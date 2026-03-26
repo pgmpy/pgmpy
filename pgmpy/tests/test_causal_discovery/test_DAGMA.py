@@ -5,24 +5,16 @@ import numpy as np
 import pandas as pd
 import pytest
 from sklearn.utils.estimator_checks import parametrize_with_checks
-<<<<<<< HEAD
 import unittest
-import numpy as np
-import pandas as pd
 from pgmpy.base import DAG
 from pgmpy.causal_discovery.DAGMA import DagmaLinear
 from pgmpy.causal_discovery import ExpertKnowledge
-=======
-
-from pgmpy.base import DAG
-from pgmpy.causal_discovery.DAGMA import DagmaLinear
-from pgmpy.estimators import ExpertKnowledge
->>>>>>> origin/feature/dagma
 
 
 def expected_failed_checks(estimator):
     """
-    scikit-learn checks that are expected to fail for pgmpy causal discovery algorithms.
+    scikit-learn checks that are expected to fail
+    for pgmpy causal discovery algorithms.
     """
     return {
         "check_fit_score_takes_y": "Causal discovery estimators do not take y parameter in score method.",
@@ -73,16 +65,19 @@ class TestDagmaLinearCore:
         # 2. Check if the extracted feature names match the dataframe columns
         np.testing.assert_array_equal(est.feature_names_in_, ["X", "Y", "Z"])
 
-        # 3. Check if the estimated adjacency matrix was saved and is a NumPy array
+        # 3. Check if the estimated adjacency matrix
+        # was saved and is a NumPy array
         assert isinstance(est.adjacency_matrix_, np.ndarray)
         assert est.adjacency_matrix_.shape == (3, 3)
 
-        # 4. Check if the algorithm successfully found the X -> Y and Y -> Z edges
+        # 4. Check if the algorithm successfully
+        # found the X -> Y and Y -> Z edges
         learned_edges = list(est.causal_graph_.edges())
         assert ("X", "Y") in learned_edges
         assert ("Y", "Z") in learned_edges
 
-        # 5. Prove the bounds and barriers successfully prevented cycles and self-loops
+        # 5. Prove the bounds and barriers successfully
+        # prevented cycles and self-loops
         assert ("Z", "X") not in learned_edges
         assert ("X", "X") not in learned_edges
         assert ("Y", "Y") not in learned_edges
@@ -108,7 +103,6 @@ class TestDagmaLinearCore:
         assert est.w_threshold == 0.4
 
 
-<<<<<<< HEAD
 class TestDagmaLinear(unittest.TestCase):
     def setUp(self):
         """
@@ -124,7 +118,8 @@ class TestDagmaLinear(unittest.TestCase):
 
     def test_fit_returns_dag(self):
         """
-        Test if the fit method runs successfully and returns a proper DAG object.
+        Test if the fit method runs successfully
+        and returns a proper DAG object.
         """
         # Initialize the estimator with default hyperparameters
         estimator = DagmaLinear()
@@ -137,9 +132,11 @@ class TestDagmaLinear(unittest.TestCase):
         self.assertIsInstance(estimator.causal_graph_, DAG)
 
         # 2. Check if the extracted feature names match the dataframe columns
-        np.testing.assert_array_equal(estimator.feature_names_in_, ["X", "Y", "Z"])
+        np.testing.assert_array_equal(estimator.feature_names_in_,
+                                      ["X", "Y", "Z"])
 
-        # 3. Check if the estimated adjacency matrix was saved and is a NumPy array
+        # 3. Check if the estimated adjacency matrix
+        # was saved and is a NumPy array
         self.assertIsInstance(estimator.adjacency_matrix_, np.ndarray)
 
         self.assertEqual(estimator.adjacency_matrix_.shape, (3, 3))
@@ -147,7 +144,8 @@ class TestDagmaLinear(unittest.TestCase):
         learned_edges = list(estimator.causal_graph_.edges())
         self.assertIn(("X", "Y"), learned_edges)
         self.assertIn(("Y", "Z"), learned_edges)
-        self.assertNotIn(("Z", "X"), learned_edges)  # Prove it didn't draw a cycle
+        self.assertNotIn(("Z", "X"),
+                         learned_edges)  # Prove it didn't draw a cycle
 
     def test_custom_hyperparameters(self):
         """
@@ -158,8 +156,6 @@ class TestDagmaLinear(unittest.TestCase):
         self.assertEqual(estimator.max_iter, 50)
 
 
-=======
->>>>>>> origin/feature/dagma
 class TestDagmaExpertKnowledge:
     """Tests for DagmaLinear with expert knowledge constraints."""
 
@@ -187,7 +183,9 @@ class TestDagmaExpertKnowledge:
         """
         # Define a timeline where Z happens first, then Y, then X
         # (This is completely backward from the true data generation process)
-        expert_knowledge = ExpertKnowledge(temporal_order=[["Z"], ["Y"], ["X"]])
+        expert_knowledge = ExpertKnowledge(temporal_order=[["Z"],
+                                                           ["Y"],
+                                                           ["X"]])
 
         # Pass expert_knowledge to the constructor, NOT to fit()
         est = DagmaLinear(expert_knowledge=expert_knowledge)
@@ -195,7 +193,8 @@ class TestDagmaExpertKnowledge:
 
         learned_edges = list(est.causal_graph_.edges())
 
-        # Because Z comes before Y and Y before X, X->Y and Y->Z are now "backward in time"
+        # Because Z comes before Y and Y before X,
+        # X->Y and Y->Z are now "backward in time"
         # The algorithm must not draw them.
         assert ("X", "Y") not in learned_edges
         assert ("Y", "Z") not in learned_edges

@@ -1,25 +1,12 @@
-import math
-from functools import partial
-
 import numpy as np
 import pandas as pd
 import scipy.linalg as slin
 import scipy.optimize as sopt
 import torch
-from scipy.special import expit as sigmoid
 from torch.optim import LBFGS
-from tqdm.auto import trange
 
-from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery
-<<<<<<< HEAD
-from pgmpy.causal_discovery import ExpertKnowledge
-from pgmpy.causal_discovery import ExpertKnowledge
-from pgmpy.causal_discovery._base import _BaseCausalDiscovery
-from pgmpy.estimators import ExpertKnowledge
->>>>>>> origin/feature/dagma
-from pgmpy.global_vars import logger
 from pgmpy.utils import compat_fns
 
 
@@ -31,10 +18,38 @@ class DagmaLinear(_BaseCausalDiscovery):
     optimizing a continuous score function (Least Squares) subject to a
     novel log-determinant acyclicity constraint.
 
-    Parameters :
+    Unlike older methods that rely on the Augmented Lagrangian scheme, DAGMA
+    uses a central path method. It solves a sequence of unconstrained
+    optimization problems where a central path parameter `mu` is progressively
+    decayed. As `mu` approaches zero, the solution is mathematically guaranteed
+    to be a DAG.
 
+    DAGMA is continuos optimization method that:
+    1. Starts by initializing a continuous weighted adjacency matrix W
+       with all zeros.
+    2. Evaluates the exact mathematical gradient of the entire graph
+       simultaneously.
+    3. Uses a gradient-based numerical solver (like L-BFGS-B or Adam)
+       to update all edge weights in the matrix W.
+    4. It wraps the continuous optimizer in a loop that progressively decays
+       the central path parameter μ.
+    5. As μ approaches zero, the force of the log-determinant barrier becomes
+       absolute, mathematically guaranteeing that the continuous matrix W
+       converges to a perfect Directed Acyclic Graph.
+
+    The exact continuous optimization objective being minimized is:
+    min_{W}  mu * (Q(W; X) + lambda1 * ||W||_1) + h(W)
+
+    Where:
+        - mu is the central path parameter.
+        - Q(W; X) = 1/(2n) * ||X - XW||_F^2  (Least Squares Loss)
+        - h(W) = -log det(sI - W ∘ W) + d * log(s)
+                    (Log-Det Acyclicity Constraint)
+        - ||W||_1 is the L1 penalty to enforce sparsity.
+        - lambda1 is L1 regularization (enforce sparsity)
+
+    Parameters
     ----------
-
     s : float, optional (default=1.0)
         Controls the domain of the M-matrices for the log-det constraint.
 
@@ -54,10 +69,8 @@ class DagmaLinear(_BaseCausalDiscovery):
     w_threshold : float, optional (default=0.3)
         Threshold for pruning small edge weights in the final adjacency matrix.
 
-    Attributes :
-
-    ------------
-
+    Attributes
+    ----------
     causal_graph_ : pgmpy.base.DAG
         The estimated Directed Acyclic Graph.
 
@@ -70,22 +83,38 @@ class DagmaLinear(_BaseCausalDiscovery):
     feature_names_in_ : np.ndarray
         The feature names in the dataset used to learn the causal graph.
 
-    Examples :
+    Examples
+    --------
+    Simulate some data to use for causal discovery
 
-    ---------
+    >>> from pgmpy.example_models import load_model
+    >>> model = load_model("bnlearn/alarm")
+    >>> data = model.simulate(n_samples=1000, seed=42)
+
+    Or create a random data with causal relation
+
+    >>> import numpy as np
+    >>> import pandas as pd
+    >>> data = pd.DataFrame(np.random.normal(size=(1000, 3)),
+    >>>                     columns=['X', 'Y', 'Z'])
+    >>> data['Y'] += 2.0 * data['X']
+    >>> data['Z'] += 1.5 * data['Y']
+
+    Use DagmaLinear algorith to learn causal structure
 
     >>> from pgmpy.causal_discovery import DagmaLinear
-    >>> ...
+    >>> est = DagmaLinear()
+    >>> est.fit(data)
+    >>> est.causal_graph_.edges()
 
-    References :
-
+    References
     ----------
-
-    DAGMA: Learning DAGs via M-matrices and a Log-Determinant Acyclicity Characterization.
-    Kevin Bello, Bryon Aragam, Pradeep Ravikumar.
-    Booth School of Business, University of Chicago, Chicago, IL 60637.
-    Machine Learning Department, Carnegie Mellon University, Pittsburgh, PA 15213
-
+    .. [1] DAGMA: Learning DAGs via M-matrices and a Log-Determinant Acyclicity
+           Characterization.
+           Kevin Bello, Bryon Aragam, Pradeep Ravikumar.
+           Booth School of Business, University of Chicago, Chicago, IL 60637.
+           Machine Learning Department, Carnegie Mellon University,
+           Pittsburgh, PA 15213
     """
 
     def __init__(
@@ -96,7 +125,6 @@ class DagmaLinear(_BaseCausalDiscovery):
         mu_factor=0.1,
         max_iter=100,
         w_threshold=0.3,
-        expert_knowledge=None,
     ):
         """
         Initialize the DagmaLinear estimator with hyperparameters
@@ -108,11 +136,16 @@ class DagmaLinear(_BaseCausalDiscovery):
         self.mu_factor = mu_factor
         self.max_iter = max_iter
         self.w_threshold = w_threshold
-        self.expert_knowledge = expert_knowledge
+        self.backend = compat_fns.get_compute_backend()
 
     def _fit(self, X: pd.DataFrame):
         """
         Core flow of the DAGMA continuous optimization algorithm.
+
+        Parameters
+        ----------
+        X : pd.DataFrame or np.ndarray
+            The data to learn the causal structure from.
         """
         # Step 1: Initialize states and extract feature dimensions
         self.feature_names_in_ = X.columns.values
@@ -120,35 +153,14 @@ class DagmaLinear(_BaseCausalDiscovery):
 
         if self.n_features_in_ < 2:
             raise ValueError(
-                f"Found array with 1 feature(s) while a minimum of 2 is required for causal dicovery"
+                f"Found array with 1 feature {self.feature_names_in_} while a"
+                "minimum of 2 is required for causal dicovery"
             )
 
         # Step 2: Data Preparation & Covariance pre-computation
         data_np = X.values
         data_np = data_np - np.mean(data_np, axis=0, keepdims=True)
         self.cov_ = (data_np.T @ data_np) / float(data_np.shape[0])
-
-        # Step 2.5: Build the Expert Knowledge Mask
-        # Initialize a mask of all 1s (all edges allowed)
-        mask = np.ones((self.n_features_in_, self.n_features_in_))
-
-        if self.expert_knowledge is not None:
-            self.expert_knowledge._orient_temporal_forbidden_edges(DAG(), only_edges=False)
-
-            # Map forbidden edges into the binary mask
-            feature_list = list(self.feature_names_in_)
-            for u, v in self.expert_knowledge.forbidden_edges:
-                try:
-                    i = feature_list.index(u)
-                    j = feature_list.index(v)
-                    mask[i, j] = 0.0  # Set the forbidden edge's mask value to 0
-                except ValueError:
-                    continue  # Ignore if nodes provided in expert knowledge are not in the datas
-
-                if u in feature_list and v in feature_list:
-                    i = feature_list.index(u)
-                    j = feature_list.index(v)
-                    mask[i, j] = 0.0  # Set the forbidden edge's mask value to 0
 
         # Step 3: Configure bounds to strictly prevent self-loops
         bounds = [
@@ -162,18 +174,42 @@ class DagmaLinear(_BaseCausalDiscovery):
         mu = self.mu_init
 
         for _ in range(self.max_iter):
-            res = sopt.minimize(
-                fun=self._objective,
-                x0=W_est.flatten(),
-                args=(mu, mask),     # PASS THE MASK TO THE OBJECTIVE FUNCTION
-                method="L-BFGS-B",
-                jac=True,
-                bounds=bounds
-            )
-            W_est = res.x.reshape(self.n_features_in_, self.n_features_in_)
 
-            # Ensure forbidden edges remain strictly zero in the main matrix
-            W_est = W_est * mask
+            if self.backend == np:
+                res = sopt.minimize(
+                    fun=self._objective,
+                    x0=W_est.flatten(),
+                    args=(mu),
+                    method="L-BFGS-B",
+                    jac=True,
+                    bounds=bounds
+                 )
+                W_est = res.x.reshape(self.n_features_in_, self.n_features_in_)
+            else:  # Pytorch
+                # Convert W_est to a PyTorch parameter
+                W_tensor = torch.nn.Parameter(
+                    torch.tensor(W_est,
+                                 dtype=torch.float64,
+                                 requires_grad=True)
+                )
+
+                # Initialize the PyTorch LBFGS optimizer
+                lbfgs = LBFGS([W_tensor],
+                              max_iter=5,
+                              line_search_fn="strong_wolfe")
+
+                def closure():
+                    lbfgs.zero_grad()  # Clear previous gradients
+                    loss = self._objective(W_tensor, mu)
+                    loss.backward()  # Automatically computes the gradients
+                    return loss
+
+                # Take an optimization step
+                lbfgs.step(closure)
+
+                # Extract the updated numpy array for the next loop
+                W_est = W_tensor.detach().numpy()
+
             mu *= self.mu_factor
 
         # Step 5: Thresholding and Graph Creation
@@ -185,53 +221,53 @@ class DagmaLinear(_BaseCausalDiscovery):
 
         edges = np.argwhere(W_est != 0)
         for i, j in edges:
-            self.causal_graph_.add_edge(self.feature_names_in_[i], self.feature_names_in_[j])
+            self.causal_graph_.add_edge(self.feature_names_in_[i],
+                                        self.feature_names_in_[j])
 
         return self
 
-    def _objective(self, w_1d: np.ndarray, mu: float, mask : np.ndarray) -> tuple[float, np.ndarray]:
+    def _objective(self,
+                   w_1d: np.ndarray,
+                   mu: float,
+                   ) -> tuple[float, np.ndarray]:
         """
         The objective function for the continuous optimization, combining
         the Least Squares score, L1 penalty, and Log-Det acyclicity constraint.
         """
 
-        # Step 1: Reshape the flat 1D array back into a 2D adjacency matrix
-        W = w_1d.reshape(self.n_features_in_, self.n_features_in_)
+        if self.backend == np:
+            # Step 1: Reshape the flat 1D array back into a 2D adjacency matrix
+            W = w_1d.reshape(self.n_features_in_, self.n_features_in_)
 
-        # EXPERT KNOWLEDGE: Strictly enforce forbidden edges to be 0 in W
-        W = W * mask
+            # Step 2: Compute the Least Squares loss and gradient
+            dif = np.eye(self.n_features_in_) - W
+            rhs = self.cov_ @ dif
+            score = 0.5 * np.trace(dif.T @ rhs)
+            G_score = -rhs
 
-        # Step 2: Compute the Least Squares loss and gradient (Covariance Trick)
-        dif = np.eye(self.n_features_in_) - W
-        rhs = self.cov_ @ dif
-        score = 0.5 * np.trace(dif.T @ rhs)
-        G_score = -rhs
+            # Step 3: Compute the Log-Determinant Acyclicity Constraint
+            # and gradient
+            M = self.s * np.eye(self.n_features_in_) - (W * W)
+            sign, logdet = np.linalg.slogdet(M)
 
-        # Step 3: Compute the Log-Determinant Acyclicity Constraint and gradient
-        M = self.s * np.eye(self.n_features_in_) - (W * W)
-        sign, logdet = np.linalg.slogdet(M)
+            # Barrier Protection: Force backtrack if we step out
+            # of the valid DAG domain
+            if sign <= 0:
+                return np.inf, np.zeros_like(w_1d)
 
-        # Barrier Protection: Force backtrack if we step out of the valid DAG domain
-        if sign <= 0:
-            return np.inf, np.zeros_like(w_1d)
+            h = -logdet + self.n_features_in_ * np.log(self.s)
+            M_inv = slin.inv(M)
+            Grad_h = 2 * W * M_inv.T
 
-        h = -logdet + self.n_features_in_ * np.log(self.s)
-        M_inv = slin.inv(M)
-        Grad_h = 2 * W * M_inv.T
+            # Step 4: Combine into the final DAGMA Central Path Objective
+            l1_penalty = self.lambda1 * np.abs(W).sum()
+            obj = mu * (score + l1_penalty) + h
 
-        # Step 4: Combine into the final DAGMA Central Path Objective
-        l1_penalty = self.lambda1 * np.abs(W).sum()
-        obj = mu * (score + l1_penalty) + h
+            # Step 5: Combine gradients
+            # (np.sign(W) is the subgradient of the L1 norm)
+            G_obj = mu * (G_score + self.lambda1 * np.sign(W)) + Grad_h
 
-        # Step 5: Combine gradients
-        # (np.sign(W) is the subgradient of the L1 norm)
-        G_obj = mu * (G_score + self.lambda1 * np.sign(W)) + Grad_h
-
-        # EXPERT KNOWLEDGE MASKING:
-        # Zero out the gradients of forbidden edges so the optimizer
-        # never increase their weights
-        G_obj = G_obj * mask
-
-        # SciPy expects a flat 1D gradient array
-        return obj, G_obj.flatten()
-
+            # SciPy expects a flat 1D gradient array
+            return obj, G_obj.flatten()
+        else:  # TODO for pythorch
+            return obj
