@@ -165,6 +165,12 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
         -------
         self : pgmpy.causal_discovery.HillClimbSearch
             Returns the instance with the fitted attributes.
+
+        Raises
+        ------
+        ValueError
+            If `start_dag` is incompatible with the data, if the required edges
+            create a cycle, or if `return_type` is invalid.
         """
         self.variables_ = list(X.columns)
 

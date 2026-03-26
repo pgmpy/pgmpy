@@ -120,6 +120,12 @@ class ExpertKnowledge:
         ----------
         nodes: iterable
             A collection of nodes present in a dataset/graph object.
+
+        Raises
+        ------
+        ValueError
+            If a node appears in multiple temporal tiers or if the temporal order
+            does not cover exactly the provided nodes.
         """
         if self.temporal_order == [[]]:
             return
@@ -146,9 +152,16 @@ class ExpertKnowledge:
             The temporal ordering of variables according to prior knowledge.
 
         Returns
-        --------
+        -------
         temporal_ordering: dict
             Dictionary with the tier (0, 1, 2, 3 etc.) for each node.
+
+        Raises
+        ------
+        TypeError
+            If `temporal_order` is not iterable.
+        ValueError
+            If a variable appears in multiple temporal tiers.
         """
         if not hasattr(temporal_order, "__iter__"):
             raise TypeError(f"Expected iterator type for temporal order. Got {type(temporal_order)} instead.")
@@ -213,7 +226,7 @@ class ExpertKnowledge:
             A partial DAG with directed and undirected edges.
 
         Returns
-        --------
+        -------
         Model after edge orientation: pgmpy.base.DAG
             The partial DAG after accounting for specified required
             and forbidden edges.
@@ -251,19 +264,17 @@ class ExpertKnowledge:
 
     def limit_search_space(self, data_coulumn_labels):
         """
-        Forms an additive set of forbidden edges by subtracting the
-        search space from the set of all possible edges.
+        Forms an additive set of forbidden edges.
+
+        The method subtracts the configured search space from the set of all
+        possible directed edges over `data_coulumn_labels` and merges the
+        result into `self.forbidden_edges`.
 
         Parameters
         ----------
         data_coulumn_labels: set | list | pd.DataFrame.columns
             Set of edges to be used for structure learning.
             If None, all possible edges are used.
-
-        Returns
-        -------
-        forbidden_edges_additive: set
-            Set of edges that are not allowed in the structure.
         """
         # Generate all possible edges
         all_possible_edges = set(permutations(data_coulumn_labels, 2))

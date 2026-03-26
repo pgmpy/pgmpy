@@ -125,8 +125,13 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         self, current_model: DAG, expert_knowledge: ExpertKnowledge
     ) -> list[tuple[Hashable, Hashable]]:
         """
-        Returns a list of all edges that can be added to the graph such that
-        it remains a DAG.
+        Return the list of edges that can be added while keeping a DAG.
+
+        Returns
+        -------
+        list[tuple[Hashable, Hashable]]
+            All directed edges whose addition respects acyclicity and the
+            expert knowledge constraints.
         """
         edges = []
         for u, v in combinations(current_model.nodes(), 2):
@@ -141,7 +146,13 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         self, current_model: DAG, expert_knowledge: ExpertKnowledge
     ) -> list[tuple[Hashable, Hashable]]:
         """
-        Returns a list of all edges that can be removed from the graph.
+        Return the list of edges that can be removed from the graph.
+
+        Returns
+        -------
+        list[tuple[Hashable, Hashable]]
+            All directed edges that are present in the graph and not required by
+            the expert knowledge.
         """
         edges = []
         for u, v in current_model.edges():
@@ -153,8 +164,13 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         self, current_model: DAG, expert_knowledge: ExpertKnowledge
     ) -> list[tuple[Hashable, Hashable]]:
         """
-        Returns a list of all edges that can be flipped such that the model
-        remains a DAG.
+        Return the list of edges that can be flipped while keeping a DAG.
+
+        Returns
+        -------
+        list[tuple[Hashable, Hashable]]
+            All directed edges whose reversal respects acyclicity and the
+            expert knowledge constraints.
         """
         potential_flips = []
         edges = list(current_model.edges())
@@ -179,6 +195,11 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         -------
         self : pgmpy.causal_discovery.GES
             Returns the instance with the fitted attributes.
+
+        Raises
+        ------
+        ValueError
+            If `return_type` is not one of `"dag"` or `"pdag"`.
         """
         self.variables_ = list(X.columns)
 

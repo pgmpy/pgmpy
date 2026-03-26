@@ -41,6 +41,18 @@ class _BaseCausalDiscovery(BaseEstimator):
         ----------
         X: pd.DataFrame
             The data to fit the causal discovery algorithm on.
+
+        Returns
+        -------
+        pd.DataFrame
+            The validated input data, converted to a DataFrame when needed.
+
+        Raises
+        ------
+        ValueError
+            If the input has zero features or fewer than two samples.
+        TypeError
+            If the input contains values that are not hashable.
         """
         n_samples, n_features = X.shape
 
@@ -70,9 +82,17 @@ class _BaseCausalDiscovery(BaseEstimator):
         return X
 
     def fit(self, X: pd.DataFrame, y=None):
-        """Fit data (`X`) to a causal graph. The method
-        calls the `_fit` method, which must be implemented separately in any causal
-        discovery algorithm inheriting from `BaseCausalDiscovery`.
+        """
+        Fit data (`X`) to a causal graph.
+
+        The method calls the `_fit` method, which must be implemented separately
+        in any causal discovery algorithm inheriting from `BaseCausalDiscovery`.
+
+        Returns
+        -------
+        object
+            The fitted estimator returned by the subclass-specific `_fit`
+            implementation.
         """
         X = self._check_fit_data(X)
         return self._fit(X)
@@ -111,6 +131,12 @@ class _BaseCausalDiscovery(BaseEstimator):
             The calculated score of the learned causal graph according to the specified scoring method. The exact
             return type depends on the chosen metric and may be a float, pandas.DataFrame, tuple, or another
             metric-specific type.
+
+        Raises
+        ------
+        ValueError
+            If neither `X` nor `true_graph` is provided, or if a string-valued
+            `metric` does not match any registered scoring method.
 
         Examples
         --------
@@ -167,9 +193,7 @@ class _BaseCausalDiscovery(BaseEstimator):
 
 
 class _ConstraintMixin:
-    """
-    Base class for all constraint-based causal discovery estimators.
-    """
+    """Base class for all constraint-based causal discovery estimators."""
 
     def fit(
         self,
@@ -177,9 +201,17 @@ class _ConstraintMixin:
         y=None,
         independencies: Independencies = None,
     ):
-        """Fit data (`X`) and independence relations (optional) to a causal graph. The method
-        calls the `_fit` method, which must be implemented separately in any causal
-        discovery algorithm inheriting from `BaseConstraintCausalDiscovery`.
+        """
+        Fit data (`X`) and optional independence relations to a causal graph.
+
+        The method calls the `_fit` method, which must be implemented separately
+        in any causal discovery algorithm inheriting from `BaseConstraintCausalDiscovery`.
+
+        Returns
+        -------
+        object
+            The fitted estimator returned by the subclass-specific `_fit`
+            implementation.
         """
         X = self._check_fit_data(X)
         return self._fit(X, independencies)
@@ -199,8 +231,10 @@ class _ConstraintMixin:
         **kwargs,
     ) -> tuple[UndirectedGraph, dict[tuple[str, str], set[str]]]:
         """
-        Estimates a graph skeleton (UndirectedGraph) from a set of independencies
-        using (the first part of) the PC algorithm.
+        Estimate a graph skeleton from independencies using the PC procedure.
+
+        The skeleton is represented as an `UndirectedGraph` and is computed using
+        the first part of the PC algorithm.
 
         The independencies can either be provided as an instance of the
         `Independencies`-class or by passing a decision function that decides any
@@ -214,6 +248,14 @@ class _ConstraintMixin:
 
         Parameters
         ----------
+        data: pandas.DataFrame
+            The data used for conditional independence testing when
+            `independencies` is not provided.
+
+        independencies: pgmpy.independencies.Independencies, optional
+            Explicit independence assertions to use instead of statistical CI
+            tests.
+
         variant: str (one of "orig", "stable", "parallel")
             The variant of PC algorithm to run.
                 "orig": The original PC algorithm. Might not give the same
@@ -285,6 +327,9 @@ class _ConstraintMixin:
         show_progress: bool (default: True)
             If True, shows a progress bar while running the algorithm.
 
+        **kwargs: dict
+            Additional keyword arguments reserved for subclasses or future
+            skeleton-building extensions.
 
         Returns
         -------
@@ -302,6 +347,11 @@ class _ConstraintMixin:
             http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
         [2] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
             Section 3.4.2.1 (page 85), Algorithm 3.3
+
+        Raises
+        ------
+        ValueError
+            If `variant` is not one of `"orig"`, `"stable"`, or `"parallel"`.
         """
         # Initialize initial values and structures.
         lim_neighbors = 0
@@ -447,7 +497,7 @@ class _ConstraintMixin:
             The maximum number of neighbours (conditioning variables) for u, v.
 
         Returns
-        --------
+        -------
         separating_set: set
             Set containing the superset of separating set of u, v.
         """
@@ -490,14 +540,22 @@ class _ScoreMixin:
         forbidden_edges: list[tuple[Hashable, Hashable]],
         required_edges: list[tuple[Hashable, Hashable]],
     ) -> Generator[tuple[tuple[str, tuple[Hashable, Hashable]], float]]:
-        """Generates a list of legal (= not in tabu_list) graph modifications
-        for a given model, together with their score changes. Possible graph modifications:
-        (1) add, (2) remove, or (3) flip a single edge. For details on scoring
-        see Koller & Friedman, Probabilistic Graphical Models, Section 18.4.3.3 (page 818).
-        If a number `max_indegree` is provided, only modifications that keep the number
-        of parents for each node below `max_indegree` are considered. A list of
-        edges can optionally be passed as `forbidden_edges` or `required_edges` to exclude those
-        edges or to force them to be present in the model, respectively.
+        """
+        Generate legal graph modifications and their score deltas.
+
+        Possible graph modifications are: (1) add, (2) remove, or (3) flip a
+        single edge. For details on scoring see Koller & Friedman,
+        Probabilistic Graphical Models, Section 18.4.3.3 (page 818). If a
+        number `max_indegree` is provided, only modifications that keep the
+        number of parents for each node below `max_indegree` are considered. A
+        list of edges can optionally be passed as `forbidden_edges` or
+        `required_edges` to exclude those edges or to force them to be present
+        in the model, respectively.
+
+        Yields
+        ------
+        tuple[tuple[str, tuple[Hashable, Hashable]], float]
+            A legal graph operation together with the corresponding score delta.
         """
 
         tabu_list = set(tabu_list)

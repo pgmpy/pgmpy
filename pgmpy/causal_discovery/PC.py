@@ -212,11 +212,19 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
         X : pd.DataFrame or np.ndarray
             The data to learn the causal structure from. If a numpy array is
             passed, then the column names would be integers from 0 to n_features-1.
+        independencies : pgmpy.independencies.Independencies, optional
+            Explicit independence assertions to use instead of statistical CI
+            tests while constructing the graph skeleton.
 
         Returns
         -------
         self : pgmpy.causal_discovery.PC
             Returns the instance with the fitted attributes.
+
+        Raises
+        ------
+        ValueError
+            If `return_type` is not one of `"dag"`, `"pdag"`, or `"cpdag"`.
         """
 
         # CI test
@@ -278,8 +286,9 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
         temporal_ordering: dict[Hashable, int] = dict(),
     ) -> PDAG:
         """
-        Orients the edges that form v-structures in a graph skeleton based on
-        the `separating_sets` to form a PDAG. For each pair of non adjacent
+        Orient the edges that form v-structures in a graph skeleton.
+
+        The `separating_sets` are used to form a PDAG. For each pair of non adjacent
         nodes `u`, `v` , if a common neighbor `z` is not in the separating set of `u` and `v`;
         then the v-structure is oriented as `u`->`z` , `v`->`z`.
 
@@ -293,6 +302,9 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
             A dict containing for each pair of not directly connected nodes a
             separating set ("witnessing set") of variables that makes them
             conditionally independent.
+        temporal_ordering: dict, optional
+            Mapping from node to temporal tier. When provided, collider
+            orientations are limited to directions consistent with this order.
 
         Returns
         -------
