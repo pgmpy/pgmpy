@@ -3,6 +3,8 @@ from collections.abc import Callable
 
 import numpy as np
 import pandas as pd
+import statsmodels.api as sm
+import statsmodels.tools.sm_exceptions as sm_exceptions
 from scipy import stats
 from sklearn.cross_decomposition import CCA
 
@@ -193,7 +195,9 @@ def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
     .. [2] https://en.wikipedia.org/wiki/Partial_correlation#Using_linear_regression
     """
     warnings.warn(
-        "`pearsonr` is deprecated. Please use `pgmpy.ci_tests.Pearsonr` instead.", FutureWarning, stacklevel=2
+        "`pearsonr` is deprecated. Please use `pgmpy.ci_tests.Pearsonr` instead.",
+        FutureWarning,
+        stacklevel=2,
     )
     # Step 1: Test if the inputs are correct
     if not hasattr(Z, "__iter__"):
@@ -413,7 +417,9 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
     np.False_
     """
     warnings.warn(
-        "`chi_square` is deprecated. Please use `pgmpy.ci_tests.ChiSquare` instead.", FutureWarning, stacklevel=2
+        "`chi_square` is deprecated. Please use `pgmpy.ci_tests.ChiSquare` instead.",
+        FutureWarning,
+        stacklevel=2,
     )
     return power_divergence(X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="pearson", **kwargs)
 
@@ -475,7 +481,11 @@ def g_sq(X, Y, Z, data, boolean=True, **kwargs):
     ... )
     np.False_
     """
-    warnings.warn("`g_sq` is deprecated. Please use `pgmpy.ci_tests.GSq` instead.", FutureWarning, stacklevel=2)
+    warnings.warn(
+        "`g_sq` is deprecated. Please use `pgmpy.ci_tests.GSq` instead.",
+        FutureWarning,
+        stacklevel=2,
+    )
     return power_divergence(X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="log-likelihood", **kwargs)
 
 
@@ -721,7 +731,9 @@ def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
            general linear hypothesis. Computational Statistics & Data Analysis.
     """
     warnings.warn(
-        "`pillai_trace` is deprecated. Please use `pgmpy.ci_tests.PillaiTrace` instead.", FutureWarning, stacklevel=2
+        "`pillai_trace` is deprecated. Please use `pgmpy.ci_tests.PillaiTrace` instead.",
+        FutureWarning,
+        stacklevel=2,
     )
     # Step 1: Test if the inputs are correct
     if not hasattr(Z, "__iter__"):
@@ -823,7 +835,11 @@ def gcm(X, Y, Z, data, boolean=True, **kwargs):
     .. [1] Rajen D. Shah, and Jonas Peters. "The Hardness of Conditional Independence Testing and the Generalised
         Covariance Measure".
     """
-    warnings.warn("`gcm` is deprecated. Please use `pgmpy.ci_tests.GCM` instead.", FutureWarning, stacklevel=2)
+    warnings.warn(
+        "`gcm` is deprecated. Please use `pgmpy.ci_tests.GCM` instead.",
+        FutureWarning,
+        stacklevel=2,
+    )
     # Step 1: Test if the inputs are correct
     if not hasattr(Z, "__iter__"):
         raise ValueError(f"Variable Z. Expected type: iterable. Got type: {type(Z)}")
@@ -939,3 +955,241 @@ def pearsonr_equivalence(X, Y, Z, data, boolean=True, delta_threshold=0.1, **kwa
         return p_value < kwargs.get("significance_level", 0.05)
     else:
         return coeff, p_value
+
+
+def _is_categorical(series):
+    """
+    Determine if a pandas Series should be treated as categorical.
+
+    Parameters
+    ----------
+    series : pd.Series
+
+    Returns
+    -------
+    bool
+    """
+    if isinstance(series.dtype, pd.CategoricalDtype):
+        return True
+    if series.dtype.kind in ("O", "S", "U", "b"):
+        return True
+    return False
+
+
+def _encode_features(data, columns):
+    """
+    Build a numeric predictor matrix from a list of column names.
+    Continuous columns are kept as-is; categorical columns are
+    one-hot encoded with ``drop_first=True``.
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+    columns : list of str
+
+    Returns
+    -------
+    np.ndarray of shape (n_samples, n_encoded_features)
+    """
+    if len(columns) == 0:
+        return np.empty((len(data), 0))
+
+    parts = []
+    for col in columns:
+        series = data[col]
+        if _is_categorical(series):
+            dummies = pd.get_dummies(series, prefix=col, drop_first=True)
+            parts.append(dummies.values.astype(float))
+        else:
+            parts.append(series.values.astype(float).reshape(-1, 1))
+
+    return np.column_stack(parts)
+
+
+@ci_registry.register(name="regression_based_lr", data_types=["discrete", "continuous", "mixed"])
+def regression_based_lr(X, Y, Z, data, boolean=True, **kwargs):
+    """
+    Regression-based likelihood-ratio conditional independence test.
+
+    Tests the null hypothesis :math:`X \\perp Y \\mid Z` by comparing two nested
+    regression models via a likelihood-ratio (or equivalent F-) test.
+    The regression family is chosen automatically based on the data type
+    of *X*:
+
+    * **Continuous X** -- OLS linear regression, F-test.
+    * **Binary X** -- Binary logistic regression, chi-squared LR test.
+    * **Categorical X (>2 levels)** -- Multinomial logistic regression, chi-squared LR test.
+
+    Predictor variables (*Y* and *Z*) can be of any type; categorical
+    predictors are one-hot encoded internally. This makes the test
+    suitable for mixed (continuous + discrete) data.
+
+    Parameters
+    ----------
+    X : str
+        First variable name (used as the response variable in the regression).
+    Y : str
+        Second variable name.
+    Z : list (default: ``[]``)
+        A list of variable names for the conditioning set. May be empty.
+    data : pd.DataFrame
+        The dataset. Columns with dtype ``'object'``, ``'category'``, or
+        ``'bool'`` are treated as categorical; all others as continuous.
+    boolean : bool (default: ``True``)
+        If ``True``, returns ``True`` when X and Y are judged independent
+        (p-value >= significance_level), ``False`` otherwise.
+        If ``False``, returns a tuple ``(statistic, p_value, dof)``.
+    significance_level : float (default: 0.05)
+        Significance threshold. Only used when ``boolean=True``.
+
+    Returns
+    -------
+    bool
+        If ``boolean=True``.
+    tuple (float, float, int)
+        ``(statistic, p_value, dof)`` if ``boolean=False``.
+
+    Notes
+    -----
+    This test is **asymmetric** -- X is used as the response variable in the
+    regression, so the model family is determined by the data type of X.
+    Swapping X and Y may yield different test statistics and occasionally
+    different p-values, though the independence verdict (True/False) is
+    typically consistent. When X and Y have different types (e.g., one
+    continuous and one categorical), place the categorical variable as X
+    for the most appropriate model selection. If a symmetric test is desired
+    for purely continuous data, consider ``pearsonr`` or ``pillai`` instead.
+
+    References
+    ----------
+    .. [1] Tsagris, M., Borboudakis, G., Lagani, V., & Tsamardinos, I.
+       (2018). Constraint-based causal discovery with mixed data.
+       *International Journal of Data Science and Analytics*, 6(1),
+       19-30. https://doi.org/10.1007/s41060-018-0097-y
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> import numpy as np
+    >>> from pgmpy.estimators.CITests import regression_based_lr
+    >>> rng = np.random.default_rng(42)
+    >>> n = 500
+    >>> Z_val = rng.standard_normal(n)
+    >>> X_val = 2 * Z_val + rng.standard_normal(n)
+    >>> Y_val = 3 * Z_val + rng.standard_normal(n)  # X ind. Y | Z
+    >>> data = pd.DataFrame({"X": X_val, "Y": Y_val, "Z": Z_val})
+    >>> regression_based_lr("X", "Y", ["Z"], data)
+    True
+    >>> stat, p, dof = regression_based_lr("X", "Y", [], data, boolean=False)
+    >>> p < 0.05          # marginally dependent
+    True
+    """
+    significance_level = kwargs.get("significance_level", 0.05)
+
+    # ---- input validation ------------------------------------------------
+    if X not in data.columns:
+        raise ValueError(f"Variable '{X}' not found in data columns.")
+    if Y not in data.columns:
+        raise ValueError(f"Variable '{Y}' not found in data columns.")
+    if X == Y:
+        raise ValueError(f"X and Y must be different variables, got '{X}' for both.")
+
+    if Z is None:
+        Z = []
+    if isinstance(Z, str):
+        Z = [Z]
+    Z = list(Z)
+
+    missing_z = [z for z in Z if z not in data.columns]
+    if missing_z:
+        raise ValueError(f"Conditioning variable(s) {missing_z} not found in data columns.")
+
+    # Drop rows with any NaN in the relevant columns
+    relevant_cols = [X, Y] + Z
+    data = data[relevant_cols].dropna()
+    n = len(data)
+
+    if n == 0:
+        raise ValueError("No valid observations remain after dropping missing values.")
+
+    # ---- encode predictors -----------------------------------------------
+    Z_enc = _encode_features(data, Z)  # (n, q_z)
+    Y_enc = _encode_features(data, [Y])  # (n, q_y)
+    q_y = Y_enc.shape[1]  # extra params contributed by Y
+
+    # Build exogenous matrices (always include intercept)
+    if Z_enc.shape[1] > 0:
+        restricted_exog = np.column_stack([np.ones((n, 1)), Z_enc])
+        full_exog = np.column_stack([np.ones((n, 1)), Z_enc, Y_enc])
+    else:
+        restricted_exog = np.ones((n, 1))  # intercept only
+        full_exog = np.column_stack([np.ones((n, 1)), Y_enc])
+
+    # ---- choose model family based on X type -----------------------------
+    x_is_categorical = _is_categorical(data[X])
+
+    if not x_is_categorical:
+        # ============ CONTINUOUS X  ->  OLS + F-test =======================
+        x_values = data[X].values.astype(float)
+
+        rank = np.linalg.matrix_rank(full_exog)
+        if rank < full_exog.shape[1]:
+            logger.warning(
+                f"regression_based_lr: design matrix is rank-deficient "
+                f"({rank} < {full_exog.shape[1]}). Results may be unreliable."
+            )
+
+        model_r = sm.OLS(x_values, restricted_exog).fit()
+        model_f = sm.OLS(x_values, full_exog).fit()
+
+        rss_r = model_r.ssr
+        rss_f = model_f.ssr
+        df1 = q_y
+        df2 = n - full_exog.shape[1]
+
+        if df1 <= 0 or df2 <= 0 or rss_f <= 0:
+            return True if boolean else (0.0, 1.0, df1)
+
+        f_stat = ((rss_r - rss_f) / df1) / (rss_f / df2)
+        p_value = stats.f.sf(f_stat, df1, df2)
+
+        if boolean:
+            return p_value >= significance_level
+        return f_stat, p_value, df1
+
+    else:
+        # ============ CATEGORICAL X  ->  Logistic / MNLogit + chi^2 ========
+        x_encoded, uniques = pd.factorize(data[X])
+        n_classes = len(uniques)
+
+        if n_classes < 2:
+            # Only one class -- independence is trivially true
+            return True if boolean else (0.0, 1.0, 0)
+
+        try:
+            if n_classes == 2:
+                model_r = sm.Logit(x_encoded, restricted_exog).fit(disp=0, method="lbfgs", maxiter=200)
+                model_f = sm.Logit(x_encoded, full_exog).fit(disp=0, method="lbfgs", maxiter=200)
+                dof = q_y
+            else:
+                model_r = sm.MNLogit(x_encoded, restricted_exog).fit(disp=0, method="lbfgs", maxiter=200)
+                model_f = sm.MNLogit(x_encoded, full_exog).fit(disp=0, method="lbfgs", maxiter=200)
+                dof = q_y * (n_classes - 1)
+        except (np.linalg.LinAlgError, sm_exceptions.PerfectSeparationError) as e:
+            logger.warning(
+                f"regression_based_lr: model fitting failed ({type(e).__name__}: {e}). "
+                "Returning independence (conservative)."
+            )
+            return True if boolean else (0.0, 1.0, 0)
+
+        lr_stat = -2.0 * (model_r.llf - model_f.llf)
+        lr_stat = max(lr_stat, 0.0)  # numerical guard
+
+        if dof <= 0:
+            return True if boolean else (0.0, 1.0, 0)
+
+        p_value = stats.chi2.sf(lr_stat, dof)
+
+        if boolean:
+            return p_value >= significance_level
+        return lr_stat, p_value, dof
