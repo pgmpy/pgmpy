@@ -82,9 +82,11 @@ class BayesianModelSampling(BayesianModelInference):
         ... )
         >>> student.add_cpds(cpd_d, cpd_i, cpd_g)
         >>> inference = BayesianModelSampling(student)
-        >>> inference.forward_sample(size=2)
-        rec.array([(0, 0, 1), (1, 0, 2)], dtype=
-                  [('diff', '<i8'), ('intel', '<i8'), ('grade', '<i8')])
+        >>> samples = inference.forward_sample(size=2, seed=42, show_progress=False)
+        >>> samples.columns.tolist()
+        ['diff', 'grade', 'intel']
+        >>> samples.shape
+        (2, 3)
         """
         sampled = pd.DataFrame(columns=list(self.model.nodes()))
 
@@ -191,12 +193,13 @@ class BayesianModelSampling(BayesianModelInference):
         >>> student.add_cpds(cpd_d, cpd_i, cpd_g)
         >>> inference = BayesianModelSampling(student)
         >>> evidence = [State(var="diff", state=0)]
-        >>> inference.rejection_sample(
-        ...     evidence=evidence, size=2, return_type="dataframe"
+        >>> samples = inference.rejection_sample(
+        ...     evidence=evidence, size=2, seed=42, show_progress=False
         ... )
-                intel       diff       grade
-        0         0          0          1
-        1         0          0          1
+        >>> bool((samples["diff"] == 0).all())
+        True
+        >>> samples.shape
+        (2, 3)
         """
 
         if seed is not None:
@@ -311,11 +314,13 @@ class BayesianModelSampling(BayesianModelInference):
         >>> student.add_cpds(cpd_d, cpd_i, cpd_g)
         >>> inference = BayesianModelSampling(student)
         >>> evidence = [State("diff", 0)]
-        >>> inference.likelihood_weighted_sample(
-        ...     evidence=evidence, size=2, return_type="recarray"
+        >>> samples = inference.likelihood_weighted_sample(
+        ...     evidence=evidence, size=2, seed=42, show_progress=False
         ... )
-        rec.array([(0, 0, 1, 0.6), (0, 0, 2, 0.6)], dtype=
-                  [('diff', '<i8'), ('intel', '<i8'), ('grade', '<i8'), ('_weight', '<f8')])
+        >>> set(samples.columns) == {"diff", "grade", "intel", "_weight"}
+        True
+        >>> bool((samples["diff"] == 0).all())
+        True
         """
         if seed is not None:
             np.random.seed(seed)
@@ -406,11 +411,11 @@ class GibbsSampling(MarkovChain):
     >>> student.add_cpds(intel_cpd, sat_cpd)
     >>> from pgmpy.sampling import GibbsSampling
     >>> gibbs_chain = GibbsSampling(student)
-    >>> gibbs_chain.sample(size=3)
-       intel  sat
-    0      0    0
-    1      0    0
-    2      1    1
+    >>> samples = gibbs_chain.sample(size=3, seed=42)
+    >>> samples.columns.tolist()
+    ['intel', 'sat']
+    >>> samples.shape
+    (3, 2)
     """
 
     def __init__(self, model=None):
@@ -517,12 +522,11 @@ class GibbsSampling(MarkovChain):
         >>> factor_cb = DiscreteFactor(["C", "B"], [2, 2], [5, 6, 7, 8])
         >>> model.add_factors(factor_ab, factor_cb)
         >>> gibbs = GibbsSampling(model)
-        >>> gibbs.sample(size=4, return_tupe="dataframe")
-           A  B  C
-        0  0  1  1
-        1  1  0  0
-        2  1  1  0
-        3  1  1  1
+        >>> samples = gibbs.sample(size=4, seed=42)
+        >>> samples.columns.tolist()
+        ['A', 'B', 'C']
+        >>> samples.shape
+        (4, 3)
         """
         if start_state is None and self.state is None:
             self.state = self.random_state()
@@ -568,10 +572,12 @@ class GibbsSampling(MarkovChain):
         >>> factor_cb = DiscreteFactor(["C", "B"], [2, 2], [5, 6, 7, 8])
         >>> model.add_factors(factor_ab, factor_cb)
         >>> gibbs = GibbsSampling(model)
-        >>> gen = gibbs.generate_sample(size=2)
-        >>> [sample for sample in gen]
-        [[State(var='C', state=1), State(var='B', state=1), State(var='A', state=0)],
-         [State(var='C', state=0), State(var='B', state=1), State(var='A', state=1)]]
+        >>> gen = gibbs.generate_sample(size=2, seed=42)
+        >>> samples = [sample for sample in gen]
+        >>> len(samples)
+        2
+        >>> [state.var for state in samples[0]]
+        [np.str_('A'), np.str_('B'), np.str_('C')]
         """
         if seed is not None:
             np.random.seed(seed)
