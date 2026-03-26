@@ -459,7 +459,6 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
 
 
     @classmethod
-    @classmethod
     def from_dagitty(cls, string=None, filename=None):
         """
         Returns a PDAG instance from a dagitty pdag string.
