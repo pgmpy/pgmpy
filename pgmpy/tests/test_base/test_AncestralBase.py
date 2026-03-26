@@ -255,14 +255,16 @@ class TestAncestralBase:
 
     def test_to_dagitty_simple(self):
         graph = AncestralBase([("A", "B", "-", ">"), ("B", "C", "-", ">")])
+        graph.exposures = {"A"}
         graph.outcomes = {"B", "C"}
         dag_str = graph.to_dagitty()
 
         assert "ancestralbase {" in dag_str
         assert "A -> B" in dag_str
         assert "B -> C" in dag_str
-        assert "B [outcomes]" in dag_str
-        assert "C [outcomes]" in dag_str
+        assert "A [exposure]" in dag_str
+        assert "B [outcome]" in dag_str
+        assert "C [outcome]" in dag_str
         assert dag_str[-1] == "}"
 
     def test_to_dagitty_complex(self):
@@ -282,8 +284,8 @@ class TestAncestralBase:
         assert "A @-> B" in dag_str
         assert "B -> C" in dag_str
         assert "C @-@ E" in dag_str
-        assert "D [outcomes]" in dag_str
-        assert "E [outcomes]" in dag_str
+        assert "D [outcome]" in dag_str
+        assert "E [outcome]" in dag_str
         assert "A [latents]" in dag_str
         assert dag_str[-1] == "}"
 
