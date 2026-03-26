@@ -83,7 +83,7 @@ class TabularCPD(DiscreteFactor):
     ...         "grade": ["A", "B", "C"],
     ...     },
     ... )
-    >>> print(cpd)
+    >>> print(cpd) # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
     +----------+------------+-----+------------+-------------+
     | diff     | diff(easy) | ... | diff(hard) | diff(hard)  |
     +----------+------------+-----+------------+-------------+
@@ -541,7 +541,7 @@ class TabularCPD(DiscreteFactor):
         ...     evidence_card=[2],
         ... )
         >>> factor = cpd.to_factor()
-        >>> factor
+        >>> factor # doctest: +ELLIPSIS
         <DiscreteFactor representing phi(grade:3, evi1:2) at 0x...>
         """
         factor = DiscreteFactor.__new__(DiscreteFactor)
@@ -582,7 +582,7 @@ class TabularCPD(DiscreteFactor):
         ...     evidence=["diff", "intel"],
         ...     evidence_card=[2, 3],
         ... )
-        >>> print(cpd)
+        >>> print(cpd) # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
         +----------+----------+----------+----------+----------+----------+----------+
         | diff     | diff(0)  | diff(0)  | diff(0)  | diff(1)  | diff(1)  | diff(1)  |
         +----------+----------+----------+----------+----------+----------+----------+
@@ -615,7 +615,7 @@ class TabularCPD(DiscreteFactor):
         array([[0.1, 0.4, 0.1, 0.2, 0. , 0.1],
                [0.3, 0.4, 0.2, 0.3, 0.1, 0.2],
                [0.6, 0.2, 0.7, 0.5, 0.9, 0.7]])
-        >>> print(cpd)
+        >>> print(cpd) # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
         +----------+----------+----------+----------+----------+----------+----------+
         | intel    | intel(0) | intel(0) | intel(1) | intel(1) | intel(2) | intel(2) |
         +----------+----------+----------+----------+----------+----------+----------+
@@ -722,14 +722,14 @@ class TabularCPD(DiscreteFactor):
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> TabularCPD.get_random(
         ...     variable="A", evidence=["B", "C"], cardinality={"A": 3, "B": 2, "C": 4}
-        ... )
+        ... ) # doctest: +ELLIPSIS
         <TabularCPD representing P(A:3 | ...) at 0x...>
         >>> TabularCPD.get_random(
         ...     variable="A",
         ...     evidence=["B", "C"],
         ...     cardinality={"A": 2, "B": 2, "C": 2},
         ...     state_names={"A": ["a1", "a2"], "B": ["b1", "b2"], "C": ["c1", "c2"]},
-        ... )
+        ... ) # doctest: +ELLIPSIS
         <TabularCPD representing P(A:2 | B:2, C:2) at 0x...>
         """
         generator = np.random.default_rng(seed=seed)
@@ -804,14 +804,14 @@ class TabularCPD(DiscreteFactor):
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> TabularCPD.get_uniform(
         ...     variable="A", evidence=["B", "C"], cardinality={"A": 3, "B": 2, "C": 4}
-        ... )
+        ... ) # doctest: +ELLIPSIS
         <TabularCPD representing P(A:3 | ...) at 0x...>
         >>> TabularCPD.get_uniform(
         ...     variable="A",
         ...     evidence=["B", "C"],
         ...     cardinality={"A": 2, "B": 2, "C": 2},
         ...     state_names={"A": ["a1", "a2"], "B": ["b1", "b2"], "C": ["c1", "c2"]},
-        ... )
+        ... ) # doctest: +ELLIPSIS
         <TabularCPD representing P(A:2 | B:2, C:2) at 0x...>
         """
         if evidence is None:

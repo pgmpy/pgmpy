@@ -584,7 +584,7 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         X -> Y
         L [latents]
         Y [outcome]
-        X [exposures]
+        X [exposure]
         }
 
         References
@@ -615,9 +615,10 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
                 else:
                     lines.append(f"{u} {symbol} {v}")
 
+        dagitty_role_map = {"exposures": "exposure", "outcomes": "outcome"}
         for role in self.get_roles():
             for var in self.get_role(role):
-                lines.append(f"{var} [{role}]")
+                lines.append(f"{var} [{dagitty_role_map.get(role, role)}]")
 
         lines.append("}")
         return "\n".join(lines)
