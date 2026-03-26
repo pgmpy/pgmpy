@@ -45,7 +45,14 @@ class BaseStructureScore(BaseObject):
         self._cached_local_score = lru_cache(maxsize=10000)(self._local_score)
 
     def local_score(self, variable: str, parents: tuple[str, ...]) -> float:
-        """Compute the cached local score for `variable` given `parents`."""
+        """
+        Compute the cached local score for `variable` given `parents`.
+
+        Returns
+        -------
+        float
+            The cached local score for the variable-parent family.
+        """
         return self._cached_local_score(variable, parents)
 
     def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
@@ -53,7 +60,14 @@ class BaseStructureScore(BaseObject):
         raise NotImplementedError
 
     def score(self, model) -> float:
-        """Compute a structure score for a model."""
+        """
+        Compute a structure score for a model.
+
+        Returns
+        -------
+        float
+            The total structure score for the model, including the structure prior.
+        """
         score = 0
         for node in model.nodes():
             score += self.local_score(node, tuple(model.predecessors(node)))
@@ -61,11 +75,25 @@ class BaseStructureScore(BaseObject):
         return score
 
     def structure_prior(self, model) -> float:
-        """Return the log prior over structures."""
+        """
+        Return the log prior over structures.
+
+        Returns
+        -------
+        float
+            The log prior contribution for the full model structure.
+        """
         return 0
 
     def structure_prior_ratio(self, operation) -> float:
-        """Return the log prior ratio for a structure operation."""
+        """
+        Return the log prior ratio for a structure operation.
+
+        Returns
+        -------
+        float
+            The log prior ratio associated with the proposed structure edit.
+        """
         return 0
 
     def state_counts(
@@ -75,7 +103,14 @@ class BaseStructureScore(BaseObject):
         weighted: bool = False,
         reindex: bool = True,
     ) -> pd.DataFrame:
-        """Return state counts for `variable`, optionally conditioned on `parents`."""
+        """
+        Return state counts for `variable`, optionally conditioned on `parents`.
+
+        Returns
+        -------
+        pandas.DataFrame
+            A contingency table of state counts for the variable and parent configuration.
+        """
         return get_state_counts(
             data=self.data,
             state_names=self.state_names,
