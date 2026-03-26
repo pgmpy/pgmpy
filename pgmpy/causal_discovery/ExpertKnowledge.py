@@ -262,22 +262,20 @@ class ExpertKnowledge:
 
         return pdag
 
-    def limit_search_space(self, data_coulumn_labels):
+    def limit_search_space(self, data_column_labels):
         """
         Forms an additive set of forbidden edges.
 
-        The method subtracts the configured search space from the set of all
-        possible directed edges over `data_coulumn_labels` and merges the
-        result into `self.forbidden_edges`.
+        The method subtracts the configured search space from the set of all possible directed edges over
+        `data_column_labels` and merges the result into `self.forbidden_edges`.
 
         Parameters
         ----------
-        data_coulumn_labels: set | list | pd.DataFrame.columns
-            Set of edges to be used for structure learning.
-            If None, all possible edges are used.
+        data_column_labels: set | list | pd.DataFrame.columns
+            Set of edges to be used for structure learning. If None, all possible edges are used.
         """
         # Generate all possible edges
-        all_possible_edges = set(permutations(data_coulumn_labels, 2))
+        all_possible_edges = set(permutations(data_column_labels, 2))
 
         # Calculate forbidden edges by subtracting the search space from all possible edges
         forbidden_edges_additive = set(all_possible_edges) - self.search_space
