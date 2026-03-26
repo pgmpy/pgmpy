@@ -684,6 +684,11 @@ class TestPDAGDagitty(unittest.TestCase):
         self.assertIn("X -> Y", result)
         self.assertIn("A -- B", result)
 
+        # graph with isolated node
+        pdag_iso = PDAG(directed_ebunch=[("X", "Y")])
+        pdag_iso.add_node("Z")
+        self.assertIn("Z", pdag_iso.to_dagitty())
+
         # empty graph
         self.assertEqual(PDAG().to_dagitty(), "pdag {\n}")
 
