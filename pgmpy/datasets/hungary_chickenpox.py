@@ -26,11 +26,11 @@ class HungaryChickenpox(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/hungary-chickenpox/"
+    base_url = "real/hungary-chickenpox"
 
-    data_url = base_url + "data/hungary-chickenpox.continuous.txt"
+    data_url = "data/hungary-chickenpox.continuous.txt"
 
-    ground_truth_url = base_url + "ground.truth/hungary_dag.txt"
+    ground_truth_url = "ground.truth/hungary_dag.txt"
     expert_knowledge_url = None
 
     categorical_variables = []
