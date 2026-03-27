@@ -30,6 +30,7 @@ pgmpy/estimators/MLE.py
 pgmpy/estimators/MmhcEstimator.py
 pgmpy/estimators/PC.py
 pgmpy/factors/discrete/CPD.py
+pgmpy/factors/discrete/DiscreteFactor.py
 pgmpy/factors/continuous/LinearGaussianCPD.py
 pgmpy/factors/FactorSet.py
 pgmpy/factors/discrete/JointProbabilityDistribution.py
