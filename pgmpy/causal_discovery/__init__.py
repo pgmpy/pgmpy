@@ -14,7 +14,7 @@ __all__ = [
 
 def __getattr__(name):
     if name == "CASTLE":
-        from pgmpy.causal_discovery.CASTLE import CASTLE
+        from pgmpy.causal_discovery.castle import CASTLE
 
         return CASTLE
     raise AttributeError(f"module 'pgmpy.causal_discovery' has no attribute {name!r}")
