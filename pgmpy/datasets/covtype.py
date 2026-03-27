@@ -18,10 +18,10 @@ class CoverType(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/covertype/"
+    base_url = "real/covertype"
 
-    data_url = base_url + "data/covtype.11vars.mixed.maximum.7.txt"
+    data_url = "data/covtype.11vars.mixed.maximum.7.txt"
     ground_truth_url = None
-    expert_knowledge_url = base_url + "ground.truth/covertype.knowledge.txt"
+    expert_knowledge_url = "ground.truth/covertype.knowledge.txt"
     categorical_variables = ["Type"]
     ordinal_variables = dict()

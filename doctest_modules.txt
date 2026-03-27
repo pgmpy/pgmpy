@@ -33,6 +33,7 @@ pgmpy/factors/discrete/CPD.py
 pgmpy/factors/discrete/DiscreteFactor.py
 pgmpy/factors/continuous/LinearGaussianCPD.py
 pgmpy/factors/FactorSet.py
+pgmpy/factors/discrete/JointProbabilityDistribution.py
 pgmpy/independencies/Independencies.py
 pgmpy/inference/ApproxInference.py
 pgmpy/inference/CausalInference.py
@@ -65,3 +66,4 @@ pgmpy/structure_score/log_likelihood.py
 pgmpy/structure_score/log_likelihood_cond_gauss.py
 pgmpy/structure_score/log_likelihood_gauss.py
 pgmpy/utils/mathext.py
+pgmpy/utils/state_name.py

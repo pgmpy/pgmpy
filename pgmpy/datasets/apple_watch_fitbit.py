@@ -24,11 +24,11 @@ class AppleWatchFitbit(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/apple-watch-fitbit/"
+    base_url = "real/apple-watch-fitbit"
 
-    data_url = base_url + "data/aw-fb-pruned18.data.mixed.maximum.6.txt"
+    data_url = "data/aw-fb-pruned18.data.mixed.maximum.6.txt"
     ground_truth_url = None
-    expert_knowledge_url = base_url + "ground.truth/aw-fb-pruned18.knowledge.txt"
+    expert_knowledge_url = "ground.truth/aw-fb-pruned18.knowledge.txt"
 
     categorical_variables = [
         "gender",
