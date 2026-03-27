@@ -50,6 +50,7 @@ pgmpy/models/JunctionTree.py
 pgmpy/models/LinearGaussianBayesianNetwork.py
 pgmpy/models/MarkovChain.py
 pgmpy/models/NaiveBayes.py
+pgmpy/prediction/DoubleMLRegressor.py
 pgmpy/structure_score/_base.py
 pgmpy/structure_score/aic.py
 pgmpy/structure_score/aic_cond_gauss.py
