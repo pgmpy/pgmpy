@@ -705,8 +705,8 @@ class TestDAGCreation(unittest.TestCase):
         self.assertNotIn("n_mediators", stats)
         self.assertNotIn("n_confounding_paths", stats)
 
-        model.with_role("exposure", {"Raf"}, inplace=True)
-        model.with_role("outcome", {"Mek"}, inplace=True)
+        model.with_role("exposures", {"Raf"}, inplace=True)
+        model.with_role("outcomes", {"Mek"}, inplace=True)
         stats = model.get_stats()
         self.assertEqual(stats["n_nodes"], 11)
         self.assertEqual(stats["n_edges"], 17)
