@@ -18,8 +18,8 @@ Bayesian Networks and DAGs that can then be plotted using graphviz.
 .. code-block:: python
 
    # Get an example model
-   from pgmpy.utils import get_example_model
-   model = get_example_model("sachs")
+   from pgmpy.example_models import load_model
+   model = load_model("bnlearn/sachs")
 
    # Convert model into pygraphviz object
    model_graphviz = model.to_graphviz()
@@ -44,8 +44,8 @@ Daft is a python package that uses matplotlib to render high quality plots suita
 .. code-block:: python
 
    # Get an example model
-   from pgmpy.utils import get_example_model
-   model = get_example_model("sachs")
+   from pgmpy.example_models import load_model
+   model = load_model("bnlearn/sachs")
 
    # Get a daft object.
    model_daft = model.to_daft()
@@ -78,8 +78,8 @@ Lastly, as both `pgmpy.models.BayesianNetwork` and `pgmpy.base.DAG` inherit `net
    import matplotlib.pyplot as plt
 
    # Get an example model
-   from pgmpy.utils import get_example_model
-   model = get_example_model("sachs")
+   from pgmpy.example_models import load_model
+   model = load_model("bnlearn/sachs")
 
    # Plot the model
    nx.draw(model)

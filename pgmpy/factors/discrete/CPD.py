@@ -11,10 +11,9 @@ from shutil import get_terminal_size
 import numpy as np
 import pandas as pd
 
-from pgmpy import config
+from pgmpy import config, logger
 from pgmpy.extern import tabulate
 from pgmpy.factors.discrete import DiscreteFactor
-from pgmpy.global_vars import logger
 from pgmpy.utils import compat_fns
 
 
@@ -84,7 +83,7 @@ class TabularCPD(DiscreteFactor):
     ...         "grade": ["A", "B", "C"],
     ...     },
     ... )
-    >>> print(cpd)
+    >>> print(cpd) # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
     +----------+------------+-----+------------+-------------+
     | diff     | diff(easy) | ... | diff(hard) | diff(hard)  |
     +----------+------------+-----+------------+-------------+
@@ -294,8 +293,8 @@ class TabularCPD(DiscreteFactor):
 
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model(model="alarm")
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/alarm")
         >>> cpd = model.get_cpds(node="SAO2")
         >>> cpd.to_csv(filename="sao2.csv")
         """
@@ -309,8 +308,8 @@ class TabularCPD(DiscreteFactor):
 
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model(model="insurance")
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/insurance")
         >>> cpd = model.get_cpds(node="ThisCarCost")
         >>> df = cpd.to_dataframe()
         >>> df.query(
@@ -545,7 +544,7 @@ class TabularCPD(DiscreteFactor):
         ...     evidence_card=[2],
         ... )
         >>> factor = cpd.to_factor()
-        >>> factor
+        >>> factor # doctest: +ELLIPSIS
         <DiscreteFactor representing phi(grade:3, evi1:2) at 0x...>
         """
         factor = DiscreteFactor.__new__(DiscreteFactor)
@@ -586,7 +585,7 @@ class TabularCPD(DiscreteFactor):
         ...     evidence=["diff", "intel"],
         ...     evidence_card=[2, 3],
         ... )
-        >>> print(cpd)
+        >>> print(cpd) # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
         +----------+----------+----------+----------+----------+----------+----------+
         | diff     | diff(0)  | diff(0)  | diff(0)  | diff(1)  | diff(1)  | diff(1)  |
         +----------+----------+----------+----------+----------+----------+----------+
@@ -619,7 +618,7 @@ class TabularCPD(DiscreteFactor):
         array([[0.1, 0.4, 0.1, 0.2, 0. , 0.1],
                [0.3, 0.4, 0.2, 0.3, 0.1, 0.2],
                [0.6, 0.2, 0.7, 0.5, 0.9, 0.7]])
-        >>> print(cpd)
+        >>> print(cpd) # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
         +----------+----------+----------+----------+----------+----------+----------+
         | intel    | intel(0) | intel(0) | intel(1) | intel(1) | intel(2) | intel(2) |
         +----------+----------+----------+----------+----------+----------+----------+
@@ -726,14 +725,14 @@ class TabularCPD(DiscreteFactor):
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> TabularCPD.get_random(
         ...     variable="A", evidence=["B", "C"], cardinality={"A": 3, "B": 2, "C": 4}
-        ... )
+        ... ) # doctest: +ELLIPSIS
         <TabularCPD representing P(A:3 | ...) at 0x...>
         >>> TabularCPD.get_random(
         ...     variable="A",
         ...     evidence=["B", "C"],
         ...     cardinality={"A": 2, "B": 2, "C": 2},
         ...     state_names={"A": ["a1", "a2"], "B": ["b1", "b2"], "C": ["c1", "c2"]},
-        ... )
+        ... ) # doctest: +ELLIPSIS
         <TabularCPD representing P(A:2 | B:2, C:2) at 0x...>
         """
         generator = np.random.default_rng(seed=seed)
@@ -808,14 +807,14 @@ class TabularCPD(DiscreteFactor):
         >>> from pgmpy.factors.discrete import TabularCPD
         >>> TabularCPD.get_uniform(
         ...     variable="A", evidence=["B", "C"], cardinality={"A": 3, "B": 2, "C": 4}
-        ... )
+        ... ) # doctest: +ELLIPSIS
         <TabularCPD representing P(A:3 | ...) at 0x...>
         >>> TabularCPD.get_uniform(
         ...     variable="A",
         ...     evidence=["B", "C"],
         ...     cardinality={"A": 2, "B": 2, "C": 2},
         ...     state_names={"A": ["a1", "a2"], "B": ["b1", "b2"], "C": ["c1", "c2"]},
-        ... )
+        ... ) # doctest: +ELLIPSIS
         <TabularCPD representing P(A:2 | B:2, C:2) at 0x...>
         """
         if evidence is None:

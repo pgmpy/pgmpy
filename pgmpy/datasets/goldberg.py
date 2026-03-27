@@ -18,8 +18,8 @@ class Goldberg(_CovarianceMixin, _BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/goldberg/"
+    base_url = "real/goldberg"
 
-    data_url = base_url + "data/goldberg.cov.txt"
+    data_url = "data/goldberg.cov.txt"
     ground_truth_url = None
     expert_knowledge_url = None

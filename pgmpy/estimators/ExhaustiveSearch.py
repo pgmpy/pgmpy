@@ -4,10 +4,10 @@ from itertools import combinations
 
 import networkx as nx
 
+from pgmpy import logger
 from pgmpy.base import DAG
 from pgmpy.estimators import StructureEstimator
 from pgmpy.estimators.StructureScore import get_scoring_method
-from pgmpy.global_vars import logger
 from pgmpy.utils.mathext import powerset
 
 

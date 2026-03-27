@@ -34,7 +34,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install .[all,tests,optional]
+          pip install .[all]
           pip install nbmake
 
       - name: Run notebooks

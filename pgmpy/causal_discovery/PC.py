@@ -5,10 +5,9 @@ import networkx as nx
 import pandas as pd
 
 from pgmpy.base import PDAG, UndirectedGraph
-from pgmpy.causal_discovery import _ConstraintMixin
-from pgmpy.causal_discovery._base import _BaseCausalDiscovery
+from pgmpy.causal_discovery import ExpertKnowledge
+from pgmpy.causal_discovery._base import _BaseCausalDiscovery, _ConstraintMixin
 from pgmpy.ci_tests import get_ci_test
-from pgmpy.estimators import ExpertKnowledge
 
 
 class PC(_ConstraintMixin, _BaseCausalDiscovery):
@@ -149,8 +148,8 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
     --------
     Simulate some data to use for causal discovery:
 
-    >>> from pgmpy.utils import get_example_model
-    >>> model = get_example_model("alarm")
+    >>> from pgmpy.example_models import load_model
+    >>> model = load_model("bnlearn/alarm")
     >>> df = model.simulate(n_samples=1000, seed=42)
 
     Use the PC algorithm to learn the causal structure from data:
@@ -314,15 +313,12 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
         >>> import pandas as pd
         >>> import numpy as np
         >>> from pgmpy.causal_discovery import PC
-        >>> rng = np.random.default_rng(42)
-        >>> data = pd.DataFrame(rng.integers(0, 4, size=(5000, 3)), columns=list("ABD"))
-        >>> data["C"] = data["A"] - data["B"]
-        >>> data["D"] += data["A"]
-        >>> c = PC()
-        >>> _ = c.fit(data)
-        >>> pdag = c._orient_colliders(c.skeleton_, c.separating_sets_)
-        >>> sorted(pdag.edges())  # edges: A->C, B->C, A--D (not directed)
-        [('A', 'C'), ('A', 'D'), ('B', 'C'), ('D', 'A'), ('D', 'C')]
+        >>> from pgmpy.example_models import load_model
+        >>> df = load_model("bnlearn/cancer").simulate(int(1e3), seed=42)
+        >>> est = PC(ci_test='chi_square').fit(df)
+        >>> pdag = est._orient_colliders(est.skeleton_, est.separating_sets_)
+        >>> sorted(pdag.edges())
+        [('Pollution', 'Cancer'), ('Xray', 'Cancer')]
         """
 
         pdag = skeleton.to_directed()
