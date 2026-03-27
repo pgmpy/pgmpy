@@ -131,7 +131,7 @@ Every new function or bug fix must include tests:
 
 ## AI Usage Policy
 
-We welcome thoughtful use of AI coding tools (Copilot, ChatGPT, Claude, Cursor, etc.) as development aids. That said, every contributor is fully responsible for the code they submit, regardless of how it was produced. Additionally, we expect the contributor to **fully disclose** the tool used and how it was used. 
+We welcome thoughtful use of AI coding tools (Copilot, ChatGPT, Claude, Cursor, etc.) as development aids. That said, every contributor is fully responsible for the code they submit, regardless of how it was produced. Additionally, we expect the contributor to **fully disclose** the tool used and how it was used.
 
 **Guidelines:**
 
