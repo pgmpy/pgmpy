@@ -164,7 +164,7 @@ class TabularCPD(DiscreteFactor):
         if values_casted.shape != expected_cpd_shape:
             raise ValueError(f"values must be of shape {expected_cpd_shape}. Got shape: {values.shape}")
 
-        if not (values_casted >= 0).all():
+        if (values_casted < 0).any():
             raise ValueError("CPD values must be non-negative.")
 
         if not isinstance(state_names, dict):
