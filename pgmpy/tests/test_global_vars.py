@@ -81,13 +81,7 @@ class TestConfig:
         assert config.SHOW_PROGRESS is False
         assert config.get_show_progress() is False
 
-        def test_torch_dtype_string_conversion(self):
-            import torch
+    def test_torch_dtype_string_conversion(self):
+        config.set_backend("torch", dtype="float32")
 
-            from pgmpy import config
-
-            config.set_backend("torch", dtype="float32")
-
-            assert config.get_dtype() == torch.float32
-
-            config.set_backend("numpy")
+        assert config.get_dtype() == torch.float32
