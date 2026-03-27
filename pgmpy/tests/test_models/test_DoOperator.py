@@ -1,5 +1,5 @@
 import pytest
-from pgmpy.models import BayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.factors.discrete import TabularCPD
 
 
@@ -7,7 +7,7 @@ def test_do_operator():
     """Test the do operator.
      Create model"""
     
-    model = BayesianNetwork([("A", "B")])
+    model = DiscreteBayesianNetwork([("A", "B")])
 
     # Define CPDs
     cpd_A = TabularCPD(variable="A", variable_card=2,
