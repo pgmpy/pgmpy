@@ -10,9 +10,10 @@ import pandas as pd
 import pytest
 
 from pgmpy.base import DAG
-from pgmpy.causal_discovery import CASTLE
 
 pytest.importorskip("torch", reason="torch is required for CASTLE tests")
+
+from pgmpy.causal_discovery import CASTLE
 
 
 @pytest.fixture
