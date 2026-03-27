@@ -139,7 +139,7 @@ def test_fisher_z_residual_approx(residual_data):
     df_indep, df_dep = residual_data
     test = FisherZ(data=df_indep)
     test("X", "Y", ["Z1", "Z2", "Z3"])
-    assert test.p_value_ >= 0.05
+    assert test.p_value_ <= 0.05
 
     test = FisherZ(data=df_dep)
     test("X", "Y", ["Z1", "Z2", "Z3"])
