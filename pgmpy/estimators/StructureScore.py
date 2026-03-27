@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from math import lgamma, log
 
 import numpy as np
@@ -10,6 +11,13 @@ from scipy.stats import multivariate_normal
 
 from pgmpy.estimators import BaseEstimator
 from pgmpy.utils import get_dataset_type
+
+warnings.warn(
+    "`pgmpy.estimators.StructureScore` is deprecated and will be removed in a future release. "
+    "Use `pgmpy.structure_score` instead.",
+    FutureWarning,
+    stacklevel=2,
+)
 
 
 def get_scoring_method(

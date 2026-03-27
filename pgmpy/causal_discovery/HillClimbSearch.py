@@ -9,7 +9,7 @@ from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery, _ScoreMixin
-from pgmpy.estimators.StructureScore import StructureScore, get_scoring_method
+from pgmpy.structure_score import BaseStructureScore, get_scoring_method
 
 
 class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
@@ -34,7 +34,7 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
 
     Parameters
     ----------
-    scoring_method : str or StructureScore instance, default=None
+    scoring_method : str or BaseStructureScore instance, default=None
         The score to be optimized during structure estimation. Supported
         structure scores:
 
@@ -44,7 +44,7 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
 
         If None, the appropriate scoring method is automatically selected based
         on the data type. Also accepts a custom score instance that inherits
-        from `StructureScore`.
+        from `BaseStructureScore`.
 
     start_dag : DAG instance, default=None
         The starting point for the local search. By default, a completely
@@ -83,11 +83,6 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
         The maximum number of iterations allowed. The algorithm terminates
         and returns the learned model when the number of iterations exceeds
         `max_iter`.
-
-    use_cache : bool, default=True
-        If True, uses caching of local scores for faster computation.
-        Note: Caching only works for scoring methods which are decomposable.
-        Can give incorrect results for custom non-decomposable scoring methods.
 
     show_progress : bool, default=True
         If True, shows a progress bar while learning the causal structure.
@@ -136,7 +131,7 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
 
     def __init__(
         self,
-        scoring_method: str | StructureScore | None = None,
+        scoring_method: str | BaseStructureScore | None = None,
         start_dag: DAG | None = None,
         tabu_length: int = 100,
         max_indegree: int | None = None,
@@ -144,7 +139,6 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
         return_type: str = "pdag",
         epsilon: float = 1e-4,
         max_iter: int = int(1e6),
-        use_cache: bool = True,
         show_progress: bool = True,
     ):
         self.scoring_method = scoring_method
@@ -155,7 +149,6 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
         self.return_type = return_type
         self.epsilon = epsilon
         self.max_iter = max_iter
-        self.use_cache = use_cache
         self.show_progress = show_progress
 
     def _fit(self, X: pd.DataFrame):
@@ -176,9 +169,8 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
         self.variables_ = list(X.columns)
 
         # Step 1: Initial checks and setup for arguments
-        # Step 1.1: Check scoring_method
-        score, score_c = get_scoring_method(self.scoring_method, X, self.use_cache)
-        score_fn = score_c.local_score
+        # Step 1.1: Check score
+        score = get_scoring_method(self.scoring_method, X)
 
         # Step 1.2: Check the start_dag
         if self.start_dag is None:
@@ -228,8 +220,7 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
             best_operation, best_score_delta = max(
                 self._legal_operations_dag(
                     model=current_model,
-                    score=score_fn,
-                    structure_score=score.structure_prior_ratio,
+                    scoring_method=score,
                     tabu_list=tabu_list,
                     max_indegree=max_indegree,
                     forbidden_edges=expert_knowledge.forbidden_edges,

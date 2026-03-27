@@ -22,7 +22,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
     dependencies between these.
 
     Abstract roles can be assigned to nodes in the graph, such as
-    exposure, outcome, adjustment set, etc. These roles are used, or created,
+    exposures, outcomes, adjustment sets, etc. These roles are used, or created,
     by algorithms that use the graph, such as causal inference,
     causal discovery, causal prediction.
 
