@@ -7,7 +7,6 @@ import unittest
 import numpy as np
 import pandas as pd
 import pytest
-from dagma.linear import DagmaLinear as OfficialDagmaLinear
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.base import DAG
@@ -88,12 +87,7 @@ class TestDagmaLinearCore:
         """
         Ensure custom hyperparameters are strictly mapped to the instance.
         """
-        est = DagmaLinear(s=2.0,
-                          lambda1=0.1,
-                          mu_init=2.0,
-                          mu_factor=0.5,
-                          max_iter=50,
-                          w_threshold=0.4)
+        est = DagmaLinear(s=2.0, lambda1=0.1, mu_init=2.0, mu_factor=0.5, max_iter=50, w_threshold=0.4)
         assert est.s == 2.0
         assert est.lambda1 == 0.1
         assert est.mu_init == 2.0
@@ -106,11 +100,14 @@ class TestDagmaLinearCore:
         Compare the adjacency matrix output of pgmpy's DagmaLinear
         with the official dagma package implementation.
         """
+        try:
+            from dagma.linear import DagmaLinear as OfficialDagmaLinear
+        except ImportError:
+            pytest.skip("Official 'dagma' not installed.")
 
         # 1. Run official DAGMA
         model_official = OfficialDagmaLinear(loss_type="l2")
-        W_official = model_official.fit(continuous_data.to_numpy().copy(),
-                                        lambda1=0.05)
+        W_official = model_official.fit(continuous_data.to_numpy().copy(), lambda1=0.05)
 
         # 2. Run pgmpy's DAGMA
         est = DagmaLinear(lambda1=0.05)
@@ -154,8 +151,7 @@ class TestDagmaLinear(unittest.TestCase):
         self.assertIsInstance(estimator.causal_graph_, DAG)
 
         # 2. Check if the extracted feature names match the dataframe columns
-        np.testing.assert_array_equal(estimator.feature_names_in_,
-                                      ["X", "Y", "Z"])
+        np.testing.assert_array_equal(estimator.feature_names_in_, ["X", "Y", "Z"])
 
         # 3. Check if the estimated adjacency matrix
         # was saved and is a NumPy array
@@ -166,8 +162,7 @@ class TestDagmaLinear(unittest.TestCase):
         learned_edges = list(estimator.causal_graph_.edges())
         self.assertIn(("X", "Y"), learned_edges)
         self.assertIn(("Y", "Z"), learned_edges)
-        self.assertNotIn(("Z", "X"),
-                         learned_edges)
+        self.assertNotIn(("Z", "X"), learned_edges)
 
     def test_custom_hyperparameters(self):
         """
