@@ -17,3 +17,4 @@ examples/Structure_Learning_Chow_Liu.ipynb
 examples/Structure_Learning_TAN.ipynb
 examples/Expert_Knowledge.ipynb
 examples/Parameter_Learning_Factor_Graphs.ipynb
+examples/Simulating_Data.ipynb
