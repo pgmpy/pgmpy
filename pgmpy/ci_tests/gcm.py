@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 from scipy import stats
+from sklearn.base import clone
+from sklearn.linear_model import LinearRegression
 
 from ._base import _BaseCITest
 
@@ -9,7 +11,7 @@ class GCM(_BaseCITest):
     r"""
     Generalized Covariance Measure (GCM) [1] test for conditional independence.
 
-    Regress :math:`X` and :math:`Y` on :math:`[1, Z]` using least squares, let :math:`r_X` and :math:`r_Y` denote the
+    Fit an estimator on :math:`X` and :math:`Y` on :math:`[1, Z]`, let :math:`r_X` and :math:`r_Y` denote the
     resulting residuals, and define :math:`U_i = r_{X, i} r_{Y, i}`. The resulting test statistic is
 
     .. math::
@@ -22,6 +24,9 @@ class GCM(_BaseCITest):
     ----------
     data : pandas.DataFrame
         The dataset in which to test the independence condition.
+    estimator: optional (default=None)
+        Any regressor with fit and predict methods to compute residuals. If None, LinearRegression() is used
+        as default.
 
     Attributes
     ----------
@@ -43,8 +48,29 @@ class GCM(_BaseCITest):
         "requires_data": True,
     }
 
-    def __init__(self, data: pd.DataFrame):
+    def __init__(self, data: pd.DataFrame, estimator=None):
         self.data = data
+        if estimator is None:
+            self.estimator = LinearRegression()
+        elif not (hasattr(estimator, "fit") and hasattr(estimator, "predict")):
+            raise ValueError(f"estimator must have fit and predict methods. Got {type(estimator)} instead.")
+        else:
+            # Ensure estimator is scikit-learn compatible and cloneable,
+            # since run_test uses sklearn.base.clone.
+            if not hasattr(estimator, "get_params"):
+                raise ValueError(
+                    "estimator must be a scikit-learn compatible estimator with a get_params method. "
+                    f"Got {type(estimator)} instead."
+                )
+            try:
+                # This will raise TypeError/ValueError if the estimator is not cloneable.
+                clone(estimator)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    "estimator must be cloneable via sklearn.base.clone. "
+                    f"Got non-cloneable estimator of type {type(estimator)}."
+                ) from exc
+            self.estimator = estimator
         super().__init__()
 
     def run_test(
@@ -58,16 +84,17 @@ class GCM(_BaseCITest):
 
         Sets ``self.statistic_`` (t-statistic) and ``self.p_value_``.
         """
-        # Step 1.1: Add another column with constant values to handle intercepts.
+        # Step 1: Append intercept column to ensure Z is never empty
         data = self.data
-        Z_aug = list(Z) + ["intercept"]
-        data_aug = data.assign(intercept=np.ones(data.shape[0]))
+        Z_data = np.column_stack([data.loc[:, list(Z)].values, np.ones(data.shape[0])])
 
-        # Step 2: Compute the linear regression and the residuals
-        X_coef = np.linalg.lstsq(data_aug.loc[:, Z_aug], data_aug.loc[:, X], rcond=None)[0]
-        Y_coef = np.linalg.lstsq(data_aug.loc[:, Z_aug], data_aug.loc[:, Y], rcond=None)[0]
-        res_x = data_aug.loc[:, X] - data_aug.loc[:, Z_aug].dot(X_coef)
-        res_y = data_aug.loc[:, Y] - data_aug.loc[:, Z_aug].dot(Y_coef)
+        # Step 2: Compute residuals using the provided estimator
+        est_x = clone(self.estimator)
+        est_y = clone(self.estimator)
+        est_x.fit(Z_data, data.loc[:, X])
+        est_y.fit(Z_data, data.loc[:, Y])
+        res_x = data.loc[:, X] - est_x.predict(Z_data)
+        res_y = data.loc[:, Y] - est_y.predict(Z_data)
 
         # Step 3: Compute the Generalised Covariance Measure.
         n = res_x.shape[0]
