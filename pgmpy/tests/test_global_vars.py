@@ -81,6 +81,10 @@ class TestConfig:
         assert config.SHOW_PROGRESS is False
         assert config.get_show_progress() is False
 
+    @pytest.mark.skipif(
+        not _check_soft_dependencies("torch", severity="none"),
+        reason="test only if torch is available",
+    )
     def test_torch_dtype_string_conversion(self):
         config.set_backend("torch", dtype="float32")
 
