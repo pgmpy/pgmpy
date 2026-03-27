@@ -5,6 +5,7 @@ import pytest
 from pgmpy.ci_tests import GSq
 
 
+@pytest.fixture
 def test_q_sq():
     df_adult = pd.read_csv("pgmpy/tests/test_estimators/testdata/adult.csv")
     test = GSq(data=df_adult)
