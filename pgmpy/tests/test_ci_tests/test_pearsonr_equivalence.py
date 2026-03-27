@@ -1,5 +1,5 @@
 import os
-import unittest
+import pytest
 
 import numpy as np
 
@@ -7,10 +7,8 @@ from pgmpy.ci_tests import PearsonrEquivalence
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.models import LinearGaussianBayesianNetwork
 
-
-@unittest.skipIf(os.getenv("GITHUB_ACTIONS") == "true", "Skipping residual tests on GitHub Actions.")
-class TestPearsonrEquivalence(unittest.TestCase):
-    def setUp(self):
+@pytest.fixture
+def pearson_equivalence_data():
         np.random.seed(42)
 
         model_dep = LinearGaussianBayesianNetwork(
@@ -30,13 +28,28 @@ class TestPearsonrEquivalence(unittest.TestCase):
         cpd_x = LinearGaussianCPD("X", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
         cpd_y_dep = LinearGaussianCPD("Y", [0, 0.5, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3", "X"])
         model_dep.add_cpds(cpd_z1, cpd_z2, cpd_z3, cpd_x, cpd_y_dep)
-        self.df_dep = model_dep.simulate(n_samples=1000, seed=42)
+        df_dep = model_dep.simulate(n_samples=1000, seed=42)
 
-    def test_pearsonr_equivalence(self):
-        test = PearsonrEquivalence(data=self.df_dep, delta_threshold=0.1)
+        return df_dep
 
-        self.assertFalse(test("X", "Y", ["Z1", "Z2", "Z3"], significance_level=0.05))
+@pytest.mark.skipif(
+    os.getenv("GITHUB_ACTIONS") == "true",
+    reason="Skipping residual tests on GitHub Actions.",
+)
+def test_pearsonr_equivalence(pearson_equivalence_data):
+        test = PearsonrEquivalence(data=pearson_equivalence_data, delta_threshold=0.1)
+
+        assert not test("X", "Y", ["Z1", "Z2", "Z3"], significance_level=0.05)
 
         test("X", "Y", ["Z1", "Z2", "Z3"])
-        self.assertIsInstance(test.statistic_, float)
-        self.assertIsInstance(test.p_value_, float)
+        assert round(test.statistic_ ,2) == pytest.approx(0.43)
+        assert round(test.p_value_ ,2) == pytest.approx(1.0)
+
+def test_pearsonr_equivalence_approx(pearson_equivalence_data):
+        test = PearsonrEquivalence(data=pearson_equivalence_data, delta_threshold=0.1)
+
+        assert not test("X", "Y", ["Z1", "Z2", "Z3"], significance_level=0.05)
+
+        test("X", "Y", ["Z1", "Z2", "Z3"])
+        assert test.statistic_ <= 0.43
+        assert test.p_value_ <= 1.0
