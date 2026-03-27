@@ -92,8 +92,8 @@ class FunctionalCPD(BaseFactor):
         ... )
 
         >>> parent_samples = pd.DataFrame({"x1": [5, 10], "x2": [1, -1]})
-        >>> cpd.sample(2, parent_samples)
-        array([2.63669038, 2.8288095 ])
+        >>> cpd.sample(2, parent_samples) # xdoctest: +ELLIPSIS
+        array([2.63669..., 2.82880...])
         """
         sampled_values = []
 
@@ -114,9 +114,12 @@ class FunctionalCPD(BaseFactor):
             else:
                 for i in range(n_samples):
                     row = parent_sample.iloc[i]
+
+                    dtype = config.get_dtype()
+                    dtype = getattr(torch, dtype) if isinstance(dtype, str) else dtype
+
                     parents_t = {
-                        p: torch.as_tensor(row[p], dtype=config.get_dtype(), device=config.get_device())
-                        for p in self.parents
+                        p: torch.as_tensor(row[p], dtype=dtype, device=config.get_device()) for p in self.parents
                     }
                     sampled_values.append(pyro.sample(f"{self.variable}", self.fn(parents_t)).item())
 
