@@ -8,7 +8,6 @@ import pandas as pd
 
 from pgmpy import config
 from pgmpy.base import DAG
-from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery
 from pgmpy.ci_tests import get_ci_test
 from pgmpy.global_vars import logger
@@ -157,7 +156,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
         ci_test: str | None = None,
         orientation_fn: Callable = llm_pairwise_orient,
         orientations: set[tuple[str, str]] | None = None,
-        expert_knowledge: ExpertKnowledge | None = None,
+        expert_knowledge=None,
         use_cache: bool = True,
         show_progress: bool = True,
     ):

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numbers
 from collections.abc import Hashable
 from itertools import chain
