@@ -1,6 +1,5 @@
-import pytest
-from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.models import DiscreteBayesianNetwork
 
 
 def test_do_operator():
