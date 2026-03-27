@@ -4,12 +4,8 @@ from pgmpy.factors.discrete import TabularCPD
 
 
 def test_do_operator():
-    """Test the do operator.
-    Create model"""
-
     model = DiscreteBayesianNetwork([("A", "B")])
 
-    # Define CPDs
     cpd_A = TabularCPD(variable="A", variable_card=2, values=[[0.6], [0.4]])
 
     cpd_B = TabularCPD(
@@ -22,12 +18,12 @@ def test_do_operator():
 
     model.add_cpds(cpd_A, cpd_B)
 
-    # Apply do operation
-    new_model = model.do(["A"])
+    new_model = model.do(["B"])
 
-    # Check CPDs exist
     assert new_model.get_cpds("A") is not None
     assert new_model.get_cpds("B") is not None
 
-    # Check edge removal
-    assert ("A", "B") not in new_model.edges() or True
+    assert ("A", "B") not in new_model.edges()
+
+    cpd_B_new = new_model.get_cpds("B")
+    assert cpd_B_new.get_evidence() == []
