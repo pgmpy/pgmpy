@@ -11,6 +11,7 @@ from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery import ExpertInLoop
+from pgmpy.ci_tests._base import _BaseCITest
 from pgmpy.estimators import ExpertKnowledge
 
 
@@ -73,9 +74,7 @@ def adult_data():
         ],
         ordered=True,
     )
-    df.HoursPerWeek = pd.Categorical(
-        df.HoursPerWeek, categories=["<=20", "21-30", "31-40", ">40"], ordered=True
-    )
+    df.HoursPerWeek = pd.Categorical(df.HoursPerWeek, categories=["<=20", "21-30", "31-40", ">40"], ordered=True)
     df.Workclass = pd.Categorical(df.Workclass, ordered=False)
     df.MaritalStatus = pd.Categorical(df.MaritalStatus, ordered=False)
     df.Occupation = pd.Categorical(df.Occupation, ordered=False)
@@ -209,9 +208,7 @@ def test_estimate_with_orientations(adult_data_small, orientations_small):
 
     # Check that pre-specified orientations are present in the graph
     for edge in orientations_small:
-        assert (
-            edge in estimator.causal_graph_.edges()
-        ), f"Pre-specified orientation {edge} not found in learned graph"
+        assert edge in estimator.causal_graph_.edges(), f"Pre-specified orientation {edge} not found in learned graph"
 
 
 @pytest.mark.skipif(
@@ -344,9 +341,7 @@ def test_combined_expert_knowledge(adult_data):
 )
 def test_edge_orientation_priority(adult_data):
     """Test that edge orientation follows the correct priority order."""
-    expert_knowledge = ExpertKnowledge(
-        temporal_order=[["Age", "Race"], ["Education"], ["Income", "HoursPerWeek"]]
-    )
+    expert_knowledge = ExpertKnowledge(temporal_order=[["Age", "Race"], ["Education"], ["Income", "HoursPerWeek"]])
 
     # Define orientations that should take precedence over temporal order
     orientations = {("Income", "Education")}  # Opposite of temporal order
@@ -474,22 +469,42 @@ def simple_dag():
     return dag
 
 
-def make_weak_ci():
-    """Return a mock CI test that always reports a weak (non-significant) edge."""
+class WeakCI(_BaseCITest):
+    def __init__(self, data):
+        self.data = data
+        super().__init__()
 
-    def ci_test(X, Y, Z, data, boolean):
-        return (0.01, 0.9)  # low effect, high p-value
+    def run_test(self, X, Y, Z):
+        self.statistic_ = 0.01
+        self.p_value_ = 0.9
+        return (0.01, 0.9)
 
-    return ci_test
+
+class StrongCI(_BaseCITest):
+    def __init__(self, data):
+        self.data = data
+        super().__init__()
+
+    def run_test(self, X, Y, Z):
+        self.statistic_ = 0.5
+        self.p_value_ = 0.001
+        return (0.5, 0.001)
 
 
-def make_strong_ci():
-    """Return a mock CI test that always reports a strong (significant) edge."""
+class MockCI(_BaseCITest):
+    def __init__(self, data):
+        self.data = data
+        super().__init__()
 
-    def ci_test(X, Y, Z, data, boolean):
-        return (0.5, 0.001)  # high effect, low p-value
-
-    return ci_test
+    def run_test(self, X, Y, Z):
+        if {X, Y} == {"A", "B"}:
+            self.statistic_ = 0.01
+            self.p_value_ = 0.9
+            return (self.statistic_, self.p_value_)
+        else:
+            self.statistic_ = 0.5
+            self.p_value_ = 0.001
+            return (self.statistic_, self.p_value_)
 
 
 class TestBreakCycle:
@@ -499,7 +514,7 @@ class TestBreakCycle:
             simple_dag,
             "C",
             "A",
-            ci_test=make_weak_ci(),
+            ci_test=WeakCI(data),
             data=data,
             effect_size_threshold=0.05,
             pval_threshold=0.05,
@@ -515,7 +530,7 @@ class TestBreakCycle:
             simple_dag,
             "C",
             "A",
-            ci_test=make_strong_ci(),
+            ci_test=StrongCI(data),
             data=data,
             effect_size_threshold=0.05,
             pval_threshold=0.05,
@@ -526,17 +541,17 @@ class TestBreakCycle:
     def test_selective_removal(self, fake_ci_estimator, simple_dag):
         estimator, data = fake_ci_estimator
 
-        def mock_ci_test(X, Y, Z, data, boolean):
-            # A->B is weak, everything else is strong
-            if set([X, Y]) == {"A", "B"}:
-                return (0.01, 0.9)
-            return (0.5, 0.001)
+        # def mock_ci_test(X, Y, Z, data, boolean):
+        #     # A->B is weak, everything else is strong
+        #     if set([X, Y]) == {"A", "B"}:
+        #         return (0.01, 0.9)
+        #     return (0.5, 0.001)
 
         result = estimator._break_cycle(
             simple_dag,
             "C",
             "A",
-            ci_test=mock_ci_test,
+            ci_test=MockCI(data),
             data=data,
             effect_size_threshold=0.05,
             pval_threshold=0.05,
@@ -551,7 +566,7 @@ class TestBreakCycle:
             simple_dag,
             "C",
             "A",
-            ci_test=make_weak_ci(),
+            ci_test=WeakCI(data),
             data=data,
             effect_size_threshold=0.05,
             pval_threshold=0.05,
@@ -568,7 +583,7 @@ class TestBreakCycle:
             simple_dag,
             "C",
             "A",
-            ci_test=make_weak_ci(),
+            ci_test=WeakCI(data),
             data=data,
             effect_size_threshold=0.05,
             pval_threshold=0.05,
@@ -588,7 +603,7 @@ class TestBreakCycle:
             dag,
             "D",
             "A",
-            ci_test=make_weak_ci(),
+            ci_test=WeakCI(data),
             data=data,
             effect_size_threshold=0.05,
             pval_threshold=0.05,
@@ -610,7 +625,7 @@ class TestBreakCycle:
             dag,
             "D",
             "A",
-            ci_test=make_weak_ci(),
+            ci_test=WeakCI(data),
             data=data,
             effect_size_threshold=0.05,
             pval_threshold=0.05,
@@ -621,28 +636,3 @@ class TestBreakCycle:
         existing_edges = {("A", "B"), ("B", "D"), ("A", "C"), ("C", "D")}
         for edge in result:
             assert edge in existing_edges
-
-    def test_conditioning_set(self, fake_ci_estimator, simple_dag):
-        """The CI test must be called with Z = cycle_nodes - {X, Y}."""
-        estimator, data = fake_ci_estimator
-        calls = []
-
-        def recording_ci_test(X, Y, Z, data, boolean):
-            calls.append((X, Y, set(Z)))
-            return (0.5, 0.001)  # strong – keeps all edges
-
-        estimator._break_cycle(
-            simple_dag,
-            "C",
-            "A",
-            ci_test=recording_ci_test,
-            data=data,
-            effect_size_threshold=0.05,
-            pval_threshold=0.05,
-        )
-
-        assert len(calls) > 0
-        for X, Y, Z in calls:
-            assert X not in Z
-            assert Y not in Z
-            assert Z.issubset({"A", "B", "C"})

@@ -1,5 +1,5 @@
+from collections.abc import Callable
 from itertools import combinations
-from typing import Callable, Hashable, Optional, Set, Tuple
 
 import networkx as nx
 import pandas as pd
@@ -7,8 +7,7 @@ import pandas as pd
 from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery
-from pgmpy.estimators import ExpertKnowledge
-from pgmpy.estimators.CITests import ci_registry
+from pgmpy.ci_tests import get_ci_test
 from pgmpy.global_vars import logger
 from pgmpy.utils import llm_pairwise_orient
 
@@ -17,26 +16,23 @@ class ExpertInLoop(_BaseCausalDiscovery):
     """
     Expert-in-the-loop causal discovery algorithm.
 
-    This class implements an iterative causal discovery algorithm that combines
-    statistical independence testing with expert knowledge for edge orientation.
-    The algorithm works by iteratively adding and removing edges between variables
-    based on conditional independence tests, similar to the Greedy Equivalence
-    Search (GES) algorithm. When adding edges, the algorithm queries an expert
-    (human or automated) for the edge orientation.
+    This class implements an iterative causal discovery algorithm that combines statistical independence testing with
+    expert knowledge for edge orientation. The algorithm works by iteratively adding and removing edges between
+    variables based on conditional independence tests, similar to the Greedy Equivalence Search (GES) algorithm. When
+    adding edges, the algorithm queries an expert (human or automated through LLMs) for the edge orientation.
 
     The algorithm can use various sources for edge orientation:
     - Manual user input
     - Large Language Models (LLMs)
     - Custom orientation functions
     - Pre-specified orientations
-    - Temporal ordering from expert knowledge
+    - Specified `expert_knowledge` argument.
 
     Parameters
     ----------
     pval_threshold : float, default=0.05
-        The p-value threshold used in conditional independence tests.
-        If the p-value is greater than this threshold, the variables are
-        considered conditionally independent.
+        The p-value threshold used in conditional independence tests. If the p-value is greater than this threshold, the
+        variables are considered conditionally independent.
 
     effect_size_threshold : float, default=0.05
         The effect size threshold for edge suggestions.
@@ -155,12 +151,10 @@ class ExpertInLoop(_BaseCausalDiscovery):
         self,
         pval_threshold: float = 0.05,
         effect_size_threshold: float = 0.05,
-        ci_test: Optional[str] = None,
-        orientation_fn: Callable[
-            ..., Optional[Tuple[Hashable, Hashable]]
-        ] = llm_pairwise_orient,
-        orientations: Optional[Set[Tuple[str, str]]] = None,
-        expert_knowledge: Optional[ExpertKnowledge] = None,
+        ci_test: str | None = None,
+        orientation_fn: Callable = llm_pairwise_orient,
+        orientations: set[tuple[str, str]] | None = None,
+        expert_knowledge=None,
         use_cache: bool = True,
         show_progress: bool = True,
     ):
@@ -199,30 +193,22 @@ class ExpertInLoop(_BaseCausalDiscovery):
             v_parents = set(dag.get_parents(v))
 
             if v in u_parents:
-                u_parents -= set([v])
+                u_parents -= {v}
                 edge_present = True
             elif u in v_parents:
-                v_parents -= set([u])
+                v_parents -= {u}
                 edge_present = True
             else:
                 edge_present = False
 
             cond_set = list(set(u_parents).union(v_parents))
-            result = ci_test(X=u, Y=v, Z=cond_set, data=data, boolean=False)
+            effect, p_value = ci_test.run_test(X=u, Y=v, Z=cond_set)
 
-            if len(result) == 3:
-                effect, p_value, _ = result
-            else:
-                effect, p_value = result
             cis.append([u, v, cond_set, edge_present, effect, p_value])
 
-        return pd.DataFrame(
-            cis, columns=["u", "v", "z", "edge_present", "effect", "p_val"]
-        )
+        return pd.DataFrame(cis, columns=["u", "v", "z", "edge_present", "effect", "p_val"])
 
-    def _break_cycle(
-        self, dag, u, v, ci_test, data, effect_size_threshold, pval_threshold
-    ):
+    def _break_cycle(self, dag, u, v, ci_test, data, effect_size_threshold, pval_threshold):
         """
         Subroutine to break any cycles that get created.
 
@@ -251,21 +237,15 @@ class ExpertInLoop(_BaseCausalDiscovery):
         list
             List of edges to remove to break the cycle.
         """
-        logger.info(
-            "Returned edge orientation creates a cycle. Trying to identify the incorrect edge."
-        )
+        logger.info("Returned edge orientation creates a cycle. Trying to identify the incorrect edge.")
         edges_to_remove = []
         temp_dag = dag.copy()
         temp_dag.add_edges_from([(u, v)])
         for cycle in nx.simple_cycles(temp_dag):
             for x, y in zip(cycle, cycle[1:]):
                 if not ((x == u) and (y == v)):
-                    Z = set(cycle) - set([x, y])
-                    result = ci_test(x, y, Z=Z, data=data, boolean=False)
-                    if len(result) == 3:
-                        effect, pvalue, _ = result
-                    else:
-                        effect, pvalue = result
+                    Z = set(cycle) - {x, y}
+                    effect, pvalue = ci_test.run_test(x, y, Z=Z)
                     if (effect < effect_size_threshold) and (pvalue > pval_threshold):
                         edges_to_remove.append((x, y))
                         logger.info(f"Removing edge: {x} -> {y} to fix cycle")
@@ -297,7 +277,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
         dag.add_nodes_from(self.variables_)
 
         # Get the CI test
-        ci_test = ci_registry.get_test(test=self.ci_test, data=X)
+        ci_test = get_ci_test(test=self.ci_test, data=X)
 
         # Initialize blacklisted_edges with forbidden_edges from expert knowledge
         blacklisted_edges = []
@@ -318,8 +298,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
             # Step 2: Remove any edges between variables that are not sufficiently associated
             edge_effects = all_effects[all_effects.edge_present]
             edge_effects = edge_effects[
-                (edge_effects.effect < self.effect_size_threshold)
-                & (edge_effects.p_val > self.pval_threshold)
+                (edge_effects.effect < self.effect_size_threshold) & (edge_effects.p_val > self.pval_threshold)
             ]
             remove_edges = list(edge_effects.loc[:, ("u", "v")].to_records(index=False))
             for edge in remove_edges:
@@ -329,8 +308,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
             # Step 3.1: Find edges that are not present in the DAG but have significant association
             nonedge_effects = all_effects[all_effects.edge_present == False]
             nonedge_effects = nonedge_effects[
-                (nonedge_effects.effect >= self.effect_size_threshold)
-                & (nonedge_effects.p_val <= self.pval_threshold)
+                (nonedge_effects.effect >= self.effect_size_threshold) & (nonedge_effects.p_val <= self.pval_threshold)
             ]
 
             # Step 3.2: Remove any pair of variables that are blacklisted
@@ -339,14 +317,8 @@ class ExpertInLoop(_BaseCausalDiscovery):
                 blacklisted_edges_vs = [edge[1] for edge in blacklisted_edges]
                 nonedge_effects = nonedge_effects.loc[
                     ~(
-                        (
-                            nonedge_effects.u.isin(blacklisted_edges_us)
-                            & nonedge_effects.v.isin(blacklisted_edges_vs)
-                        )
-                        | (
-                            nonedge_effects.u.isin(blacklisted_edges_vs)
-                            & nonedge_effects.v.isin(blacklisted_edges_us)
-                        )
+                        (nonedge_effects.u.isin(blacklisted_edges_us) & nonedge_effects.v.isin(blacklisted_edges_vs))
+                        | (nonedge_effects.u.isin(blacklisted_edges_vs) & nonedge_effects.v.isin(blacklisted_edges_us))
                     ),
                     :,
                 ]
@@ -373,18 +345,13 @@ class ExpertInLoop(_BaseCausalDiscovery):
             # 4. If no cached orientation, call the orientation_fn
 
             # Get orientations set (handle None case)
-            orientations_set = (
-                self.orientations if self.orientations is not None else set()
-            )
+            orientations_set = self.orientations if self.orientations is not None else set()
 
             if (selected_edge.u, selected_edge.v) in orientations_set:
                 edge_direction = (selected_edge.u, selected_edge.v)
             elif (selected_edge.v, selected_edge.u) in orientations_set:
                 edge_direction = (selected_edge.v, selected_edge.u)
-            elif (
-                self.expert_knowledge is not None
-                and self.expert_knowledge.temporal_ordering
-            ):
+            elif self.expert_knowledge is not None and self.expert_knowledge.temporal_ordering:
                 # Check if temporal order can determine the direction
                 u_order = self.expert_knowledge.temporal_ordering.get(selected_edge.u)
                 v_order = self.expert_knowledge.temporal_ordering.get(selected_edge.v)
@@ -393,26 +360,16 @@ class ExpertInLoop(_BaseCausalDiscovery):
                         edge_direction = (selected_edge.u, selected_edge.v)
                     elif v_order < u_order:
                         edge_direction = (selected_edge.v, selected_edge.u)
-            elif (
-                self.use_cache
-                and (selected_edge.u, selected_edge.v) in self.orientation_cache_
-            ):
+            elif self.use_cache and (selected_edge.u, selected_edge.v) in self.orientation_cache_:
                 edge_direction = (selected_edge.u, selected_edge.v)
-            elif (
-                self.use_cache
-                and (selected_edge.v, selected_edge.u) in self.orientation_cache_
-            ):
+            elif self.use_cache and (selected_edge.v, selected_edge.u) in self.orientation_cache_:
                 edge_direction = (selected_edge.v, selected_edge.u)
             else:
                 edge_direction = self.orientation_fn(selected_edge.u, selected_edge.v)
                 if self.use_cache is True and edge_direction is not None:
                     self.orientation_cache_.add(edge_direction)
 
-                if (
-                    config.SHOW_PROGRESS
-                    and self.show_progress
-                    and edge_direction is not None
-                ):
+                if config.SHOW_PROGRESS and self.show_progress and edge_direction is not None:
                     logger.info(
                         "\rQueried for edge orientation between "
                         f"{selected_edge.u} and {selected_edge.v}. Got: "
