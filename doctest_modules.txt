@@ -65,3 +65,4 @@ pgmpy/structure_score/log_likelihood.py
 pgmpy/structure_score/log_likelihood_cond_gauss.py
 pgmpy/structure_score/log_likelihood_gauss.py
 pgmpy/utils/mathext.py
+pgmpy/utils/state_name.py
