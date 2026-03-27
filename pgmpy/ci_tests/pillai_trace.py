@@ -7,15 +7,42 @@ from ._base import _BaseCITest
 
 
 class PillaiTrace(_BaseCITest):
-    """
-    A mixed-data residualization based conditional independence test[1].
+    r"""
+    Pillai's trace test for conditional independence with mixed data [1].
 
-    Uses XGBoost estimator to compute LS residuals[2], and then does an
-    association test (Pillai's Trace) on the residuals.
+    This test first residualizes :math:`X` and :math:`Y` with respect to :math:`[1, Z]` using an estimator (XGBoost by
+    default). For a continuous target :math:`T`, the residual is
+
+    .. math::
+        r_T = T - \hat{T}(Z).
+
+    For a categorical target :math:`T` with :math:`K` categories, let :math:`D_T \in \{0, 1\}^{n \times K}` be the
+    dummy-encoded matrix of :math:`T`, and let :math:`\hat{D}_T(Z)` denote the predicted class probabilities from the
+    classifier. The residual matrix [2] is defined as (last column dropped to avoid colinearity):
+
+    .. math::
+        R_T = \operatorname{drop\_last}\left(D_T - \hat{D}_T(Z)\right),
+
+    Let :math:`R_X \in \mathbb{R}^{n \times p}` and :math:`R_Y \in \mathbb{R}^{n \times q}` be the residuals of
+    :math:`X` and :math:`Y`, and :math:`\rho = \rho_1, \ldots, \rho_s` be the canonical correlations between them. The
+    Pillai's trace statistic is:
+
+    .. math::
+        V = \sum_{i=1}^{s} \rho_i^2.
+
+    The p-value is computed using :math:`F`-approximation as (:math:`p` and :math:`q` are the number of columns in
+    residual matrices):
+
+    .. math::
+        F = \frac{V / (pq)}{(s - V) / \left[s (n - 1 + s - p - q)\right]}
+          = \frac{V}{pq} \cdot \frac{s (n - 1 + s - p - q)}{s - V},
+
+    with numerator degrees of freedom :math:`df_1 = pq` and denominator degrees of freedom
+    :math:`df_2 = s (n - 1 + s - p - q)`, where :math:`n` is the sample size.
 
     Parameters
     ----------
-    data: pandas.DataFrame
+    data : pandas.DataFrame
         The dataset in which to test the independence condition.
 
     seed : int, optional
@@ -24,15 +51,15 @@ class PillaiTrace(_BaseCITest):
     Attributes
     ----------
     statistic_ : float
-        Pillai's trace statistic. Set after calling the test.
+        Pillai's trace statistic :math:`V`. Set after calling the test.
     p_value_ : float
         The p-value for the test, computed via F-approximation. Set after calling the test.
 
     References
     ----------
-    .. [1] Ankan, Ankur, and Johannes Textor. "A simple unified approach to testing high-dimensional" "conditional
-           independences for categorical and ordinal data." Proceedings of the
-           AAAI Conference on Artificial Intelligence.
+    .. [1] Ankan, Ankur, and Johannes Textor. "A simple unified approach to testing high-dimensional conditional
+           independences for categorical and ordinal data." Proceedings of the AAAI Conference on Artificial
+           Intelligence.
     .. [2] Li, C.; and Shepherd, B. E. 2010. Test of Association Between Two Ordinal Variables While Adjusting for
            Covariates. Journal of the American Statistical Association.
     .. [3] Muller, K. E. and Peterson B. L. (1984) Practical Methods for computing power in testing the multivariate
@@ -104,10 +131,9 @@ class PillaiTrace(_BaseCITest):
         Sets ``self.statistic_`` (Pillai's trace) and ``self.p_value_``.
         """
         data = self.data
-        # Step 1.1: If no conditional variables are specified, use a constant value.
-        if len(Z) == 0:
-            Z = ["cont_Z"]
-            data = data.assign(cont_Z=np.ones(data.shape[0]))
+        # Step 1: Add an intercept term for conditional variables.
+        Z = Z + ["_intercept_Z"]
+        data = data.assign(_intercept_Z=np.ones(data.shape[0]))
 
         # Step 2: Get the predictions
         pred_x, pred_y, x_cat_index, y_cat_index = self._get_predictions(X, Y, Z, data)

@@ -25,6 +25,7 @@ classifiers = [
 ]
 
 dependencies = [
+  "huggingface_hub>=0.23",
   "networkx>=3.0",
   "numpy>=2.0",
   "scipy>=1.10",
@@ -44,9 +45,10 @@ torch = [
   "pyro-ppl>=1.9.1",
 ]
 optional = [
+  "pgmpy[torch]",
   "daft-pgm>=0.1.4",
   "xgboost>=2.0.3",
-  "litellm==1.61.15",
+  "litellm>=1.61.15",
   "pygraphviz",
 ]
 tests = [
@@ -72,7 +74,7 @@ docs = [
   "sphinx_sitemap",
 ]
 all = [
-  "pgmpy[torch,optional,tests,docs]",
+  "pgmpy[optional,tests,docs]",
 ]
 
 [project.urls]
@@ -88,14 +90,15 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 exclude = ["tests"]
 
+[tool.setuptools]
+include-package-data = true
+
 [tool.setuptools.package-data]
 pgmpy = [
   "utils/example_models/*.bif.gz",
   "utils/example_models/*.json",
   "utils/example_models/*.txt"
 ]
-[tool.setuptools]
-include-package-data = true
 
 [tool.pytest.ini_options]
 addopts = "-p no:doctest"

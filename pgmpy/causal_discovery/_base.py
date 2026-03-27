@@ -1,9 +1,6 @@
 from collections import deque
 from collections.abc import Callable, Collection, Generator, Hashable
 from itertools import chain, combinations, permutations
-from typing import (
-    Any,
-)
 
 import networkx as nx
 import numpy as np
@@ -19,6 +16,7 @@ from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.ci_tests import IndependenceMatch, get_ci_test
 from pgmpy.independencies import Independencies
 from pgmpy.metrics import get_metrics
+from pgmpy.structure_score import BaseStructureScore
 
 
 class _BaseCausalDiscovery(BaseEstimator):
@@ -104,8 +102,8 @@ class _BaseCausalDiscovery(BaseEstimator):
             `pgmpy.metrics.get_metrics(requires_true_graph=True)`
 
         metric : str or pgmpy.metrics._Base.*Metric instance, optional
-            Method to be used for calculating the score. If ``None``, a default metric appropriate for the provided
-            argument (`X` or `true_graph`) will be selected internally.
+            Method to be used for calculating the score. If ``None``, a default metric appropriate for the
+            provided argument (`X` or `true_graph`) will be selected internally.
 
         Returns
         -------
@@ -355,11 +353,13 @@ class _ConstraintMixin:
                                 break
 
             elif variant == "stable":
+                neighbors = {node: set(graph.neighbors(node)) for node in variables}
+                edges_to_remove = []
                 # In case of stable, precompute neighbors as this is the stable algorithm.
                 for u, v in graph.edges():
                     if (enforce_expert_knowledge is False) or ((u, v) not in expert_knowledge.required_edges):
                         for separating_set in self._get_potential_sepsets(
-                            u, v, temporal_ordering, graph, lim_neighbors
+                            u, v, temporal_ordering, graph, lim_neighbors, neighbors=neighbors
                         ):
                             # If a conditioning set exists remove the edge, store the
                             # separating set and move on to finding conditioning set for next edge.
@@ -370,8 +370,9 @@ class _ConstraintMixin:
                                 significance_level=significance_level,
                             ):
                                 separating_sets[frozenset((u, v))] = separating_set
-                                graph.remove_edge(u, v)
+                                edges_to_remove.append((u, v))
                                 break
+                graph.remove_edges_from(edges_to_remove)
 
             elif variant == "parallel":
 
@@ -423,6 +424,7 @@ class _ConstraintMixin:
         temporal_ordering: dict[Hashable, int],
         graph: UndirectedGraph,
         lim_neighbors: int,
+        neighbors: dict[Hashable, set[Hashable]] = None,
     ) -> Collection[tuple]:
         """
         Return the temporally consistent superset of separating set of `u`, `v`.
@@ -453,8 +455,13 @@ class _ConstraintMixin:
         separating_set: set
             Set containing the superset of separating set of u, v.
         """
-        separating_set_u = set(graph.neighbors(u))
-        separating_set_v = set(graph.neighbors(v))
+
+        if neighbors is not None:
+            separating_set_u = neighbors[u].copy()
+            separating_set_v = neighbors[v].copy()
+        else:
+            separating_set_u = set(graph.neighbors(u)).copy()
+            separating_set_v = set(graph.neighbors(v)).copy()
         separating_set_u.discard(v)
         separating_set_v.discard(u)
 
@@ -486,8 +493,7 @@ class _ScoreMixin:
     def _legal_operations_dag(
         self,
         model: DAG,
-        score: Callable[[Any, list[Any]], float],
-        structure_score: Callable[[str], float],
+        scoring_method: BaseStructureScore,
         tabu_list: deque[tuple[str, tuple[Hashable, Hashable]]],
         max_indegree: int,
         forbidden_edges: list[tuple[Hashable, Hashable]],
@@ -515,21 +521,23 @@ class _ScoreMixin:
             if not nx.has_path(model, Y, X):
                 operation = ("+", (X, Y))
                 if (operation not in tabu_list) and ((X, Y) not in forbidden_edges):
-                    old_parents = model.get_parents(Y)
-                    new_parents = old_parents + [X]
+                    old_parents = tuple(model.get_parents(Y))
+                    new_parents = old_parents + (X,)
                     if len(new_parents) <= max_indegree:
-                        score_delta = score(Y, new_parents) - score(Y, old_parents)
-                        score_delta += structure_score("+")
+                        score_delta = scoring_method.local_score(Y, new_parents) - scoring_method.local_score(
+                            Y, old_parents
+                        )
+                        score_delta += scoring_method.structure_prior_ratio("+")
                         yield (operation, score_delta)
 
         # Step 2: Get all legal operations for removing edges
         for X, Y in model.edges():
             operation = ("-", (X, Y))
             if (operation not in tabu_list) and ((X, Y) not in required_edges):
-                old_parents = model.get_parents(Y)
-                new_parents = [var for var in old_parents if var != X]
-                score_delta = score(Y, new_parents) - score(Y, old_parents)
-                score_delta += structure_score("-")
+                old_parents = tuple(model.get_parents(Y))
+                new_parents = tuple(var for var in old_parents if var != X)
+                score_delta = scoring_method.local_score(Y, new_parents) - scoring_method.local_score(Y, old_parents)
+                score_delta += scoring_method.structure_prior_ratio("-")
                 yield (operation, score_delta)
 
         # Step 3: Get all legal operations for flipping edges
@@ -542,16 +550,16 @@ class _ScoreMixin:
                     and ((X, Y) not in required_edges)
                     and ((Y, X) not in forbidden_edges)
                 ):
-                    old_X_parents = model.get_parents(X)
-                    old_Y_parents = model.get_parents(Y)
-                    new_X_parents = old_X_parents + [Y]
-                    new_Y_parents = [var for var in old_Y_parents if var != X]
+                    old_X_parents = tuple(model.get_parents(X))
+                    old_Y_parents = tuple(model.get_parents(Y))
+                    new_X_parents = old_X_parents + (Y,)
+                    new_Y_parents = tuple(var for var in old_Y_parents if var != X)
                     if len(new_X_parents) <= max_indegree:
                         score_delta = (
-                            score(X, new_X_parents)
-                            + score(Y, new_Y_parents)
-                            - score(X, old_X_parents)
-                            - score(Y, old_Y_parents)
+                            scoring_method.local_score(X, new_X_parents)
+                            + scoring_method.local_score(Y, new_Y_parents)
+                            - scoring_method.local_score(X, old_X_parents)
+                            - scoring_method.local_score(Y, old_Y_parents)
                         )
-                        score_delta += structure_score("flip")
+                        score_delta += scoring_method.structure_prior_ratio("flip")
                         yield (operation, score_delta)
