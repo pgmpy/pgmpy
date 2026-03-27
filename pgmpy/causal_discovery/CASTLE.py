@@ -1,7 +1,7 @@
-from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
-from sklearn.preprocessing import StandardScaler
 import numpy as np
 import pandas as pd
+from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
+from sklearn.preprocessing import StandardScaler
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery
@@ -11,7 +11,7 @@ nn = _safe_import("torch.nn")
 F = _safe_import("torch.nn.functional")
 
 
-def _dag_constraint(W: "torch.Tensor") -> "torch.Tensor":
+def _dag_constraint(W: torch.Tensor) -> torch.Tensor:
     """Compute the DAG acyclicity constraint h(W).
 
     Uses the matrix exponential formulation:
@@ -70,7 +70,7 @@ class _CASTLEModel(nn.Module):
         # One shared hidden layer across all sub-networks
         self.hidden_layer = nn.Linear(n_hidden, n_hidden, bias=True)
 
-    def forward(self, X: "torch.Tensor"):
+    def forward(self, X: torch.Tensor):
         outs = []
         out_0 = None
         for i in range(self.num_inputs):
@@ -88,7 +88,7 @@ class _CASTLEModel(nn.Module):
         Out = torch.cat(outs, dim=1)
         return Out, out_0
 
-    def get_W(self) -> "torch.Tensor":
+    def get_W(self) -> torch.Tensor:
         """Compute the weighted adjacency matrix from input-layer weights.
 
         Returns
@@ -288,7 +288,6 @@ class CASTLE(_BaseCausalDiscovery):
         alpha = 0.0
         prev_h = float("inf")
 
-
         for epoch in range(self.max_epochs):
             model.train()
             n_train = X_train.shape[0]
@@ -318,9 +317,7 @@ class CASTLE(_BaseCausalDiscovery):
                 h = _dag_constraint(W)
                 dag_penalty = 0.5 * rho * h * h + alpha * h
 
-                loss = supervised_loss + self.reg_lambda * (
-                    recon_loss + dag_penalty + self.reg_beta * group_lasso
-                )
+                loss = supervised_loss + self.reg_lambda * (recon_loss + dag_penalty + self.reg_beta * group_lasso)
 
                 loss.backward()
                 optimizer.step()

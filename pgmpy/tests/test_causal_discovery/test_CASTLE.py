@@ -2,14 +2,16 @@
 Tests for the CASTLE causal discovery algorithm in pgmpy.causal_discovery.
 """
 
+from unittest.mock import patch
+
+import networkx as nx
 import numpy as np
 import pandas as pd
 import pytest
-import networkx as nx
-from unittest.mock import patch
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery import CASTLE
+
 
 @pytest.fixture
 def simple_df():
@@ -25,6 +27,7 @@ def fitted_castle(simple_df):
     castle = CASTLE(max_epochs=5, n_hidden=8, random_state=42)
     castle.fit(simple_df, target_col="y")
     return castle
+
 
 class TestCASTLECore:
     """Tests for core CASTLE fitting behaviour and output attributes."""
@@ -87,6 +90,7 @@ class TestCASTLECore:
         assert castle.max_epochs == 200
         assert castle.random_state is None
 
+
 class TestCASTLEInputValidation:
     """Tests for input validation, error handling, and edge cases."""
 
@@ -120,12 +124,11 @@ class TestCASTLEInputValidation:
         assert castle.cols_[0] == "A"
 
     def test_optional_dependency_guard(self):
-        with patch(
-            "pgmpy.causal_discovery.CASTLE._check_soft_dependencies"
-        ) as mock_check:
+        with patch("pgmpy.causal_discovery.CASTLE._check_soft_dependencies") as mock_check:
             mock_check.side_effect = ImportError("torch not found")
             with pytest.raises(ImportError, match="torch"):
                 CASTLE()
+
 
 class TestCASTLEPredict:
     """Tests for the CASTLE predict method."""
@@ -165,6 +168,7 @@ class TestCASTLEPredict:
         mse = np.mean((test["y"].values - preds) ** 2)
         assert np.isfinite(mse)
         assert mse < 10.0  # loose upper bound, not a performance claim
+
 
 class TestCASTLETraining:
     """Tests for training behaviour including reproducibility."""
