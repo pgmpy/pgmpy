@@ -104,10 +104,7 @@ def test_fit_rand(rand_data):
 
     # print(num_letter(networkx.convert_matrix.from_numpy_array(model.adjacency_matrix_).edges()))
     # [('A', 'B'), ('B', 'C')]
-    assert graph.has_edge("A", "B")
-    assert graph.has_edge("B", "C")
-
-    assert not graph.has_edge("A", "C")
+    assert set(graph.edges()) == {("A", "B"), ("B", "C")}
 
     # Test adjacency matrix structure -- Main Goal is to check the association paths should be blocked
     Adj_matrix = algo.adjacency_matrix_
@@ -126,10 +123,7 @@ def test_fit_rand2(rand_data2):
 
     # print(num_letter(networkx.convert_matrix.from_numpy_array(model.adjacency_matrix_).edges()))
     # [('A', 'B'), ('A', 'C'), ('B', 'D'), ('C', 'E')]
-    assert graph.has_edge("A", "B")
-    assert graph.has_edge("A", "C")
-    assert graph.has_edge("B", "D")
-    assert graph.has_edge("C", "E")
+    assert set(graph.edges()) == {("A", "B"), ("A", "C"), ("B", "D"), ("C", "E")}
 
     # Test adjacency matrix structure -- Main Goal is to check the association paths should be blocked
     Adj_matrix = algo.adjacency_matrix_
@@ -156,23 +150,26 @@ def test_large_lingam_data(large_lingam_data):
     algo.fit(large_lingam_data)
     graph = algo.causal_graph_
 
-    # print(num_letter(nx.convert_matrix.from_numpy_array(model.adjacency_matrix_).edges()))
+    # print(num_letter(networkx.convert_matrix.from_numpy_array(model.adjacency_matrix_).edges()))
     # [('A', 'B'), ('A', 'C'), ('B', 'D'), ('C', 'E'), ('D', 'F'), ('D', 'G'), ('E', 'F'), ('E', 'G'), ('F', 'H'),
     #  ('F', 'I'), ('G', 'H'), ('G', 'I'), ('H', 'J'), ('I', 'J')]
-    assert graph.has_edge("A", "B")
-    assert graph.has_edge("A", "C")
-    assert graph.has_edge("B", "D")
-    assert graph.has_edge("C", "E")
-    assert graph.has_edge("D", "F")
-    assert graph.has_edge("D", "G")
-    assert graph.has_edge("E", "F")
-    assert graph.has_edge("E", "G")
-    assert graph.has_edge("F", "H")
-    assert graph.has_edge("F", "I")
-    assert graph.has_edge("G", "H")
-    assert graph.has_edge("G", "I")
-    assert graph.has_edge("H", "J")
-    assert graph.has_edge("I", "J")
+    assert set(graph.edges()) == {
+        ("A", "B"),
+        ("A", "C"),
+        ("B", "D"),
+        ("C", "E"),
+        ("D", "F"),
+        ("D", "G"),
+        ("E", "F"),
+        ("E", "G"),
+        ("F", "H"),
+        ("F", "I"),
+        ("G", "H"),
+        ("G", "I"),
+        ("H", "J"),
+        ("I", "J"),
+        ("F", "J"),  # confounder
+    }
 
     # Test adjacency matrix structure
     Adj_matrix = algo.adjacency_matrix_
