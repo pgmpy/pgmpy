@@ -56,7 +56,7 @@ class YourModelName(YourMixinClass, _BaseExampleModel):
         "is_hybrid": False,  # TODO: Set appropriately
     }
 
-    # TODO: Set the path to the model file within the `example_models` repository.
+    # TODO: Set the path to the model file within the `example_models` Hugging Face repository.
     # For example:
     #   - "discrete/asia.bif.gz" for a gzipped BIF file
     #   - "bnrep/asia.bif" for a plain BIF file

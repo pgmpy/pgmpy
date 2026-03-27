@@ -352,7 +352,7 @@ class JointProbabilityDistribution(DiscreteFactor):
         ...     values=np.ones(12) / 12,
         ... )
         >>> bayesian_model = prob.minimal_imap(order=["x2", "x1", "x3"])
-        >>> bayesian_model
+        >>> bayesian_model # doctest: +ELLIPSIS
         <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork object at 0x...>
         >>> bayesian_model.edges()
         OutEdgeView([('x2', 'x3'), ('x1', 'x3')])
