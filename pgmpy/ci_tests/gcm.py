@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 from scipy import stats
+from sklearn.base import clone
+from sklearn.linear_model import LinearRegression
 
 from ._base import _BaseCITest
 
@@ -9,7 +11,7 @@ class GCM(_BaseCITest):
     r"""
     Generalized Covariance Measure (GCM) [1] test for conditional independence.
 
-    Regress :math:`X` and :math:`Y` on :math:`[1, Z]` using least squares, let :math:`r_X` and :math:`r_Y` denote the
+    Fit an estimator on :math:`X` and :math:`Y` on :math:`[1, Z]`, let :math:`r_X` and :math:`r_Y` denote the
     resulting residuals, and define :math:`U_i = r_{X, i} r_{Y, i}`. The resulting test statistic is
 
     .. math::
@@ -22,6 +24,9 @@ class GCM(_BaseCITest):
     ----------
     data : pandas.DataFrame
         The dataset in which to test the independence condition.
+    estimator: optional (default=None)
+        Any regressor with fit and predict methods to compute residuals. If None, LinearRegression() is used
+        as default.
 
     Attributes
     ----------
@@ -43,8 +48,21 @@ class GCM(_BaseCITest):
         "requires_data": True,
     }
 
-    def __init__(self, data: pd.DataFrame):
+    def __init__(self, data: pd.DataFrame, estimator=None):
         self.data = data
+
+        if estimator is None:
+            self.estimator = LinearRegression()
+        else:
+            # Check if estimator is sklearn compatible.
+            required_methods = ["fit", "predict", "get_params", "set_params"]
+            if not all(hasattr(estimator, method) for method in required_methods):
+                raise ValueError(
+                    "`estimator` must be a scikit-learn compatible.",
+                    "It must have fit, predict methods and be clonable.",
+                )
+            self.estimator = estimator
+
         super().__init__()
 
     def run_test(
@@ -58,16 +76,16 @@ class GCM(_BaseCITest):
 
         Sets ``self.statistic_`` (t-statistic) and ``self.p_value_``.
         """
-        # Step 1.1: Add another column with constant values to handle intercepts.
-        data = self.data
-        Z_aug = list(Z) + ["intercept"]
-        data_aug = data.assign(intercept=np.ones(data.shape[0]))
+        # Step 1: Append intercept column to ensure Z is never empty
+        Z_data = np.column_stack([self.data.loc[:, list(Z)].values, np.ones(self.data.shape[0])])
 
-        # Step 2: Compute the linear regression and the residuals
-        X_coef = np.linalg.lstsq(data_aug.loc[:, Z_aug], data_aug.loc[:, X], rcond=None)[0]
-        Y_coef = np.linalg.lstsq(data_aug.loc[:, Z_aug], data_aug.loc[:, Y], rcond=None)[0]
-        res_x = data_aug.loc[:, X] - data_aug.loc[:, Z_aug].dot(X_coef)
-        res_y = data_aug.loc[:, Y] - data_aug.loc[:, Z_aug].dot(Y_coef)
+        # Step 2: Compute residuals using the provided estimator
+        est_x = clone(self.estimator)
+        est_y = clone(self.estimator)
+        est_x.fit(Z_data, self.data.loc[:, X])
+        est_y.fit(Z_data, self.data.loc[:, Y])
+        res_x = self.data.loc[:, X] - est_x.predict(Z_data)
+        res_y = self.data.loc[:, Y] - est_y.predict(Z_data)
 
         # Step 3: Compute the Generalised Covariance Measure.
         n = res_x.shape[0]
