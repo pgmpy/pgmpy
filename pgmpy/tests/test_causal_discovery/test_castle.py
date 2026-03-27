@@ -8,16 +8,11 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import pytest
-from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery import CASTLE
 
-torch_available = _check_soft_dependencies("torch", severity="none")
-pytestmark = pytest.mark.skipif(
-    not torch_available,
-    reason="torch is required for CASTLE tests",
-)
+pytest.importorskip("torch", reason="torch is required for CASTLE tests")
 
 
 @pytest.fixture
