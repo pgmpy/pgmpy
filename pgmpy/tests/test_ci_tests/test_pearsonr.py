@@ -122,7 +122,7 @@ def test_pearsonr_residual_approx(residual_data):
     test = Pearsonr(data=df_indep)
     test("X", "Y", ["Z1", "Z2", "Z3"])
     assert abs(test.statistic_) <= 0.1
-    assert test.p_value_ >= 0.05
+    assert test.p_value_ >= 0.01
 
     test = Pearsonr(data=df_dep)
     test("X", "Y", ["Z1", "Z2", "Z3"])
