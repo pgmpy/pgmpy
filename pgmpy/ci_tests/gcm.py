@@ -50,27 +50,19 @@ class GCM(_BaseCITest):
 
     def __init__(self, data: pd.DataFrame, estimator=None):
         self.data = data
+
         if estimator is None:
             self.estimator = LinearRegression()
-        elif not (hasattr(estimator, "fit") and hasattr(estimator, "predict")):
-            raise ValueError(f"estimator must have fit and predict methods. Got {type(estimator)} instead.")
         else:
-            # Ensure estimator is scikit-learn compatible and cloneable,
-            # since run_test uses sklearn.base.clone.
-            if not hasattr(estimator, "get_params"):
+            # Check if estimator is sklearn compatible.
+            required_methods = ["fit", "predict", "get_params", "set_params"]
+            if not all(hasattr(estimator, method) for method in required_methods):
                 raise ValueError(
-                    "estimator must be a scikit-learn compatible estimator with a get_params method. "
-                    f"Got {type(estimator)} instead."
+                    "`estimator` must be a scikit-learn compatible.",
+                    "It must have fit, predict methods and be clonable.",
                 )
-            try:
-                # This will raise TypeError/ValueError if the estimator is not cloneable.
-                clone(estimator)
-            except (TypeError, ValueError) as exc:
-                raise ValueError(
-                    "estimator must be cloneable via sklearn.base.clone. "
-                    f"Got non-cloneable estimator of type {type(estimator)}."
-                ) from exc
             self.estimator = estimator
+
         super().__init__()
 
     def run_test(
@@ -85,16 +77,15 @@ class GCM(_BaseCITest):
         Sets ``self.statistic_`` (t-statistic) and ``self.p_value_``.
         """
         # Step 1: Append intercept column to ensure Z is never empty
-        data = self.data
-        Z_data = np.column_stack([data.loc[:, list(Z)].values, np.ones(data.shape[0])])
+        Z_data = np.column_stack([self.data.loc[:, list(Z)].values, np.ones(self.data.shape[0])])
 
         # Step 2: Compute residuals using the provided estimator
         est_x = clone(self.estimator)
         est_y = clone(self.estimator)
-        est_x.fit(Z_data, data.loc[:, X])
-        est_y.fit(Z_data, data.loc[:, Y])
-        res_x = data.loc[:, X] - est_x.predict(Z_data)
-        res_y = data.loc[:, Y] - est_y.predict(Z_data)
+        est_x.fit(Z_data, self.data.loc[:, X])
+        est_y.fit(Z_data, self.data.loc[:, Y])
+        res_x = self.data.loc[:, X] - est_x.predict(Z_data)
+        res_y = self.data.loc[:, Y] - est_y.predict(Z_data)
 
         # Step 3: Compute the Generalised Covariance Measure.
         n = res_x.shape[0]
