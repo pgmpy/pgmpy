@@ -705,7 +705,9 @@ class TestDAGCreation(unittest.TestCase):
         self.assertNotIn("n_mediators", stats)
         self.assertNotIn("n_confounding_paths", stats)
 
-        stats = model.get_stats(exposures=["PKC", "Plcg"], outcomes=["Akt", "PIP2"])
+        model.with_role("exposure", {"Raf"}, inplace=True)
+        model.with_role("outcome", {"Mek"}, inplace=True)
+        stats = model.get_stats()
         self.assertEqual(stats["n_nodes"], 11)
         self.assertEqual(stats["n_edges"], 17)
         self.assertEqual(stats["n_root_nodes"], 2)
@@ -717,18 +719,20 @@ class TestDAGCreation(unittest.TestCase):
         self.assertEqual(stats["max_n_parents"], 3)
         self.assertEqual(stats["n_latent_nodes"], 0)
 
-        self.assertEqual(stats["n_exposures"], 2)
-        self.assertEqual(stats["n_outcomes"], 2)
-        self.assertEqual(stats["n_causal_paths"], 8)
+        self.assertEqual(stats["n_exposures"], 1)
+        self.assertEqual(stats["n_outcomes"], 1)
+        self.assertEqual(stats["n_causal_paths"], 1)
         self.assertEqual(stats["n_direct_paths"], 1)
-        self.assertEqual(stats["n_mediated_paths"], 7)
-        self.assertEqual(stats["n_mediators"], 5)
-        self.assertEqual(stats["n_confounding_paths"], 0)
+        self.assertEqual(stats["n_mediated_paths"], 0)
+        self.assertEqual(stats["n_mediators"], 0)
+        self.assertEqual(stats["n_confounding_paths"], 3)
 
-        stats = model.get_stats(exposures=["PKC"])
+        dag_test = DAG(ebunch=[("D", "G"), ("I", "G"), ("G", "L"), ("I", "S")], roles={"exposures": "D"})
+        stats = dag_test.get_stats()
         self.assertNotIn("n_causal_paths", stats)
 
-        stats = model.get_stats(outcomes=["Akt"])
+        dag_test2 = DAG(ebunch=[("D", "G"), ("I", "G"), ("G", "L"), ("I", "S")], roles={"outcomes": "L"})
+        stats = dag_test2.get_stats()
         self.assertNotIn("n_causal_paths", stats)
 
 

@@ -1720,7 +1720,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             )
         )
 
-    def get_stats(self, exposures=None, outcomes=None):
+    def get_stats(self):
         """
         Returns a dictionary of summary statistics about the structure of the DAG.
 
@@ -1769,15 +1769,41 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         Examples
         --------
         >>> from pgmpy.base import DAG
-        >>> dag = DAG([("D", "G"), ("I", "G"), ("G", "L"), ("I", "S")])
-        >>> stats = dag.get_stats()
-        >>> stats["n_nodes"]
-        5
-        >>> stats["n_v_structures"]
-        1
-        >>> stats = dag.get_stats(exposures=["D"], outcomes=["L"])
-        >>> stats["n_causal_paths"]
-        1
+        >>> from pprint import pprint
+        >>> dag = DAG([('D', 'G'), ('I', 'G'), ('G', 'L'), ('I', 'S')])
+        >>> pprint(dag.get_stats())
+        {'avg_n_parents': 0.8,
+         'edge_density': 0.4,
+         'max_n_parents': 2,
+         'n_connected_components': 1,
+         'n_edges': 4,
+         'n_latent_nodes': 0,
+         'n_leaf_nodes': 2,
+         'n_nodes': 5,
+         'n_root_nodes': 2,
+         'n_v_structures': 1}
+        >>> dag2 = DAG(
+        ...     ebunch=[('D', 'G'), ('I', 'G'), ('G', 'L'), ('I', 'S')],
+        ...     roles={'exposures': 'D', 'outcomes': 'L'}
+        ... )
+        >>> pprint(dag2.get_stats())
+        {'avg_n_parents': 0.8,
+         'edge_density': 0.4,
+         'max_n_parents': 2,
+         'n_causal_paths': 1,
+         'n_confounding_paths': 0,
+         'n_connected_components': 1,
+         'n_direct_paths': 0,
+         'n_edges': 4,
+         'n_exposures': 1,
+         'n_latent_nodes': 0,
+         'n_leaf_nodes': 2,
+         'n_mediated_paths': 1,
+         'n_mediators': 1,
+         'n_nodes': 5,
+         'n_outcomes': 1,
+         'n_root_nodes': 2,
+         'n_v_structures': 1}
         """
         no_of_nodes = self.number_of_nodes()
         no_of_edges = self.number_of_edges()
@@ -1800,41 +1826,67 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             "n_latent_nodes": len(getattr(self, "latents", [])),
         }
 
+        exposures = self.get_role("exposures") if self.has_role("exposures") else None
+        outcomes = self.get_role("outcomes") if self.has_role("outcomes") else None
+
         if exposures is not None and outcomes is not None:
-            stats.update(self._get_causal_stats(exposures, outcomes))
+            exposures = set(exposures)
+            outcomes = set(outcomes)
+
+            topo_order = list(nx.topological_sort(self))
+            paths_fwd = dict.fromkeys(self.nodes(), 0)
+            for exp in exposures:
+                paths_fwd[exp] = 1
+
+            for node in topo_order:
+                for child in self.successors(node):
+                    paths_fwd[child] += paths_fwd[node]
+
+            n_causal_paths = sum(paths_fwd[out] for out in outcomes)
+
+            n_direct_paths = sum(self.has_edge(exp, out) for exp in exposures for out in outcomes)
+
+            n_mediated_paths = n_causal_paths - n_direct_paths
+
+            reachable_from_exp = set()
+            for exp in exposures:
+                reachable_from_exp |= nx.descendants(self, exp)
+
+            can_reach_outcome = set()
+            for out in outcomes:
+                can_reach_outcome |= nx.ancestors(self, out)
+
+            mediator_nodes = (reachable_from_exp & can_reach_outcome) - exposures - outcomes
+            n_mediators = len(mediator_nodes)
+
+            relevant_nodes = set(self.nodes()) - exposures
+            blocked_graph = self.subgraph(relevant_nodes)
+
+            n_confounding_paths = 0
+
+            for exp in exposures:
+                for parent in self.predecessors(exp):
+                    paths_conf = dict.fromkeys(blocked_graph.nodes(), 0)
+                    if parent in paths_conf:
+                        paths_conf[parent] = 1
+                    for node in topo_order:
+                        if node not in blocked_graph:
+                            continue
+                        for child in blocked_graph.successors(node):
+                            paths_conf[child] += paths_conf[node]
+
+                    n_confounding_paths += sum(paths_conf[out] for out in outcomes if out in paths_conf)
+
+            stats.update(
+                {
+                    "n_exposures": len(exposures),
+                    "n_outcomes": len(outcomes),
+                    "n_causal_paths": n_causal_paths,
+                    "n_direct_paths": n_direct_paths,
+                    "n_mediated_paths": n_mediated_paths,
+                    "n_mediators": n_mediators,
+                    "n_confounding_paths": n_confounding_paths,
+                }
+            )
 
         return stats
-
-    def _get_causal_stats(self, exposures, outcomes):
-        import itertools
-
-        causal_paths = []
-        for exp, out in itertools.product(exposures, outcomes):
-            causal_paths.extend(nx.all_simple_paths(self, exp, out))
-
-        n_causal_paths = len(causal_paths)
-        mediator_nodes = set()
-        for path in causal_paths:
-            mediator_nodes.update(path[1:-1])  # excluding the first and the last node
-
-        n_direct_paths = sum(len(path) == 2 for path in causal_paths)
-        n_mediated_paths = sum(len(path) > 2 for path in causal_paths)
-
-        undirected = self.to_undirected()
-        n_confounding_paths = sum(
-            self.has_edge(path[1], path[0])
-            and not all(self.has_edge(path[i], path[i + 1]) for i in range(len(path) - 1))
-            for exp, out in itertools.product(exposures, outcomes)
-            for path in nx.all_simple_paths(undirected, exp, out)
-            if len(path) > 1
-        )
-
-        return {
-            "n_exposures": len(exposures),
-            "n_outcomes": len(outcomes),
-            "n_causal_paths": n_causal_paths,
-            "n_direct_paths": n_direct_paths,
-            "n_mediated_paths": n_mediated_paths,
-            "n_mediators": len(mediator_nodes),
-            "n_confounding_paths": n_confounding_paths,
-        }
