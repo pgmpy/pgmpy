@@ -8,9 +8,16 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import pytest
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery import CASTLE
+
+torch_available = _check_soft_dependencies("torch", severity="none")
+pytestmark = pytest.mark.skipif(
+    not torch_available,
+    reason="torch is required for CASTLE tests",
+)
 
 
 @pytest.fixture
@@ -53,14 +60,14 @@ class TestCASTLECore:
         assert hasattr(fitted_castle, "model_")
 
     def test_fit_sets_base_class_attributes(self, fitted_castle):
-        # n_features_in_ counts all columns including target (set by base class)
+        # feature_names_in_ counts all columns including target (set by base class)
         assert fitted_castle.n_features_in_ == 3
-        assert hasattr(fitted_castle, "feature_names_in_")
-        # feature_names_in_ excludes the target column
-        assert len(fitted_castle.feature_names_in_) == 2
-        assert "x1" in fitted_castle.feature_names_in_
-        assert "x2" in fitted_castle.feature_names_in_
-        assert "y" not in fitted_castle.feature_names_in_
+        assert hasattr(fitted_castle, "predictor_names_")
+        # predictor_names_ excludes the target column
+        assert len(fitted_castle.predictor_names_) == 2
+        assert "x1" in fitted_castle.predictor_names_
+        assert "x2" in fitted_castle.predictor_names_
+        assert "y" not in fitted_castle.predictor_names_
 
     def test_empty_graph_is_acyclic_after_high_threshold(self, simple_df):
         # A very high threshold zeroes all weights, producing an empty graph
@@ -107,6 +114,13 @@ class TestCASTLEInputValidation:
         castle = CASTLE(max_epochs=2)
         with pytest.raises(ValueError, match="target_col"):
             castle.fit(df, target_col=99)
+
+    def test_negative_target_col_int_raises(self):
+        np.random.seed(42)
+        df = pd.DataFrame(np.random.normal(0, 1, (100, 3)), columns=["A", "B", "C"])
+        castle = CASTLE(max_epochs=2)
+        with pytest.raises(ValueError, match="target_col"):
+            castle.fit(df, target_col=-1)
 
     def test_target_col_by_integer_resolves_correctly(self):
         np.random.seed(42)

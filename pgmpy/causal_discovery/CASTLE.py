@@ -11,6 +11,10 @@ nn = _safe_import("torch.nn")
 F = _safe_import("torch.nn.functional")
 
 
+if torch is None:
+    raise ImportError("torch is required for CASTLE. Install with: pip install torch")
+
+
 def _dag_constraint(W: torch.Tensor) -> torch.Tensor:
     """Compute the DAG acyclicity constraint h(W).
 
@@ -166,8 +170,8 @@ class CASTLE(_BaseCausalDiscovery):
     n_features_in_ : int
         Number of features seen during ``fit``.
 
-    feature_names_in_ : list[str]
-        Names of the independent (non-target) features seen during ``fit``.
+    predictor_names_ : list[str]
+        Names of the non-target (independent) features used by predict.
 
     Examples
     --------
@@ -259,7 +263,7 @@ class CASTLE(_BaseCausalDiscovery):
         if target_col is None:
             target_col = cols[0]
         elif target_col not in cols:
-            if isinstance(target_col, int) and target_col < len(cols):
+            if isinstance(target_col, int) and 0 <= target_col < len(cols):
                 target_col = cols[target_col]
             else:
                 raise ValueError(f"target_col {target_col} not found in columns")
@@ -357,7 +361,7 @@ class CASTLE(_BaseCausalDiscovery):
         self.causal_graph_ = dag
         self.model_ = model
         self.cols_ = cols
-        self.feature_names_in_ = cols[1:]
+        self.predictor_names_ = cols[1:]
 
         return self
 
@@ -376,7 +380,7 @@ class CASTLE(_BaseCausalDiscovery):
             1-D array of predicted values for the target column.
         """
         if isinstance(X, pd.DataFrame):
-            X_feats = X[self.feature_names_in_].to_numpy(dtype=np.float32)
+            X_feats = X[self.predictor_names_].to_numpy(dtype=np.float32)
         else:
             X_feats = np.asarray(X, dtype=np.float32)
 
