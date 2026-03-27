@@ -1,3 +1,4 @@
+import warnings
 from collections.abc import Callable, Hashable
 from itertools import combinations
 
@@ -13,14 +14,14 @@ from pgmpy.utils import llm_pairwise_orient
 
 
 class ExpertInLoop(StructureEstimator):
-    def __init__(self, data: Optional[pd.DataFrame] = None, **kwargs):
-        logger.warning(
-            "DeprecationWarning: This ExpertInLoop class will be removed in a future release. "
-            "Please use the new sklearn compatible ExpertInLoop class from the "
-            "pgmpy.causal_discovery module instead."
+    def __init__(self, data: pd.DataFrame | None = None, **kwargs):
+        warnings.warn(
+            "ExpertInLoop is deprecated. Please use pgmpy.causal_discovery.ExpertInLoop instead.",
+            FutureWarning,
+            stacklevel=2,
         )
         super().__init__(data=data, **kwargs)
-        self.orientation_cache = set([])
+        self.orientation_cache = set()
 
     def test_all(self, ci_test, dag: DAG) -> pd.DataFrame:
         """
