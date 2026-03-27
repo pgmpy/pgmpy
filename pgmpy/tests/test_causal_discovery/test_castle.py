@@ -134,7 +134,7 @@ class TestCASTLEInputValidation:
         assert castle.cols_[0] == "A"
 
     def test_optional_dependency_guard(self):
-        with patch("pgmpy.causal_discovery.CASTLE._check_soft_dependencies") as mock_check:
+        with patch("pgmpy.causal_discovery.castle._check_soft_dependencies") as mock_check:
             mock_check.side_effect = ImportError("torch not found")
             with pytest.raises(ImportError, match="torch"):
                 CASTLE()

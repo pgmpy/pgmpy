@@ -11,104 +11,110 @@ nn = _safe_import("torch.nn")
 F = _safe_import("torch.nn.functional")
 
 
-if torch is None:
-    raise ImportError("torch is required for CASTLE. Install with: pip install torch")
+if torch is not None:
 
+    def _dag_constraint(W: torch.Tensor) -> torch.Tensor:
+        """Compute the DAG acyclicity constraint h(W).
 
-def _dag_constraint(W: torch.Tensor) -> torch.Tensor:
-    """Compute the DAG acyclicity constraint h(W).
+        Uses the matrix exponential formulation:
+            h(W) = trace(exp(W ⊙ W)) - d
 
-    Uses the matrix exponential formulation:
-        h(W) = trace(exp(W ⊙ W)) - d
+        where d = W.shape[0] and ⊙ is elementwise (Hadamard) product.
+        h(W) == 0 iff W encodes a DAG.
 
-    where d = W.shape[0] and ⊙ is elementwise (Hadamard) product.
-    h(W) == 0 iff W encodes a DAG.
-
-    Parameters
-    ----------
-    W : torch.Tensor of shape (d, d)
-        Weighted adjacency matrix.
-
-    Returns
-    -------
-    h : torch.Tensor (scalar)
-        The acyclicity constraint value.
-    """
-    d = W.shape[0]
-    return torch.trace(torch.linalg.matrix_exp(W * W)) - d
-
-
-class _CASTLEModel(nn.Module):
-    """Internal masked-autoencoder network for CASTLE.
-
-    Each feature *i* has its own input layer whose *i*-th row is permanently
-    masked to zero, preventing the sub-network for *i* from seeing its own
-    value.  A single hidden layer is shared across all sub-networks.
-
-    Parameters
-    ----------
-    num_inputs : int
-        Number of input features (= number of DAG nodes).
-    n_hidden : int
-        Width of the hidden layers.
-    """
-
-    def __init__(self, num_inputs: int, n_hidden: int):
-        super().__init__()
-        self.num_inputs = num_inputs
-        self.n_hidden = n_hidden
-
-        self.input_layers = nn.ModuleList()
-        self.output_layers = nn.ModuleList()
-
-        for i in range(num_inputs):
-            self.input_layers.append(nn.Linear(num_inputs, n_hidden, bias=True))
-
-            # Mask: all 1s except row i is all 0s — prevents self-causation
-            mask_i = torch.ones((num_inputs, n_hidden))
-            mask_i[i, :] = 0.0
-            self.register_buffer(f"mask_{i}", mask_i)
-
-            self.output_layers.append(nn.Linear(n_hidden, 1, bias=True))
-
-        # One shared hidden layer across all sub-networks
-        self.hidden_layer = nn.Linear(n_hidden, n_hidden, bias=True)
-
-    def forward(self, X: torch.Tensor):
-        outs = []
-        out_0 = None
-        for i in range(self.num_inputs):
-            mask_i = getattr(self, f"mask_{i}")
-            # input_layers[i].weight shape: (n_hidden, num_inputs)
-            # mask_i shape: (num_inputs, n_hidden) → mask_i.T: (n_hidden, num_inputs)
-            weight_masked = self.input_layers[i].weight * mask_i.T
-            h0_i = F.relu(F.linear(X, weight_masked, self.input_layers[i].bias))
-            h1_i = F.relu(self.hidden_layer(h0_i))
-            out_i = self.output_layers[i](h1_i)
-            outs.append(out_i)
-            if i == 0:
-                out_0 = out_i
-
-        Out = torch.cat(outs, dim=1)
-        return Out, out_0
-
-    def get_W(self) -> torch.Tensor:
-        """Compute the weighted adjacency matrix from input-layer weights.
+        Parameters
+        ----------
+        W : torch.Tensor of shape (d, d)
+            Weighted adjacency matrix.
 
         Returns
         -------
-        W : torch.Tensor of shape (num_inputs, num_inputs)
-            ``W[j, i]`` is the L2 norm of column *j* in masked weight matrix *i*,
-            representing the influence of feature *j* on feature *i*.
+        h : torch.Tensor (scalar)
+            The acyclicity constraint value.
         """
-        W_cols = []
-        for i in range(self.num_inputs):
-            mask_i = getattr(self, f"mask_{i}")
-            weight_masked = self.input_layers[i].weight * mask_i.T  # (n_hidden, num_inputs)
-            norm = torch.norm(weight_masked, p=2, dim=0)  # (num_inputs,)
-            W_cols.append(norm.unsqueeze(1))
+        d = W.shape[0]
+        return torch.trace(torch.linalg.matrix_exp(W * W)) - d
 
-        return torch.cat(W_cols, dim=1)
+    class _CASTLEModel(nn.Module):
+        """Internal masked-autoencoder network for CASTLE.
+
+        Each feature *i* has its own input layer whose *i*-th row is permanently
+        masked to zero, preventing the sub-network for *i* from seeing its own
+        value.  A single hidden layer is shared across all sub-networks.
+
+        Parameters
+        ----------
+        num_inputs : int
+            Number of input features (= number of DAG nodes).
+        n_hidden : int
+            Width of the hidden layers.
+        """
+
+        def __init__(self, num_inputs: int, n_hidden: int):
+            super().__init__()
+            self.num_inputs = num_inputs
+            self.n_hidden = n_hidden
+
+            self.input_layers = nn.ModuleList()
+            self.output_layers = nn.ModuleList()
+
+            for i in range(num_inputs):
+                self.input_layers.append(nn.Linear(num_inputs, n_hidden, bias=True))
+
+                # Mask: all 1s except row i is all 0s — prevents self-causation
+                mask_i = torch.ones((num_inputs, n_hidden))
+                mask_i[i, :] = 0.0
+                self.register_buffer(f"mask_{i}", mask_i)
+
+                self.output_layers.append(nn.Linear(n_hidden, 1, bias=True))
+
+            # One shared hidden layer across all sub-networks
+            self.hidden_layer = nn.Linear(n_hidden, n_hidden, bias=True)
+
+        def forward(self, X: torch.Tensor):
+            outs = []
+            out_0 = None
+            for i in range(self.num_inputs):
+                mask_i = getattr(self, f"mask_{i}")
+                # input_layers[i].weight shape: (n_hidden, num_inputs)
+                # mask_i shape: (num_inputs, n_hidden) → mask_i.T: (n_hidden, num_inputs)
+                weight_masked = self.input_layers[i].weight * mask_i.T
+                h0_i = F.relu(F.linear(X, weight_masked, self.input_layers[i].bias))
+                h1_i = F.relu(self.hidden_layer(h0_i))
+                out_i = self.output_layers[i](h1_i)
+                outs.append(out_i)
+                if i == 0:
+                    out_0 = out_i
+
+            Out = torch.cat(outs, dim=1)
+            return Out, out_0
+
+        def get_W(self) -> torch.Tensor:
+            """Compute the weighted adjacency matrix from input-layer weights.
+
+            Returns
+            -------
+            W : torch.Tensor of shape (num_inputs, num_inputs)
+                ``W[j, i]`` is the L2 norm of column *j* in masked weight matrix *i*,
+                representing the influence of feature *j* on feature *i*.
+            """
+            W_cols = []
+            for i in range(self.num_inputs):
+                mask_i = getattr(self, f"mask_{i}")
+                weight_masked = self.input_layers[i].weight * mask_i.T  # (n_hidden, num_inputs)
+                norm = torch.norm(weight_masked, p=2, dim=0)  # (num_inputs,)
+                W_cols.append(norm.unsqueeze(1))
+
+            return torch.cat(W_cols, dim=1)
+
+else:
+
+    def _dag_constraint(*args, **kwargs):
+        raise ImportError("torch is required for CASTLE. Install with: pip install torch")
+
+    class _CASTLEModel:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("torch is required for CASTLE. Install with: pip install torch")
 
 
 class CASTLE(_BaseCausalDiscovery):
