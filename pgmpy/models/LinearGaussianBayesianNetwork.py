@@ -1013,8 +1013,10 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> df2 = pd.DataFrame(
         ...     np.random.normal(0, 1, (50, 3)), columns=["x1", "x2", "x3"]
         ... )
-        >>> model.fit(df1)
-        >>> model.fit_update(df2)
+        >>> model.fit(df1)  # doctest: +ELLIPSIS
+        <pgmpy.models.LinearGaussianBayesianNetwork.LinearGaussianBayesianNetwork object at 0x...>
+        >>> model.fit_update(df2)  # doctest: +ELLIPSIS
+        <pgmpy.models.LinearGaussianBayesianNetwork.LinearGaussianBayesianNetwork object at 0x...>
         """
         # Step 1: Check all variables are present in the new data
         if len(missing_vars := (set(self.nodes()) - set(data.columns))) > 0:
