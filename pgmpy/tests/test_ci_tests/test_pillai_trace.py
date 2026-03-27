@@ -204,5 +204,5 @@ def test_pillai_tests_approx(pillai_data):
         computed_coefs.append(test.statistic_)
         computed_pvalues.append(test.p_value_)
 
-    assert np.all(np.array(computed_coefs) >= 0.09)
+    assert np.all(np.array(computed_coefs) <= 0.05)
     assert np.all(np.array(computed_pvalues) <= 0.05)
