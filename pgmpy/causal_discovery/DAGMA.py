@@ -1,3 +1,6 @@
+import math
+
+import networkx as nx
 import numpy as np
 import pandas as pd
 import scipy.linalg as slin
@@ -136,7 +139,6 @@ class DagmaLinear(_BaseCausalDiscovery):
         self.mu_factor = mu_factor
         self.max_iter = max_iter
         self.w_threshold = w_threshold
-        self.backend = compat_fns.get_compute_backend()
 
     def _fit(self, X: pd.DataFrame):
         """
@@ -151,12 +153,6 @@ class DagmaLinear(_BaseCausalDiscovery):
         self.feature_names_in_ = X.columns.values
         self.n_features_in_ = len(self.feature_names_in_)
 
-        if self.n_features_in_ < 2:
-            raise ValueError(
-                f"Found array with 1 feature {self.feature_names_in_} while a"
-                "minimum of 2 is required for causal dicovery"
-            )
-
         # Step 2: Data Preparation & Covariance pre-computation
         data_np = X.values
         data_np = data_np - np.mean(data_np, axis=0, keepdims=True)
@@ -164,43 +160,30 @@ class DagmaLinear(_BaseCausalDiscovery):
 
         # Step 3: Configure bounds to strictly prevent self-loops
         bounds = [
-            (0, 0) if i == j else (None, None)
-            for i in range(self.n_features_in_)
-            for j in range(self.n_features_in_)
+            (0, 0) if i == j else (None, None) for i in range(self.n_features_in_) for j in range(self.n_features_in_)
         ]
 
         # Step 4: The Central Path Optimization Loop
         W_est = np.zeros((self.n_features_in_, self.n_features_in_))
         mu = self.mu_init
+        backend = compat_fns.get_compute_backend()
 
         for _ in range(self.max_iter):
-
-            if self.backend == np:
+            if backend == np:
                 res = sopt.minimize(
-                    fun=self._objective,
-                    x0=W_est.flatten(),
-                    args=(mu),
-                    method="L-BFGS-B",
-                    jac=True,
-                    bounds=bounds
-                 )
-                W_est = res.x.reshape(self.n_features_in_, self.n_features_in_)
+                    fun=self._objective, x0=W_est.flatten(), args=(mu), method="L-BFGS-B", jac=True, bounds=bounds
+                )
+                W_est = res.x.reshape(self.n_features_in_, self.n_features_in_).copy()
             else:  # Pytorch
                 # Convert W_est to a PyTorch parameter
-                W_tensor = torch.nn.Parameter(
-                    torch.tensor(W_est,
-                                 dtype=torch.float64,
-                                 requires_grad=True)
-                )
+                W_tensor = torch.nn.Parameter(torch.tensor(W_est, dtype=torch.float64, requires_grad=True))
 
                 # Initialize the PyTorch LBFGS optimizer
-                lbfgs = LBFGS([W_tensor],
-                              max_iter=5,
-                              line_search_fn="strong_wolfe")
+                lbfgs = LBFGS([W_tensor], max_iter=5, line_search_fn="strong_wolfe")
 
                 def closure():
                     lbfgs.zero_grad()  # Clear previous gradients
-                    loss = self._objective(W_tensor, mu)
+                    loss = self._objective(W_tensor, mu, backend)
                     loss.backward()  # Automatically computes the gradients
                     return loss
 
@@ -208,36 +191,35 @@ class DagmaLinear(_BaseCausalDiscovery):
                 lbfgs.step(closure)
 
                 # Extract the updated numpy array for the next loop
-                W_est = W_tensor.detach().numpy()
+                W_est = W_tensor.detach().numpy().copy()
 
             mu *= self.mu_factor
 
         # Step 5: Thresholding and Graph Creation
         W_est[np.abs(W_est) < self.w_threshold] = 0
         self.adjacency_matrix_ = W_est
-
-        self.causal_graph_ = DAG()
-        self.causal_graph_.add_nodes_from(self.feature_names_in_)
-
-        edges = np.argwhere(W_est != 0)
-        for i, j in edges:
-            self.causal_graph_.add_edge(self.feature_names_in_[i],
-                                        self.feature_names_in_[j])
+        # Panda data frame to map data features
+        df_adj = pd.DataFrame(W_est, index=self.feature_names_in_, columns=self.feature_names_in_)
+        # Convert to a NetworkX DiGraph, for passing to pgmpy's DAG
+        nx_graph = nx.from_pandas_adjacency(df_adj, create_using=nx.DiGraph)
+        self.causal_graph_ = DAG(nx_graph)
 
         return self
 
-    def _objective(self,
-                   w_1d: np.ndarray,
-                   mu: float,
-                   ) -> tuple[float, np.ndarray]:
+    def _objective(
+        self,
+        w_in: np.ndarray | torch.Tensor,
+        mu: float,
+    ) -> tuple[float, np.ndarray]:
         """
         The objective function for the continuous optimization, combining
         the Least Squares score, L1 penalty, and Log-Det acyclicity constraint.
         """
 
-        if self.backend == np:
+        backend = compat_fns.get_compute_backend()
+        if backend == np:
             # Step 1: Reshape the flat 1D array back into a 2D adjacency matrix
-            W = w_1d.reshape(self.n_features_in_, self.n_features_in_)
+            W = w_in.reshape(self.n_features_in_, self.n_features_in_)
 
             # Step 2: Compute the Least Squares loss and gradient
             dif = np.eye(self.n_features_in_) - W
@@ -253,7 +235,7 @@ class DagmaLinear(_BaseCausalDiscovery):
             # Barrier Protection: Force backtrack if we step out
             # of the valid DAG domain
             if sign <= 0:
-                return np.inf, np.zeros_like(w_1d)
+                return np.inf, np.zeros_like(w_in)
 
             h = -logdet + self.n_features_in_ * np.log(self.s)
             M_inv = slin.inv(M)
@@ -269,5 +251,32 @@ class DagmaLinear(_BaseCausalDiscovery):
 
             # SciPy expects a flat 1D gradient array
             return obj, G_obj.flatten()
-        else:  # TODO for pythorch
+
+        else:  # for pythorch
+            W = w_in
+
+            if not isinstance(self.cov_, torch.Tensor):
+                self.cov_ = torch.tensor(self.cov_, dtype=W.dtype, device=W.device)
+
+            eye = torch.eye(self.n_features_in_, dtype=W.dtype, device=W.device)
+
+            # Step 1: Compute the Least Squares loss
+            dif = eye - W
+            rhs = self.cov_ @ dif
+            score = 0.5 * torch.trace(dif.T @ rhs)
+
+            # Step 2: Compute the Log-Determinant Acyclicity Constraint
+            M = self.s * eye - (W * W)
+            sign, logdet = torch.linalg.slogdet(M)
+
+            # Barrier Protection
+            if sign <= 0:
+                return torch.tensor(float("inf"), requires_grad=True)
+
+            h = -logdet + self.n_features_in_ * math.log(self.s)
+
+            # Step 3: DAGMA Central Path Objective
+            l1_penalty = self.lambda1 * torch.abs(W).sum()
+            obj = mu * (score + l1_penalty) + h
+
             return obj
