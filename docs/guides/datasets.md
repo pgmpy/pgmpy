@@ -127,7 +127,7 @@ Subsequent calls read from this local cache.
 
 ## See Also
 
-- **Reference:** {py:func}`pgmpy.datasets.list_datasets` | {py:func}`pgmpy.datasets.load_dataset`
+- **API Reference:** {doc}`Datasets and Example Models API <../api/data>`
 - **Examples:** {doc}`Examples <../examples>`
 - **Previous:** {doc}`simulations` -- generate synthetic data from a model
 - **Next:** {doc}`example_models` -- pre-built Bayesian Networks for benchmarking

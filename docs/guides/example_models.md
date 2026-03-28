@@ -131,7 +131,7 @@ the built-in registry.
 
 ## See Also
 
-- **Reference:** {py:func}`pgmpy.example_models.list_models` | {py:func}`pgmpy.example_models.load_model`
+- **API Reference:** {doc}`Datasets and Example Models API <../api/data>`
 - **Examples:** {doc}`Inference in Discrete BN <../examples/Inference_Discrete_BN>` | {doc}`Simulating Data <../examples/Simulating_Data>`
 - **Previous:** {doc}`datasets` -- built-in datasets for testing
 - **Next:** {doc}`io` -- import and export models in various formats

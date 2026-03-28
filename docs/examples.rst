@@ -1,8 +1,8 @@
 .. meta::
    :description: Example notebooks for pgmpy covering Bayesian networks, structure learning, inference, simulations, and causal analysis.
 
-Examples
-========
+Example Notebooks
+=================
 
 A curated set of `Jupyter notebooks <https://github.com/pgmpy/pgmpy/tree/dev/examples>`_
 that demonstrate the most common tasks in pgmpy: building models, learning from

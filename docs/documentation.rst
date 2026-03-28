@@ -3,8 +3,8 @@
 .. meta::
    :description: Task-oriented pgmpy guides for causal discovery, parameter estimation, probabilistic inference, simulations, and model building.
 
-Guides
-======
+User Guide
+==========
 
 Use these guides when you want workflow-oriented documentation before diving into
 the API reference. Each page focuses on a concrete task and links to the

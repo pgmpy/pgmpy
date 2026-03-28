@@ -93,8 +93,8 @@ Check whether a causal effect is identifiable from the graph alone.
         [("X", "Y"), ("Z", "X"), ("Z", "Y")],
         roles={"exposures": "X", "outcomes": "Y"},
     )
-    identified = Adjustment(variant="minimal").identify(dag)
-    print(identified.get_role("adjustment"))
+    identified_graph, is_identified = Adjustment(variant="minimal").identify(dag)
+    identified.get_role("adjustment")
 
 
 .. _quickstart-causal-inference:
@@ -108,22 +108,12 @@ Estimate a causal effect from data once you have a causal graph.
 
 .. code-block:: python
 
-    from pgmpy.datasets import load_dataset
+    from pgmpy.example_models import load_model
     from pgmpy.inference import CausalInference
-    from pgmpy.models import DiscreteBayesianNetwork
 
-    data = load_dataset("sachs_discrete").data[["PKA", "ERK", "Akt"]]
-    dag = DiscreteBayesianNetwork(
-        [
-            ("PKA", "ERK"),
-            ("ERK", "Akt"),
-            ("PKA", "Akt"),
-        ]
-    )
-
-    ci = CausalInference(dag)
-    ate = ci.estimate_ate("PKA", "Akt", data)
-    print(ate)
+    model = load_model("bnlearn/sachs")
+    infer = CausalInference(model)
+    infer.query(variables=["Akt"], do={"PKC": "LOW"})
 
 
 .. _quickstart-example-data-models:
@@ -174,15 +164,9 @@ Extend pgmpy
 
 **User Guide:** :doc:`Extensibility <../guides/extensibility>`
 
-Start new datasets, models, metrics, or algorithms from the repository
-templates. This workflow assumes you are working in a local clone of the
-pgmpy repository.
-
-.. code-block:: bash
-
-    ls devtools/extension_templates
-    cp devtools/extension_templates/_metrics.py pgmpy/metrics/my_metric.py
-
+Implement new datasets, models, metrics, or algorithms from the repository templates. pgmpy provides extension templates
+for each class of method. To add a new method, you can just follow the TODOs listed in the extension template for that
+method. All of our extension templates can be found at: https://github.com/pgmpy/pgmpy/tree/dev/devtools/extension_templates
 
 Next Steps
 ----------

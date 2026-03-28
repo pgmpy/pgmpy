@@ -54,6 +54,6 @@ print(data.head())
 ## See Also
 
 - **Examples:** {doc}`Simulating Data <../examples/Simulating_Data>`
-- **API Reference:** {py:class}`pgmpy.sampling.Sampling.BayesianModelSampling` | {py:class}`pgmpy.sampling.Sampling.GibbsSampling`
+- **API Reference:** {doc}`Inference and Sampling API <../api/inference>`
 - **Previous:** {doc}`metrics` -- evaluate model quality
 - **Next:** {doc}`datasets` -- built-in datasets for testing

@@ -112,5 +112,6 @@ For a new metric implementation, the high-level flow is:
 ## See Also
 
 - **Related guides:** {doc}`custom_model` | {doc}`datasets` | {doc}`example_models` | {doc}`metrics` | {doc}`causal_discovery`
+- **API Reference:** {doc}`Causal Discovery API <../api/structure_learning>` | {doc}`Metrics API <../api/metrics>` | {doc}`Datasets and Example Models API <../api/data>`
 - **Contributing:** {doc}`../development`
 - **Previous:** {doc}`plotting` -- visualize graphs with pygraphviz, daft, and networkx

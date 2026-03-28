@@ -1,5 +1,7 @@
 .. pgmpy documentation master file
 
+.. title:: Documentation — pgmpy
+
 :hide-toc:
 :hide-navigation:
 
