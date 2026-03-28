@@ -1826,14 +1826,16 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             "n_latent_nodes": len(getattr(self, "latents", [])),
         }
 
-        exposures = self.get_role("exposures") if self.has_role("exposures") else None
-        outcomes = self.get_role("outcomes") if self.has_role("outcomes") else None
+        exposures = self.get_role("exposures") if len(self.get_role("exposures")) > 0 else None
+        outcomes = self.get_role("outcomes") if len(self.get_role("outcomes")) > 0 else None
 
         if exposures is not None and outcomes is not None:
             exposures = set(exposures)
             outcomes = set(outcomes)
-
+            # Used for calculation of n_causal_paths and n_compounding_paths
             topo_order = list(nx.topological_sort(self))
+
+            # n_causal_paths
             paths_fwd = dict.fromkeys(self.nodes(), 0)
             for exp in exposures:
                 paths_fwd[exp] = 1
@@ -1844,10 +1846,13 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
             n_causal_paths = sum(paths_fwd[out] for out in outcomes)
 
+            # n_direct_paths
             n_direct_paths = sum(self.has_edge(exp, out) for exp in exposures for out in outcomes)
 
+            # n_mediated_paths
             n_mediated_paths = n_causal_paths - n_direct_paths
 
+            # n_mediators
             reachable_from_exp = set()
             for exp in exposures:
                 reachable_from_exp |= nx.descendants(self, exp)
@@ -1859,6 +1864,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             mediator_nodes = (reachable_from_exp & can_reach_outcome) - exposures - outcomes
             n_mediators = len(mediator_nodes)
 
+            # n_confounding_paths
             relevant_nodes = set(self.nodes()) - exposures
             blocked_graph = self.subgraph(relevant_nodes)
 
