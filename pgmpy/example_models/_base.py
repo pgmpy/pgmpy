@@ -1,16 +1,12 @@
 import gzip
-import hashlib
 import io
-import os
-import shutil
-from urllib.request import urlopen
 
 from skbase.base import BaseObject
 from skbase.lookup import all_objects
 
 from pgmpy.base import DAG
-from pgmpy.global_vars import PGMPY_DATA_HOME
 from pgmpy.readwrite import BIFReader
+from pgmpy.utils.hf_hub import read_hf_file
 
 
 class _BaseExampleModel(BaseObject):
@@ -30,40 +26,19 @@ class _BaseExampleModel(BaseObject):
         "is_hybrid": bool,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example_models/refs/heads/main"
+    repo_id = "pgmpy/example_models"
+    revision = "main"
 
     @classmethod
     def _get_raw_data(cls) -> bytes:
         """
-        Checks if the data is cached locally; if not, fetches it from the URL and caches it.
+        Fetches the model file from the Hugging Face Hub cache.
         """
-        name = cls.get_class_tag("name")
-        path = os.path.join(
-            PGMPY_DATA_HOME,
-            hashlib.sha256(f"{cls.base_url}_{name}".encode()).hexdigest(),
+        return read_hf_file(
+            repo_id=cls.repo_id,
+            filename=cls.data_url,
+            revision=cls.revision,
         )
-        file_path = os.path.join(path, "model")
-
-        if os.path.exists(file_path):
-            with open(file_path, "rb") as f:
-                raw_data = f.read()
-        else:
-            os.makedirs(path, exist_ok=True)
-
-            with urlopen(f"{cls.base_url}/{cls.data_url}", timeout=60) as response:
-                raw_data = response.read()
-
-            with open(file_path, "wb") as f:
-                f.write(raw_data)
-        return raw_data
-
-    @staticmethod
-    def clear_cache():
-        """
-        Clears the cached data for all models.
-        """
-        if os.path.exists(PGMPY_DATA_HOME):
-            shutil.rmtree(PGMPY_DATA_HOME)
 
 
 class DiscreteMixin:

@@ -24,11 +24,11 @@ class HTRU2(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/htru2/"
+    base_url = "real/htru2"
 
-    data_url = base_url + "data/pulsar.mixed.maximum.2.txt"
+    data_url = "data/pulsar.mixed.maximum.2.txt"
     ground_truth_url = None
-    expert_knowledge_url = base_url + "ground.truth/htr2.knowledge.txt"
+    expert_knowledge_url = "ground.truth/htr2.knowledge.txt"
 
     categorical_variables = ["pulsar"]
     ordinal_variables = dict()

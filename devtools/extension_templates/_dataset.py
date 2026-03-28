@@ -35,19 +35,21 @@ class YourDatasetClass(_BaseDataset):
         "is_ordinal": bool,
     }
 
-    # TODO: Add the base URL for your dataset assets.
-    base_url = "https://raw.githubusercontent.com/your-org/your-dataset-repo/main/your-dataset/"
+    # TODO: Add the dataset-specific base directory within the example_datasets repository.
+    base_url = "real/your-dataset"
 
-    # TODO: Add the URL to the dataset. The current parser expects the dataset to be in a tabular form with the first
-    # row containing the names of the columns.
-    data_url = base_url + "<link_to_data_file>"
+    # TODO: Add the path to the dataset. The current parser expects the dataset to be in a tabular form with the first
+    # row containing the names of the columns. Paths are relative to `base_url`.
+    data_url = "<link_to_data_file>"
 
-    # TODO: Add the URL for the ground truth. The current parser expects the ground truth to be a dagitty model string.
-    ground_truth_url = base_url + "<link_to_gt_file>"
+    # TODO: Add the path for the ground truth. The current parser expects the ground truth to be a dagitty model
+    # string. Paths are relative to `base_url`.
+    ground_truth_url = "<link_to_gt_file>"
 
-    # TODO: Add the URL for the expert knowledge. An example of the expected format can be found at:
-    # https://github.com/pgmpy/example-causal-datasets/blob/main/real/abalone/ground.truth/abalone.knowledge.txt
-    expert_knowledge_url = base_url + "<link_to_expert_knowledge_file>"
+    # TODO: Add the path for the expert knowledge. An example of the expected format can be found in the
+    # example_datasets repository under `real/abalone/ground.truth/abalone.knowledge.txt`. Paths are relative to
+    # `base_url`.
+    expert_knowledge_url = "<link_to_expert_knowledge_file>"
 
     # TODO: If the tag `has_missing_data=True`, add the marker that is used for missing values in the dataset.
     missing_values_marker = None
@@ -67,7 +69,7 @@ class YourDatasetClass(_BaseDataset):
         if not cls.get_class_tag("has_ground_truth"):
             return None
 
-        _ = cls._get_raw_data("ground_truth", cls.ground_truth_url).decode("utf-8-sig", errors="ignore")
+        _ = cls._get_raw_data(cls.ground_truth_url).decode("utf-8-sig", errors="ignore")
         # TODO: Add logic for parsing the data from the line above into a `pgmpy.base.DAG` object.
         dag = None
         return dag
@@ -75,7 +77,7 @@ class YourDatasetClass(_BaseDataset):
     # TODO: If the data is in tabular text format, remove the following `load_dataframe` method.
     @classmethod
     def load_dataframe(cls) -> pandas.DataFrame:
-        _ = cls._get_raw_data("data", cls.data_url)
+        _ = cls._get_raw_data(cls.data_url)
 
         # TODO: Add logic to construct a pandas DataFrame object from data in line above.
         dataframe = None
@@ -87,7 +89,7 @@ class YourDatasetClass(_BaseDataset):
         if not cls.get_class_tag("has_expert_knowledge"):
             return None
 
-        _ = cls._get_raw_data("expert_knowledge", cls.expert_knowledge_url)
+        _ = cls._get_raw_data(cls.expert_knowledge_url)
 
         # TODO: Add logic to construct a `pgmpy.estimator.ExpertKnowledge` object from data in line above.
         expert_knowledge = None

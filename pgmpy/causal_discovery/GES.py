@@ -99,7 +99,7 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
     >>> expert = ExpertKnowledge(forbidden_edges=[("HISTORY", "CVP")])
     >>> ges = GES(scoring_method="bic-d", expert_knowledge=expert)
     >>> ges.fit(df)  # doctest: +ELLIPSIS
-    GES(expert_knowledge=<pgmpy.causal_discovery.ExpertKnowledge.ExpertKnowledge object at 0x...>,
+    GES(expert_knowledge=Expert Knowledge: 0 required edges, 1 forbidden edges, ...,
         scoring_method='bic-d')
 
     References
