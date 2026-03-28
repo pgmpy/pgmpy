@@ -4,7 +4,7 @@
 :hide-navigation:
 
 .. meta::
-   :description: pgmpy documentation for Bayesian networks, causal discovery, parameter estimation, inference, and causal effect workflows in Python.
+   :description: pgmpy documentation for causal discovery, model testing, causal effect estimation, parameter estimation, probabilistic and causal inference, and simulations in Python.
 
 .. grid:: 1 1 2 2
    :gutter: 3
@@ -15,7 +15,7 @@
 
       .. image:: _static/images/logo.png
          :alt: pgmpy logo
-         :width: 180px
+         :width: 220px
          :align: center
 
    .. grid-item::
@@ -23,13 +23,12 @@
 
       .. container:: hero-subtitle
 
-         Python Library for Causal AI
+         Python toolkit for causal and probabilistic reasoning
 
-      pgmpy is a Python package for causal inference and probabilistic inference
-      using Directed Acyclic Graphs (DAGs) and Bayesian Networks with a focus on
-      modularity and extensibility. Implementations of various algorithms for
-      causal discovery, parameter estimation, approximate inference, exact
-      inference, and causal inference are available.
+      pgmpy provides the building blocks for causal and probabilistic reasoning using graphical models. It implements data structures for a wide range of causal model types such as DAGs, PDAGs, MAGs, PAGs, Bayesian Networks, Dynamic Bayesian Networks, and Structural Equation Models along with algorithms for various tasks such as causal discovery, causal identification, causal and probabilistic inference, model validation, parameter estimation, simulations, and more.
+
+      Algorithms for each task follow a unified composable API, making them modular and extensible. They are also scikit-learn compatible when possible. They can be used directly, combined in sklearn pipelines, or used to build higher-level tools on top of them.
+
 
       .. container:: hero-actions
 
@@ -65,70 +64,69 @@
 
             API Reference
 
-      .. container:: badge-container badge-container-left
-
-         |pypi-badge| |conda-badge| |github-badge| |jmlr-badge|
-
 Key Features
 ------------
 
-.. grid:: 1 1 2 3
+.. grid:: 1 1 2 4
    :gutter: 3
    :class-container: sd-shadow-hover-cards pgmpy-card-grid
 
-   .. grid-item-card:: Causal Discovery and Structure Learning
+   .. grid-item-card:: Causal Discovery / Structure Learning
       :link: api/structure_learning
       :link-type: doc
       :class-card: sd-card-hover pgmpy-card
 
-      Learn causal structure from data.
+      Learn causal graphs from data using scikit-learn compatible implementations.
 
    .. grid-item-card:: Parameter Estimation
       :link: api/parameter_estimation
       :link-type: doc
       :class-card: sd-card-hover pgmpy-card
 
-      Estimate model parameters with Maximum Likelihood, Bayesian estimation, or EM.
+      Estimate conditional distributions for nodes in the model.
 
    .. grid-item-card:: Probabilistic Inference
       :link: api/inference
       :link-type: doc
       :class-card: sd-card-hover pgmpy-card
 
-      Run exact inference (Variable Elimination, Belief Propagation) or approximate
-      inference (sampling, Gibbs).
-
-   .. grid-item-card:: Causal Inference
-      :link: api/causal_inference
-      :link-type: doc
-      :class-card: sd-card-hover pgmpy-card
-
-      Perform interventional and counterfactual queries using do-calculus, backdoor,
-      and frontdoor adjustment.
+      Compute posterior distributions from the learned model using exact or approximate inference.
 
    .. grid-item-card:: Causal Identification
       :link: guides/causal_identification
       :link-type: doc
       :class-card: sd-card-hover pgmpy-card
 
-      Determine whether a causal effect is identifiable from observational data
-      given the graph structure.
+      Given a causal graph determine how to estimate the a causal query.
+
+   .. grid-item-card:: Causal Inference
+      :link: guides/causal_identification
+      :link-type: doc
+      :class-card: sd-card-hover pgmpy-card
+
+      Compute interventional and counterfactual distributions from models.
 
    .. grid-item-card:: Example Datasets and Models
       :link: examples
       :link-type: doc
       :class-card: sd-card-hover pgmpy-card
 
-      Explore built-in example Bayesian Networks and datasets to quickly prototype
-      and test workflows.
+      Built-in collection of example Bayesian Networks and datasets from different sources.
 
-Workflow
---------
+   .. grid-item-card:: Simulations
+      :link: examples
+      :link-type: doc
+      :class-card: sd-card-hover pgmpy-card
 
-.. figure:: _static/images/pgmpy_workflow.png
-   :alt: Possible Workflows in pgmpy for Directed Acyclic Graphs (DAGs) and Bayesian Networks (BNs).
+      Simulate data from models under various scenarios.
 
-   Possible Workflows in pgmpy for Directed Acyclic Graphs (DAGs) and Bayesian Networks (BNs).
+   .. grid-item-card:: Extend pgmpy
+      :link: examples
+      :link-type: doc
+      :class-card: sd-card-hover pgmpy-card
+
+      Write your own custom pgmpy plugable methods using our extension templates.
+
 
 .. toctree::
    :hidden:
@@ -139,19 +137,3 @@ Workflow
    API Reference <reference>
    Citation <citation>
    Getting Involved <development>
-
-.. |pypi-badge| image:: https://img.shields.io/pypi/v/pgmpy?style=flat-square&color=2E8B8E
-   :alt: PyPI version
-   :target: https://pypi.org/project/pgmpy/
-
-.. |conda-badge| image:: https://img.shields.io/conda/vn/conda-forge/pgmpy?style=flat-square&color=2E8B8E
-   :alt: Conda version
-   :target: https://anaconda.org/conda-forge/pgmpy
-
-.. |github-badge| image:: https://img.shields.io/github/stars/pgmpy/pgmpy?style=flat-square&color=2E8B8E
-   :alt: GitHub stars
-   :target: https://github.com/pgmpy/pgmpy
-
-.. |jmlr-badge| image:: https://img.shields.io/badge/JMLR-2024-009688?style=flat-square
-   :alt: JMLR 2024
-   :target: http://jmlr.org/papers/v25/23-0487.html
