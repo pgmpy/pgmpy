@@ -289,9 +289,9 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         --------
         >>> from pgmpy.base import PDAG
         >>> pdag = PDAG(
-        ...     directed_ebunch=[("A", "B")], undirected_ebunch=[("B", "C"), ("C", "B")]
+        ...     directed_ebunch=[("A", "B")], undirected_ebunch=[("B", "C")]
         ... )
-        >>> pdag.apply_meeks_rules()
+        >>> pdag = pdag.apply_meeks_rules()
         >>> pdag.directed_edges
         {('A', 'B'), ('B', 'C')}
         """
@@ -381,6 +381,7 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
 
         Examples
         --------
+        >>> from pgmpy.base import PDAG
         >>> pdag = PDAG(
         ...     directed_ebunch=[("A", "B"), ("C", "B")],
         ...     undirected_ebunch=[("C", "D"), ("D", "A")],
