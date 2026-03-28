@@ -3,54 +3,69 @@ Quickstart
 
 Task-oriented examples to help you get started with pgmpy.
 
-Learn Structure from Data
--------------------------
+The sections below provide a minimal example for various supported tasks and a link to the corresponding User Guide page for the full workflow.
 
-Discover the causal graph from observational data using constraint-based
-or score-based algorithms.
 
-.. code-block:: python
+.. _quickstart-causal-discovery:
 
-    from pgmpy.utils import get_example_model
-    from pgmpy.estimators import PC
+Causal Discovery / Structure Learning
+-------------------------------------
 
-    model = get_example_model("alarm")
-    df = model.simulate(n_samples=1000)
+**User Guide:** :doc:`Causal Discovery and Structure Learning <../guides/causal_discovery>`
 
-    learned_dag = PC(data=df).estimate(ci_test="chi_square", return_type="dag")
-
-Estimate Parameters
--------------------
-
-Fit conditional probability distributions to a known graph structure
-using Maximum Likelihood or Bayesian estimation.
+Learn a graph structure directly from data.
 
 .. code-block:: python
 
-    from pgmpy.utils import get_example_model
+    from pgmpy.datasets import load_dataset
+    from pgmpy.causal_discovery import PC
 
-    model = get_example_model("alarm")
-    df = model.simulate(n_samples=1000)
+    dataset = load_dataset("sachs_discrete")
+    est = PC(ci_test="chi_square", return_type="dag")
+    est.fit(dataset.data)
+    print(est.causal_graph_)
 
-    # Fit parameters to the learned structure
-    from pgmpy.models import BayesianNetwork
 
-    bn = BayesianNetwork(model.edges())
-    bn.fit(df)
-    bn.get_cpds("HISTORY")
+.. _quickstart-parameter-estimation:
 
-Run Probabilistic Inference
----------------------------
+Parameter Estimation
+--------------------
 
-Query the posterior probability of variables given evidence using
-exact or approximate inference.
+**User Guide:** :doc:`Parameter Estimation <../guides/parameter_estimation>`
+
+Fit conditional distributions for a known graph structure.
 
 .. code-block:: python
 
-    from pgmpy.utils import get_example_model
+    from pgmpy.estimators import MaximumLikelihoodEstimator
+    from pgmpy.models import DiscreteBayesianNetwork
+    from pgmpy.example_models import load_model
+
+    # Generate some data to use for fitting.
+    model = load_model("bnlearn/alarm")
+    df = model.simulate(n_samples=1000, seed=42)
+
+    # Create a network structure and fit data to it.
+    bn_struct = DiscreteBayesianNetwork(model.edges())
+    bn_struct.fit(df, estimator=MaximumLikelihoodEstimator)
+    bn_struct.cpds
+
+
+.. _quickstart-probabilistic-inference:
+
+Probabilistic Inference
+-----------------------
+
+**User Guide:** :doc:`Probabilistic Inference <../guides/probabilistic_inference>`
+
+Query posterior distributions from a Bayesian Network.
+
+.. code-block:: python
+
+    from pgmpy.example_models import load_model
     from pgmpy.inference import VariableElimination
 
-    model = get_example_model("alarm")
+    model = load_model("bnlearn/alarm")
     infer = VariableElimination(model)
 
     result = infer.query(
@@ -59,76 +74,119 @@ exact or approximate inference.
     )
     print(result)
 
-Perform Causal Inference
-------------------------
 
-Estimate causal effects using do-calculus, backdoor adjustment,
-or frontdoor adjustment.
+.. _quickstart-causal-identification:
+
+Causal Identification
+---------------------
+
+**User Guide:** :doc:`Causal Identification <../guides/causal_identification>`
+
+Check whether a causal effect is identifiable from the graph alone.
 
 .. code-block:: python
 
-    from pgmpy.utils import get_example_model
-    from pgmpy.inference import CausalInference
+    from pgmpy.base import DAG
+    from pgmpy.identification import Adjustment
 
-    model = get_example_model("alarm")
-    infer = CausalInference(model)
-
-    # Compute the causal effect of intervention
-    result = infer.query(
-        variables=["HISTORY"],
-        do={"LVEDVOLUME": "LOW"},
+    dag = DAG(
+        [("X", "Y"), ("Z", "X"), ("Z", "Y")],
+        roles={"exposures": "X", "outcomes": "Y"},
     )
-    print(result)
+    identified = Adjustment(variant="minimal").identify(dag)
+    print(identified.get_role("adjustment"))
 
-Simulate Data from a Model
+
+.. _quickstart-causal-inference:
+
+Causal Inference
+----------------
+
+**User Guide:** :doc:`Causal Estimation <../guides/causal_estimation>`
+
+Estimate a causal effect from data once you have a causal graph.
+
+.. code-block:: python
+
+    from pgmpy.datasets import load_dataset
+    from pgmpy.inference import CausalInference
+    from pgmpy.models import DiscreteBayesianNetwork
+
+    data = load_dataset("sachs_discrete").data[["PKA", "ERK", "Akt"]]
+    dag = DiscreteBayesianNetwork(
+        [
+            ("PKA", "ERK"),
+            ("ERK", "Akt"),
+            ("PKA", "Akt"),
+        ]
+    )
+
+    ci = CausalInference(dag)
+    ate = ci.estimate_ate("PKA", "Akt", data)
+    print(ate)
+
+
+.. _quickstart-example-data-models:
+
+Example Datasets and Models
 ---------------------------
 
-Generate synthetic datasets from an existing Bayesian Network
-for testing and experimentation.
+**User Guides:** :doc:`Example Datasets <../guides/datasets>` | :doc:`Example Models <../guides/example_models>`
+
+Discover built-in datasets and example models.
 
 .. code-block:: python
 
-    from pgmpy.utils import get_example_model
+    from pgmpy.datasets import list_datasets, load_dataset
+    from pgmpy.example_models import list_models, load_model
 
-    model = get_example_model("alarm")
-    df = model.simulate(n_samples=500)
-    print(df.head())
+    print(list_datasets(is_discrete=True, has_ground_truth=True)[:3])
+    dataset = load_dataset("sachs_discrete")
+    print(dataset.name, dataset.data.shape)
 
-Build a Custom Model
---------------------
+    print(list_models()[:3])
+    model = load_model("bnlearn/alarm")
+    print(len(model.nodes()), len(model.edges()))
 
-Define a Bayesian Network from scratch by specifying the graph
-structure and conditional probability distributions.
+
+.. _quickstart-simulations:
+
+Simulations
+-----------
+
+**User Guide:** :doc:`Simulations <../guides/simulations>`
+
+Generate synthetic data from a model for testing and experimentation.
 
 .. code-block:: python
 
-    from pgmpy.models import BayesianNetwork
-    from pgmpy.factors.discrete import TabularCPD
+    from pgmpy.example_models import load_model
 
-    bn = BayesianNetwork([("D", "G"), ("I", "G"), ("G", "L")])
+    model = load_model("bnlearn/ecoli70")
+    data = model.simulate(int(1e3))
+    data.head()
 
-    cpd_d = TabularCPD("D", 2, [[0.6], [0.4]])
-    cpd_i = TabularCPD("I", 2, [[0.7], [0.3]])
-    cpd_g = TabularCPD(
-        "G",
-        3,
-        [[0.3, 0.05, 0.9, 0.5], [0.4, 0.25, 0.08, 0.3], [0.3, 0.7, 0.02, 0.2]],
-        evidence=["D", "I"],
-        evidence_card=[2, 2],
-    )
-    cpd_l = TabularCPD(
-        "L",
-        2,
-        [[0.1, 0.4, 0.99], [0.9, 0.6, 0.01]],
-        evidence=["G"],
-        evidence_card=[3],
-    )
 
-    bn.add_cpds(cpd_d, cpd_i, cpd_g, cpd_l)
-    bn.check_model()
+.. _quickstart-extensibility:
+
+Extend pgmpy
+------------
+
+**User Guide:** :doc:`Extensibility <../guides/extensibility>`
+
+Start new datasets, models, metrics, or algorithms from the repository
+templates. This workflow assumes you are working in a local clone of the
+pgmpy repository.
+
+.. code-block:: bash
+
+    ls devtools/extension_templates
+    cp devtools/extension_templates/_metrics.py pgmpy/metrics/my_metric.py
+
 
 Next Steps
 ----------
 
-* :doc:`Examples <../examples>` -- Jupyter notebooks with detailed walkthroughs
-* :doc:`API Reference <../reference>` -- Full module documentation
+* :doc:`User Guide <../documentation>` -- Workflow-oriented documentation for each task area
+* :doc:`Examples <../examples>` -- Jupyter notebooks with longer walkthroughs
+* :doc:`API Reference <../reference>` -- Full public API documentation
