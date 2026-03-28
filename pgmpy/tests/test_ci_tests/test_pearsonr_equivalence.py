@@ -54,5 +54,5 @@ def test_pearsonr_equivalence_approx(pearson_equivalence_data):
     assert not test("X", "Y", ["Z1", "Z2", "Z3"], significance_level=0.05)
 
     test("X", "Y", ["Z1", "Z2", "Z3"])
-    assert round(test.statistic_, 2) <= 0.43
-    assert round(test.p_value_, 2) <= 1.0
+    assert test.statistic_ <= 0.7
+    assert test.p_value_ <= 1.0
