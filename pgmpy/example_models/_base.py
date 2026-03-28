@@ -71,9 +71,7 @@ class ContinuousMixin:
         from pgmpy.models import LinearGaussianBayesianNetwork
 
         raw_data = cls._get_raw_data()
-
         file_obj = io.BytesIO(raw_data)
-
         return LinearGaussianBayesianNetwork.load(file_obj)
 
 
@@ -100,14 +98,13 @@ def load_model(name: str):
 
     Returns
     -------
-    model: pgmpy.base.DAG or pgmpy.models.DiscreteBayesianNetwork or pgmpy.models.LinearGaussianBayesianNetwork or
-                pgmpy.models.FunctionalBayesianNetwork
+    model: pgmpy.base.DAG or pgmpy.models.DiscreteBayesianNetwork or
+           pgmpy.models.LinearGaussianBayesianNetwork or
+           pgmpy.models.FunctionalBayesianNetwork
         The loaded example model.
 
     Examples
     --------
-    #  Loading a discrete Bayesian network with parameters.
-
     >>> from pgmpy.example_models import load_model
     >>> model = load_model("bnlearn/alarm")
     >>> print(model)
@@ -117,21 +114,13 @@ def load_model(name: str):
     >>> model.get_cpds("HISTORY")
     <TabularCPD representing P(HISTORY:2 | LVFAILURE:2) at 0x7d4527a84230>
 
-    # Loading a DAG without parameters.
-
     >>> model = load_model("dagitty/acid_1996")
     >>> print(model)
     DAG with 18 nodes and 22 edges
-    >>> len(model.nodes())
-    18
-
-    # Loading a continuous Bayesian network with parameters.
 
     >>> model = load_model("bnlearn/arth150")
     >>> print(model)
     LinearGaussianBayesianNetwork with 107 nodes and 150 edges
-
-    # Loading a bnRep discrete Bayesian network.
 
     >>> model = load_model("bnrep/asia")
     >>> print(model)
@@ -154,44 +143,72 @@ def list_models(**filter_tags) -> list[str]:
     """
     Lists all available example models.
 
+    The models can be filtered based on their tags by providing keyword
+    arguments. Supports both exact matching and comparator-based suffixes
+    for numeric tags (``n_nodes``, ``n_edges``).
 
-    The models can be filtered based on their tags by providing keyword arguments. The available tags are:
-    - name: str
-    - n_nodes: No. of nodes in the model.
-    - n_edges: No. of edges in the model.
-    - is_parameterized: Whether it is just the network structure or also has parameters (CPDs) defined.
-    - is_discrete: Whether the model has only discrete variables / parameterization.
-    - is_continuous: Whether the model has only continuous variables / parameterization.
-    - is_hybrid: Whether the model has both discrete and continuous variables / parameterization.
+    Available tags
+    --------------
+    - name            : str  -- exact model name
+    - n_nodes         : int  -- number of nodes
+    - n_edges         : int  -- number of edges
+    - is_parameterized: bool -- has CPDs / parameters defined
+    - is_discrete     : bool -- discrete variables only
+    - is_continuous   : bool -- continuous variables only
+    - is_hybrid       : bool -- both discrete and continuous variables
+
+    Comparator suffixes (for numeric tags)
+    ---------------------------------------
+    ``__gt``   strictly greater than     ``n_nodes__gt=10``
+    ``__gte``  greater than or equal to  ``n_nodes__gte=10``
+    ``__lt``   strictly less than        ``n_nodes__lt=50``
+    ``__lte``  less than or equal to     ``n_nodes__lte=50``
+    ``__ne``   not equal to              ``n_nodes__ne=10``
+    ``__in``   value in collection       ``n_nodes__in=[10, 20, 46]``
+
+    Filters are combined with logical AND. Suffixed and plain filters may
+    be freely mixed: ``list_models(n_nodes__gte=10, is_discrete=True)``.
+
+    Parameters
+    ----------
+    **filter_tags
+        Tag-based filter criteria (see above).
 
     Returns
     -------
-    list
-        List of names of all available example models.
+    list of str
+        Sorted list of model names matching all supplied criteria.
 
     Examples
     --------
     >>> from pgmpy.example_models import list_models
     >>> list_models()
-    ['bnlearn/alarm', 'bnlearn/arth150', ..... ]
+    ['bnlearn/alarm', 'bnlearn/arth150', ...]
     >>> list_models(is_discrete=True)
-    ['bnlearn/alarm', 'bnlearn/asia', 'bnlearn/cancer', ..... ]
-    >>> list_models(is_parameterized=False)
-    ['dagitty/acid_1996', ...., ]
+    ['bnlearn/alarm', 'bnlearn/asia', ...]
+    >>> list_models(n_nodes=10)
+    [...]
+    >>> list_models(n_nodes__gt=10)
+    [...]
+    >>> list_models(n_nodes__gte=10, n_nodes__lte=50)
+    [...]
+    >>> list_models(n_nodes__in=[10, 20, 46], is_discrete=True)
+    [...]
     """
+    from pgmpy.utils.filter_utils import apply_comparator_filters, split_filter_tags
+
     valid_tags = set(_BaseExampleModel._tags.keys())
 
-    if invalid_tags := set(filter_tags.keys()) - valid_tags:
-        raise ValueError(
-            f"Unrecognized filter argument(s): {sorted(invalid_tags)}. Valid filter tags are: {sorted(valid_tags)}."
-        )
+    exact_tags, comparator_filters = split_filter_tags(filter_tags, valid_tags)
 
     all_models = all_objects(
         object_types=_BaseExampleModel,
         package_name="pgmpy.example_models",
         return_names=False,
-        filter_tags=filter_tags,
+        filter_tags=exact_tags,
     )
+
+    all_models = apply_comparator_filters(all_models, comparator_filters)
 
     model_names = [cls.get_class_tag("name") for cls in all_models if cls.get_class_tag("name") is not None]
 
