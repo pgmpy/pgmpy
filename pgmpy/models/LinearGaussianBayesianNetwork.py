@@ -972,15 +972,56 @@ class LinearGaussianBayesianNetwork(DAG):
         self,
         data: pd.DataFrame,
         n_prev_samples: int | None = None,
+<<<<<<< HEAD
     ) -> "LinearGaussianBayesianNetwork":
         """
+=======
+    ) -> LinearGaussianBayesianNetwork:
+        r"""
+>>>>>>> fb4e4883 (FIX: move math formulas to main docstring with LaTeX and fix raw string)
         Updates the parameters of the LinearGaussianBayesianNetwork with new
         data without refitting from scratch.
 
-        Internally, retrieves the joint Gaussian distribution implied by the
-        current CPD parameters, updates it using the pooled mean and covariance
-        formula with the new batch, then re-extracts the CPD parameters from
-        the updated joint using standard conditional Gaussian relationships.
+        The previous joint Gaussian :math:`(\mu_1, \Sigma_1)` is recovered from
+        the current CPD parameters via ``to_joint_gaussian()``. The new batch
+        statistics :math:`(\mu_2, \Sigma_2)` are computed from the new data with
+        ``ddof=0``. Given :math:`n_1` = ``n_prev_samples``, :math:`n_2` = ``len(data)``,
+        and :math:`n_{total} = n_1 + n_2`, the joint is updated using the exact
+        pooled formulas:
+
+        .. math::
+
+            \mu = \frac{n_1 \mu_1 + n_2 \mu_2}{n_{total}}
+
+        .. math::
+
+            \Sigma = \frac{n_1 \Sigma_1 + n_2 \Sigma_2
+                     + n_1 (\mu_1 - \mu)(\mu_1 - \mu)^T
+                     + n_2 (\mu_2 - \mu)(\mu_2 - \mu)^T}{n_{total}}
+
+        CPD parameters are then re-extracted from :math:`(\mu, \Sigma)` using
+        conditional Gaussian relationships. For a root node :math:`i` (no parents):
+
+        .. math::
+
+            \beta_0 = \mu_i, \quad
+            \sigma = \sqrt{\Sigma_{ii} \cdot \frac{n_{total}}{n_{total} - 1}}
+
+        For a non-root node :math:`i` with parent index set :math:`pa`,
+        letting :math:`k = 1 + |pa|`:
+
+        .. math::
+
+            \beta = \Sigma_{pa,pa}^{-1} \Sigma_{pa,i}, \quad
+            \beta_0 = \mu_i - \beta^T \mu_{pa}
+
+        .. math::
+
+            \sigma = \sqrt{\max(\Sigma_{ii} - \Sigma_{i,pa} \beta,\ 0)
+                     \cdot \frac{n_{total}}{n_{total} - k}}
+
+        The :math:`n_{total} / (n_{total} - k)` factor matches pgmpy's unbiased
+        std estimator used in ``fit()``.
 
         The model must have been previously fitted using ``fit()`` before
         calling this method.
@@ -999,36 +1040,6 @@ class LinearGaussianBayesianNetwork(DAG):
         -------
         self : LinearGaussianBayesianNetwork
             The model with updated CPD parameters.
-
-        Notes
-        -----
-        The previous joint Gaussian (mu1, Sigma1) is recovered from the current CPD
-        parameters via ``to_joint_gaussian()``. The new batch statistics (mu2, Sigma2)
-        are computed from the new data with ``ddof=0``. These are combined using the
-        exact pooled formulas:
-
-        Let n1 = n_prev_samples, n2 = len(data), n_total = n1 + n2.
-
-        Pooled mean:
-            mu = (n1 * mu1 + n2 * mu2) / n_total
-
-        Pooled covariance (d1 = mu1 - mu, d2 = mu2 - mu):
-            Sigma = (n1 * Sigma1 + n2 * Sigma2
-                     + n1 * outer(d1, d1) + n2 * outer(d2, d2)) / n_total
-
-        CPD parameters are re-extracted from (mu, Sigma) using conditional Gaussian
-        relationships. For a root node i (no parents):
-            beta_0 = mu[i]
-            std = sqrt(Sigma[i, i] * n_total / (n_total - 1))
-
-        For a non-root node i with parent indices pa:
-            beta_coeffs = solve(Sigma[pa, pa], Sigma[i, pa])
-            beta_0 = mu[i] - beta_coeffs @ mu[pa]
-            sigma2 = Sigma[i, i] - Sigma[i, pa] @ beta_coeffs
-            std = sqrt(max(sigma2, 0) * n_total / (n_total - k))
-
-        where k = 1 + len(parents). The n_total / (n_total - k) factor matches
-        pgmpy's unbiased std estimator used in ``fit()``.
 
         Examples
         --------
