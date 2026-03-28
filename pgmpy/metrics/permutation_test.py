@@ -12,7 +12,6 @@ from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators.CITests import ci_registry
 from pgmpy.metrics import _BaseUnsupervisedMetric
-from pgmpy.models import DynamicBayesianNetwork
 
 
 class PermutationTest(_BaseUnsupervisedMetric):
@@ -46,13 +45,12 @@ class PermutationTest(_BaseUnsupervisedMetric):
         If None, uses max(20, int(1/significance_level)).
         If -1, uses all possible permutations (factorial of number of nodes)
 
-    ci_test : {"pillai", "chi_square", "pearsonr", "gcm", "g_sq", "log_likelihood", "freeman_tuckey",
-    "modified_log_likelihood", "neyman", "cressie_read"}
-
+    ci_test : str, Instance of BaseCITest, optional
+        link them here
         The statistical conditional independence test to use for evaluating the Local Markov Conditions in data.
         See :class:`pgmpy.estimators.CITests` for more details.
 
-    return_summary : bool, default=True
+    return_summary : bool, default=False
         If True, returns detailed information about the test including
         individual LMC violations and permutation results.
 
@@ -132,7 +130,21 @@ class PermutationTest(_BaseUnsupervisedMetric):
         "supported_graph_types": (DAG,),
     }
 
-    def __init__(self):
+    def __init__(
+        self,
+        n_permutations: int | None = None,
+        significance_level: float = 0.05,
+        ci_test: str | None = None,
+        return_summary: bool = False,
+        show_progress: bool = True,
+        seed: int | None = None,
+    ):
+        self.n_permutations = n_permutations
+        self.significance_level = significance_level
+        self.ci_test = ci_test
+        self.return_summary = return_summary
+        self.show_progress = show_progress
+        self.seed = seed
         super().__init__()
 
     def _get_parental_triples(self, dag):
@@ -147,10 +159,13 @@ class PermutationTest(_BaseUnsupervisedMetric):
                 triples.append((node, nd, parents))
         return triples
 
-    def _lmc_violations(self, dag, data, ci_test, significance_level):
-        """Validate the local markov condition for a given directed graph. Return number of violations."""
-        triples = self._get_parental_triples(dag)
-        n_violations = 0
+    def _violations(self, permuted_dag, data, ci_test, significance_level, original_dag=None):
+        """Calculate LMC and TPA violations."""
+        triples = self._get_parental_triples(permuted_dag)
+        n_lmc_violations = 0
+        n_tpa_violations = 0
+
+        # lmc violations
         for node, nd, parents in triples:
             res = ci_test(
                 X=node,
@@ -162,23 +177,19 @@ class PermutationTest(_BaseUnsupervisedMetric):
             )
             pval = res[1]
             if pval <= significance_level:
-                n_violations += 1
-        return n_violations, len(triples)
+                n_lmc_violations += 1
 
-    def _tpa_violations(self, permuted_dag, original_dag):
-        """
-        Evaluate which pairwise parental d-separations (parental triples) in `permuted_dag` are
-        violated assuming `original_dag` is the ground truth DAG.
-        """
-        triples = self._get_parental_triples(permuted_dag)
-        n_violations = 0
-        for node, nd, parents in triples:
-            # Check d-separation in original DAG
-            if original_dag.is_dconnected(node, nd, observed=parents):
-                n_violations += 1
-        return n_violations, len(triples)
+        # tpa violations
+        if original_dag is not None:
+            for node, nd, parents in triples:
+                # Check d-separation in original DAG
+                if original_dag.is_dconnected(node, nd, observed=parents):
+                    n_tpa_violations += 1
+        return n_lmc_violations, n_tpa_violations
 
     def _get_permutation_list(self, nodes, n_permutations, exclude_original_order=False):
+        if self.seed is not None:
+            np.random.seed(self.seed)
         if n_permutations == -1 or n_permutations >= math.factorial(len(nodes)):
             perms = list(permutations(nodes))
             if exclude_original_order:
@@ -195,21 +206,11 @@ class PermutationTest(_BaseUnsupervisedMetric):
 
     def _evaluate(
         self,
-        causal_graph: DAG,
         X: pd.DataFrame,
-        n_permutations: int | None = None,
-        significance_level: float = 0.05,
-        ci_test: str | None = None,
-        return_summary: bool = True,
-        show_progress: bool = True,
+        causal_graph: DAG,
     ):
 
         # Step 0: Initialize variables and validate inputs.
-        if not isinstance(X, pd.DataFrame):
-            raise TypeError(f"Data should be a pandas DataFrame. Got: {type(X)}")
-
-        if not isinstance(causal_graph, DAG) or isinstance(causal_graph, DynamicBayesianNetwork):
-            raise TypeError(f"DAG must be a `pgmpy.base.DAG` object. Got: {type(causal_graph)}")
 
         nodes = list(causal_graph.nodes())
         data_columns = set(X.columns)
@@ -218,24 +219,24 @@ class PermutationTest(_BaseUnsupervisedMetric):
             missing_vars = set(nodes) - data_columns
             raise ValueError(f"Data missing variables present in model: {missing_vars}")
 
-        if n_permutations is None:
-            n_permutations = max(20, int(1 / significance_level))
-        elif n_permutations == -1:
+        if self.n_permutations is None:
+            n_permutations = max(20, int(1 / self.significance_level))
+        elif self.n_permutations == -1:
             n_permutations = math.factorial(len(nodes))
 
-        ci_test = ci_registry.get_test(ci_test, data=X)
+        ci_test = ci_registry.get_test(self.ci_test, data=X)
         permutation_violations = []
         tpa_violations = []
         n_within_mec = 0
 
         # Step 1: Compute LMC violations for the given DAG.
 
-        n_lmc_violations, _ = self._lmc_violations(causal_graph, X, ci_test, significance_level)
+        n_lmc_violations, _ = self._violations(causal_graph, X, ci_test, self.significance_level)
 
         # Step 2: Generate permutations and compute LMC violations for each to construct null distribution.
 
         perm_list = self._get_permutation_list(nodes, n_permutations)
-        if show_progress and config.SHOW_PROGRESS:
+        if self.show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(perm_list, desc="Constructing Null Distribution")
         else:
             pbar = perm_list
@@ -248,11 +249,12 @@ class PermutationTest(_BaseUnsupervisedMetric):
             permuted_dag.add_nodes_from(nx_permuted_dag.nodes())
             permuted_dag.add_edges_from(nx_permuted_dag.edges())
 
-            n_perm_lmc_violations, _ = self._lmc_violations(permuted_dag, X, ci_test, significance_level)
+            n_perm_lmc_violations, n_perm_tpa_violations = self._violations(
+                permuted_dag, X, ci_test, self.significance_level, causal_graph
+            )
             permutation_violations.append(n_perm_lmc_violations)
-            n_tpa_violations, _ = self._tpa_violations(permuted_dag, causal_graph)
-            tpa_violations.append(n_tpa_violations)
-            if n_tpa_violations == 0:
+            tpa_violations.append(n_perm_tpa_violations)
+            if n_perm_tpa_violations == 0:
                 n_within_mec += 1
 
         # Step 3: Compute test statistics and p-values.
@@ -268,7 +270,7 @@ class PermutationTest(_BaseUnsupervisedMetric):
         ci_lower, ci_upper = proportion_confint(
             count_less_violations,
             n_permutations,
-            alpha=significance_level,
+            alpha=self.significance_level,
             method="wilson",
         )
 
@@ -280,15 +282,16 @@ class PermutationTest(_BaseUnsupervisedMetric):
             "n_within_mec": n_within_mec,
             "ci_lower_falsified": ci_lower,
             "ci_upper_falsified": ci_upper,
-            "falsifiable": p_value_falsifiable <= significance_level,
-            "falsified": (p_value_falsifiable <= significance_level) and (p_value_falsified >= significance_level),
+            "falsifiable": p_value_falsifiable <= self.significance_level,
+            "falsified": (p_value_falsifiable <= self.significance_level)
+            and (p_value_falsified >= self.significance_level),
         }
 
-        if return_summary:
+        if self.return_summary:
             result["summary"] = {
                 "lmc_permutation_violations": permutation_violations,
                 "tpa_permutation_violations": tpa_violations,
-                "significance_level": significance_level,
+                "significance_level": self.significance_level,
                 "ci_test": ci_test,
             }
 
