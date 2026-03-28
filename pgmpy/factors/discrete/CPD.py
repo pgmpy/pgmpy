@@ -421,6 +421,11 @@ class TabularCPD(DiscreteFactor):
             If inplace=True it will modify the CPD itself, else would return
             a new CPD
 
+        Raises
+        ------
+        ValueError
+            If any column sums to zero (normalization would produce NaN values)
+
         Examples
         --------
         >>> from pgmpy.factors.discrete import TabularCPD
@@ -438,7 +443,13 @@ class TabularCPD(DiscreteFactor):
         """
         tabular_cpd = self if inplace else self.copy()
         cpd = tabular_cpd.get_values()
-        tabular_cpd.values = (cpd / cpd.sum(axis=0)).reshape(tuple(tabular_cpd.cardinality))
+        column_sums = cpd.sum(axis=0)
+        zero_sum_columns = np.where(column_sums == 0)[0]
+        if len(zero_sum_columns) > 0:
+            raise ValueError(
+                f"Cannot normalize CPD: column(s) {zero_sum_columns.tolist()} sum to zero"
+            )
+        tabular_cpd.values = (cpd / column_sums).reshape(tuple(tabular_cpd.cardinality))
         if not inplace:
             return tabular_cpd
 

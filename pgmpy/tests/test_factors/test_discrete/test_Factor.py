@@ -2887,6 +2887,34 @@ class TestTabularCPDMethods:
             np.array([[[0.7, 0.2], [0.6, 0.2]], [[0.4, 0.4], [0.4, 0.8]]]),
         )
 
+    def test_normalize_zero_sum_column_raises_error(self):
+        """Test that normalize raises ValueError when a column sums to zero."""
+        cpd = TabularCPD(
+            "A",
+            2,
+            [[0], [0]],
+        )
+        with self.assertRaises(ValueError) as context:
+            cpd.normalize()
+        self.assertIn("Cannot normalize CPD", str(context.exception))
+        self.assertIn("sum to zero", str(context.exception))
+
+    def test_normalize_zero_sum_column_informative_error_message(self):
+        """Test that the error message includes the column indices that sum to zero."""
+        cpd = TabularCPD(
+            "A",
+            2,
+            [[0, 0.5, 0], [0, 0.5, 0]],
+            evidence=["B"],
+            evidence_card=[3],
+        )
+        with self.assertRaises(ValueError) as context:
+            cpd.normalize()
+        error_msg = str(context.exception)
+        # Column 0 and column 2 sum to zero
+        self.assertIn("0", error_msg)
+        self.assertIn("2", error_msg)
+
     def test__repr__(self):
         grade_cpd = TabularCPD(
             "grade",
