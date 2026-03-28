@@ -1826,10 +1826,10 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             "n_latent_nodes": len(getattr(self, "latents", [])),
         }
 
-        exposures = self.get_role("exposures") if len(self.get_role("exposures")) > 0 else None
-        outcomes = self.get_role("outcomes") if len(self.get_role("outcomes")) > 0 else None
+        exposures = self.get_role("exposures")
+        outcomes = self.get_role("outcomes")
 
-        if exposures is not None and outcomes is not None:
+        if len(exposures) > 0 and len(outcomes) > 0:
             exposures = set(exposures)
             outcomes = set(outcomes)
             # Used for calculation of n_causal_paths and n_compounding_paths
