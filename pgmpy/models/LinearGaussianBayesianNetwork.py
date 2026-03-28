@@ -1000,6 +1000,36 @@ class LinearGaussianBayesianNetwork(DAG):
         self : LinearGaussianBayesianNetwork
             The model with updated CPD parameters.
 
+        Notes
+        -----
+        The previous joint Gaussian (mu1, Sigma1) is recovered from the current CPD
+        parameters via ``to_joint_gaussian()``. The new batch statistics (mu2, Sigma2)
+        are computed from the new data with ``ddof=0``. These are combined using the
+        exact pooled formulas:
+
+        Let n1 = n_prev_samples, n2 = len(data), n_total = n1 + n2.
+
+        Pooled mean:
+            mu = (n1 * mu1 + n2 * mu2) / n_total
+
+        Pooled covariance (d1 = mu1 - mu, d2 = mu2 - mu):
+            Sigma = (n1 * Sigma1 + n2 * Sigma2
+                     + n1 * outer(d1, d1) + n2 * outer(d2, d2)) / n_total
+
+        CPD parameters are re-extracted from (mu, Sigma) using conditional Gaussian
+        relationships. For a root node i (no parents):
+            beta_0 = mu[i]
+            std = sqrt(Sigma[i, i] * n_total / (n_total - 1))
+
+        For a non-root node i with parent indices pa:
+            beta_coeffs = solve(Sigma[pa, pa], Sigma[i, pa])
+            beta_0 = mu[i] - beta_coeffs @ mu[pa]
+            sigma2 = Sigma[i, i] - Sigma[i, pa] @ beta_coeffs
+            std = sqrt(max(sigma2, 0) * n_total / (n_total - k))
+
+        where k = 1 + len(parents). The n_total / (n_total - k) factor matches
+        pgmpy's unbiased std estimator used in ``fit()``.
+
         Examples
         --------
         >>> import numpy as np
@@ -1032,7 +1062,7 @@ class LinearGaussianBayesianNetwork(DAG):
         if n_prev_samples is None:
             n_prev_samples = data.shape[0]
 
-        # Step 3: Get topological order — used for joint stats and CPD extraction
+        # Step 3: Get topological order - used for joint stats and CPD extraction
         variables = list(nx.topological_sort(self))
         idx = {v: i for i, v in enumerate(variables)}
 
@@ -1140,9 +1170,9 @@ class LinearGaussianBayesianNetwork(DAG):
         mu_a = mu[missing_indexes]
         mu_b = mu[observed_indexes]
 
-        cov_aa = cov[np.ix_(missing_indexes, missing_indexes)]  # Full |a|×|a| submatrix
-        cov_bb = cov[np.ix_(observed_indexes, observed_indexes)]  # Full |b|×|b| submatrix
-        cov_ab = cov[np.ix_(missing_indexes, observed_indexes)]  # Full |a|×|b| submatrix
+        cov_aa = cov[np.ix_(missing_indexes, missing_indexes)]  # Full |a| x |a| submatrix
+        cov_bb = cov[np.ix_(observed_indexes, observed_indexes)]  # Full |b| x |b| submatrix
+        cov_ab = cov[np.ix_(missing_indexes, observed_indexes)]  # Full |a| x |b| submatrix
 
         # Step 2: Compute the conditional distributions
         X_b = data.loc[:, observed_vars].values  # shape: (n_samples, |observed|)
