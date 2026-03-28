@@ -643,6 +643,29 @@ class TestFBNMethods(unittest.TestCase):
         self.assertAlmostEqual(params["ibpB_alpha1"].mean().item(), 0.125, delta=0.2)
         self.assertAlmostEqual(params["ibpB_sigma"].mean().item(), 0.461, delta=0.3)
 
+    def test_predict_missing_values(self):
+        model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+
+        cpd1 = FunctionalCPD("x1", lambda _: dist.Normal(0, 1))
+        cpd2 = FunctionalCPD("x2", lambda p: dist.Normal(p["x1"] + 1, 1), parents=["x1"])
+        cpd3 = FunctionalCPD("x3", lambda p: dist.Normal(p["x2"] + 1, 1), parents=["x2"])
+
+        model.add_cpds(cpd1, cpd2, cpd3)
+
+        data = pd.DataFrame({
+            "x1": [1.0, 2.0],
+            "x2": [None, None],
+            "x3": [None, None],
+        })
+
+        result = model.predict(data)
+
+        # No missing values
+        self.assertFalse(result.isnull().values.any())
+
+        # Structure preserved
+        self.assertListEqual(list(result.columns), ["x1", "x2", "x3"])
+
     def tearDown(self):
         del self.model
         del self.cpd1
