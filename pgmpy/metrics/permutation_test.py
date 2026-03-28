@@ -2,7 +2,6 @@
 import math
 from itertools import permutations
 
-import networkx as nx
 import numpy as np
 import pandas as pd
 from statsmodels.stats.proportion import proportion_confint
@@ -46,7 +45,6 @@ class PermutationTest(_BaseUnsupervisedMetric):
         If -1, uses all possible permutations (factorial of number of nodes)
 
     ci_test : str, Instance of BaseCITest, optional
-        link them here
         The statistical conditional independence test to use for evaluating the Local Markov Conditions in data.
         See :class:`pgmpy.estimators.CITests` for more details.
 
@@ -95,9 +93,9 @@ class PermutationTest(_BaseUnsupervisedMetric):
 
     >>> model = load_model("bnlearn/earthquake")
     >>> data = model.simulate(2000)
-    >>> permutation_test = PermutationTest()
+    >>> permutation_test = PermutationTest(ci_test="pillai", n_permutations=-1)
     >>> result_true = permutation_test.evaluate(
-    ...     data, model, ci_test="pillai", n_permutations=-1
+    ...     data, model
     ... )
     >>> print(
     ...     f"Falsifiable: {result_true['falsifiable']}, Falsified: {result_true['falsified']}"
@@ -107,7 +105,7 @@ class PermutationTest(_BaseUnsupervisedMetric):
     >>> model.remove_edge("Earthquake", "Alarm")
     >>> model.add_edge("Burglary", "Earthquake")
     >>> result = permutation_test.evaluate(
-    ...     data, model, ci_test="pillai", n_permutations=-1
+    ...     data, model
     ... )
     >>> print(f"Falsifiable: {result['falsifiable']}, Falsified: {result['falsified']}")
 
@@ -116,7 +114,7 @@ class PermutationTest(_BaseUnsupervisedMetric):
     ...     [("JohnCalls", "Earthquake"), ("Earthquake", "Burglary")]
     ... )
     >>> result_wrong = permutation_test.evaluate(
-    ...     data, wrong_model, ci_test="pillai", n_permutations=-1
+    ...     data, wrong_model
     ... )
     >>> print(f"Wrong model falsifiable: {result_wrong['falsifiable']}")
     """
@@ -159,33 +157,35 @@ class PermutationTest(_BaseUnsupervisedMetric):
                 triples.append((node, nd, parents))
         return triples
 
-    def _violations(self, permuted_dag, data, ci_test, significance_level, original_dag=None):
-        """Calculate LMC and TPA violations."""
-        triples = self._get_parental_triples(permuted_dag)
+    def _permute_triple(self, triple, perm_mapping=None):
+        node, nd, parents = triple
+        if perm_mapping is None:
+            return node, nd, parents
+        return (perm_mapping[node], perm_mapping[nd], [perm_mapping[p] for p in parents])
+
+    def _get_violations(self, ci_test, X, causal_graph, triples=None, perm_mapping=None):
+        """Calculate LMC and TPA violations for a given permutation."""
+        if triples is None:
+            triples = self._get_parental_triples(causal_graph)
         n_lmc_violations = 0
         n_tpa_violations = 0
-
-        # lmc violations
-        for node, nd, parents in triples:
+        for triple in triples:
+            p_node, p_nd, p_parents = self._permute_triple(triple, perm_mapping)
             res = ci_test(
-                X=node,
-                Y=nd,
-                Z=parents,
-                data=data,
+                X=p_node,
+                Y=p_nd,
+                Z=p_parents,
+                data=X,
                 boolean=False,
-                significance_level=significance_level,
+                significance_level=self.significance_level,
             )
             pval = res[1]
-            if pval <= significance_level:
+            if pval <= self.significance_level:
                 n_lmc_violations += 1
-
-        # tpa violations
-        if original_dag is not None:
-            for node, nd, parents in triples:
-                # Check d-separation in original DAG
-                if original_dag.is_dconnected(node, nd, observed=parents):
-                    n_tpa_violations += 1
-        return n_lmc_violations, n_tpa_violations
+            # TPA: check d-separation in original DAG
+            if perm_mapping is not None and causal_graph.is_dconnected(p_node, p_nd, observed=p_parents):
+                n_tpa_violations += 1
+        return n_lmc_violations, n_tpa_violations, triples
 
     def _get_permutation_list(self, nodes, n_permutations, exclude_original_order=False):
         if self.seed is not None:
@@ -223,6 +223,8 @@ class PermutationTest(_BaseUnsupervisedMetric):
             n_permutations = max(20, int(1 / self.significance_level))
         elif self.n_permutations == -1:
             n_permutations = math.factorial(len(nodes))
+        else:
+            n_permutations = self.n_permutations
 
         ci_test = ci_registry.get_test(self.ci_test, data=X)
         permutation_violations = []
@@ -231,7 +233,7 @@ class PermutationTest(_BaseUnsupervisedMetric):
 
         # Step 1: Compute LMC violations for the given DAG.
 
-        n_lmc_violations, _ = self._violations(causal_graph, X, ci_test, self.significance_level)
+        n_lmc_violations, _, triples = self._get_violations(ci_test, X, causal_graph)
 
         # Step 2: Generate permutations and compute LMC violations for each to construct null distribution.
 
@@ -243,14 +245,9 @@ class PermutationTest(_BaseUnsupervisedMetric):
 
         for permuted_nodes in pbar:
             perm_mapping = dict(zip(nodes, permuted_nodes))
-            # Relabel nodes in the original DAG
-            nx_permuted_dag = nx.relabel_nodes(causal_graph, perm_mapping, copy=True)
-            permuted_dag = DAG()
-            permuted_dag.add_nodes_from(nx_permuted_dag.nodes())
-            permuted_dag.add_edges_from(nx_permuted_dag.edges())
 
-            n_perm_lmc_violations, n_perm_tpa_violations = self._violations(
-                permuted_dag, X, ci_test, self.significance_level, causal_graph
+            n_perm_lmc_violations, n_perm_tpa_violations, _ = self._get_violations(
+                ci_test, X, causal_graph, triples, perm_mapping
             )
             permutation_violations.append(n_perm_lmc_violations)
             tpa_violations.append(n_perm_tpa_violations)
