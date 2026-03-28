@@ -25,11 +25,11 @@ class Cities(_CovarianceMixin, _BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/cites/"
+    base_url = "real/cites"
 
-    data_url = base_url + "data/cites.cov.txt"
+    data_url = "data/cites.cov.txt"
     ground_truth_url = None
-    expert_knowledge_url = base_url + "ground.truth/cites.knowledge.txt"
+    expert_knowledge_url = "ground.truth/cites.knowledge.txt"
 
     categorical_variables = []
     ordinal_variables = dict()

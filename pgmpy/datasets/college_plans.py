@@ -18,9 +18,9 @@ class CollegePlans(_BaseDataset):
         "is_ordinal": True,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/college-plans/"
+    base_url = "real/college-plans"
 
-    data_url = base_url + "data/college-plans.discrete.txt"
+    data_url = "data/college-plans.discrete.txt"
     ground_truth_url = None
     expert_knowledge_url = None
 

@@ -1,13 +1,9 @@
 from __future__ import annotations
 
-import hashlib
 import io
-import os
 import re
-import shutil
 from dataclasses import dataclass
 from typing import Any
-from urllib.request import urlopen
 
 import numpy as np
 import pandas as pd
@@ -16,7 +12,7 @@ from skbase.lookup import all_objects
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery import ExpertKnowledge
-from pgmpy.global_vars import PGMPY_DATA_HOME
+from pgmpy.utils.hf_hub import read_hf_file
 
 
 @dataclass
@@ -60,6 +56,11 @@ class _BaseDataset(BaseObject):
         "is_mixed": False,
         "is_ordinal": False,
     }
+
+    base_url = ""
+    repo_id = "pgmpy/example_datasets"
+    repo_type = "dataset"
+    revision = "main"
 
     @staticmethod
     def _parse_expert_knowledge(raw_expert_knowledge: bytes) -> ExpertKnowledge:
@@ -117,37 +118,23 @@ class _BaseDataset(BaseObject):
         return ExpertKnowledge(forbidden_edges=forbids, required_edges=requires, temporal_order=temporal)
 
     @classmethod
-    def _get_raw_data(cls, data_type, url) -> bytes:
+    def _get_raw_data(cls, filename) -> bytes:
         """
-        Checks if the data is cached locally; if not, fetches it from the URL and caches it.
+        Fetches a dataset file from the Hugging Face Hub cache.
         """
-        name = cls.get_class_tag("name")
-        cache_dir_path = os.path.join(
-            PGMPY_DATA_HOME,
-            hashlib.sha256(f"{name}_{cls.base_url}".encode()).hexdigest(),
+        return read_hf_file(
+            repo_id=cls.repo_id,
+            filename=f"{cls.base_url}/{filename}",
+            repo_type=cls.repo_type,
+            revision=cls.revision,
         )
-
-        path = os.path.join(cache_dir_path, data_type)
-
-        if os.path.exists(path):
-            with open(path, "rb") as f:
-                raw_data = f.read()
-        else:
-            os.makedirs(cache_dir_path, exist_ok=True)
-
-            with urlopen(url, timeout=60) as response:
-                raw_data = response.read()
-
-            with open(path, "wb") as f:
-                f.write(raw_data)
-        return raw_data
 
     @classmethod
     def load_dataframe(cls) -> pd.DataFrame:
         """
         Fetches/reads from cache the data associated with the dataset.
         """
-        raw_data = cls._get_raw_data("data", cls.data_url)
+        raw_data = cls._get_raw_data(cls.data_url)
         df = pd.read_csv(io.BytesIO(raw_data), sep=getattr(cls, "sep", "\t"))
         if cls.get_class_tag("has_missing_data"):
             df.replace(cls.missing_values_marker, pd.NA, inplace=True)
@@ -168,7 +155,7 @@ class _BaseDataset(BaseObject):
         if not cls.get_class_tag("has_expert_knowledge"):
             return None
 
-        raw_data = cls._get_raw_data("expert_knowledge", cls.expert_knowledge_url)
+        raw_data = cls._get_raw_data(cls.expert_knowledge_url)
         expert_knowledge = cls._parse_expert_knowledge(raw_data)
         return expert_knowledge
 
@@ -178,16 +165,8 @@ class _BaseDataset(BaseObject):
         if not cls.get_class_tag("has_ground_truth"):
             return None
 
-        raw_data = cls._get_raw_data("ground_truth", cls.ground_truth_url).decode("utf-8-sig", errors="ignore")
+        raw_data = cls._get_raw_data(cls.ground_truth_url).decode("utf-8-sig", errors="ignore")
         return DAG.from_dagitty(raw_data)
-
-    @staticmethod
-    def clear_cache() -> None:
-        """
-        Clears the cached data for all datasets.
-        """
-        if os.path.exists(PGMPY_DATA_HOME):
-            shutil.rmtree(PGMPY_DATA_HOME)
 
 
 class _CovarianceMixin:
@@ -202,7 +181,7 @@ class _CovarianceMixin:
         """
         Fetches the data and creates a covariance matrix DataFrame.
         """
-        raw_data = cls._get_raw_data("covariance_matrix", cls.data_url).decode("utf-8-sig", errors="ignore")
+        raw_data = cls._get_raw_data(cls.data_url).decode("utf-8-sig", errors="ignore")
 
         lines = raw_data.strip().splitlines()
         # First replace multiple spaces with a single space and then split the line on either \t or space. Datasets are
@@ -242,16 +221,12 @@ class _TubingenBenchmarkMixin:
 
     @classmethod
     def load_dataframe(cls, pair_id: int) -> pd.DataFrame:
-        url = f"{cls.base_url}/pair{pair_id:04}.txt"
-        cache_name = f"pair_{pair_id:04}_data"
-        raw_data = cls._get_raw_data(cache_name, url)
+        raw_data = cls._get_raw_data(f"pair{pair_id:04}.txt")
         return pd.read_csv(io.BytesIO(raw_data), sep=r"\s+", header=None, names=["x", "y"])
 
     @classmethod
     def load_ground_truth(cls, pair_id: int) -> DAG:
-        url = f"{cls.base_url}/pair{pair_id:04}_graph.txt"
-        cache_name = f"pair_{pair_id:04}_graph"
-        raw_data = cls._get_raw_data(cache_name, url)
+        raw_data = cls._get_raw_data(f"pair{pair_id:04}_graph.txt")
         content = raw_data.decode("utf-8-sig", errors="ignore")
         return DAG.from_dagitty(content)
 
