@@ -588,14 +588,12 @@ $values
         >>> reader = BIFReader(string=bif_str)
         >>> model = reader.get_model()
         >>> writer = BIFWriter(model)
-        >>> cpds = writer.get_cpds()
-        >>> cpds = {k: v.tolist() for k, v in cpds.items()}
-        >>> cpds # doctest: +NORMALIZE_WHITESPACE
-        {'bowel-problem': [0.01, 0.99],
-        'dog-out': [0.99, 0.97, 0.9, 0.3, 0.01, 0.03, 0.1, 0.7],
-        'family-out': [0.15, 0.85],
-        'hear-bark': [0.7, 0.01, 0.3, 0.99],
-        'light-on': [0.6, 0.05, 0.4, 0.95]}
+        >>> writer.get_cpds() # doctest: +NORMALIZE_WHITESPACE
+        {'bowel-problem': array([0.01, 0.99]),
+        'dog-out': array([0.99, 0.97, 0.9 , 0.3 , 0.01, 0.03, 0.1 , 0.7 ]),
+        'family-out': array([0.15, 0.85]),
+        'hear-bark': array([0.7 , 0.01, 0.3 , 0.99]),
+        'light-on': array([0.6 , 0.05, 0.4 , 0.95])}
         """
         cpds = self.model.get_cpds()
         tables = {}
