@@ -24,11 +24,11 @@ class Adult(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/adult/"
+    base_url = "real/adult"
 
-    data_url = base_url + "data/adult.data.mixed.maximum.50.json.txt"
+    data_url = "data/adult.data.mixed.maximum.50.json.txt"
     ground_truth_url = None
-    expert_knowledge_url = base_url + "ground.truth/adult.knowledge.txt"
+    expert_knowledge_url = "ground.truth/adult.knowledge.txt"
 
     categorical_variables = [
         "workclass",
