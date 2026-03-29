@@ -63,9 +63,7 @@ def test_default_metrics(true_dag, est_dag):
 
 
 def test_selective_metrics(true_dag, est_dag):
-    result = OrientationConfusionMatrix(metrics=["precision", "recall"]).evaluate(
-        true_dag, est_dag
-    )
+    result = OrientationConfusionMatrix(metrics=["precision", "recall"]).evaluate(true_dag, est_dag)
     assert set(result) == {"precision", "recall"}
 
 

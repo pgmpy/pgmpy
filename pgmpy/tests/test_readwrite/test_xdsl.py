@@ -9,10 +9,10 @@ import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
+from pgmpy.example_models import load_model
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.readwrite import XDSLReader, XDSLWriter
-from pgmpy.utils import get_example_model
 
 TEST_FILE = """<?xml version="1.0" encoding="UTF-8"?>
 <!-- This network was created in trial version of GeNIe, which can be used for evaluation purposes only -->
@@ -228,9 +228,7 @@ class TestXDSLWriterMethods:
             evidence_card=[2],
         )
 
-        self.dummy_model.add_cpds(
-            self.cpd_a, self.cpd_b, self.cpd_c, self.cpd_d
-        )  # testing without state names
+        self.dummy_model.add_cpds(self.cpd_a, self.cpd_b, self.cpd_c, self.cpd_d)  # testing without state names
         self.writer_dummy = XDSLWriter(self.dummy_model)
 
         self.model_with_whitespaces = DiscreteBayesianNetwork()
@@ -261,7 +259,7 @@ class TestXDSLWriterMethods:
 
     def test_writer_cpds(self):
         self.writer_dummy.write_xdsl(filename="dummy_model.xdsl")
-        with open("dummy_model.xdsl", "r") as f:
+        with open("dummy_model.xdsl") as f:
             reader = XDSLReader(f)
         model = reader.get_model(state_name_type=int)
         self.assert_models_equivalent(self.dummy_model, model)
@@ -270,7 +268,7 @@ class TestXDSLWriterMethods:
     def test_alarm_model(self):
         XDSLWriter(self.alarm_model_bn).write_xdsl("alarm_model.xdsl")
 
-        with open("alarm_model.xdsl", "r") as f:
+        with open("alarm_model.xdsl") as f:
             file_text = f.read()
         alarm_model_bn_test = XDSLReader(string=file_text).get_model()
         self.assert_models_equivalent(self.alarm_model_bn, alarm_model_bn_test)
@@ -379,7 +377,7 @@ class TestXDSLWriterMethodsTorch:
     def _setup(self):
         config.set_backend("torch")
 
-        self.alarm_model_bn = get_example_model(model="alarm")
+        self.alarm_model_bn = load_model("bnlearn/alarm")
 
         self.dummy_model = DiscreteBayesianNetwork([("A", "C"), ("B", "C"), ("C", "D")])
         self.cpd_a = TabularCPD(variable="A", variable_card=2, values=[[0.92], [0.08]])
@@ -404,9 +402,7 @@ class TestXDSLWriterMethodsTorch:
             evidence_card=[2],
         )
 
-        self.dummy_model.add_cpds(
-            self.cpd_a, self.cpd_b, self.cpd_c, self.cpd_d
-        )  # testing without state names
+        self.dummy_model.add_cpds(self.cpd_a, self.cpd_b, self.cpd_c, self.cpd_d)  # testing without state names
         self.writer_dummy = XDSLWriter(self.dummy_model)
 
         self.model_with_whitespaces = DiscreteBayesianNetwork()
@@ -439,7 +435,7 @@ class TestXDSLWriterMethodsTorch:
 
     def test_writer_cpds(self):
         self.writer_dummy.write_xdsl(filename="dummy_model.xdsl")
-        with open("dummy_model.xdsl", "r") as f:
+        with open("dummy_model.xdsl") as f:
             reader = XDSLReader(f)
         model = reader.get_model(state_name_type=int)
         self.assert_models_equivalent(self.dummy_model, model)
@@ -447,7 +443,7 @@ class TestXDSLWriterMethodsTorch:
 
     def test_alarm_model(self):
         XDSLWriter(self.alarm_model_bn).write_xdsl("alarm_model.xdsl")
-        with open("alarm_model.xdsl", "r") as f:
+        with open("alarm_model.xdsl") as f:
             file_text = f.read()
         alarm_model_bn_test = XDSLReader(string=file_text).get_model()
         self.assert_models_equivalent(self.alarm_model_bn, alarm_model_bn_test)

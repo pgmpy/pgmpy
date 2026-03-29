@@ -215,42 +215,30 @@ class TestXBNReader:
         assert distribution["b"]["CONDSET"] == ["a"]
         np_test.assert_array_equal(distribution["a"]["DPIS"], np.array([[0.2], [0.8]]))
         np_test.assert_array_equal(distribution["f"]["DPIS"], np.array([[0.3], [0.7]]))
-        np_test.assert_array_equal(
-            distribution["e"]["DPIS"], np.array([[0.8, 0.6], [0.2, 0.4]])
-        )
+        np_test.assert_array_equal(distribution["e"]["DPIS"], np.array([[0.8, 0.6], [0.2, 0.4]]))
         np_test.assert_array_equal(distribution["e"]["CARDINALITY"], np.array([2]))
         np_test.assert_array_equal(
             distribution["d"]["DPIS"],
             np.array([[0.8, 0.9, 0.7, 0.05], [0.2, 0.1, 0.3, 0.95]]),
         )
-        np_test.assert_array_equal(
-            distribution["b"]["DPIS"], np.array([[0.8, 0.2], [0.2, 0.8]])
-        )
+        np_test.assert_array_equal(distribution["b"]["DPIS"], np.array([[0.8, 0.2], [0.2, 0.8]]))
         np_test.assert_array_equal(distribution["d"]["CARDINALITY"], np.array([2, 2]))
-        np_test.assert_array_equal(
-            distribution["c"]["DPIS"], np.array([[0.2, 0.05], [0.8, 0.95]])
-        )
+        np_test.assert_array_equal(distribution["c"]["DPIS"], np.array([[0.2, 0.05], [0.8, 0.95]]))
         np_test.assert_array_equal(distribution["c"]["CARDINALITY"], np.array([2]))
         distribution = self.reader_file.get_distributions()
         assert distribution["a"]["TYPE"] == "discrete"
         assert distribution["b"]["CONDSET"] == ["a"]
         np_test.assert_array_equal(distribution["a"]["DPIS"], np.array([[0.2], [0.8]]))
         np_test.assert_array_equal(distribution["f"]["DPIS"], np.array([[0.3], [0.7]]))
-        np_test.assert_array_equal(
-            distribution["e"]["DPIS"], np.array([[0.8, 0.6], [0.2, 0.4]])
-        )
+        np_test.assert_array_equal(distribution["e"]["DPIS"], np.array([[0.8, 0.6], [0.2, 0.4]]))
         np_test.assert_array_equal(distribution["e"]["CARDINALITY"], np.array([2]))
         np_test.assert_array_equal(
             distribution["d"]["DPIS"],
             np.array([[0.8, 0.9, 0.7, 0.05], [0.2, 0.1, 0.3, 0.95]]),
         )
         np_test.assert_array_equal(distribution["d"]["CARDINALITY"], np.array([2, 2]))
-        np_test.assert_array_equal(
-            distribution["b"]["DPIS"], np.array([[0.8, 0.2], [0.2, 0.8]])
-        )
-        np_test.assert_array_equal(
-            distribution["c"]["DPIS"], np.array([[0.2, 0.05], [0.8, 0.95]])
-        )
+        np_test.assert_array_equal(distribution["b"]["DPIS"], np.array([[0.8, 0.2], [0.2, 0.8]]))
+        np_test.assert_array_equal(distribution["c"]["DPIS"], np.array([[0.2, 0.05], [0.8, 0.95]]))
         np_test.assert_array_equal(distribution["c"]["CARDINALITY"], np.array([2]))
 
     def test_get_model(self):
@@ -364,9 +352,7 @@ class TestXBNWriter:
         }
         model = DiscreteBayesianNetwork()
         model.add_nodes_from(["a", "b", "c", "d", "e", "f"])
-        model.add_edges_from(
-            [("b", "d"), ("a", "b"), ("a", "c"), ("c", "d"), ("c", "e")]
-        )
+        model.add_edges_from([("b", "d"), ("a", "b"), ("a", "c"), ("c", "d"), ("c", "e")])
         cpd_distribution = {
             "a": {"TYPE": "discrete", "DPIS": np.array([[0.2], [0.8]])},
             "e": {
@@ -402,8 +388,16 @@ class TestXBNWriter:
             cpd = values["DPIS"]
             evidence_card = values["CARDINALITY"] if "CARDINALITY" in values else []
             states = nodes[var]["STATES"]
+            state_names = {var: states}
+            for ev in evidence:
+                state_names[ev] = nodes[ev]["STATES"]
             cpd = TabularCPD(
-                var, len(states), cpd, evidence=evidence, evidence_card=evidence_card
+                var,
+                len(states),
+                cpd,
+                evidence=evidence,
+                evidence_card=evidence_card,
+                state_names=state_names,
             )
             tabular_cpds.append(cpd)
         model.add_cpds(*tabular_cpds)
@@ -728,42 +722,30 @@ class TestXBNReaderTorch:
         assert distribution["b"]["CONDSET"] == ["a"]
         np_test.assert_array_equal(distribution["a"]["DPIS"], np.array([[0.2], [0.8]]))
         np_test.assert_array_equal(distribution["f"]["DPIS"], np.array([[0.3], [0.7]]))
-        np_test.assert_array_equal(
-            distribution["e"]["DPIS"], np.array([[0.8, 0.6], [0.2, 0.4]])
-        )
+        np_test.assert_array_equal(distribution["e"]["DPIS"], np.array([[0.8, 0.6], [0.2, 0.4]]))
         np_test.assert_array_equal(distribution["e"]["CARDINALITY"], np.array([2]))
         np_test.assert_array_equal(
             distribution["d"]["DPIS"],
             np.array([[0.8, 0.9, 0.7, 0.05], [0.2, 0.1, 0.3, 0.95]]),
         )
-        np_test.assert_array_equal(
-            distribution["b"]["DPIS"], np.array([[0.8, 0.2], [0.2, 0.8]])
-        )
+        np_test.assert_array_equal(distribution["b"]["DPIS"], np.array([[0.8, 0.2], [0.2, 0.8]]))
         np_test.assert_array_equal(distribution["d"]["CARDINALITY"], np.array([2, 2]))
-        np_test.assert_array_equal(
-            distribution["c"]["DPIS"], np.array([[0.2, 0.05], [0.8, 0.95]])
-        )
+        np_test.assert_array_equal(distribution["c"]["DPIS"], np.array([[0.2, 0.05], [0.8, 0.95]]))
         np_test.assert_array_equal(distribution["c"]["CARDINALITY"], np.array([2]))
         distribution = self.reader_file.get_distributions()
         assert distribution["a"]["TYPE"] == "discrete"
         assert distribution["b"]["CONDSET"] == ["a"]
         np_test.assert_array_equal(distribution["a"]["DPIS"], np.array([[0.2], [0.8]]))
         np_test.assert_array_equal(distribution["f"]["DPIS"], np.array([[0.3], [0.7]]))
-        np_test.assert_array_equal(
-            distribution["e"]["DPIS"], np.array([[0.8, 0.6], [0.2, 0.4]])
-        )
+        np_test.assert_array_equal(distribution["e"]["DPIS"], np.array([[0.8, 0.6], [0.2, 0.4]]))
         np_test.assert_array_equal(distribution["e"]["CARDINALITY"], np.array([2]))
         np_test.assert_array_equal(
             distribution["d"]["DPIS"],
             np.array([[0.8, 0.9, 0.7, 0.05], [0.2, 0.1, 0.3, 0.95]]),
         )
         np_test.assert_array_equal(distribution["d"]["CARDINALITY"], np.array([2, 2]))
-        np_test.assert_array_equal(
-            distribution["b"]["DPIS"], np.array([[0.8, 0.2], [0.2, 0.8]])
-        )
-        np_test.assert_array_equal(
-            distribution["c"]["DPIS"], np.array([[0.2, 0.05], [0.8, 0.95]])
-        )
+        np_test.assert_array_equal(distribution["b"]["DPIS"], np.array([[0.8, 0.2], [0.2, 0.8]]))
+        np_test.assert_array_equal(distribution["c"]["DPIS"], np.array([[0.2, 0.05], [0.8, 0.95]]))
         np_test.assert_array_equal(distribution["c"]["CARDINALITY"], np.array([2]))
 
     def test_get_model(self):
@@ -877,9 +859,7 @@ class TestXBNWriterTorch:
         }
         model = DiscreteBayesianNetwork()
         model.add_nodes_from(["a", "b", "c", "d", "e", "f"])
-        model.add_edges_from(
-            [("b", "d"), ("a", "b"), ("a", "c"), ("c", "d"), ("c", "e")]
-        )
+        model.add_edges_from([("b", "d"), ("a", "b"), ("a", "c"), ("c", "d"), ("c", "e")])
         cpd_distribution = {
             "a": {"TYPE": "discrete", "DPIS": np.array([[0.2], [0.8]])},
             "e": {
@@ -915,8 +895,16 @@ class TestXBNWriterTorch:
             cpd = values["DPIS"]
             evidence_card = values["CARDINALITY"] if "CARDINALITY" in values else []
             states = nodes[var]["STATES"]
+            state_names = {var: states}
+            for ev in evidence:
+                state_names[ev] = nodes[ev]["STATES"]
             cpd = TabularCPD(
-                var, len(states), cpd, evidence=evidence, evidence_card=evidence_card
+                var,
+                len(states),
+                cpd,
+                evidence=evidence,
+                evidence_card=evidence_card,
+                state_names=state_names,
             )
             tabular_cpds.append(cpd)
         model.add_cpds(*tabular_cpds)

@@ -14,39 +14,25 @@ np.random.seed(42)
 
 class TestCausalGraphMethods(unittest.TestCase):
     def setUp(self):
-        self.game = DiscreteBayesianNetwork(
-            [("A", "X"), ("A", "B"), ("C", "B"), ("C", "Y"), ("X", "Y"), ("B", "X")]
-        )
+        self.game = DiscreteBayesianNetwork([("A", "X"), ("A", "B"), ("C", "B"), ("C", "Y"), ("X", "Y"), ("B", "X")])
         self.inference = CausalInference(self.game)
 
         self.dag_bd1 = DiscreteBayesianNetwork([("X", "Y"), ("Z1", "X"), ("Z1", "Y")])
         self.inference_bd = CausalInference(self.dag_bd1)
 
-        self.dag_bd2 = DiscreteBayesianNetwork(
-            [("X", "Y"), ("Z1", "X"), ("Z1", "Z2"), ("Z2", "Y")]
-        )
+        self.dag_bd2 = DiscreteBayesianNetwork([("X", "Y"), ("Z1", "X"), ("Z1", "Z2"), ("Z2", "Y")])
         self.inference_bd2 = CausalInference(self.dag_bd2)
 
     def test_is_d_separated(self):
         self.assertTrue(self.inference.model.is_dconnected("X", "Y", observed=None))
-        self.assertFalse(
-            self.inference.model.is_dconnected("B", "Y", observed=("C", "X"))
-        )
+        self.assertFalse(self.inference.model.is_dconnected("B", "Y", observed=("C", "X")))
 
     def test_backdoor_validation(self):
-        self.assertTrue(
-            self.inference.is_valid_backdoor_adjustment_set("X", "Y", Z="C")
-        )
+        self.assertTrue(self.inference.is_valid_backdoor_adjustment_set("X", "Y", Z="C"))
 
         # Z accepts str or set[str]
-        self.assertTrue(
-            self.inference_bd.is_valid_backdoor_adjustment_set("X", "Y", Z="Z1")
-        )
-        self.assertTrue(
-            self.inference_bd2.is_valid_backdoor_adjustment_set(
-                "X", "Y", Z={"Z1", "Z2"}
-            )
-        )
+        self.assertTrue(self.inference_bd.is_valid_backdoor_adjustment_set("X", "Y", Z="Z1"))
+        self.assertTrue(self.inference_bd2.is_valid_backdoor_adjustment_set("X", "Y", Z={"Z1", "Z2"}))
 
 
 class TestCausalInferenceInit(unittest.TestCase):
@@ -60,14 +46,10 @@ class TestAdjustmentSet(unittest.TestCase):
     def setUp(self):
         # Model example taken from Constructing Separators and Adjustment Sets
         # in Ancestral Graphs UAI 2014.
-        self.model_dag = DAG(
-            [("x1", "y1"), ("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")]
-        )
+        self.model_dag = DAG([("x1", "y1"), ("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")])
         self.infer_dag = CausalInference(self.model_dag)
 
-        self.model_sem = SEMGraph(
-            [("x1", "y1"), ("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")]
-        )
+        self.model_sem = SEMGraph([("x1", "y1"), ("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")])
         self.infer_sem = CausalInference(self.model_sem)
 
     def test_proper_backdoor_graph_error(self):
@@ -113,38 +95,32 @@ class TestAdjustmentSet(unittest.TestCase):
 
     def test_proper_backdoor_graph(self):
         # DAG
-        bd_graph = self.infer_dag.get_proper_backdoor_graph(
-            X=["x1", "x2"], Y=["y1", "y2"]
-        )
+        bd_graph = self.infer_dag.get_proper_backdoor_graph(X=["x1", "x2"], Y=["y1", "y2"])
         self.assertTrue(("x1", "y1") not in bd_graph.edges())
         self.assertEqual(len(bd_graph.edges()), 4)
         self.assertTrue(
             set(bd_graph.edges()),
-            set([("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")]),
+            {("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")},
         )
 
         # SEMGraph
-        bd_graph = self.infer_sem.get_proper_backdoor_graph(
-            X=["x1", "x2"], Y=["y1", "y2"]
-        )
+        bd_graph = self.infer_sem.get_proper_backdoor_graph(X=["x1", "x2"], Y=["y1", "y2"])
         self.assertTrue(("x1", "y1") not in bd_graph.edges())
         self.assertEqual(len(bd_graph.edges()), 10)
         self.assertTrue(
             set(bd_graph.edges()),
-            set(
-                [
-                    ("x1", "z1"),
-                    ("z1", "z2"),
-                    ("z2", "x2"),
-                    ("y2", "z2"),
-                    (".x1", "x1"),
-                    (".y1", "y1"),
-                    (".z1", "z1"),
-                    (".z2", "z2"),
-                    (".x2", "x2"),
-                    (".y2", "y2"),
-                ]
-            ),
+            {
+                ("x1", "z1"),
+                ("z1", "z2"),
+                ("z2", "x2"),
+                ("y2", "z2"),
+                (".x1", "x1"),
+                (".y1", "y1"),
+                (".z1", "z1"),
+                (".z2", "z2"),
+                (".x2", "x2"),
+                (".y2", "y2"),
+            },
         )
 
     def test_proper_backdoor_graph_not_list(self):
@@ -154,7 +130,7 @@ class TestAdjustmentSet(unittest.TestCase):
         self.assertEqual(len(bd_graph.edges()), 4)
         self.assertTrue(
             set(bd_graph.edges()),
-            set([("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")]),
+            {("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")},
         )
 
         # SEMGraph
@@ -163,72 +139,42 @@ class TestAdjustmentSet(unittest.TestCase):
         self.assertEqual(len(bd_graph.edges()), 10)
         self.assertTrue(
             set(bd_graph.edges()),
-            set(
-                [
-                    ("x1", "z1"),
-                    ("z1", "z2"),
-                    ("z2", "x2"),
-                    ("y2", "z2"),
-                    (".x1", "x1"),
-                    (".y1", "y1"),
-                    (".z1", "z1"),
-                    (".z2", "z2"),
-                    (".x2", "x2"),
-                    (".y2", "y2"),
-                ]
-            ),
+            {
+                ("x1", "z1"),
+                ("z1", "z2"),
+                ("z2", "x2"),
+                ("y2", "z2"),
+                (".x1", "x1"),
+                (".y1", "y1"),
+                (".z1", "z1"),
+                (".z2", "z2"),
+                (".x2", "x2"),
+                (".y2", "y2"),
+            },
         )
 
     def test_is_valid_adjustment_set(self):
         # DAG
         self.assertTrue(
-            self.infer_dag.is_valid_adjustment_set(
-                X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z1", "z2"]
-            )
+            self.infer_dag.is_valid_adjustment_set(X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z1", "z2"])
         )
 
-        self.assertTrue(
-            self.infer_dag.is_valid_adjustment_set(
-                X="x1", Y="y1", adjustment_set=["z1", "z2"]
-            )
-        )
+        self.assertTrue(self.infer_dag.is_valid_adjustment_set(X="x1", Y="y1", adjustment_set=["z1", "z2"]))
 
-        self.assertFalse(
-            self.infer_dag.is_valid_adjustment_set(
-                X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z1"]
-            )
-        )
+        self.assertFalse(self.infer_dag.is_valid_adjustment_set(X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z1"]))
 
-        self.assertTrue(
-            self.infer_dag.is_valid_adjustment_set(
-                X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z2"]
-            )
-        )
+        self.assertTrue(self.infer_dag.is_valid_adjustment_set(X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z2"]))
 
         # SEMGraph
         self.assertTrue(
-            self.infer_sem.is_valid_adjustment_set(
-                X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z1", "z2"]
-            )
+            self.infer_sem.is_valid_adjustment_set(X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z1", "z2"])
         )
 
-        self.assertTrue(
-            self.infer_sem.is_valid_adjustment_set(
-                X="x1", Y="y1", adjustment_set=["z1", "z2"]
-            )
-        )
+        self.assertTrue(self.infer_sem.is_valid_adjustment_set(X="x1", Y="y1", adjustment_set=["z1", "z2"]))
 
-        self.assertFalse(
-            self.infer_sem.is_valid_adjustment_set(
-                X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z1"]
-            )
-        )
+        self.assertFalse(self.infer_sem.is_valid_adjustment_set(X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z1"]))
 
-        self.assertTrue(
-            self.infer_sem.is_valid_adjustment_set(
-                X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z2"]
-            )
-        )
+        self.assertTrue(self.infer_sem.is_valid_adjustment_set(X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z2"]))
 
     def test_get_minimal_adjustment_set(self):
         # Without latent variables
@@ -278,9 +224,7 @@ class TestAdjustmentSet(unittest.TestCase):
         self.assertRaises(ValueError, infer.get_minimal_adjustment_set, X="W", Y="Y")
 
         # M graph
-        dag2 = SEMGraph(
-            [("X", "Y"), ("Z1", "X"), ("Z1", "Z3"), ("Z2", "Z3"), ("Z2", "Y")]
-        )
+        dag2 = SEMGraph([("X", "Y"), ("Z1", "X"), ("Z1", "Z3"), ("Z2", "Z3"), ("Z2", "Y")])
         infer = CausalInference(dag2)
         adj_set = infer.get_minimal_adjustment_set(X="X", Y="Y")
         self.assertEqual(adj_set, set())
@@ -381,9 +325,7 @@ class TestBackdoorPaths(unittest.TestCase):
         self.assertEqual(deconfounders, frozenset())
 
     def test_game3_bn(self):
-        game3 = DiscreteBayesianNetwork(
-            [("X", "Y"), ("X", "A"), ("B", "A"), ("B", "Y"), ("B", "X")]
-        )
+        game3 = DiscreteBayesianNetwork([("X", "Y"), ("X", "A"), ("B", "A"), ("B", "Y"), ("B", "X")])
         inference = CausalInference(game3)
         self.assertFalse(inference.is_valid_backdoor_adjustment_set("X", "Y"))
         deconfounders = inference.get_all_backdoor_adjustment_sets("X", "Y")
@@ -397,9 +339,7 @@ class TestBackdoorPaths(unittest.TestCase):
         self.assertEqual(deconfounders, frozenset({frozenset({"B"})}))
 
     def test_game4_bn(self):
-        game4 = DiscreteBayesianNetwork(
-            [("A", "X"), ("A", "B"), ("C", "B"), ("C", "Y")]
-        )
+        game4 = DiscreteBayesianNetwork([("A", "X"), ("A", "B"), ("C", "B"), ("C", "Y")])
         inference = CausalInference(game4)
         self.assertTrue(inference.is_valid_backdoor_adjustment_set("X", "Y"))
         deconfounders = inference.get_all_backdoor_adjustment_sets("X", "Y")
@@ -413,26 +353,18 @@ class TestBackdoorPaths(unittest.TestCase):
         self.assertEqual(deconfounders, frozenset())
 
     def test_game5_bn(self):
-        game5 = DiscreteBayesianNetwork(
-            [("A", "X"), ("A", "B"), ("C", "B"), ("C", "Y"), ("X", "Y"), ("B", "X")]
-        )
+        game5 = DiscreteBayesianNetwork([("A", "X"), ("A", "B"), ("C", "B"), ("C", "Y"), ("X", "Y"), ("B", "X")])
         inference = CausalInference(game5)
         self.assertFalse(inference.is_valid_backdoor_adjustment_set("X", "Y"))
         deconfounders = inference.get_all_backdoor_adjustment_sets("X", "Y")
-        self.assertEqual(
-            deconfounders, frozenset({frozenset({"C"}), frozenset({"A", "B"})})
-        )
+        self.assertEqual(deconfounders, frozenset({frozenset({"C"}), frozenset({"A", "B"})}))
 
     def test_game5_sem(self):
-        game5 = SEMGraph(
-            [("A", "X"), ("A", "B"), ("C", "B"), ("C", "Y"), ("X", "Y"), ("B", "X")]
-        )
+        game5 = SEMGraph([("A", "X"), ("A", "B"), ("C", "B"), ("C", "Y"), ("X", "Y"), ("B", "X")])
         inference = CausalInference(game5)
         self.assertFalse(inference.is_valid_backdoor_adjustment_set("X", "Y"))
         deconfounders = inference.get_all_backdoor_adjustment_sets("X", "Y")
-        self.assertEqual(
-            deconfounders, frozenset({frozenset({"C"}), frozenset({"A", "B"})})
-        )
+        self.assertEqual(deconfounders, frozenset({frozenset({"C"}), frozenset({"A", "B"})}))
 
     def test_game6_bn(self):
         game6 = DiscreteBayesianNetwork(
@@ -626,32 +558,24 @@ class TestSEMIdentification(unittest.TestCase):
         self.assertRaises(ValueError, self.demo._iv_transformations, "x1", "y1", scale)
 
         for y in ["y2", "y3", "y4"]:
-            full_graph, dependent_var = self.demo._iv_transformations(
-                X="eta1", Y=y, scaling_indicators=scale
-            )
+            full_graph, dependent_var = self.demo._iv_transformations(X="eta1", Y=y, scaling_indicators=scale)
             self.assertEqual(dependent_var, y)
             self.assertTrue((".y1", y) in full_graph.edges)
             self.assertFalse(("eta1", y) in full_graph.edges)
 
         for y in ["y6", "y7", "y8"]:
-            full_graph, dependent_var = self.demo._iv_transformations(
-                X="eta2", Y=y, scaling_indicators=scale
-            )
+            full_graph, dependent_var = self.demo._iv_transformations(X="eta2", Y=y, scaling_indicators=scale)
             self.assertEqual(dependent_var, y)
             self.assertTrue((".y5", y) in full_graph.edges)
             self.assertFalse(("eta2", y) in full_graph.edges)
 
-        full_graph, dependent_var = self.demo._iv_transformations(
-            X="xi1", Y="eta1", scaling_indicators=scale
-        )
+        full_graph, dependent_var = self.demo._iv_transformations(X="xi1", Y="eta1", scaling_indicators=scale)
         self.assertEqual(dependent_var, "y1")
         self.assertTrue((".eta1", "y1") in full_graph.edges())
         self.assertTrue((".x1", "y1") in full_graph.edges())
         self.assertFalse(("xi1", "eta1") in full_graph.edges())
 
-        full_graph, dependent_var = self.demo._iv_transformations(
-            X="xi1", Y="eta2", scaling_indicators=scale
-        )
+        full_graph, dependent_var = self.demo._iv_transformations(X="xi1", Y="eta2", scaling_indicators=scale)
         self.assertEqual(dependent_var, "y5")
         self.assertTrue((".y1", "y5") in full_graph.edges())
         self.assertTrue((".eta2", "y5") in full_graph.edges())
@@ -659,9 +583,7 @@ class TestSEMIdentification(unittest.TestCase):
         self.assertFalse(("eta1", "eta2") in full_graph.edges())
         self.assertFalse(("xi1", "eta2") in full_graph.edges())
 
-        full_graph, dependent_var = self.demo._iv_transformations(
-            X="eta1", Y="eta2", scaling_indicators=scale
-        )
+        full_graph, dependent_var = self.demo._iv_transformations(X="eta1", Y="eta2", scaling_indicators=scale)
         self.assertEqual(dependent_var, "y5")
         self.assertTrue((".y1", "y5") in full_graph.edges())
         self.assertTrue((".eta2", "y5") in full_graph.edges())
@@ -679,9 +601,7 @@ class TestSEMIdentification(unittest.TestCase):
             ("deferenc", "unionsen"),
             ("laboract", "unionsen"),
         ]:
-            full_graph, dependent_var = self.union._iv_transformations(
-                u, v, scaling_indicators=scale
-            )
+            full_graph, dependent_var = self.union._iv_transformations(u, v, scaling_indicators=scale)
             self.assertFalse((u, v) in full_graph.edges())
             self.assertEqual(dependent_var, v)
 
@@ -723,9 +643,7 @@ class TestSEMIdentification(unittest.TestCase):
             {"x2", "y1", "y2", "y3", "y4", "y5", "y6", "y7", "y8"},
         )
 
-        self.assertSetEqual(
-            self.demo.get_ivs("xi1", "eta1", scaling_indicators=scale), {"x2", "x3"}
-        )
+        self.assertSetEqual(self.demo.get_ivs("xi1", "eta1", scaling_indicators=scale), {"x2", "x3"})
         self.assertSetEqual(
             self.demo.get_ivs("xi1", "eta2", scaling_indicators=scale),
             {"x2", "x3", "y2", "y3", "y4"},
@@ -738,63 +656,29 @@ class TestSEMIdentification(unittest.TestCase):
     def test_get_conditional_ivs_demo(self):
         scale = {"eta1": "y1", "eta2": "y5", "xi1": "x1"}
 
-        self.assertEqual(
-            self.demo.get_conditional_ivs("eta1", "y2", scaling_indicators=scale), []
-        )
-        self.assertEqual(
-            self.demo.get_conditional_ivs("eta1", "y3", scaling_indicators=scale), []
-        )
-        self.assertEqual(
-            self.demo.get_conditional_ivs("eta1", "y4", scaling_indicators=scale), []
-        )
+        self.assertEqual(self.demo.get_conditional_ivs("eta1", "y2", scaling_indicators=scale), [])
+        self.assertEqual(self.demo.get_conditional_ivs("eta1", "y3", scaling_indicators=scale), [])
+        self.assertEqual(self.demo.get_conditional_ivs("eta1", "y4", scaling_indicators=scale), [])
 
-        self.assertEqual(
-            self.demo.get_conditional_ivs("eta2", "y6", scaling_indicators=scale), []
-        )
-        self.assertEqual(
-            self.demo.get_conditional_ivs("eta2", "y7", scaling_indicators=scale), []
-        )
-        self.assertEqual(
-            self.demo.get_conditional_ivs("eta2", "y8", scaling_indicators=scale), []
-        )
+        self.assertEqual(self.demo.get_conditional_ivs("eta2", "y6", scaling_indicators=scale), [])
+        self.assertEqual(self.demo.get_conditional_ivs("eta2", "y7", scaling_indicators=scale), [])
+        self.assertEqual(self.demo.get_conditional_ivs("eta2", "y8", scaling_indicators=scale), [])
 
-        self.assertEqual(
-            self.demo.get_conditional_ivs("xi1", "x2", scaling_indicators=scale), []
-        )
-        self.assertEqual(
-            self.demo.get_conditional_ivs("xi1", "x3", scaling_indicators=scale), []
-        )
+        self.assertEqual(self.demo.get_conditional_ivs("xi1", "x2", scaling_indicators=scale), [])
+        self.assertEqual(self.demo.get_conditional_ivs("xi1", "x3", scaling_indicators=scale), [])
 
-        self.assertEqual(
-            self.demo.get_conditional_ivs("xi1", "eta1", scaling_indicators=scale), []
-        )
-        self.assertEqual(
-            self.demo.get_conditional_ivs("xi1", "eta2", scaling_indicators=scale), []
-        )
-        self.assertEqual(
-            self.demo.get_conditional_ivs("eta1", "eta2", scaling_indicators=scale), []
-        )
+        self.assertEqual(self.demo.get_conditional_ivs("xi1", "eta1", scaling_indicators=scale), [])
+        self.assertEqual(self.demo.get_conditional_ivs("xi1", "eta2", scaling_indicators=scale), [])
+        self.assertEqual(self.demo.get_conditional_ivs("eta1", "eta2", scaling_indicators=scale), [])
 
     def test_get_ivs_union(self):
         scale = {}
-        self.assertSetEqual(
-            self.union.get_ivs("yrsmill", "unionsen", scaling_indicators=scale), set()
-        )
-        self.assertSetEqual(
-            self.union.get_ivs("deferenc", "unionsen", scaling_indicators=scale), set()
-        )
-        self.assertSetEqual(
-            self.union.get_ivs("laboract", "unionsen", scaling_indicators=scale), set()
-        )
-        self.assertSetEqual(
-            self.union.get_ivs("deferenc", "laboract", scaling_indicators=scale), set()
-        )
-        self.assertSetEqual(
-            self.union.get_ivs("age", "laboract", scaling_indicators=scale), {"yrsmill"}
-        )
-        self.assertSetEqual(
-            self.union.get_ivs("age", "deferenc", scaling_indicators=scale), {"yrsmill"}
-        )
+        self.assertSetEqual(self.union.get_ivs("yrsmill", "unionsen", scaling_indicators=scale), set())
+        self.assertSetEqual(self.union.get_ivs("deferenc", "unionsen", scaling_indicators=scale), set())
+        self.assertSetEqual(self.union.get_ivs("laboract", "unionsen", scaling_indicators=scale), set())
+        self.assertSetEqual(self.union.get_ivs("deferenc", "laboract", scaling_indicators=scale), set())
+        self.assertSetEqual(self.union.get_ivs("age", "laboract", scaling_indicators=scale), {"yrsmill"})
+        self.assertSetEqual(self.union.get_ivs("age", "deferenc", scaling_indicators=scale), {"yrsmill"})
 
     def test_get_conditional_ivs_union(self):
         self.assertEqual(
@@ -829,62 +713,46 @@ class TestSEMIdentification(unittest.TestCase):
     def test_iv_transformations_custom(self):
         scale_custom = {"eta1": "y2", "eta2": "y5", "xi1": "x1"}
 
-        full_graph, var = self.custom._iv_transformations(
-            "xi1", "x2", scaling_indicators=scale_custom
-        )
+        full_graph, var = self.custom._iv_transformations("xi1", "x2", scaling_indicators=scale_custom)
         self.assertEqual(var, "x2")
         self.assertTrue((".x1", "x2") in full_graph.edges())
         self.assertFalse(("xi1", "x2") in full_graph.edges())
 
-        full_graph, var = self.custom._iv_transformations(
-            "xi1", "y4", scaling_indicators=scale_custom
-        )
+        full_graph, var = self.custom._iv_transformations("xi1", "y4", scaling_indicators=scale_custom)
         self.assertEqual(var, "y4")
         self.assertTrue((".x1", "y4") in full_graph.edges())
         self.assertFalse(("xi1", "y4") in full_graph.edges())
 
-        full_graph, var = self.custom._iv_transformations(
-            "xi1", "y1", scaling_indicators=scale_custom
-        )
+        full_graph, var = self.custom._iv_transformations("xi1", "y1", scaling_indicators=scale_custom)
         self.assertEqual(var, "y1")
         self.assertTrue((".x1", "y1") in full_graph.edges())
         self.assertFalse(("xi1", "y1") in full_graph.edges())
         self.assertFalse(("y4", "y1") in full_graph.edges())
 
-        full_graph, var = self.custom._iv_transformations(
-            "xi1", "eta1", scaling_indicators=scale_custom
-        )
+        full_graph, var = self.custom._iv_transformations("xi1", "eta1", scaling_indicators=scale_custom)
         self.assertEqual(var, "y2")
         self.assertTrue((".eta1", "y2") in full_graph.edges())
         self.assertTrue((".x1", "y2") in full_graph.edges())
         self.assertFalse(("y1", "eta1") in full_graph.edges())
         self.assertFalse(("xi1", "eta1") in full_graph.edges())
 
-        full_graph, var = self.custom._iv_transformations(
-            "y1", "eta1", scaling_indicators=scale_custom
-        )
+        full_graph, var = self.custom._iv_transformations("y1", "eta1", scaling_indicators=scale_custom)
         self.assertEqual(var, "y2")
         self.assertTrue((".eta1", "y2") in full_graph.edges())
         self.assertTrue((".x1", "y2") in full_graph.edges())
         self.assertFalse(("y1", "eta1") in full_graph.edges())
         self.assertFalse(("xi1", "eta1") in full_graph.edges())
 
-        full_graph, var = self.custom._iv_transformations(
-            "y1", "eta2", scaling_indicators=scale_custom
-        )
+        full_graph, var = self.custom._iv_transformations("y1", "eta2", scaling_indicators=scale_custom)
         self.assertEqual(var, "y5")
         self.assertTrue((".eta2", "y5") in full_graph.edges())
         self.assertFalse(("y1", "eta2") in full_graph.edges())
 
-        full_graph, var = self.custom._iv_transformations(
-            "y4", "y1", scaling_indicators=scale_custom
-        )
+        full_graph, var = self.custom._iv_transformations("y4", "y1", scaling_indicators=scale_custom)
         self.assertEqual(var, "y1")
         self.assertFalse(("y4", "y1") in full_graph.edges())
 
-        full_graph, var = self.custom._iv_transformations(
-            "eta1", "y3", scaling_indicators=scale_custom
-        )
+        full_graph, var = self.custom._iv_transformations("eta1", "y3", scaling_indicators=scale_custom)
         self.assertEqual(var, "y3")
         self.assertTrue((".y2", "y3") in full_graph.edges())
         self.assertFalse(("eta1", "y3") in full_graph.edges())
@@ -896,9 +764,7 @@ class TestSEMIdentification(unittest.TestCase):
             self.custom.get_ivs("xi1", "x2", scaling_indicators=scale_custom),
             {"y1", "y2", "y3", "y4", "y5"},
         )
-        self.assertSetEqual(
-            self.custom.get_ivs("xi1", "y4", scaling_indicators=scale_custom), {"x2"}
-        )
+        self.assertSetEqual(self.custom.get_ivs("xi1", "y4", scaling_indicators=scale_custom), {"x2"})
         self.assertSetEqual(
             self.custom.get_ivs("xi1", "y1", scaling_indicators=scale_custom),
             {"x2", "y4"},
@@ -916,9 +782,7 @@ class TestSEMIdentification(unittest.TestCase):
             self.custom.get_ivs("y1", "eta2", scaling_indicators=scale_custom),
             {"x1", "x2", "y2", "y3", "y4"},
         )
-        self.assertSetEqual(
-            self.custom.get_ivs("y4", "y1", scaling_indicators=scale_custom), set()
-        )
+        self.assertSetEqual(self.custom.get_ivs("y4", "y1", scaling_indicators=scale_custom), set())
         self.assertSetEqual(
             self.custom.get_ivs("eta1", "y3", scaling_indicators=scale_custom),
             {"x1", "x2", "y4"},
@@ -948,9 +812,7 @@ class TestSEMIdentification(unittest.TestCase):
         inference2 = CausalInference(model2)
         self.assertEqual(inference2.get_conditional_ivs("x", "y"), [("z", {"w"})])
 
-        model3 = SEMGraph(
-            ebunch=[("x", "y"), ("u", "x"), ("u", "y"), ("z", "x")], latents=["u"]
-        )
+        model3 = SEMGraph(ebunch=[("x", "y"), ("u", "x"), ("u", "y"), ("z", "x")], latents=["u"])
         inference3 = CausalInference(model3)
         self.assertEqual(inference3.get_ivs("x", "y"), {"z"})
 
@@ -961,9 +823,7 @@ class TestSEMIdentification(unittest.TestCase):
 
 class TestBayesianIV(unittest.TestCase):
     def setUp(self):
-        self.model = DiscreteBayesianNetwork(
-            ebunch=[("Z", "X"), ("X", "Y"), ("U", "Y"), ("U", "X")], latents=["U"]
-        )
+        self.model = DiscreteBayesianNetwork(ebunch=[("Z", "X"), ("X", "Y"), ("U", "Y"), ("U", "X")], latents=["U"])
 
         self.causal_inf = CausalInference(self.model)
 
@@ -980,9 +840,7 @@ class TestBayesianIV(unittest.TestCase):
         self.assertIn(("I", {"W"}), cond_ivs)
 
     def test_identification_method(self):
-        backdoor_model = DiscreteBayesianNetwork(
-            ebunch=[("X", "Y"), ("M", "Y"), ("M", "X")]
-        )
+        backdoor_model = DiscreteBayesianNetwork(ebunch=[("X", "Y"), ("M", "Y"), ("M", "X")])
         causal_inf = CausalInference(backdoor_model)
         methods = causal_inf.identification_method("X", "Y")
         expected_backdoor = {"backdoor set": {frozenset({"M"})}}
@@ -994,9 +852,7 @@ class TestBayesianIV(unittest.TestCase):
         expected_frontdoor = {"frontdoor set": {frozenset({"M"})}}
         self.assertEqual(methods, expected_frontdoor)
 
-        iv_model = DiscreteBayesianNetwork(
-            ebunch=[("Z", "X"), ("X", "Y"), ("U", "Y"), ("U", "X")], latents=["U"]
-        )
+        iv_model = DiscreteBayesianNetwork(ebunch=[("Z", "X"), ("X", "Y"), ("U", "Y"), ("U", "X")], latents=["U"])
         causal_inf = CausalInference(iv_model)
         methods = causal_inf.identification_method("X", "Y")
         expected_iv = {"instrumental variables": {"Z"}}
@@ -1044,9 +900,7 @@ class TestDoQuery(unittest.TestCase):
 
     def get_example_model(self):
         # Model structure: Z -> X -> Y; Z -> W -> Y
-        example_model = DiscreteBayesianNetwork(
-            [("X", "Y"), ("Z", "X"), ("Z", "W"), ("W", "Y")]
-        )
+        example_model = DiscreteBayesianNetwork([("X", "Y"), ("Z", "X"), ("Z", "W"), ("W", "Y")])
         cpd_z = TabularCPD(variable="Z", variable_card=2, values=[[0.2], [0.8]])
 
         cpd_x = TabularCPD(
@@ -1079,9 +933,7 @@ class TestDoQuery(unittest.TestCase):
 
     def get_iv_model(self):
         # Model structure: Z -> X -> Y; X <- U -> Y
-        example_model = DiscreteBayesianNetwork(
-            [("Z", "X"), ("X", "Y"), ("U", "X"), ("U", "Y")]
-        )
+        example_model = DiscreteBayesianNetwork([("Z", "X"), ("X", "Y"), ("U", "X"), ("U", "Y")])
         cpd_z = TabularCPD(variable="Z", variable_card=2, values=[[0.2], [0.8]])
         cpd_u = TabularCPD(variable="U", variable_card=2, values=[[0.7], [0.3]])
         cpd_x = TabularCPD(
@@ -1106,24 +958,16 @@ class TestDoQuery(unittest.TestCase):
     def test_query(self):
         for algo in ["ve", "bp"]:
             # Simpson model queries
-            query_nodo1 = self.simp_infer.query(
-                variables=["C"], do=None, evidence={"T": 1}, inference_algo=algo
-            )
+            query_nodo1 = self.simp_infer.query(variables=["C"], do=None, evidence={"T": 1}, inference_algo=algo)
             np_test.assert_array_almost_equal(query_nodo1.values, np.array([0.5, 0.5]))
 
-            query_nodo2 = self.simp_infer.query(
-                variables=["C"], do=None, evidence={"T": 0}, inference_algo=algo
-            )
+            query_nodo2 = self.simp_infer.query(variables=["C"], do=None, evidence={"T": 0}, inference_algo=algo)
             np_test.assert_array_almost_equal(query_nodo2.values, np.array([0.6, 0.4]))
 
-            query1 = self.simp_infer.query(
-                variables=["C"], do={"T": 1}, inference_algo=algo
-            )
+            query1 = self.simp_infer.query(variables=["C"], do={"T": 1}, inference_algo=algo)
             np_test.assert_array_almost_equal(query1.values, np.array([0.6, 0.4]))
 
-            query2 = self.simp_infer.query(
-                variables=["C"], do={"T": 0}, inference_algo=algo
-            )
+            query2 = self.simp_infer.query(variables=["C"], do={"T": 0}, inference_algo=algo)
             np_test.assert_array_almost_equal(query2.values, np.array([0.5, 0.5]))
 
             query3 = self.simp_infer.query(["C"], adjustment_set=["S"])
@@ -1134,9 +978,7 @@ class TestDoQuery(unittest.TestCase):
             np_test.assert_array_almost_equal(query_nodo1.values, np.array([0.2, 0.8]))
 
             query_nodo2 = self.iv_infer.query(["X"], do=None, evidence={"Z": 1})
-            np_test.assert_array_almost_equal(
-                query_nodo2.values, np.array([0.48, 0.52])
-            )
+            np_test.assert_array_almost_equal(query_nodo2.values, np.array([0.48, 0.52]))
 
             query1 = self.iv_infer.query(["X"], do={"Z": 1})
             np_test.assert_array_almost_equal(query1.values, np.array([0.48, 0.52]))
@@ -1150,14 +992,10 @@ class TestDoQuery(unittest.TestCase):
     def test_adjustment_query(self):
         for algo in ["ve", "bp"]:
             # Test adjustment with do operation.
-            query1 = self.example_infer.query(
-                variables=["Y"], do={"X": 1}, adjustment_set={"Z"}, inference_algo=algo
-            )
+            query1 = self.example_infer.query(variables=["Y"], do={"X": 1}, adjustment_set={"Z"}, inference_algo=algo)
             np_test.assert_array_almost_equal(query1.values, np.array([0.7240, 0.2760]))
 
-            query2 = self.example_infer.query(
-                variables=["Y"], do={"X": 1}, adjustment_set={"W"}, inference_algo=algo
-            )
+            query2 = self.example_infer.query(variables=["Y"], do={"X": 1}, adjustment_set={"W"}, inference_algo=algo)
             np_test.assert_array_almost_equal(query2.values, np.array([0.7240, 0.2760]))
 
             # Test adjustment without do operation.
@@ -1195,9 +1033,7 @@ class TestDoQuery(unittest.TestCase):
 
         # A slight modified version of the above model where only some of the adjustment
         # set variables are in evidence.
-        bn = DiscreteBayesianNetwork(
-            [("X", "Y"), ("W1", "X"), ("W1", "Y"), ("W2", "X"), ("W2", "Y")]
-        )
+        bn = DiscreteBayesianNetwork([("X", "Y"), ("W1", "X"), ("W1", "Y"), ("W2", "X"), ("W2", "Y")])
         cpd_w1 = TabularCPD(variable="W1", variable_card=2, values=[[0.7], [0.3]])
         cpd_w2 = TabularCPD(variable="W2", variable_card=2, values=[[0.3], [0.7]])
         cpd_x = TabularCPD(
@@ -1224,9 +1060,7 @@ class TestDoQuery(unittest.TestCase):
 
     def test_query_error(self):
         self.assertRaises(ValueError, self.simp_infer.query, variables="C", do={"T": 1})
-        self.assertRaises(
-            ValueError, self.simp_infer.query, variables=["E"], do={"T": 1}
-        )
+        self.assertRaises(ValueError, self.simp_infer.query, variables=["E"], do={"T": 1})
         self.assertRaises(ValueError, self.simp_infer.query, variables=["C"], do="T")
         self.assertRaises(
             ValueError,
@@ -1278,9 +1112,7 @@ class TestDoQuery(unittest.TestCase):
         evidence = {"W": "True"}
         counterfactual_intervention = {"S": "False"}
         with self.assertRaises(ValueError) as cm:
-            causal_inference.query(
-                variables=["R"], evidence=evidence, do=counterfactual_intervention
-            )
+            causal_inference.query(variables=["R"], evidence=evidence, do=counterfactual_intervention)
         self.assertIn(
             "Invalid causal query: There is a direct edge from the query"
             " variable 'R' to the intervention variable 'S'.",
@@ -1291,17 +1123,13 @@ class TestDoQuery(unittest.TestCase):
 class TestEstimator(unittest.TestCase):
     def test_create_estimator(self):
         game1 = DiscreteBayesianNetwork([("X", "A"), ("A", "Y"), ("A", "B")])
-        data = pd.DataFrame(
-            np.random.randint(2, size=(1000, 4)), columns=["X", "A", "B", "Y"]
-        )
+        data = pd.DataFrame(np.random.randint(2, size=(1000, 4)), columns=["X", "A", "B", "Y"])
         inference = CausalInference(model=game1)
         ate = inference.estimate_ate("X", "Y", data=data, estimator_type="linear")
         self.assertAlmostEqual(ate, 0, places=1)
 
     def test_estimate_frontdoor(self):
-        model = DiscreteBayesianNetwork(
-            [("X", "Z"), ("Z", "Y"), ("U", "X"), ("U", "Y")], latents=["U"]
-        )
+        model = DiscreteBayesianNetwork([("X", "Z"), ("Z", "Y"), ("U", "X"), ("U", "Y")], latents=["U"])
         U = np.random.randn(10000)
         X = 0.3 * U + np.random.randn(10000)
         Z = 0.8 * X + 0.3 * np.random.randn(10000)
@@ -1313,9 +1141,7 @@ class TestEstimator(unittest.TestCase):
         self.assertAlmostEqual(ate, 0.8 * 0.9, places=1)
 
     def test_estimate_fail_no_adjustment(self):
-        model = DiscreteBayesianNetwork(
-            [("X", "Y"), ("U", "X"), ("U", "Y")], latents=["U"]
-        )
+        model = DiscreteBayesianNetwork([("X", "Y"), ("U", "X"), ("U", "Y")], latents=["U"])
 
         U = np.random.randn(10000)
         X = 0.3 * U + np.random.randn(10000)
@@ -1340,6 +1166,4 @@ class TestEstimator(unittest.TestCase):
         data = pd.DataFrame({"X": X, "Y": Y, "Z": Z, "P1": P1})
 
         infer = CausalInference(model=model)
-        self.assertAlmostEqual(
-            infer.estimate_ate("X", "Y", data), ((0.8 * 0.9) + (0.9 * 0.1)), places=1
-        )
+        self.assertAlmostEqual(infer.estimate_ate("X", "Y", data), ((0.8 * 0.9) + (0.9 * 0.1)), places=1)

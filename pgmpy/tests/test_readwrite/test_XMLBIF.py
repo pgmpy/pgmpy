@@ -8,7 +8,7 @@ import numpy.testing as np_test
 import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
 
-from pgmpy import config
+from pgmpy import config, logger
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
@@ -324,9 +324,7 @@ class TestXMLBIFWriterMethodsString:
         self.expected_model = reader.get_model()
         self.writer = XMLBIFWriter(self.expected_model)
 
-        self.model_stateless = DiscreteBayesianNetwork(
-            [("D", "G"), ("I", "G"), ("G", "L"), ("I", "S")]
-        )
+        self.model_stateless = DiscreteBayesianNetwork([("D", "G"), ("I", "G"), ("G", "L"), ("I", "S")])
         self.cpd_d = TabularCPD(variable="D", variable_card=2, values=[[0.6], [0.4]])
         self.cpd_i = TabularCPD(variable="I", variable_card=2, values=[[0.7], [0.3]])
 
@@ -358,14 +356,12 @@ class TestXMLBIFWriterMethodsString:
             evidence_card=[2],
         )
 
-        self.model_stateless.add_cpds(
-            self.cpd_d, self.cpd_i, self.cpd_g, self.cpd_l, self.cpd_s
-        )
+        self.model_stateless.add_cpds(self.cpd_d, self.cpd_i, self.cpd_g, self.cpd_l, self.cpd_s)
         self.writer_stateless = XMLBIFWriter(self.model_stateless)
 
     def test_write_xmlbif_statefull(self):
         self.writer.write_xmlbif("dog_problem_output.xbif")
-        with open("dog_problem_output.xbif", "r") as f:
+        with open("dog_problem_output.xbif") as f:
             file_text = f.read()
         reader = XMLBIFReader(string=file_text)
         model = reader.get_model(state_name_type=str)
@@ -374,7 +370,7 @@ class TestXMLBIFWriterMethodsString:
 
     def test_write_xmlbif_stateless(self):
         self.writer_stateless.write_xmlbif("grade_problem_output.xbif")
-        with open("grade_problem_output.xbif", "r") as f:
+        with open("grade_problem_output.xbif") as f:
             reader = XMLBIFReader(f)
         model = reader.get_model(state_name_type=int)
         self.assert_models_equivelent(self.model_stateless, model)
@@ -586,9 +582,7 @@ class TestXMLBIFWriterMethodsStringTorch:
         self.expected_model = reader.get_model()
         self.writer = XMLBIFWriter(self.expected_model)
 
-        self.model_stateless = DiscreteBayesianNetwork(
-            [("D", "G"), ("I", "G"), ("G", "L"), ("I", "S")]
-        )
+        self.model_stateless = DiscreteBayesianNetwork([("D", "G"), ("I", "G"), ("G", "L"), ("I", "S")])
         self.cpd_d = TabularCPD(variable="D", variable_card=2, values=[[0.6], [0.4]])
         self.cpd_i = TabularCPD(variable="I", variable_card=2, values=[[0.7], [0.3]])
 
@@ -620,16 +614,14 @@ class TestXMLBIFWriterMethodsStringTorch:
             evidence_card=[2],
         )
 
-        self.model_stateless.add_cpds(
-            self.cpd_d, self.cpd_i, self.cpd_g, self.cpd_l, self.cpd_s
-        )
+        self.model_stateless.add_cpds(self.cpd_d, self.cpd_i, self.cpd_g, self.cpd_l, self.cpd_s)
         self.writer_stateless = XMLBIFWriter(self.model_stateless)
         yield
         config.set_backend("numpy")
 
     def test_write_xmlbif_statefull(self):
         self.writer.write_xmlbif("dog_problem_output.xbif")
-        with open("dog_problem_output.xbif", "r") as f:
+        with open("dog_problem_output.xbif") as f:
             file_text = f.read()
         reader = XMLBIFReader(string=file_text)
         model = reader.get_model(state_name_type=str)
@@ -638,7 +630,7 @@ class TestXMLBIFWriterMethodsStringTorch:
 
     def test_write_xmlbif_stateless(self):
         self.writer_stateless.write_xmlbif("grade_problem_output.xbif")
-        with open("grade_problem_output.xbif", "r") as f:
+        with open("grade_problem_output.xbif") as f:
             reader = XMLBIFReader(f)
         model = reader.get_model(state_name_type=int)
         self.assert_models_equivelent(self.model_stateless, model)

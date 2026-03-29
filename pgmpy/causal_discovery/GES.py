@@ -1,14 +1,14 @@
+from collections.abc import Hashable
 from itertools import combinations
-from typing import Hashable, List, Optional, Tuple, Union
 
 import networkx as nx
 import numpy as np
 import pandas as pd
 
 from pgmpy.base import DAG
+from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery, _ScoreMixin
-from pgmpy.estimators import ExpertKnowledge
-from pgmpy.estimators.StructureScore import StructureScore, get_scoring_method
+from pgmpy.structure_score import BaseStructureScore, get_scoring_method
 
 
 class GES(_ScoreMixin, _BaseCausalDiscovery):
@@ -27,7 +27,7 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
 
     Parameters
     ----------
-    scoring_method : str or StructureScore instance, default=None
+    scoring_method : str or BaseStructureScore instance, default=None
         The score to be optimized during structure estimation. Supported
         structure scores:
 
@@ -37,7 +37,7 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
 
         If None, the appropriate scoring method is automatically selected based
         on the data type. Also accepts a custom score instance that inherits
-        from `StructureScore`.
+        from `BaseStructureScore`.
 
     expert_knowledge : ExpertKnowledge instance, default=None
         Expert knowledge to be used with the algorithm. Expert knowledge
@@ -58,11 +58,6 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         (edge addition, removal, or flipping). Operations with smaller
         improvements are not performed.
 
-    use_cache : bool, default=True
-        If True, uses caching of local scores for faster computation.
-        Note: Caching only works for scoring methods which are decomposable.
-        Can give incorrect results for custom non-decomposable scoring methods.
-
     Attributes
     ----------
     causal_graph_ : DAG or PDAG
@@ -82,9 +77,9 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
     Simulate some data to use for causal discovery:
 
     >>> import numpy as np
-    >>> from pgmpy.utils import get_example_model
+    >>> from pgmpy.example_models import load_model
     >>> np.random.seed(42)
-    >>> model = get_example_model("alarm")
+    >>> model = load_model("bnlearn/alarm")
     >>> df = model.simulate(n_samples=1000, seed=42)
 
     Use the GES algorithm to learn the causal structure from data:
@@ -92,14 +87,20 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
     >>> from pgmpy.causal_discovery import GES
     >>> ges = GES(scoring_method="bic-d")
     >>> ges.fit(df)
-    >>> ges.causal_graph_.edges()
+    GES(scoring_method='bic-d')
+    >>> ges.causal_graph_  # doctest: +ELLIPSIS
+    <pgmpy.base.PDAG.PDAG object at 0x...>
+    >>> ges.n_features_in_
+    37
 
     Use expert knowledge to constrain the search:
 
-    >>> from pgmpy.estimators import ExpertKnowledge
+    >>> from pgmpy.causal_discovery import ExpertKnowledge
     >>> expert = ExpertKnowledge(forbidden_edges=[("HISTORY", "CVP")])
     >>> ges = GES(scoring_method="bic-d", expert_knowledge=expert)
-    >>> ges.fit(df)
+    >>> ges.fit(df)  # doctest: +ELLIPSIS
+    GES(expert_knowledge=Expert Knowledge: 0 required edges, 1 forbidden edges, ...,
+        scoring_method='bic-d')
 
     References
     ----------
@@ -110,21 +111,19 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
 
     def __init__(
         self,
-        scoring_method: Optional[Union[str, StructureScore]] = None,
-        expert_knowledge: Optional[ExpertKnowledge] = None,
+        scoring_method: str | BaseStructureScore | None = None,
+        expert_knowledge: ExpertKnowledge | None = None,
         return_type: str = "pdag",
         min_improvement: float = 1e-6,
-        use_cache: bool = True,
     ):
         self.scoring_method = scoring_method
         self.expert_knowledge = expert_knowledge
         self.return_type = return_type
         self.min_improvement = min_improvement
-        self.use_cache = use_cache
 
     def _legal_edge_additions(
         self, current_model: DAG, expert_knowledge: ExpertKnowledge
-    ) -> List[Tuple[Hashable, Hashable]]:
+    ) -> list[tuple[Hashable, Hashable]]:
         """
         Returns a list of all edges that can be added to the graph such that
         it remains a DAG.
@@ -132,19 +131,15 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         edges = []
         for u, v in combinations(current_model.nodes(), 2):
             if not (current_model.has_edge(u, v) or current_model.has_edge(v, u)):
-                if not nx.has_path(current_model, v, u) and (
-                    (u, v) not in expert_knowledge.forbidden_edges
-                ):
+                if not nx.has_path(current_model, v, u) and ((u, v) not in expert_knowledge.forbidden_edges):
                     edges.append((u, v))
-                if not nx.has_path(current_model, u, v) and (
-                    (v, u) not in expert_knowledge.forbidden_edges
-                ):
+                if not nx.has_path(current_model, u, v) and ((v, u) not in expert_knowledge.forbidden_edges):
                     edges.append((v, u))
         return edges
 
     def _legal_edge_removals(
         self, current_model: DAG, expert_knowledge: ExpertKnowledge
-    ) -> List[Tuple[Hashable, Hashable]]:
+    ) -> list[tuple[Hashable, Hashable]]:
         """
         Returns a list of all edges that can be removed from the graph.
         """
@@ -156,7 +151,7 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
 
     def _legal_edge_flips(
         self, current_model: DAG, expert_knowledge: ExpertKnowledge
-    ) -> List[Tuple[Hashable, Hashable]]:
+    ) -> list[tuple[Hashable, Hashable]]:
         """
         Returns a list of all edges that can be flipped such that the model
         remains a DAG.
@@ -164,9 +159,7 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         potential_flips = []
         edges = list(current_model.edges())
         for u, v in edges:
-            if ((u, v) not in expert_knowledge.required_edges) and (
-                (v, u) not in expert_knowledge.forbidden_edges
-            ):
+            if ((u, v) not in expert_knowledge.required_edges) and ((v, u) not in expert_knowledge.forbidden_edges):
                 current_model.remove_edge(u, v)
                 if not nx.has_path(current_model, u, v):
                     potential_flips.append((v, u))
@@ -189,8 +182,7 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         """
         self.variables_ = list(X.columns)
 
-        _, score_c = get_scoring_method(self.scoring_method, X, self.use_cache)
-        score_fn = score_c.local_score
+        score = get_scoring_method(self.scoring_method, X)
 
         current_model = DAG()
         current_model.add_nodes_from(self.variables_)
@@ -203,19 +195,15 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         if expert_knowledge.search_space:
             expert_knowledge.limit_search_space(X.columns)
 
-        expert_knowledge._orient_temporal_forbidden_edges(
-            current_model, only_edges=False
-        )
+        expert_knowledge._orient_temporal_forbidden_edges(current_model, only_edges=False)
 
         while True:
-            potential_edges = self._legal_edge_additions(
-                current_model, expert_knowledge
-            )
+            potential_edges = self._legal_edge_additions(current_model, expert_knowledge)
             score_deltas = np.zeros(len(potential_edges))
 
             for index, (u, v) in enumerate(potential_edges):
-                current_parents = current_model.get_parents(v)
-                score_deltas[index] = score_fn(v, current_parents + [u]) - score_fn(
+                current_parents = tuple(current_model.get_parents(v))
+                score_deltas[index] = score.local_score(v, current_parents + (u,)) - score.local_score(
                     v, current_parents
                 )
 
@@ -226,20 +214,16 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
             current_model.add_edge(edge_to_add[0], edge_to_add[1])
 
         while True:
-            potential_removals = self._legal_edge_removals(
-                current_model, expert_knowledge
-            )
+            potential_removals = self._legal_edge_removals(current_model, expert_knowledge)
             score_deltas = np.zeros(len(potential_removals))
 
             for index, (u, v) in enumerate(potential_removals):
-                current_parents = current_model.get_parents(v)
-                score_deltas[index] = score_fn(
-                    v, [node for node in current_parents if node != u]
-                ) - score_fn(v, current_parents)
+                current_parents = tuple(current_model.get_parents(v))
+                score_deltas[index] = score.local_score(
+                    v, tuple(node for node in current_parents if node != u)
+                ) - score.local_score(v, current_parents)
 
-            if len(potential_removals) == 0 or np.all(
-                score_deltas < self.min_improvement
-            ):
+            if len(potential_removals) == 0 or np.all(score_deltas < self.min_improvement):
                 break
 
             edge_to_remove = potential_removals[np.argmax(score_deltas)]
@@ -250,13 +234,11 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
             score_deltas = np.zeros(len(potential_flips))
 
             for index, (u, v) in enumerate(potential_flips):
-                v_parents = current_model.get_parents(v)
-                u_parents = current_model.get_parents(u)
-                score_deltas[index] = (
-                    score_fn(v, v_parents + [u]) - score_fn(v, v_parents)
-                ) + (
-                    score_fn(u, [node for node in u_parents if node != v])
-                    - score_fn(u, u_parents)
+                v_parents = tuple(current_model.get_parents(v))
+                u_parents = tuple(current_model.get_parents(u))
+                score_deltas[index] = (score.local_score(v, v_parents + (u,)) - score.local_score(v, v_parents)) + (
+                    score.local_score(u, tuple(node for node in u_parents if node != v))
+                    - score.local_score(u, u_parents)
                 )
 
             if len(potential_flips) == 0 or np.all(score_deltas < self.min_improvement):
@@ -271,12 +253,8 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         elif self.return_type.lower() == "pdag":
             self.causal_graph_ = current_model.to_pdag()
         else:
-            raise ValueError(
-                f"return_type must be one of: dag, pdag. Got: {self.return_type}"
-            )
+            raise ValueError(f"return_type must be one of: dag, pdag. Got: {self.return_type}")
 
-        self.adjacency_matrix_ = nx.to_pandas_adjacency(
-            self.causal_graph_, weight=1, dtype="int"
-        )
+        self.adjacency_matrix_ = nx.to_pandas_adjacency(self.causal_graph_, weight=1, dtype="int")
 
         return self

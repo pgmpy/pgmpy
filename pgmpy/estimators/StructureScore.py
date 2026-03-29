@@ -1,6 +1,7 @@
-#!/usr/bin/env python
+from __future__ import annotations
+
+import warnings
 from math import lgamma, log
-from typing import Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -11,13 +12,20 @@ from scipy.stats import multivariate_normal
 from pgmpy.estimators import BaseEstimator
 from pgmpy.utils import get_dataset_type
 
+warnings.warn(
+    "`pgmpy.estimators.StructureScore` is deprecated and will be removed in a future release. "
+    "Use `pgmpy.structure_score` instead.",
+    FutureWarning,
+    stacklevel=2,
+)
+
 
 def get_scoring_method(
-    scoring_method: Optional[Union[str, "StructureScore"]],
+    scoring_method: str | StructureScore | None,
     data: pd.DataFrame,
     use_cache: bool,
     **kwargs,
-) -> Tuple["StructureScore", "StructureScore"]:
+) -> tuple[StructureScore, StructureScore]:
     available_methods = {
         "continuous": {
             "bic-g": BICGauss,
@@ -38,9 +46,7 @@ def get_scoring_method(
             "aic-cg": AICCondGauss,
         },
     }
-    all_available_methods = [
-        key for subdict in available_methods.values() for key in subdict.keys()
-    ]
+    all_available_methods = [key for subdict in available_methods.values() for key in subdict.keys()]
 
     var_type = get_dataset_type(data)
     supported_methods = available_methods[var_type] | available_methods["mixed"]
@@ -53,9 +59,7 @@ def get_scoring_method(
             "bicscore",
             "aicscore",
         ]:
-            raise ValueError(
-                "The scoring method names have been changed. Please refer the documentation."
-            )
+            raise ValueError("The scoring method names have been changed. Please refer the documentation.")
         elif scoring_method.lower() not in list(all_available_methods):
             raise ValueError(
                 "Unknown scoring method. Please refer documentation for a list of supported score metrics."
@@ -146,7 +150,7 @@ class StructureScore(BaseEstimator):
     """
 
     def __init__(self, data, **kwargs):
-        super(StructureScore, self).__init__(data, **kwargs)
+        super().__init__(data, **kwargs)
 
     def score(self, model):
         """
@@ -301,7 +305,7 @@ class K2(StructureScore):
     """
 
     def __init__(self, data, **kwargs):
-        super(K2, self).__init__(data, **kwargs)
+        super().__init__(data, **kwargs)
 
     def local_score(self, variable, parents):
         """
@@ -372,11 +376,7 @@ class K2(StructureScore):
         # log_gamma_counts += gamma_counts_adj
         # log_gamma_conds += gamma_conds_adj
 
-        score = (
-            np.sum(log_gamma_counts)
-            - np.sum(log_gamma_conds)
-            + num_parents_states * lgamma(var_cardinality)
-        )
+        score = np.sum(log_gamma_counts) - np.sum(log_gamma_conds) + num_parents_states * lgamma(var_cardinality)
 
         return score
 
@@ -432,7 +432,7 @@ class BDeu(StructureScore):
 
     def __init__(self, data, equivalent_sample_size=10, **kwargs):
         self.equivalent_sample_size = equivalent_sample_size
-        super(BDeu, self).__init__(data, **kwargs)
+        super().__init__(data, **kwargs)
 
     def local_score(self, variable, parents):
         """
@@ -478,11 +478,7 @@ class BDeu(StructureScore):
         gammaln(log_gamma_conds + alpha, out=log_gamma_conds)
 
         # Adjustment for missing zero-count columns (when using reindex=False to save memory).
-        gamma_counts_adj = (
-            (num_parents_states - counts.shape[1])
-            * len(self.state_names[variable])
-            * gammaln(beta)
-        )
+        gamma_counts_adj = (num_parents_states - counts.shape[1]) * len(self.state_names[variable]) * gammaln(beta)
         gamma_conds_adj = (num_parents_states - counts.shape[1]) * gammaln(alpha)
 
         # Final BDeu local score calculation.
@@ -543,7 +539,7 @@ class BDs(BDeu):
     """
 
     def __init__(self, data, equivalent_sample_size=10, **kwargs):
-        super(BDs, self).__init__(data, equivalent_sample_size, **kwargs)
+        super().__init__(data, equivalent_sample_size, **kwargs)
 
     def structure_prior_ratio(self, operation):
         """
@@ -670,11 +666,7 @@ class BDs(BDeu):
         gammaln(log_gamma_conds + alpha, out=log_gamma_conds)
 
         # Adjustment because of missing 0 columns when using reindex=False for computing state_counts to save memory.
-        gamma_counts_adj = (
-            (num_parents_states - counts.shape[1])
-            * len(self.state_names[variable])
-            * gammaln(beta)
-        )
+        gamma_counts_adj = (num_parents_states - counts.shape[1]) * len(self.state_names[variable]) * gammaln(beta)
         gamma_conds_adj = (num_parents_states - counts.shape[1]) * gammaln(alpha)
 
         score = (
@@ -702,7 +694,7 @@ class LogLikeliHood(StructureScore):
     """
 
     def __init__(self, data, **kwargs):
-        super(LogLikeliHood, self).__init__(data, **kwargs)
+        super().__init__(data, **kwargs)
 
     def _log_likelihood(self, variable, parents):
 
@@ -729,9 +721,7 @@ class LogLikeliHood(StructureScore):
         return (np.sum(log_likelihoods), num_parents_states, var_cardinality)
 
     def local_score(self, variable, parents):
-        ll, num_parents_states, var_cardinality = self._log_likelihood(
-            variable=variable, parents=parents
-        )
+        ll, num_parents_states, var_cardinality = self._log_likelihood(variable=variable, parents=parents)
         return ll
 
 
@@ -780,7 +770,7 @@ class BIC(LogLikeliHood):
     """
 
     def __init__(self, data, **kwargs):
-        super(BIC, self).__init__(data, **kwargs)
+        super().__init__(data, **kwargs)
 
     def local_score(self, variable, parents):
         """
@@ -817,9 +807,7 @@ class BIC(LogLikeliHood):
         """
 
         sample_size = len(self.data)
-        ll, num_parents_states, var_cardinality = self._log_likelihood(
-            variable=variable, parents=parents
-        )
+        ll, num_parents_states, var_cardinality = self._log_likelihood(variable=variable, parents=parents)
         score = ll - 0.5 * log(sample_size) * num_parents_states * (var_cardinality - 1)
 
         return score
@@ -873,7 +861,7 @@ class AIC(LogLikeliHood):
     """
 
     def __init__(self, data, **kwargs):
-        super(AIC, self).__init__(data, **kwargs)
+        super().__init__(data, **kwargs)
 
     def local_score(self, variable, parents):
         """
@@ -909,9 +897,7 @@ class AIC(LogLikeliHood):
             the data contains unsupported types (e.g., continuous values).
         """
 
-        ll, num_parents_states, var_cardinality = self._log_likelihood(
-            variable=variable, parents=parents
-        )
+        ll, num_parents_states, var_cardinality = self._log_likelihood(variable=variable, parents=parents)
         score = ll - num_parents_states * (var_cardinality - 1)
 
         return score
@@ -957,7 +943,7 @@ class LogLikelihoodGauss(StructureScore):
     """
 
     def __init__(self, data, **kwargs):
-        super(LogLikelihoodGauss, self).__init__(data, **kwargs)
+        super().__init__(data, **kwargs)
 
     def _log_likelihood(self, variable, parents):
         """
@@ -995,9 +981,7 @@ class LogLikelihoodGauss(StructureScore):
         if len(parents) == 0:
             glm_model = smf.glm(formula=f"{variable} ~ 1", data=self.data).fit()
         else:
-            glm_model = smf.glm(
-                formula=f"{variable} ~ {' + '.join(parents)}", data=self.data
-            ).fit()
+            glm_model = smf.glm(formula=f"{variable} ~ {' + '.join(parents)}", data=self.data).fit()
 
         return (glm_model.llf, glm_model.df_model)
 
@@ -1074,7 +1058,7 @@ class BICGauss(LogLikelihoodGauss):
     """
 
     def __init__(self, data, **kwargs):
-        super(BICGauss, self).__init__(data, **kwargs)
+        super().__init__(data, **kwargs)
 
     def local_score(self, variable, parents):
         """
@@ -1151,7 +1135,7 @@ class AICGauss(LogLikelihoodGauss):
     """
 
     def __init__(self, data, **kwargs):
-        super(AICGauss, self).__init__(data, **kwargs)
+        super().__init__(data, **kwargs)
 
     def local_score(self, variable, parents):
         """
@@ -1238,7 +1222,7 @@ class LogLikelihoodCondGauss(StructureScore):
     """
 
     def __init__(self, data, **kwargs):
-        super(LogLikelihoodCondGauss, self).__init__(data, **kwargs)
+        super().__init__(data, **kwargs)
 
     @staticmethod
     def _adjusted_cov(df):
@@ -1274,9 +1258,7 @@ class LogLikelihoodCondGauss(StructureScore):
         """
         # If a number of rows less than number of variables, return variance 1 with no covariance.
         if (df.shape[0] == 1) or (df.shape[0] < len(df.columns)):
-            return pd.DataFrame(
-                np.eye(len(df.columns)), index=df.columns, columns=df.columns
-            )
+            return pd.DataFrame(np.eye(len(df.columns)), index=df.columns, columns=df.columns)
 
         # If the matrix is not positive semidefinite, add a small error to make it.
         df_cov = df.cov()
@@ -1349,9 +1331,7 @@ class LogLikelihoodCondGauss(StructureScore):
             k = self._cat_parents_product(parents=parents) * (n_cont_parents + 2)
         else:
             if n_cont_parents == 0:
-                k = self._cat_parents_product(parents=parents) * (
-                    self.data[variable].nunique() - 1
-                )
+                k = self._cat_parents_product(parents=parents) * (self.data[variable].nunique() - 1)
             else:
                 k = (
                     self._cat_parents_product(parents=parents)
@@ -1445,9 +1425,7 @@ class LogLikelihoodCondGauss(StructureScore):
                     p_c1c2_d = multivariate_normal.pdf(
                         x=df_d.loc[:, [c1] + c2],
                         mean=df_d.loc[:, [c1] + c2].mean(axis=0),
-                        cov=LogLikelihoodCondGauss._adjusted_cov(
-                            df_d.loc[:, [c1] + c2]
-                        ),
+                        cov=LogLikelihoodCondGauss._adjusted_cov(df_d.loc[:, [c1] + c2]),
                         allow_singular=True,
                     )
                     if len(c2) == 0:
@@ -1458,9 +1436,7 @@ class LogLikelihoodCondGauss(StructureScore):
                             multivariate_normal.pdf(
                                 x=df_d.loc[:, c2],
                                 mean=df_d.loc[:, c2].mean(axis=0),
-                                cov=LogLikelihoodCondGauss._adjusted_cov(
-                                    df_d.loc[:, c2]
-                                ),
+                                cov=LogLikelihoodCondGauss._adjusted_cov(df_d.loc[:, c2]),
                                 allow_singular=True,
                             ),
                         )
@@ -1521,9 +1497,7 @@ class LogLikelihoodCondGauss(StructureScore):
                             multivariate_normal.pdf(
                                 x=df_d1d2.loc[:, c],
                                 mean=df_d2.loc[:, c].mean(axis=0),
-                                cov=LogLikelihoodCondGauss._adjusted_cov(
-                                    df_d2.loc[:, c]
-                                ),
+                                cov=LogLikelihoodCondGauss._adjusted_cov(df_d2.loc[:, c]),
                                 allow_singular=True,
                             ),
                         )
@@ -1532,9 +1506,7 @@ class LogLikelihoodCondGauss(StructureScore):
                     for var, value in zip(d2, d_states[1:]):
                         p_d2 = p_d2.loc[p_d2.index.get_level_values(var) == value]
 
-                    log_like += np.sum(
-                        np.log((p_c_d1d2 * p_d1d2) / (p_c_d2 * p_d2.values.ravel()[0]))
-                    )
+                    log_like += np.sum(np.log((p_c_d1d2 * p_d1d2) / (p_c_d2 * p_d2.values.ravel()[0])))
             return log_like
 
     def local_score(self, variable, parents):
@@ -1616,7 +1588,7 @@ class BICCondGauss(LogLikelihoodCondGauss):
     """
 
     def __init__(self, data, **kwargs):
-        super(BICCondGauss, self).__init__(data, **kwargs)
+        super().__init__(data, **kwargs)
 
     def local_score(self, variable, parents):
         """
@@ -1701,7 +1673,7 @@ class AICCondGauss(LogLikelihoodCondGauss):
     """
 
     def __init__(self, data, **kwargs):
-        super(AICCondGauss, self).__init__(data, **kwargs)
+        super().__init__(data, **kwargs)
 
     def local_score(self, variable, parents):
         """

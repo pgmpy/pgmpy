@@ -179,9 +179,7 @@ class TestUAIWriter:
                 len(states[var]),
                 values,
                 evidence=parents[var],
-                evidence_card=[
-                    len(states[evidence_var]) for evidence_var in parents[var]
-                ],
+                evidence_card=[len(states[evidence_var]) for evidence_var in parents[var]],
             )
             tabular_cpds.append(cpd)
         self.bayesmodel.add_cpds(*tabular_cpds)
@@ -446,9 +444,7 @@ class TestUAIWriterTorch:
                 len(states[var]),
                 values,
                 evidence=parents[var],
-                evidence_card=[
-                    len(states[evidence_var]) for evidence_var in parents[var]
-                ],
+                evidence_card=[len(states[evidence_var]) for evidence_var in parents[var]],
             )
             tabular_cpds.append(cpd)
         self.bayesmodel.add_cpds(*tabular_cpds)

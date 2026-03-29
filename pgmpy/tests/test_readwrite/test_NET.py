@@ -7,10 +7,11 @@ import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
+from pgmpy.example_models import load_model
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.readwrite import NETReader, NETWriter
-from pgmpy.utils import compat_fns, get_example_model
+from pgmpy.utils import compat_fns
 
 
 class TestNETWriter:
@@ -413,7 +414,7 @@ class TestNETWriterTorch:
     def _setup(self):
         config.set_backend("torch")
 
-        asia = get_example_model("asia")
+        asia = load_model("bnlearn/asia")
         self.writer = NETWriter(asia)
         yield
         config.set_backend("numpy")
@@ -456,9 +457,7 @@ class TestNETWriterTorch:
 
     def test_get_cpds(self):
         cpds = self.writer.get_cpds()
-        np.testing.assert_array_equal(
-            compat_fns.to_numpy(cpds["asia"], decimals=2), np.array([0.01, 0.99])
-        )
+        np.testing.assert_array_equal(compat_fns.to_numpy(cpds["asia"], decimals=2), np.array([0.01, 0.99]))
         np.testing.assert_array_equal(
             compat_fns.to_numpy(cpds["bronc"], decimals=2),
             np.array([[0.6, 0.3], [0.4, 0.7]]),
@@ -475,9 +474,7 @@ class TestNETWriterTorch:
             compat_fns.to_numpy(cpds["lung"], decimals=2),
             np.array([[0.1, 0.01], [0.9, 0.99]]),
         )
-        np.testing.assert_array_equal(
-            compat_fns.to_numpy(cpds["smoke"], decimals=2), np.array([0.5, 0.5])
-        )
+        np.testing.assert_array_equal(compat_fns.to_numpy(cpds["smoke"], decimals=2), np.array([0.5, 0.5]))
         np.testing.assert_array_equal(
             compat_fns.to_numpy(cpds["tub"], decimals=2),
             np.array([[0.05, 0.01], [0.95, 0.99]]),

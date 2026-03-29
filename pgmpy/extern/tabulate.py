@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # LICENSE INFORMATION
 #
 # Copyright (c) 2011-2013 Sergey Astanin
@@ -24,8 +22,6 @@
 #     WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 """Pretty-print tabular data."""
-
-from __future__ import print_function, unicode_literals
 
 import re
 from collections import namedtuple
@@ -137,9 +133,7 @@ def _mediawiki_row_with_attrs(separator, cell_values, colwidths, colaligns):
     }
     # hard-coded padding _around_ align attribute and value together
     # rather than padding parameter which affects only the value
-    values_with_attrs = [
-        " " + alignment.get(a, "") + c + " " for c, a in zip(cell_values, colaligns)
-    ]
+    values_with_attrs = [" " + alignment.get(a, "") + c + " " for c, a in zip(cell_values, colaligns)]
     colsep = separator * 2
     return (separator + colsep.join(values_with_attrs)).rstrip()
 
@@ -259,7 +253,7 @@ _table_formats = {
 }
 
 
-tabulate_formats = list(sorted(_table_formats.keys()))
+tabulate_formats = sorted(_table_formats.keys())
 
 
 _invisible_codes = re.compile(r"\x1b\[\d*m")  # ANSI color codes
@@ -336,9 +330,7 @@ def _type(string, has_invisible=True):
 
     """
 
-    if has_invisible and (
-        isinstance(string, _text_type) or isinstance(string, _binary_type)
-    ):
+    if has_invisible and (isinstance(string, _text_type) or isinstance(string, _binary_type)):
         string = _strip_invisible(string)
 
     if string is None:
@@ -528,7 +520,7 @@ def _format(val, valtype, floatfmt, missingval=""):
         return missingval
 
     if valtype in [int, _text_type]:
-        return "{0}".format(val)
+        return f"{val}"
     elif valtype is _binary_type:
         try:
             return _text_type(val, "ascii")
@@ -537,7 +529,7 @@ def _format(val, valtype, floatfmt, missingval=""):
     elif valtype is float:
         return format(float(val), floatfmt)
     else:
-        return "{0}".format(val)
+        return f"{val}"
 
 
 def _align_header(header, alignment, width):
@@ -546,7 +538,7 @@ def _align_header(header, alignment, width):
     elif alignment == "center":
         return _padboth(width, header)
     elif not alignment:
-        return "{0}".format(header)
+        return f"{header}"
     else:
         return _padleft(width, header)
 
@@ -582,9 +574,7 @@ def _normalize_tabular_data(tabular_data, headers):
         if hasattr(tabular_data.values, "__call__"):
             # likely a conventional dict
             keys = tabular_data.keys()
-            rows = list(
-                izip_longest(*tabular_data.values())
-            )  # columns have to be transposed
+            rows = list(izip_longest(*tabular_data.values()))  # columns have to be transposed
         elif hasattr(tabular_data, "index"):
             # values is a property, has .index => it's likely a pandas.DataFrame (pandas 0.11.0)
             keys = tabular_data.keys()
@@ -600,19 +590,10 @@ def _normalize_tabular_data(tabular_data, headers):
     else:  # it's a usual an iterable of iterables, or a NumPy array
         rows = list(tabular_data)
 
-        if (
-            headers == "keys"
-            and hasattr(tabular_data, "dtype")
-            and getattr(tabular_data.dtype, "names")
-        ):
+        if headers == "keys" and hasattr(tabular_data, "dtype") and getattr(tabular_data.dtype, "names"):
             # numpy record array
             headers = tabular_data.dtype.names
-        elif (
-            headers == "keys"
-            and len(rows) > 0
-            and isinstance(rows[0], tuple)
-            and hasattr(rows[0], "_fields")
-        ):
+        elif headers == "keys" and len(rows) > 0 and isinstance(rows[0], tuple) and hasattr(rows[0], "_fields"):
             # namedtuple
             headers = list(map(_text_type, rows[0]._fields))
         elif len(rows) > 0 and isinstance(rows[0], dict):
@@ -899,8 +880,7 @@ def tabulate(
     # optimization: look for ANSI control codes once,
     # enable smart width functions only if a control code is found
     plain_text = "\n".join(
-        ["\t".join(map(_text_type, headers))]
-        + ["\t".join(map(_text_type, row)) for row in list_of_lists]
+        ["\t".join(map(_text_type, headers))] + ["\t".join(map(_text_type, row)) for row in list_of_lists]
     )
     has_invisible = re.search(_invisible_codes, plain_text)
     if has_invisible:
@@ -911,25 +891,17 @@ def tabulate(
     # format rows and columns, convert numeric values to strings
     cols = list(zip(*list_of_lists))
     coltypes = list(map(_column_type, cols))
-    cols = [
-        [_format(v, ct, floatfmt, missingval) for v in c]
-        for c, ct in zip(cols, coltypes)
-    ]
+    cols = [[_format(v, ct, floatfmt, missingval) for v in c] for c, ct in zip(cols, coltypes)]
 
     # align columns
     aligns = [numalign if ct in [int, float] else stralign for ct in coltypes]
     minwidths = [width_fn(h) + 2 for h in headers] if headers else [0] * len(cols)
-    cols = [
-        _align_column(c, a, minw, has_invisible)
-        for c, a, minw in zip(cols, aligns, minwidths)
-    ]
+    cols = [_align_column(c, a, minw, has_invisible) for c, a, minw in zip(cols, aligns, minwidths)]
 
     if headers:
         # align headers and add headers
         minwidths = [max(minw, width_fn(c[0])) for minw, c in zip(minwidths, cols)]
-        headers = [
-            _align_header(h, a, minw) for h, a, minw in zip(headers, aligns, minwidths)
-        ]
+        headers = [_align_header(h, a, minw) for h, a, minw in zip(headers, aligns, minwidths)]
         rows = list(zip(*cols))
     else:
         minwidths = [width_fn(c[0]) for c in cols]

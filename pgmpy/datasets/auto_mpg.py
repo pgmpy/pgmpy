@@ -25,11 +25,11 @@ class AutoMpg(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/auto-mpg/"
+    base_url = "real/auto-mpg"
 
-    data_url = base_url + "data/auto-mpg.data.mixed.max.3.categories.txt"
+    data_url = "data/auto-mpg.data.mixed.max.3.categories.txt"
     ground_truth_url = None
-    expert_knowledge_url = base_url + "ground.truth/auto-mpg.knowledge.txt"
+    expert_knowledge_url = "ground.truth/auto-mpg.knowledge.txt"
 
     categorical_variables = ["cylinders", "modelyear", "origin"]
     ordinal_variables = dict()

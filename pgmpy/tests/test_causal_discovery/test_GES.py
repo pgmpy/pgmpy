@@ -9,6 +9,7 @@ from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.causal_discovery import GES
 from pgmpy.estimators import ExpertKnowledge
+from pgmpy.structure_score import K2
 
 
 def expected_failed_checks(estimator):
@@ -59,10 +60,14 @@ class TestGESCore:
     def test_estimate_rand(self, rand_data):
         est = GES(scoring_method="k2", return_type="dag")
         est.fit(rand_data)
-        assert set(est.causal_graph_.nodes()) == set(["A", "B", "C"])
-        assert list(est.causal_graph_.edges()) == [("B", "C")] or list(
-            est.causal_graph_.edges()
-        ) == [("C", "B")]
+        assert set(est.causal_graph_.nodes()) == {"A", "B", "C"}
+        assert list(est.causal_graph_.edges()) == [("B", "C")] or list(est.causal_graph_.edges()) == [("C", "B")]
+
+    def test_estimate_rand_with_structure_score_instance(self, rand_data):
+        est = GES(scoring_method=K2(rand_data), return_type="dag")
+        est.fit(rand_data)
+        assert set(est.causal_graph_.nodes()) == {"A", "B", "C"}
+        assert list(est.causal_graph_.edges()) == [("B", "C")] or list(est.causal_graph_.edges()) == [("C", "B")]
 
     def test_estimate_titanic(self, titanic_data_categorical):
         est = GES(scoring_method="k2", return_type="dag")
@@ -109,9 +114,7 @@ class TestGESExpertKnowledge:
         assert ("B", "C") in list(est.causal_graph_.edges())
 
     def test_forbidden_edges(self, titanic_data_categorical):
-        expert_knowledge = ExpertKnowledge(
-            forbidden_edges=[("Sex", "Survived"), ("Survived", "Sex")]
-        )
+        expert_knowledge = ExpertKnowledge(forbidden_edges=[("Sex", "Survived"), ("Survived", "Sex")])
         est = GES(
             scoring_method="k2",
             expert_knowledge=expert_knowledge,
@@ -131,17 +134,13 @@ class TestGESExpertKnowledge:
             ("Age", "Income"),
         ]
         expert_knowledge = ExpertKnowledge(search_space=search_space)
-        est = GES(
-            scoring_method="k2", expert_knowledge=expert_knowledge, return_type="dag"
-        )
+        est = GES(scoring_method="k2", expert_knowledge=expert_knowledge, return_type="dag")
         est.fit(adult_data)
         for edge in est.causal_graph_.edges():
             assert edge in search_space
 
     def test_temporal_order(self, titanic_data_categorical):
-        expert_knowledge = ExpertKnowledge(
-            temporal_order=[["Pclass", "Sex"], ["Survived"]]
-        )
+        expert_knowledge = ExpertKnowledge(temporal_order=[["Pclass", "Sex"], ["Survived"]])
         est = GES(
             scoring_method="k2",
             expert_knowledge=expert_knowledge,
@@ -171,8 +170,6 @@ class TestGESScoringMethods:
 
     @pytest.mark.parametrize("scoring_method", ["aic-g", "bic-g"])
     def test_gaussian_scores(self, scoring_method):
-        data = pd.read_csv(
-            "pgmpy/tests/test_estimators/testdata/gaussian_testdata.csv", index_col=0
-        )
+        data = pd.read_csv("pgmpy/tests/test_estimators/testdata/gaussian_testdata.csv", index_col=0)
         est = GES(scoring_method=scoring_method, return_type="dag")
         est.fit(data)

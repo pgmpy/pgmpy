@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 import io
 import sys
@@ -212,9 +211,7 @@ class TestPomdpXReaderString:
             ],
             "ObsVar": [{"vname": "obs_sensor", "ValueEnum": ["ogood", "obad"]}],
             "RewardVar": [{"vname": "reward_rover"}],
-            "ActionVar": [
-                {"vname": "action_rover", "ValueEnum": ["amw", "ame", "ac", "as"]}
-            ],
+            "ActionVar": [{"vname": "action_rover", "ValueEnum": ["amw", "ame", "ac", "as"]}],
         }
         assert self.reader_string.get_variables() == var_expected
         assert self.reader_file.get_variables() == var_expected
@@ -889,18 +886,14 @@ class TestPomdpXWriter:
                 ],
                 "ObsVar": [{"vname": "obs_sensor", "ValueEnum": ["ogood", "obad"]}],
                 "RewardVar": [{"vname": "reward_rover"}],
-                "ActionVar": [
-                    {"vname": "action_rover", "ValueEnum": ["amw", "ame", "ac", "as"]}
-                ],
+                "ActionVar": [{"vname": "action_rover", "ValueEnum": ["amw", "ame", "ac", "as"]}],
             },
             "initial_state_belief": [
                 {
                     "Var": "rover_0",
                     "Parent": ["null"],
                     "Type": "TBL",
-                    "Parameter": [
-                        {"Instance": ["-"], "ProbTable": ["0.0", "1.0", "0.0"]}
-                    ],
+                    "Parameter": [{"Instance": ["-"], "ProbTable": ["0.0", "1.0", "0.0"]}],
                 },
                 {
                     "Var": "rock_0",
@@ -1579,12 +1572,8 @@ class TestPomdpXWriter:
                     "Type": "DD",
                     "Parameter": {
                         "action_rover": {
-                            "amw": {
-                                "rover_0": {"s0": "-100.0", "s1": "0.0", "s2": "0.0"}
-                            },
-                            "ame": {
-                                "rover_0": {"s0": "0.0", "s1": "10.0", "s2": "0.0"}
-                            },
+                            "amw": {"rover_0": {"s0": "-100.0", "s1": "0.0", "s2": "0.0"}},
+                            "ame": {"rover_0": {"s0": "0.0", "s1": "10.0", "s2": "0.0"}},
                             "ac": "0.0",
                             "as": {
                                 "rover_0": {
@@ -1869,9 +1858,7 @@ class TestPomdpXReaderStringTorch:
             ],
             "ObsVar": [{"vname": "obs_sensor", "ValueEnum": ["ogood", "obad"]}],
             "RewardVar": [{"vname": "reward_rover"}],
-            "ActionVar": [
-                {"vname": "action_rover", "ValueEnum": ["amw", "ame", "ac", "as"]}
-            ],
+            "ActionVar": [{"vname": "action_rover", "ValueEnum": ["amw", "ame", "ac", "as"]}],
         }
         assert self.reader_string.get_variables() == var_expected
         assert self.reader_file.get_variables() == var_expected
@@ -2546,18 +2533,14 @@ class TestPomdpXWriterTorch:
                 ],
                 "ObsVar": [{"vname": "obs_sensor", "ValueEnum": ["ogood", "obad"]}],
                 "RewardVar": [{"vname": "reward_rover"}],
-                "ActionVar": [
-                    {"vname": "action_rover", "ValueEnum": ["amw", "ame", "ac", "as"]}
-                ],
+                "ActionVar": [{"vname": "action_rover", "ValueEnum": ["amw", "ame", "ac", "as"]}],
             },
             "initial_state_belief": [
                 {
                     "Var": "rover_0",
                     "Parent": ["null"],
                     "Type": "TBL",
-                    "Parameter": [
-                        {"Instance": ["-"], "ProbTable": ["0.0", "1.0", "0.0"]}
-                    ],
+                    "Parameter": [{"Instance": ["-"], "ProbTable": ["0.0", "1.0", "0.0"]}],
                 },
                 {
                     "Var": "rock_0",
@@ -3236,12 +3219,8 @@ class TestPomdpXWriterTorch:
                     "Type": "DD",
                     "Parameter": {
                         "action_rover": {
-                            "amw": {
-                                "rover_0": {"s0": "-100.0", "s1": "0.0", "s2": "0.0"}
-                            },
-                            "ame": {
-                                "rover_0": {"s0": "0.0", "s1": "10.0", "s2": "0.0"}
-                            },
+                            "amw": {"rover_0": {"s0": "-100.0", "s1": "0.0", "s2": "0.0"}},
+                            "ame": {"rover_0": {"s0": "0.0", "s1": "10.0", "s2": "0.0"}},
                             "ac": "0.0",
                             "as": {
                                 "rover_0": {

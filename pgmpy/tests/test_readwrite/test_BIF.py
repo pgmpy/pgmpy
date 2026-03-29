@@ -65,9 +65,7 @@ class TestBIFReader:
             include_properties=True,
         )
 
-        self.water_model = BIFReader(
-            "pgmpy/tests/test_readwrite/testdata/water.bif", include_properties=True
-        )
+        self.water_model = BIFReader("pgmpy/tests/test_readwrite/testdata/water.bif", include_properties=True)
 
     def test_network_name(self):
         name_expected = "Dog-Problem"
@@ -426,9 +424,7 @@ class TestBIFWriter:
                 len(states[var]),
                 values,
                 evidence=parents[var],
-                evidence_card=[
-                    len(states[evidence_var]) for evidence_var in parents[var]
-                ],
+                evidence_card=[len(states[evidence_var]) for evidence_var in parents[var]],
             )
             tabular_cpds.append(cpd)
         self.model.add_cpds(*tabular_cpds)
@@ -976,9 +972,7 @@ class TestBIFWriterTorch:
                 len(states[var]),
                 values,
                 evidence=parents[var],
-                evidence_card=[
-                    len(states[evidence_var]) for evidence_var in parents[var]
-                ],
+                evidence_card=[len(states[evidence_var]) for evidence_var in parents[var]],
             )
             tabular_cpds.append(cpd)
         self.model.add_cpds(*tabular_cpds)
