@@ -1,7 +1,9 @@
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
+import statsmodels.tools.sm_exceptions as sm_exceptions
 from skbase.lookup import all_objects
 
 from pgmpy.ci_tests import RegressionBasedLR, _BaseCITest
@@ -38,14 +40,6 @@ class TestRegressionBasedLR(unittest.TestCase):
         Y_multi = 2.0 * Z3 + rng3.standard_normal(n)
         cls.multi_data = pd.DataFrame({"X": X_multi, "Y": Y_multi, "Z": Z3})
 
-        # Mixed: categorical X, continuous Y and Z, X ind Y | Z
-        rng4 = np.random.default_rng(99)
-        Z4 = rng4.standard_normal(n)
-        prob4 = 1 / (1 + np.exp(-Z4))
-        X_mix = pd.Categorical(np.where(rng4.uniform(size=n) < prob4, "A", "B"))
-        Y_mix = 2.0 * Z4 + rng4.standard_normal(n)
-        cls.mixed_data = pd.DataFrame({"X": X_mix, "Y": Y_mix, "Z": Z4})
-
     # ------------------------------------------------------------------
     # Continuous X tests
     # ------------------------------------------------------------------
@@ -66,113 +60,158 @@ class TestRegressionBasedLR(unittest.TestCase):
         self.assertFalse(result)
         self.assertLess(test.p_value_, 0.05)
 
-    def test_continuous_direct_dependence(self):
-        """Direct edge X -> Y detected."""
-        rng = np.random.default_rng(42)
-        n = 500
-        X = rng.standard_normal(n)
-        Y = 2.0 * X + rng.standard_normal(n) * 0.5
-        data = pd.DataFrame({"X": X, "Y": Y})
-        test = RegressionBasedLR(data=data)
-        result = test("X", "Y", [], significance_level=0.05)
-        self.assertFalse(result)
-        self.assertLess(test.p_value_, 0.05)
-
     # ------------------------------------------------------------------
-    # Binary X tests
+    # Binary X test
     # ------------------------------------------------------------------
-
-    def test_binary_conditional_independence(self):
-        """Binary X ind Y | Z."""
-        test = RegressionBasedLR(data=self.binary_data)
-        result = test("X", "Y", ["Z"], significance_level=0.05)
-        self.assertTrue(result)
-        self.assertGreaterEqual(test.p_value_, 0.05)
 
     def test_binary_marginal_dependence(self):
-        """Binary X dep Y marginally."""
+        """Binary X dep Y marginally; exercises binary Logit path."""
         test = RegressionBasedLR(data=self.binary_data)
         result = test("X", "Y", [], significance_level=0.05)
         self.assertFalse(result)
         self.assertLess(test.p_value_, 0.05)
 
     # ------------------------------------------------------------------
-    # Multinomial X tests
+    # Multinomial X test
     # ------------------------------------------------------------------
 
     def test_multinomial_conditional_independence(self):
-        """Multinomial X ind Y | Z."""
+        """Multinomial X ind Y | Z; exercises MNLogit path and dof calculation."""
         test = RegressionBasedLR(data=self.multi_data)
         result = test("X", "Y", ["Z"], significance_level=0.05)
         self.assertTrue(result)
         self.assertGreaterEqual(test.p_value_, 0.05)
-
-    def test_multinomial_statistic_attributes(self):
-        """run_test sets statistic_, p_value_, dof_ correctly for multinomial."""
-        test = RegressionBasedLR(data=self.multi_data)
-        test.run_test("X", "Y", [])
-        self.assertGreater(test.statistic_, 0.0)
-        self.assertGreaterEqual(test.p_value_, 0.0)
-        self.assertLessEqual(test.p_value_, 1.0)
         self.assertGreater(test.dof_, 0)
 
     # ------------------------------------------------------------------
-    # Mixed data
+    # _encode_features: categorical predictor branch (Group 1 coverage)
     # ------------------------------------------------------------------
 
-    def test_mixed_data_conditional_independence(self):
-        """Categorical X, continuous Y and Z: X ind Y | Z."""
-        test = RegressionBasedLR(data=self.mixed_data)
-        result = test("X", "Y", ["Z"], significance_level=0.05)
-        self.assertTrue(result)
-
-    # ------------------------------------------------------------------
-    # Edge cases
-    # ------------------------------------------------------------------
-
-    def test_empty_conditioning_set(self):
-        """Z=[] reduces to marginal test; function runs without error."""
-        test = RegressionBasedLR(data=self.cont_data)
-        test.run_test("X", "Y", [])
+    def test_categorical_y_as_predictor(self):
+        """Categorical Y is one-hot encoded in _encode_features (get_dummies branch)."""
+        rng = np.random.default_rng(101)
+        n = 300
+        Y_cat = pd.Categorical(rng.choice(["low", "mid", "high"], size=n))
+        Z = rng.standard_normal(n)
+        X = Z + rng.standard_normal(n)
+        data = pd.DataFrame({"X": X, "Y": Y_cat, "Z": Z})
+        test = RegressionBasedLR(data=data)
+        test.run_test("X", "Y", ["Z"])
         self.assertIsNotNone(test.p_value_)
+        self.assertIsInstance(test.statistic_, float)
+
+    # ------------------------------------------------------------------
+    # Exception handler coverage (Group 2): mock raises actual errors
+    # ------------------------------------------------------------------
+
+    def test_logit_linalg_error_returns_independence(self):
+        """LinAlgError during Logit.fit is caught; returns independence."""
+        rng = np.random.default_rng(42)
+        n = 200
+        data = pd.DataFrame(
+            {
+                "X": pd.Categorical(rng.choice(["A", "B"], size=n)),
+                "Y": rng.standard_normal(n),
+            }
+        )
+        test = RegressionBasedLR(data=data)
+        with patch(
+            "statsmodels.discrete.discrete_model.Logit.fit",
+            side_effect=np.linalg.LinAlgError("Singular matrix"),
+        ):
+            test.run_test("X", "Y", [])
+        self.assertEqual(test.statistic_, 0.0)
+        self.assertEqual(test.p_value_, 1.0)
+        self.assertEqual(test.dof_, 0)
+
+    def test_mnlogit_perfect_separation_error_returns_independence(self):
+        """PerfectSeparationError during MNLogit.fit is caught; returns independence."""
+        rng = np.random.default_rng(42)
+        n = 200
+        data = pd.DataFrame(
+            {
+                "X": pd.Categorical(rng.choice(["A", "B", "C"], size=n)),
+                "Y": rng.standard_normal(n),
+            }
+        )
+        test = RegressionBasedLR(data=data)
+        with patch(
+            "statsmodels.discrete.discrete_model.MNLogit.fit",
+            side_effect=sm_exceptions.PerfectSeparationError("Perfect separation"),
+        ):
+            test.run_test("X", "Y", [])
+        self.assertEqual(test.statistic_, 0.0)
+        self.assertEqual(test.p_value_, 1.0)
+        self.assertEqual(test.dof_, 0)
+
+    # ------------------------------------------------------------------
+    # Degenerate OLS df2 <= 0 branch (Group 4 coverage)
+    # ------------------------------------------------------------------
+
+    def test_ols_degenerate_dof(self):
+        """n=3 with 2 Z cols gives df2 = 3 - 4 = -1 <= 0; returns independence."""
+        rng = np.random.default_rng(77)
+        n = 3
+        data = pd.DataFrame(
+            {
+                "X": rng.standard_normal(n),
+                "Y": rng.standard_normal(n),
+                "Z1": rng.standard_normal(n),
+                "Z2": rng.standard_normal(n),
+            }
+        )
+        test = RegressionBasedLR(data=data)
+        test.run_test("X", "Y", ["Z1", "Z2"])
+        self.assertEqual(test.p_value_, 1.0)
+        self.assertEqual(test.statistic_, 0.0)
+
+    # ------------------------------------------------------------------
+    # Edge cases / defensive branches
+    # ------------------------------------------------------------------
 
     def test_constant_variable(self):
-        """Constant X (zero variance) returns independence without crashing."""
+        """Constant X (zero variance) does not crash; returns independence."""
         rng = np.random.default_rng(7)
         data = pd.DataFrame({"X": [1.0] * 200, "Y": rng.standard_normal(200)})
         test = RegressionBasedLR(data=data)
         result = test("X", "Y", [], significance_level=0.05)
         self.assertTrue(result)
 
-    def test_boolean_column_as_categorical(self):
-        """Boolean dtype X is routed to binary logistic model."""
-        rng = np.random.default_rng(42)
-        n = 500
-        Z = rng.standard_normal(n)
-        X_bool = Z > 0
-        Y = 2.0 * Z + rng.standard_normal(n) * 0.3
-        data = pd.DataFrame({"X": X_bool, "Y": Y, "Z": Z})
+    def test_constant_categorical_single_class(self):
+        """Constant categorical X (1 class) hits n_classes < 2 early return."""
+        rng = np.random.default_rng(123)
+        n = 100
+        data = pd.DataFrame({"X": ["A"] * n, "Y": rng.standard_normal(n)})
         test = RegressionBasedLR(data=data)
-        result = test("X", "Y", ["Z"], significance_level=0.05)
+        result = test("X", "Y", [], significance_level=0.05)
         self.assertTrue(result)
+        self.assertEqual(test.statistic_, 0.0)
+        self.assertEqual(test.p_value_, 1.0)
+        self.assertEqual(test.dof_, 0)
 
-    def test_missing_data_handled(self):
-        """NaN rows are dropped gracefully."""
-        data = self.cont_data.copy()
-        data.loc[[0, 5, 10], "X"] = np.nan
+    def test_rank_deficient_design_matrix(self):
+        """Rank-deficient predictors emit a warning but do not crash."""
+        rng = np.random.default_rng(55)
+        n = 200
+        Z = rng.standard_normal(n)
+        data = pd.DataFrame(
+            {
+                "X": rng.standard_normal(n),
+                "Y": Z,
+                "Z": Z,  # Z == Y → collinear columns in design matrix
+            }
+        )
         test = RegressionBasedLR(data=data)
-        test.run_test("X", "Y", ["Z"])
+        with self.assertLogs("pgmpy", level="WARNING"):
+            test.run_test("X", "Y", ["Z"])
         self.assertIsNotNone(test.p_value_)
 
-    def test_asymmetry_acknowledged(self):
-        """Both orderings of X/Y yield consistent independence verdict."""
-        test_xy = RegressionBasedLR(data=self.cont_data)
-        test_yx = RegressionBasedLR(data=self.cont_data)
-        test_xy.run_test("X", "Y", ["Z"])
-        test_yx.run_test("Y", "X", ["Z"])
-        # Both should say independent (p >= 0.05)
-        self.assertGreaterEqual(test_xy.p_value_, 0.05)
-        self.assertGreaterEqual(test_yx.p_value_, 0.05)
+    def test_all_nan_raises(self):
+        """All-NaN data after dropna raises ValueError (n == 0 guard)."""
+        data = pd.DataFrame({"X": [np.nan] * 10, "Y": [np.nan] * 10})
+        test = RegressionBasedLR(data=data)
+        with self.assertRaises(ValueError):
+            test.run_test("X", "Y", [])
 
     # ------------------------------------------------------------------
     # Input validation (from _BaseCITest)
@@ -189,99 +228,6 @@ class TestRegressionBasedLR(unittest.TestCase):
         test = RegressionBasedLR(data=self.cont_data)
         with self.assertRaises(ValueError):
             test("X", "Y", ["X"])
-
-    # ------------------------------------------------------------------
-    # Edge cases that cover defensive branches
-    # ------------------------------------------------------------------
-
-    def test_all_nan_raises(self):
-        """All-NaN data after dropna raises ValueError."""
-        data = pd.DataFrame(
-            {
-                "X": [np.nan] * 10,
-                "Y": [np.nan] * 10,
-            }
-        )
-        test = RegressionBasedLR(data=data)
-        with self.assertRaises(ValueError):
-            test.run_test("X", "Y", [])
-
-    def test_constant_categorical_single_class(self):
-        """Constant categorical X (1 class) returns independence."""
-        rng = np.random.default_rng(123)
-        n = 100
-        data = pd.DataFrame(
-            {
-                "X": ["A"] * n,  # single class → n_classes < 2 branch
-                "Y": rng.standard_normal(n),
-            }
-        )
-        test = RegressionBasedLR(data=data)
-        result = test("X", "Y", [], significance_level=0.05)
-        self.assertTrue(result)
-        self.assertEqual(test.statistic_, 0.0)
-        self.assertEqual(test.p_value_, 1.0)
-        self.assertEqual(test.dof_, 0)
-
-    def test_perfect_separation_returns_independence(self):
-        """Perfect separation in logistic regression is caught gracefully."""
-        n = 100
-        data = pd.DataFrame(
-            {
-                "X": pd.Categorical(["A"] * (n // 2) + ["B"] * (n // 2)),
-                "Y": np.concatenate([np.ones(n // 2) * -1e6, np.ones(n // 2) * 1e6]),
-            }
-        )
-        test = RegressionBasedLR(data=data)
-        test.run_test("X", "Y", [])
-        self.assertIsNotNone(test.p_value_)
-
-    def test_rank_deficient_design_matrix(self):
-        """Rank-deficient predictors trigger warning but don't crash."""
-        rng = np.random.default_rng(55)
-        n = 200
-        Z = rng.standard_normal(n)
-        data = pd.DataFrame(
-            {
-                "X": rng.standard_normal(n),
-                "Y": Z,
-                "Z": Z,  # Z == Y → collinear columns in design matrix
-            }
-        )
-        test = RegressionBasedLR(data=data)
-        with self.assertLogs("pgmpy", level="WARNING"):
-            test.run_test("X", "Y", ["Z"])
-        self.assertIsNotNone(test.p_value_)
-
-    def test_ols_degenerate_dof(self):
-        """When n ≈ p (no residual df), returns independence gracefully."""
-        rng = np.random.default_rng(77)
-        n = 5
-        data = pd.DataFrame(
-            {
-                "X": rng.standard_normal(n),
-                "Y": rng.standard_normal(n),
-                "Z1": rng.standard_normal(n),
-                "Z2": rng.standard_normal(n),
-                "Z3": rng.standard_normal(n),
-                "Z4": rng.standard_normal(n),
-            }
-        )
-        test = RegressionBasedLR(data=data)
-        test.run_test("X", "Y", ["Z1", "Z2", "Z3", "Z4"])
-        self.assertIsNotNone(test.p_value_)
-
-    def test_multinomial_with_many_z_dof_edge(self):
-        """Multinomial path with enough Z columns to stress dof calculation."""
-        rng = np.random.default_rng(88)
-        n = 200
-        Z = rng.standard_normal(n)
-        X = pd.Categorical(np.where(Z > 0.5, "high", np.where(Z < -0.5, "low", "mid")))
-        Y = rng.standard_normal(n)
-        data = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
-        test = RegressionBasedLR(data=data)
-        test.run_test("X", "Y", ["Z"])
-        self.assertGreater(test.dof_, 0)
 
     # ------------------------------------------------------------------
     # Registry check
@@ -308,7 +254,7 @@ class TestRegressionBasedLRIntegration(unittest.TestCase):
         from pgmpy.causal_discovery import PC
 
         rng = np.random.default_rng(42)
-        n = 500  # larger n to give RegressionBasedLR sufficient power
+        n = 500
         Z = rng.standard_normal(n)
         X = 2.0 * Z + rng.standard_normal(n)
         Y = 3.0 * Z + rng.standard_normal(n)

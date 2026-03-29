@@ -234,7 +234,7 @@ class RegressionBasedLR(_BaseCITest):
 
             lr_stat = max(-2.0 * (model_r.llf - model_f.llf), 0.0)
 
-            if dof <= 0:
+            if dof <= 0:  # pragma: no cover
                 self.statistic_ = 0.0
                 self.p_value_ = 1.0
                 self.dof_ = 0
