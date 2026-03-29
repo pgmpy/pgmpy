@@ -8,6 +8,7 @@ Getting Involved
    :hidden:
 
    started/contributing
+   roadmap
 
 Contributing
 ------------
@@ -18,6 +19,15 @@ We welcome contributions! Please see our :doc:`Contributing Guide <started/contr
 - Code style and quality standards
 - Testing requirements
 - Commit and PR etiquette
+
+Roadmap
+-------
+
+For a high-level view of the project direction and the areas where
+contributions are especially useful, see the :doc:`Roadmap <roadmap>`.
+
+The roadmap is intentionally theme-based rather than milestone-based, so it can
+evolve with community feedback and active development work.
 
 Quick Links
 ^^^^^^^^^^^
