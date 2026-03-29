@@ -50,7 +50,7 @@ class BIFReader:
     >>> from pgmpy.example_models import load_model
     >>> asia = load_model("bnlearn/asia")
     >>> writer = BIFWriter(asia)
-    >>> bif_str = str(writer) 
+    >>> bif_str = str(writer)
     >>> reader = BIFReader(string=bif_str)
     >>> print(reader) # doctest: +ELLIPSIS
     <pgmpy.readwrite.BIF.BIFReader object at 0x...>
@@ -265,8 +265,8 @@ class BIFReader:
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
         >>> from pgmpy.example_models import load_model
         >>> asia = load_model("bnlearn/asia")
-        >>> writer = BIFWriter(asia) 
-        >>> bif_str = str(writer) 
+        >>> writer = BIFWriter(asia)
+        >>> bif_str = str(writer)
         >>> reader = BIFReader(string=bif_str)
         >>> reader.get_model() # doctest: +ELLIPSIS
         <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork object at 0x...>
@@ -484,9 +484,9 @@ $values
         >>> asia = load_model("bnlearn/asia")
         >>> writer = BIFWriter(asia)
         >>> writer.get_states() # doctest: +NORMALIZE_WHITESPACE
-        {'asia': ['yes', 'no'], 'bronc': ['yes', 'no'], 
-        'dysp': ['yes', 'no'], 'either': ['yes', 'no'], 
-        'lung': ['yes', 'no'], 'smoke': ['yes', 'no'], 
+        {'asia': ['yes', 'no'], 'bronc': ['yes', 'no'],
+        'dysp': ['yes', 'no'], 'either': ['yes', 'no'],
+        'lung': ['yes', 'no'], 'smoke': ['yes', 'no'],
         'tub': ['yes', 'no'], 'xray': ['yes', 'no']}
         """
         variable_states = {}
@@ -545,13 +545,13 @@ $values
         >>> asia = load_model("bnlearn/asia")
         >>> writer = BIFWriter(asia)
         >>> writer.get_parents() # doctest: +NORMALIZE_WHITESPACE
-        {'asia': [], 
-        'bronc': ['smoke'], 
-        'dysp': ['bronc', 'either'], 
-        'either': ['lung', 'tub'], 
-        'lung': ['smoke'], 
-        'smoke': [], 
-        'tub': ['asia'], 
+        {'asia': [],
+        'bronc': ['smoke'],
+        'dysp': ['bronc', 'either'],
+        'either': ['lung', 'tub'],
+        'lung': ['smoke'],
+        'smoke': [],
+        'tub': ['asia'],
         'xray': ['either']}
         """
         cpds = self.model.get_cpds()
@@ -575,11 +575,11 @@ $values
         >>> asia = load_model("bnlearn/asia")
         >>> writer = BIFWriter(asia)
         >>> writer.get_cpds() # doctest: +NORMALIZE_WHITESPACE
-        {'asia': array([0.01, 0.99]), 'bronc': array([0.6, 0.3, 0.4, 0.7]), 
-        'dysp': array([0.9, 0.8, 0.7, 0.1, 0.1, 0.2, 0.3, 0.9]), 
-        'either': array([1., 1., 1., 0., 0., 0., 0., 1.]), 
-        'lung': array([0.1 , 0.01, 0.9 , 0.99]), 'smoke': array([0.5, 0.5]), 
-        'tub': array([0.05, 0.01, 0.95, 0.99]), 
+        {'asia': array([0.01, 0.99]), 'bronc': array([0.6, 0.3, 0.4, 0.7]),
+        'dysp': array([0.9, 0.8, 0.7, 0.1, 0.1, 0.2, 0.3, 0.9]),
+        'either': array([1., 1., 1., 0., 0., 0., 0., 1.]),
+        'lung': array([0.1 , 0.01, 0.9 , 0.99]), 'smoke': array([0.5, 0.5]),
+        'tub': array([0.05, 0.01, 0.95, 0.99]),
         'xray': array([0.98, 0.05, 0.02, 0.95])}
         """
         cpds = self.model.get_cpds()
