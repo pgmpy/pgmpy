@@ -1,86 +1,129 @@
 # Causal Estimation
 
 ```{meta}
-:description: Estimate causal effects from data after identification using do-calculus and regression-based estimators.
+:description: Estimate causal effects from graphs and data using pgmpy's causal inference and prediction APIs.
 ```
 
-Causal estimation quantifies how much changing a variable changes an outcome.
+Causal estimation turns an identified causal query into a numerical effect. Once you know
+that a causal effect is identifiable (see {doc}`Causal Identification <causal_identification>`),
+this step combines the graph and observed data to compute quantities like the average
+treatment effect or an interventional distribution.
 
-More precisely, it estimates causal effects such as the average treatment
-effect (ATE) from observed data using an identified adjustment set:
+:::{note}
+**Prerequisite:** This guide assumes a causal effect has been identified. See
+{doc}`Causal Identification <causal_identification>` to determine identifiability first.
+:::
 
-```{math}
-ATE = E[Y \mid do(X=1)] - E[Y \mid do(X=0)]
-```
+:::{tip}
+**When to use this vs. Probabilistic Inference:** Use *Causal Estimation* when you need
+interventional answers (do-calculus, "what if I set X to x?"). Use
+{doc}`Probabilistic Inference <probabilistic_inference>` for observational queries
+(conditioning on evidence, "what is P(Y | X=x)?").
+:::
 
-## When to use
+## At a Glance
 
-- Use `CausalInference` when you already have a causal graph and want
-  interventional quantities from that graph.
-- Use the naive adjustment regressor as a simple baseline for backdoor-based
-  estimation.
-- Use the naive IV regressor when an instrumental variable assumption is more
-  plausible than unconfoundedness.
-- Use Double ML when you want a more flexible semi-parametric estimator for
-  high-dimensional settings.
+- **[Unified API](#api)**: Two entry points — `CausalInference` for graph-based queries, and `pgmpy.prediction` for sklearn-style regression.
+- **[Interventional Queries](#interventional-queries)**: Compute distributions under do-interventions on fitted discrete models.
+- **[Average Treatment Effect](#average-treatment-effect)**: Estimate ATE from data using identified adjustment sets.
+- **[Regression-Based Estimators](#regression-based-estimators)**: Sklearn-compatible regressors for adjustment, instrumental variable, and double ML workflows.
 
-## Example
+## API
+
+pgmpy provides two consistent entry points:
+
+**Graph-based queries** using `CausalInference`:
 
 ```python
-from pgmpy.datasets import load_dataset
+import numpy as np
+import pandas as pd
+from pgmpy.base import DAG
 from pgmpy.inference import CausalInference
-from pgmpy.models import DiscreteBayesianNetwork
 
-dataset = load_dataset("sachs_discrete")
-data = dataset.data
-dag = DiscreteBayesianNetwork(
-    [
-        ("PKA", "ERK"),
-        ("ERK", "Akt"),
-        ("PKA", "Akt"),
-    ]
+rng = np.random.default_rng(42)
+data = pd.DataFrame(
+    {
+        "X": rng.normal(size=500),
+        "Z": rng.normal(size=500),
+        "Y": rng.normal(size=500),
+    }
 )
-ci = CausalInference(dag)
-ate = ci.estimate_ate("PKA", "Akt", data)
-print(ate)
+
+graph = DAG([("X", "Y"), ("Z", "X"), ("Z", "Y")])
+ci = CausalInference(graph)
+
+ate = ci.estimate_ate("X", "Y", data=data, estimator_type="linear")
+print(round(float(ate), 4))
 ```
 
-## Algorithms
+**Sklearn-style regressors** using `pgmpy.prediction` estimators that use causal graph
+role annotations (exposures, outcomes, adjustment sets) to drive the estimation.
 
-```{eval-rst}
-.. list-table::
-   :header-rows: 1
-   :widths: 35 65
+## Interventional Queries
 
-   * - Algorithm
-     - API Reference
-   * - CausalInference (do-calculus)
-     - :class:`pgmpy.inference.CausalInference.CausalInference`
+For fitted discrete models, `CausalInference.query(..., do=..., evidence=...)` computes
+interventional distributions such as P(Y | do(X), Z), letting you answer "what if"
+questions directly from the model:
+
+```python
+from pgmpy.example_models import load_model
+from pgmpy.inference import CausalInference
+
+model = load_model("bnlearn/alarm")
+ci = CausalInference(model)
+
+result = ci.query(
+    variables=["HISTORY"],
+    do={"CVP": "LOW"},
+    evidence={"PCWP": "LOW"},
+    show_progress=False,
+)
+print(result)
 ```
 
-## Semi-parametric Estimators
+## Average Treatment Effect
 
-These methods combine graphical structure with flexible regression models for
-heterogeneous treatment effect estimation.
+`CausalInference.estimate_ate(...)` estimates the average treatment effect of an exposure
+on an outcome, automatically using identified adjustment sets from the causal graph.
 
-```{eval-rst}
-.. list-table::
-   :header-rows: 1
-   :widths: 35 65
+## Regression-Based Estimators
 
-   * - Algorithm
-     - API Reference
-   * - Naive Adjustment Regressor
-     - :class:`pgmpy.prediction.NaiveAdjustmentRegressor.NaiveAdjustmentRegressor`
-   * - Naive IV Regressor
-     - :class:`pgmpy.prediction.NaiveIVRegressor.NaiveIVRegressor`
-   * - Double ML Regressor
-     - :class:`pgmpy.prediction.DoubleMLRegressor.DoubleMLRegressor`
+pgmpy provides sklearn-compatible regressors that use causal graph roles to determine
+which variables play which role in the estimation. These include adjustment-based
+regression, instrumental variable regression, and cross-fitted double machine learning
+for flexible nuisance models:
+
+```python
+import numpy as np
+import pandas as pd
+from pgmpy.base import DAG
+from pgmpy.prediction import NaiveAdjustmentRegressor
+
+rng = np.random.default_rng(42)
+Z = rng.normal(size=500)
+X = 0.5 * Z + rng.normal(size=500)
+Y = 0.8 * X + 0.3 * Z + rng.normal(size=500)
+data = pd.DataFrame({"X": X, "Z": Z, "Y": Y})
+
+graph = DAG(
+    [("X", "Y"), ("Z", "X"), ("Z", "Y")],
+    roles={"exposures": "X", "outcomes": "Y", "adjustment": "Z"},
+)
+
+reg = NaiveAdjustmentRegressor(causal_graph=graph)
+reg.fit(data[["X", "Z"]], data["Y"])
+print(reg.predict(data[["X", "Z"]])[:5])
 ```
 
 ## See Also
 
-- **Examples:** {doc}`Causal Inference <../examples/Causal_Inference>` | {doc}`Causal Games <../examples/Causal_Games>`
-- **API Reference:** {doc}`Causal Inference API <../api/causal_inference>`
-- **Previous:** {doc}`causal_identification` -- check identifiability
-- **Next:** {doc}`metrics` -- evaluate the learned model
+:::{seealso}
+- {doc}`Causal Identification <causal_identification>` — Verify identifiability before estimation.
+:::
+
+## API Reference
+
+For the full list of estimation methods:
+
+- {doc}`Causal Inference API <../api/causal_inference>`
+- {doc}`Graph Classes API <../api/base>`

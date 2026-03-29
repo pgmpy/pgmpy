@@ -1,73 +1,70 @@
 # Metrics
 
 ```{meta}
-:description: Evaluate learned graphs and models with supervised and unsupervised metrics in pgmpy.
+:description: Evaluate learned graphs and fitted models using pgmpy's metric APIs.
 ```
 
-Metrics help quantify how good a learned model is, either by comparing it to a
-known ground-truth graph or by checking how well it matches the data.
+After learning a graph or fitting a model, you need to evaluate how good the result is.
+pgmpy provides metrics for two settings: **supervised evaluation** compares a learned
+graph against a known ground-truth graph, and **unsupervised evaluation** scores a graph
+against the observed data when no ground truth is available.
 
-For example, Structural Hamming Distance (SHD) counts the number of edge
-additions, deletions, and reversals needed to transform an estimated graph into
-the true graph, where {math}`R` denotes reversed edges:
+## At a Glance
 
-```{math}
-SHD(G, \hat{G}) = |E \setminus \hat{E}| + |\hat{E} \setminus E| + |R|
-```
+- **[Unified API](#api)**: All metrics share a consistent callable interface.
+- **[Supervised Metrics](#supervised-metrics)**: Compare learned graphs against ground truth using structural distance and confusion matrices.
+- **[Unsupervised Metrics](#unsupervised-metrics)**: Score graphs against data using correlation residuals, implied conditional independencies, and structure scores.
+- **[Metric Discovery](#metric-discovery)**: Programmatically find available metrics by their requirements.
 
-## When to use
+## API
 
-- Use SHD when you have a ground-truth graph and want a simple structural error
-  count.
-- Use structure score comparisons when you care about how well the learned
-  graph explains the data under a scoring function.
-- Use correlation score or implied conditional independencies when no
-  ground-truth graph is available.
-- Use Fisher C when you want a single omnibus fit diagnostic from implied
-  independencies.
-
-## Example
+All metrics follow the same pattern — instantiate and call:
 
 ```python
 from pgmpy.base import DAG
 from pgmpy.metrics import SHD
 
 true_graph = DAG([("A", "B"), ("B", "C")])
-est_graph = DAG([("B", "A"), ("B", "C")])
+estimated_graph = DAG([("B", "A"), ("B", "C")])
 
-shd = SHD()
-print(shd(true_causal_graph=true_graph, est_causal_graph=est_graph))
+metric = SHD()
+print(metric(true_causal_graph=true_graph, est_causal_graph=estimated_graph))
 ```
 
-## Algorithms
+## Supervised Metrics
 
-```{eval-rst}
-.. list-table::
-   :header-rows: 1
-   :widths: 30 15 55
+When a ground-truth graph is available, supervised metrics measure the structural
+distance between the estimated and true graphs — counting edge additions, deletions,
+and reversals, or computing confusion matrices for adjacency and orientation accuracy.
 
-   * - Metric
-     - Type
-     - API Reference
-   * - Structural Hamming Distance (SHD)
-     - Supervised
-     - :class:`pgmpy.metrics.SHD`
-   * - Structure Score
-     - Supervised
-     - :class:`pgmpy.metrics.StructureScore`
-   * - Correlation Score
-     - Unsupervised
-     - :class:`pgmpy.metrics.CorrelationScore`
-   * - Implied Conditional Independencies
-     - Unsupervised
-     - :class:`pgmpy.metrics.ImpliedCIs`
-   * - Fisher C
-     - Unsupervised
-     - :class:`pgmpy.metrics.FisherC`
+## Unsupervised Metrics
+
+When no ground truth is available, unsupervised metrics score how well a graph explains
+the observed data. These check whether the conditional independencies implied by the
+graph hold in the data, or evaluate the graph under a configurable structure scoring
+method.
+
+## Metric Discovery
+
+`get_metrics(...)` lets you discover available metrics by their requirements instead of
+hard-coding class names:
+
+```python
+from pgmpy.metrics import get_metrics
+
+supervised = get_metrics(requires_true_graph=True)
+unsupervised = get_metrics(requires_data=True)
 ```
 
 ## See Also
 
-- **API Reference:** {doc}`Metrics API <../api/metrics>`
-- **Previous:** {doc}`causal_estimation` -- estimate causal effects
-- **Next:** {doc}`simulations` -- generate synthetic data from a model
+:::{seealso}
+- {doc}`Causal Discovery <causal_discovery>` — The primary workflow that produces graphs for evaluation.
+:::
+
+## API Reference
+
+For the full list of supported metrics:
+
+- {doc}`Metrics API <../api/metrics>`
+- {doc}`Graph Classes API <../api/base>`

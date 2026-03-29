@@ -10,6 +10,9 @@ Use these guides when you want workflow-oriented documentation before diving int
 the API reference. Each page focuses on a concrete task and links to the
 relevant examples and public APIs.
 
+Core Workflow
+-------------
+
 .. grid:: 1 1 2 3
    :gutter: 3
    :class-container: pgmpy-card-grid
@@ -19,91 +22,119 @@ relevant examples and public APIs.
       :link-type: doc
       :class-card: sd-card-hover pgmpy-card
 
-      Learn causal graph structure from data.
+      Learn causal graphs from data with constraint-based, score-based, and expert-guided algorithms.
 
    .. grid-item-card:: Parameter Estimation
       :link: guides/parameter_estimation
       :link-type: doc
       :class-card: sd-card-hover pgmpy-card
 
-      Estimate model parameters from data.
+      Learn CPDs from data using MLE, Bayesian priors, or EM for missing data.
 
    .. grid-item-card:: Probabilistic Inference
       :link: guides/probabilistic_inference
       :link-type: doc
       :class-card: sd-card-hover pgmpy-card
 
-      Query posterior probabilities given evidence.
-
-   .. grid-item-card:: Causal Identification
-      :link: guides/causal_identification
-      :link-type: doc
-      :class-card: sd-card-hover pgmpy-card
-
-      Determine if a causal effect is identifiable from the graph.
-
-   .. grid-item-card:: Causal Estimation
-      :link: guides/causal_estimation
-      :link-type: doc
-      :class-card: sd-card-hover pgmpy-card
-
-      Estimate causal effects from data.
-
-   .. grid-item-card:: Metrics
-      :link: guides/metrics
-      :link-type: doc
-      :class-card: sd-card-hover pgmpy-card
-
-      Evaluate and compare learned models.
-
-   .. grid-item-card:: Example Datasets
-      :link: guides/datasets
-      :link-type: doc
-      :class-card: sd-card-hover pgmpy-card
-
-      Built-in datasets for testing and experimentation.
-
-   .. grid-item-card:: Example Models
-      :link: guides/example_models
-      :link-type: doc
-      :class-card: sd-card-hover pgmpy-card
-
-      Pre-built Bayesian Networks from standard repositories.
+      Compute posteriors, marginals, and MAP assignments with exact or approximate methods.
 
    .. grid-item-card:: Simulations
       :link: guides/simulations
       :link-type: doc
       :class-card: sd-card-hover pgmpy-card
 
-      Generate synthetic data from Bayesian Networks.
+      Sample observational, interventional, and conditional data from fitted models.
+
+Causal Inference
+----------------
+
+.. grid:: 1 1 2 3
+   :gutter: 3
+   :class-container: pgmpy-card-grid
+
+   .. grid-item-card:: Causal Identification
+      :link: guides/causal_identification
+      :link-type: doc
+      :class-card: sd-card-hover pgmpy-card
+
+      Determine identifiability using backdoor adjustment and frontdoor criteria.
+
+   .. grid-item-card:: Causal Estimation
+      :link: guides/causal_estimation
+      :link-type: doc
+      :class-card: sd-card-hover pgmpy-card
+
+      Estimate treatment effects and interventional distributions from causal graphs and data.
+
+Evaluation & Data
+-----------------
+
+.. grid:: 1 1 2 3
+   :gutter: 3
+   :class-container: pgmpy-card-grid
+
+   .. grid-item-card:: Metrics
+      :link: guides/metrics
+      :link-type: doc
+      :class-card: sd-card-hover pgmpy-card
+
+      Evaluate learned graphs with supervised and unsupervised metrics.
+
+   .. grid-item-card:: Example Datasets
+      :link: guides/datasets
+      :link-type: doc
+      :class-card: sd-card-hover pgmpy-card
+
+      Curated benchmark datasets with ground-truth graphs and expert knowledge.
+
+   .. grid-item-card:: Example Models
+      :link: guides/example_models
+      :link-type: doc
+      :class-card: sd-card-hover pgmpy-card
+
+      Ready-made networks from bnlearn, bnrep, and dagitty for benchmarking and exploration.
+
+Utilities
+---------
+
+.. grid:: 1 1 2 3
+   :gutter: 3
+   :class-container: pgmpy-card-grid
 
    .. grid-item-card:: Exporting / Importing Models
       :link: guides/io
       :link-type: doc
       :class-card: sd-card-hover pgmpy-card
 
-      Read and write models in various file formats.
+      Save and load models in BIF, NET, XMLBIF, XDSL, and other formats.
 
    .. grid-item-card:: Defining a Custom Model
       :link: guides/custom_model
       :link-type: doc
       :class-card: sd-card-hover pgmpy-card
 
-      Build models from scratch with custom structure and parameters.
+      Define graphs and CPDs directly for discrete, continuous, or dynamic models.
 
    .. grid-item-card:: Plotting Models
       :link: guides/plotting
       :link-type: doc
       :class-card: sd-card-hover pgmpy-card
 
-      Visualize graphs with pygraphviz, daft, and networkx.
+      Visualize model structure with Graphviz, daft, and networkx backends.
+
+Contributing
+------------
+
+.. grid:: 1 1 2 3
+   :gutter: 3
+   :class-container: pgmpy-card-grid
 
    .. grid-item-card:: Extensibility
       :link: guides/extensibility
       :link-type: doc
       :class-card: sd-card-hover pgmpy-card
 
-      Use repository templates to add datasets, models, metrics, and algorithms.
+      Add new algorithms, datasets, and metrics using the built-in extension templates.
 
 .. toctree::
    :hidden:

@@ -1,28 +1,47 @@
 # Causal Identification
 
 ```{meta}
-:description: Check whether a causal effect is identifiable from a causal graph using backdoor and frontdoor criteria.
+:description: Identify adjustment and frontdoor strategies from causal graphs using pgmpy's identification APIs.
 ```
 
-Causal identification checks whether a causal effect can be computed from
-observational data given a causal graph.
+Before estimating a causal effect from data, you need to determine whether the effect
+is even identifiable from observational data given the causal graph. Causal identification
+answers: "Can the causal effect of X on Y be expressed purely in terms of the observed
+data distribution?" The answer depends on the graph structure — if there are unobserved
+confounders, certain effects may not be identifiable.
 
-Formally, if a valid adjustment set {math}`Z` exists, the effect is
-identifiable and can be written as:
+## At a Glance
 
-```{math}
-P(Y \mid do(X)) = \sum_Z P(Y \mid X, Z) P(Z)
+- **[Unified API](#api)**: All identification methods share an `identify(graph)` / `validate(graph)` interface.
+- **[Backdoor Adjustment](#backdoor-adjustment)**: Find minimal, variance-optimal, or all valid adjustment sets.
+- **[Frontdoor Identification](#frontdoor-identification)**: Identify effects when backdoor adjustment is blocked by unobserved confounders.
+- **[Validation](#validation)**: Verify whether a candidate adjustment or frontdoor set is valid.
+
+## API
+
+Identification methods follow a consistent pattern — create the identifier, call
+`identify(...)`, and inspect the result:
+
+```python
+from pgmpy.base import DAG
+from pgmpy.identification import Adjustment  # swap in any identification method
+
+dag = DAG(
+    [("X", "Y"), ("Z", "X"), ("Z", "Y")],
+    roles={"exposures": "X", "outcomes": "Y"},
+)
+
+identified_graph, success = Adjustment(variant="minimal").identify(dag)
+
+print(success)
+print(identified_graph.get_role("adjustment"))
 ```
 
-## When to use
+## Backdoor Adjustment
 
-- Use causal identification before estimation when you need to know whether an
-  observational dataset can support a target causal query.
-- Use adjustment when you expect a valid backdoor set to exist.
-- Use frontdoor when backdoor adjustment is impossible but a mediator-based
-  identification strategy is available.
-
-## Example
+The backdoor criterion finds sets of variables to condition on that block all spurious
+paths between exposure and outcome. pgmpy supports finding minimal adjustment sets,
+variance-optimal sets, or enumerating all valid sets:
 
 ```python
 from pgmpy.base import DAG
@@ -32,28 +51,48 @@ dag = DAG(
     [("X", "Y"), ("Z", "X"), ("Z", "Y")],
     roles={"exposures": "X", "outcomes": "Y"},
 )
-identified = Adjustment(variant="minimal").identify(dag)
-print(identified.get_role("adjustment"))
+
+# Minimal adjustment set
+identified_min, ok_min = Adjustment(variant="minimal").identify(dag)
+print("Minimal:", identified_min.get_role("adjustment"), ok_min)
+
+# All valid adjustment sets
+identified_all, ok_all = Adjustment(variant="all").identify(dag)
+print("All:", identified_all.get_role("adjustment"), ok_all)
 ```
 
-## Algorithms
+## Frontdoor Identification
 
-```{eval-rst}
-.. list-table::
-   :header-rows: 1
-   :widths: 30 70
+When unobserved confounders block the backdoor criterion, the frontdoor criterion provides
+an alternative by identifying mediating variables through which the causal effect flows.
 
-   * - Algorithm
-     - API Reference
-   * - Adjustment (Backdoor)
-     - :class:`pgmpy.identification.adjustment.Adjustment`
-   * - Frontdoor
-     - :class:`pgmpy.identification.frontdoor.Frontdoor`
+## Validation
+
+If you already have a candidate adjustment or frontdoor set, use `validate(...)` to check
+whether it satisfies the graphical criterion before proceeding to estimation:
+
+```python
+from pgmpy.base import DAG
+from pgmpy.identification import Adjustment
+
+dag = DAG(
+    [("X", "Y"), ("Z", "X"), ("Z", "Y")],
+    roles={"exposures": "X", "outcomes": "Y", "adjustment": "Z"},
+)
+
+is_valid = Adjustment(variant="minimal").validate(dag)
+print(is_valid)  # True
 ```
 
 ## See Also
 
-- **Examples:** {doc}`Causal Inference <../examples/Causal_Inference>`
-- **API Reference:** {doc}`Causal Inference API <../api/causal_inference>`
-- **Previous:** {doc}`probabilistic_inference` -- query posterior probabilities
-- **Next:** {doc}`causal_estimation` -- estimate causal effects from data
+:::{seealso}
+- {doc}`Causal Estimation <causal_estimation>` — Estimate the identified causal effects from data.
+:::
+
+## API Reference
+
+For the full list of identification methods:
+
+- {doc}`Causal Inference API <../api/causal_inference>`
+- {doc}`Graph Classes API <../api/base>`

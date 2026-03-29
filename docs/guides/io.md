@@ -1,80 +1,61 @@
 # Exporting / Importing Models
 
 ```{meta}
-:description: Import and export Bayesian Networks using common file formats like BIF, UAI, XMLBIF, and XDSL.
+:description: Read and write pgmpy models using the model-level save/load helpers and readwrite classes.
 ```
 
-pgmpy can read and write Bayesian Networks in common file formats to make your
-models portable across tools.
+pgmpy supports importing and exporting models in several standard Bayesian network file
+formats. This enables interoperability with tools like GeNIe, Hugin, and others, as well
+as persisting fitted models to disk for later use.
 
-In practice, these formats store both structure and CPDs so models can be
-reused for inference, simulation, or further editing.
+## At a Glance
 
-## When to use
+- **[Unified API](#api)**: Model-level `save(...)` and `load(...)` methods for common workflows.
+- **[Multiple Formats](#supported-formats)**: BIF, NET, XMLBIF, XDSL, and more.
+- **[Reader/Writer Classes](#readerwriter-classes)**: Fine-grained control over format-specific behavior.
 
-- Use these readers and writers when you need to exchange models with other
-  Bayesian network tools.
-- Use BIF or XMLBIF for common Bayesian-network interchange workflows.
-- Use XDSL when interoperating with GeNIe / SMILE tooling.
-- Use UAI or PomdpX when targeting those ecosystem-specific formats.
+## API
 
-## Example
+The simplest way to save and load models is through the model-level methods:
 
 ```python
-from pgmpy.inference import VariableElimination
-from pgmpy.readwrite import BIFReader, BIFWriter
-from pgmpy.utils import get_example_model
+from pgmpy.example_models import load_model
+from pgmpy.models import DiscreteBayesianNetwork
 
-model = get_example_model("asia")
-BIFWriter(model).write_bif("asia.bif")
+model = load_model("bnlearn/alarm")
+model.save("alarm.bif", filetype="bif")
 
-imported = BIFReader("asia.bif").get_model()
-infer = VariableElimination(imported)
-variable = list(imported.nodes())[0]
-query = infer.query(variables=[variable])
-print(query)
+loaded = DiscreteBayesianNetwork.load("alarm.bif", filetype="bif")
+print(loaded)
 ```
 
 ## Supported Formats
 
-```{eval-rst}
-.. list-table::
-   :header-rows: 1
-   :widths: 15 20 20 45
+pgmpy supports several Bayesian network interchange formats including BIF, NET, XMLBIF,
+XDSL, XBN, UAI, and PomdpX. The model-level `save`/`load` methods handle format
+detection automatically.
 
-   * - Format
-     - Reader
-     - Writer
-     - Description
-   * - BIF
-     - :class:`~pgmpy.readwrite.BIF.BIFReader`
-     - :class:`~pgmpy.readwrite.BIF.BIFWriter`
-     - Bayesian Interchange Format. Widely used by bnlearn and other tools.
-   * - UAI
-     - :class:`~pgmpy.readwrite.UAI.UAIReader`
-     - :class:`~pgmpy.readwrite.UAI.UAIWriter`
-     - UAI inference competition format.
-   * - XMLBIF
-     - :class:`~pgmpy.readwrite.XMLBIF.XMLBIFReader`
-     - :class:`~pgmpy.readwrite.XMLBIF.XMLBIFWriter`
-     - XML-based Bayesian Interchange Format.
-   * - XDSL
-     - :class:`~pgmpy.readwrite.XDSL.XDSLReader`
-     - :class:`~pgmpy.readwrite.XDSL.XDSLWriter`
-     - GeNIe / SMILE file format.
-   * - PomdpX
-     - :class:`~pgmpy.readwrite.PomdpX.PomdpXReader`
-     - :class:`~pgmpy.readwrite.PomdpX.PomdpXWriter`
-     - POMDP XML format for partially observable models.
-   * - XBN
-     - :class:`~pgmpy.readwrite.XMLBeliefNetwork.XBNReader`
-     - :class:`~pgmpy.readwrite.XMLBeliefNetwork.XBNWriter`
-     - XML Belief Network format (Microsoft).
+## Reader/Writer Classes
+
+For fine-grained control, each format has dedicated reader and writer classes in
+`pgmpy.readwrite` that expose format-specific options:
+
+```python
+from pgmpy.readwrite import BIFReader
+
+reader = BIFReader("alarm.bif")
+model = reader.get_model()
 ```
 
 ## See Also
 
-- **Examples:** {doc}`Examples <../examples>`
-- **API Reference:** {doc}`Reading/Writing API <../api/readwrite>`
-- **Previous:** {doc}`example_models` -- pre-built Bayesian Networks
-- **Next:** {doc}`custom_model` -- define models and factors directly in pgmpy
+:::{seealso}
+- {doc}`Defining a Custom Model <custom_model>` — Build models from scratch instead of loading from files.
+:::
+
+## API Reference
+
+For the full list of supported formats and I/O classes:
+
+- {doc}`Reading/Writing API <../api/readwrite>`
+- {doc}`Models API <../api/models>`

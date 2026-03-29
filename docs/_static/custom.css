@@ -395,7 +395,7 @@ html[data-theme="dark"] .bd-header {
     flex-direction: column;
     gap: 0.72rem;
     height: 100%;
-    min-height: 10.75rem;
+    min-height: 11.5rem;
     padding: 1.2rem 1.25rem;
     position: relative;
 }

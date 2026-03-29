@@ -1,131 +1,171 @@
 # Causal Discovery and Structure Learning
 
 ```{meta}
-:description: Learn causal graphs from data using constraint- and score-based structure learning in pgmpy.
+:description: Learn causal graphs from data using the unified causal discovery APIs in pgmpy.
 ```
 
-Causal discovery (structure learning) finds which variables influence others
-by learning a directed graph from data.
+Causal discovery recovers the causal graph from observational data — determining which
+variables directly cause which others. Given a dataset of jointly observed variables,
+pgmpy searches over graph structures to produce a DAG or PDAG representing the causal
+relationships.
 
-In more precise terms, we seek a directed acyclic graph (DAG) {math}`G` over
-variables {math}`X` that either satisfies conditional independencies like
-{math}`X \perp Y \mid Z` (constraint-based) or maximizes a score
-{math}`S(G; D)` (score-based) for data {math}`D`:
+## At a Glance
 
-```{math}
-G^* = \arg\max_G S(G; D)
-```
+- **[Unified API](#api)**: All discovery algorithms share a consistent `fit` / `causal_graph_` / `score` interface.
+- **[Expert Knowledge](#expert-knowledge)**: Encode required edges, forbidden edges, and temporal orderings to constrain the search.
+- **[Scoring and Evaluation](#scoring-and-evaluation)**: Compare learned graphs against data or a known reference using a unified `score(...)` method.
+- **[Scikit-learn Compatibility](#scikit-learn-compatibility)**: Use discovery estimators in sklearn pipelines and tooling.
 
-## When to use
+## API
 
-- Use causal discovery when the graph structure is unknown but observational
-  data is available.
-- Use constraint-based methods when conditional independence tests are a good
-  fit for the data type and assumptions.
-- Use score-based methods when you want to optimize a graph objective such as
-  BIC, AIC, or BDeu.
-- Use expert-in-the-loop workflows when you need domain constraints such as
-  required or forbidden edges.
-
-## Example
+All discovery algorithms follow the same pattern — instantiate, fit, and read the result:
 
 ```python
 from pgmpy.datasets import load_dataset
-from pgmpy.estimators import HillClimbSearch, BIC
+from pgmpy.causal_discovery import PC   # swap in any discovery algorithm
+from pgmpy.structure_score import BIC
 
 dataset = load_dataset("sachs_discrete")
 data = dataset.data
-hc = HillClimbSearch(data)
-model = hc.estimate(scoring_method=BIC(data))
-print(model.edges())
+
+est = PC(ci_test="chi_square", return_type="dag", show_progress=False)
+est.fit(data)
+
+print(est.causal_graph_.edges())
+print(est.adjacency_matrix_.head())
 ```
 
-## Conditional Independence Tests
+Switching algorithms requires only changing the class and its constructor arguments.
+The fitted result is always accessed through `causal_graph_` and `adjacency_matrix_`.
 
-Constraint-based algorithms rely on conditional independence (CI) tests to
-determine the graph structure. pgmpy provides the following CI tests:
+## Expert Knowledge
 
-```{eval-rst}
-.. list-table::
-   :header-rows: 1
-   :widths: 40 60
+pgmpy supports incorporating domain knowledge into the discovery process through the
+`ExpertKnowledge` class. You can encode:
 
-   * - Test
-     - Description
-   * - Chi-Square
-     - Standard chi-squared test for discrete data
-   * - G-Squared
-     - G-test (log-likelihood ratio) for discrete data
-   * - Log-Likelihood
-     - Log-likelihood ratio test
-   * - Pearson r
-     - Pearson partial correlation test for continuous data
-   * - Pillai Trace
-     - Pillai trace test for multivariate continuous data
-   * - GCM
-     - Generalized Covariance Measure for nonlinear dependencies
+- **Required edges** that must appear in the learned graph.
+- **Forbidden edges** that must not appear.
+- **Temporal orderings** that constrain edge directions.
+- **Search-space restrictions** that limit which variables are considered.
+
+Both constraint-based and score-based algorithms accept an `expert_knowledge` parameter:
+
+```python
+from pgmpy.causal_discovery import HillClimbSearch, ExpertKnowledge
+from pgmpy.datasets import load_dataset
+
+dataset = load_dataset("sachs_discrete")
+data = dataset.data
+
+expert = ExpertKnowledge(
+    required_edges=[("PKC", "PKA")],
+    forbidden_edges=[("PKA", "PKC")],
+    temporal_order=[["PKC", "Raf"], ["Mek", "PKA"]],
+)
+
+est = HillClimbSearch(
+    scoring_method="bic-d", expert_knowledge=expert, show_progress=False
+)
+est.fit(data)
+print(est.causal_graph_.edges())
 ```
 
-## Scoring Functions
+## Scoring and Evaluation
 
-Score-based algorithms use scoring functions to evaluate candidate graph
-structures. Available scoring functions:
+All discovery estimators expose a unified `score(...)` method for comparing results:
 
-```{eval-rst}
-.. list-table::
-   :header-rows: 1
-   :widths: 30 70
+```python
+from pgmpy.causal_discovery import HillClimbSearch, PC
+from pgmpy.datasets import load_dataset
+from pgmpy.structure_score import BIC
 
-   * - Score
-     - Description
-   * - K2
-     - K2 score for discrete Bayesian Networks
-   * - BDeu
-     - Bayesian Dirichlet equivalent uniform score
-   * - BDs
-     - Bayesian Dirichlet sparse score
-   * - BIC / AIC
-     - Information-theoretic scores for discrete models
-   * - BICGauss / AICGauss
-     - Information-theoretic scores for Gaussian models
+dataset = load_dataset("sachs_discrete")
+data = dataset.data
+
+hc = HillClimbSearch(scoring_method=BIC(data), show_progress=False).fit(data)
+pc = PC(ci_test="chi_square", return_type="dag", show_progress=False).fit(data)
+
+# Score against data (no ground truth needed)
+print(hc.score(X=data, metric="correlation_score"))
+print(pc.score(X=data, metric="correlation_score"))
 ```
 
-## Algorithms
+You can score against data using unsupervised metrics, or against a known reference
+graph using supervised metrics. Use `pgmpy.metrics.get_metrics(...)` to discover
+available metrics programmatically.
 
-```{eval-rst}
-.. list-table::
-   :header-rows: 1
-   :widths: 30 20 50
+## Scikit-learn Compatibility
 
-   * - Algorithm
-     - Type
-     - API Reference
-   * - PC
-     - Constraint-based
-     - :class:`pgmpy.estimators.PC.PC`
-   * - Hill-Climb Search
-     - Score-based
-     - :class:`pgmpy.estimators.HillClimbSearch.HillClimbSearch`
-   * - Greedy Equivalence Search (GES)
-     - Score-based
-     - :class:`pgmpy.estimators.GES.GES`
-   * - Tree Search
-     - Score-based
-     - :class:`pgmpy.estimators.TreeSearch.TreeSearch`
-   * - Exhaustive Search
-     - Score-based
-     - :class:`pgmpy.estimators.ExhaustiveSearch.ExhaustiveSearch`
-   * - Max-Min Hill-Climb (MMHC)
-     - Hybrid
-     - :class:`pgmpy.estimators.MmhcEstimator.MmhcEstimator`
-   * - Expert In The Loop
-     - Interactive
-     - :class:`pgmpy.estimators.expert.ExpertInLoop`
+Discovery estimators inherit from `sklearn.base.BaseEstimator` and work with sklearn
+tooling — cloning, parameter inspection, and pipelines:
+
+```python
+from sklearn.pipeline import Pipeline
+from pgmpy.causal_discovery import PC
+
+pipeline = Pipeline(
+    steps=[
+        ("discover", PC(ci_test="chi_square", return_type="dag", show_progress=False)),
+    ]
+)
+pipeline.fit(data)
+
+print(pipeline[-1].causal_graph_)
+```
+
+## Common Recipes
+
+```python
+from pgmpy.datasets import load_dataset
+
+dataset = load_dataset("sachs_discrete")
+data = dataset.data
+```
+
+**Score-based discovery with BIC:**
+```python
+from pgmpy.causal_discovery import HillClimbSearch
+
+est = HillClimbSearch(scoring_method="bic-d", show_progress=False).fit(data)
+```
+
+**Constraint-based discovery with a different CI test:**
+```python
+from pgmpy.causal_discovery import PC
+
+est = PC(ci_test="g_sq", return_type="dag", show_progress=False).fit(data)
+```
+
+**GES returning a PDAG:**
+```python
+from pgmpy.causal_discovery import GES
+
+est = GES(scoring_method="bic-d", return_type="pdag", show_progress=False).fit(data)
+```
+
+**Score against ground truth:**
+```python
+est.score(true_graph=dataset.ground_truth, metric="shd")
+```
+
+**Auto-detect scoring for continuous data:**
+```python
+est = HillClimbSearch(scoring_method=None, show_progress=False).fit(continuous_data)
 ```
 
 ## See Also
 
-- **Examples:** {doc}`Structure Learning <../examples/Structure_Learning>` | {doc}`Chow-Liu Tree <../examples/Structure_Learning_Chow_Liu>` | {doc}`TAN <../examples/Structure_Learning_TAN>` | {doc}`Expert Knowledge <../examples/Expert_Knowledge>`
-- **API Reference:** {doc}`Causal Discovery API <../api/structure_learning>`
-- **Previous:** {doc}`custom_model` -- define a model from scratch
-- **Next:** {doc}`parameter_estimation` -- estimate CPDs for the learned structure
+:::{seealso}
+- {doc}`Parameter Estimation <parameter_estimation>` — Estimate CPDs once you have a graph.
+- {doc}`Metrics <metrics>` — Evaluate learned graphs with supervised and unsupervised metrics.
+:::
+
+## API Reference
+
+For the full list of discovery algorithms, scoring methods, and conditional independence
+tests:
+
+- {doc}`Causal Discovery API <../api/structure_learning>`
+- {doc}`Conditional Independence Tests API <../api/ci_test>`
+- {doc}`Structure Scoring API <../api/structure_score>`
+- {doc}`Metrics API <../api/metrics>`

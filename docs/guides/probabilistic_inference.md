@@ -1,86 +1,125 @@
 # Probabilistic Inference
 
 ```{meta}
-:description: Compute posterior probabilities with exact or approximate inference algorithms.
+:description: Query fitted pgmpy models using the unified probabilistic inference APIs.
 ```
 
-Probabilistic inference computes the probability of variables of interest
-given observed evidence.
+Probabilistic inference computes the distribution over query variables given observed
+evidence in a graphical model. For example, given a Bayesian network modeling disease
+diagnosis, inference answers questions like "What is the probability of disease X given
+symptoms A and B?".
 
-Formally, inference computes a posterior such as
-{math}`P(X \mid e) = \frac{P(X, e)}{P(e)}`, often by summing out hidden
-variables or using sampling to approximate the result.
+:::{note}
+**Prerequisite:** This guide assumes you have a fitted model with parameters. Obtain one
+from {doc}`Parameter Estimation <parameter_estimation>` or load a ready-made one from
+{doc}`Example Models <example_models>`.
+:::
 
-## When to use
+:::{tip}
+**When to use this vs. Causal Estimation:** Use *Probabilistic Inference* for
+observational queries that condition on evidence. For interventional queries that model
+interventions (do-calculus), see {doc}`Causal Estimation <causal_estimation>`.
+:::
 
-- Use variable elimination as the default exact method for small to medium
-  networks.
-- Use belief propagation when the graph structure or repeated-query pattern
-  makes message passing efficient.
-- Use MPLP for MAP-style inference problems rather than full posterior
-  estimation.
-- Use approximate or Gibbs sampling when exact inference becomes too expensive.
+## At a Glance
 
-## Example
+- **[Unified API](#api)**: All inference engines share a `query(...)` / `map_query(...)` interface.
+- **[Exact Inference](#exact-inference)**: Variable Elimination and Belief Propagation for precise posterior computation.
+- **[MAP Queries](#map-queries)**: Find the most likely assignment for a set of variables.
+- **[Approximate Inference](#approximate-inference)**: Sampling-based and other approximate methods for large models.
+
+## API
+
+All inference engines follow the same pattern — instantiate with a model, then query:
 
 ```python
-from pgmpy.inference import VariableElimination
-from pgmpy.utils import get_example_model
+from pgmpy.example_models import load_model
+from pgmpy.inference import VariableElimination  # swap in any inference engine
 
-model = get_example_model("alarm")
+model = load_model("bnlearn/alarm")
 infer = VariableElimination(model)
-variable = list(model.nodes())[0]
-query = infer.query(variables=[variable])
-print(query)
+
+posterior = infer.query(
+    variables=["HISTORY"],
+    evidence={"CVP": "LOW", "PCWP": "LOW"},
+)
+print(posterior)
 ```
 
-## Algorithms
+Switching inference engines requires only changing the class.
 
-### Exact Inference
+## Exact Inference
 
-Exact inference computes the true posterior distribution. These methods are
-suitable for small to moderately sized networks.
+Exact inference computes the precise posterior distribution. pgmpy provides Variable
+Elimination (the default choice for most queries) and Belief Propagation (efficient for
+repeated queries through junction-tree reasoning). These are best when the model is small
+enough for exact computation to be tractable.
 
-```{eval-rst}
-.. list-table::
-   :header-rows: 1
-   :widths: 35 65
+## MAP Queries
 
-   * - Algorithm
-     - API Reference
-   * - Variable Elimination
-     - :class:`pgmpy.inference.ExactInference.VariableElimination`
-   * - Belief Propagation
-     - :class:`pgmpy.inference.ExactInference.BeliefPropagation`
-   * - Max-Product Linear Programming (MPLP)
-     - :class:`pgmpy.inference.mplp.Mplp`
-   * - Dynamic Bayesian Network Inference
-     - :class:`pgmpy.inference.dbn_inference.DBNInference`
+In addition to full posterior distributions, inference engines support Maximum A Posteriori
+queries that return the single most likely assignment:
+
+```python
+map_result = infer.map_query(variables=["HISTORY"], evidence={"CVP": "LOW"})
+print(map_result)
 ```
 
-### Approximate Inference
+## Approximate Inference
 
-Approximate inference uses sampling to estimate posterior distributions. These
-methods scale better to large networks where exact inference is intractable.
+When exact inference is too expensive for large networks, pgmpy provides approximate
+methods including sampling-based inference and message-passing optimization. There is
+also specialized support for inference on Dynamic Bayesian Networks.
 
-```{eval-rst}
-.. list-table::
-   :header-rows: 1
-   :widths: 35 65
+## Common Recipes
 
-   * - Algorithm
-     - API Reference
-   * - Approximate Inference (Sampling)
-     - :class:`pgmpy.inference.ApproxInference.ApproxInference`
-   * - Forward Sampling
-     - :class:`pgmpy.sampling.Sampling.BayesianModelSampling`
-   * - Gibbs Sampling
-     - :class:`pgmpy.sampling.Sampling.GibbsSampling`
+```python
+from pgmpy.example_models import load_model
+from pgmpy.inference import VariableElimination
+
+model = load_model("bnlearn/alarm")
+infer = VariableElimination(model)
+```
+
+**Posterior over a single variable:**
+```python
+infer.query(variables=["HISTORY"], evidence={"CVP": "LOW"})
+```
+
+**Joint posterior over multiple variables:**
+```python
+infer.query(variables=["HISTORY", "CO"], evidence={"CVP": "LOW"}, joint=True)
+```
+
+**Separate marginals instead of joint:**
+```python
+marginals = infer.query(variables=["HISTORY", "CO"], joint=False)
+print(marginals["HISTORY"])
+```
+
+**MAP assignment:**
+```python
+infer.map_query(variables=["HISTORY", "CO"], evidence={"CVP": "LOW"})
+```
+
+**Switch to Belief Propagation:**
+```python
+from pgmpy.inference import BeliefPropagation
+
+infer = BeliefPropagation(model)
+infer.query(variables=["HISTORY"], evidence={"CVP": "LOW"})
 ```
 
 ## See Also
 
-- **Examples:** {doc}`Inference in Discrete BN <../examples/Inference_Discrete_BN>` | {doc}`Monty Hall <../examples/Monty_Hall>` | {doc}`Junction Tree Inference <../examples/Junction_Tree_Inference>`
-- **API Reference:** {doc}`Inference API <../api/inference>`
-- **Previous:** {doc}`parameter_estimation` -- estimate model parameters
-- **Next:** {doc}`causal_identification` -- check whether a causal effect is identifiable
+:::{seealso}
+- {doc}`Simulations <simulations>` — Generate synthetic datasets from fitted models.
+- {doc}`Causal Estimation <causal_estimation>` — Answer interventional "what if" queries using do-calculus.
+:::
+
+## API Reference
+
+For the full list of inference algorithms and sampling methods:
+
+- {doc}`Inference and Sampling API <../api/inference>`
+- {doc}`Models API <../api/models>`

@@ -1,133 +1,70 @@
 # Example Datasets
 
 ```{meta}
-:description: Discover and load built-in datasets in pgmpy using list_datasets and load_dataset.
+:description: Discover and load built-in benchmark datasets using pgmpy's dataset helpers.
 ```
 
-The `pgmpy.datasets` module has two primary entry points:
+pgmpy ships a curated collection of benchmark datasets for causal discovery and graphical
+modeling. Each dataset includes not only the data table, but also metadata such as
+ground-truth graphs, expert knowledge, and dataset characteristics — ready to use
+without any manual download or preparation.
 
-- `list_datasets` to discover dataset names.
-- `load_dataset` to load one dataset and its metadata.
+:::{tip}
+**When to use this vs. Example Models:** *Example Datasets* provide data tables for
+learning graph structures and parameters. {doc}`Example Models <example_models>` provide
+pre-built graph structures (and optionally parameters) for inference, simulation, and
+benchmarking.
+:::
 
-Typical workflow:
+## At a Glance
 
-1. Call `list_datasets(...)` with optional filters to find a dataset.
-2. Call `load_dataset(name)` on one of the returned names.
+- **[Unified API](#api)**: Discover datasets with `list_datasets(...)` and load them with `load_dataset(...)`.
+- **[Rich Filtering](#filtering)**: Filter datasets by type, size, and available metadata before loading.
+- **[Bundled Metadata](#bundled-metadata)**: Each dataset carries its ground-truth graph, expert knowledge, and tags alongside the data.
 
-## When to use
+## API
 
-- Use built-in datasets when you need a standard benchmark without managing raw
-  files yourself.
-- Use `list_datasets` when you want to discover datasets by tags such as data
-  type, sample count, or ground-truth availability.
-- Use `load_dataset` when you want the DataFrame plus associated metadata,
-  expert knowledge, and ground-truth graph.
-
-## Example
+The dataset API has two entry points — discover, then load:
 
 ```python
 from pgmpy.datasets import list_datasets, load_dataset
 
 matches = list_datasets(is_discrete=True, has_ground_truth=True)
-print(matches[:3])
-
 dataset = load_dataset(matches[0])
-print(dataset.name)
-print(dataset.data.shape)
-print(dataset.ground_truth is not None)
-```
-
-## `list_datasets`
-
-`list_datasets(**filter_tags)` returns a sorted `list[str]` of dataset names.
-If no filters are provided, all available datasets are returned.
-
-```python
-from pgmpy.datasets import list_datasets
-
-all_datasets = list_datasets()
-print(len(all_datasets))
-print(all_datasets[:5])
-
-# Filter by tags (exact-match filtering on tag values)
-print(list_datasets(is_discrete=True, has_ground_truth=True))
-print(list_datasets(is_continuous=True, n_variables=11))
-```
-
-Supported filter tags:
-
-```{eval-rst}
-.. list-table::
-   :header-rows: 1
-   :widths: 35 65
-
-   * - Tag
-     - Meaning
-   * - ``name``
-     - Dataset identifier string.
-   * - ``n_variables``
-     - Number of variables (columns).
-   * - ``n_samples``
-     - Number of samples (rows).
-   * - ``has_ground_truth``
-     - Whether a ground-truth causal graph is available.
-   * - ``has_expert_knowledge``
-     - Whether expert knowledge constraints are available.
-   * - ``has_missing_data``
-     - Whether the dataset contains missing values.
-   * - ``has_index_col``
-     - Whether the raw file includes an index column that is removed on load.
-   * - ``is_simulated``
-     - Whether the dataset is simulated.
-   * - ``is_interventional``
-     - Whether data includes interventions.
-   * - ``is_discrete``
-     - Whether all variables are discrete.
-   * - ``is_continuous``
-     - Whether all variables are continuous.
-   * - ``is_mixed``
-     - Whether data contains both continuous and categorical variables.
-   * - ``is_ordinal``
-     - Whether ordinal variables are present.
-```
-
-## `load_dataset`
-
-`load_dataset(name)` returns a `Dataset` object, not just a DataFrame.
-The returned object has these fields:
-
-- `name`: dataset name.
-- `data`: `pandas.DataFrame` with rows as samples and columns as variables.
-- `expert_knowledge`: `pgmpy.estimators.ExpertKnowledge` or `None`.
-- `ground_truth`: `pgmpy.base.DAG` or `None`.
-- `tags`: metadata dictionary for the dataset.
-
-```python
-from pgmpy.datasets import load_dataset
-
-dataset = load_dataset("sachs_discrete")
 
 print(dataset.name)
 print(dataset.data.shape)
-print(dataset.tags["is_discrete"])
-print(dataset.ground_truth is not None)
-print(dataset.expert_knowledge is not None)
-
-# Use this DataFrame in estimators/inference workflows.
-data = dataset.data
+print(dataset.tags)
 ```
 
-If `name` does not match an available dataset, `load_dataset` raises
-`ValueError`.
+The loaded object exposes the data as a `pandas.DataFrame` and keeps all metadata on
+the same object for downstream workflows.
 
-## Caching behavior
+## Filtering
 
-On first load, dataset files are downloaded and cached under `~/.pgmpy`.
-Subsequent calls read from this local cache.
+`list_datasets(**filters)` narrows the catalog before loading. Supported filters include
+data type (`is_discrete`, `is_continuous`, `is_mixed`), available metadata
+(`has_ground_truth`, `has_expert_knowledge`), size (`n_variables`, `n_samples`), and
+data origin (`is_simulated`, `is_interventional`).
+
+## Bundled Metadata
+
+Each loaded dataset provides structured access to:
+
+- **`data`**: The tabular data as a `pandas.DataFrame`, ready for `estimator.fit(data)`.
+- **`ground_truth`**: The true causal graph (when available), for use with supervised metrics.
+- **`expert_knowledge`**: Domain constraints (when available), for use with discovery algorithms.
+- **`tags`**: Dictionary of dataset properties and characteristics.
 
 ## See Also
 
-- **API Reference:** {doc}`Datasets and Example Models API <../api/data>`
-- **Examples:** {doc}`Examples <../examples>`
-- **Previous:** {doc}`simulations` -- generate synthetic data from a model
-- **Next:** {doc}`example_models` -- pre-built Bayesian Networks for benchmarking
+:::{seealso}
+- {doc}`Causal Discovery <causal_discovery>` — Use loaded datasets to learn causal graphs.
+- {doc}`Example Models <example_models>` — Pre-built graph structures to pair with these datasets.
+:::
+
+## API Reference
+
+For the full list of available datasets:
+
+- {doc}`Datasets and Example Models API <../api/data>`

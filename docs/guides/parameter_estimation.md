@@ -1,120 +1,78 @@
 # Parameter Estimation
 
 ```{meta}
-:description: Estimate CPDs for known structures using MLE, Bayesian, or EM methods.
+:description: Estimate model parameters from data using pgmpy's unified parameter-estimation APIs.
 ```
 
-Once a model structure is known, parameter estimation learns the numerical
-parameters associated with that structure. In a Bayesian network, this means
-estimating one conditional probability distribution (CPD) for each variable,
-conditioned on every parent configuration in the graph. After this step, the
-graph is no longer just a dependency structure: together with the learned CPDs,
-it defines a full probabilistic model that can be used for inference, sampling,
-and prediction.
+Once the structure of a graphical model is known, the next step is estimating its
+numerical parameters from data. For a Bayesian network, this means learning the
+conditional probability distribution (CPD) for every node given its parents.
 
-For fully observed discrete data, maximum likelihood estimation (MLE) computes
-each CPD entry from empirical counts. For a variable {math}`X`, one of its
-states {math}`x`, and a parent configuration {math}`Pa = p`,
-{math}`N(x, p)` is the number of rows where both conditions hold and
-{math}`N(p) = \sum_{x'} N(x', p)` is the number of rows with parent state
-{math}`p`. The MLE estimate is:
+:::{note}
+**Prerequisite:** This guide assumes you already have a graph structure, either from
+{doc}`Causal Discovery <causal_discovery>` or built manually with
+{doc}`Defining a Custom Model <custom_model>`.
+:::
 
-```{math}
-\hat{P}(X = x \mid Pa = p) = \frac{N(x, p)}{N(p)}
-```
+## At a Glance
 
-## When to use
+- **[Unified API](#api)**: A single `model.fit(data, estimator=...)` call handles all estimation methods.
+- **[Prior-Based Smoothing](#prior-based-smoothing)**: Bayesian estimation with Dirichlet priors for sparse data.
+- **[Missing Data and Latent Variables](#missing-data-and-latent-variables)**: Expectation Maximization for incomplete observations.
+- **[Parallel Estimation](#parallel-estimation)**: Speed up fitting for larger models with `n_jobs`.
 
-- Use maximum likelihood estimation for fully observed data with enough samples
-  per parent configuration.
-- Use Bayesian estimation when the data is sparse and you want smoothing via
-  priors.
-- Use expectation maximization when the model has latent variables or missing
-  data.
-- Use SEM and IV estimators when working with structural equation models rather
-  than discrete CPDs.
+## API
 
-## Example
+The recommended entry point is `model.fit(...)`. Provide the graph, the data, and the
+estimator class:
 
 ```python
-import pandas as pd
+from pgmpy.example_models import load_model
 from pgmpy.estimators import MaximumLikelihoodEstimator
 from pgmpy.models import DiscreteBayesianNetwork
 
-data = pd.DataFrame(
-    {
-        "PKA": [0, 0, 1, 1],
-        "ERK": [0, 0, 1, 1],
-        "Akt": [0, 1, 1, 0],
-    }
-)
-model = DiscreteBayesianNetwork([("PKA", "ERK"), ("ERK", "Akt")])
+reference = load_model("bnlearn/alarm")
+data = reference.simulate(n_samples=1000, seed=42, show_progress=False)
 
-mle = MaximumLikelihoodEstimator(model, data)
-cpds = mle.get_parameters()
-model.add_cpds(*cpds)
+model = DiscreteBayesianNetwork(reference.edges())
+model.fit(data, estimator=MaximumLikelihoodEstimator)
 
-print("Learned CPDs:")
-for cpd in model.get_cpds():
-    print(cpd)
+print(model.get_cpds("HISTORY"))
 ```
 
-This learns one CPD for each node in the model:
+Switching the estimation method only requires changing the `estimator` argument.
+For finer control, you can instantiate estimator classes directly and call their
+parameter-generation methods before adding the CPDs to the model.
 
-- {math}`P(\text{PKA})`
-- {math}`P(\text{ERK} \mid \text{PKA})`
-- {math}`P(\text{Akt} \mid \text{ERK})`
+## Prior-Based Smoothing
 
-Example output:
+When data is sparse, maximum likelihood estimates can be unreliable. The Bayesian
+estimator adds Dirichlet priors (pseudo-counts and equivalent sample size) to smooth
+the estimated distributions and incorporate prior beliefs.
 
-```text
-+--------+-----+
-| PKA(0) | 0.5 |
-+--------+-----+
-| PKA(1) | 0.5 |
-+--------+-----+
+## Missing Data and Latent Variables
 
-+--------+--------+--------+
-| PKA    | PKA(0) | PKA(1) |
-+--------+--------+--------+
-| ERK(0) | 1.0    | 0.0    |
-+--------+--------+--------+
-| ERK(1) | 0.0    | 1.0    |
-+--------+--------+--------+
+When the dataset has missing values or the model contains latent variables, simple
+counting is not enough. The Expectation Maximization estimator handles this through
+iterative estimation, alternating between imputing missing values and updating parameters.
 
-+--------+--------+--------+
-| ERK    | ERK(0) | ERK(1) |
-+--------+--------+--------+
-| Akt(0) | 0.5    | 0.5    |
-+--------+--------+--------+
-| Akt(1) | 0.5    | 0.5    |
-+--------+--------+--------+
-```
+## Parallel Estimation
 
-## Algorithms
-
-```{eval-rst}
-.. list-table::
-   :header-rows: 1
-   :widths: 30 70
-
-   * - Algorithm
-     - API Reference
-   * - Maximum Likelihood Estimation (MLE)
-     - :class:`pgmpy.estimators.MLE.MaximumLikelihoodEstimator`
-   * - Bayesian Estimation
-     - :class:`pgmpy.estimators.BayesianEstimator.BayesianEstimator`
-   * - Expectation Maximization (EM)
-     - :class:`pgmpy.estimators.EM.ExpectationMaximization`
-   * - SEM Estimator
-     - :class:`pgmpy.estimators.SEMEstimator.SEMEstimator`
-   * - IV Estimator
-     - :class:`pgmpy.estimators.SEMEstimator.IVEstimator`
-```
+The `n_jobs` parameter in `model.fit(...)` parallelizes parameter estimation across nodes,
+which can speed up fitting for larger models. The `state_names` parameter lets you
+specify the supported states explicitly when some states may not appear in small datasets.
 
 ## See Also
 
-- **Examples:** {doc}`Discrete BN Parameters <../examples/Parameter_Learning_Discrete_BN>` | {doc}`Factor Graph Parameters <../examples/Parameter_Learning_Factor_Graphs>`
-- **API Reference:** {doc}`Parameter Estimation API <../api/parameter_estimation>`
-- **Previous:** {doc}`causal_discovery` -- learn graph structure from data
-- **Next:** {doc}`probabilistic_inference` -- query the fitted model
+:::{seealso}
+- {doc}`Probabilistic Inference <probabilistic_inference>` — Query the fitted model.
+- {doc}`Simulations <simulations>` — Sample synthetic data from the fitted model.
+:::
+
+## API Reference
+
+For the full list of supported estimators:
+
+- {doc}`Parameter Estimation API <../api/parameter_estimation>`
+- {doc}`Models API <../api/models>`
+- {doc}`Factors and CPDs API <../api/factors>`

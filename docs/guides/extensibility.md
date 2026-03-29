@@ -1,117 +1,55 @@
 # Extensibility
 
 ```{meta}
-:description: Extend pgmpy with new datasets, example models, metrics, and causal discovery algorithms using the repository templates.
+:description: Extend pgmpy using the repository templates for new datasets, models, metrics, and discovery algorithms.
 ```
 
-pgmpy includes repository templates for adding new extension points without
-starting from a blank file.
+pgmpy is designed to be extensible. When you want to add a new algorithm, dataset,
+metric, or model, repository templates ensure that new contributions integrate seamlessly
+with the existing API — discoverable through the same listing and filtering functions.
 
-These templates live in `devtools/extension_templates/` and are the right
-starting point when you want to add a new dataset, example model, metric, or
-causal discovery algorithm.
+## At a Glance
 
-## When to use
+- **[Unified API](#api)**: A template-driven workflow that is the same across all extension types.
+- **[Extension Templates](#extension-templates)**: Ready-made scaffolds for discovery algorithms, datasets, example models, and metrics.
+- **[Automatic Registration](#automatic-registration)**: New extensions become part of the public API once exported from the package.
 
-- Use these templates when you want to add a new public extension to pgmpy in a
-  way that matches the existing package structure.
-- Use them before writing a new module from scratch, because they already
-  encode the expected imports, class shape, metadata tags, and contribution
-  checklist.
-- Use them together with the test layout under `pgmpy/tests/` when preparing a
-  contribution.
+## API
 
-## Available Templates
+The extension workflow follows a consistent pattern:
 
-```{eval-rst}
-.. list-table::
-   :header-rows: 1
-   :widths: 35 30 35
+1. Pick a template from `devtools/extension_templates/`.
+2. Copy it into the correct package directory.
+3. Fill in the TODO markers and implementation details.
+4. Export the new object from the package `__init__.py`.
+5. Add the matching tests and docs.
 
-   * - Extension Type
-     - Template
-     - Target Location
-   * - Causal discovery algorithm
-     - ``devtools/extension_templates/_causal_discovery.py``
-     - ``pgmpy/causal_discovery/``
-   * - Dataset
-     - ``devtools/extension_templates/_dataset.py``
-     - ``pgmpy/datasets/``
-   * - Example model
-     - ``devtools/extension_templates/_example_model.py``
-     - ``pgmpy/example_models/``
-   * - Metric
-     - ``devtools/extension_templates/_metrics.py``
-     - ``pgmpy/metrics/``
+```bash
+ls devtools/extension_templates
+cp devtools/extension_templates/_metrics.py pgmpy/metrics/my_metric.py
 ```
 
-## Typical Workflow
+## Extension Templates
 
-1. Pick the closest template from `devtools/extension_templates/`.
-2. Copy it into the target package and rename it to the final public module
-   name.
-3. Work through the `TODO` markers in the template.
-4. Register the new object in the package `__init__.py` if the template asks
-   for it.
-5. Add tests in the corresponding `pgmpy/tests/` area before contributing.
+Templates are available for the most common extension types:
 
-One important detail is common across these templates: the template filenames
-start with `_` because they are not meant to be imported directly. Your real
-extension module should use a normal public filename.
+- **Discovery algorithms**: New estimators follow the unified `fit` / `causal_graph_` /
+  `score` API.
+- **Datasets**: New datasets become discoverable via `list_datasets()`.
+- **Example models**: New models become discoverable via `list_models()`.
+- **Metrics**: New metrics become discoverable via `get_metrics()`.
 
-## What Each Template Covers
+## Automatic Registration
 
-### Adding a Causal Discovery Algorithm
+Each extension needs an entry in its package's `__init__.py` to become part of the public
+API. Once registered, the new object is automatically discoverable through the listing
+and filtering functions used by the rest of the library.
 
-The causal discovery template defines a `MyCausalDiscoveryAlgo` skeleton based
-on `_BaseCausalDiscovery`, with placeholders for hyperparameters, learned graph
-attributes, and the `_fit` implementation.
+## API Reference
 
-Use `devtools/extension_templates/_causal_discovery.py` when you want to add a
-new discovery estimator under `pgmpy/causal_discovery/`. The template also
-calls out the matching test location under `pgmpy/tests/test_causal_discovery/`.
+For existing components that serve as reference implementations:
 
-### Adding a Dataset
-
-The dataset template defines a dataset class based on `_BaseDataset` and walks
-through the required `_tags`, remote asset URLs, parsing hooks, and optional
-expert knowledge / ground-truth loaders.
-
-Use `devtools/extension_templates/_dataset.py` when you want the dataset to be
-discoverable through `list_datasets()` and loadable through `load_dataset()`.
-
-### Adding an Example Model
-
-The example-model template explains how to choose the right mixin, define model
-metadata, and point to the backing asset for a parameterized model or DAG.
-
-Use `devtools/extension_templates/_example_model.py` when adding a model under
-`pgmpy/example_models/`, including a new source subdirectory if needed.
-
-### Adding a Metric
-
-The metrics template includes both supervised and unsupervised skeletons and
-documents the required tags, base classes, and evaluation method shape.
-
-Use `devtools/extension_templates/_metrics.py` when adding a new graph metric
-under `pgmpy/metrics/`. It also documents the expected exports and test file
-layout.
-
-## Example
-
-For a new metric implementation, the high-level flow is:
-
-```text
-1. Copy devtools/extension_templates/_metrics.py to pgmpy/metrics/my_metric.py
-2. Remove the unused template class
-3. Fill in _tags, __init__, and _evaluate
-4. Export the metric from pgmpy/metrics/__init__.py
-5. Add tests in pgmpy/tests/test_metrics/test_my_metric.py
-```
-
-## See Also
-
-- **Related guides:** {doc}`custom_model` | {doc}`datasets` | {doc}`example_models` | {doc}`metrics` | {doc}`causal_discovery`
-- **API Reference:** {doc}`Causal Discovery API <../api/structure_learning>` | {doc}`Metrics API <../api/metrics>` | {doc}`Datasets and Example Models API <../api/data>`
-- **Contributing:** {doc}`../development`
-- **Previous:** {doc}`plotting` -- visualize graphs with pygraphviz, daft, and networkx
+- {doc}`Causal Discovery API <../api/structure_learning>`
+- {doc}`Datasets and Example Models API <../api/data>`
+- {doc}`Metrics API <../api/metrics>`
+- {doc}`Models API <../api/models>`

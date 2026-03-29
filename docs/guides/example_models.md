@@ -1,137 +1,71 @@
 # Example Models
 
 ```{meta}
-:description: Load pre-built Bayesian Networks for inference, simulation, and benchmarking.
+:description: Discover and load built-in example models using pgmpy's example-model helpers.
 ```
 
-pgmpy provides pre-built Bayesian Networks for testing, benchmarking, and
-learning.
+pgmpy ships a registry of ready-made Bayesian network models from standard repositories.
+These range from structure-only causal graphs to fully parameterized networks that can be
+queried and simulated immediately — useful for benchmarking, demonstrations, and exploring
+the API.
 
-These models are fully parameterized, so you can run inference immediately or
-simulate data from the joint distribution of the network.
+:::{tip}
+**When to use this vs. Example Datasets:** *Example Models* provide pre-built graph
+structures (and optionally parameters) ready for inference and simulation.
+{doc}`Example Datasets <datasets>` provide data tables for learning structures and
+parameters from scratch.
+:::
 
-## When to use
+## At a Glance
 
-- Use example models when you need a ready-to-query network without fitting one
-  from scratch.
-- Use small models such as `asia` or `cancer` for tutorials and debugging.
-- Use larger models such as `alarm` or `andes` for benchmarking inference
-  and structure-aware workflows.
+- **[Unified API](#api)**: Discover models with `list_models(...)` and load them with `load_model(...)`.
+- **[Rich Filtering](#filtering)**: Filter models by type, parameterization, and size before loading.
+- **[Multiple Model Families](#model-families)**: Discrete, continuous, and structure-only models from bnlearn, bnrep, and dagitty repositories.
 
-## Example
+## API
+
+The example-model API mirrors the dataset API — discover, then load:
 
 ```python
-from pgmpy.inference import VariableElimination
-from pgmpy.utils import get_example_model
+from pgmpy.example_models import list_models, load_model
 
-model = get_example_model("alarm")
-infer = VariableElimination(model)
-variable = list(model.nodes())[0]
-query = infer.query(variables=[variable])
-print(query)
+names = list_models(is_parameterized=True, is_discrete=True)
+model = load_model(names[0])
+
+print(model)
+print(len(model.nodes()), len(model.edges()))
 ```
 
-## Available Models
+The returned object type depends on the model family (e.g., `DiscreteBayesianNetwork`,
+`LinearGaussianBayesianNetwork`, or `DAG`).
 
-### Discrete Bayesian Networks
+## Filtering
 
-```{eval-rst}
-.. list-table::
-   :header-rows: 1
-   :widths: 25 15 60
+`list_models(**filters)` narrows the registry before loading. Supported filters include
+`is_parameterized`, `is_discrete`, `is_continuous`, `is_hybrid`, `n_nodes`, and `n_edges`.
 
-   * - Model
-     - Size
-     - Description
-   * - asia
-     - Small
-     - Lung disease diagnosis network
-   * - cancer
-     - Small
-     - Cancer diagnosis network
-   * - earthquake
-     - Small
-     - Earthquake and burglary alarm network
-   * - sachs
-     - Small
-     - Protein signaling network
-   * - survey
-     - Small
-     - Student survey network
-   * - alarm
-     - Medium
-     - Medical monitoring alarm network
-   * - barley
-     - Medium
-     - Barley crop yield network
-   * - child
-     - Medium
-     - Congenital heart disease diagnosis
-   * - insurance
-     - Medium
-     - Insurance risk assessment
-   * - mildew
-     - Medium
-     - Mildew crop disease network
-   * - water
-     - Medium
-     - Water treatment network
-   * - hailfinder
-     - Large
-     - Severe weather forecasting
-   * - hepar2
-     - Large
-     - Liver disorder diagnosis
-   * - win95pts
-     - Large
-     - Windows 95 printer troubleshooting
-   * - andes
-     - Very Large
-     - Intelligent tutoring system
-   * - diabetes
-     - Very Large
-     - Diabetes patient management
-   * - link
-     - Very Large
-     - Linkage analysis network
-   * - munin1 -- munin4, munin
-     - Very Large
-     - Electromyography diagnosis
-   * - pathfinder
-     - Very Large
-     - Pathology diagnosis
-   * - pigs
-     - Very Large
-     - Pedigree genetics network
-```
+## Model Families
 
-### Gaussian Bayesian Networks
+- **Discrete parameterized**: Classic networks with full CPD tables, ready for inference
+  and simulation.
+- **Continuous**: Networks with linear Gaussian parameters.
+- **Structure-only**: Causal graphs without parameters, useful for identification and
+  causal reasoning tasks.
 
-```{eval-rst}
-.. list-table::
-   :header-rows: 1
-   :widths: 30 70
-
-   * - Model
-     - Description
-   * - ecoli70
-     - E. coli gene regulatory network
-   * - magic-niab
-     - MAGIC wheat population (NIAB)
-   * - magic-irri
-     - MAGIC rice population (IRRI)
-   * - arth150
-     - Arabidopsis gene network
-```
-
-### Conditional Linear Gaussian Networks
-
-No curated conditional linear Gaussian example models are currently listed in
-the built-in registry.
+Loaded models integrate directly with the rest of the pgmpy stack — inference, simulation,
+parameter estimation, and plotting all work out of the box.
 
 ## See Also
 
-- **API Reference:** {doc}`Datasets and Example Models API <../api/data>`
-- **Examples:** {doc}`Inference in Discrete BN <../examples/Inference_Discrete_BN>` | {doc}`Simulating Data <../examples/Simulating_Data>`
-- **Previous:** {doc}`datasets` -- built-in datasets for testing
-- **Next:** {doc}`io` -- import and export models in various formats
+:::{seealso}
+- {doc}`Probabilistic Inference <probabilistic_inference>` — Query loaded parameterized models.
+- {doc}`Simulations <simulations>` — Sample data from loaded parameterized models.
+- {doc}`Example Datasets <datasets>` — Companion data tables for benchmarking.
+:::
+
+## API Reference
+
+For the full list of available models:
+
+- {doc}`Datasets and Example Models API <../api/data>`
+- {doc}`Models API <../api/models>`
