@@ -18,11 +18,11 @@ class Airfoil(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/airfoil-self-noise/"
+    base_url = "real/airfoil-self-noise"
 
-    data_url = base_url + "data/airfoil-self-noise.continuous.txt"
+    data_url = "data/airfoil-self-noise.continuous.txt"
     ground_truth_url = None
-    expert_knowledge_url = base_url + "ground.truth/airfoil-self-noise.knowledge.txt"
+    expert_knowledge_url = "ground.truth/airfoil-self-noise.knowledge.txt"
 
     categorical_variables = []
     ordinal_variables = dict()

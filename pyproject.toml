@@ -25,6 +25,7 @@ classifiers = [
 ]
 
 dependencies = [
+  "huggingface_hub>=0.23",
   "networkx>=3.0",
   "numpy>=2.0",
   "scipy>=1.10",

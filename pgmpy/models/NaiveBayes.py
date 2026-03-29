@@ -113,10 +113,10 @@ class NaiveBayes(DiscreteBayesianNetwork):
         >>> model = NaiveBayes()
         >>> model.add_nodes_from(["a", "b", "c", "d"])
         >>> model.add_edges_from([("a", "b"), ("a", "c"), ("a", "d")])
-        >>> model.active_trail_nodes("a")
-        {'a', 'd', 'c', 'b'}
-        >>> model.active_trail_nodes("a", ["b", "c"])
-        {'a', 'd'}
+        >>> sorted(model.active_trail_nodes("a"))
+        ['a', 'b', 'c', 'd']
+        >>> sorted(model.active_trail_nodes("a", ["b", "c"]))
+        ['a', 'd']
         >>> model.active_trail_nodes("b", ["a"])
         {'b'}
         """
@@ -143,8 +143,9 @@ class NaiveBayes(DiscreteBayesianNetwork):
         >>> model = NaiveBayes()
         >>> model.add_edges_from([("a", "b"), ("a", "c"), ("a", "d")])
         >>> ind = model.local_independencies("b")
-        >>> ind
-        (b \u27c2 d, c | a)
+        >>> assertion = ind.get_assertions()[0]
+        >>> sorted(assertion.event1), sorted(assertion.event2), sorted(assertion.event3)
+        (['b'], ['c', 'd'], ['a'])
         """
         independencies = Independencies()
         for variable in [variables] if isinstance(variables, str) else variables:
@@ -181,14 +182,14 @@ class NaiveBayes(DiscreteBayesianNetwork):
         ...     columns=["A", "B", "C", "D", "E"],
         ... )
         >>> model.fit(values, "A")
-        >>> model.get_cpds()
-        [<TabularCPD representing P(D:2 | A:2) at 0x4b72870>,
-         <TabularCPD representing P(E:2 | A:2) at 0x4bb2150>,
-         <TabularCPD representing P(A:2) at 0x4bb23d0>,
-         <TabularCPD representing P(B:2 | A:2) at 0x4bb24b0>,
-         <TabularCPD representing P(C:2 | A:2) at 0x4bb2750>]
-        >>> model.edges()
-        [('A', 'D'), ('A', 'E'), ('A', 'B'), ('A', 'C')]
+        >>> model.get_cpds()  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        [<TabularCPD representing P(A:2) at 0x...>,
+         <TabularCPD representing P(B:2 | A:2) at 0x...>,
+         <TabularCPD representing P(C:2 | A:2) at 0x...>,
+         <TabularCPD representing P(D:2 | A:2) at 0x...>,
+         <TabularCPD representing P(E:2 | A:2) at 0x...>]
+        >>> sorted(model.edges())
+        [('A', 'B'), ('A', 'C'), ('A', 'D'), ('A', 'E')]
         """
         if not parent_node:
             if not self.dependent:
