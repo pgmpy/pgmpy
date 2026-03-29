@@ -50,6 +50,13 @@ def dbn_setup():
 
 
 @pytest.fixture
+def torch_backend():
+    config.set_backend("torch")
+    yield
+    config.set_backend("numpy")
+
+
+@pytest.fixture
 def dbn_torch_setup():
     config.set_backend("torch")
     model = DBN()
@@ -219,7 +226,7 @@ class TestApproxInferenceDBN:
     reason="execute only if required dependency present",
 )
 class TestApproxInferenceBNTorch:
-    def test_query_marg(self, alarm_setup):
+    def test_query_marg(self, alarm_setup, torch_backend):
         infer_alarm, alarm_ve, samples = alarm_setup
         query_results = infer_alarm.query(variables=["HISTORY"])
         ve_results = alarm_ve.query(variables=["HISTORY"])
@@ -244,7 +251,7 @@ class TestApproxInferenceBNTorch:
         for var in ["HISTORY", "CVP"]:
             assert query_results[var].__eq__(ve_results[var], atol=0.01)
 
-    def test_query_evidence(self, alarm_setup):
+    def test_query_evidence(self, alarm_setup, torch_backend):
         infer_alarm, alarm_ve, samples = alarm_setup
         query_results = infer_alarm.query(variables=["HISTORY"], evidence={"PVSAT": "LOW"}, joint=True, seed=42)
         ve_results = alarm_ve.query(variables=["HISTORY"], evidence={"PVSAT": "LOW"}, joint=True)
@@ -287,7 +294,7 @@ class TestApproxInferenceBNTorch:
         for var in ["HISTORY", "CVP"]:
             assert query_results[var].__eq__(ve_results[var], atol=0.01)
 
-    def test_virtual_evidence(self, alarm_setup):
+    def test_virtual_evidence(self, alarm_setup, torch_backend):
         infer_alarm, alarm_ve, _ = alarm_setup
         virtual_evid = TabularCPD(
             "PAP",
