@@ -10,7 +10,6 @@ from pgmpy.example_models import load_model
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import LinearGaussianBayesianNetwork
-from pgmpy.utils import get_example_model
 
 
 class TestLGBNMethods(unittest.TestCase):
@@ -285,9 +284,9 @@ class TestLGBNMethods(unittest.TestCase):
                 )
 
         # Test fit on the alarm model
-        model = get_example_model("alarm")
+        model = load_model("bnlearn/alarm")
         model_lin = LinearGaussianBayesianNetwork(model.edges())
-        cpds = model_lin.get_random_cpds()
+        cpds = model_lin.get_random_cpds(seed=42)
         model_lin.add_cpds(*cpds)
         df = model_lin.simulate(n_samples=int(1e6), seed=42)
 
@@ -331,7 +330,7 @@ class TestLGBNMethods(unittest.TestCase):
         )
 
     def test_predict_ecoli(self):
-        model = get_example_model("ecoli70")
+        model = load_model("bnlearn/ecoli70")
         df = model.simulate(n_samples=10, seed=18)
         df = df.drop(["yceP", "yheI", "cspA"], axis=1)
         result = model.predict(df)
@@ -412,10 +411,15 @@ class TestLGBNMethods(unittest.TestCase):
         self.assertEqual(cov.round(2).squeeze(), 5.76)
 
     def test_get_random_cpds(self):
-        model = get_example_model("alarm")
+        model = load_model("bnlearn/alarm")
         model_lin = LinearGaussianBayesianNetwork(model.edges())
         cpds = model_lin.get_random_cpds()
         self.assertEqual(len(cpds), len(model.nodes()))
+        cpds1 = model_lin.get_random_cpds(seed=None)
+        cpds2 = model_lin.get_random_cpds(seed=None)
+        betas1 = [cpd.beta[0] for cpd in cpds1]
+        betas2 = [cpd.beta[0] for cpd in cpds2]
+        self.assertFalse(betas1 == betas2)
 
     def test_get_random(self):
         model1 = LinearGaussianBayesianNetwork.get_random(n_nodes=10, edge_prob=0.8)

@@ -5,10 +5,9 @@ import networkx as nx
 import pandas as pd
 
 from pgmpy.base import PDAG, UndirectedGraph
-from pgmpy.causal_discovery import _ConstraintMixin
-from pgmpy.causal_discovery._base import _BaseCausalDiscovery
-from pgmpy.estimators import ExpertKnowledge
-from pgmpy.estimators.CITests import ci_registry
+from pgmpy.causal_discovery import ExpertKnowledge
+from pgmpy.causal_discovery._base import _BaseCausalDiscovery, _ConstraintMixin
+from pgmpy.ci_tests import get_ci_test
 
 
 class PC(_ConstraintMixin, _BaseCausalDiscovery):
@@ -75,7 +74,7 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
 
     ci_test : str or callable, default=None
         The conditional independence (CI) test to use for finding (conditional) independences in the data. This can be
-        any of the CI test implemented in :mod:`pgmpy.estimators.CITests` or a custom function that follows the
+        any of the CI test implemented in :mod:`pgmpy.ci_tests` or a custom function that follows the
         signature of the built-in CI tests.
 
         If None, the appropriate CI test will be chosen based on the data type.
@@ -149,8 +148,8 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
     --------
     Simulate some data to use for causal discovery:
 
-    >>> from pgmpy.utils import get_example_model
-    >>> model = get_example_model("alarm")
+    >>> from pgmpy.example_models import load_model
+    >>> model = load_model("bnlearn/alarm")
     >>> df = model.simulate(n_samples=1000, seed=42)
 
     Use the PC algorithm to learn the causal structure from data:
@@ -158,7 +157,11 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
     >>> from pgmpy.causal_discovery import PC
     >>> pc = PC(variant="parallel", ci_test="chi_square", significance_level=0.01)
     >>> pc.fit(df)
-    >>> pc.causal_graph_.edges()
+    PC(ci_test='chi_square')
+    >>> pc.causal_graph_  # doctest: +ELLIPSIS
+    <pgmpy.base.PDAG.PDAG object at 0x...>
+    >>> pc.n_features_in_
+    37
 
     Specify expert knowledge:
 
@@ -217,7 +220,7 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
         """
 
         # CI test
-        ci_test = ci_registry.get_test(self.ci_test, data=X)
+        ci_test = get_ci_test(test=self.ci_test, data=X)
 
         if self.expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
@@ -309,16 +312,13 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
         --------
         >>> import pandas as pd
         >>> import numpy as np
-        >>> from pgmpy.estimators import PC
-        >>> data = pd.DataFrame(
-        ...     np.random.randint(0, 4, size=(5000, 3)), columns=list("ABD")
-        ... )
-        >>> data["C"] = data["A"] - data["B"]
-        >>> data["D"] += data["A"]
-        >>> c = PC(data)
-        >>> pdag = c._orient_colliders(*c._build_skeleton())
-        >>> pdag.edges()  # edges: A->C, B->C, A--D (not directed)
-        OutEdgeView([('B', 'C'), ('A', 'C'), ('A', 'D'), ('D', 'A')])
+        >>> from pgmpy.causal_discovery import PC
+        >>> from pgmpy.example_models import load_model
+        >>> df = load_model("bnlearn/cancer").simulate(int(1e3), seed=42)
+        >>> est = PC(ci_test='chi_square').fit(df)
+        >>> pdag = est._orient_colliders(est.skeleton_, est.separating_sets_)
+        >>> sorted(pdag.edges())
+        [('Pollution', 'Cancer'), ('Xray', 'Cancer')]
         """
 
         pdag = skeleton.to_directed()

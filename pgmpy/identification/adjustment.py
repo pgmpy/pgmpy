@@ -12,8 +12,8 @@ class Adjustment(_BaseIdentification):
     Given a causal graph, finds the adjustment set.
 
     This class implements a few variants for computing adjustment sets for
-    identifying the total causal effect of the `exposure` variables on
-    `outcome` variables. Additionally, it provides methods to check if the
+    identifying the total causal effect of the variables in the `exposures`
+    role on the variables in the `outcomes` role. Additionally, it provides methods to check if the
     current set of variables with role `adjustment` satisfy the backdoor
     criterion and to compute the backdoor adjustment formula.
 
@@ -68,10 +68,10 @@ class Adjustment(_BaseIdentification):
         """
         Returns a proper backdoor graph of the `causal_graph`.
 
-        For a `causal_graph` with variable roles `exposure` and `outcome`
+        For a `causal_graph` with variable roles `exposures` and `outcomes`
         defined, returns it's proper backdoor graph. A proper backdoor graph is
         a graph which removes the first edge of every proper causal path from
-        `exposure` to `outcome`.
+        `exposures` to `outcomes`.
 
         Parameters
         ----------
@@ -184,7 +184,7 @@ class Adjustment(_BaseIdentification):
         """
         Validate the causal graph for backdoor identification.
 
-        Given a `causal_graph` with variable roles `exposure`, `outcome`, and
+        Given a `causal_graph` with variable roles `exposures`, `outcomes`, and
         `adjustment` defined, this method checks if the given `adjustment` set
         is valid.
 

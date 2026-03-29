@@ -2,7 +2,7 @@ from math import isclose
 
 from skbase.utils.dependencies import _safe_import
 
-from pgmpy.global_vars import logger
+from pgmpy import logger
 
 torch = _safe_import("torch")
 optim = _safe_import("torch.optim")

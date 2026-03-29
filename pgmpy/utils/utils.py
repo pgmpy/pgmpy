@@ -1,4 +1,5 @@
 import gzip
+import warnings
 
 import pandas as pd
 
@@ -8,7 +9,7 @@ except ImportError:
     # For python 3.8 and lower
     from importlib_resources import files
 
-from pgmpy.global_vars import logger
+from pgmpy import logger
 
 
 def get_example_model(model: str):
@@ -47,9 +48,10 @@ def get_example_model(model: str):
       one of the model classes in pgmpy.models
                            depending on the type of dataset.
     """
-    logger.warning(
-        "Deprecation Warning: `get_example_model` is deprecated and will be removed in a future release. "
-        "Please use `pgmpy.example_models.load_model` instead."
+    warnings.warn(
+        "`get_example_model` is deprecated. Please use `pgmpy.example_models.load_model` instead.",
+        FutureWarning,
+        stacklevel=2,
     )
     cat_models = {
         "asia",
@@ -488,6 +490,19 @@ def to_timeseries_format(df: pd.DataFrame, return_format: str = "pd-multiindex")
 
     Examples
     --------
+    >>> import pandas as pd
+    >>> df = pd.DataFrame(
+    ...     [
+    ...         [1, 1, 0, 0, 0, 0, 0, 1, 0],
+    ...         [0, 2, 0, 1, 1, 1, 1, 1, 1],
+    ...     ],
+    ...     columns=[
+    ...         ("D", 0), ("G" , 0), ("I" , 0),
+    ...         ("D", 1), ("G", 1),
+    ...         ("D", 2), ("G", 2),
+    ...         ("I", 1), ("I", 2)
+    ...     ],
+    ... )
 
     For input dataframe `df`, represented in the wide format
 
@@ -496,12 +511,12 @@ def to_timeseries_format(df: pd.DataFrame, return_format: str = "pd-multiindex")
     1      0      2      0      1      1      1      1      1      1
 
     >>> to_timeseries_format(df, return_format="numpy3d")
-    [[[1 0 0]
-      [1 0 0]
-      [0 1 0]]
-     [[0 1 1]
-      [2 1 1]
-      [0 1 1]]]
+    array([[[1, 0, 0],
+            [1, 0, 0],
+            [0, 1, 0]],
+            [[0, 1, 1],
+            [2, 1, 1],
+            [0, 1, 1]]])
 
     >>> to_timeseries_format(df, return_format="pd-multiindex")
     variable       D  G  I
@@ -526,10 +541,10 @@ def to_timeseries_format(df: pd.DataFrame, return_format: str = "pd-multiindex")
      2         1  1  1]
 
     >>> to_timeseries_format(df, return_format="sorted")
-            (D,0), (D,1), (D,2), (G,0), (G,1), (G,2), (I,0), (I,1), (I,2)
-    0         1      0      0      1      0      0      0      1      0
-    1         0      1      1      2      1      1      0      1      1
-
+    variable D     G     I
+    time     0 1 2 0 1 2 0 1 2
+    0        1 0 0 1 0 0 0 1 0
+    1        0 1 1 2 1 1 0 1 1
     """
     x = df.copy()
 

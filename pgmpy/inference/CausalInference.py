@@ -1,3 +1,4 @@
+import warnings
 from collections.abc import Iterable
 from itertools import chain, product
 
@@ -6,11 +7,10 @@ import numpy as np
 from networkx.algorithms.dag import descendants
 from tqdm.auto import tqdm
 
-from pgmpy import config
+from pgmpy import config, logger
 from pgmpy.base import DAG
 from pgmpy.estimators.LinearModel import LinearEstimator
 from pgmpy.factors.discrete import DiscreteFactor
-from pgmpy.global_vars import logger
 from pgmpy.models import (
     DiscreteBayesianNetwork,
     FunctionalBayesianNetwork,
@@ -42,7 +42,9 @@ class CausalInference:
     >>> from pgmpy.inference.CausalInference import CausalInference
     >>> inference = CausalInference(game)
     >>> inference.get_all_backdoor_adjustment_sets(X="X", Y="Y")
+    frozenset()
     >>> inference.get_all_frontdoor_adjustment_sets(X="X", Y="Y")
+    frozenset({frozenset({'A'})})
 
     References
     ----------
@@ -120,9 +122,10 @@ class CausalInference:
         >>> inference.is_valid_backdoor_adjustment_set("X", "Y")
         True
         """
-        logger.warning(
-            "Deprecation Warning: This method will be deprecated in future releases. "
-            "Please use pgmpy.identification.Adjustment class instead."
+        warnings.warn(
+            "`is_valid_backdoor_adjustment_set` is deprecated. Please use pgmpy.identification.Adjustment instead.",
+            FutureWarning,
+            stacklevel=2,
         )
 
         Z_ = _variable_or_iterable_to_set(Z)
@@ -164,9 +167,10 @@ class CausalInference:
         >>> inference.get_all_backdoor_adjustment_sets("X", "Y")
         frozenset()
         """
-        logger.warning(
-            "Deprecation Warning: This method will be deprecated in future releases. "
-            "Please use pgmpy.identification.Adjustment class instead."
+        warnings.warn(
+            "`get_all_backdoor_adjustment_sets` is deprecated. Please use pgmpy.identification.Adjustment instead.",
+            FutureWarning,
+            stacklevel=2,
         )
 
         try:
@@ -216,9 +220,10 @@ class CausalInference:
         Is valid frontdoor adjustment: bool
             True if Z is a valid frontdoor adjustment set.
         """
-        logger.warning(
-            "Deprecation Warning: This method will be deprecated in future releases. "
-            "Please use pgmpy.identification.Frontdoor class instead."
+        warnings.warn(
+            "`is_valid_frontdoor_adjustment_set` is deprecated. Please use pgmpy.identification.Frontdoor instead.",
+            FutureWarning,
+            stacklevel=2,
         )
         Z = _variable_or_iterable_to_set(Z)
 
@@ -270,9 +275,10 @@ class CausalInference:
         -------
         frozenset: a frozenset of frozensets
         """
-        logger.warning(
-            "Deprecation Warning: This method will be deprecated in future releases. "
-            "Please use pgmpy.identification.Frontdoor class instead."
+        warnings.warn(
+            "`get_all_frontdoor_adjustment_sets` is deprecated. Please use pgmpy.identification.Frontdoor instead.",
+            FutureWarning,
+            stacklevel=2,
         )
         assert X in self.observed_variables
         assert Y in self.observed_variables
@@ -308,8 +314,8 @@ class CausalInference:
         ...     ],
         ...     latents=["xi1", "eta1"],
         ... )
-        >>> model.get_scaling_indicators()
-        {'xi1': 'x1', 'eta1': 'y1'}
+        >>> sorted(model.get_scaling_indicators().items())
+        [('eta1', 'y1'), ('xi1', 'x1')]
 
         Returns
         -------
@@ -359,9 +365,11 @@ class CausalInference:
         ...     ],
         ...     latents=["xi1", "eta1"],
         ... )
-        >>> model._iv_transformations(
+        >>> inference = CausalInference(model)
+        >>> inference._iv_transformations(
         ...     "xi1", "eta1", scaling_indicators={"xi1": "x1", "eta1": "y1"}
-        ... )
+        ... ) # doctest: +ELLIPSIS
+        (<pgmpy.base.DAG.DAG object at 0x...>, 'y1')
         """
         full_graph = self.dag.copy()
 
@@ -417,7 +425,8 @@ class CausalInference:
         >>> model = SEMGraph(
         ...     ebunch=[("I", "X"), ("X", "Y")], latents=[], err_corr=[("X", "Y")]
         ... )
-        >>> model.get_ivs("X", "Y")
+        >>> inference = CausalInference(model)
+        >>> inference.get_ivs("X", "Y")
         {'I'}
         """
         if not scaling_indicators:
@@ -479,7 +488,8 @@ class CausalInference:
         ...     latents=[],
         ...     err_corr=[("W", "Y")],
         ... )
-        >>> model.get_ivs("X", "Y")
+        >>> inference = CausalInference(model)
+        >>> inference.get_conditional_ivs("X", "Y")
         [('I', {'W'})]
         """
         if not scaling_indicators:
@@ -722,18 +732,20 @@ class CausalInference:
         Examples
         --------
         >>> import pandas as pd
+        >>> import numpy as np
+        >>> rng = np.random.default_rng(42)
         >>> game1 = DiscreteBayesianNetwork([("X", "A"), ("A", "Y"), ("A", "B")])
         >>> data = pd.DataFrame(
-        ...     np.random.randint(2, size=(1000, 4)), columns=["X", "A", "B", "Y"]
+        ...     rng.random(size=(1000, 4)), columns=["X", "A", "B", "Y"]
         ... )
         >>> inference = CausalInference(model=game1)
-        >>> inference.estimate_ate("X", "Y", data=data, estimator_type="linear")
+        >>> float(round(inference.estimate_ate("X", "Y", data=data, estimator_type="linear"), 15))
+        0.001138244615115
+
         """
         valid_estimators = ["linear"]
-        try:
-            assert estimator_type in valid_estimators
-        except AssertionError:
-            print(f"{estimator_type} if not a valid estimator_type.  Please select from {valid_estimators}")
+        if estimator_type not in valid_estimators:
+            raise ValueError(f"{estimator_type} is not a valid estimator_type. Please select from {valid_estimators}")
         all_simple_paths = nx.all_simple_paths(self.model, X, Y)
         all_path_effects = []
         for path in all_simple_paths:
@@ -781,8 +793,8 @@ class CausalInference:
         ...     [("x1", "y1"), ("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")]
         ... )
         >>> c_infer = CausalInference(model)
-        >>> c_infer.get_proper_backdoor_graph(X=["x1", "x2"], Y=["y1", "y2"])
-        <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork at 0x7fba501ad940>
+        >>> c_infer.get_proper_backdoor_graph(X=["x1", "x2"], Y=["y1", "y2"]) # doctest: +ELLIPSIS
+        <pgmpy.base.DAG.DAG object at 0x...>
 
         References
         ----------
@@ -951,11 +963,11 @@ class CausalInference:
 
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model("alarm")
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/alarm")
         >>> infer = CausalInference(model)
-        >>> infer.query(["HISTORY"], do={"CVP": "LOW"}, evidence={"HR": "LOW"})
-        <DiscreteFactor representing phi(HISTORY:2) at 0x7f4e0874c2e0>
+        >>> infer.query(["HISTORY"], do={"CVP": "LOW"}, evidence={"HR": "LOW"}) # doctest: +ELLIPSIS
+        <DiscreteFactor representing phi(HISTORY:2) at 0x...>
         """
         # Step 1: Check if all the arguments are valid and get them to uniform types.
         if (not isinstance(variables, Iterable)) or (isinstance(variables, str)):

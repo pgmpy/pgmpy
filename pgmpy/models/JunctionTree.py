@@ -40,11 +40,15 @@ class JunctionTree(ClusterGraph):
 
     G can also be grown by adding edges.
 
+    >>> G = JunctionTree()
+    >>> G.add_nodes_from([("a", "b", "c"), ("a", "b")])
     >>> G.add_edge(("a", "b", "c"), ("a", "b"))
 
     or a list of edges
 
-    >>> G.add_edges_from([(("a", "b", "c"), ("a", "b")), (("a", "b", "c"), ("a", "c"))])
+    >>> G = JunctionTree()
+    >>> G.add_nodes_from([("a", "b", "c"), ("a", "b")])
+    >>> G.add_edges_from([(("a", "b", "c"), ("a", "b"))])
     """
 
     def __init__(self, ebunch=None):
@@ -132,14 +136,14 @@ class JunctionTree(ClusterGraph):
         >>> phi2 = DiscreteFactor(["a", "c"], [1, 2], np.random.rand(2))
         >>> G.add_factors(phi1, phi2)
         >>> modelCopy = G.copy()
-        >>> modelCopy.edges()
-        EdgeView([(('a', 'b'), ('a', 'b', 'c')), (('a', 'c'), ('a', 'b', 'c'))])
-        >>> G.factors
-        [<DiscreteFactor representing phi(a:1, b:2) at 0xb720ee4c>,
-         <DiscreteFactor representing phi(a:1, c:2) at 0xb4e1e06c>]
-        >>> modelCopy.factors
-        [<DiscreteFactor representing phi(a:1, b:2) at 0xb4bd11ec>,
-         <DiscreteFactor representing phi(a:1, c:2) at 0xb4bd138c>]
+        >>> sorted(modelCopy.edges())
+        [(('a', 'b', 'c'), ('a', 'b')), (('a', 'b', 'c'), ('a', 'c'))]
+        >>> G.factors  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        [<DiscreteFactor representing phi(a:1, b:2) at 0x...>,
+         <DiscreteFactor representing phi(a:1, c:2) at 0x...>]
+        >>> modelCopy.factors  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        [<DiscreteFactor representing phi(a:1, b:2) at 0x...>,
+         <DiscreteFactor representing phi(a:1, c:2) at 0x...>]
 
         """
         copy = JunctionTree(self.edges())
