@@ -24,6 +24,7 @@ def test_ci_registry():
     assert "fisher_z" in all_tests
     assert "pillai" in all_tests
     assert "gcm" in all_tests
+    assert "regression_based_lr" in all_tests
 
 
 @pytest.fixture
