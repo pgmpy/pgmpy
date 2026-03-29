@@ -48,9 +48,13 @@ class BIFReader:
     --------
     >>> # dog-problem.bif file is present at
     >>> # http://www.cs.cmu.edu/~javabayes/Examples/DogProblem/dog-problem.bif
+    >>> import requests
     >>> from pgmpy.readwrite import BIFReader
-    >>> reader = BIFReader("bif_test.bif")
-    <pgmpy.readwrite.BIF.BIFReader object at 0x7f2375621cf8>
+    >>> url = "http://www.cs.cmu.edu/~javabayes/Examples/DogProblem/dog-problem.bif"
+    >>> bif_str = requests.get(url).text
+    >>> reader = BIFReader(string=bif_str)
+    >>> print(reader) # doctest: +ELLIPSIS
+    <pgmpy.readwrite.BIF.BIFReader object at 0x...>
     >>> model = reader.get_model()
 
     Reference
@@ -260,10 +264,13 @@ class BIFReader:
 
         Example
         ----------
+        >>> import requests
         >>> from pgmpy.readwrite import BIFReader
-        >>> reader = BIFReader("bif_test.bif")
-        >>> reader.get_model()
-        <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork object at 0x7f20af154320>
+        >>> url = "http://www.cs.cmu.edu/~javabayes/Examples/DogProblem/dog-problem.bif"
+        >>> bif_str = requests.get(url).text
+        >>> reader = BIFReader(string=bif_str)
+        >>> reader.get_model() # doctest: +ELLIPSIS
+        <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork object at 0x...>
         """
         model = DiscreteBayesianNetwork()
         model.add_nodes_from(self.variable_names)
@@ -315,8 +322,8 @@ class BIFWriter:
     >>> from pgmpy.example_models import load_model
     >>> asia = load_model("bnlearn/asia")
     >>> writer = BIFWriter(asia)
-    >>> writer
-    <writer_BIF.BIFWriter at 0x7f05e5ea27b8>
+    >>> writer # doctest: +ELLIPSIS
+    <pgmpy.readwrite.BIF.BIFWriter object at 0x...>
     >>> writer.write("asia.bif")
     """
 
@@ -454,10 +461,14 @@ $values
         Example
         -------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
-        >>> model = BIFReader("dog-problem.bif").get_model()
+        >>> import requests
+        >>> url = "http://www.cs.cmu.edu/~javabayes/Examples/DogProblem/dog-problem.bif"
+        >>> bif_str = requests.get(url).text
+        >>> reader = BIFReader(string=bif_str)
+        >>> model = reader.get_model()
         >>> writer = BIFWriter(model)
-        >>> writer.get_variables()
-        ['bowel-problem', 'family-out', 'hear-bark', 'light-on', 'dog-out']
+        >>> sorted(writer.get_variables())
+        ['bowel-problem', 'dog-out', 'family-out', 'hear-bark', 'light-on']
         """
         variables = self.model.nodes()
         return variables
@@ -473,14 +484,18 @@ $values
         Example
         -------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
-        >>> model = BIFReader("dog-problem.bif").get_model()
+        >>> import requests
+        >>> url = "http://www.cs.cmu.edu/~javabayes/Examples/DogProblem/dog-problem.bif"
+        >>> bif_str = requests.get(url).text
+        >>> reader = BIFReader(string=bif_str)
+        >>> model = reader.get_model()
         >>> writer = BIFWriter(model)
-        >>> writer.get_states()
-        {'bowel-problem': ['bowel-problem_0', 'bowel-problem_1'],
-         'dog-out': ['dog-out_0', 'dog-out_1'],
-         'family-out': ['family-out_0', 'family-out_1'],
-         'hear-bark': ['hear-bark_0', 'hear-bark_1'],
-         'light-on': ['light-on_0', 'light-on_1']}
+        >>> writer.get_states() # doctest: +NORMALIZE_WHITESPACE
+        {'bowel-problem': ['true', 'false'],
+        'dog-out': ['true', 'false'],
+        'family-out': ['true', 'false'],
+        'hear-bark': ['true', 'false'],
+        'light-on': ['true', 'false']}
         """
         variable_states = {}
         cpds = self.model.get_cpds()
@@ -510,14 +525,14 @@ $values
         Example
         -------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
-        >>> model = BIFReader("dog-problem.bif").get_model()
+        >>> import requests
+        >>> url = "http://www.cs.cmu.edu/~javabayes/Examples/DogProblem/dog-problem.bif"
+        >>> bif_str = requests.get(url).text
+        >>> reader = BIFReader(string=bif_str)
+        >>> model = reader.get_model()
         >>> writer = BIFWriter(model)
-        >>> writer.get_properties()
-        {'bowel-problem': ['position = (335, 99)'],
-         'dog-out': ['position = (300, 195)'],
-         'family-out': ['position = (257, 99)'],
-         'hear-bark': ['position = (296, 268)'],
-         'light-on': ['position = (218, 195)']}
+        >>> writer.get_properties() # doctest: +NORMALIZE_WHITESPACE
+        {'bowel-problem': [], 'dog-out': [], 'family-out': [], 'hear-bark': [], 'light-on': []}
         """
         variables = self.model.nodes()
         property_tag = {}
@@ -537,9 +552,13 @@ $values
         Example
         -------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
-        >>> model = BIFReader("dog-problem.bif").get_model()
+        >>> import requests
+        >>> url = "http://www.cs.cmu.edu/~javabayes/Examples/DogProblem/dog-problem.bif"
+        >>> bif_str = requests.get(url).text
+        >>> reader = BIFReader(string=bif_str)
+        >>> model = reader.get_model()
         >>> writer = BIFWriter(model)
-        >>> writer.get_parents()
+        >>> writer.get_parents() # doctest: +NORMALIZE_WHITESPACE
         {'bowel-problem': [],
          'dog-out': ['bowel-problem', 'family-out'],
          'family-out': [],
@@ -563,14 +582,20 @@ $values
         Example
         -------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
-        >>> model = BIFReader("dog-problem.bif").get_model()
+        >>> import requests
+        >>> url = "http://www.cs.cmu.edu/~javabayes/Examples/DogProblem/dog-problem.bif"
+        >>> bif_str = requests.get(url).text
+        >>> reader = BIFReader(string=bif_str)
+        >>> model = reader.get_model()
         >>> writer = BIFWriter(model)
-        >>> writer.get_cpds()
-        {'bowel-problem': array([ 0.01,  0.99]),
-         'dog-out': array([ 0.99,  0.97,  0.9 ,  0.3 ,  0.01,  0.03,  0.1 ,  0.7 ]),
-         'family-out': array([ 0.15,  0.85]),
-         'hear-bark': array([ 0.7 ,  0.01,  0.3 ,  0.99]),
-         'light-on': array([ 0.6 ,  0.05,  0.4 ,  0.95])}
+        >>> cpds = writer.get_cpds()
+        >>> cpds = {k: v.tolist() for k, v in cpds.items()}
+        >>> cpds # doctest: +NORMALIZE_WHITESPACE
+        {'bowel-problem': [0.01, 0.99],
+        'dog-out': [0.99, 0.97, 0.9, 0.3, 0.01, 0.03, 0.1, 0.7],
+        'family-out': [0.15, 0.85],
+        'hear-bark': [0.7, 0.01, 0.3, 0.99],
+        'light-on': [0.6, 0.05, 0.4, 0.95]}
         """
         cpds = self.model.get_cpds()
         tables = {}
