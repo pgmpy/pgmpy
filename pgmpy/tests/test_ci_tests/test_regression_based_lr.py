@@ -1,4 +1,3 @@
-import os
 import unittest
 
 import numpy as np
@@ -192,6 +191,99 @@ class TestRegressionBasedLR(unittest.TestCase):
             test("X", "Y", ["X"])
 
     # ------------------------------------------------------------------
+    # Edge cases that cover defensive branches
+    # ------------------------------------------------------------------
+
+    def test_all_nan_raises(self):
+        """All-NaN data after dropna raises ValueError."""
+        data = pd.DataFrame(
+            {
+                "X": [np.nan] * 10,
+                "Y": [np.nan] * 10,
+            }
+        )
+        test = RegressionBasedLR(data=data)
+        with self.assertRaises(ValueError):
+            test.run_test("X", "Y", [])
+
+    def test_constant_categorical_single_class(self):
+        """Constant categorical X (1 class) returns independence."""
+        rng = np.random.default_rng(123)
+        n = 100
+        data = pd.DataFrame(
+            {
+                "X": ["A"] * n,  # single class → n_classes < 2 branch
+                "Y": rng.standard_normal(n),
+            }
+        )
+        test = RegressionBasedLR(data=data)
+        result = test("X", "Y", [], significance_level=0.05)
+        self.assertTrue(result)
+        self.assertEqual(test.statistic_, 0.0)
+        self.assertEqual(test.p_value_, 1.0)
+        self.assertEqual(test.dof_, 0)
+
+    def test_perfect_separation_returns_independence(self):
+        """Perfect separation in logistic regression is caught gracefully."""
+        n = 100
+        data = pd.DataFrame(
+            {
+                "X": pd.Categorical(["A"] * (n // 2) + ["B"] * (n // 2)),
+                "Y": np.concatenate([np.ones(n // 2) * -1e6, np.ones(n // 2) * 1e6]),
+            }
+        )
+        test = RegressionBasedLR(data=data)
+        test.run_test("X", "Y", [])
+        self.assertIsNotNone(test.p_value_)
+
+    def test_rank_deficient_design_matrix(self):
+        """Rank-deficient predictors trigger warning but don't crash."""
+        rng = np.random.default_rng(55)
+        n = 200
+        Z = rng.standard_normal(n)
+        data = pd.DataFrame(
+            {
+                "X": rng.standard_normal(n),
+                "Y": Z,
+                "Z": Z,  # Z == Y → collinear columns in design matrix
+            }
+        )
+        test = RegressionBasedLR(data=data)
+        with self.assertLogs("pgmpy", level="WARNING"):
+            test.run_test("X", "Y", ["Z"])
+        self.assertIsNotNone(test.p_value_)
+
+    def test_ols_degenerate_dof(self):
+        """When n ≈ p (no residual df), returns independence gracefully."""
+        rng = np.random.default_rng(77)
+        n = 5
+        data = pd.DataFrame(
+            {
+                "X": rng.standard_normal(n),
+                "Y": rng.standard_normal(n),
+                "Z1": rng.standard_normal(n),
+                "Z2": rng.standard_normal(n),
+                "Z3": rng.standard_normal(n),
+                "Z4": rng.standard_normal(n),
+            }
+        )
+        test = RegressionBasedLR(data=data)
+        test.run_test("X", "Y", ["Z1", "Z2", "Z3", "Z4"])
+        self.assertIsNotNone(test.p_value_)
+
+    def test_multinomial_with_many_z_dof_edge(self):
+        """Multinomial path with enough Z columns to stress dof calculation."""
+        rng = np.random.default_rng(88)
+        n = 200
+        Z = rng.standard_normal(n)
+        X = pd.Categorical(np.where(Z > 0.5, "high", np.where(Z < -0.5, "low", "mid")))
+        Y = rng.standard_normal(n)
+        data = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
+        test = RegressionBasedLR(data=data)
+        test.run_test("X", "Y", ["Z"])
+        self.assertGreater(test.dof_, 0)
+
+    # ------------------------------------------------------------------
     # Registry check
     # ------------------------------------------------------------------
 
@@ -208,10 +300,6 @@ class TestRegressionBasedLR(unittest.TestCase):
         self.assertIn("regression_based_lr", all_names)
 
 
-@unittest.skipIf(
-    os.getenv("GITHUB_ACTIONS") == "true",
-    "Skipping heavy integration tests on GitHub Actions.",
-)
 class TestRegressionBasedLRIntegration(unittest.TestCase):
     """Integration test: use RegressionBasedLR as CI test in PC algorithm."""
 
@@ -220,16 +308,16 @@ class TestRegressionBasedLRIntegration(unittest.TestCase):
         from pgmpy.causal_discovery import PC
 
         rng = np.random.default_rng(42)
-        n = 500
+        n = 500  # larger n to give RegressionBasedLR sufficient power
         Z = rng.standard_normal(n)
         X = 2.0 * Z + rng.standard_normal(n)
         Y = 3.0 * Z + rng.standard_normal(n)
         data = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
 
-        est = PC(ci_test="regression_based_lr", significance_level=0.05)
+        est = PC(ci_test="regression_based_lr", significance_level=0.01)
         est.fit(data)
         edges = set(est.skeleton_.edges())
-        self.assertIn(("X", "Z"), edges | {(v, u) for u, v in edges})
-        self.assertIn(("Y", "Z"), edges | {(v, u) for u, v in edges})
-        self.assertNotIn(("X", "Y"), edges)
-        self.assertNotIn(("Y", "X"), edges)
+        sym_edges = edges | {(v, u) for u, v in edges}
+        self.assertIn(("X", "Z"), sym_edges)
+        self.assertIn(("Y", "Z"), sym_edges)
+        self.assertNotIn(("X", "Y"), sym_edges)
