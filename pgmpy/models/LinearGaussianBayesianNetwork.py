@@ -523,7 +523,7 @@ class LinearGaussianBayesianNetwork(DAG):
         virtual_intervention: list[LinearGaussianCPD] | None = None,
         include_latents: bool = False,
         seed: int | None = None,
-        missing_prob=None,
+        missing_prob: dict[str, float | callable] | None = None,
     ) -> pd.DataFrame:
         """
         Simulates data from the model.
@@ -554,12 +554,9 @@ class LinearGaussianBayesianNetwork(DAG):
             Seed for the random number generator.
 
         missing_prob: dict (default: None)
-            A dictionary specifying the probability of missingness for each variable.
-            Keys must be valid variable names in the model, and values must be floats
-            between 0 and 1. Each sampled value is independently replaced with NaN
-            with the specified probability (MCAR assumption). A ValueError is raised
-            if a variable is not present in the sampled data or if the probability
-            is outside the range [0, 1].
+            A dictionary where keys are variable names (str) and values are either floats in [0,1]
+            for MCAR missingness or callable for MAR/MNAR missingness which must return a boolean array or
+            float array of probabilities in [0, 1]
 
         Returns
         -------
@@ -577,16 +574,51 @@ class LinearGaussianBayesianNetwork(DAG):
 
         Simple forward sampling
         >>> model.simulate(n_samples=3, seed=42)
+                 x1        x2        x3
+        0 -3.307168 -4.270673  9.688070
+        1 -7.195367 -9.833986  9.493212
+        2 -0.324284 -4.959026  8.758940
 
         Sampling with intervention (do)
         >>> model.simulate(n_samples=3, seed=42, do={"x2": 0.0})
+                 x1        x3   x2
+        0  2.218868  0.880048  0.0
+        1  4.001805  6.821694  0.0
+        2 -6.804141  0.093461  0.0
 
         Sampling with evidence
         >>> model.simulate(n_samples=3, seed=42, evidence={"x1": 2.0})
+            x1        x2         x3
+        0  2.0 -6.753790   8.242987
+        1  2.0 -5.284287  12.763190
+        2  2.0  1.133549  -3.023892
 
         Sampling with both intervention and evidence
         >>> model.simulate(n_samples=3, seed=42, do={"x2": 1.0}, evidence={"x1": 0.0})
+            x1        x3   x2
+        0  0.0  3.914151  1.0
+        1  0.0 -0.119952  1.0
+        2  0.0  5.251354  1.0
 
+        Sampling with missing_prob to introduce missing values
+        >>> import numpy as np
+        >>> model.simulate(n_samples=3, seed=42, missing_prob={"x1": 0.5})  #MCAR
+                 x1        x2        x3
+        0       NaN -4.270673  9.688070
+        1       NaN -9.833986  9.493212
+        2 -0.324284 -4.959026  8.758940
+
+        >>> model.simulate(n_samples=3, seed=42, missing_prob={"x2": lambda df: df["x1"] > 0.0}) #MAR
+                 x1        x2        x3
+        0 -3.307168 -4.270673  9.688070
+        1 -7.195367 -9.833986  9.493212
+        2 -0.324284 -4.959026  8.758940
+
+        >>> model.simulate(n_samples=3, seed=42, missing_prob={"x1" : 0.5, "x2": lambda df: df["x1"] > -0.4}) #Mixed
+                 x1        x2        x3
+        0       NaN -4.270673  9.688070
+        1       NaN -9.833986  9.493212
+        2 -0.324284       NaN  8.758940
         """
         # Step 1: Check if all arguments are specified and valid
         evidence = {} if evidence is None else evidence
@@ -718,21 +750,24 @@ class LinearGaussianBayesianNetwork(DAG):
         # Step 7: Handle missing_prob argument
         if missing_prob is not None:
             if not isinstance(missing_prob, dict):
-                raise ValueError(f"missing_prob should be dict[str, float]. Got {type(missing_prob)}")
+                raise ValueError(f"missing_prob must be a dict. Got {type(missing_prob)}.")
 
-            for node, prob in missing_prob.items():
+            for node, val in missing_prob.items():
                 if node not in df.columns:
-                    raise ValueError(f"{node} not present in sampled data")
+                    raise ValueError(f"'{node}' not present in sampled data columns.")
+                if not isinstance(val, (int, float)) and not callable(val):
+                    raise ValueError(f"Value for '{node}' must be a float or callable. Got {type(val)}.")
+                if isinstance(val, (int, float)) and not (0.0 <= val <= 1.0):
+                    raise ValueError(f"Missing probability for '{node}' must be in [0, 1]. Got {val}.")
 
-                if not isinstance(prob, (int, float)):
-                    raise ValueError(f"Missing probability for {node} must be numeric")
+            # Step 8: Apply masking
+            for node, val in missing_prob.items():
+                if isinstance(val, (int, float)):
+                    mask = rng.random(n_samples) < float(val)
+                else:
+                    result = np.asarray(val(df))
+                    mask = result if result.dtype == bool else rng.random(n_samples) < result
 
-                if not (0 <= prob <= 1):
-                    raise ValueError(f"Missing probability for {node} must be between 0 and 1")
-
-            # Apply masking (post-processing stage)
-            for node, prob in missing_prob.items():
-                mask = rng.random(len(df)) < prob
                 df.loc[mask, node] = np.nan
 
         return df
