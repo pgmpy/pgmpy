@@ -5,7 +5,8 @@ class TestExpertKnowledge:
     def test_repr_and_str_empty(self):
         ek = ExpertKnowledge()
         assert repr(ek) == (
-            "Expert Knowledge: 0 required edges, 0 forbidden edges, temporal order on 0 nodes, and 0 search space edges"
+            "Expert Knowledge: 0 required edges, 0 forbidden edges, "
+            "temporal order on 0 nodes, 0 search space edges, and 0 explicit orientations"
         )
         assert str(ek) == "Expert Knowledge:"
 
@@ -17,7 +18,8 @@ class TestExpertKnowledge:
             search_space=[("A", "B"), ("B", "C")],
         )
         assert repr(ek) == (
-            "Expert Knowledge: 1 required edges, 1 forbidden edges, temporal order on 2 nodes, and 2 search space edges"
+            "Expert Knowledge: 1 required edges, 1 forbidden edges, "
+            "temporal order on 2 nodes, 2 search space edges, and 0 explicit orientations"
         )
         assert "Expert Knowledge:\n" in str(ek)
         assert "Required Edges: {('A', 'B')}" in str(ek)

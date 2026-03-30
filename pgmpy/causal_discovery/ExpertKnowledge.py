@@ -90,6 +90,8 @@ class ExpertKnowledge:
         required_edges=None,
         temporal_order=None,
         search_space=None,
+        orientation_fn=None,
+        orientations=None,
         **kwargs,
     ):
         self.forbidden_edges = self._validate_edges(forbidden_edges) if forbidden_edges is not None else set()
@@ -99,6 +101,8 @@ class ExpertKnowledge:
 
         self.temporal_order = temporal_order if temporal_order is not None else [[]]
         self.temporal_ordering = self._get_temporal_ordering(self.temporal_order)
+        self.orientation_fn = orientation_fn
+        self.orientations = self._validate_edges(orientations) if orientations is not None else set()
 
     def __repr__(self):
         # Calculate total number of nodes in temporal order
@@ -107,8 +111,9 @@ class ExpertKnowledge:
         return (
             f"Expert Knowledge: {len(self.required_edges)} required edges, "
             f"{len(self.forbidden_edges)} forbidden edges, "
-            f"temporal order on {n_temporal_nodes} nodes, and "
-            f"{len(self.search_space)} search space edges"
+            f"temporal order on {n_temporal_nodes} nodes, "
+            f"{len(self.search_space)} search space edges, "
+            f"and {len(self.orientations)} explicit orientations"
         )
 
     def __str__(self):
@@ -120,6 +125,8 @@ class ExpertKnowledge:
             lines.append(f"Forbidden Edges: {self.forbidden_edges}")
         if self.search_space:
             lines.append(f"Search Space: {self.search_space}")
+        if self.orientations:
+            lines.append(f"Orientations: {self.orientations}")
         if self.temporal_order and self.temporal_order != [[]]:
             lines.append(f"Temporal Order: {self.temporal_order}")
 

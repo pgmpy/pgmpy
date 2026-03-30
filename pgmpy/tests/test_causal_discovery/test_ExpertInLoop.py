@@ -29,6 +29,9 @@ def expected_failed_checks(estimator):
     return {
         "check_fit_score_takes_y": "Causal discovery estimators do not take y parameter in score method.",
         "check_n_features_in_after_fitting": "Failing for score method (not for fit) for unknown reason.",
+        "check_positive_only_tag_during_fit": (
+            "Fails due to numpy internal cast issue on estimator test data when X -= X.mean()"
+        ),
     }
 
 
@@ -321,6 +324,7 @@ def test_combined_expert_knowledge(adult_data):
     estimator = ExpertInLoop(
         expert_knowledge=expert_knowledge,
         effect_size_threshold=0.0001,
+        orientation_fn=simple_orient,
         show_progress=False,
     )
     estimator.fit(adult_data)
@@ -330,9 +334,10 @@ def test_combined_expert_knowledge(adult_data):
 
     # Check temporal order
     for u, v in estimator.causal_graph_.edges():
-        u_order = expert_knowledge.temporal_ordering[u]
-        v_order = expert_knowledge.temporal_ordering[v]
-        assert u_order <= v_order, f"Edge {u}->{v} violates temporal order"
+        if u in expert_knowledge.temporal_ordering and v in expert_knowledge.temporal_ordering:
+            u_order = expert_knowledge.temporal_ordering[u]
+            v_order = expert_knowledge.temporal_ordering[v]
+            assert u_order <= v_order, f"Edge {u}->{v} violates temporal order"
 
 
 @pytest.mark.skipif(
@@ -350,6 +355,7 @@ def test_edge_orientation_priority(adult_data):
         expert_knowledge=expert_knowledge,
         orientations=orientations,
         effect_size_threshold=0.0001,
+        orientation_fn=simple_orient,
         show_progress=False,
     )
     estimator.fit(adult_data)

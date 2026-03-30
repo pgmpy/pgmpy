@@ -163,8 +163,11 @@ class ExpertInLoop(_BaseCausalDiscovery):
         self.pval_threshold = pval_threshold
         self.effect_size_threshold = effect_size_threshold
         self.ci_test = ci_test
+        # I am adding this because scikit-learn's get_params matches __init__ arguments to self.attributes exactly
         self.orientation_fn = orientation_fn
         self.orientations = orientations
+
+        # I am adding this because scikit-learn forbids mutating passed parameters inside __init__
         self.expert_knowledge = expert_knowledge
         self.use_cache = use_cache
         self.show_progress = show_progress
@@ -204,7 +207,14 @@ class ExpertInLoop(_BaseCausalDiscovery):
                 edge_present = False
 
             cond_set = list(set(u_parents).union(v_parents))
-            effect, p_value = ci_test.run_test(X=u, Y=v, Z=cond_set)
+            cond_set_frozen = frozenset(cond_set)
+            cache_key = (min(u, v), max(u, v), cond_set_frozen)
+
+            if cache_key in self.ci_cache_:
+                effect, p_value = self.ci_cache_[cache_key]
+            else:
+                effect, p_value = ci_test.run_test(X=u, Y=v, Z=cond_set)
+                self.ci_cache_[cache_key] = (effect, p_value)
 
             cis.append([u, v, cond_set, edge_present, effect, p_value])
 
@@ -241,7 +251,8 @@ class ExpertInLoop(_BaseCausalDiscovery):
         """
         logger.info("Returned edge orientation creates a cycle. Trying to identify the incorrect edge.")
         edges_to_remove = []
-        temp_dag = dag.copy()
+        # I am adding this because nx.DiGraph avoids the internal cyclic validation of pgmpy.base.DAG which crashes
+        temp_dag = nx.DiGraph(dag)
         temp_dag.add_edges_from([(u, v)])
         for cycle in nx.simple_cycles(temp_dag):
             for x, y in zip(cycle, cycle[1:]):
@@ -253,6 +264,71 @@ class ExpertInLoop(_BaseCausalDiscovery):
                         logger.info(f"Removing edge: {x} -> {y} to fix cycle")
 
         return edges_to_remove
+
+    def _get_edge_orientation(self, u, v):
+        """
+        Determines the orientation of an edge between u and v using expert knowledge,
+        caching, and the orientation function.
+        """
+        # I am adding this because we need to properly merge orientations from both class sources
+        orientations_set = set()
+        if (
+            self.expert_knowledge
+            and hasattr(self.expert_knowledge, "orientations")
+            and self.expert_knowledge.orientations
+        ):
+            orientations_set.update(self.expert_knowledge.orientations)
+        if hasattr(self, "orientations") and self.orientations:
+            orientations_set.update(self.orientations)
+
+        if (u, v) in orientations_set:
+            return (u, v)
+        elif (v, u) in orientations_set:
+            return (v, u)
+
+        if (
+            self.expert_knowledge
+            and hasattr(self.expert_knowledge, "temporal_ordering")
+            and self.expert_knowledge.temporal_ordering
+        ):
+            u_order = self.expert_knowledge.temporal_ordering.get(u)
+            v_order = self.expert_knowledge.temporal_ordering.get(v)
+            if u_order is not None and v_order is not None:
+                if u_order < v_order:
+                    return (u, v)
+                elif v_order < u_order:
+                    return (v, u)
+
+        if self.use_cache:
+            if (u, v) in self.orientation_cache_:
+                return (u, v)
+            elif (v, u) in self.orientation_cache_:
+                return (v, u)
+
+        # I am adding this because we must prioritize ExpertKnowledge but fallback to self.orientation_fn
+        orient_fn = None
+        if (
+            self.expert_knowledge
+            and hasattr(self.expert_knowledge, "orientation_fn")
+            and self.expert_knowledge.orientation_fn is not None
+        ):
+            orient_fn = self.expert_knowledge.orientation_fn
+        elif hasattr(self, "orientation_fn") and self.orientation_fn is not None:
+            orient_fn = self.orientation_fn
+
+        if orient_fn is None:
+            # I am adding this because if no orient function exists, we cannot guess direction
+            return None
+
+        edge_direction = orient_fn(u, v)
+        if self.use_cache and edge_direction is not None:
+            self.orientation_cache_.add(edge_direction)
+
+        if config.SHOW_PROGRESS and self.show_progress and edge_direction is not None:
+            logger.info(
+                f"\rQueried for edge orientation between {u} and {v}. Got: {edge_direction[0]} -> {edge_direction[1]}"
+            )
+        return edge_direction
 
     def _fit(self, X: pd.DataFrame):
         """
@@ -273,6 +349,9 @@ class ExpertInLoop(_BaseCausalDiscovery):
         # Initialize orientation cache (preserve if pre-populated)
         if not hasattr(self, "orientation_cache_"):
             self.orientation_cache_ = set()
+
+        # I am adding this because _test_all calculates the CI tests O(N^2) times repetitively in the loop without cache
+        self.ci_cache_ = {}
 
         # Step 0: Create a new DAG on all the variables with no edge.
         dag = DAG()
@@ -303,6 +382,22 @@ class ExpertInLoop(_BaseCausalDiscovery):
                 (edge_effects.effect < self.effect_size_threshold) & (edge_effects.p_val > self.pval_threshold)
             ]
             remove_edges = list(edge_effects.loc[:, ("u", "v")].to_records(index=False))
+
+            # I am adding this because we must protect required edges from being arbitrarily removed by Step 2
+            # original code that I felt was buggy/useless (commented out per request):
+            # remove_edges = list(edge_effects.loc[:, ("u", "v")].to_records(index=False))
+            # for edge in remove_edges:
+            #     dag.remove_edge(edge[0], edge[1])
+
+            if (
+                self.expert_knowledge
+                and hasattr(self.expert_knowledge, "required_edges")
+                and self.expert_knowledge.required_edges
+            ):
+                req_set = set(self.expert_knowledge.required_edges)
+                req_set.update([(v, u) for u, v in self.expert_knowledge.required_edges])
+                remove_edges = [edge for edge in remove_edges if edge not in req_set]
+
             for edge in remove_edges:
                 dag.remove_edge(edge[0], edge[1])
 
@@ -314,16 +409,26 @@ class ExpertInLoop(_BaseCausalDiscovery):
             ]
 
             # Step 3.2: Remove any pair of variables that are blacklisted
-            if len(blacklisted_edges) > 0:
-                blacklisted_edges_us = [edge[0] for edge in blacklisted_edges]
-                blacklisted_edges_vs = [edge[1] for edge in blacklisted_edges]
-                nonedge_effects = nonedge_effects.loc[
-                    ~(
-                        (nonedge_effects.u.isin(blacklisted_edges_us) & nonedge_effects.v.isin(blacklisted_edges_vs))
-                        | (nonedge_effects.u.isin(blacklisted_edges_vs) & nonedge_effects.v.isin(blacklisted_edges_us))
-                    ),
-                    :,
-                ]
+            # I am adding this because the naive isin() & isin() creates Cartesian product
+            # false positives which breaks valid edges
+            # original code that I felt was buggy/useless (commented out per request):
+            # if len(blacklisted_edges) > 0:
+            #     blacklisted_edges_us = [edge[0] for edge in blacklisted_edges]
+            #     blacklisted_edges_vs = [edge[1] for edge in blacklisted_edges]
+            #     nonedge_effects = nonedge_effects.loc[
+            #         ~(
+            #             (nonedge_effects.u.isin(blacklisted_edges_us) &
+            #              nonedge_effects.v.isin(blacklisted_edges_vs))
+            #             | (nonedge_effects.u.isin(blacklisted_edges_vs) &
+            #                nonedge_effects.v.isin(blacklisted_edges_us))
+            #         ),
+            #         :,
+            #     ]
+
+            if len(blacklisted_edges) > 0 and not nonedge_effects.empty:
+                bl_set = set(blacklisted_edges) | {(v, u) for u, v in blacklisted_edges}
+                mask = nonedge_effects.apply(lambda row: (row["u"], row["v"]) in bl_set, axis=1)
+                nonedge_effects = nonedge_effects[~mask]
 
             # Step 3.3: Exit loop if all correlations in data are explained by the model
             if (edge_effects.shape[0] == 0) and (nonedge_effects.shape[0] == 0):
@@ -331,52 +436,18 @@ class ExpertInLoop(_BaseCausalDiscovery):
 
             # If there are only removals and no candidate additions, continue
             # to the next iteration after having applied removals.
-            if nonedge_effects.shape[0] == 0:
+            # I am adding this because if all edges are blacklisted, argmax will
+            # throw an IndexError on an empty dataframe
+            if nonedge_effects.empty:
+                if len(remove_edges) == 0:
+                    break
                 continue
 
             # Step 3.4: Find the pair of variables with the highest effect size
             selected_edge = nonedge_effects.iloc[nonedge_effects.effect.argmax()]
-            edge_direction = None
 
             # Step 3.5: Find the edge orientation for the selected pair of variables
-            #
-            # Priority order:
-            # 1. If `orientations` are provided, use them
-            # 2. Check temporal ordering from expert_knowledge
-            # 3. Try to use cached orientations if `use_cache=True`
-            # 4. If no cached orientation, call the orientation_fn
-
-            # Get orientations set (handle None case)
-            orientations_set = self.orientations if self.orientations is not None else set()
-
-            if (selected_edge.u, selected_edge.v) in orientations_set:
-                edge_direction = (selected_edge.u, selected_edge.v)
-            elif (selected_edge.v, selected_edge.u) in orientations_set:
-                edge_direction = (selected_edge.v, selected_edge.u)
-            elif self.expert_knowledge is not None and self.expert_knowledge.temporal_ordering:
-                # Check if temporal order can determine the direction
-                u_order = self.expert_knowledge.temporal_ordering.get(selected_edge.u)
-                v_order = self.expert_knowledge.temporal_ordering.get(selected_edge.v)
-                if u_order is not None and v_order is not None:
-                    if u_order < v_order:
-                        edge_direction = (selected_edge.u, selected_edge.v)
-                    elif v_order < u_order:
-                        edge_direction = (selected_edge.v, selected_edge.u)
-            elif self.use_cache and (selected_edge.u, selected_edge.v) in self.orientation_cache_:
-                edge_direction = (selected_edge.u, selected_edge.v)
-            elif self.use_cache and (selected_edge.v, selected_edge.u) in self.orientation_cache_:
-                edge_direction = (selected_edge.v, selected_edge.u)
-            else:
-                edge_direction = self.orientation_fn(selected_edge.u, selected_edge.v)
-                if self.use_cache is True and edge_direction is not None:
-                    self.orientation_cache_.add(edge_direction)
-
-                if config.SHOW_PROGRESS and self.show_progress and edge_direction is not None:
-                    logger.info(
-                        "\rQueried for edge orientation between "
-                        f"{selected_edge.u} and {selected_edge.v}. Got: "
-                        f"{edge_direction[0]} -> {edge_direction[1]}"
-                    )
+            edge_direction = self._get_edge_orientation(selected_edge.u, selected_edge.v)
 
             # Step 3.6: Handle the edge direction
             # 1. If orientation function returns None, do not add the edge
@@ -398,9 +469,16 @@ class ExpertInLoop(_BaseCausalDiscovery):
                     effect_size_threshold=self.effect_size_threshold,
                     pval_threshold=self.pval_threshold,
                 )
-                blacklisted_edges.extend(edges_to_remove)
-                dag.remove_edges_from(edges_to_remove)
-                dag.add_edges_from([(edge_direction[0], edge_direction[1])])
+
+                # I am adding this because if _break_cycle found no eligible edge,
+                # adding the edge would introduce a permanent cycle
+                if len(edges_to_remove) == 0:
+                    logger.info("Could not find a weak edge to break cycle. Rejecting the new edge.")
+                    blacklisted_edges.append((edge_direction[0], edge_direction[1]))
+                else:
+                    blacklisted_edges.extend(edges_to_remove)
+                    dag.remove_edges_from(edges_to_remove)
+                    dag.add_edges_from([(edge_direction[0], edge_direction[1])])
             else:
                 dag.add_edges_from([edge_direction])
 
