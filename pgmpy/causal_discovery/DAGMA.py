@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import math
 
 import networkx as nx
@@ -5,9 +7,9 @@ import numpy as np
 import pandas as pd
 import scipy.linalg as slin
 import scipy.optimize as sopt
-
 from skbase.utils.dependencies import _safe_import
 
+from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery
 from pgmpy.utils import compat_fns
@@ -162,9 +164,7 @@ class DagmaLinear(_BaseCausalDiscovery):
 
         # Step 3: Configure bounds to strictly prevent self-loops
         bounds = [
-            (0, 0) if i == j else (None, None)
-            for i in range(self.n_features_in_)
-            for j in range(self.n_features_in_)
+            (0, 0) if i == j else (None, None) for i in range(self.n_features_in_) for j in range(self.n_features_in_)
         ]
 
         # Step 4: The Central Path Optimization Loop
@@ -174,32 +174,36 @@ class DagmaLinear(_BaseCausalDiscovery):
 
         for _ in range(self.max_iter):
             if backend == np:
+                # Use L-BFGS-B from SciPy for the NumPy backend
                 res = sopt.minimize(
                     fun=self._objective,
                     x0=W_est.flatten(),
-                    args=(mu),
+                    args=(mu, backend, True),  # return_grad=True
                     method="L-BFGS-B",
-                    jac=True, bounds=bounds
+                    jac=True,
+                    bounds=bounds,
                 )
-                W_est = res.x.reshape(self.n_features_in_,
-                                      self.n_features_in_).copy()
+                W_est = res.x.reshape(self.n_features_in_, self.n_features_in_).copy()
             else:  # Pytorch
+                if torch is None:
+                    raise ImportError(
+                        "PyTorch backend selected but torch is not installed. "
+                        "Install it using `pip install pgmpy[torch]`"
+                    )
 
                 from torch.optim import LBFGS
 
-                # Convert W_est to a PyTorch parameter
-                W_tensor = torch.nn.Parameter(torch.tensor(W_est,
-                                                           dtype=torch.float64,
-                                                           requires_grad=True))
+                # Convert W_est to a PyTorch parameter using global config
+                W_tensor = torch.nn.Parameter(
+                    torch.tensor(W_est, dtype=config.get_dtype(), device=config.get_device(), requires_grad=True)
+                )
 
                 # Initialize the PyTorch LBFGS optimizer
-                lbfgs = LBFGS([W_tensor],
-                              max_iter=5,
-                              line_search_fn="strong_wolfe")
+                lbfgs = LBFGS([W_tensor], max_iter=5, line_search_fn="strong_wolfe")
 
                 def closure():
                     lbfgs.zero_grad()  # Clear previous gradients
-                    loss = self._objective(W_tensor, mu, backend)
+                    loss = self._objective(W_tensor, mu, backend, return_grad=False)
                     loss.backward()  # Automatically computes the gradients
                     return loss
 
@@ -215,9 +219,7 @@ class DagmaLinear(_BaseCausalDiscovery):
         W_est[np.abs(W_est) < self.w_threshold] = 0
         self.adjacency_matrix_ = W_est
         # Panda data frame to map data features
-        df_adj = pd.DataFrame(W_est,
-                              index=self.feature_names_in_,
-                              columns=self.feature_names_in_)
+        df_adj = pd.DataFrame(W_est, index=self.feature_names_in_, columns=self.feature_names_in_)
         # Convert to a NetworkX DiGraph, for passing to pgmpy's DAG
         nx_graph = nx.from_pandas_adjacency(df_adj, create_using=nx.DiGraph)
         self.causal_graph_ = DAG(nx_graph)
@@ -228,13 +230,14 @@ class DagmaLinear(_BaseCausalDiscovery):
         self,
         w_in: np.ndarray | torch.Tensor,
         mu: float,
-    ) -> tuple[float, np.ndarray]:
+        backend,
+        return_grad: bool = True,
+    ) -> tuple[float, np.ndarray] | torch.Tensor:
         """
         The objective function for the continuous optimization, combining
         the Least Squares score, L1 penalty, and Log-Det acyclicity constraint.
         """
 
-        backend = compat_fns.get_compute_backend()
         if backend == np:
             # Step 1: Reshape the flat 1D array back into a 2D adjacency matrix
             W = w_in.reshape(self.n_features_in_, self.n_features_in_)
@@ -267,20 +270,18 @@ class DagmaLinear(_BaseCausalDiscovery):
             # (np.sign(W) is the subgradient of the L1 norm)
             G_obj = mu * (G_score + self.lambda1 * np.sign(W)) + Grad_h
 
-            # SciPy expects a flat 1D gradient array
-            return obj, G_obj.flatten()
+            # SciPy expects a flat 1D gradient array if return_grad is True
+            if return_grad:
+                return obj, G_obj.flatten()
+            return obj
 
         else:  # for pythorch
             W = w_in
 
             if not isinstance(self.cov_, torch.Tensor):
-                self.cov_ = torch.tensor(self.cov_,
-                                         dtype=W.dtype,
-                                         device=W.device)
+                self.cov_ = torch.tensor(self.cov_, dtype=W.dtype, device=W.device)
 
-            eye = torch.eye(self.n_features_in_,
-                            dtype=W.dtype,
-                            device=W.device)
+            eye = torch.eye(self.n_features_in_, dtype=W.dtype, device=W.device)
 
             # Step 1: Compute the Least Squares loss
             dif = eye - W

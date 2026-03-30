@@ -1,21 +1,12 @@
-from __future__ import annotations
-
-import math
 from collections import deque
-from collections.abc import Callable, Generator, Hashable
-from itertools import combinations, permutations
+from collections.abc import Callable, Collection, Generator, Hashable
+from itertools import chain, combinations, permutations
 
 import networkx as nx
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
-from skbase.utils.dependencies import _safe_import
 from sklearn.base import BaseEstimator
-from sklearn.metrics import (
-    adjusted_mutual_info_score,
-    mutual_info_score,
-    normalized_mutual_info_score,
-)
 from sklearn.utils.validation import check_is_fitted, validate_data
 from tqdm.auto import tqdm
 
@@ -26,10 +17,8 @@ from pgmpy.independencies import Independencies
 from pgmpy.metrics import get_metrics
 from pgmpy.structure_score import BaseStructureScore
 
-torch = _safe_import("torch")
 
-
-class BaseCausalDiscovery(BaseEstimator):
+class _BaseCausalDiscovery(BaseEstimator):
     """
     Base class for all causal discovery estimators in pgmpy.
 
@@ -127,8 +116,7 @@ class BaseCausalDiscovery(BaseEstimator):
         >>> from pgmpy.causal_discovery import PC
         >>> from pgmpy.metrics import get_metrics
         >>> from pgmpy.datasets import load_dataset
-        >>> dataset = load_dataset("lead")
-        >>> data = dataset.data
+        >>> data = load_dataset("lead")
         >>> dag = PC(return_type="dag").fit(data)
         >>> score = dag.score(X=data, metric="correlation_score")
         """
@@ -177,279 +165,6 @@ class BaseCausalDiscovery(BaseEstimator):
             raise ValueError("Either `X` or `true_graph` needs to be specified")
 
 
-class _BaseDAGMAMixin:
-    """
-    Mixin class implementing shared acyclicity constraint, optimization, and graph reconstruction logic for DAGMA and
-    its variants.
-    """
-
-    def _resolve_device_and_dtype(self) -> tuple:
-        """
-        Queries the global pgmpy configurations to resolve the PyTorch device and tensor float precision (mapping
-        string representations to torch.dtype objects).
-
-        If the global backend is ``"numpy"``, it is automatically switched to ``"torch"`` (DAGMA requires PyTorch).
-        """
-        if config.get_backend() == "numpy":
-            config.set_backend("torch")
-        device = config.get_device()
-        dtype_str = config.get_dtype()
-        if isinstance(dtype_str, str):
-            dtype = getattr(torch, dtype_str)
-        else:
-            dtype = dtype_str
-        return device, dtype
-
-    def _log_det_barrier(self, W, s: float):
-        """
-        Computes the log-determinant acyclicity barrier function:
-        h(W) = -log det(sI - W o W) + d log s
-
-        Returns
-        -------
-        is_cyclic : bool
-            True if the matrix violates the M-matrix domain (sign <= 0).
-        h : torch.Tensor or None
-            The computed barrier value if acyclic, otherwise None.
-        """
-        d = W.shape[0]
-        I = torch.eye(d, device=W.device, dtype=W.dtype)
-        M = s * I - W * W
-
-        sign, logdet = torch.slogdet(M)
-        if sign <= 0:
-            return True, None
-
-        h = -logdet + d * math.log(s)
-        return False, h
-
-    def _convert_to_dag(self, W: np.ndarray, feature_names: list, w_threshold: float, return_type: str):
-        """
-        Thresholds the estimated weight matrix and converts it into a pgmpy DAG or CPDAG.
-        """
-        W_thresh = np.where(np.abs(W) > w_threshold, W, 0)
-        # Zero out diagonal entries — self-loops are never part of a DAG
-        np.fill_diagonal(W_thresh, 0)
-        dag = nx.from_pandas_adjacency(
-            pd.DataFrame(W_thresh, index=feature_names, columns=feature_names),
-            create_using=nx.DiGraph,
-        )
-
-        # Break any residual cycles by removing the smallest-|weight| edge in each cycle.
-        # DAGMANonlinear can produce small numerical cycles at low iteration counts;
-        # DAGMALinear with proper convergence should not trigger this path. The guard
-        # is kept here (shared mixin) because both variants call _convert_to_dag.
-        while True:
-            try:
-                cycle = nx.find_cycle(dag)
-            except nx.NetworkXNoCycle:
-                break
-            # Remove the edge with the smallest absolute weight in the cycle
-            min_edge = min(cycle, key=lambda e: abs(W_thresh[feature_names.index(e[0]), feature_names.index(e[1])]))
-            dag.remove_edge(*min_edge)
-
-        if return_type == "dag":
-            return DAG(dag)
-        elif return_type == "cpdag":
-            return DAG(dag).to_pdag()
-        else:
-            raise ValueError(f"return_type must be 'dag' or 'cpdag', got {return_type}")
-
-    def _optimize(
-        self,
-        W_tensor,
-        optimizer_cls,
-        optimizer_kwargs: dict,
-        objective_fn,
-        mu_init: float,
-        mu_factor: float,
-        max_iter: int,
-        inner_iter: int = 1,
-        gradient_fn=None,
-        s_schedule=None,
-        warm_iter=None,
-        lr=None,
-        tol=1e-6,
-        checkpoint=1000,
-    ) -> np.ndarray:
-        """
-        Unified optimization loop executing the dual-loop DAGMA optimization
-        with domain-violation recovery and optional analytical gradients.
-
-        When ``gradient_fn`` is provided, gradients are computed analytically and
-        injected into ``W_param.grad`` — eliminating autograd backward pass overhead.
-        Any ``torch.optim.Optimizer`` works because all optimizers read ``param.grad``
-        the same way.
-
-        When ``gradient_fn`` is None, falls back to autograd (``loss.backward()``).
-
-        Domain-violation recovery (two-level):
-        - **Inner level:** When a step violates the M-matrix domain, the bad step is
-          undone, learning rate is halved, and the step is re-applied with the smaller
-          lr. If lr drops too low, signals failure to the outer level.
-        - **Outer level:** When the inner loop fails, W is rolled back to the
-          pre-iteration checkpoint, lr is halved, and s is loosened (+0.1).
-          Retries until success or lr < 1e-16 (gives up gracefully).
-
-        Parameters
-        ----------
-        W_tensor : torch.Tensor
-            Initial weight matrix.
-        optimizer_cls : type
-            Uninstantiated PyTorch optimizer class.
-        optimizer_kwargs : dict
-            Keyword arguments for the optimizer constructor.
-        objective_fn : callable
-            ``fn(W, mu, s) -> loss`` — computes scalar loss (with or without graph).
-        mu_init : float
-            Initial central path parameter.
-        mu_factor : float
-            Decay factor for mu (mu *= mu_factor each outer iteration).
-        max_iter : int
-            Number of outer iterations (T).
-        inner_iter : int, optional (default=1)
-            Number of inner optimization steps per outer iteration.
-            When ``warm_iter`` is provided, this applies only to the final stage.
-        gradient_fn : callable or None, optional (default=None)
-            ``fn(W, mu, s) -> (grad, is_valid)`` — analytical gradient + domain check.
-            When None, autograd ``loss.backward()`` is used.
-        s_schedule : list of float or None, optional (default=None)
-            s values per outer iteration. If None, defaults to ``[1.0] * max_iter``.
-        warm_iter : int or None, optional (default=None)
-            Inner steps for non-final outer iterations. If None, ``inner_iter`` is
-            used for all stages (no warm/final split).
-        lr : float or None, optional (default=None)
-            Initial learning rate for retry halving. If None, extracted from
-            ``optimizer_kwargs['lr']`` or defaults to 0.0003.
-        tol : float, optional (default=1e-6)
-            Relative tolerance for convergence early-stop.
-        checkpoint : int, optional (default=1000)
-            Frequency (in inner steps) of convergence checks.
-
-        Returns
-        -------
-        np.ndarray
-            Optimized weight matrix.
-        """
-        mu = mu_init
-        W_current = W_tensor.detach().clone()
-        use_analytical = gradient_fn is not None
-
-        # Resolve learning rate for retry halving
-        if lr is None:
-            lr = optimizer_kwargs.get("lr", 0.0003)
-        lr_initial = lr
-
-        # Resolve s-schedule
-        if s_schedule is None:
-            s_schedule = [1.0] * max_iter
-        elif len(s_schedule) < max_iter:
-            s_schedule = list(s_schedule) + [s_schedule[-1]] * (max_iter - len(s_schedule))
-
-        # Resolve warm/final iteration split
-        _warm_iter = warm_iter if warm_iter is not None else inner_iter
-        _final_iter = inner_iter
-
-        # Detect L-BFGS — requires step(closure) API
-        is_lbfgs = optimizer_cls is torch.optim.LBFGS
-
-        for t in range(max_iter):
-            s = s_schedule[t]
-            inner_iters = _final_iter if t == max_iter - 1 else _warm_iter
-            lr_current = lr_initial
-            success = False
-
-            while not success:
-                # Checkpoint W before this attempt (for outer-level rollback)
-                W_checkpoint = W_current.clone()
-
-                W_param = torch.nn.Parameter(W_current.clone().requires_grad_(not use_analytical))
-                opt_kw = dict(optimizer_kwargs)
-                opt_kw["lr"] = lr_current
-                optimizer = optimizer_cls([W_param], **opt_kw)
-
-                obj_prev = 1e16
-                success = True  # assume success unless proven otherwise
-
-                for i in range(1, inner_iters + 1):
-                    if use_analytical:
-                        # --- Analytical gradient path ---
-                        with torch.no_grad():
-                            grad, is_valid = gradient_fn(W_param.data, mu, s)
-
-                        if not is_valid:
-                            # Domain violation: M-matrix has negative inv entries
-                            success = False
-                            break
-
-                        W_param.grad = grad
-                        optimizer.step()
-
-                        # Convergence check (loss computed without graph)
-                        if i % checkpoint == 0 or i == inner_iters:
-                            with torch.no_grad():
-                                obj_new = objective_fn(W_param.data, mu, s).item()
-                            if abs((obj_prev - obj_new) / (abs(obj_prev) + 1e-16)) <= tol:
-                                break
-                            obj_prev = obj_new
-
-                    elif is_lbfgs:
-                        # --- L-BFGS autograd path (step-with-closure API) ---
-                        def closure():
-                            optimizer.zero_grad()
-                            loss = objective_fn(W_param, mu, s)
-                            if loss.item() >= 1e9:  # barrier violation sentinel
-                                return loss
-                            loss.backward()
-                            return loss
-
-                        loss = optimizer.step(closure)
-                        if loss.item() >= 1e9:
-                            success = False
-                            break
-
-                        if i % checkpoint == 0 or i == inner_iters:
-                            obj_new = loss.item()
-                            if abs((obj_prev - obj_new) / (abs(obj_prev) + 1e-16)) <= tol:
-                                break
-                            obj_prev = obj_new
-
-                    else:
-                        # --- Standard autograd path (Adam, SGD, etc.) ---
-                        optimizer.zero_grad()
-                        loss = objective_fn(W_param, mu, s)
-
-                        if loss.item() >= 1e9:  # barrier violation sentinel
-                            success = False
-                            break
-
-                        loss.backward()
-                        optimizer.step()
-
-                        # Convergence check
-                        if i % checkpoint == 0 or i == inner_iters:
-                            obj_new = loss.item()
-                            if abs((obj_prev - obj_new) / (abs(obj_prev) + 1e-16)) <= tol:
-                                break
-                            obj_prev = obj_new
-
-                if not success:
-                    # Outer-level recovery: rollback W, halve lr, loosen s
-                    W_current = W_checkpoint
-                    lr_current *= 0.5
-                    s = s + 0.1
-                    s_schedule[t] = s
-                    if lr_current < 1e-16:
-                        # Give up gracefully — accept current checkpoint
-                        success = True
-                else:
-                    W_current = W_param.detach().clone()
-
-            mu *= mu_factor
-
-        return W_current.cpu().numpy()
-
-
 class _ConstraintMixin:
     """
     Base class for all constraint-based causal discovery estimators.
@@ -477,6 +192,7 @@ class _ConstraintMixin:
         significance_level: float = 0.01,
         max_cond_vars: int = 5,
         expert_knowledge=None,
+        enforce_expert_knowledge: bool = False,
         n_jobs: int = -1,
         show_progress: bool = True,
         **kwargs,
@@ -537,8 +253,30 @@ class _ConstraintMixin:
             The maximum number of variables to condition on while testing
             independence.
 
-        expert_knowledge: pgmpy.causal_discovery.ExpertKnowledge instance
-            Expert knowledge to be used with the algorithm.
+        expert_knowledge: pgmpy.estimators.ExpertKnowledge instance
+            Expert knowledge to be used with the algorithm. Expert knowledge
+            includes required/forbidden edges in the final graph, temporal
+            information about the variables etc. Please refer
+            pgmpy.estimators.ExpertKnowledge class for more details.
+
+        enforce_expert_knowledge: boolean (default: False)
+            If True, the algorithm modifies the search space according to the
+            edges specified in expert knowledge object. This implies the following:
+                1. For every edge (u, v) specified in `forbidden_edges`, there will
+                    be no edge between u and v.
+                2. For every edge (u, v) specified in `required_edges`, one of the
+                    following would be present in the final model: u -> v, u <-
+                    v, or u - v (if CPDAG is returned).
+
+            If False, the algorithm attempts to make the edge orientations as
+            specified by expert knowledge after learning the skeleton. This
+            implies the following:
+                1. For every edge (u, v) specified in `forbidden_edges`, the final
+                    graph would have either v <- u or no edge except if u -> v is part
+                    of a collider structure in the learned skeleton.
+                2. For every edge (u, v) specified in `required_edges`, the final graph
+                    would either have u -> v or no edge except if v <- u is part of a
+                    collider structure in the learned skeleton.
 
         n_jobs: int (default: -1)
             The number of jobs to run in parallel.
@@ -559,8 +297,10 @@ class _ConstraintMixin:
 
         References
         ----------
-        - :footcite:t:`neapolitan_2009` (Section 10.1.2, Algorithm 10.2, page 550).
-        - :footcite:t:`koller_friedman_2009` (Section 3.4.2.1, page 85, Algorithm 3.3).
+        [1] Neapolitan, Learning Bayesian Networks, Section 10.1.2, Algorithm 10.2 (page 550)
+            http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
+        [2] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
+            Section 3.4.2.1 (page 85), Algorithm 3.3
         """
         # Initialize initial values and structures.
         lim_neighbors = 0
@@ -570,27 +310,25 @@ class _ConstraintMixin:
         else:
             ci_test = get_ci_test(test=ci_test, data=data)
 
+        if expert_knowledge is None:
+            from pgmpy.causal_discovery import ExpertKnowledge
+
+            expert_knowledge = ExpertKnowledge()
+
+        if expert_knowledge.search_space:
+            expert_knowledge.limit_search_space(data.columns)
+
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=max_cond_vars)
             pbar.set_description("Working for n conditional variables: 0")
-
-        if variant == "parallel":
-            parallel_pool = Parallel(n_jobs=n_jobs, prefer="threads")
 
         variables = list(data.columns.values)
 
         # Step 1: Initialize a fully connected undirected graph
         graph = nx.complete_graph(n=variables, create_using=nx.Graph)
-        if expert_knowledge is None:
-            temporal_ordering, required_edges, forbidden_edges = {}, set(), set()
-        else:
-            temporal_ordering = expert_knowledge.temporal_ordering_
-            required_edges = expert_knowledge.required_edges_
-            forbidden_edges = expert_knowledge.forbidden_edges_
-
-        # Remove edges that are forbidden in both directions. Directed forbidden are enforced as orientations after the
-        # skeleton is learned.
-        graph.remove_edges_from([(u, v) for (u, v) in forbidden_edges if (v, u) in forbidden_edges])
+        temporal_ordering = expert_knowledge.temporal_ordering
+        if enforce_expert_knowledge:
+            graph.remove_edges_from(expert_knowledge.forbidden_edges)
 
         # Exit condition: 1. If all the nodes in graph has less than `lim_neighbors` neighbors.
         #             or  2. `lim_neighbors` is greater than `max_conditional_variables`.
@@ -599,7 +337,7 @@ class _ConstraintMixin:
             # size `lim_neighbors` which makes u and v independent.
             if variant == "orig":
                 for u, v in graph.edges():
-                    if (u, v) not in required_edges:
+                    if (enforce_expert_knowledge is False) or ((u, v) not in expert_knowledge.required_edges):
                         for separating_set in self._get_potential_sepsets(
                             u, v, temporal_ordering, graph, lim_neighbors
                         ):
@@ -620,30 +358,26 @@ class _ConstraintMixin:
                 edges_to_remove = []
                 # In case of stable, precompute neighbors as this is the stable algorithm.
                 for u, v in graph.edges():
-                    if (u, v) not in required_edges:
-                        sep_vars = set()
-                        found_independence = False
+                    if (enforce_expert_knowledge is False) or ((u, v) not in expert_knowledge.required_edges):
                         for separating_set in self._get_potential_sepsets(
                             u, v, temporal_ordering, graph, lim_neighbors, neighbors=neighbors
                         ):
+                            # If a conditioning set exists remove the edge, store the
+                            # separating set and move on to finding conditioning set for next edge.
                             if ci_test(
                                 u,
                                 v,
                                 separating_set,
                                 significance_level=significance_level,
                             ):
-                                found_independence = True
-                                sep_vars.update(separating_set)
-                        if found_independence:
-                            separating_sets[frozenset((u, v))] = tuple(sorted(sep_vars, key=repr))
-                            edges_to_remove.append((u, v))
+                                separating_sets[frozenset((u, v))] = separating_set
+                                edges_to_remove.append((u, v))
+                                break
                 graph.remove_edges_from(edges_to_remove)
 
             elif variant == "parallel":
 
                 def _parallel_fun(u, v):
-                    sep_vars = set()
-                    found_independence = False
                     for separating_set in self._get_potential_sepsets(u, v, temporal_ordering, graph, lim_neighbors):
                         if ci_test(
                             u,
@@ -651,13 +385,12 @@ class _ConstraintMixin:
                             separating_set,
                             significance_level=significance_level,
                         ):
-                            found_independence = True
-                            sep_vars.update(separating_set)
-                    if found_independence:
-                        return (u, v), tuple(sorted(sep_vars, key=repr))
+                            return (u, v), separating_set
 
-                results = parallel_pool(
-                    delayed(_parallel_fun)(u, v) for (u, v) in graph.edges() if (u, v) not in required_edges
+                results = Parallel(n_jobs=n_jobs)(
+                    delayed(_parallel_fun)(u, v)
+                    for (u, v) in graph.edges()
+                    if (enforce_expert_knowledge is False) or ((u, v) not in expert_knowledge.required_edges)
                 )
                 for result in results:
                     if result is not None:
@@ -693,14 +426,13 @@ class _ConstraintMixin:
         graph: UndirectedGraph,
         lim_neighbors: int,
         neighbors: dict[Hashable, set[Hashable]] = None,
-    ) -> set[tuple]:
+    ) -> Collection[tuple]:
         """
-        Return the temporally consistent candidate separating sets of `u`, `v`.
+        Return the temporally consistent superset of separating set of `u`, `v`.
 
-        Each candidate is a sorted tuple of size ``lim_neighbors`` drawn from
-        the (temporally filtered) neighbors of ``u`` or ``v``. Sorting both
-        input sets makes ``combinations`` yield lex-sorted tuples, so the
-        union of the two halves deduplicates directly via set semantics.
+        The temporal order (if specified) of the superset can only be smaller
+        ("earlier") than a particular node. The neighbors of `u` satisfying
+        this condition are returned.
 
         Parameters
         ----------
@@ -720,9 +452,9 @@ class _ConstraintMixin:
             The maximum number of neighbours (conditioning variables) for u, v.
 
         Returns
-        -------
-        sepsets: set[tuple]
-            Unique candidate separating sets of size ``lim_neighbors``.
+        --------
+        separating_set: set
+            Set containing the superset of separating set of u, v.
         """
 
         if neighbors is not None:
@@ -744,9 +476,10 @@ class _ConstraintMixin:
                 if temporal_ordering[neigh] > max_order:
                     separating_set_v.discard(neigh)
 
-        sorted_u = sorted(separating_set_u, key=repr)
-        sorted_v = sorted(separating_set_v, key=repr)
-        return set(combinations(sorted_u, lim_neighbors)) | set(combinations(sorted_v, lim_neighbors))
+        return chain(
+            combinations(separating_set_u, lim_neighbors),
+            combinations(separating_set_v, lim_neighbors),
+        )
 
 
 class _ScoreMixin:
@@ -777,176 +510,57 @@ class _ScoreMixin:
         edges or to force them to be present in the model, respectively.
         """
 
-        # Step 0: Pre-compute structures that are constant
         tabu_list = set(tabu_list)
-        descendants = {v: nx.descendants(model, v) for v in model.nodes()}
-        edges = list(model.edges())
-        edge_set = set(edges)
-        reverse_edge_set = {(Y, X) for (X, Y) in edges}
 
-        parents_cache = {v: tuple(model.get_parents(v)) for v in model.nodes()}
-        current_score = {v: scoring_method.local_score(v, parents_cache[v]) for v in model.nodes()}
-
-        prior_add = scoring_method.structure_prior_ratio("+")
-        prior_remove = scoring_method.structure_prior_ratio("-")
-        prior_flip = scoring_method.structure_prior_ratio("flip")
-
-        # Step 1: Get all legal operations for adding edges. Sort the iteration order for reproducible runs.
-        potential_new_edges = sorted(set(permutations(self.variables_, 2)) - edge_set - reverse_edge_set)
+        # Step 1: Get all legal operations for adding edges.
+        potential_new_edges = (
+            set(permutations(self.variables_, 2)) - set(model.edges()) - {(Y, X) for (X, Y) in model.edges()}
+        )
 
         for X, Y in potential_new_edges:
-            # Adding X->Y creates a cycle iff Y already reaches X.
-            if X in descendants[Y]:
-                continue
-            operation = ("+", (X, Y))
-            if (operation not in tabu_list) and ((X, Y) not in forbidden_edges):
-                old_parents = parents_cache[Y]
-                new_parents = old_parents + (X,)
-                if len(new_parents) <= max_indegree:
-                    score_delta = scoring_method.local_score(Y, new_parents) - current_score[Y] + prior_add
-                    yield (operation, score_delta)
+            # Check if adding (X, Y) will create a cycle.
+            if not nx.has_path(model, Y, X):
+                operation = ("+", (X, Y))
+                if (operation not in tabu_list) and ((X, Y) not in forbidden_edges):
+                    old_parents = tuple(model.get_parents(Y))
+                    new_parents = old_parents + (X,)
+                    if len(new_parents) <= max_indegree:
+                        score_delta = scoring_method.local_score(Y, new_parents) - scoring_method.local_score(
+                            Y, old_parents
+                        )
+                        score_delta += scoring_method.structure_prior_ratio("+")
+                        yield (operation, score_delta)
 
         # Step 2: Get all legal operations for removing edges
-        for X, Y in edges:
+        for X, Y in model.edges():
             operation = ("-", (X, Y))
             if (operation not in tabu_list) and ((X, Y) not in required_edges):
-                old_parents = parents_cache[Y]
+                old_parents = tuple(model.get_parents(Y))
                 new_parents = tuple(var for var in old_parents if var != X)
-                score_delta = scoring_method.local_score(Y, new_parents) - current_score[Y] + prior_remove
+                score_delta = scoring_method.local_score(Y, new_parents) - scoring_method.local_score(Y, old_parents)
+                score_delta += scoring_method.structure_prior_ratio("-")
                 yield (operation, score_delta)
 
         # Step 3: Get all legal operations for flipping edges
-        for X, Y in edges:
-            # Flipping X->Y to Y->X creates a cycle iff some other child of X
-            # already reaches Y (a path X -> C -> ... -> Y with C != Y).
-            if any(Y in descendants[c] for c in model.successors(X) if c != Y):
-                continue
-            operation = ("flip", (X, Y))
-            if (
-                ((operation not in tabu_list) and ("flip", (Y, X)) not in tabu_list)
-                and ((X, Y) not in required_edges)
-                and ((Y, X) not in forbidden_edges)
-            ):
-                new_X_parents = parents_cache[X] + (Y,)
-                new_Y_parents = tuple(var for var in parents_cache[Y] if var != X)
-                if len(new_X_parents) <= max_indegree:
-                    score_delta = (
-                        scoring_method.local_score(X, new_X_parents)
-                        + scoring_method.local_score(Y, new_Y_parents)
-                        - current_score[X]
-                        - current_score[Y]
-                        + prior_flip
-                    )
-                    yield (operation, score_delta)
-
-
-class _TreeSearchMixin:
-    """
-    Mixin class providing shared functionality for tree-based causal discovery
-    algorithms (Chow-Liu and TAN).
-
-    Provides static helpers for resolving the ``edge_weights_fn`` argument,
-    computing pairwise edge weights, and constructing a directed spanning tree
-    (DAG) from a weight matrix.  Both :class:`ChowLiu` and :class:`TAN` inherit
-    from this mixin so that the shared logic lives in exactly one place.
-    """
-
-    _EDGE_WEIGHT_FNS = {
-        "mutual_info": mutual_info_score,
-        "adjusted_mutual_info": adjusted_mutual_info_score,
-        "normalized_mutual_info": normalized_mutual_info_score,
-    }
-
-    @staticmethod
-    def _resolve_edge_weights_fn(edge_weights_fn):
-        """
-        Resolve ``edge_weights_fn`` to a callable of the form ``fn(array, array)``.
-
-        Accepts either one of the string shorthands in
-        :attr:`_EDGE_WEIGHT_FNS` or a callable (returned unchanged). Anything
-        else raises ``ValueError``.
-        """
-        if callable(edge_weights_fn):
-            return edge_weights_fn
-        try:
-            return _TreeSearchMixin._EDGE_WEIGHT_FNS[edge_weights_fn]
-        except (KeyError, TypeError):
-            raise ValueError(
-                f"edge_weights_fn should be one of {list(_TreeSearchMixin._EDGE_WEIGHT_FNS)}, "
-                f"or a callable of the form fn(array, array). Got: {edge_weights_fn!r}"
-            )
-
-    @staticmethod
-    def _get_weights(data, edge_weights_fn="mutual_info", n_jobs=-1, show_progress=True):
-        """
-        Compute the pairwise edge weight matrix.
-
-        Parameters
-        ----------
-        data : pd.DataFrame
-            Dataframe where each column represents one variable.
-
-        edge_weights_fn : str or callable, default="mutual_info"
-            Method to use for computing edge weights. Options are:
-
-            - ``"mutual_info"``: Mutual Information Score.
-            - ``"adjusted_mutual_info"``: Adjusted Mutual Information Score.
-            - ``"normalized_mutual_info"``: Normalized Mutual Information Score.
-            - A callable of the form ``fn(array, array) -> float``.
-
-        n_jobs : int, default=-1
-            Number of jobs to run in parallel. ``-1`` means use all processors.
-
-        show_progress : bool, default=True
-            If ``True``, shows a progress bar.
-
-        Returns
-        -------
-        weights : np.ndarray, shape (n_columns, n_columns)
-            Symmetric matrix where ``weights[i, j]`` is the edge weight between
-            variable *i* and variable *j*.
-        """
-        edge_weights_fn = _TreeSearchMixin._resolve_edge_weights_fn(edge_weights_fn)
-
-        n_vars = len(data.columns)
-        pbar = combinations(data.columns, 2)
-        if show_progress and config.SHOW_PROGRESS:
-            pbar = tqdm(pbar, total=(n_vars * (n_vars - 1) / 2), desc="Building tree")
-
-        vals = Parallel(n_jobs=n_jobs)(delayed(edge_weights_fn)(data.loc[:, u], data.loc[:, v]) for u, v in pbar)
-        weights = np.zeros((n_vars, n_vars))
-        indices = np.triu_indices(n_vars, k=1)
-        weights[indices] = vals
-        weights.T[indices] = vals
-        return weights
-
-    @staticmethod
-    def _create_tree_and_dag(weights, columns, root_node):
-        """
-        Build a DAG by computing the maximum spanning tree from a weight matrix
-        and directing all edges away from ``root_node`` via BFS.
-
-        Parameters
-        ----------
-        weights : np.ndarray, shape (n_columns, n_columns)
-            Symmetric matrix where each element represents an edge weight.
-
-        columns : list or array-like
-            Names of the columns (and rows) of the weight matrix.
-
-        root_node : str, int, or any hashable python object
-            The root node of the tree structure.
-
-        Returns
-        -------
-        model : pgmpy.base.DAG
-            The estimated DAG rooted at ``root_node``.
-        """
-        T = nx.maximum_spanning_tree(
-            nx.from_pandas_adjacency(
-                pd.DataFrame(weights, index=columns, columns=columns),
-                create_using=nx.Graph,
-            )
-        )
-        D = nx.bfs_tree(T, root_node)
-        return DAG(D)
+        for X, Y in model.edges():
+            # Check if flipping creates any cycles
+            if not any(map(lambda path: len(path) > 2, nx.all_simple_paths(model, X, Y))):
+                operation = ("flip", (X, Y))
+                if (
+                    ((operation not in tabu_list) and ("flip", (Y, X)) not in tabu_list)
+                    and ((X, Y) not in required_edges)
+                    and ((Y, X) not in forbidden_edges)
+                ):
+                    old_X_parents = tuple(model.get_parents(X))
+                    old_Y_parents = tuple(model.get_parents(Y))
+                    new_X_parents = old_X_parents + (Y,)
+                    new_Y_parents = tuple(var for var in old_Y_parents if var != X)
+                    if len(new_X_parents) <= max_indegree:
+                        score_delta = (
+                            scoring_method.local_score(X, new_X_parents)
+                            + scoring_method.local_score(Y, new_Y_parents)
+                            - scoring_method.local_score(X, old_X_parents)
+                            - scoring_method.local_score(Y, old_Y_parents)
+                        )
+                        score_delta += scoring_method.structure_prior_ratio("flip")
+                        yield (operation, score_delta)
