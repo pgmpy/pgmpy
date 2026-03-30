@@ -50,7 +50,7 @@ class GES(StructureEstimator):
     def _chain_component(
         self,
         node: Any,
-        current_model,
+        current_model: PDAG,
     ) -> set[Any]:
         """
         Return the chain component of `node`, i.e., all nodes reachable
@@ -110,7 +110,7 @@ class GES(StructureEstimator):
 
     def _is_dag(
         self,
-        current_model,
+        current_model: PDAG,
     ) -> bool:
         """
         Check whether the graph is fully directed (i.e., contains no undirected edges).
@@ -187,7 +187,7 @@ class GES(StructureEstimator):
         u: Any,
         v: Any,
         T: Iterable[Any],
-        current_model,
+        current_model: PDAG,
     ):
         """
         Perform insert(u -> v) with conditioning set T.
@@ -222,7 +222,7 @@ class GES(StructureEstimator):
         u: Any,
         v: Any,
         H: set[Any],
-        current_model,
+        current_model: PDAG,
     ):
         """
         Perform delete(u - v) or delete(u -> v) with conditioning set H.
@@ -255,7 +255,7 @@ class GES(StructureEstimator):
         u: Any,
         v: Any,
         C: Iterable[Any],
-        current_model,
+        current_model: PDAG,
     ):
         """
         Perform turn operation (reverse or orient edge between u and v) with set C.
@@ -289,7 +289,7 @@ class GES(StructureEstimator):
         self,
         u: Any,
         v: Any,
-        current_model,
+        current_model: PDAG,
         score_fn: Callable[[Any, list[Any]], float],
     ) -> list[tuple[float, Any, Any, set[Any]]]:
         """
@@ -344,7 +344,7 @@ class GES(StructureEstimator):
         self,
         u: Any,
         v: Any,
-        current_model,
+        current_model: PDAG,
         score_fn: Callable[[Any, list[Any]], float],
     ) -> list[tuple[float, Any, Any, set[Any]]]:
         """
@@ -386,7 +386,7 @@ class GES(StructureEstimator):
         self,
         u: Any,
         v: Any,
-        current_model,
+        current_model: PDAG,
         score_fn: Callable[[Any, list[Any]], float],
     ):
         """
@@ -401,7 +401,7 @@ class GES(StructureEstimator):
         self,
         u: Any,
         v: Any,
-        current_model,
+        current_model: PDAG,
         score_fn: Callable[[Any, list[Any]], float],
     ) -> list[tuple[float, Any, Any, set[Any]]]:
         """
@@ -460,7 +460,7 @@ class GES(StructureEstimator):
         self,
         u: Any,
         v: Any,
-        current_model,
+        current_model: PDAG,
         score_fn: Callable[[Any, list[Any]], float],
     ) -> list[tuple[float, Any, Any, set[Any]]]:
         """
@@ -511,7 +511,7 @@ class GES(StructureEstimator):
 
     def estimate(
         self,
-        scoring_method: str | StructureScore | None = "bic-g",
+        scoring_method: str | StructureScore | None = None,
         min_improvement: float = 1e-6,
         debug: bool = False,
     ) -> PDAG:
@@ -530,10 +530,14 @@ class GES(StructureEstimator):
             The operation (edge addition, removal, or turning) would only be performed if the
             model score improves by atleast `min_improvement`.
 
+        debug: bool
+            Estimate the graph in debug mode, printing the corresponding increase in score at
+            each step.
+
         Returns
         -------
-        Estimated model: pgmpy.base.DAG
-            A `DAG` at a (local) score maximum.
+        Estimated model: pgmpy.base.PDAG
+            A `PDAG` at a (local) score maximum.
 
         Examples
         --------

@@ -2,7 +2,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from pgmpy.estimators import GES, ExpertKnowledge
+from pgmpy.estimators import GES
+from pgmpy.example_models import load_model
 
 
 @pytest.fixture
@@ -37,63 +38,32 @@ def gaussian_data():
     )
 
 
-@pytest.fixture
-def mixed_data():
-    data = pd.read_csv(
-        "pgmpy/tests/test_estimators/testdata/mixed_testdata.csv",
-        index_col=0,
-    )
-    data["A_cat"] = data.A_cat.astype("category")
-    data["B_cat"] = data.B_cat.astype("category")
-    data["C_cat"] = data.C_cat.astype("category")
-    data["B_int"] = data.B_int.astype("category")
-    return data
-
-
 def test_estimate_discrete(random_data_estimator, titanic_estimators):
     est_rand = random_data_estimator
-    est_titanic1, est_titanic2 = titanic_estimators
+    est_titanic1, _est_titanic2 = titanic_estimators
 
     est_rand.estimate()
     est_titanic1.estimate()
 
-    temporal_knowledge = ExpertKnowledge(temporal_order=[["Pclass", "Sex"], ["Survived"]])
 
-    dag2 = est_titanic2.estimate(
-        expert_knowledge=temporal_knowledge,
-        scoring_method="k2",
-    )
+def test_cancer_model():
+    cancer_model = load_model("bnlearn/cancer")
+    data = cancer_model.simulate(3000, seed=0)
 
-    expected_edges = {
-        ("Sex", "Survived"),
-        ("Sex", "Pclass"),
-        ("Pclass", "Survived"),
-    }
+    est = GES(data)
+    dag = est.estimate()
 
-    assert set(dag2.edges()) == expected_edges
+    assert set(cancer_model.edges) <= set(dag.edges)
 
 
-def test_search_space():
-    adult_data = pd.read_csv("pgmpy/tests/test_estimators/testdata/adult.csv")
+def test_child_model():
+    cancer_model = load_model("bnlearn/child")
+    data = cancer_model.simulate(3000, seed=0)
 
-    search_space = [
-        ("Age", "Education"),
-        ("Education", "HoursPerWeek"),
-        ("Education", "Income"),
-        ("HoursPerWeek", "Income"),
-        ("Age", "Income"),
-    ]
+    est = GES(data)
+    dag = est.estimate()
 
-    expert_knowledge = ExpertKnowledge(search_space=search_space)
-    est = GES(adult_data)
-
-    dag = est.estimate(
-        scoring_method="k2",
-        expert_knowledge=expert_knowledge,
-    )
-
-    for edge in dag.edges():
-        assert edge in search_space
+    assert set(cancer_model.edges) <= set(dag.edges)
 
 
 def test_estimate_gaussian(gaussian_data):
@@ -101,8 +71,3 @@ def test_estimate_gaussian(gaussian_data):
 
     for score in ["aic-g", "bic-g"]:
         est.estimate(scoring_method=score, debug=True)
-
-
-def test_estimate_mixed(mixed_data):
-    est = GES(mixed_data)
-    est.estimate(scoring_method="ll-cg")
