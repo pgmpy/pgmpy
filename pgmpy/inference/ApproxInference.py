@@ -93,7 +93,6 @@ class ApproxInference:
         evidence=None,
         virtual_evidence=None,
         joint=True,
-        state_names=None,
         show_progress=True,
         seed=None,
     ):
@@ -188,12 +187,11 @@ class ApproxInference:
                     seed=seed,
                 )
 
-        # Step 2: If state_names is None, infer it from samples.
-        if state_names is None:
-            if isinstance(self.model, DiscreteBayesianNetwork):
-                state_names = {var: list(samples.loc[:, var].unique()) for var in variables}
-            elif isinstance(self.model, DynamicBayesianNetwork):
-                state_names = {var: list(samples.loc[:, [var]].iloc[:, 0].unique()) for var in variables}
+        # Step 2: Infer state_names from samples.
+        if isinstance(self.model, DiscreteBayesianNetwork):
+            state_names = {var: list(samples.loc[:, var].unique()) for var in variables}
+        elif isinstance(self.model, DynamicBayesianNetwork):
+            state_names = {var: list(samples.loc[:, [var]].iloc[:, 0].unique()) for var in variables}
 
         # Step 3: Compute the distributions and return it.
         return self.get_distribution(samples, variables=variables, state_names=state_names, joint=joint)
@@ -281,7 +279,6 @@ class ApproxInference:
             evidence=evidence,
             virtual_evidence=virtual_evidence,
             joint=True,
-            state_names=state_names,
             show_progress=show_progress,
             seed=seed,
         )
