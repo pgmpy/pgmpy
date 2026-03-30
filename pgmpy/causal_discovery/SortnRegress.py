@@ -54,7 +54,7 @@ class SortnRegress(_BaseCausalDiscovery):
         self : pgmpy.causal_discovery.SortnRegress
             Returns the instance with the fitted attributes.
         """
-        self.variables = list(X.columns)
+        self.variables_ = list(X.columns)
 
         variances = X.var().sort_values()
         sorted_nodes = variances.index.tolist()
@@ -77,7 +77,7 @@ class SortnRegress(_BaseCausalDiscovery):
 
         self.causal_graph_ = model
         self.adjacency_matrix_ = nx.to_pandas_adjacency(
-            self.causal_graph_, nodelist=self.variables, weight=1, dtype="int"
+            self.causal_graph_, nodelist=self.variables_, weight=1, dtype="int"
         )
 
         return self
