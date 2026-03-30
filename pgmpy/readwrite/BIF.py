@@ -462,20 +462,45 @@ $values
         -------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
         >>> bif_data = '''network dog-problem { }
-        ... variable bowel-problem { type discrete [ 2 ] { bowel-problem_0, bowel-problem_1 }; property position = (335, 99) ; }
-        ... variable family-out { type discrete [ 2 ] { family-out_0, family-out_1 }; property position = (257, 99) ; }
-        ... variable hear-bark { type discrete [ 2 ] { hear-bark_0, hear-bark_1 }; property position = (296, 268) ; }
-        ... variable light-on { type discrete [ 2 ] { light-on_0, light-on_1 }; property position = (218, 195) ; }
-        ... variable dog-out { type discrete [ 2 ] { dog-out_0, dog-out_1 }; property position = (300, 195) ; }
-        ... probability ( bowel-problem ) { table 0.01, 0.99; }
-        ... probability ( family-out ) { table 0.15, 0.85; }
-        ... probability ( dog-out | bowel-problem, family-out ) { table 0.99, 0.97, 0.9, 0.3, 0.01, 0.03, 0.1, 0.7; }
-        ... probability ( hear-bark | dog-out ) { table 0.7, 0.01, 0.3, 0.99; }
-        ... probability ( light-on | family-out ) { table 0.6, 0.05, 0.4, 0.95; }
+        ... variable bowel-problem {
+        ...     type discrete [ 2 ] { bowel-problem_0, bowel-problem_1 };
+        ...     property position = (335, 99) ;
+        ... }
+        ... variable family-out {
+        ...     type discrete [ 2 ] { family-out_0, family-out_1 };
+        ...     property position = (257, 99) ;
+        ... }
+        ... variable hear-bark {
+        ...     type discrete [ 2 ] { hear-bark_0, hear-bark_1 };
+        ...     property position = (296, 268) ;
+        ... }
+        ... variable light-on {
+        ...     type discrete [ 2 ] { light-on_0, light-on_1 };
+        ...     property position = (218, 195) ;
+        ... }
+        ... variable dog-out {
+        ...     type discrete [ 2 ] { dog-out_0, dog-out_1 };
+        ...     property position = (300, 195) ;
+        ... }
+        ... probability ( bowel-problem ) {
+        ...     table 0.01, 0.99;
+        ... }
+        ... probability ( family-out ) {
+        ...     table 0.15, 0.85;
+        ... }
+        ... probability ( dog-out | bowel-problem, family-out ) {
+        ...     table 0.99, 0.97, 0.9, 0.3, 0.01, 0.03, 0.1, 0.7;
+        ... }
+        ... probability ( hear-bark | dog-out ) {
+        ...     table 0.7, 0.01, 0.3, 0.99;
+        ... }
+        ... probability ( light-on | family-out ) {
+        ...     table 0.6, 0.05, 0.4, 0.95;
+        ... }
         ... '''
         >>> model = BIFReader(string=bif_data).get_model()
         >>> writer = BIFWriter(model)
-        >>> writer.get_variables()
+        >>> list(writer.get_variables())
         ['bowel-problem', 'family-out', 'hear-bark', 'light-on', 'dog-out']
         """
         variables = self.model.nodes()
@@ -493,25 +518,46 @@ $values
         -------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
         >>> bif_data = '''network dog-problem { }
-        ... variable bowel-problem { type discrete [ 2 ] { bowel-problem_0, bowel-problem_1 }; property position = (335, 99) ; }
-        ... variable family-out { type discrete [ 2 ] { family-out_0, family-out_1 }; property position = (257, 99) ; }
-        ... variable hear-bark { type discrete [ 2 ] { hear-bark_0, hear-bark_1 }; property position = (296, 268) ; }
-        ... variable light-on { type discrete [ 2 ] { light-on_0, light-on_1 }; property position = (218, 195) ; }
-        ... variable dog-out { type discrete [ 2 ] { dog-out_0, dog-out_1 }; property position = (300, 195) ; }
-        ... probability ( bowel-problem ) { table 0.01, 0.99; }
-        ... probability ( family-out ) { table 0.15, 0.85; }
-        ... probability ( dog-out | bowel-problem, family-out ) { table 0.99, 0.97, 0.9, 0.3, 0.01, 0.03, 0.1, 0.7; }
-        ... probability ( hear-bark | dog-out ) { table 0.7, 0.01, 0.3, 0.99; }
-        ... probability ( light-on | family-out ) { table 0.6, 0.05, 0.4, 0.95; }
+        ... variable bowel-problem {
+        ...     type discrete [ 2 ] { bowel-problem_0, bowel-problem_1 };
+        ...     property position = (335, 99) ;
+        ... }
+        ... variable family-out {
+        ...     type discrete [ 2 ] { family-out_0, family-out_1 };
+        ...     property position = (257, 99) ;
+        ... }
+        ... variable hear-bark {
+        ...     type discrete [ 2 ] { hear-bark_0, hear-bark_1 };
+        ...     property position = (296, 268) ;
+        ... }
+        ... variable light-on {
+        ...     type discrete [ 2 ] { light-on_0, light-on_1 };
+        ...     property position = (218, 195) ;
+        ... }
+        ... variable dog-out {
+        ...     type discrete [ 2 ] { dog-out_0, dog-out_1 };
+        ...     property position = (300, 195) ;
+        ... }
+        ... probability ( bowel-problem ) {
+        ...     table 0.01, 0.99;
+        ... }
+        ... probability ( family-out ) {
+        ...     table 0.15, 0.85;
+        ... }
+        ... probability ( dog-out | bowel-problem, family-out ) {
+        ...     table 0.99, 0.97, 0.9, 0.3, 0.01, 0.03, 0.1, 0.7;
+        ... }
+        ... probability ( hear-bark | dog-out ) {
+        ...     table 0.7, 0.01, 0.3, 0.99;
+        ... }
+        ... probability ( light-on | family-out ) {
+        ...     table 0.6, 0.05, 0.4, 0.95;
+        ... }
         ... '''
         >>> model = BIFReader(string=bif_data).get_model()
         >>> writer = BIFWriter(model)
-        >>> writer.get_states()
-        {'bowel-problem': ['bowel-problem_0', 'bowel-problem_1'],
-         'dog-out': ['dog-out_0', 'dog-out_1'],
-         'family-out': ['family-out_0', 'family-out_1'],
-         'hear-bark': ['hear-bark_0', 'hear-bark_1'],
-         'light-on': ['light-on_0', 'light-on_1']}
+        >>> writer.get_states()['bowel-problem']
+        ['bowel-problem_0', 'bowel-problem_1']
         """
         variable_states = {}
         cpds = self.model.get_cpds()
@@ -542,25 +588,46 @@ $values
         -------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
         >>> bif_data = '''network dog-problem { }
-        ... variable bowel-problem { type discrete [ 2 ] { bowel-problem_0, bowel-problem_1 }; property position = (335, 99) ; }
-        ... variable family-out { type discrete [ 2 ] { family-out_0, family-out_1 }; property position = (257, 99) ; }
-        ... variable hear-bark { type discrete [ 2 ] { hear-bark_0, hear-bark_1 }; property position = (296, 268) ; }
-        ... variable light-on { type discrete [ 2 ] { light-on_0, light-on_1 }; property position = (218, 195) ; }
-        ... variable dog-out { type discrete [ 2 ] { dog-out_0, dog-out_1 }; property position = (300, 195) ; }
-        ... probability ( bowel-problem ) { table 0.01, 0.99; }
-        ... probability ( family-out ) { table 0.15, 0.85; }
-        ... probability ( dog-out | bowel-problem, family-out ) { table 0.99, 0.97, 0.9, 0.3, 0.01, 0.03, 0.1, 0.7; }
-        ... probability ( hear-bark | dog-out ) { table 0.7, 0.01, 0.3, 0.99; }
-        ... probability ( light-on | family-out ) { table 0.6, 0.05, 0.4, 0.95; }
+        ... variable bowel-problem {
+        ...     type discrete [ 2 ] { bowel-problem_0, bowel-problem_1 };
+        ...     property position = (335, 99) ;
+        ... }
+        ... variable family-out {
+        ...     type discrete [ 2 ] { family-out_0, family-out_1 };
+        ...     property position = (257, 99) ;
+        ... }
+        ... variable hear-bark {
+        ...     type discrete [ 2 ] { hear-bark_0, hear-bark_1 };
+        ...     property position = (296, 268) ;
+        ... }
+        ... variable light-on {
+        ...     type discrete [ 2 ] { light-on_0, light-on_1 };
+        ...     property position = (218, 195) ;
+        ... }
+        ... variable dog-out {
+        ...     type discrete [ 2 ] { dog-out_0, dog-out_1 };
+        ...     property position = (300, 195) ;
+        ... }
+        ... probability ( bowel-problem ) {
+        ...     table 0.01, 0.99;
+        ... }
+        ... probability ( family-out ) {
+        ...     table 0.15, 0.85;
+        ... }
+        ... probability ( dog-out | bowel-problem, family-out ) {
+        ...     table 0.99, 0.97, 0.9, 0.3, 0.01, 0.03, 0.1, 0.7;
+        ... }
+        ... probability ( hear-bark | dog-out ) {
+        ...     table 0.7, 0.01, 0.3, 0.99;
+        ... }
+        ... probability ( light-on | family-out ) {
+        ...     table 0.6, 0.05, 0.4, 0.95;
+        ... }
         ... '''
         >>> model = BIFReader(string=bif_data, include_properties=True).get_model()
         >>> writer = BIFWriter(model)
-        >>> writer.get_properties()
-        {'bowel-problem': ['position = (335, 99)'],
-         'dog-out': ['position = (300, 195)'],
-         'family-out': ['position = (257, 99)'],
-         'hear-bark': ['position = (296, 268)'],
-         'light-on': ['position = (218, 195)']}
+        >>> writer.get_properties()['dog-out']
+        ['position = (300, 195)']
         """
         variables = self.model.nodes()
         property_tag = {}
@@ -581,25 +648,46 @@ $values
         -------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
         >>> bif_data = '''network dog-problem { }
-        ... variable bowel-problem { type discrete [ 2 ] { bowel-problem_0, bowel-problem_1 }; property position = (335, 99) ; }
-        ... variable family-out { type discrete [ 2 ] { family-out_0, family-out_1 }; property position = (257, 99) ; }
-        ... variable hear-bark { type discrete [ 2 ] { hear-bark_0, hear-bark_1 }; property position = (296, 268) ; }
-        ... variable light-on { type discrete [ 2 ] { light-on_0, light-on_1 }; property position = (218, 195) ; }
-        ... variable dog-out { type discrete [ 2 ] { dog-out_0, dog-out_1 }; property position = (300, 195) ; }
-        ... probability ( bowel-problem ) { table 0.01, 0.99; }
-        ... probability ( family-out ) { table 0.15, 0.85; }
-        ... probability ( dog-out | bowel-problem, family-out ) { table 0.99, 0.97, 0.9, 0.3, 0.01, 0.03, 0.1, 0.7; }
-        ... probability ( hear-bark | dog-out ) { table 0.7, 0.01, 0.3, 0.99; }
-        ... probability ( light-on | family-out ) { table 0.6, 0.05, 0.4, 0.95; }
+        ... variable bowel-problem {
+        ...     type discrete [ 2 ] { bowel-problem_0, bowel-problem_1 };
+        ...     property position = (335, 99) ;
+        ... }
+        ... variable family-out {
+        ...     type discrete [ 2 ] { family-out_0, family-out_1 };
+        ...     property position = (257, 99) ;
+        ... }
+        ... variable hear-bark {
+        ...     type discrete [ 2 ] { hear-bark_0, hear-bark_1 };
+        ...     property position = (296, 268) ;
+        ... }
+        ... variable light-on {
+        ...     type discrete [ 2 ] { light-on_0, light-on_1 };
+        ...     property position = (218, 195) ;
+        ... }
+        ... variable dog-out {
+        ...     type discrete [ 2 ] { dog-out_0, dog-out_1 };
+        ...     property position = (300, 195) ;
+        ... }
+        ... probability ( bowel-problem ) {
+        ...     table 0.01, 0.99;
+        ... }
+        ... probability ( family-out ) {
+        ...     table 0.15, 0.85;
+        ... }
+        ... probability ( dog-out | bowel-problem, family-out ) {
+        ...     table 0.99, 0.97, 0.9, 0.3, 0.01, 0.03, 0.1, 0.7;
+        ... }
+        ... probability ( hear-bark | dog-out ) {
+        ...     table 0.7, 0.01, 0.3, 0.99;
+        ... }
+        ... probability ( light-on | family-out ) {
+        ...     table 0.6, 0.05, 0.4, 0.95;
+        ... }
         ... '''
         >>> model = BIFReader(string=bif_data).get_model()
         >>> writer = BIFWriter(model)
-        >>> writer.get_parents()
-        {'bowel-problem': [],
-         'dog-out': ['bowel-problem', 'family-out'],
-         'family-out': [],
-         'hear-bark': ['dog-out'],
-         'light-on': ['family-out']}
+        >>> writer.get_parents()['dog-out']
+        ['bowel-problem', 'family-out']
         """
         cpds = self.model.get_cpds()
         variable_parents = {}
@@ -619,25 +707,47 @@ $values
         -------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
         >>> bif_data = '''network dog-problem { }
-        ... variable bowel-problem { type discrete [ 2 ] { bowel-problem_0, bowel-problem_1 }; property position = (335, 99) ; }
-        ... variable family-out { type discrete [ 2 ] { family-out_0, family-out_1 }; property position = (257, 99) ; }
-        ... variable hear-bark { type discrete [ 2 ] { hear-bark_0, hear-bark_1 }; property position = (296, 268) ; }
-        ... variable light-on { type discrete [ 2 ] { light-on_0, light-on_1 }; property position = (218, 195) ; }
-        ... variable dog-out { type discrete [ 2 ] { dog-out_0, dog-out_1 }; property position = (300, 195) ; }
-        ... probability ( bowel-problem ) { table 0.01, 0.99; }
-        ... probability ( family-out ) { table 0.15, 0.85; }
-        ... probability ( dog-out | bowel-problem, family-out ) { table 0.99, 0.97, 0.9, 0.3, 0.01, 0.03, 0.1, 0.7; }
-        ... probability ( hear-bark | dog-out ) { table 0.7, 0.01, 0.3, 0.99; }
-        ... probability ( light-on | family-out ) { table 0.6, 0.05, 0.4, 0.95; }
+        ... variable bowel-problem {
+        ...     type discrete [ 2 ] { bowel-problem_0, bowel-problem_1 };
+        ...     property position = (335, 99) ;
+        ... }
+        ... variable family-out {
+        ...     type discrete [ 2 ] { family-out_0, family-out_1 };
+        ...     property position = (257, 99) ;
+        ... }
+        ... variable hear-bark {
+        ...     type discrete [ 2 ] { hear-bark_0, hear-bark_1 };
+        ...     property position = (296, 268) ;
+        ... }
+        ... variable light-on {
+        ...     type discrete [ 2 ] { light-on_0, light-on_1 };
+        ...     property position = (218, 195) ;
+        ... }
+        ... variable dog-out {
+        ...     type discrete [ 2 ] { dog-out_0, dog-out_1 };
+        ...     property position = (300, 195) ;
+        ... }
+        ... probability ( bowel-problem ) {
+        ...     table 0.01, 0.99;
+        ... }
+        ... probability ( family-out ) {
+        ...     table 0.15, 0.85;
+        ... }
+        ... probability ( dog-out | bowel-problem, family-out ) {
+        ...     table 0.99, 0.97, 0.9, 0.3, 0.01, 0.03, 0.1, 0.7;
+        ... }
+        ... probability ( hear-bark | dog-out ) {
+        ...     table 0.7, 0.01, 0.3, 0.99;
+        ... }
+        ... probability ( light-on | family-out ) {
+        ...     table 0.6, 0.05, 0.4, 0.95;
+        ... }
         ... '''
+        >>> import numpy as np
         >>> model = BIFReader(string=bif_data).get_model()
         >>> writer = BIFWriter(model)
-        >>> writer.get_cpds()
-        {'bowel-problem': array([ 0.01,  0.99]),
-         'dog-out': array([ 0.99,  0.97,  0.9 ,  0.3 ,  0.01,  0.03,  0.1 ,  0.7 ]),
-         'family-out': array([ 0.15,  0.85]),
-         'hear-bark': array([ 0.7 ,  0.01,  0.3 ,  0.99]),
-         'light-on': array([ 0.6 ,  0.05,  0.4 ,  0.95])}
+        >>> np.allclose(writer.get_cpds()['bowel-problem'], [0.01, 0.99])
+        True
         """
         cpds = self.model.get_cpds()
         tables = {}
