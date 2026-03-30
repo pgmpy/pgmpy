@@ -133,7 +133,7 @@ class DoubleMLRegressor(_BaseCausalPrediction):
     ...     effect_estimator=LinearRegression(),
     ...     n_folds=3,
     ... )
-    >>> dml.fit(X, y)
+    >>> dml = dml.fit(X, y)
     >>> dml.effect_est_
     LinearRegression()
     >>> dml.effect_est_.coef_.round(1)

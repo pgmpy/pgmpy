@@ -24,11 +24,11 @@ class StudentPerformance(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/student-performance/"
+    base_url = "real/student-performance"
 
-    data_url = base_url + "data/student-performance.data.mixed.maximum.3.txt"
+    data_url = "data/student-performance.data.mixed.maximum.3.txt"
     ground_truth_url = None
-    expert_knowledge_url = base_url + "ground.truth/student-performance.knowledge.txt"
+    expert_knowledge_url = "ground.truth/student-performance.knowledge.txt"
 
     categorical_variables = [
         "school",

@@ -4,10 +4,9 @@ from itertools import product
 import numpy as np
 import pandas as pd
 
-from pgmpy import config
+from pgmpy import config, logger
 from pgmpy.extern import tabulate
 from pgmpy.factors.base import BaseFactor
-from pgmpy.global_vars import logger
 from pgmpy.utils import StateNameMixin, compat_fns
 
 State = namedtuple("State", ["var", "state"])
@@ -64,7 +63,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
     >>> phi = DiscreteFactor(
     ...     variables=["x1", "x2", "x3"], cardinality=[2, 2, 2], values=np.ones(8)
     ... )
-    >>> phi
+    >>> phi #doctest: +ELLIPSIS
     <DiscreteFactor representing phi(x1:2, x2:2, x3:2) at 0x...>
     >>> print(phi)
     +-------+-------+-------+-----------------+
@@ -190,8 +189,8 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model(model="asia")
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/asia")
         >>> phi = model.get_cpds(node="either").to_factor()
         >>> float(phi.get_value(lung="yes", tub="no", either="yes"))
         1.0
@@ -231,8 +230,8 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model("asia")
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/asia")
         >>> phi = model.get_cpds(node="either").to_factor()
         >>> phi.set_value(value=0.1, lung="yes", tub="no", either="yes")
         >>> float(phi.get_value(lung="yes", tub="no", either="yes"))

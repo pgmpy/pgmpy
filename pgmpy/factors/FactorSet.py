@@ -34,7 +34,7 @@ class FactorSet:
         ...     variables=["x3", "x4", "x1"], cardinality=[2, 2, 2], values=range(8)
         ... )
         >>> factor_set = FactorSet(phi1, phi2)
-        >>> factor_set
+        >>> factor_set  # doctest: +ELLIPSIS
         <pgmpy.factors.FactorSet.FactorSet object at 0x...>
         >>> print(factor_set)  # doctest: +SKIP
         {<DiscreteFactor representing phi(x3:2, x4:2, x1:2) at 0x...>,
@@ -108,7 +108,7 @@ class FactorSet:
              <DiscreteFactor representing phi(x5:2, x6:2, x7:2) at 0x7f8e32b5b250>,
              <DiscreteFactor representing phi(x3:2, x4:2, x1:2) at 0x7f8e32b5b150>])
         >>> factor_set1.remove_factors(phi1, phi2)
-        >>> print(factor_set1)
+        >>> print(factor_set1)  # doctest: +ELLIPSIS
         {<DiscreteFactor representing phi(x5:2, x6:2, x7:2) at 0x...>}
         """
         for factor in factors:
@@ -330,10 +330,10 @@ class FactorSet:
         ...     variables=["x3", "x4", "x1"], cardinality=[2, 2, 2], values=range(8)
         ... )
         >>> factor_set = FactorSet(phi1, phi2)
-        >>> factor_set
+        >>> factor_set  # doctest: +ELLIPSIS
         <pgmpy.factors.FactorSet.FactorSet object at 0x...>
         >>> factor_set_copy = factor_set.copy()
-        >>> factor_set_copy
+        >>> factor_set_copy  # doctest: +ELLIPSIS
         <pgmpy.factors.FactorSet.FactorSet object at 0x...>
         """
         # No need to have copies of factors as argument because __init__ method creates copies.

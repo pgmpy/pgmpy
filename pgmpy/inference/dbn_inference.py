@@ -53,10 +53,14 @@ class DBNInference(Inference):
     >>> dbnet.add_cpds(z_start_cpd, z_trans_cpd, x_i_cpd, y_i_cpd)
     >>> dbnet.initialize_initial_state()
     >>> dbn_inf = DBNInference(dbnet)
-    >>> dbn_inf.start_junction_tree.nodes()
-    NodeView(((('X', 0), ('Y', 0)), (('X', 0), ('Z', 0))))
-    >>> dbn_inf.one_and_half_junction_tree.nodes()
-    NodeView(((('Z', 1), ('Z', 0)), (('Y', 1), ('X', 1)), (('Z', 1), ('X', 1))))
+    >>> sorted(dbn_inf.start_junction_tree.nodes()) # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+    [(<DynamicNode(X, 0) at 0x...>, <DynamicNode(Y, 0) at 0x...>),
+    (<DynamicNode(X, 0) at 0x...>, <DynamicNode(Z, 0) at 0x...>)]
+    >>> sorted(tuple(sorted(n)) for n in dbn_inf.one_and_half_junction_tree.nodes())
+    ...    # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+    [(<DynamicNode(X, 1) at 0x...>, <DynamicNode(Y, 1) at 0x...>),
+    (<DynamicNode(X, 1) at 0x...>, <DynamicNode(Z, 1) at 0x...>),
+    (<DynamicNode(Z, 0) at 0x...>, <DynamicNode(Z, 1) at 0x...>)]
 
     References
     ----------

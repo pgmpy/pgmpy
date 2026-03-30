@@ -1,3 +1,5 @@
+import logging
+
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -10,11 +12,11 @@ from pgmpy.base import UndirectedGraph
 from pgmpy.causal_discovery import PC
 from pgmpy.estimators import ExpertKnowledge
 from pgmpy.estimators.BaseConstraintEstimator import BaseConstraintEstimator
+from pgmpy.example_models import load_model
 from pgmpy.independencies import Independencies
 from pgmpy.metrics import SHD, CorrelationScore
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.sampling import BayesianModelSampling
-from pgmpy.utils import get_example_model
 
 
 def expected_failed_checks(estimator):
@@ -484,14 +486,14 @@ def test_build_dag_continuous(ci_test, variant):
 
 
 def test_pc_alarm():
-    alarm_model = get_example_model("alarm")
+    alarm_model = load_model("bnlearn/alarm")
     data = BayesianModelSampling(alarm_model).forward_sample(size=int(1e4), seed=42)
     est = PC(variant="stable", max_cond_vars=5, n_jobs=2, show_progress=False)
     est.fit(X=data)
 
 
 def test_pc_asia(caplog):
-    asia_model = get_example_model("asia")
+    asia_model = load_model("bnlearn/asia")
     data = asia_model.simulate(n_samples=int(1e5), seed=42)
     req_edges = [("xray", "either")]
     background = ExpertKnowledge(required_edges=req_edges)
@@ -503,8 +505,13 @@ def test_pc_asia(caplog):
         show_progress=False,
     )
 
-    with caplog.at_level("WARNING"):
-        est.fit(X=data)
+    pgmpy_logger = logging.getLogger("pgmpy")
+    pgmpy_logger.addHandler(caplog.handler)
+    try:
+        with caplog.at_level("WARNING", logger="pgmpy"):
+            est.fit(X=data)
+    finally:
+        pgmpy_logger.removeHandler(caplog.handler)
     expected_warning = (
         "Specified expert knowledge conflicts with learned structure. Ignoring edge xray->either from required edges"
     )
@@ -513,7 +520,7 @@ def test_pc_asia(caplog):
 
 
 def test_pc_asia_expert():
-    asia_model = get_example_model("asia")
+    asia_model = load_model("bnlearn/asia")
     data = asia_model.simulate(n_samples=int(1e5), seed=42)
     est = PC(
         variant="stable",
@@ -539,7 +546,7 @@ def test_pc_asia_expert():
 
 
 def test_temporal_pc_cancer():
-    cancer_model = get_example_model("cancer")
+    cancer_model = load_model("bnlearn/cancer")
     data = cancer_model.simulate(n_samples=int(5e4), seed=42)
 
     background = ExpertKnowledge(  # e.g. we know only "Pollution", "Smoker", "Cancer" can be the causes of others
@@ -606,7 +613,7 @@ def test_temporal_pc_sachs():
         ("Akt", "Erk"),
     }
 
-    model = get_example_model("sachs")
+    model = load_model("bnlearn/sachs")
     df = model.simulate(int(1e3))
 
     expert = ExpertKnowledge(temporal_order=temporal_order)
@@ -695,7 +702,7 @@ def test_temporal_ordering_sepsets_and_skeleton(estimator_class):
 
 
 def test_score():
-    asia_model = get_example_model("asia")
+    asia_model = load_model("bnlearn/asia")
     data = asia_model.simulate(n_samples=int(1e4), seed=42)
     est = PC(
         return_type="dag",
@@ -724,3 +731,33 @@ def test_score():
     shd = est.score(true_graph=asia_model, metric="SHD")
     assert np.round(structure_score, 4) > -3e4
     assert shd, 2
+
+
+def test_stable_variant_order_independence():
+
+    rng = np.random.default_rng(seed=42)
+    n = 2000
+
+    data = pd.DataFrame(
+        rng.integers(0, 3, size=(n, 12)),
+        columns=[chr(65 + i) for i in range(12)],
+    )
+    data["M"] = (data["A"] + data["B"] + data["C"]) % 3
+    data["N"] = (data["D"] + data["E"] + data["F"]) % 3
+    data["O"] = (data["M"] + data["N"] + data["G"]) % 3
+
+    skeletons = []
+    for _ in range(5):
+        cols = list(rng.permutation(data.columns))
+        shuffled = data[cols]
+        pc = PC(
+            variant="stable",
+            ci_test="chi_square",
+            significance_level=0.05,
+            show_progress=False,
+        )
+        pc.fit(shuffled)
+        edges = frozenset(frozenset((u, v)) for u, v in pc.skeleton_.edges())
+        skeletons.append(edges)
+
+    assert all(s == skeletons[0] for s in skeletons)

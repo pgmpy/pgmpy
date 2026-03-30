@@ -1,5 +1,6 @@
 from ._base import _BaseCITest, get_ci_test
 from .chi_square import ChiSquare
+from .fisher_z import FisherZ
 from .g_sq import GSq
 from .gcm import GCM
 from .independence_match import IndependenceMatch
@@ -14,6 +15,7 @@ __all__ = [
     "_BaseCITest",
     "get_ci_test",
     "ChiSquare",
+    "FisherZ",
     "GSq",
     "GCM",
     "IndependenceMatch",
