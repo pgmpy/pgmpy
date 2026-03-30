@@ -14,9 +14,9 @@ Defining Bayesian Networks
 
 See the :doc:`Defining a Custom Model <guides/custom_model>` guide for background.
 
-.. grid:: 3
+.. grid:: 1 1 2 3
    :gutter: 3
-   :class-container: sd-shadow-hover-cards
+   :class-container: pgmpy-card-grid
 
    .. grid-item-card:: Creating Discrete BN
       :link: examples/Creating_Discrete_BN
@@ -58,9 +58,9 @@ Causal Discovery / Structure Learning
 
 See the :doc:`Causal Discovery <guides/causal_discovery>` guide for background.
 
-.. grid:: 3
+.. grid:: 1 1 2 3
    :gutter: 3
-   :class-container: sd-shadow-hover-cards
+   :class-container: pgmpy-card-grid
 
    .. grid-item-card:: Structure Learning
       :link: examples/Structure_Learning
@@ -95,9 +95,9 @@ Parameter Estimation
 
 See the :doc:`Parameter Estimation <guides/parameter_estimation>` guide for background.
 
-.. grid:: 3
+.. grid:: 1 1 2 3
    :gutter: 3
-   :class-container: sd-shadow-hover-cards
+   :class-container: pgmpy-card-grid
 
    .. grid-item-card:: Discrete BN Parameters
       :link: examples/Parameter_Learning_Discrete_BN
@@ -118,9 +118,9 @@ Probabilistic Inference
 
 See the :doc:`Probabilistic Inference <guides/probabilistic_inference>` guide for background.
 
-.. grid:: 3
+.. grid:: 1 1 2 3
    :gutter: 3
-   :class-container: sd-shadow-hover-cards
+   :class-container: pgmpy-card-grid
 
    .. grid-item-card:: Inference in Discrete BN
       :link: examples/Inference_Discrete_BN
@@ -141,9 +141,9 @@ Causal Inference
 
 See the :doc:`Causal Identification <guides/causal_identification>` and :doc:`Causal Estimation <guides/causal_estimation>` guides for background.
 
-.. grid:: 3
+.. grid:: 1 1 2 3
    :gutter: 3
-   :class-container: sd-shadow-hover-cards
+   :class-container: pgmpy-card-grid
 
    .. grid-item-card:: Causal Inference
       :link: examples/Causal_Inference
@@ -164,9 +164,9 @@ Simulations
 
 See the :doc:`Simulations <guides/simulations>` guide for background.
 
-.. grid:: 3
+.. grid:: 1 1 2 3
    :gutter: 3
-   :class-container: sd-shadow-hover-cards
+   :class-container: pgmpy-card-grid
 
    .. grid-item-card:: Simulating Data
       :link: examples/Simulating_Data
@@ -178,9 +178,9 @@ See the :doc:`Simulations <guides/simulations>` guide for background.
 Extending pgmpy
 """"""""""""""""""
 
-.. grid:: 3
+.. grid:: 1 1 2 3
    :gutter: 3
-   :class-container: sd-shadow-hover-cards
+   :class-container: pgmpy-card-grid
 
    .. grid-item-card:: Extending pgmpy
       :link: examples/Extending_pgmpy
@@ -209,9 +209,9 @@ Tutorial Notebooks
 A series of in-depth tutorial notebooks that walk through pgmpy's core concepts step by step — from
 probabilistic graphical model basics to real-world applications.
 
-.. grid:: 3
+.. grid:: 1 1 2 3
    :gutter: 3
-   :class-container: sd-shadow-hover-cards
+   :class-container: pgmpy-card-grid
 
    .. grid-item-card:: 1. Introduction to PGMs
       :link: detailed_notebooks/1. Introduction to Probabilistic Graphical Models

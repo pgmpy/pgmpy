@@ -27,9 +27,7 @@
 
          Python toolkit for causal and probabilistic reasoning
 
-      pgmpy provides the building blocks for causal and probabilistic reasoning using graphical models. It implements data structures for a range of causal and graphical models such as DAGs, PDAGs, MAGs, PAGs, Bayesian Networks, Dynamic Bayesian Networks, and Structural Equation Models along with algorithms for various tasks such as causal discovery, causal identification, causal and probabilistic inference, model validation, parameter estimation, simulations, and more.
-
-      Algorithms for each task follow a unified composable API, making them modular and extensible. They are also scikit-learn compatible when possible. They can be used directly, combined in sklearn pipelines, or used to build higher-level tools on top of them.
+      pgmpy is a Python library for causal and probabilistic reasoning with graphical models. It covers the full workflow from learning causal graphs from data to estimating causal effects, running probabilistic inference, and simulating data from fitted models. All algorithms follow a unified, composable API and are scikit-learn compatible where possible, so they work standalone, in sklearn pipelines, or as building blocks for higher-level tools.
 
 
       .. container:: hero-actions
@@ -71,61 +69,61 @@ Key Features
 
 .. grid:: 1 1 2 4
    :gutter: 3
-   :class-container: sd-shadow-hover-cards pgmpy-card-grid
+   :class-container: pgmpy-card-grid
 
    .. grid-item-card:: Causal Discovery / Structure Learning
       :link: quickstart-causal-discovery
       :link-type: ref
-      :class-card: sd-card-hover pgmpy-card
+      :class-card: sd-card-hover
 
       Learn causal graphs from data using scikit-learn compatible implementations.
 
    .. grid-item-card:: Parameter Estimation
       :link: quickstart-parameter-estimation
       :link-type: ref
-      :class-card: sd-card-hover pgmpy-card
+      :class-card: sd-card-hover
 
       Estimate conditional distributions for nodes in the model.
 
    .. grid-item-card:: Probabilistic Inference
       :link: quickstart-probabilistic-inference
       :link-type: ref
-      :class-card: sd-card-hover pgmpy-card
+      :class-card: sd-card-hover
 
       Compute posterior distributions from the learned model using exact or approximate inference.
 
    .. grid-item-card:: Causal Identification
       :link: quickstart-causal-identification
       :link-type: ref
-      :class-card: sd-card-hover pgmpy-card
+      :class-card: sd-card-hover
 
       Given a causal graph determine how to estimate the a causal query.
 
    .. grid-item-card:: Causal Inference
       :link: quickstart-causal-inference
       :link-type: ref
-      :class-card: sd-card-hover pgmpy-card
+      :class-card: sd-card-hover
 
       Compute interventional and counterfactual distributions from models.
 
    .. grid-item-card:: Example Datasets and Models
       :link: quickstart-example-data-models
       :link-type: ref
-      :class-card: sd-card-hover pgmpy-card
+      :class-card: sd-card-hover
 
       Built-in collection of example Bayesian Networks and datasets from different sources.
 
    .. grid-item-card:: Simulations
       :link: quickstart-simulations
       :link-type: ref
-      :class-card: sd-card-hover pgmpy-card
+      :class-card: sd-card-hover
 
       Simulate data from models under various scenarios.
 
    .. grid-item-card:: Extend pgmpy
       :link: quickstart-extensibility
       :link-type: ref
-      :class-card: sd-card-hover pgmpy-card
+      :class-card: sd-card-hover
 
       Write your own custom pgmpy plugable methods using our extension templates.
 
