@@ -182,3 +182,19 @@ projects](https://github.com/pgmpy/pgmpy/wiki/Mentored-Projects). If you are
 interested in contributing to pgmpy, please join our
 [discord](https://discord.gg/DRkdKaumBs) server and introduce yourself. We will
 be happy to help you get started.
+
+## Beginner Example: Simple Bayesian Network
+
+Here is a simple example to help beginners understand how to create a Bayesian Network using pgmpy.
+
+```python
+from pgmpy.models import BayesianNetwork
+
+# Define the structure
+model = BayesianNetwork([('Rain', 'Traffic')])
+
+print("Nodes:", model.nodes())
+print("Edges:", model.edges())
+```
+
+This example demonstrates how to define a basic dependency between two variables.
