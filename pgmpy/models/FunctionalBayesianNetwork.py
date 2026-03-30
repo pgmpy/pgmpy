@@ -13,6 +13,7 @@ from pgmpy.factors.hybrid import FunctionalCPD
 from pgmpy.models import DiscreteBayesianNetwork
 
 pyro = _safe_import("pyro", pkg_name="pyro-ppl")
+torch = _safe_import("torch")
 
 
 class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
@@ -108,6 +109,8 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
             outcomes=outcomes,
             roles=roles,
         )
+        self._fit_estimator = None
+        self._posterior_samples = None
 
     def add_cpds(self, *cpds: FunctionalCPD) -> None:
         """
@@ -492,6 +495,8 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         mcmc_kwargs = mcmc_kwargs or {}
 
         cpds_dict = {node: self.get_cpds(node) for node in sort_nodes}
+        self._fit_estimator = estimator.lower()
+        self._posterior_samples = None
 
         # Step 2: Fit the model using the specified method.
         if estimator.lower() == "svi":
@@ -546,4 +551,408 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         if estimator.lower() == "svi":
             return dict(pyro.get_param_store().items())
         else:
-            return mcmc.get_samples()
+            self._posterior_samples = mcmc.get_samples()
+            return self._posterior_samples
+
+    def _validate_prediction_data(self, data: pd.DataFrame, allow_nan: bool) -> list[Hashable]:
+        """
+        Validate inputs for prediction methods and return the model's topological order.
+        """
+        if not isinstance(data, pd.DataFrame):
+            raise ValueError(f"data should be a pandas.DataFrame object. Got: {type(data)}.")
+
+        extra_columns = set(data.columns) - set(self.nodes())
+        if extra_columns:
+            raise ValueError("Data has variables which are not in the model")
+
+        if self._fit_estimator == "mcmc":
+            raise NotImplementedError(
+                "Prediction after fitting FunctionalBayesianNetwork with estimator='MCMC' is not yet supported."
+            )
+
+        self.check_model()
+        topo_order = list(nx.topological_sort(self))
+
+        if allow_nan:
+            if set(data.columns) == set(self.nodes()) and not data.isna().any().any():
+                raise ValueError("No variable missing in data. Nothing to predict")
+        else:
+            if data.isna().any().any():
+                raise ValueError(
+                    "`predict_probability` does not support NaN values. "
+                    "Drop columns corresponding to variables to predict."
+                )
+
+            missing_variables = [var for var in topo_order if var not in data.columns]
+            if len(missing_variables) == 0:
+                raise ValueError("No variable missing in data. Nothing to predict")
+
+        return topo_order
+
+    def _to_prediction_tensor(self, value: Any) -> torch.Tensor:
+        """
+        Convert a Python or NumPy value into a torch tensor compatible with the configured backend.
+        """
+        tensor = torch.as_tensor(value, device=config.get_device())
+        if tensor.is_floating_point():
+            tensor = tensor.to(dtype=config.get_dtype())
+        return tensor
+
+    def _to_numpy_samples(self, values: Any, node: Hashable, n_samples: int) -> np.ndarray:
+        """
+        Convert vectorized samples into a 1D numpy array with `n_samples` elements.
+        """
+        if isinstance(values, torch.Tensor):
+            values = values.detach().cpu().numpy()
+
+        values = np.asarray(values)
+        values = np.squeeze(values)
+
+        if values.ndim == 0:
+            values = np.repeat(values.item(), n_samples)
+
+        if values.ndim != 1 or values.shape[0] != n_samples:
+            raise ValueError(
+                f"Vectorized CPD for {node} must return exactly {n_samples} scalar samples. "
+                f"Got array with shape {values.shape}."
+            )
+
+        return values
+
+    def _to_log_prob_vector(self, log_prob: torch.Tensor, node: Hashable, n_samples: int) -> torch.Tensor:
+        """
+        Convert a batched log-probability tensor into a 1D tensor of per-sample log-probabilities.
+        """
+        if not isinstance(log_prob, torch.Tensor):
+            log_prob = self._to_prediction_tensor(log_prob)
+
+        if log_prob.ndim == 0:
+            log_prob = log_prob.repeat(n_samples)
+        elif log_prob.shape[0] != n_samples:
+            raise ValueError(
+                f"Vectorized CPD for {node} returned log_prob with incompatible shape {tuple(log_prob.shape)}."
+            )
+        else:
+            log_prob = log_prob.reshape(n_samples, -1).sum(dim=1)
+
+        return log_prob.to(dtype=config.get_dtype(), device=config.get_device())
+
+    def _normalize_log_weights(self, log_weights: torch.Tensor) -> np.ndarray:
+        """
+        Normalize log-weights using a stable log-sum-exp transform.
+        """
+        finite_mask = torch.isfinite(log_weights)
+        if not torch.any(finite_mask):
+            raise ValueError("Evidence has zero probability under the model.")
+
+        finite_weights = log_weights[finite_mask]
+        shifted = torch.exp(finite_weights - torch.max(finite_weights))
+        weight_sum = shifted.sum()
+        if weight_sum <= 0:
+            raise ValueError("Evidence has zero probability under the model.")
+
+        weights = torch.zeros_like(log_weights)
+        weights[finite_mask] = shifted / weight_sum
+        return weights.detach().cpu().numpy()
+
+    def _get_distribution_descriptor(self, distribution: Any) -> dict[str, Any]:
+        """
+        Classify a Pyro distribution for prediction summaries.
+        """
+        support = getattr(distribution, "support", None)
+        is_discrete = bool(getattr(support, "is_discrete", False))
+
+        if getattr(distribution, "has_enumerate_support", False) and is_discrete:
+            try:
+                states = distribution.enumerate_support(expand=False)
+            except TypeError:
+                states = distribution.enumerate_support()
+
+            if isinstance(states, torch.Tensor):
+                states = states.detach().cpu().numpy()
+
+            states = np.asarray(states)
+            if states.ndim > 1:
+                states = states[:, 0]
+
+            return {
+                "kind": "finite_discrete",
+                "states": [state.item() if np.asarray(state).ndim == 0 else state for state in states],
+            }
+
+        if is_discrete:
+            return {"kind": "discrete"}
+
+        return {"kind": "continuous"}
+
+    def _weighted_mode(self, values: np.ndarray, weights: np.ndarray, states: list[Any] | None = None) -> Any:
+        """
+        Compute a weighted mode from posterior samples.
+        """
+        candidate_states = states if states is not None else list(np.unique(values))
+        state_probs = [weights[values == state].sum() for state in candidate_states]
+        return candidate_states[int(np.argmax(state_probs))]
+
+    def _weighted_mean_and_cov(self, samples: np.ndarray, weights: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Compute weighted posterior means and covariances from samples.
+        """
+        mean = weights @ samples
+        centered = samples - mean
+        cov = centered.T @ (centered * weights[:, None])
+        return mean, cov
+
+    def _posterior_importance_samples(
+        self,
+        evidence: dict[Hashable, Any],
+        missing_vars: list[Hashable],
+        topo_order: list[Hashable],
+        cpds_dict: dict[Hashable, FunctionalCPD],
+        n_samples: int,
+        seed: int | None = None,
+    ) -> tuple[dict[Hashable, np.ndarray], np.ndarray, dict[Hashable, dict[str, Any]]]:
+        """
+        Approximate posterior samples for missing variables using ancestral importance sampling.
+        """
+        if seed is not None:
+            pyro.set_rng_seed(seed)
+
+        log_weights = torch.zeros(n_samples, dtype=config.get_dtype(), device=config.get_device())
+        particles: dict[Hashable, np.ndarray] = {}
+        descriptors: dict[Hashable, dict[str, Any]] = {}
+        missing_set = set(missing_vars)
+
+        with torch.no_grad():
+            for node in topo_order:
+                cpd = cpds_dict[node]
+
+                if cpd.vectorized:
+                    parent_sample = None
+                    if cpd.parents:
+                        parent_sample = pd.DataFrame({parent: particles[parent] for parent in cpd.parents})
+
+                    distribution = cpd.fn(parent_sample)
+
+                    if node in missing_set:
+                        descriptors[node] = self._get_distribution_descriptor(distribution)
+                        particles[node] = self._to_numpy_samples(distribution.sample(), node=node, n_samples=n_samples)
+                    else:
+                        obs_tensor = self._to_prediction_tensor(np.repeat(evidence[node], n_samples))
+                        log_weights += self._to_log_prob_vector(
+                            distribution.log_prob(obs_tensor),
+                            node=node,
+                            n_samples=n_samples,
+                        )
+                        particles[node] = np.repeat(evidence[node], n_samples)
+
+                else:
+                    node_particles = []
+                    for particle_index in range(n_samples):
+                        if cpd.parents:
+                            parent_values = {
+                                parent: self._to_prediction_tensor(particles[parent][particle_index])
+                                for parent in cpd.parents
+                            }
+                        else:
+                            parent_values = None
+
+                        distribution = cpd.fn(parent_values)
+
+                        if node in missing_set:
+                            descriptors.setdefault(node, self._get_distribution_descriptor(distribution))
+                            sample = distribution.sample()
+                            if isinstance(sample, torch.Tensor):
+                                sample = sample.detach().cpu().numpy()
+                            sample = np.asarray(sample).item()
+                            node_particles.append(sample)
+                        else:
+                            obs_value = self._to_prediction_tensor(evidence[node])
+                            log_prob = distribution.log_prob(obs_value)
+                            if isinstance(log_prob, torch.Tensor) and log_prob.ndim > 0:
+                                log_prob = log_prob.sum()
+                            log_weights[particle_index] += log_prob
+                            node_particles.append(evidence[node])
+
+                    particles[node] = np.asarray(node_particles)
+
+        weights = self._normalize_log_weights(log_weights)
+        posterior_samples = {var: particles[var] for var in missing_vars}
+        posterior_descriptors = {var: descriptors[var] for var in missing_vars}
+        return posterior_samples, weights, posterior_descriptors
+
+    def predict(
+        self,
+        data: pd.DataFrame,
+        stochastic: bool = False,
+        n_samples: int = 1000,
+        seed: int | None = None,
+        **kwargs: Any,
+    ) -> pd.DataFrame:
+        """
+        Predict missing variables from a Functional Bayesian Network using approximate posterior inference.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame
+            A DataFrame containing observed variables. Missing variables can either be omitted
+            as columns or indicated with NaN values.
+
+        stochastic : bool, default=False
+            If True, return a joint sample from the approximate posterior of the missing variables.
+            If False, return posterior means for continuous variables and posterior modes for
+            discrete variables.
+
+        n_samples : int, default=1000
+            Number of importance samples used to approximate the posterior.
+
+        seed : int, optional
+            Random seed for posterior approximation and stochastic prediction.
+
+        Returns
+        -------
+        pandas.DataFrame
+            A completed DataFrame with predictions for all missing values.
+        """
+        if kwargs:
+            raise TypeError(f"Unexpected keyword arguments: {sorted(kwargs.keys())}")
+
+        if not isinstance(n_samples, int) or n_samples <= 0:
+            raise ValueError(f"n_samples should be a positive integer. Got: {n_samples}.")
+
+        topo_order = self._validate_prediction_data(data=data, allow_nan=True)
+        cpds_dict = {node: self.get_cpds(node) for node in topo_order}
+        all_columns = data.columns.tolist() + [node for node in topo_order if node not in data.columns]
+        rng = np.random.default_rng(seed)
+        predictions = []
+
+        for index, data_point in data.iterrows():
+            missing_vars = [
+                node for node in topo_order if node not in data.columns or pd.isna(data_point.get(node, np.nan))
+            ]
+            completed_row = data_point.to_dict()
+
+            if missing_vars:
+                evidence = {
+                    node: data_point[node] for node in topo_order if node in data.columns and pd.notna(data_point[node])
+                }
+                row_seed = None if seed is None else int(rng.integers(0, np.iinfo(np.int32).max))
+                samples, weights, descriptors = self._posterior_importance_samples(
+                    evidence=evidence,
+                    missing_vars=missing_vars,
+                    topo_order=topo_order,
+                    cpds_dict=cpds_dict,
+                    n_samples=n_samples,
+                    seed=row_seed,
+                )
+
+                if stochastic:
+                    particle_index = int(rng.choice(n_samples, p=weights))
+                    for node in missing_vars:
+                        completed_row[node] = samples[node][particle_index]
+                else:
+                    for node in missing_vars:
+                        kind = descriptors[node]["kind"]
+                        if kind == "continuous":
+                            completed_row[node] = float(np.dot(weights, samples[node]))
+                        elif kind == "finite_discrete":
+                            completed_row[node] = self._weighted_mode(
+                                values=samples[node],
+                                weights=weights,
+                                states=descriptors[node]["states"],
+                            )
+                        else:
+                            completed_row[node] = self._weighted_mode(values=samples[node], weights=weights)
+
+            predictions.append(pd.Series(completed_row, name=index))
+
+        return pd.DataFrame(predictions).reindex(columns=all_columns)
+
+    def predict_probability(
+        self,
+        data: pd.DataFrame,
+        n_samples: int = 1000,
+        seed: int | None = None,
+        **kwargs: Any,
+    ) -> pd.DataFrame | tuple[list[str], np.ndarray, np.ndarray]:
+        """
+        Predict posterior distributions for missing variables using approximate posterior inference.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame
+            A DataFrame containing observed variables. Variables to predict must be omitted as columns.
+
+        n_samples : int, default=1000
+            Number of importance samples used to approximate the posterior.
+
+        seed : int, optional
+            Random seed for posterior approximation.
+
+        Returns
+        -------
+        pandas.DataFrame or tuple[list[str], np.ndarray, np.ndarray]
+            If all missing variables have finite discrete support, returns a DataFrame with one
+            probability column per state. If all missing variables are continuous, returns a tuple
+            of `(variables, mean, covariance)` where `mean` has shape `(n_rows, n_missing)` and
+            `covariance` has shape `(n_rows, n_missing, n_missing)`.
+        """
+        if kwargs:
+            raise TypeError(f"Unexpected keyword arguments: {sorted(kwargs.keys())}")
+
+        if not isinstance(n_samples, int) or n_samples <= 0:
+            raise ValueError(f"n_samples should be a positive integer. Got: {n_samples}.")
+
+        topo_order = self._validate_prediction_data(data=data, allow_nan=False)
+        cpds_dict = {node: self.get_cpds(node) for node in topo_order}
+        missing_vars = [node for node in topo_order if node not in data.columns]
+        rng = np.random.default_rng(seed)
+
+        posterior_results = []
+        kinds = set()
+        reference_descriptors = None
+
+        for _, data_point in data.iterrows():
+            evidence = {node: data_point[node] for node in data.columns}
+            row_seed = None if seed is None else int(rng.integers(0, np.iinfo(np.int32).max))
+            samples, weights, descriptors = self._posterior_importance_samples(
+                evidence=evidence,
+                missing_vars=missing_vars,
+                topo_order=topo_order,
+                cpds_dict=cpds_dict,
+                n_samples=n_samples,
+                seed=row_seed,
+            )
+
+            posterior_results.append((samples, weights, descriptors))
+            kinds.update(descriptor["kind"] for descriptor in descriptors.values())
+            if reference_descriptors is None:
+                reference_descriptors = descriptors
+
+        if kinds == {"finite_discrete"}:
+            pred_values = {
+                f"{var}_{state}": [] for var in missing_vars for state in reference_descriptors[var]["states"]
+            }
+
+            for samples, weights, descriptors in posterior_results:
+                for var in missing_vars:
+                    for state in descriptors[var]["states"]:
+                        pred_values[f"{var}_{state}"].append(weights[samples[var] == state].sum())
+
+            return pd.DataFrame(pred_values, index=data.index)
+
+        if kinds == {"continuous"}:
+            means = []
+            covariances = []
+
+            for samples, weights, _ in posterior_results:
+                sample_matrix = np.column_stack([samples[var] for var in missing_vars])
+                mean, covariance = self._weighted_mean_and_cov(sample_matrix, weights)
+                means.append(mean)
+                covariances.append(covariance)
+
+            return missing_vars, np.vstack(means), np.stack(covariances)
+
+        raise NotImplementedError(
+            "`predict_probability` currently supports either all-continuous missing variables "
+            "or all finite-support discrete missing variables."
+        )
