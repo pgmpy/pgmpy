@@ -7,6 +7,7 @@ on:
 
 jobs:
   test-nosoftdeps:
+    if: github.repository == 'pgmpy/pgmpy'
     name: Core deps | ${{ matrix.os }} | Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -54,6 +55,7 @@ jobs:
         run: pytest --verbose
 
   test-fulldep:
+    if: github.repository == 'pgmpy/pgmpy'
     name: Optional deps | ${{ matrix.os }} | Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -130,6 +132,7 @@ jobs:
           if-no-files-found: error
 
   update-test-durations:
+    if: github.repository == 'pgmpy/pgmpy'
     name: Update .test_durations
     needs: test-fulldep
     runs-on: ubuntu-latest
@@ -193,7 +196,7 @@ jobs:
 
   notify:
     needs: [test-nosoftdeps, test-fulldep, update-test-durations]
-    if: failure()
+    if: failure() && github.repository == 'pgmpy/pgmpy'
     runs-on: ubuntu-latest
     permissions:
       issues: write
