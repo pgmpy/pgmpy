@@ -199,7 +199,7 @@ class DagmaLinear(_BaseCausalDiscovery):
                 )
 
                 # Initialize the PyTorch LBFGS optimizer
-                lbfgs = LBFGS([W_tensor], max_iter=5, line_search_fn="strong_wolfe")
+                lbfgs = LBFGS([W_tensor], max_iter=100, line_search_fn="strong_wolfe")
 
                 def closure():
                     lbfgs.zero_grad()  # Clear previous gradients

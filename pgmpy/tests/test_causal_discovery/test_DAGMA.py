@@ -66,7 +66,7 @@ def continuous_data():
 class TestDagmaLinearCore:
     """Tests for core DagmaLinear functionality."""
 
-    def test_estimate_returns_dag(self, continuous_data):
+    def test_estimate_returns_dag(self, continuous_data, backend):
         est = DagmaLinear()
 
         est.fit(continuous_data)
@@ -95,7 +95,7 @@ class TestDagmaLinearCore:
         assert ("Y", "Y") not in learned_edges
         assert ("Z", "Z") not in learned_edges
 
-    def test_custom_hyperparameters(self):
+    def test_custom_hyperparameters(self, backend):
         """
         Ensure custom hyperparameters are strictly mapped to the instance.
         """
@@ -107,7 +107,7 @@ class TestDagmaLinearCore:
         assert est.max_iter == 50
         assert est.w_threshold == 0.4
 
-    def test_compare_with_official_dagma(self, continuous_data):
+    def test_compare_with_official_dagma(self, continuous_data, backend):
         """
         Compare the adjacency matrix output of pgmpy's DagmaLinear
         with the official dagma package implementation.
@@ -119,10 +119,12 @@ class TestDagmaLinearCore:
 
         # 1. Run official DAGMA
         model_official = OfficialDagmaLinear(loss_type="l2")  # pragma: no cover
-        W_official = model_official.fit(continuous_data.to_numpy().copy(), lambda1=0.05)
+        W_official = model_official.fit(
+            continuous_data.to_numpy().copy(), lambda1=0.05, w_threshold=0.5
+        )  # pragma: no cover
 
         # 2. Run pgmpy's DAGMA
-        est = DagmaLinear(lambda1=0.05)  # pragma: no cover
+        est = DagmaLinear(lambda1=0.05, w_threshold=0.5)  # pragma: no cover
         est.fit(continuous_data)  # pragma: no cover
         W_pgmpy = est.adjacency_matrix_  # pragma: no cover
 
