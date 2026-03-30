@@ -7,8 +7,10 @@ import unittest
 import numpy as np
 import pandas as pd
 import pytest
+from skbase.utils.dependencies import _check_soft_dependencies
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
+from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.causal_discovery.DAGMA import DagmaLinear
 
@@ -35,6 +37,16 @@ def test_dagma_compatibility(estimator, check):
     Automatically runs scikit-learn API compliance checks.
     """
     check(estimator)
+
+
+@pytest.fixture(params=["numpy", "torch"])
+def backend(request):
+    if request.param == "torch":
+        if not _check_soft_dependencies("torch", severity="none"):
+            pytest.skip("torch not installed")
+        config.set_backend("torch")
+    yield request.param
+    config.set_backend("numpy")
 
 
 @pytest.fixture
@@ -106,20 +118,20 @@ class TestDagmaLinearCore:
             pytest.skip("Official 'dagma' not installed.")
 
         # 1. Run official DAGMA
-        model_official = OfficialDagmaLinear(loss_type="l2")
+        model_official = OfficialDagmaLinear(loss_type="l2")  # pragma: no cover
         W_official = model_official.fit(continuous_data.to_numpy().copy(), lambda1=0.05)
 
         # 2. Run pgmpy's DAGMA
-        est = DagmaLinear(lambda1=0.05)
-        est.fit(continuous_data)
-        W_pgmpy = est.adjacency_matrix_
+        est = DagmaLinear(lambda1=0.05)  # pragma: no cover
+        est.fit(continuous_data)  # pragma: no cover
+        W_pgmpy = est.adjacency_matrix_  # pragma: no cover
 
         # Check 1. Both optimizers found the exact same DAG structure
         # Official optimizer 'adam', pgmpy optimizer 'L-BFGS-B'
-        np.testing.assert_array_equal(W_pgmpy != 0, W_official != 0)
+        np.testing.assert_array_equal(W_pgmpy != 0, W_official != 0)  # pragma: no cover
 
         # Check 2. Assert matrices are identical up to a small tolerance
-        np.testing.assert_allclose(W_pgmpy, W_official, atol=0.05)
+        np.testing.assert_allclose(W_pgmpy, W_official, atol=0.05)  # pragma: no cover
 
 
 class TestDagmaLinear(unittest.TestCase):
