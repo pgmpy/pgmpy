@@ -4,8 +4,7 @@ Core benchmark runner orchestrator.
 The BenchmarkRunner is the main entry point for running benchmarks.
 It coordinates simulators, methods, metrics, and semantic evaluation.
 """
-
-from typing import List, Dict, Any, Optional, Callable
+from typing import List, Dict, Any, Optional, Callable, Union
 from dataclasses import dataclass, field, asdict
 import json
 import time
