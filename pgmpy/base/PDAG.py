@@ -247,14 +247,16 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         if not inplace:
             return pdag
 
-    def adjacent_neighbors(self, u):
-        adj = set()
-        for node in self.nodes:
-            if self.is_adjacent(u, node):
-                adj.add(node)
-        return adj
+    def is_clique(self, nodes: Iterable) -> bool:
+        """
+        Checks if a set of nodes forms a clique. A clique is a subgraph
+        where every pair of nodes is connected by an edge (fully connected).
 
-    def is_clique(self, nodes):
+        Parameters
+        ----------
+        nodes: Iterable
+            The set of nodes to be checked for clique formation.
+        """
         for node1, node2 in itertools.combinations(nodes, 2):
             if not self.has_undirected_edge(node1, node2):
                 return False
@@ -384,7 +386,11 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         if not inplace:
             return pdag
 
-    def calibrate_directed_undirected_edges(self):
+    def calibrate_directed_undirected_edges(self) -> None:
+        """
+        Iterates through existing edges to correctly assign directed
+        and undirected edges.
+        """
         all_edges = set(self.edges)
         undirected = set()
         directed = set()

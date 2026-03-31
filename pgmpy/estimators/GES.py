@@ -121,6 +121,17 @@ class GES(StructureEstimator):
 
         return True
 
+    def adjacent_neighbors(self, u: Any, current_model: PDAG):
+        """
+        Return all adjacent neighbors of u in current_model. Considers edges
+        in any direction.
+        """
+        adj = set()
+        for node in current_model.nodes:
+            if current_model.is_adjacent(u, node):
+                adj.add(node)
+        return adj
+
     @staticmethod
     def powerset(iterable: Iterable[Any]):
         """
@@ -227,7 +238,7 @@ class GES(StructureEstimator):
         """
         Perform delete(u - v) or delete(u -> v) with conditioning set H.
         """
-        na_vu = current_model.undirected_neighbors(v) & current_model.adjacent_neighbors(u)
+        na_vu = current_model.undirected_neighbors(v) & self.adjacent_neighbors(u, current_model)
 
         if not H.issubset(na_vu):
             raise ValueError(f"H={H} is not a subset of NA_vu={na_vu}.")
@@ -295,7 +306,7 @@ class GES(StructureEstimator):
         """
         Score all valid insert(u -> v) operations.
         """
-        T0 = current_model.undirected_neighbors(v) - current_model.adjacent_neighbors(u)
+        T0 = current_model.undirected_neighbors(v) - self.adjacent_neighbors(u, current_model)
 
         power_set = self.powerset(T0)
         subsets = [[*T, False] for T in power_set]  # [elements..., passed_cond_2]
@@ -305,7 +316,7 @@ class GES(StructureEstimator):
             entry = subsets.pop(0)
             T, passed_cond_2 = set(entry[:-1]), entry[-1]
 
-            na_vu = current_model.undirected_neighbors(v) & current_model.adjacent_neighbors(u)
+            na_vu = current_model.undirected_neighbors(v) & self.adjacent_neighbors(u, current_model)
             na_vuT = na_vu.union(T)
 
             # Condition 1: NA_vu ∪ T is a clique
@@ -353,7 +364,7 @@ class GES(StructureEstimator):
         if not current_model.has_edge(u, v):
             raise ValueError(f"No edge exists between nodes {u, v} to delete.")
 
-        na_vu = current_model.undirected_neighbors(v) & current_model.adjacent_neighbors(u)
+        na_vu = current_model.undirected_neighbors(v) & self.adjacent_neighbors(u, current_model)
         H0 = na_vu
 
         power_set = self.powerset(H0)
@@ -407,7 +418,7 @@ class GES(StructureEstimator):
         """
         Score all valid turn(u -> v) operations.
         """
-        T0 = current_model.undirected_neighbors(v) - current_model.adjacent_neighbors(u)
+        T0 = current_model.undirected_neighbors(v) - self.adjacent_neighbors(u, current_model)
 
         power_set = self.powerset(T0)
         subsets = [[*T, False] for T in power_set]  # [elements..., passed_cond_2]
@@ -417,7 +428,7 @@ class GES(StructureEstimator):
             entry = subsets.pop(0)
             T, passed_cond_2 = set(entry[:-1]), entry[-1]
 
-            na_vu = current_model.undirected_neighbors(v) & current_model.adjacent_neighbors(u)
+            na_vu = current_model.undirected_neighbors(v) & self.adjacent_neighbors(u, current_model)
             C = na_vu.union(T)
 
             # Condition 1: NA_vu ∪ T is a clique
@@ -466,7 +477,7 @@ class GES(StructureEstimator):
         """
         Score all valid turn(u - v) operations.
         """
-        non_adjacents = current_model.undirected_neighbors(v) - current_model.adjacent_neighbors(u) - {u}
+        non_adjacents = current_model.undirected_neighbors(v) - self.adjacent_neighbors(u, current_model) - {u}
 
         if len(non_adjacents) == 0:
             return []
@@ -491,7 +502,7 @@ class GES(StructureEstimator):
 
             subgraph = self._induced_subgraph(self._chain_component(v, current_model), current_model)
 
-            na_vu = current_model.undirected_neighbors(v) & current_model.adjacent_neighbors(u)
+            na_vu = current_model.undirected_neighbors(v) & self.adjacent_neighbors(u, current_model)
 
             # Separation condition
             if not self._separates({u, v}, C, na_vu - C, subgraph):
