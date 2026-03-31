@@ -247,6 +247,19 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         if not inplace:
             return pdag
 
+    def adjacent_neighbors(self, u):
+        adj = set()
+        for node in self.nodes:
+            if self.is_adjacent(u, node):
+                adj.add(node)
+        return adj
+
+    def is_clique(self, nodes):
+        for node1, node2 in itertools.combinations(nodes, 2):
+            if not self.has_undirected_edge(node1, node2):
+                return False
+        return True
+
     def _check_new_unshielded_collider(self, u, v):
         """
         Tests if orienting an undirected edge u - v as u -> v creates new unshielded V-structures in the PDAG.
@@ -370,6 +383,20 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
                                 break
         if not inplace:
             return pdag
+
+    def calibrate_directed_undirected_edges(self):
+        all_edges = set(self.edges)
+        undirected = set()
+        directed = set()
+        for u, v in all_edges:
+            if (v, u) in all_edges:
+                if u > v:
+                    undirected.add((u, v))
+            else:
+                directed.add((u, v))
+
+        self.undirected_edges = undirected
+        self.directed_edges = directed
 
     def to_dag(self):
         """
