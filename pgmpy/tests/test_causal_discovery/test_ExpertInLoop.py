@@ -3,13 +3,14 @@ Tests for the sklearn-compatible ExpertInLoop class in pgmpy.causal_discovery
 """
 
 import logging
+from unittest.mock import patch
+
 import networkx as nx
 import numpy as np
 import pandas as pd
 import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
 from sklearn.utils.estimator_checks import parametrize_with_checks
-from unittest.mock import patch
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery import ExpertInLoop
