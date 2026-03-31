@@ -760,3 +760,79 @@ def test_show_progress_logs_orientation(caplog):
 
     orientation_logs = [r for r in caplog.records if "Queried for edge orientation" in r.message]
     assert len(orientation_logs) >= 1
+
+
+def test_get_edge_orientation_expert_knowledge_orientations():
+    """ExpertKnowledge orientations are correctly used in _get_edge_orientation.
+    Covers ExpertInLoop.py line 280, 284-287.
+    """
+    ek = ExpertKnowledge(orientations=[("A", "B")])
+    estimator = ExpertInLoop(expert_knowledge=ek)
+    # Forward hit (line 285)
+    assert estimator._get_edge_orientation("A", "B") == ("A", "B")
+    # Reversed hit (line 287)
+    assert estimator._get_edge_orientation("B", "A") == ("A", "B")
+
+
+def test_get_edge_orientation_temporal_ordering_both_directions():
+    """temporal_ordering covers both u < v and v < u directions.
+    Covers ExpertInLoop.py lines 290-300.
+    """
+    ek = ExpertKnowledge(temporal_order=[["A"], ["B"]])
+    estimator = ExpertInLoop(expert_knowledge=ek)
+    # Forward: A < B (line 298)
+    assert estimator._get_edge_orientation("A", "B") == ("A", "B")
+    # Reversed: B > A (line 300)
+    assert estimator._get_edge_orientation("B", "A") == ("A", "B")
+
+
+def test_get_edge_orientation_expert_knowledge_fn():
+    """ExpertKnowledge orientation_fn is correctly used in _get_edge_orientation.
+    Covers ExpertInLoop.py line 315.
+    """
+
+    def ek_orient(u, v, **kwargs):
+        return (v, u)
+
+    ek = ExpertKnowledge(orientation_fn=ek_orient)
+    estimator = ExpertInLoop(expert_knowledge=ek)
+    # Orientation from ExpertKnowledge.orientation_fn should be prioritized
+    assert estimator._get_edge_orientation("A", "B") == ("B", "A")
+
+
+def test_fit_nonedge_empty_breaks():
+    """_fit breaks when nonedge_effects is empty and no removals occurred.
+    Covers ExpertInLoop.py lines 445-446.
+    """
+    n = 20
+    data = pd.DataFrame({"A": np.random.normal(size=n)})
+    # ExpertInLoop on single variable will have no candidate edges
+    estimator = ExpertInLoop(orientation_fn=simple_orient)
+    estimator.fit(data)
+    assert estimator.causal_graph_.number_of_nodes() == 1
+    assert estimator.causal_graph_.number_of_edges() == 0
+
+
+def test_fit_cycle_broken_successfully():
+    """A cycle that is identified is broken by removing a weak edge.
+    Covers ExpertInLoop.py lines 482-484.
+    """
+    np.random.seed(0)
+    data = pd.DataFrame({"A": [1, 2], "B": [1, 2], "C": [1, 2]})
+    estimator = ExpertInLoop(effect_size_threshold=0.0, pval_threshold=1.0)
+    
+    # We must ensure variables_ is set before fit is called if we are mocking parts of fit,
+    # but estimator.fit(data) will set it. 
+    
+    # We patch _get_edge_orientation to return a sequence that creates A->B, B->C, then C->A (cycle)
+    # The 4th return is for the re-evaluation if needed.
+    with patch.object(estimator, "_get_edge_orientation", side_effect=[("A", "B"), ("B", "C"), ("C", "A"), ("C", "A")]):
+        # Mock _break_cycle on the instance to return A->B
+        with patch.object(estimator, "_break_cycle", return_value=[("A", "B")]):
+            estimator.fit(data)
+
+    # Final graph should have B->C and C->A, but NOT A->B.
+    assert ("A", "B") not in estimator.causal_graph_.edges()
+    assert ("B", "C") in estimator.causal_graph_.edges()
+    assert ("C", "A") in estimator.causal_graph_.edges()
+    assert nx.is_directed_acyclic_graph(estimator.causal_graph_)

@@ -18,10 +18,17 @@ class TestExpertKnowledge:
             temporal_order=[["A"], ["B"]],
             forbidden_edges=[("C", "D")],
             search_space=[("A", "B"), ("B", "C")],
+            orientations=[("A", "B")],
         )
+        # Call str and repr directly to ensure coverage
+        s = str(ek)
+        r = repr(ek)
+        print(s)
+        print(r)
+
         assert repr(ek) == (
             "Expert Knowledge: 1 required edges, 1 forbidden edges, "
-            "temporal order on 2 nodes, 2 search space edges, and 0 explicit orientations"
+            "temporal order on 2 nodes, 2 search space edges, and 1 explicit orientations"
         )
         assert "Expert Knowledge:\n" in str(ek)
         assert "Required Edges: {('A', 'B')}" in str(ek)
@@ -31,6 +38,7 @@ class TestExpertKnowledge:
         # Check individual elements to avoid flakiness with set representation
         assert "('A', 'B')" in str(ek)
         assert "('B', 'C')" in str(ek)
+        assert "Orientations: {('A', 'B')}" in str(ek)
         assert "Temporal Order: [['A'], ['B']]" in str(ek)
 
     def test_duplicate_node_in_temporal_order_raises(self):
@@ -40,3 +48,9 @@ class TestExpertKnowledge:
         """
         with pytest.raises(ValueError, match="present in multiple tiers"):
             ExpertKnowledge(temporal_order=[["A", "B"], ["A", "C"]])
+
+    def test_validate_edges_type_error(self):
+        """Line 198 in ExpertKnowledge.py: invalid edge_list type."""
+        ek = ExpertKnowledge()
+        with pytest.raises(TypeError, match="edge_list must be a list, tuple, or set"):
+            ek._validate_edges("invalid")
