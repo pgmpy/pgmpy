@@ -3,6 +3,7 @@ import pandas as pd
 import pytest
 
 from pgmpy.estimators import MaximumLikelihoodEstimator as MLE
+from pgmpy.factors.hybrid.Adapters import LinearGaussianAdapter, TabularAdapter
 from pgmpy.factors.hybrid.FunctionalCPD_Refactor import FunctionalCPD
 from pgmpy.factors.hybrid.SkproAdapter import SkproAdapter
 from pgmpy.models.FunctionalBayesianNetwork_Refactor import FunctionalBayesianNetwork as FunctionalBN
@@ -43,6 +44,31 @@ def test_fit_learns_mixed_tabular_and_linear_cpds():
     np.testing.assert_allclose(fitted_d.beta[0], 0.0, atol=0.25)
     np.testing.assert_allclose(fitted_d.beta[1:], [2.5, -1.5, 3.0], atol=0.2)
     np.testing.assert_allclose(fitted_d.std, 1.0, atol=0.15)
+
+
+def test_fit_uses_tabular_and_linear_adapters():
+    rng = np.random.default_rng(21)
+    data = pd.DataFrame(
+        {
+            "A": rng.integers(0, 2, size=80),
+            "B": rng.normal(size=80),
+            "C": rng.normal(size=80),
+        }
+    )
+
+    model = FunctionalBN([("A", "C"), ("B", "C")])
+    cpd_a = FunctionalCPD(variable="A", tag="tabular", estimator=MLE)
+    cpd_b = FunctionalCPD(variable="B", tag="linear", estimator="MLE")
+    cpd_c = FunctionalCPD(variable="C", tag="linear", estimator="MLE")
+    model.add_cpds(cpd_a, cpd_b, cpd_c)
+    model.fit(data)
+
+    fitted_a = model.get_cpds("A")
+    fitted_b = model.get_cpds("B")
+    assert isinstance(fitted_a.adapter_, TabularAdapter)
+    assert isinstance(fitted_b.adapter_, LinearGaussianAdapter)
+    assert "FunctionalCPD(tabular)" in repr(fitted_a)
+    assert "FunctionalCPD(linear)" in repr(fitted_b)
 
 
 class DummySkproRegressor:
