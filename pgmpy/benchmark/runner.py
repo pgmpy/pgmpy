@@ -5,16 +5,14 @@ The BenchmarkRunner is the main entry point for running benchmarks.
 It coordinates simulators, methods, metrics, and semantic evaluation.
 """
 
-from typing import List, Dict, Any, Optional, Callable, Union
+from typing import List, Dict, Any, Optional, Callable
 from dataclasses import dataclass, field, asdict
 import json
 import time
 import pandas as pd
 import networkx as nx
 from joblib import Parallel, delayed
-import warnings
 import logging
-import os
 
 from pgmpy.benchmark.base import BaseSimulator, BaseMetric, MetricResult
 from pgmpy.benchmark.metrics import shd, precision_recall, orientation_f1, sid
@@ -348,7 +346,8 @@ class BenchmarkRunner:
                 if self.verbose > 0:
                     self.logger.warning(f"Metric computation failed: {e}")
                 # Better fallback handling
-                metric_name = getattr(metric, '_name', getattr(metric, 'func', metric).__name__ if hasattr(getattr(metric, 'func', metric), '__name__') else str(metric))
+                metric_func = getattr(metric, 'func', metric)
+                metric_name = getattr(metric, '_name', getattr(metric_func, '__name__', str(metric)))
                 metrics_dict[metric_name] = np.nan
         
         return BenchmarkRun(

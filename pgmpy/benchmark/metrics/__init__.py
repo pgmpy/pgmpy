@@ -10,10 +10,8 @@ Provides standard evaluation metrics for causal graph recovery:
 """
 
 from typing import Callable, Dict, Any, List
-from abc import ABC, abstractmethod
 import networkx as nx
 import numpy as np
-import time
 
 from pgmpy.benchmark.base import BaseMetric, MetricResult
 

@@ -175,13 +175,23 @@ def _default_rules() -> List[EvaluationRule]:
         EvaluationRule(
             name="recall_priority_penalty",
             condition=lambda ctx: ctx.priority == "recall",
-            action=lambda w: {**w, **{k: v * 1.3 if k == "recall" else v * 0.9 if k == "precision" else v for k, v in w.items()}},
+            action=lambda w: {
+                **w, **{
+                    k: (v * 1.3 if k == "recall" else v * 0.9 if k == "precision" else v)
+                    for k, v in w.items()
+                },
+            },
             rationale="Recall priority: favor recall, penalize precision",
         ),
         EvaluationRule(
             name="precision_priority_adjustment",
             condition=lambda ctx: ctx.priority == "precision",
-            action=lambda w: {**w, **{k: v * 1.3 if k == "precision" else v * 0.9 if k == "recall" else v for k, v in w.items()}},
+            action=lambda w: {
+                **w, **{
+                    k: (v * 1.3 if k == "precision" else v * 0.9 if k == "recall" else v)
+                    for k, v in w.items()
+                },
+            },
             rationale="Precision priority: favor precision, penalize recall",
         ),
         EvaluationRule(
@@ -277,7 +287,8 @@ class SemanticScorer:
             for rule in self.rules:
                 if rule.name in fired_rules:
                     trace.append(f"  → {rule.name}: {rule.rationale}")
-            trace.append(f"[WEIGHTS ADJUSTED] {{{', '.join(f'{k}={v:.2f}' for k, v in sorted(adjusted_weights.items()))}}}")
+            weights_str = ', '.join(f'{k}={v:.2f}' for k, v in sorted(adjusted_weights.items()))
+            trace.append(f"[WEIGHTS ADJUSTED] {{{weights_str}}}")
         else:
             trace.append("[RULES FIRED] None")
         
@@ -289,9 +300,16 @@ class SemanticScorer:
         composite_score = self._aggregate_scores(component_scores, adjusted_weights)
         
         trace.append(f"[COMPOSITE SCORE] {composite_score:.4f}")
-        trace.append(f"[INTERPRETATION] "
-                    f"{'Excellent' if composite_score > 0.85 else 'Good' if composite_score > 0.70 else 'Fair' if composite_score > 0.50 else 'Poor'} "
-                    f"performance for {self.context.domain} with {self.context.priority} priority")
+        quality = (
+            'Excellent' if composite_score > 0.85
+            else 'Good' if composite_score > 0.70
+            else 'Fair' if composite_score > 0.50
+            else 'Poor'
+        )
+        trace.append(
+            f"[INTERPRETATION] {quality} performance for "
+            f"{self.context.domain} with {self.context.priority} priority"
+        )
         
         return composite_score, trace
     

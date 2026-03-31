@@ -12,7 +12,7 @@ import logging
 import tempfile
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any
 
 
 logger = logging.getLogger(__name__)

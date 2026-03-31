@@ -9,7 +9,6 @@ Provides simulators for common causal graph structures:
 """
 
 from typing import Optional, Dict, Any, Literal
-from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 import networkx as nx
