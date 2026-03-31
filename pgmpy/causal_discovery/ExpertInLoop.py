@@ -193,30 +193,30 @@ class ExpertInLoop(_BaseCausalDiscovery):
             The results with p-values and effect sizes of all the tests.
         """
         cis = []
+        # Use defensive getattr to satisfy sklearn standards while allowing testability
+        ci_cache = getattr(self, "ci_cache_", {})
         for u, v in combinations(list(dag.nodes()), 2):
             u_parents = set(dag.get_parents(u))
             v_parents = set(dag.get_parents(v))
 
             if v in u_parents:
-                u_parents -= {v}
+                conditioning_set = u_parents - {v}
                 edge_present = True
             elif u in v_parents:
-                v_parents -= {u}
+                conditioning_set = v_parents - {u}
                 edge_present = True
             else:
+                conditioning_set = u_parents | v_parents
                 edge_present = False
 
-            cond_set = list(set(u_parents).union(v_parents))
-            cond_set_frozen = frozenset(cond_set)
-            cache_key = (min(u, v), max(u, v), cond_set_frozen)
-
-            if cache_key in self.ci_cache_:
-                effect, p_value = self.ci_cache_[cache_key]
+            cache_key = (min(u, v), max(u, v), frozenset(conditioning_set))
+            if cache_key in ci_cache:
+                effect, p_value = ci_cache[cache_key]
             else:
-                effect, p_value = ci_test.run_test(X=u, Y=v, Z=cond_set)
-                self.ci_cache_[cache_key] = (effect, p_value)
+                effect, p_value = ci_test.run_test(X=u, Y=v, Z=list(conditioning_set))
+                ci_cache[cache_key] = (effect, p_value)
 
-            cis.append([u, v, cond_set, edge_present, effect, p_value])
+            cis.append([u, v, list(conditioning_set), edge_present, effect, p_value])
 
         return pd.DataFrame(cis, columns=["u", "v", "z", "edge_present", "effect", "p_val"])
 
@@ -251,11 +251,10 @@ class ExpertInLoop(_BaseCausalDiscovery):
         """
         logger.info("Returned edge orientation creates a cycle. Trying to identify the incorrect edge.")
         edges_to_remove = []
-        # I am adding this because nx.DiGraph avoids the internal cyclic validation of pgmpy.base.DAG which crashes
         temp_dag = nx.DiGraph(dag)
         temp_dag.add_edges_from([(u, v)])
         for cycle in nx.simple_cycles(temp_dag):
-            for x, y in zip(cycle, cycle[1:]):
+            for x, y in zip(cycle, cycle[1:] + [cycle[0]]):
                 if not ((x == u) and (y == v)):
                     Z = set(cycle) - {x, y}
                     effect, pvalue = ci_test.run_test(x, y, Z=Z)
@@ -265,27 +264,34 @@ class ExpertInLoop(_BaseCausalDiscovery):
 
         return edges_to_remove
 
-    def _get_edge_orientation(self, u, v):
+    def _get_edge_orientation(self, u: str, v: str) -> tuple[str, str] | None:
         """
-        Determines the orientation of an edge between u and v using expert knowledge,
-        caching, and the orientation function.
+        Determines the orientation of the edge between `u` and `v`.
+        Priority:
+        1. Explicit orientations in expert_knowledge.
+        2. Explicit orientations in self.orientations.
+        3. Temporal ordering in expert_knowledge.
+        4. Orientation cache (if use_cache is True).
+        5. Orientation function in expert_knowledge.
+        6. Orientation function in self.orientation_fn.
         """
-        # I am adding this because we need to properly merge orientations from both class sources
-        orientations_set = set()
+        # 1 & 2. Explicit orientations
         if (
             self.expert_knowledge
             and hasattr(self.expert_knowledge, "orientations")
             and self.expert_knowledge.orientations
         ):
-            orientations_set.update(self.expert_knowledge.orientations)
-        if hasattr(self, "orientations") and self.orientations:
-            orientations_set.update(self.orientations)
+            if (u, v) in self.expert_knowledge.orientations:
+                return (u, v)
+            if (v, u) in self.expert_knowledge.orientations:
+                return (v, u)
+        if self.orientations:
+            if (u, v) in self.orientations:
+                return (u, v)
+            if (v, u) in self.orientations:
+                return (v, u)
 
-        if (u, v) in orientations_set:
-            return (u, v)
-        elif (v, u) in orientations_set:
-            return (v, u)
-
+        # 3. Temporal ordering
         if (
             self.expert_knowledge
             and hasattr(self.expert_knowledge, "temporal_ordering")
@@ -296,42 +302,39 @@ class ExpertInLoop(_BaseCausalDiscovery):
             if u_order is not None and v_order is not None:
                 if u_order < v_order:
                     return (u, v)
-                elif v_order < u_order:
+                if v_order < u_order:
                     return (v, u)
 
+        # 4. Cache
+        orientation_cache = getattr(self, "orientation_cache_", set())
         if self.use_cache:
-            if (u, v) in self.orientation_cache_:
+            if (u, v) in orientation_cache:
                 return (u, v)
-            elif (v, u) in self.orientation_cache_:
+            if (v, u) in orientation_cache:
                 return (v, u)
 
-        # I am adding this because we must prioritize ExpertKnowledge but fallback to self.orientation_fn
-        orient_fn = None
-        if (
-            self.expert_knowledge
+        # 5 & 6. Orientation function
+        orient_fn = (
+            self.expert_knowledge.orientation_fn
+            if self.expert_knowledge
             and hasattr(self.expert_knowledge, "orientation_fn")
-            and self.expert_knowledge.orientation_fn is not None
-        ):
-            orient_fn = self.expert_knowledge.orientation_fn
-        elif hasattr(self, "orientation_fn") and self.orientation_fn is not None:
-            orient_fn = self.orientation_fn
+            and self.expert_knowledge.orientation_fn
+            else self.orientation_fn
+        )
 
-        if orient_fn is None:
-            # added error handling instead of None
-            raise ValueError(
-                "No orientation function is available. Provide an `orientation_fn` to ExpertInLoop "
-                "or set `orientation_fn` on the `expert_knowledge` object."
-            )
+        if orient_fn:
+            res = orient_fn(u, v)
+            if res and self.use_cache:
+                orientation_cache.add(res)
 
-        edge_direction = orient_fn(u, v)
-        if self.use_cache and edge_direction is not None:
-            self.orientation_cache_.add(edge_direction)
+            if self.show_progress and res:
+                logger.info(f"Queried for edge orientation: {u} - {v} -> {res}")
+            return res
 
-        if config.SHOW_PROGRESS and self.show_progress and edge_direction is not None:
-            logger.info(
-                f"\rQueried for edge orientation between {u} and {v}. Got: {edge_direction[0]} -> {edge_direction[1]}"
-            )
-        return edge_direction
+        raise ValueError(
+            f"No orientation function is available for edge {u}-{v}. "
+            "Please provide an orientation_fn or ExpertKnowledge."
+        )
 
     def _fit(self, X: pd.DataFrame):
         """
@@ -349,12 +352,11 @@ class ExpertInLoop(_BaseCausalDiscovery):
         """
         self.variables_ = list(X.columns)
 
-        # Initialize orientation cache (preserve if pre-populated)
-        if not hasattr(self, "orientation_cache_"):
-            self.orientation_cache_ = set()
-
-        # I am adding this because _test_all calculates the CI tests O(N^2) times repetitively in the loop without cache
+        # Caches are initialized at the start of fit to satisfy sklearn compatibility
+        # while maintaining performance during the iterative loop.
         self.ci_cache_ = {}
+        if not hasattr(self, "orientation_cache_") or not self.use_cache:
+            self.orientation_cache_ = set()
 
         # Step 0: Create a new DAG on all the variables with no edge.
         dag = DAG()
@@ -453,9 +455,6 @@ class ExpertInLoop(_BaseCausalDiscovery):
             edge_direction = self._get_edge_orientation(selected_edge.u, selected_edge.v)
 
             # Step 3.6: Handle the edge direction
-            # 1. If orientation function returns None, do not add the edge
-            # 2. If new edge creates a cycle, try to resolve it
-            # 3. Otherwise, add the edge
             if edge_direction is None:
                 logger.info(
                     f"Orientation function returned None for edge {selected_edge.u} - {selected_edge.v}. "
@@ -473,11 +472,14 @@ class ExpertInLoop(_BaseCausalDiscovery):
                     pval_threshold=self.pval_threshold,
                 )
 
-                # I am adding this because if _break_cycle found no eligible edge,
-                # adding the edge would introduce a permanent cycle
                 if len(edges_to_remove) == 0:
                     logger.info("Could not find a weak edge to break cycle. Rejecting the new edge.")
                     blacklisted_edges.append((edge_direction[0], edge_direction[1]))
+                elif any(tuple(e) == tuple(edge_direction) for e in edges_to_remove):
+                    logger.info(
+                        f"Cycle-breaking subroutine suggested removing the new edge {edge_direction}. Rejecting it."
+                    )
+                    blacklisted_edges.append(edge_direction)
                 else:
                     blacklisted_edges.extend(edges_to_remove)
                     dag.remove_edges_from(edges_to_remove)

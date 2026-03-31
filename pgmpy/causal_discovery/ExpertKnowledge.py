@@ -94,15 +94,40 @@ class ExpertKnowledge:
         orientations=None,
         **kwargs,
     ):
-        self.forbidden_edges = self._validate_edges(forbidden_edges) if forbidden_edges is not None else set()
-        self.required_edges = self._validate_edges(required_edges) if required_edges is not None else set()
-
-        self.search_space = self._validate_edges(search_space) if search_space is not None else set()
+        self.forbidden_edges = self._validate_edges(forbidden_edges)
+        self.required_edges = self._validate_edges(required_edges)
+        self.search_space = self._validate_edges(search_space)
+        self.orientations = self._validate_edges(orientations) if orientations is not None else set()
 
         self.temporal_order = temporal_order if temporal_order is not None else [[]]
         self.temporal_ordering = self._get_temporal_ordering(self.temporal_order)
         self.orientation_fn = orientation_fn
-        self.orientations = self._validate_edges(orientations) if orientations is not None else set()
+
+    def _validate_edges(self, edge_list):
+        """
+        Validate the edge list provided by the user.
+
+        Parameters
+        ----------
+        edge_list: iterable
+            The edge list to validate.
+
+        Returns
+        -------
+        set
+            The validated set of directed edges as tuples (u, v).
+        """
+        if edge_list is None:
+            return set()
+        if not isinstance(edge_list, (list, tuple, set)):
+            raise TypeError("edge_list must be a list, tuple, or set")
+        # Ensure each element is a tuple of length 2
+        edges = set()
+        for edge in edge_list:
+            if not isinstance(edge, (list, tuple)) or len(edge) != 2:
+                raise ValueError(f"Invalid edge format: {edge}. Expected (u, v) pair.")
+            edges.add(tuple(edge))
+        return edges
 
     def __repr__(self):
         # Calculate total number of nodes in temporal order
@@ -131,14 +156,6 @@ class ExpertKnowledge:
             lines.append(f"Temporal Order: {self.temporal_order}")
 
         return "\n".join(lines)
-
-    def _validate_edges(self, edge_list):
-        if not hasattr(edge_list, "__iter__"):
-            raise TypeError(f"Expected iterator type for edge information. Got {type(edge_list)} instead.")
-        elif not isinstance(edge_list, set):
-            return set(edge_list)
-        else:
-            return edge_list
 
     def _validate_temporal_order(self, nodes):
         """

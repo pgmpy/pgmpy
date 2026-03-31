@@ -818,17 +818,27 @@ def test_fit_cycle_broken_successfully():
     Covers ExpertInLoop.py lines 482-484.
     """
     np.random.seed(0)
-    data = pd.DataFrame({"A": [1, 2], "B": [1, 2], "C": [1, 2]})
+    data = pd.DataFrame({"A": [1, 2, 3, 4, 5], "B": [1, 2, 3, 4, 5], "C": [1, 2, 3, 4, 5]})
     estimator = ExpertInLoop(effect_size_threshold=0.0, pval_threshold=1.0)
-    
+
     # We must ensure variables_ is set before fit is called if we are mocking parts of fit,
-    # but estimator.fit(data) will set it. 
-    
-    # We patch _get_edge_orientation to return a sequence that creates A->B, B->C, then C->A (cycle)
-    # The 4th return is for the re-evaluation if needed.
-    with patch.object(estimator, "_get_edge_orientation", side_effect=[("A", "B"), ("B", "C"), ("C", "A"), ("C", "A")]):
+    # but estimator.fit(data) will set it.
+
+    def det_orient(u, v):
+        # Always return a fixed orientation regardless of call order to force A->B, B->C, C->A
+        edges = {
+            ("A", "B"): ("A", "B"),
+            ("B", "A"): ("A", "B"),
+            ("B", "C"): ("B", "C"),
+            ("C", "B"): ("B", "C"),
+            ("C", "A"): ("C", "A"),
+            ("A", "C"): ("C", "A"),
+        }
+        return edges.get((u, v))
+
+    with patch.object(estimator, "_get_edge_orientation", side_effect=det_orient):
         # Mock _break_cycle on the instance to return A->B
-        with patch.object(estimator, "_break_cycle", return_value=[("A", "B")]):
+        with patch.object(ExpertInLoop, "_break_cycle", return_value=[("A", "B")]):
             estimator.fit(data)
 
     # Final graph should have B->C and C->A, but NOT A->B.
