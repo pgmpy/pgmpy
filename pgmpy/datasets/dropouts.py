@@ -18,9 +18,9 @@ class Dropouts(_CovarianceMixin, _BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/dropouts/"
+    base_url = "real/dropouts"
 
-    data_url = base_url + "data/dropouts.cov.txt"
+    data_url = "data/dropouts.cov.txt"
 
     ground_truth_url = None
 

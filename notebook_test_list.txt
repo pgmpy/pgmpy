@@ -7,6 +7,7 @@ examples/Creating_Discrete_BN.ipynb
 examples/Creating_Linear_BN.ipynb
 examples/Causal_Inference.ipynb
 examples/Defining_CPDs.ipynb
+examples/Dynamic_BN.ipynb
 examples/Extending_pgmpy.ipynb
 examples/Inference_Discrete_BN.ipynb
 examples/Junction_Tree_Inference.ipynb
@@ -17,3 +18,4 @@ examples/Structure_Learning_Chow_Liu.ipynb
 examples/Structure_Learning_TAN.ipynb
 examples/Expert_Knowledge.ipynb
 examples/Parameter_Learning_Factor_Graphs.ipynb
+examples/Simulating_Data.ipynb

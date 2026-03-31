@@ -25,9 +25,9 @@ class USCrime(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/uscrime/"
+    base_url = "real/uscrime"
 
-    data_url = base_url + "data/uscrime.continuous.txt"
+    data_url = "data/uscrime.continuous.txt"
     ground_truth_url = None
     expert_knowledge_url = None
 
