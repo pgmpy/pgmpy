@@ -5,6 +5,7 @@ Tests for ResultStore and storage backends.
 import pytest
 import tempfile
 import json
+import platform
 from pathlib import Path
 from pgmpy.benchmark.storage import ResultStore
 
@@ -232,6 +233,7 @@ class TestResultStoreEdgeCases:
         loaded = store.load("run_1")
         assert loaded["metric"] == 0.95
 
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Windows file locking issues")
     def test_sqlite_duplicate_save(self):
         """Test SQLite duplicate save handling."""
         try:
@@ -264,6 +266,7 @@ class TestResultStoreEdgeCases:
 class TestResultStoreIntegration:
     """Integration tests for storage."""
 
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Windows file locking issues")
     def test_multiple_backends_separate_storage(self):
         """Test that different backends don't share data."""
         with tempfile.TemporaryDirectory() as tmpdir:

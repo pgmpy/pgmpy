@@ -128,7 +128,7 @@ class TestMetricsEdgeCases:
         pred_dag.add_nodes_from(range(5))
 
         result = precision_recall(pred_dag, true_dag)
-        # Should be a MetricResult object with value attribute
+        # Should be a MetricResult object or dict
         assert hasattr(result, 'value') or isinstance(result, dict)
 
     def test_precision_recall_all_correct(self):
@@ -239,6 +239,7 @@ class TestSemanticRuleEdgeCases:
         weights = {"shd": 1.0, "precision": 1.0}
         fired_rules, adjusted = engine.evaluate(context, weights)
         assert isinstance(fired_rules, list)
+        assert isinstance(adjusted, dict)
 
     def test_rule_engine_with_valid_rules(self):
         """Test rule engine evaluates rules correctly."""
