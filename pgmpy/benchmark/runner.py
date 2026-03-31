@@ -13,9 +13,14 @@ import pandas as pd
 import networkx as nx
 from joblib import Parallel, delayed
 import warnings
+import logging
+import os
 
 from pgmpy.benchmark.base import BaseSimulator, BaseMetric, MetricResult
 from pgmpy.benchmark.metrics import shd, precision_recall, orientation_f1, sid
+
+# Setup module-level logger
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -172,6 +177,30 @@ class BenchmarkRunner:
         semantic_context: Optional[Dict[str, Any]] = None,
         verbose: int = 0,
     ):
+        # INPUT VALIDATION (BUG FIX #2)
+        if not simulators:
+            raise ValueError("At least one simulator must be provided")
+        if not methods:
+            raise ValueError("At least one method must be provided")
+        if n_runs <= 0:
+            raise ValueError(f"n_runs must be positive integer (got {n_runs})")
+        if n_jobs < -1 or n_jobs == 0:
+            raise ValueError(f"n_jobs must be -1 or positive integer (got {n_jobs})")
+        if output_format not in ["json", "csv"]:
+            raise ValueError(f"output_format must be 'json' or 'csv' (got {output_format})")
+        
+        # Validate simulators have required interface
+        for i, sim in enumerate(simulators):
+            if not hasattr(sim, 'simulate') or not callable(sim.simulate):
+                raise TypeError(f"Simulator {i} ({sim}) must have simulate() method")
+            if not hasattr(sim, 'get_name') or not callable(sim.get_name):
+                raise TypeError(f"Simulator {i} ({sim}) must have get_name() method")
+        
+        # Validate methods are callable
+        for i, method in enumerate(methods):
+            if not callable(method) and not hasattr(method, 'estimate') and not hasattr(method, 'fit'):
+                raise TypeError(f"Method {i} ({method}) must be callable or have estimate()/fit() methods")
+        
         self.simulators = simulators
         self.methods = methods
         self.n_runs = n_runs
@@ -179,6 +208,7 @@ class BenchmarkRunner:
         self.output_format = output_format
         self.semantic_context = semantic_context or {}
         self.verbose = verbose
+        self.logger = logger  # Use module-level logger (BUG FIX #3)
         
         # Set up metrics (default: SHD + precision_recall)
         if metrics is None:
@@ -188,12 +218,20 @@ class BenchmarkRunner:
         for metric in metrics:
             if isinstance(metric, str):
                 from pgmpy.benchmark.metrics import MetricsRegistry
-                self.metrics.append(MetricsRegistry.get(metric))
+                try:
+                    self.metrics.append(MetricsRegistry.get(metric))
+                except KeyError:
+                    raise ValueError(f"Unknown metric: '{metric}'")
             elif callable(metric):
                 # Assume it's a metric function; wrap it
                 self.metrics.append(_MetricWrapper(metric))
             else:
                 self.metrics.append(metric)
+        
+        if self.verbose > 0:
+            self.logger.info(f"BenchmarkRunner initialized: {len(simulators)} simulators, "
+                           f"{len(methods)} methods, {len(self.metrics)} metrics")
+
     
     def run(self) -> BenchmarkResults:
         """
@@ -205,7 +243,7 @@ class BenchmarkRunner:
             All result data and summary information.
         """
         if self.verbose > 0:
-            print("Starting benchmark run...")
+            self.logger.info("Starting benchmark run...")
         
         all_runs = []
         run_id = 0
@@ -235,7 +273,7 @@ class BenchmarkRunner:
         all_runs.extend(results)
         
         if self.verbose > 0:
-            print(f"Completed {len(all_runs)} runs")
+            self.logger.info(f"Completed {len(all_runs)} runs")
         
         config = {
             "n_simulators": len(self.simulators),
@@ -290,7 +328,7 @@ class BenchmarkRunner:
             estimated_dag = self._run_method(method, sim_output.data)
         except Exception as e:
             if self.verbose > 0:
-                print(f"Method {self._method_name(method)} failed: {e}")
+                self.logger.warning(f"Method {self._method_name(method)} failed: {e}")
             estimated_dag = nx.DiGraph()  # Empty fallback
         
         execution_time = time.time() - start_time
@@ -302,12 +340,16 @@ class BenchmarkRunner:
         for metric in self.metrics:
             try:
                 result = metric.compute(estimated_dag, sim_output.dag)
+                if not isinstance(result, MetricResult):
+                    raise TypeError(f"Metric {metric} must return MetricResult, got {type(result)}")
                 metrics_dict[result.name] = result.value
                 metrics_detail[result.name] = result.metadata
             except Exception as e:
                 if self.verbose > 0:
-                    print(f"Metric computation failed: {e}")
-                metrics_dict[metric.get_name()] = np.nan
+                    self.logger.warning(f"Metric computation failed: {e}")
+                # Better fallback handling
+                metric_name = getattr(metric, '_name', getattr(metric, 'func', metric).__name__ if hasattr(getattr(metric, 'func', metric), '__name__') else str(metric))
+                metrics_dict[metric_name] = np.nan
         
         return BenchmarkRun(
             run_id=run_id,
@@ -336,20 +378,38 @@ class BenchmarkRunner:
         -------
         nx.DiGraph
             Estimated causal DAG.
+            
+        Raises
+        ------
+        TypeError
+            If method doesn't return a valid nx.DiGraph.
         """
+        result = None
+        
         # Try to detect method type and call appropriately
-        if hasattr(method, "estimate"):
+        if hasattr(method, "estimate") and callable(getattr(method, "estimate")):
             # pgmpy estimator interface
-            return method.estimate()
-        elif hasattr(method, "fit"):
+            result = method.estimate()
+        elif hasattr(method, "fit") and callable(getattr(method, "fit")):
             # sklearn-like interface
             method.fit(data)
-            return method.graph_
+            if not hasattr(method, 'graph_'):
+                raise AttributeError(f"Method {self._method_name(method)} must have 'graph_' attribute after fit()")
+            result = method.graph_
         elif callable(method):
             # User-provided callable
-            return method(data)
+            result = method(data)
         else:
             raise ValueError(f"Unknown method type: {type(method)}")
+        
+        # VALIDATE RESULT TYPE (BUG FIX #5)
+        if not isinstance(result, nx.DiGraph):
+            raise TypeError(
+                f"Method {self._method_name(method)} must return nx.DiGraph, "
+                f"got {type(result).__name__}"
+            )
+        
+        return result
     
     def _method_name(self, method: Any) -> str:
         """Get descriptive name for a method."""

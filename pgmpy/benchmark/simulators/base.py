@@ -1,15 +1,20 @@
-"""Simulators submodule."""
+"""Simulators submodule — package structure placeholder.
 
-from pgmpy.benchmark.simulators import (
-    ErdosRenyiSimulator,
-    ScaleFreeSimulator,
-    RealBNSimulator,
-    LinearGaussianSEM,
-)
+This file is kept for backward compatibility but is no longer used.
+All simulator classes are defined and exported in __init__.py
 
-__all__ = [
-    "ErdosRenyiSimulator",
-    "ScaleFreeSimulator",
-    "RealBNSimulator",
-    "LinearGaussianSEM",
-]
+Including:
+    - ErdosRenyiSimulator
+    - ScaleFreeSimulator
+    - RealBNSimulator
+    - LinearGaussianSEM
+
+To use simulators:
+    from pgmpy.benchmark import ErdosRenyiSimulator
+    or
+    from pgmpy.benchmark.simulators import ErdosRenyiSimulator
+"""
+
+# NOTE: Direct imports from this file are no longer recommended.
+# Use pgmpy.benchmark module instead (see __init__.py)
+
