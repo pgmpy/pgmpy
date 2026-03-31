@@ -121,6 +121,19 @@ class GES(StructureEstimator):
 
         return True
 
+    def _has_acyclic_extension(
+        self,
+        current_model: PDAG,
+    ) -> bool:
+        """
+        Check whether `current_model` can be converted to an acyclic DAG.
+        """
+        if self._is_dag(current_model):
+            return nx.is_directed_acyclic_graph(nx.DiGraph(current_model.edges()))
+
+        dag = current_model.to_dag()
+        return nx.is_directed_acyclic_graph(dag)
+
     def adjacent_neighbors(self, u: Any, current_model: PDAG):
         """
         Return all adjacent neighbors of u in current_model. Considers edges
@@ -163,21 +176,8 @@ class GES(StructureEstimator):
     ) -> list[tuple[Hashable, Hashable]]:
         """
         Return all edges that can be considered for deletion.
-
-        For undirected edges, only one canonical ordering is returned.
         """
-        edges = set()
-
-        for u, v in current_model.edges():
-            if not current_model.has_edge(v, u):
-                # Directed edge u -> v
-                edges.add((u, v))
-            else:
-                # Undirected edge represented u -- v
-                undir_edge = (u, v) if u > v else (v, u)
-                edges.add(undir_edge)
-
-        return list(edges)
+        return list(current_model.edges())
 
     def _legal_edge_turns(
         self,
@@ -222,7 +222,7 @@ class GES(StructureEstimator):
         new_model.add_edge(u, v)
 
         # Orient v - t as v -> t for all t in T
-        remove_edges = [(v, t) for t in T]
+        remove_edges = [(t, v) for t in T]
         new_model.remove_edges_from(remove_edges)
 
         new_model.calibrate_directed_undirected_edges()
@@ -346,8 +346,9 @@ class GES(StructureEstimator):
                 parents_v = current_model.directed_parents(v)
 
                 score_delta = score_fn(v, list(na_vuT | parents_v | {u})) - score_fn(v, list(na_vuT | parents_v))
-
-                valid_insert_ops.append((score_delta, u, v, T))
+                new_model = self.insert(u, v, T, current_model)
+                if self._has_acyclic_extension(new_model):
+                    valid_insert_ops.append((score_delta, u, v, T))
 
         return valid_insert_ops
 
@@ -463,7 +464,9 @@ class GES(StructureEstimator):
                 old_score = score_fn(v, list(C | parents_v)) + score_fn(u, list(parents_u))
 
                 score_delta = new_score - old_score
-                valid_turn_ops.append((score_delta, u, v, T))
+                new_model = self.turn(u, v, T, current_model)
+                if self._has_acyclic_extension(new_model):
+                    valid_turn_ops.append((score_delta, u, v, T))
 
         return valid_turn_ops
 
@@ -516,7 +519,9 @@ class GES(StructureEstimator):
             old_score = score_fn(v, list(parents_v | C)) + score_fn(u, list(parents_u | (C & na_vu) | {v}))
 
             score_delta = new_score - old_score
-            valid_turn_ops.append((score_delta, u, v, C))
+            new_model = self.turn(u, v, C, current_model)
+            if self._has_acyclic_extension(new_model):
+                valid_turn_ops.append((score_delta, u, v, C))
 
         return valid_turn_ops
 
