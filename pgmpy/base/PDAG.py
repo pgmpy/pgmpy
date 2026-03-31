@@ -506,9 +506,7 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
 
         inner = re.sub(
             r"(\w+)\s*->\s*\{([^}]+)\}",
-            lambda m: " ".join(
-                f"{m.group(1)} -> {y.strip()}" for y in m.group(2).split()
-            ),
+            lambda m: " ".join(f"{m.group(1)} -> {y.strip()}" for y in m.group(2).split()),
             inner,
         )
 
