@@ -3,6 +3,7 @@ Tests for the sklearn-compatible ExpertInLoop class in pgmpy.causal_discovery
 """
 
 import logging
+import sys
 from unittest.mock import patch
 
 import networkx as nx
@@ -13,6 +14,8 @@ from skbase.utils.dependencies import _check_soft_dependencies
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.base import DAG
+
+eiul_module = sys.modules["pgmpy.causal_discovery.ExpertInLoop"]
 from pgmpy.causal_discovery import ExpertInLoop
 from pgmpy.ci_tests._base import _BaseCITest
 from pgmpy.estimators import ExpertKnowledge
@@ -727,7 +730,7 @@ def test_cycle_rejected_when_no_removable_edge():
     )
 
     # Patch get_ci_test to return StrongCI so _break_cycle sees no weak edge
-    with patch("pgmpy.causal_discovery.ExpertInLoop.get_ci_test", return_value=StrongCI(data)):
+    with patch.object(eiul_module, "get_ci_test", return_value=StrongCI(data)):
         estimator.fit(data)
 
     # The result must still be a valid DAG (the cycle-completing edge was rejected)
@@ -750,7 +753,7 @@ def test_show_progress_logs_orientation(caplog):
         show_progress=True,
     )
 
-    with patch("pgmpy.causal_discovery.ExpertInLoop.config") as mock_cfg:
+    with patch.object(eiul_module, "config") as mock_cfg:
         mock_cfg.SHOW_PROGRESS = True
         with caplog.at_level(logging.INFO, logger="pgmpy"):
             estimator.fit(data)
