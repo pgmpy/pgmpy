@@ -4,6 +4,7 @@
 # pgmpy/base/DAG.py
 pgmpy/base/ADMG.py
 pgmpy/base/DAG.py
+pgmpy/base/PDAG.py
 pgmpy/base/MAG.py
 pgmpy/base/SimpleCausalModel.py
 pgmpy/base/UndirectedGraph.py
