@@ -482,3 +482,107 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
             and self.latents == other.latents
             and self.get_role_dict() == other.get_role_dict()
         )
+
+    @classmethod
+    def from_dagitty(cls, string=None, filename=None):
+        """
+        Initializes a PDAG instance using a DAGitty syntax string.
+
+        In DAGitty syntax, directed edges are represented as X -> Y and
+        undirected edges as X -- Y.
+
+        Parameters
+        ----------
+        string: str (default: None)
+            A DAGitty syntax string. E.g. "dag { X -> Y X -- Z }"
+
+        filename: str (default: None)
+            Path to a file containing the DAGitty model string.
+
+        Returns
+        -------
+        pgmpy.base.PDAG
+            PDAG instance with directed and undirected edges.
+
+        Examples
+        --------
+        >>> from pgmpy.base import PDAG
+        >>> pdag = PDAG.from_dagitty("dag { X -> Y X -- Z }")
+        >>> pdag.directed_edges
+        [('X', 'Y')]
+        >>> pdag.undirected_edges
+        [('X', 'Z')]
+        """
+        import re
+
+        if filename is not None:
+            with open(filename, "r") as f:
+                dagitty_str = f.read()
+        elif string is not None:
+            dagitty_str = string
+        else:
+            raise ValueError("Either `string` or `filename` must be provided.")
+
+        match = re.search(r'\{(.+?)\}', dagitty_str, re.DOTALL)
+        if not match:
+            raise ValueError(
+                "Invalid DAGitty string. Expected format: dag { X -> Y X -- Z }"
+            )
+        inner = match.group(1).strip()
+
+        directed_edges = []
+        undirected_edges = []
+
+        for m in re.finditer(r'(\w+)\s*->\s*(\w+)', inner):
+            directed_edges.append((m.group(1), m.group(2)))
+
+        for m in re.finditer(r'(\w+)\s*--\s*(\w+)', inner):
+            undirected_edges.append((m.group(1), m.group(2)))
+
+        return cls(
+            directed_ebunch=directed_edges,
+            undirected_ebunch=undirected_edges,
+        )
+
+    def to_dagitty(self):
+        """
+        Returns a DAGitty syntax string of the PDAG.
+
+        Directed edges are written as X -> Y.
+        Undirected edges are written as X -- Y.
+        Isolated nodes (no edges) are listed separately.
+
+        Returns
+        -------
+        str
+            DAGitty syntax string representing this PDAG.
+
+        Examples
+        --------
+        >>> from pgmpy.base import PDAG
+        >>> pdag = PDAG(directed_ebunch=[('X', 'Y')], undirected_ebunch=[('X', 'Z')])
+        >>> print(pdag.to_dagitty())
+        dag {
+        X -> Y
+        X -- Z
+        }
+        """
+        lines = []
+
+        for u, v in self.directed_edges:
+            lines.append(f"{u} -> {v}")
+
+        for u, v in self.undirected_edges:
+            lines.append(f"{u} -- {v}")
+
+        nodes_in_edges = set()
+        for u, v in self.directed_edges:
+            nodes_in_edges.update([u, v])
+        for u, v in self.undirected_edges:
+            nodes_in_edges.update([u, v])
+
+        for node in sorted(self.nodes()):
+            if node not in nodes_in_edges:
+                lines.append(str(node))
+
+        return "dag {\n" + "\n".join(lines) + "\n}"
