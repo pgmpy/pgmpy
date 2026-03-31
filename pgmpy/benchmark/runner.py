@@ -18,7 +18,10 @@ from pgmpy.benchmark.metrics import shd, precision_recall, orientation_f1, sid
 
 # Setup module-level logger
 logger = logging.getLogger(__name__)
+import logging
 
+# Désactive complètement le logging du module
+logging.getLogger("pgmpy.benchmark").disabled = True
 
 @dataclass
 class BenchmarkRun:
