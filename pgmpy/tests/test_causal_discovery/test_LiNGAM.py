@@ -12,6 +12,7 @@ import pytest
 from sklearn.decomposition import FastICA
 
 from pgmpy.causal_discovery import LiNGAM
+from pgmpy.datasets import load_dataset
 
 
 @pytest.fixture
@@ -95,6 +96,13 @@ def large_lingam_data():
     return data
 
 
+@pytest.fixture
+def mpg_data():
+    data = load_dataset("auto_mpg").data.dropna()
+    continuous_cols = ["displacement", "horsepower", "weight", "acceleration", "mpg"]
+    return data[continuous_cols]
+
+
 def test_fit_rand(rand_data):
     # model = lingam.ICALiNGAM(random_state=42, max_iter=1000)
 
@@ -168,7 +176,6 @@ def test_large_lingam_data(large_lingam_data):
         ("G", "I"),
         ("H", "J"),
         ("I", "J"),
-        ("F", "J"),  # confounder
     }
 
     # Test adjacency matrix structure
@@ -176,21 +183,24 @@ def test_large_lingam_data(large_lingam_data):
     assert Adj_matrix.shape == (10, 10)
 
     # print(model.adjacency_matrix_)
-    # Note: There are slight differences in the non-zero values of the adjacency matrix compared to the
-    # official lingam package due to the different edge pruning techniques used (Wald test vs. Adaptive Lasso).
     test_matrix = np.array(
         [
             [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
             [1.50456931, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [-1.20729124, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [0.0, 0.81661721, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [0.0, 0.0, -0.98877545, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [0.0, 0.0, 0.0, 1.31563236, 0.69922556, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [0.0, 0.0, 0.0, -0.86888487, 0.48815156, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [0.0, 0.0, 0.0, 0.0, 0.0, 0.50483525, -1.10748153, 0.0, 0.0, 0.0],
-            [0.0, 0.0, 0.0, 0.0, 0.0, 0.61281088, 0.80349663, 0.0, 0.0, 0.0],
-            [0.0, 0.0, 0.0, 0.0, 0.0, -0.04201462, 0.0, -0.6911563, 0.92003648, 0.0],
+            [-1.21074647, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.80754453, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, -0.99998171, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 1.31147539, 0.6850421, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, -0.89242808, 0.49331201, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.49770536, -1.0948292, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.60129612, 0.79999919, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.70158999, 0.89914671, 0.0],
         ]
     )
 
     np_test.assert_almost_equal(Adj_matrix.to_numpy(), test_matrix)
+
+
+def test_mpg_data(mpg_data):
+    algo = LiNGAM(fast_ica=FastICA(random_state=42))
+    algo.fit(mpg_data)

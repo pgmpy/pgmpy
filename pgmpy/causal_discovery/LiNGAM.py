@@ -2,9 +2,9 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from scipy.optimize import linear_sum_assignment
-from scipy.stats import chi2
 from sklearn.decomposition import FastICA
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LassoLarsIC, LinearRegression
+from sklearn.preprocessing import StandardScaler
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery
@@ -21,29 +21,33 @@ class LiNGAM(_BaseCausalDiscovery):
 
     Parameters
     ----------
-    fast_ica: sklearn.decomposition.FastICA
+    fast_ica : sklearn.decomposition.FastICA
         An instance of FastICA to use for independent component analysis. If None,
         a default FastICA instance with `max_iter=1000` is used.
 
-    alpha: float, default=0.05
-        Significance level for the Wald test used to prune edges.
+    estimator : sklearn.linear_model._base.LinearModel
+        An instance of a linear model to use for estimating the causal relationships.
+        If None, a default LinearRegression instance is used.
 
-    return_type: str, default="dag"
+    gamma : float, default=1.0
+        The exponent used to calculate the adaptive weights in the Adaptive Lasso.
+
+    return_type : str, default="dag"
         The type of graph to return. Currently only "dag" is supported.
 
     Attributes
     ----------
-    causal_graph_: pgmpy.base.DAG
+    causal_graph_ : pgmpy.base.DAG
         The learned causal graph.
 
-    adjacency_matrix_: pd.DataFrame
+    adjacency_matrix_ : pd.DataFrame
         The learned adjacency matrix of the graph. Elements correspond to coefficients
         in the linear model.
 
-    n_features_in_: int
+    n_features_in_ : int
         The number of features in the dataset used to learn the causal graph.
 
-    feature_names_in_: list
+    feature_names_in_ : list
         The feature names in the dataset used to learn the causal graph.
 
     Examples
@@ -64,12 +68,14 @@ class LiNGAM(_BaseCausalDiscovery):
     def __init__(
         self,
         fast_ica=None,
-        alpha: float = 0.05,
+        estimator=None,
+        gamma: float = 1.0,
         return_type: str = "dag",
     ):
-        self.alpha = alpha
-        self.return_type = return_type
         self.fast_ica = fast_ica
+        self.gamma = gamma
+        self.estimator = estimator if estimator is not None else LinearRegression()
+        self.return_type = return_type
 
     def _fit(self, X: pd.DataFrame):
 
@@ -116,12 +122,12 @@ class LiNGAM(_BaseCausalDiscovery):
         if causal_order is None:
             raise ValueError("Could not find a valid causal order. Graph contains unresolvable cycles.")
 
-        B_tilde = self._prune_edges(X_vals, B_hat, causal_order, alpha=self.alpha)
+        B_tilde = self._prune_edges(X_vals, causal_order)
 
         self.adjacency_matrix_ = pd.DataFrame(B_tilde, index=self.feature_names_in_, columns=self.feature_names_in_)
 
         # Step 6: Construct graph
-        self.causal_graph_ = nx.convert_matrix.from_numpy_array(B_tilde.T, create_using=DAG())
+        self.causal_graph_ = nx.from_numpy_array(B_tilde.T, create_using=DAG())
         nx.relabel_nodes(
             self.causal_graph_, mapping={i: name for i, name in enumerate(self.feature_names_in_)}, copy=False
         )
@@ -206,79 +212,89 @@ class LiNGAM(_BaseCausalDiscovery):
 
         return causal_order
 
-    def _prune_edges(self, X: np.ndarray, B_hat: np.ndarray, causal_order: list, alpha: float = 0.01) -> np.ndarray:
-        """
-        Perform a Wald test to prune statistically insignificant edges from the
-        estimated LiNGAM connection matrix. This follows the straightforward pruning
-        approach outlined in Section 6.1 of the paper.
+    def _adaptive_lasso(self, X: np.ndarray, predictors: list, target: int) -> np.ndarray:
+        r"""
+        This is a helper function which implements the Adaptive Lasso algorithm.
+
+        .. math::
+            \beta^*_{(n)} = \arg\min_{\beta} \left\| \mathbf{y} - \sum_{j=1}^p \mathbf{x}_j \beta_j \right\|^2_2
+            + \lambda_n \sum_{j=1}^p w_j |\beta_j|
 
         Parameters
         ----------
         X : np.ndarray
-            The observed dataset array of shape (n_samples, n_features).
-        B_hat : np.ndarray
-            The fully connected, lower-triangular estimated connection matrix from ICA.
+            The input data matrix.
+
+        predictors : list
+            The list of predictor variables.
+
+        target : int
+            The target variable.
+
+        Returns
+        -------
+        coef : np.ndarray
+            The pruned coefficients.
+        """
+
+        # Step 1: Standardize X
+        scaler = StandardScaler()
+        X_std = scaler.fit_transform(X)
+
+        # Step 2: Pruning with Adaptive Lasso
+        # Step 2.1: Fit the estimator to the standardized data
+        self.estimator.fit(X_std[:, predictors], X_std[:, target])
+        weight = np.power(np.abs(self.estimator.coef_), self.gamma)
+
+        # Step 2.2: Fit the Lasso regression to the weighted standardized data
+        Lasso_reg = LassoLarsIC(criterion="bic")
+        Lasso_reg.fit(X_std[:, predictors] * weight, X_std[:, target])
+        pruned_idx = np.abs(Lasso_reg.coef_ * weight) > 0.0
+
+        # Step 3: Calculate coefficients of the original scale
+        coef = np.zeros(Lasso_reg.coef_.shape)
+        if pruned_idx.sum() > 0:
+            pred = np.array(predictors)
+            self.estimator.fit(X[:, pred[pruned_idx]], X[:, target])
+            coef[pruned_idx] = self.estimator.coef_
+
+        return coef
+
+    def _prune_edges(self, X: np.ndarray, causal_order: list) -> np.ndarray:
+        """
+        This function is used to prune the edges of the causal graph.
+        It uses the Adaptive Lasso algorithm to prune the edges of the causal graph.
+
+        Parameters
+        ----------
+        X : np.ndarray
+            The input data matrix.
         causal_order : list
-            The topological causal ordering of the variables. Nodes can only be caused
-            by nodes earlier in this list.
-        alpha : float
-            The significance level for the Wald test p-value. Edges with
-            p-values >= alpha are pruned (set to 0).
+            The causal order of the given matrix.
 
         Returns
         -------
         B_pruned : np.ndarray
-            The pruned adjacency matrix with insignificant edges removed.
+            The pruned causal matrix.
+
+        References
+        ----------
+        Zou, H. (2006). The Adaptive Lasso and Its Oracle Properties. Journal of the American Statistical Association,
+         101(476), 1418–1429.
+
+        See Also
+        --------
+        pgmpy.causal_discovery.LiNGAM._adaptive_lasso
         """
 
-        n_samples, n_features = X.shape
-        B_pruned = np.zeros_like(B_hat)
+        B_pruned = np.zeros([X.shape[1], X.shape[1]], dtype="float64")
+        for i in range(1, len(causal_order)):
+            target = causal_order[i]
+            predictors = causal_order[:i]
 
-        for i, target_node in enumerate(causal_order):
-            potential_parents = causal_order[:i]
-            if len(potential_parents) == 0:
+            if len(predictors) == 0:
                 continue
 
-            # Extract the target variable and the feature matrix of its potential parents
-            y_target = X[:, target_node]
-            X_parents = X[:, potential_parents]
-
-            # Fit OLS regression: y = X_parents * beta + error
-            reg = LinearRegression().fit(X_parents, y_target)
-            coefs = reg.coef_
-
-            # Regression residuals to estimate the error variance
-            y_pred = reg.predict(X_parents)
-            residuals = y_target - y_pred
-
-            # Estimate the variance of the residuals (sigma^2)
-            # Use degrees of freedom (ddof) correction if there are more samples than
-            # parent features
-            sigma_sq = (
-                np.var(residuals, ddof=len(potential_parents))
-                if len(residuals) > len(potential_parents)
-                else np.var(residuals)
-            )
-
-            # Covariance matrix of the regression coefficients
-            # var(beta) = sigma^2 * (X^T * X)^-1
-            XtX_inv = np.linalg.pinv(X_parents.T @ X_parents)
-            var_beta = sigma_sq * XtX_inv
-
-            standard_errors = np.sqrt(np.diag(var_beta))
-
-            # Perform the Wald test for each potential parent
-            for j, parent_node in enumerate(potential_parents):
-                if standard_errors[j] > 0:
-                    # The Wald statistic is (beta_hat / SE(beta_hat))^2
-                    # Under the null hypothesis (true beta = 0), this follows a
-                    # chi-square distribution with 1 DOF.
-                    wald_stat = (coefs[j] ** 2) / (standard_errors[j] ** 2)
-                    p_value = 1 - chi2.cdf(wald_stat, df=1)
-                else:
-                    p_value = 0
-
-                if p_value < alpha:
-                    B_pruned[target_node, parent_node] = coefs[j]
+            B_pruned[target, predictors] = self._adaptive_lasso(X, predictors, target)
 
         return B_pruned
