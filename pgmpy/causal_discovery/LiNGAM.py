@@ -12,12 +12,20 @@ from pgmpy.causal_discovery._base import _BaseCausalDiscovery
 
 class LiNGAM(_BaseCausalDiscovery):
     """
-    LiNGAM (Linear Non-Gaussian Acyclic Model) finds the causal order under three assumptions:
-    1. The causal graph is acyclic.
-    2. The causal relationships are linear.
-    3. The noise terms are non-Gaussian.
-    A model with these three properties we call a Linear, Non-Gaussian, Acyclic Model,
-    abbreviated LiNGAM.
+    Continuous data causal discovery using the Linear Non-Gaussian Acyclic Model (LiNGAM).
+
+    This class implements the LiNGAM algorithm [1]_ for causal discovery. Given a
+    tabular dataset, the algorithm estimates the causal structure among the
+    variables in the data as a Directed Acyclic Graph (DAG) by utilizing Independent
+    Component Analysis (ICA).
+
+    The algorithm relies on the following three core assumptions about the generated data:
+    1. The true causal graph is a directed acyclic graph (no feedback loops).
+    2. The causal relationships between variables are strictly linear.
+    3. The residual error (noise) terms have a non-Gaussian distribution.
+
+    A model with these three properties is called a Linear, Non-Gaussian, Acyclic
+    Model, abbreviated LiNGAM.
 
     Parameters
     ----------
@@ -53,10 +61,16 @@ class LiNGAM(_BaseCausalDiscovery):
     Examples
     --------
     >>> import pandas as pd
+    >>> import numpy as np
     >>> from pgmpy.causal_discovery import LiNGAM
-    >>> X = pd.DataFrame({"x1": [1, 2, 3], "x2": [2, 4, 6], "x3": [3, 6, 9]})
-    >>> algo = LiNGAM()
-    >>> algo.fit(X)
+    >>> X = pd.DataFrame(np.random.uniform(size=(100, 3)), columns=list("ABC"))
+    >>> X["B"] = 2.0 * X["A"] + X["B"]
+    >>> X["C"] = -1.5 * X["B"] + X["C"]
+    >>> lingam = LiNGAM()
+    >>> lingam.fit(X)
+    >>> set(lingam.causal_graph_.edges())
+    {('A', 'B'), ('B', 'C')}
+
 
     References
     ----------
@@ -67,17 +81,38 @@ class LiNGAM(_BaseCausalDiscovery):
 
     def __init__(
         self,
-        fast_ica=None,
+        fast_ica: FastICA | None = None,
         estimator=None,
         gamma: float = 1.0,
         return_type: str = "dag",
     ):
-        self.fast_ica = fast_ica
+        if fast_ica is None:
+            self.fast_ica = FastICA(max_iter=1000)
+        else:
+            self.fast_ica = fast_ica
+
+        if estimator is None:
+            self.estimator = LinearRegression()
+        else:
+            self.estimator = estimator
+
         self.gamma = gamma
-        self.estimator = estimator if estimator is not None else LinearRegression()
         self.return_type = return_type
 
     def _fit(self, X: pd.DataFrame):
+        """
+        The fitting procedure for the LiNGAM algorithm.
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            The data to learn the causal structure from.
+
+        Returns
+        -------
+        self : pgmpy.causal_discovery.LiNGAM
+            Returns the instance with the fitted attributes.
+        """
 
         # Step 0: Validate inputs
         if self.return_type != "dag":
@@ -91,10 +126,7 @@ class LiNGAM(_BaseCausalDiscovery):
         # Step 1: Apply an ICA algorithm to obtain a decomposition X = AS where S has
         # the same size as X and contains in its rows the independent components.
         # From here on, we will exclusively work with W = A^-1.
-        if self.fast_ica is None:
-            ica = FastICA(max_iter=1000)
-        else:
-            ica = self.fast_ica
+        ica = self.fast_ica
 
         ica.fit(X_vals)
         W = ica.components_
@@ -150,26 +182,26 @@ class LiNGAM(_BaseCausalDiscovery):
         """
         causal_order = []
 
-        row_num = B_hat.shape[0]
-        original_index = np.arange(row_num)
+        n_rows = B_hat.shape[0]
+        original_indices = np.arange(n_rows)
 
         while 0 < len(B_hat):
             # find a row i such that all of which elements are zero
-            row_index_list = np.where(np.sum(np.abs(B_hat), axis=1) == 0)[0]
-            if len(row_index_list) == 0:
+            row_indices = np.where(np.sum(np.abs(B_hat), axis=1) == 0)[0]
+            if len(row_indices) == 0:
                 break
 
-            target_index = row_index_list[0]
+            target_index = row_indices[0]
 
             # append i to the end of the list
-            causal_order.append(original_index[target_index])
-            original_index = np.delete(original_index, target_index, axis=0)
+            causal_order.append(original_indices[target_index])
+            original_indices = np.delete(original_indices, target_index, axis=0)
 
             # remove the i-th row and the i-th column from matrix
             mask = np.delete(np.arange(len(B_hat)), target_index, axis=0)
             B_hat = B_hat[mask][:, mask]
 
-        if len(causal_order) != row_num:
+        if len(causal_order) != n_rows:
             causal_order = None
 
         return causal_order
@@ -247,12 +279,12 @@ class LiNGAM(_BaseCausalDiscovery):
         weight = np.power(np.abs(self.estimator.coef_), self.gamma)
 
         # Step 2.2: Fit the Lasso regression to the weighted standardized data
-        Lasso_reg = LassoLarsIC(criterion="bic")
-        Lasso_reg.fit(X_std[:, predictors] * weight, X_std[:, target])
-        pruned_idx = np.abs(Lasso_reg.coef_ * weight) > 0.0
+        lasso_reg = LassoLarsIC(criterion="bic")
+        lasso_reg.fit(X_std[:, predictors] * weight, X_std[:, target])
+        pruned_idx = np.abs(lasso_reg.coef_ * weight) > 0.0
 
         # Step 3: Calculate coefficients of the original scale
-        coef = np.zeros(Lasso_reg.coef_.shape)
+        coef = np.zeros(lasso_reg.coef_.shape)
         if pruned_idx.sum() > 0:
             pred = np.array(predictors)
             self.estimator.fit(X[:, pred[pruned_idx]], X[:, target])
@@ -279,15 +311,16 @@ class LiNGAM(_BaseCausalDiscovery):
 
         References
         ----------
-        Zou, H. (2006). The Adaptive Lasso and Its Oracle Properties. Journal of the American Statistical Association,
-         101(476), 1418–1429.
+        .. [1] Zou, H. (2006). The adaptive lasso and its oracle properties.
+               Journal of the American Statistical Association, 101(476), 1418–1429.
+               https://doi.org/10.1198/016214506000000735
 
         See Also
         --------
         pgmpy.causal_discovery.LiNGAM._adaptive_lasso
         """
 
-        B_pruned = np.zeros([X.shape[1], X.shape[1]], dtype="float64")
+        B_pruned = np.zeros((X.shape[1], X.shape[1]), dtype=float)
         for i in range(1, len(causal_order)):
             target = causal_order[i]
             predictors = causal_order[:i]
