@@ -317,8 +317,11 @@ class ExpertInLoop(_BaseCausalDiscovery):
             orient_fn = self.orientation_fn
 
         if orient_fn is None:
-            # I am adding this because if no orient function exists, we cannot guess direction
-            return None
+            # added error handling instead of None
+            raise ValueError(
+                "No orientation function is available. Provide an `orientation_fn` to ExpertInLoop "
+                "or set `orientation_fn` on the `expert_knowledge` object."
+            )
 
         edge_direction = orient_fn(u, v)
         if self.use_cache and edge_direction is not None:

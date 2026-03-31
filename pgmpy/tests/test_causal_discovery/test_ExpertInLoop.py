@@ -2,12 +2,14 @@
 Tests for the sklearn-compatible ExpertInLoop class in pgmpy.causal_discovery
 """
 
+import logging
 import networkx as nx
 import numpy as np
 import pandas as pd
 import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
 from sklearn.utils.estimator_checks import parametrize_with_checks
+from unittest.mock import patch
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery import ExpertInLoop
@@ -642,3 +644,115 @@ class TestBreakCycle:
         existing_edges = {("A", "B"), ("B", "D"), ("A", "C"), ("C", "D")}
         for edge in result:
             assert edge in existing_edges
+
+
+# --- Coverage gap tests ---
+
+
+def test_no_orientation_fn_raises():
+    """ValueError is raised during fitting when no orientation function is configured.
+
+    Covers ExpertInLoop._get_edge_orientation lines 319-323: the ``orient_fn is None``
+    branch that now raises instead of silently returning None.
+    """
+    np.random.seed(0)
+    # Strongly correlated data so at least one candidate edge is found
+    x = np.arange(50, dtype=float)
+    data = pd.DataFrame({"A": x, "B": x + 1.0})
+
+    estimator = ExpertInLoop(
+        orientation_fn=None,
+        effect_size_threshold=0.0,
+        pval_threshold=1.0,
+        show_progress=False,
+    )
+    with pytest.raises(ValueError, match="No orientation function is available"):
+        estimator.fit(data)
+
+
+def test_orientation_fn_returns_none_blacklists_edge():
+    """When orientation_fn returns None the candidate edge is blacklisted, not added.
+
+    Covers ExpertInLoop._fit lines 456-461: the ``edge_direction is None`` branch.
+    """
+    np.random.seed(0)
+    x = np.arange(50, dtype=float)
+    data = pd.DataFrame({"A": x, "B": x + 1.0})
+
+    def none_orient(var1, var2, **kwargs):
+        return None
+
+    estimator = ExpertInLoop(
+        orientation_fn=none_orient,
+        effect_size_threshold=0.0,
+        pval_threshold=1.0,
+        show_progress=False,
+    )
+    estimator.fit(data)
+
+    # Edge should have been blacklisted and NOT added to the graph
+    assert ("A", "B") not in estimator.causal_graph_.edges()
+    assert ("B", "A") not in estimator.causal_graph_.edges()
+
+
+def test_cycle_rejected_when_no_removable_edge():
+    """New edge is blacklisted when _break_cycle finds no weak edge to remove.
+
+    Covers ExpertInLoop._fit lines 478-480: the ``len(edges_to_remove) == 0`` branch.
+    Uses a cyclic orientation function + StrongCI (all edges look strong so
+    _break_cycle returns []) to trigger the rejection path naturally.
+    """
+    np.random.seed(0)
+    n = 30
+    # Three perfectly correlated variables so all pairs have strong association
+    x = np.arange(n, dtype=float)
+    data = pd.DataFrame({"A": x, "B": x + 1.0, "C": x + 2.0})
+
+    # Orientation function that always returns the cycle-completing direction:
+    # A->B, B->C, then C->A (which would create A->B->C->A cycle)
+    orient_order = [("A", "B"), ("B", "C"), ("C", "A")]
+    call_count = {"n": 0}
+
+    def cyclic_orient(var1, var2, **kwargs):
+        idx = call_count["n"] % len(orient_order)
+        call_count["n"] += 1
+        return orient_order[idx]
+
+    estimator = ExpertInLoop(
+        orientation_fn=cyclic_orient,
+        effect_size_threshold=0.0,
+        pval_threshold=1.0,
+        show_progress=False,
+    )
+
+    # Patch get_ci_test to return StrongCI so _break_cycle sees no weak edge
+    with patch("pgmpy.causal_discovery.ExpertInLoop.get_ci_test", return_value=StrongCI(data)):
+        estimator.fit(data)
+
+    # The result must still be a valid DAG (the cycle-completing edge was rejected)
+    assert nx.is_directed_acyclic_graph(estimator.causal_graph_)
+
+
+def test_show_progress_logs_orientation(caplog):
+    """logger.info is called when show_progress=True and an edge is oriented.
+
+    Covers ExpertInLoop._get_edge_orientation lines 327-330.
+    """
+    np.random.seed(0)
+    x = np.arange(50, dtype=float)
+    data = pd.DataFrame({"A": x, "B": x + 1.0})
+
+    estimator = ExpertInLoop(
+        orientation_fn=simple_orient,
+        effect_size_threshold=0.0,
+        pval_threshold=1.0,
+        show_progress=True,
+    )
+
+    with patch("pgmpy.causal_discovery.ExpertInLoop.config") as mock_cfg:
+        mock_cfg.SHOW_PROGRESS = True
+        with caplog.at_level(logging.INFO, logger="pgmpy"):
+            estimator.fit(data)
+
+    orientation_logs = [r for r in caplog.records if "Queried for edge orientation" in r.message]
+    assert len(orientation_logs) >= 1

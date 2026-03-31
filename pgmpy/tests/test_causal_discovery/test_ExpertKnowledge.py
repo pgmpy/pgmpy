@@ -1,3 +1,5 @@
+import pytest
+
 from pgmpy.causal_discovery import ExpertKnowledge
 
 
@@ -30,3 +32,11 @@ class TestExpertKnowledge:
         assert "('A', 'B')" in str(ek)
         assert "('B', 'C')" in str(ek)
         assert "Temporal Order: [['A'], ['B']]" in str(ek)
+
+    def test_duplicate_node_in_temporal_order_raises(self):
+        """ValueError is raised when a node appears in multiple tiers of temporal_order.
+
+        Covers ExpertKnowledge._get_temporal_ordering line 192.
+        """
+        with pytest.raises(ValueError, match="present in multiple tiers"):
+            ExpertKnowledge(temporal_order=[["A", "B"], ["A", "C"]])
