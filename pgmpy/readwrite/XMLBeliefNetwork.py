@@ -22,7 +22,42 @@ class XBNReader:
 
     Examples
     --------
-    >>> reader = XBNReader("test_XBN.xml")
+    >>> from pgmpy.readwrite import XBNReader
+    >>> xml = '''<ANALYSISNOTEBOOK NAME="Notebook.Cancer Example" ROOT="Cancer">
+    ...   <BNMODEL NAME="Cancer">
+    ...     <STATICPROPERTIES>
+    ...       <FORMAT VALUE="MSR DTAS XML"/>
+    ...       <VERSION VALUE="0.2"/>
+    ...       <CREATOR VALUE="Microsoft Research DTAS"/>
+    ...     </STATICPROPERTIES>
+    ...     <VARIABLES>
+    ...       <VAR NAME="a" TYPE="discrete" XPOS="13495" YPOS="10465">
+    ...         <DESCRIPTION>(a) Metastatic Cancer</DESCRIPTION>
+    ...         <STATENAME>Present</STATENAME><STATENAME>Absent</STATENAME>
+    ...       </VAR>
+    ...       <VAR NAME="b" TYPE="discrete" XPOS="11290" YPOS="11965">
+    ...         <DESCRIPTION>(b) Serum Calcium Increase</DESCRIPTION>
+    ...         <STATENAME>Present</STATENAME><STATENAME>Absent</STATENAME>
+    ...       </VAR>
+    ...     </VARIABLES>
+    ...     <STRUCTURE><ARC PARENT="a" CHILD="b"/></STRUCTURE>
+    ...     <DISTRIBUTIONS>
+    ...       <DIST TYPE="discrete">
+    ...         <PRIVATE NAME="a"/>
+    ...         <DPIS><DPI> 0.2 0.8 </DPI></DPIS>
+    ...       </DIST>
+    ...       <DIST TYPE="discrete">
+    ...         <PRIVATE NAME="b"/>
+    ...         <CONDSET><CONDELEM NAME="a"/></CONDSET>
+    ...         <DPIS>
+    ...           <DPI INDEXES=" 0 "> 0.8 0.2 </DPI>
+    ...           <DPI INDEXES=" 1 "> 0.2 0.8 </DPI>
+    ...         </DPIS>
+    ...       </DIST>
+    ...     </DISTRIBUTIONS>
+    ...   </BNMODEL>
+    ... </ANALYSISNOTEBOOK>'''
+    >>> reader = XBNReader(string=xml)
 
     Reference
     ---------
@@ -52,10 +87,44 @@ class XBNReader:
 
         Examples
         --------
-        >>> reader = XBNReader("xbn_test.xml")
+        >>> from pgmpy.readwrite import XBNReader
+        >>> xml = '''<ANALYSISNOTEBOOK NAME="Notebook.Cancer Example" ROOT="Cancer">
+        ...   <BNMODEL NAME="Cancer">
+        ...     <STATICPROPERTIES>
+        ...       <FORMAT VALUE="MSR DTAS XML"/>
+        ...       <VERSION VALUE="0.2"/>
+        ...       <CREATOR VALUE="Microsoft Research DTAS"/>
+        ...     </STATICPROPERTIES>
+        ...     <VARIABLES>
+        ...       <VAR NAME="a" TYPE="discrete" XPOS="13495" YPOS="10465">
+        ...         <DESCRIPTION>(a) Metastatic Cancer</DESCRIPTION>
+        ...         <STATENAME>Present</STATENAME><STATENAME>Absent</STATENAME>
+        ...       </VAR>
+        ...       <VAR NAME="b" TYPE="discrete" XPOS="11290" YPOS="11965">
+        ...         <DESCRIPTION>(b) Serum Calcium Increase</DESCRIPTION>
+        ...         <STATENAME>Present</STATENAME><STATENAME>Absent</STATENAME>
+        ...       </VAR>
+        ...     </VARIABLES>
+        ...     <STRUCTURE><ARC PARENT="a" CHILD="b"/></STRUCTURE>
+        ...     <DISTRIBUTIONS>
+        ...       <DIST TYPE="discrete">
+        ...         <PRIVATE NAME="a"/>
+        ...         <DPIS><DPI> 0.2 0.8 </DPI></DPIS>
+        ...       </DIST>
+        ...       <DIST TYPE="discrete">
+        ...         <PRIVATE NAME="b"/>
+        ...         <CONDSET><CONDELEM NAME="a"/></CONDSET>
+        ...         <DPIS>
+        ...           <DPI INDEXES=" 0 "> 0.8 0.2 </DPI>
+        ...           <DPI INDEXES=" 1 "> 0.2 0.8 </DPI>
+        ...         </DPIS>
+        ...       </DIST>
+        ...     </DISTRIBUTIONS>
+        ...   </BNMODEL>
+        ... </ANALYSISNOTEBOOK>'''
+        >>> reader = XBNReader(string=xml)
         >>> reader.get_analysisnotebook_values()
-        {'NAME': "Notebook.Cancer Example From Neapolitan",
-         'ROOT': "Cancer"}
+        {'NAME': 'Notebook.Cancer Example', 'ROOT': 'Cancer'}
         """
         return {key: value for key, value in self.network.items()}
 
@@ -65,7 +134,42 @@ class XBNReader:
 
         Examples
         --------
-        >>> reader = XBNReader("xbn_test.xml")
+        >>> from pgmpy.readwrite import XBNReader
+        >>> xml = '''<ANALYSISNOTEBOOK NAME="Notebook.Cancer Example" ROOT="Cancer">
+        ...   <BNMODEL NAME="Cancer">
+        ...     <STATICPROPERTIES>
+        ...       <FORMAT VALUE="MSR DTAS XML"/>
+        ...       <VERSION VALUE="0.2"/>
+        ...       <CREATOR VALUE="Microsoft Research DTAS"/>
+        ...     </STATICPROPERTIES>
+        ...     <VARIABLES>
+        ...       <VAR NAME="a" TYPE="discrete" XPOS="13495" YPOS="10465">
+        ...         <DESCRIPTION>(a) Metastatic Cancer</DESCRIPTION>
+        ...         <STATENAME>Present</STATENAME><STATENAME>Absent</STATENAME>
+        ...       </VAR>
+        ...       <VAR NAME="b" TYPE="discrete" XPOS="11290" YPOS="11965">
+        ...         <DESCRIPTION>(b) Serum Calcium Increase</DESCRIPTION>
+        ...         <STATENAME>Present</STATENAME><STATENAME>Absent</STATENAME>
+        ...       </VAR>
+        ...     </VARIABLES>
+        ...     <STRUCTURE><ARC PARENT="a" CHILD="b"/></STRUCTURE>
+        ...     <DISTRIBUTIONS>
+        ...       <DIST TYPE="discrete">
+        ...         <PRIVATE NAME="a"/>
+        ...         <DPIS><DPI> 0.2 0.8 </DPI></DPIS>
+        ...       </DIST>
+        ...       <DIST TYPE="discrete">
+        ...         <PRIVATE NAME="b"/>
+        ...         <CONDSET><CONDELEM NAME="a"/></CONDSET>
+        ...         <DPIS>
+        ...           <DPI INDEXES=" 0 "> 0.8 0.2 </DPI>
+        ...           <DPI INDEXES=" 1 "> 0.2 0.8 </DPI>
+        ...         </DPIS>
+        ...       </DIST>
+        ...     </DISTRIBUTIONS>
+        ...   </BNMODEL>
+        ... </ANALYSISNOTEBOOK>'''
+        >>> reader = XBNReader(string=xml)
         >>> reader.get_bnmodel_name()
         'Cancer'
         """
@@ -77,7 +181,42 @@ class XBNReader:
 
         Examples
         --------
-        >>> reader = XBNReader("xbn_test.xml")
+        >>> from pgmpy.readwrite import XBNReader
+        >>> xml = '''<ANALYSISNOTEBOOK NAME="Notebook.Cancer Example" ROOT="Cancer">
+        ...   <BNMODEL NAME="Cancer">
+        ...     <STATICPROPERTIES>
+        ...       <FORMAT VALUE="MSR DTAS XML"/>
+        ...       <VERSION VALUE="0.2"/>
+        ...       <CREATOR VALUE="Microsoft Research DTAS"/>
+        ...     </STATICPROPERTIES>
+        ...     <VARIABLES>
+        ...       <VAR NAME="a" TYPE="discrete" XPOS="13495" YPOS="10465">
+        ...         <DESCRIPTION>(a) Metastatic Cancer</DESCRIPTION>
+        ...         <STATENAME>Present</STATENAME><STATENAME>Absent</STATENAME>
+        ...       </VAR>
+        ...       <VAR NAME="b" TYPE="discrete" XPOS="11290" YPOS="11965">
+        ...         <DESCRIPTION>(b) Serum Calcium Increase</DESCRIPTION>
+        ...         <STATENAME>Present</STATENAME><STATENAME>Absent</STATENAME>
+        ...       </VAR>
+        ...     </VARIABLES>
+        ...     <STRUCTURE><ARC PARENT="a" CHILD="b"/></STRUCTURE>
+        ...     <DISTRIBUTIONS>
+        ...       <DIST TYPE="discrete">
+        ...         <PRIVATE NAME="a"/>
+        ...         <DPIS><DPI> 0.2 0.8 </DPI></DPIS>
+        ...       </DIST>
+        ...       <DIST TYPE="discrete">
+        ...         <PRIVATE NAME="b"/>
+        ...         <CONDSET><CONDELEM NAME="a"/></CONDSET>
+        ...         <DPIS>
+        ...           <DPI INDEXES=" 0 "> 0.8 0.2 </DPI>
+        ...           <DPI INDEXES=" 1 "> 0.2 0.8 </DPI>
+        ...         </DPIS>
+        ...       </DIST>
+        ...     </DISTRIBUTIONS>
+        ...   </BNMODEL>
+        ... </ANALYSISNOTEBOOK>'''
+        >>> reader = XBNReader(string=xml)
         >>> reader.get_static_properties()
         {'FORMAT': 'MSR DTAS XML', 'VERSION': '0.2', 'CREATOR': 'Microsoft Research DTAS'}
         """
@@ -92,18 +231,44 @@ class XBNReader:
 
         Examples
         --------
-        >>> reader = XBNReader("xbn_test.xml")
-        >>> reader.get_variables()
-        {'a': {'TYPE': 'discrete', 'XPOS': '13495',
-               'YPOS': '10465', 'DESCRIPTION': '(a) Metastatic Cancer',
-               'STATES': ['Present', 'Absent']}
-        'b': {'TYPE': 'discrete', 'XPOS': '11290',
-               'YPOS': '11965', 'DESCRIPTION': '(b) Serum Calcium Increase',
-               'STATES': ['Present', 'Absent']},
-        'c': {....},
-        'd': {....},
-        'e': {....}
-        }
+        >>> from pgmpy.readwrite import XBNReader
+        >>> xml = '''<ANALYSISNOTEBOOK NAME="Notebook.Cancer Example" ROOT="Cancer">
+        ...   <BNMODEL NAME="Cancer">
+        ...     <STATICPROPERTIES>
+        ...       <FORMAT VALUE="MSR DTAS XML"/>
+        ...       <VERSION VALUE="0.2"/>
+        ...       <CREATOR VALUE="Microsoft Research DTAS"/>
+        ...     </STATICPROPERTIES>
+        ...     <VARIABLES>
+        ...       <VAR NAME="a" TYPE="discrete" XPOS="13495" YPOS="10465">
+        ...         <DESCRIPTION>(a) Metastatic Cancer</DESCRIPTION>
+        ...         <STATENAME>Present</STATENAME><STATENAME>Absent</STATENAME>
+        ...       </VAR>
+        ...       <VAR NAME="b" TYPE="discrete" XPOS="11290" YPOS="11965">
+        ...         <DESCRIPTION>(b) Serum Calcium Increase</DESCRIPTION>
+        ...         <STATENAME>Present</STATENAME><STATENAME>Absent</STATENAME>
+        ...       </VAR>
+        ...     </VARIABLES>
+        ...     <STRUCTURE><ARC PARENT="a" CHILD="b"/></STRUCTURE>
+        ...     <DISTRIBUTIONS>
+        ...       <DIST TYPE="discrete">
+        ...         <PRIVATE NAME="a"/>
+        ...         <DPIS><DPI> 0.2 0.8 </DPI></DPIS>
+        ...       </DIST>
+        ...       <DIST TYPE="discrete">
+        ...         <PRIVATE NAME="b"/>
+        ...         <CONDSET><CONDELEM NAME="a"/></CONDSET>
+        ...         <DPIS>
+        ...           <DPI INDEXES=" 0 "> 0.8 0.2 </DPI>
+        ...           <DPI INDEXES=" 1 "> 0.2 0.8 </DPI>
+        ...         </DPIS>
+        ...       </DIST>
+        ...     </DISTRIBUTIONS>
+        ...   </BNMODEL>
+        ... </ANALYSISNOTEBOOK>'''
+        >>> reader = XBNReader(string=xml)
+        >>> sorted(list(reader.get_variables().keys()))
+        ['a', 'b']
         """
         variables = {}
         for variable in self.bnmodel.find("VARIABLES"):
@@ -122,9 +287,44 @@ class XBNReader:
 
         Examples
         --------
-        >>> reader = XBNReader("xbn_test.xml")
+        >>> from pgmpy.readwrite import XBNReader
+        >>> xml = '''<ANALYSISNOTEBOOK NAME="Notebook.Cancer Example" ROOT="Cancer">
+        ...   <BNMODEL NAME="Cancer">
+        ...     <STATICPROPERTIES>
+        ...       <FORMAT VALUE="MSR DTAS XML"/>
+        ...       <VERSION VALUE="0.2"/>
+        ...       <CREATOR VALUE="Microsoft Research DTAS"/>
+        ...     </STATICPROPERTIES>
+        ...     <VARIABLES>
+        ...       <VAR NAME="a" TYPE="discrete" XPOS="13495" YPOS="10465">
+        ...         <DESCRIPTION>(a) Metastatic Cancer</DESCRIPTION>
+        ...         <STATENAME>Present</STATENAME><STATENAME>Absent</STATENAME>
+        ...       </VAR>
+        ...       <VAR NAME="b" TYPE="discrete" XPOS="11290" YPOS="11965">
+        ...         <DESCRIPTION>(b) Serum Calcium Increase</DESCRIPTION>
+        ...         <STATENAME>Present</STATENAME><STATENAME>Absent</STATENAME>
+        ...       </VAR>
+        ...     </VARIABLES>
+        ...     <STRUCTURE><ARC PARENT="a" CHILD="b"/></STRUCTURE>
+        ...     <DISTRIBUTIONS>
+        ...       <DIST TYPE="discrete">
+        ...         <PRIVATE NAME="a"/>
+        ...         <DPIS><DPI> 0.2 0.8 </DPI></DPIS>
+        ...       </DIST>
+        ...       <DIST TYPE="discrete">
+        ...         <PRIVATE NAME="b"/>
+        ...         <CONDSET><CONDELEM NAME="a"/></CONDSET>
+        ...         <DPIS>
+        ...           <DPI INDEXES=" 0 "> 0.8 0.2 </DPI>
+        ...           <DPI INDEXES=" 1 "> 0.2 0.8 </DPI>
+        ...         </DPIS>
+        ...       </DIST>
+        ...     </DISTRIBUTIONS>
+        ...   </BNMODEL>
+        ... </ANALYSISNOTEBOOK>'''
+        >>> reader = XBNReader(string=xml)
         >>> reader.get_edges()
-        [('a', 'b'), ('a', 'c'), ('b', 'd'), ('c', 'd'), ('c', 'e')]
+        [('a', 'b')]
         """
         return [(arc.get("PARENT"), arc.get("CHILD")) for arc in self.bnmodel.find("STRUCTURE")]
 
@@ -148,19 +348,47 @@ class XBNReader:
 
         Examples
         --------
-        >>> reader = XBNReader("xbn_test.xml")
-        >>> reader.get_distributions()
-        {'a': {'TYPE': 'discrete', 'DPIS': array([[ 0.2,  0.8]])},
-         'e': {'TYPE': 'discrete', 'DPIS': array([[ 0.8,  0.2],
-                 [ 0.6,  0.4]]), 'CONDSET': ['c'], 'CARDINALITY': [2]},
-         'b': {'TYPE': 'discrete', 'DPIS': array([[ 0.8,  0.2],
-                 [ 0.2,  0.8]]), 'CONDSET': ['a'], 'CARDINALITY': [2]},
-         'c': {'TYPE': 'discrete', 'DPIS': array([[ 0.2 ,  0.8 ],
-                 [ 0.05,  0.95]]), 'CONDSET': ['a'], 'CARDINALITY': [2]},
-         'd': {'TYPE': 'discrete', 'DPIS': array([[ 0.8 ,  0.2 ],
-                 [ 0.9 ,  0.1 ],
-                 [ 0.7 ,  0.3 ],
-                 [ 0.05,  0.95]]), 'CONDSET': ['b', 'c']}, 'CARDINALITY': [2, 2]}
+        >>> from pgmpy.readwrite import XBNReader
+        >>> xml = '''<ANALYSISNOTEBOOK NAME="Notebook.Cancer Example" ROOT="Cancer">
+        ...   <BNMODEL NAME="Cancer">
+        ...     <STATICPROPERTIES>
+        ...       <FORMAT VALUE="MSR DTAS XML"/>
+        ...       <VERSION VALUE="0.2"/>
+        ...       <CREATOR VALUE="Microsoft Research DTAS"/>
+        ...     </STATICPROPERTIES>
+        ...     <VARIABLES>
+        ...       <VAR NAME="a" TYPE="discrete" XPOS="13495" YPOS="10465">
+        ...         <DESCRIPTION>(a) Metastatic Cancer</DESCRIPTION>
+        ...         <STATENAME>Present</STATENAME><STATENAME>Absent</STATENAME>
+        ...       </VAR>
+        ...       <VAR NAME="b" TYPE="discrete" XPOS="11290" YPOS="11965">
+        ...         <DESCRIPTION>(b) Serum Calcium Increase</DESCRIPTION>
+        ...         <STATENAME>Present</STATENAME><STATENAME>Absent</STATENAME>
+        ...       </VAR>
+        ...     </VARIABLES>
+        ...     <STRUCTURE><ARC PARENT="a" CHILD="b"/></STRUCTURE>
+        ...     <DISTRIBUTIONS>
+        ...       <DIST TYPE="discrete">
+        ...         <PRIVATE NAME="a"/>
+        ...         <DPIS><DPI> 0.2 0.8 </DPI></DPIS>
+        ...       </DIST>
+        ...       <DIST TYPE="discrete">
+        ...         <PRIVATE NAME="b"/>
+        ...         <CONDSET><CONDELEM NAME="a"/></CONDSET>
+        ...         <DPIS>
+        ...           <DPI INDEXES=" 0 "> 0.8 0.2 </DPI>
+        ...           <DPI INDEXES=" 1 "> 0.2 0.8 </DPI>
+        ...         </DPIS>
+        ...       </DIST>
+        ...     </DISTRIBUTIONS>
+        ...   </BNMODEL>
+        ... </ANALYSISNOTEBOOK>'''
+        >>> reader = XBNReader(string=xml)
+        >>> dists = reader.get_distributions()
+        >>> dists['a']['TYPE']
+        'discrete'
+        >>> dists['b']['CONDSET']
+        ['a']
         """
         distribution = {}
         for dist in self.bnmodel.find("DISTRIBUTIONS"):
@@ -232,6 +460,15 @@ class XBNWriter:
 
     Examples
     --------
+    >>> from pgmpy.readwrite import XBNWriter
+    >>> from pgmpy.models import DiscreteBayesianNetwork
+    >>> from pgmpy.factors.discrete import TabularCPD
+    >>> model = DiscreteBayesianNetwork([("a", "b")])
+    >>> cpd_a = TabularCPD("a", 2, [[0.2], [0.8]], state_names={"a": ["Present", "Absent"]})
+    >>> cpd_b = TabularCPD("b", 2, [[0.8, 0.2], [0.2, 0.8]],
+    ...                    evidence=["a"], evidence_card=[2],
+    ...                    state_names={"a": ["Present", "Absent"], "b": ["Present", "Absent"]})
+    >>> model.add_cpds(cpd_a, cpd_b)
     >>> writer = XBNWriter(model)
     """
 
@@ -280,57 +517,84 @@ class XBNWriter:
 
     def set_analysisnotebook(self, **data):
         """
-        Set attributes for ANALYSISNOTEBOOK tag
+            Set attributes for ANALYSISNOTEBOOK tag
 
-        Parameters
-        ----------
-        **data: dict
-            {name: value} for the attributes to be set.
+            Parameters
+            ----------
+            **data: dict
+                {name: value} for the attributes to be set.
 
-        Examples
-        --------
-        >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
-        >>> writer = XBNWriter()
-        >>> writer.set_analysisnotebook(
-        ...     NAME="Notebook.Cancer Example From Neapolitan", ROOT="Cancer"
-        ... )
+            Examples
+            --------
+            >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
+        >>> from pgmpy.readwrite import XBNWriter
+        >>> from pgmpy.models import DiscreteBayesianNetwork
+        >>> from pgmpy.factors.discrete import TabularCPD
+        >>> model = DiscreteBayesianNetwork([("a", "b")])
+        >>> cpd_a = TabularCPD("a", 2, [[0.2], [0.8]], state_names={"a": ["Present", "Absent"]})
+        >>> cpd_b = TabularCPD("b", 2, [[0.8, 0.2], [0.2, 0.8]],
+        ...                    evidence=["a"], evidence_card=[2],
+        ...                    state_names={"a": ["Present", "Absent"], "b": ["Present", "Absent"]})
+        >>> model.add_cpds(cpd_a, cpd_b)
+        >>> writer = XBNWriter(model)
+            >>> writer.set_analysisnotebook(
+            ...     NAME="Notebook.Cancer Example From Neapolitan", ROOT="Cancer"
+            ... )
         """
         for key, value in data.items():
             self.network.set(str(key), str(value))
 
     def set_bnmodel_name(self, name):
         """
-        Set the name of the BNMODEL.
+            Set the name of the BNMODEL.
 
-        Parameters
-        ----------
-        name: str
-            Name of the BNModel.
+            Parameters
+            ----------
+            name: str
+                Name of the BNModel.
 
-        Examples
-        --------
-        >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
-        >>> writer = XBNWriter()
-        >>> writer.set_bnmodel_name("Cancer")
+            Examples
+            --------
+            >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
+        >>> from pgmpy.readwrite import XBNWriter
+        >>> from pgmpy.models import DiscreteBayesianNetwork
+        >>> from pgmpy.factors.discrete import TabularCPD
+        >>> model = DiscreteBayesianNetwork([("a", "b")])
+        >>> cpd_a = TabularCPD("a", 2, [[0.2], [0.8]], state_names={"a": ["Present", "Absent"]})
+        >>> cpd_b = TabularCPD("b", 2, [[0.8, 0.2], [0.2, 0.8]],
+        ...                    evidence=["a"], evidence_card=[2],
+        ...                    state_names={"a": ["Present", "Absent"], "b": ["Present", "Absent"]})
+        >>> model.add_cpds(cpd_a, cpd_b)
+        >>> writer = XBNWriter(model)
+            >>> writer.set_bnmodel_name("Cancer")
         """
         self.bnmodel.set("NAME", str(name))
 
     def set_static_properties(self, **data):
         """
-        Set STATICPROPERTIES tag for the network
+            Set STATICPROPERTIES tag for the network
 
-        Parameters
-        ----------
-        **data: dict
-            {name: value} for name and value of the property.
+            Parameters
+            ----------
+            **data: dict
+                {name: value} for name and value of the property.
 
-        Examples
-        --------
-        >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
-        >>> writer = XBNWriter()
-        >>> writer.set_static_properties(
-        ...     FORMAT="MSR DTAS XML", VERSION="0.2", CREATOR="Microsoft Research DTAS"
-        ... )
+            Examples
+            --------
+            >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
+        >>> from pgmpy.readwrite import XBNWriter
+        >>> from pgmpy.models import DiscreteBayesianNetwork
+        >>> from pgmpy.factors.discrete import TabularCPD
+        >>> model = DiscreteBayesianNetwork([("a", "b")])
+        >>> cpd_a = TabularCPD("a", 2, [[0.2], [0.8]], state_names={"a": ["Present", "Absent"]})
+        >>> cpd_b = TabularCPD("b", 2, [[0.8, 0.2], [0.2, 0.8]],
+        ...                    evidence=["a"], evidence_card=[2],
+        ...                    state_names={"a": ["Present", "Absent"], "b": ["Present", "Absent"]})
+        >>> model.add_cpds(cpd_a, cpd_b)
+        >>> writer = XBNWriter(model)
+            >>> writer.set_static_properties(
+            ...     FORMAT="MSR DTAS XML", VERSION="0.2", CREATOR="Microsoft Research DTAS"
+            ... )
         """
         static_prop = etree.SubElement(self.bnmodel, "STATICPROPERTIES")
         for key, value in data.items():
@@ -338,35 +602,44 @@ class XBNWriter:
 
     def set_variables(self, data):
         """
-        Set variables for the network.
+            Set variables for the network.
 
-        Parameters
-        ----------
-        data: dict
-            dict for variable in the form of example as shown.
+            Parameters
+            ----------
+            data: dict
+                dict for variable in the form of example as shown.
 
-        Examples
-        --------
-        >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
-        >>> writer = XBNWriter()
-        >>> writer.set_variables(
-        ...     {
-        ...         "a": {
-        ...             "TYPE": "discrete",
-        ...             "XPOS": "13495",
-        ...             "YPOS": "10465",
-        ...             "DESCRIPTION": "(a) Metastatic Cancer",
-        ...             "STATES": ["Present", "Absent"],
-        ...         },
-        ...         "b": {
-        ...             "TYPE": "discrete",
-        ...             "XPOS": "11290",
-        ...             "YPOS": "11965",
-        ...             "DESCRIPTION": "(b) Serum Calcium Increase",
-        ...             "STATES": ["Present", "Absent"],
-        ...         },
-        ...     }
-        ... )
+            Examples
+            --------
+            >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
+        >>> from pgmpy.readwrite import XBNWriter
+        >>> from pgmpy.models import DiscreteBayesianNetwork
+        >>> from pgmpy.factors.discrete import TabularCPD
+        >>> model = DiscreteBayesianNetwork([("a", "b")])
+        >>> cpd_a = TabularCPD("a", 2, [[0.2], [0.8]], state_names={"a": ["Present", "Absent"]})
+        >>> cpd_b = TabularCPD("b", 2, [[0.8, 0.2], [0.2, 0.8]],
+        ...                    evidence=["a"], evidence_card=[2],
+        ...                    state_names={"a": ["Present", "Absent"], "b": ["Present", "Absent"]})
+        >>> model.add_cpds(cpd_a, cpd_b)
+        >>> writer = XBNWriter(model)
+            >>> writer.set_variables(
+            ...     {
+            ...         "a": {
+            ...             "TYPE": "discrete",
+            ...             "XPOS": "13495",
+            ...             "YPOS": "10465",
+            ...             "DESCRIPTION": "(a) Metastatic Cancer",
+            ...             "STATES": ["Present", "Absent"],
+            ...         },
+            ...         "b": {
+            ...             "TYPE": "discrete",
+            ...             "XPOS": "11290",
+            ...             "YPOS": "11965",
+            ...             "DESCRIPTION": "(b) Serum Calcium Increase",
+            ...             "STATES": ["Present", "Absent"],
+            ...         },
+            ...     }
+            ... )
         """
         variables = etree.SubElement(self.bnmodel, "VARIABLES")
         for var in sorted(data):
@@ -390,20 +663,29 @@ class XBNWriter:
 
     def set_edges(self, edge_list):
         """
-        Set edges/arc in the network.
+            Set edges/arc in the network.
 
-        Parameters
-        ----------
-        edge_list: array_like
-            list, tuple, dict or set whose each element has two values (parent, child).
+            Parameters
+            ----------
+            edge_list: array_like
+                list, tuple, dict or set whose each element has two values (parent, child).
 
-        Examples
-        --------
-        >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
-        >>> writer = XBNWriter()
-        >>> writer.set_edges(
-        ...     [("a", "b"), ("a", "c"), ("b", "d"), ("c", "d"), ("c", "e")]
-        ... )
+            Examples
+            --------
+            >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
+        >>> from pgmpy.readwrite import XBNWriter
+        >>> from pgmpy.models import DiscreteBayesianNetwork
+        >>> from pgmpy.factors.discrete import TabularCPD
+        >>> model = DiscreteBayesianNetwork([("a", "b")])
+        >>> cpd_a = TabularCPD("a", 2, [[0.2], [0.8]], state_names={"a": ["Present", "Absent"]})
+        >>> cpd_b = TabularCPD("b", 2, [[0.8, 0.2], [0.2, 0.8]],
+        ...                    evidence=["a"], evidence_card=[2],
+        ...                    state_names={"a": ["Present", "Absent"], "b": ["Present", "Absent"]})
+        >>> model.add_cpds(cpd_a, cpd_b)
+        >>> writer = XBNWriter(model)
+            >>> writer.set_edges(
+            ...     [("a", "b"), ("a", "c"), ("b", "d"), ("c", "d"), ("c", "e")]
+            ... )
         """
         structure = etree.SubElement(self.bnmodel, "STRUCTURE")
         for edge in edge_list:
@@ -411,13 +693,22 @@ class XBNWriter:
 
     def set_distributions(self):
         """
-        Set distributions in the network.
+            Set distributions in the network.
 
-        Examples
-        --------
-        >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
-        >>> writer = XBNWriter()
-        >>> writer.set_distributions()
+            Examples
+            --------
+            >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
+        >>> from pgmpy.readwrite import XBNWriter
+        >>> from pgmpy.models import DiscreteBayesianNetwork
+        >>> from pgmpy.factors.discrete import TabularCPD
+        >>> model = DiscreteBayesianNetwork([("a", "b")])
+        >>> cpd_a = TabularCPD("a", 2, [[0.2], [0.8]], state_names={"a": ["Present", "Absent"]})
+        >>> cpd_b = TabularCPD("b", 2, [[0.8, 0.2], [0.2, 0.8]],
+        ...                    evidence=["a"], evidence_card=[2],
+        ...                    state_names={"a": ["Present", "Absent"], "b": ["Present", "Absent"]})
+        >>> model.add_cpds(cpd_a, cpd_b)
+        >>> writer = XBNWriter(model)
+            >>> writer.set_distributions()
         """
         distributions = etree.SubElement(self.bnmodel, "DISTRIBUTIONS")
 
@@ -458,11 +749,19 @@ class XBNWriter:
 
         Example
         -------
-        >>> from pgmpy.example_models import load_model
-        >>> from pgmpy.readwrite import XBNReader, XBNWriter
-        >>> asia = load_model("bnlearn/asia")
-        >>> writer = XBNWriter(asia)
-        >>> writer.write(filename="asia.xbn")
+        >>> import tempfile
+        >>> from pgmpy.readwrite import XBNWriter
+        >>> from pgmpy.models import DiscreteBayesianNetwork
+        >>> from pgmpy.factors.discrete import TabularCPD
+        >>> model = DiscreteBayesianNetwork([("a", "b")])
+        >>> cpd_a = TabularCPD("a", 2, [[0.2], [0.8]], state_names={"a": ["Present", "Absent"]})
+        >>> cpd_b = TabularCPD("b", 2, [[0.8, 0.2], [0.2, 0.8]],
+        ...                    evidence=["a"], evidence_card=[2],
+        ...                    state_names={"a": ["Present", "Absent"], "b": ["Present", "Absent"]})
+        >>> model.add_cpds(cpd_a, cpd_b)
+        >>> writer = XBNWriter(model)
+        >>> with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".xbn") as f:
+        ...     writer.write(filename=f.name)
         """
         writer = self.__str__()
         with open(filename, "wb") as fout:
