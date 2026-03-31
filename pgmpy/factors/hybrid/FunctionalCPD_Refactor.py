@@ -1,5 +1,5 @@
-from pgmpy.factors.hybrid.Adapters import LinearGaussianAdapter, TabularAdapter
 from pgmpy.factors.base import BaseFactor
+from pgmpy.factors.hybrid.Adapters import LinearGaussianAdapter, TabularAdapter
 from pgmpy.factors.hybrid.SkproAdapter import SkproAdapter
 
 
@@ -17,32 +17,27 @@ class FunctionalCPD(BaseFactor):
         self.tag_name_ = self.tag[0] if isinstance(self.tag, list) else self.tag
 
         if self.tag_name_ == "tabular":
-            self._fit_tabular()
+            self.adapter_ = TabularAdapter(variable=self.variable, estimator=self.estimator, parents=self.parents_)
+            self.fitted_cpd_ = self.adapter_.fit(self.data_).fitted_cpd_
         elif self.tag_name_ == "linear":
-            self._fit_linear()
+            self.adapter_ = LinearGaussianAdapter(
+                variable=self.variable, estimator=self.estimator, parents=self.parents_
+            )
+            self.fitted_cpd_ = self.adapter_.fit(self.data_).fitted_cpd_
         elif self.tag_name_ == "functional":
             self._fit_functional()
         elif self.tag_name_ == "skpro" or self.tag_name_.startswith("skpro."):
-            self._fit_external_ml()
+            if self.estimator is None:
+                raise ValueError("For skpro tag, `estimator` must be provided.")
+
+            self.adapter_ = SkproAdapter(variable=self.variable, model=self.estimator, parents=self.parents_).fit(
+                self.data_
+            )
+            self.fitted_cpd_ = self.adapter_
 
         self.is_fitted_ = True
 
         return self
-
-    def _fit_tabular(self):
-        self.adapter_ = TabularAdapter(variable=self.variable, estimator=self.estimator, parents=self.parents_)
-        self.fitted_cpd_ = self.adapter_.fit(self.data_).fitted_cpd_
-
-    def _fit_linear(self):
-        self.adapter_ = LinearGaussianAdapter(variable=self.variable, estimator=self.estimator, parents=self.parents_)
-        self.fitted_cpd_ = self.adapter_.fit(self.data_).fitted_cpd_
-
-    def _fit_external_ml(self):
-        if self.estimator is None:
-            raise ValueError("For skpro tag, `estimator` must be provided.")
-
-        self.adapter_ = SkproAdapter(variable=self.variable, model=self.estimator, parents=self.parents_).fit(self.data_)
-        self.fitted_cpd_ = self.adapter_
 
     def __repr__(self):
         if not getattr(self, "is_fitted_", False):
