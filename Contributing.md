@@ -131,7 +131,7 @@ Every new function or bug fix must include tests:
 
 ## AI Usage Policy
 
-We welcome the thoughtful use of AI coding tools (Copilot, ChatGPT, Claude, Cursor, etc.) as development aids. That said, every contributor is fully responsible for the code they submit, regardless of how it was produced. Additionally, we expect the contributor to **fully disclose** the tool used and how it was used. We have a set of questions in the PR checklist regarding this, and we expect it to be answered by the contributor in detail.
+We welcome thoughtful use of AI coding tools (Copilot, ChatGPT, Claude, Cursor, etc.) as development aids. That said, every contributor is fully responsible for the code they submit, regardless of how it was produced. Additionally, we expect the contributor to **fully disclose** the tool used and how it was used.
 
 **Guidelines:**
 
@@ -139,8 +139,9 @@ We welcome the thoughtful use of AI coding tools (Copilot, ChatGPT, Claude, Curs
 - **Disclose any AI usage.** If AI generated any part of your PR, fill in the LLM usage questionnaire in the PR template.
 - **Test thoroughly.** AI-generated code often introduces subtle edge-case bugs. Do not rely on the AI tool to verify correctness. Think of your own edge cases for tests.
 - **Follow project conventions.** Changes that ignore pgmpy's existing patterns are a common sign of unreviewed AI output. Go through your changes before asking for a review.
+- **Keep conversations human.** Use AI tools to help you understand issues and feedback, but write issues, comments, and responses in your own words. Do not copy and paste AI-generated text.
 
-Misrepresenting AI tool usage in your contributions is a **serious violation** of our contributing guidelines and may result in a **permanent ban** from contributing to the repository.
+Misrepresenting AI tool usage in your contributions is a **violation** of our policy and may result in a **permanent ban** from contributing to the repository.
 
 ## Documentation
 

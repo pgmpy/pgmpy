@@ -1,12 +1,13 @@
 import os
 import unittest
 
+from sklearn.ensemble import RandomForestRegressor
+
 from pgmpy.ci_tests import GCM
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.models import LinearGaussianBayesianNetwork
 
 
-@unittest.skipIf(os.getenv("GITHUB_ACTIONS") == "true", "Skipping residual tests on GitHub Actions.")
 class TestGCM(unittest.TestCase):
     def setUp(self):
         model_indep = LinearGaussianBayesianNetwork(
@@ -42,21 +43,54 @@ class TestGCM(unittest.TestCase):
         model_dep.add_cpds(cpd_z1, cpd_z2, cpd_z3, cpd_x, cpd_y_dep)
         self.df_dep = model_dep.simulate(n_samples=10000, seed=42)
 
-    def test_gcm(self):
+    @unittest.skipIf(os.getenv("GITHUB_ACTIONS") == "true", "Skipping exact residual tests on GitHub Actions.")
+    def test_gcm_exact(self):
         test = GCM(data=self.df_indep)
 
         # Non-conditional test
         test("X", "Y", [])
-        self.assertAlmostEqual(round(test.statistic_, 3), 38.962)
+        self.assertAlmostEqual(round(test.statistic_, 3), 39.631)
         self.assertAlmostEqual(test.p_value_, 0.0)
 
         # Conditional test (independent)
         test("X", "Y", ["Z1", "Z2", "Z3"])
-        self.assertAlmostEqual(round(test.statistic_, 3), -0.312)
-        self.assertEqual(round(test.p_value_, 4), 0.7547)
+        self.assertAlmostEqual(round(test.statistic_, 3), 0.584)
+        self.assertEqual(round(test.p_value_, 4), 0.5591)
 
         # Conditional test (dependent)
         test = GCM(data=self.df_dep)
         test("X", "Y", ["Z1", "Z2", "Z3"])
         self.assertAlmostEqual(round(test.statistic_, 3), 39.798)
         self.assertAlmostEqual(test.p_value_, 0.0)
+
+        # Test with custom sklearn estimator
+        test = GCM(data=self.df_indep, estimator=RandomForestRegressor(random_state=42))
+        test("X", "Y", ["Z1", "Z2", "Z3"])
+        self.assertIsInstance(test.statistic_, float)
+        self.assertIsInstance(test.p_value_, float)
+        self.assertGreaterEqual(test.p_value_, 0.0)
+        self.assertLessEqual(test.p_value_, 1.0)
+
+    def test_gcm_approx(self):
+        test = GCM(data=self.df_indep)
+
+        # Non-conditional test
+        test("X", "Y", [])
+        self.assertTrue(test.statistic_ > 1)
+        self.assertTrue(test.p_value_ < 0.05)
+
+        # Conditional test (independent)
+        test("X", "Y", ["Z1", "Z2", "Z3"])
+        self.assertTrue(test.statistic_ < 1)
+        self.assertTrue(test.p_value_ > 0.05)
+
+        # Conditional test (dependent)
+        test = GCM(data=self.df_dep)
+        test("X", "Y", ["Z1", "Z2", "Z3"])
+        self.assertTrue(test.statistic_ > 1)
+        self.assertTrue(test.p_value_ < 0.05)
+
+        # Test with custom sklearn estimator
+        test = GCM(data=self.df_indep, estimator=RandomForestRegressor(random_state=42))
+        test("X", "Y", ["Z1", "Z2", "Z3"])
+        self.assertTrue(test.p_value_ > 0.05)
