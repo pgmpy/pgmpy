@@ -516,27 +516,25 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         import re
 
         if filename is not None:
-            with open(filename, "r") as f:
+            with open(filename) as f:
                 dagitty_str = f.read()
         elif string is not None:
             dagitty_str = string
         else:
             raise ValueError("Either `string` or `filename` must be provided.")
 
-        match = re.search(r'\{(.+?)\}', dagitty_str, re.DOTALL)
+        match = re.search(r"\{(.+?)\}", dagitty_str, re.DOTALL)
         if not match:
-            raise ValueError(
-                "Invalid DAGitty string. Expected format: dag { X -> Y X -- Z }"
-            )
+            raise ValueError("Invalid DAGitty string. Expected format: dag { X -> Y X -- Z }")
         inner = match.group(1).strip()
 
         directed_edges = []
         undirected_edges = []
 
-        for m in re.finditer(r'(\w+)\s*->\s*(\w+)', inner):
+        for m in re.finditer(r"(\w+)\s*->\s*(\w+)", inner):
             directed_edges.append((m.group(1), m.group(2)))
 
-        for m in re.finditer(r'(\w+)\s*--\s*(\w+)', inner):
+        for m in re.finditer(r"(\w+)\s*--\s*(\w+)", inner):
             undirected_edges.append((m.group(1), m.group(2)))
 
         return cls(

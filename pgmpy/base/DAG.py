@@ -1780,7 +1780,3 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             "max_n_parents": max(in_degrees.values()) if in_degrees else 0,
             "n_latent_nodes": len(getattr(self, "latents", [])),
         }
-
-
-
-
