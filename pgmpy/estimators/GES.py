@@ -1,18 +1,20 @@
+import warnings
 from collections.abc import Callable, Hashable, Iterable
-from itertools import chain, combinations
+from itertools import combinations
 from typing import Any
 
 import networkx as nx
 import numpy as np
 import pandas as pd
 
-from pgmpy.base import DAG, PDAG
+from pgmpy.base import PDAG
 from pgmpy.estimators import (
     StructureEstimator,
     StructureScore,
 )
 from pgmpy.estimators.ScoreCache import ScoreCache
 from pgmpy.estimators.StructureScore import get_scoring_method
+from pgmpy.utils.mathext import powerset
 
 
 class GES(StructureEstimator):
@@ -43,49 +45,14 @@ class GES(StructureEstimator):
     """
 
     def __init__(self, data: pd.DataFrame, use_cache: bool = False, **kwargs):
+        warnings.warn(
+            "GES is deprecated. Please use pgmpy.causal_discovery.GES instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
         self.use_cache = use_cache
 
         super().__init__(data=data, **kwargs)
-
-    def _chain_component(
-        self,
-        node: Any,
-        current_model: PDAG,
-    ) -> set[Any]:
-        """
-        Return the chain component of `node`, i.e., all nodes reachable
-        via undirected edges.
-        """
-        visited: set[Any] = set()
-        to_visit: set[Any] = {node}
-
-        while to_visit:
-            for j in to_visit:
-                visited.add(j)
-                to_visit = (to_visit | current_model.undirected_neighbors(j)) - visited
-
-        return visited
-
-    def _induced_subgraph(
-        self,
-        node_list: Iterable[Any],
-        model,
-    ) -> nx.DiGraph:
-        """
-        Return the induced subgraph over `node_list`.
-        """
-        node_set = set(node_list)
-        sub_edges = []
-
-        for u, v in model.edges():
-            if u in node_set and v in node_set:
-                sub_edges.append((u, v))
-
-        subg = nx.DiGraph()
-        subg.add_nodes_from(model.nodes())
-        subg.add_edges_from(sub_edges)
-
-        return subg
 
     def _separates(
         self,
@@ -107,51 +74,6 @@ class GES(StructureEstimator):
                         return False
 
         return True
-
-    def _is_dag(
-        self,
-        current_model: PDAG,
-    ) -> bool:
-        """
-        Check whether the graph is fully directed (i.e., contains no undirected edges).
-        """
-        for u, v in current_model.edges():
-            if current_model.has_edge(v, u):
-                return False
-
-        return True
-
-    def _has_acyclic_extension(
-        self,
-        current_model: PDAG,
-    ) -> bool:
-        """
-        Check whether `current_model` can be converted to an acyclic DAG.
-        """
-        if self._is_dag(current_model):
-            return nx.is_directed_acyclic_graph(nx.DiGraph(current_model.edges()))
-
-        dag = current_model.to_dag()
-        return nx.is_directed_acyclic_graph(dag)
-
-    def adjacent_neighbors(self, u: Any, current_model: PDAG):
-        """
-        Return all adjacent neighbors of u in current_model. Considers edges
-        in any direction.
-        """
-        adj = set()
-        for node in current_model.nodes:
-            if current_model.is_adjacent(u, node):
-                adj.add(node)
-        return adj
-
-    @staticmethod
-    def powerset(iterable: Iterable[Any]):
-        """
-        Return the power set of an iterable.
-        """
-        s = list(iterable)
-        return chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
 
     def _legal_edge_additions(
         self,
@@ -238,7 +160,7 @@ class GES(StructureEstimator):
         """
         Perform delete(u - v) or delete(u -> v) with conditioning set H.
         """
-        na_vu = current_model.undirected_neighbors(v) & self.adjacent_neighbors(u, current_model)
+        na_vu = current_model.undirected_neighbors(v) & current_model.all_neighbors(u)
 
         if not H.issubset(na_vu):
             raise ValueError(f"H={H} is not a subset of NA_vu={na_vu}.")
@@ -306,9 +228,9 @@ class GES(StructureEstimator):
         """
         Score all valid insert(u -> v) operations.
         """
-        T0 = current_model.undirected_neighbors(v) - self.adjacent_neighbors(u, current_model)
+        T0 = current_model.undirected_neighbors(v) - current_model.all_neighbors(u)
 
-        power_set = self.powerset(T0)
+        power_set = powerset(list(T0))
         subsets = [[*T, False] for T in power_set]  # [elements..., passed_cond_2]
         valid_insert_ops = []
 
@@ -316,7 +238,7 @@ class GES(StructureEstimator):
             entry = subsets.pop(0)
             T, passed_cond_2 = set(entry[:-1]), entry[-1]
 
-            na_vu = current_model.undirected_neighbors(v) & self.adjacent_neighbors(u, current_model)
+            na_vu = current_model.undirected_neighbors(v) & current_model.all_neighbors(u)
             na_vuT = na_vu.union(T)
 
             # Condition 1: NA_vu ∪ T is a clique
@@ -330,11 +252,7 @@ class GES(StructureEstimator):
             if passed_cond_2:
                 cond_2 = True
             else:
-                cond_2 = True
-                for path in nx.all_simple_paths(current_model, v, u):
-                    if not na_vuT.intersection(set(path)):
-                        cond_2 = False
-                        break
+                cond_2 = not current_model.has_semidirected_path(v, u, blocked_nodes=na_vuT)
 
                 if cond_2:
                     # Mark supersets of T
@@ -347,7 +265,7 @@ class GES(StructureEstimator):
 
                 score_delta = score_fn(v, list(na_vuT | parents_v | {u})) - score_fn(v, list(na_vuT | parents_v))
                 new_model = self.insert(u, v, T, current_model)
-                if self._has_acyclic_extension(new_model):
+                if new_model.has_acyclic_extension():
                     valid_insert_ops.append((score_delta, u, v, T))
 
         return valid_insert_ops
@@ -365,10 +283,10 @@ class GES(StructureEstimator):
         if not current_model.has_edge(u, v):
             raise ValueError(f"No edge exists between nodes {u, v} to delete.")
 
-        na_vu = current_model.undirected_neighbors(v) & self.adjacent_neighbors(u, current_model)
+        na_vu = current_model.undirected_neighbors(v) & current_model.all_neighbors(u)
         H0 = na_vu
 
-        power_set = self.powerset(H0)
+        power_set = powerset(list(H0))
         subsets = [[*H, False] for H in power_set]  # [elements..., cond_1]
         valid_delete_ops = []
 
@@ -419,9 +337,9 @@ class GES(StructureEstimator):
         """
         Score all valid turn(u -> v) operations.
         """
-        T0 = current_model.undirected_neighbors(v) - self.adjacent_neighbors(u, current_model)
+        T0 = current_model.undirected_neighbors(v) - current_model.all_neighbors(u)
 
-        power_set = self.powerset(T0)
+        power_set = powerset(list(T0))
         subsets = [[*T, False] for T in power_set]  # [elements..., passed_cond_2]
         valid_turn_ops = []
 
@@ -429,7 +347,7 @@ class GES(StructureEstimator):
             entry = subsets.pop(0)
             T, passed_cond_2 = set(entry[:-1]), entry[-1]
 
-            na_vu = current_model.undirected_neighbors(v) & self.adjacent_neighbors(u, current_model)
+            na_vu = current_model.undirected_neighbors(v) & current_model.all_neighbors(u)
             C = na_vu.union(T)
 
             # Condition 1: NA_vu ∪ T is a clique
@@ -442,13 +360,12 @@ class GES(StructureEstimator):
             if passed_cond_2:
                 cond_2 = True
             else:
-                cond_2 = True
-                for path in nx.all_simple_paths(current_model, v, u):
-                    if path == [v, u]:
-                        continue
-                    elif set(path).isdisjoint(C | current_model.undirected_neighbors(u)):
-                        cond_2 = False
-                        break
+                cond_2 = not current_model.has_semidirected_path(
+                    v,
+                    u,
+                    blocked_nodes=C | current_model.undirected_neighbors(u),
+                    ignore_direct_edge=True,
+                )
 
                 if cond_2:
                     for s in subsets:
@@ -465,7 +382,7 @@ class GES(StructureEstimator):
 
                 score_delta = new_score - old_score
                 new_model = self.turn(u, v, T, current_model)
-                if self._has_acyclic_extension(new_model):
+                if new_model.has_acyclic_extension():
                     valid_turn_ops.append((score_delta, u, v, T))
 
         return valid_turn_ops
@@ -480,13 +397,13 @@ class GES(StructureEstimator):
         """
         Score all valid turn(u - v) operations.
         """
-        non_adjacents = current_model.undirected_neighbors(v) - self.adjacent_neighbors(u, current_model) - {u}
+        non_adjacents = current_model.undirected_neighbors(v) - current_model.all_neighbors(u) - {u}
 
         if len(non_adjacents) == 0:
             return []
 
         C0 = current_model.undirected_neighbors(v) - {u}
-        power_set = self.powerset(C0)
+        power_set = powerset(list(C0))
 
         # Only subsets containing at least one non-adjacent node
         subsets = [[*set(C), False] for C in power_set if len(set(C) & non_adjacents) > 0]
@@ -503,9 +420,9 @@ class GES(StructureEstimator):
                 subsets = [s for s in subsets if not C.issubset(set(s[:-1]))]
                 continue
 
-            subgraph = self._induced_subgraph(self._chain_component(v, current_model), current_model)
+            subgraph = nx.DiGraph(current_model.subgraph(current_model.chain_component(v)))
 
-            na_vu = current_model.undirected_neighbors(v) & self.adjacent_neighbors(u, current_model)
+            na_vu = current_model.undirected_neighbors(v) & current_model.all_neighbors(u)
 
             # Separation condition
             if not self._separates({u, v}, C, na_vu - C, subgraph):
@@ -520,7 +437,7 @@ class GES(StructureEstimator):
 
             score_delta = new_score - old_score
             new_model = self.turn(u, v, C, current_model)
-            if self._has_acyclic_extension(new_model):
+            if new_model.has_acyclic_extension():
                 valid_turn_ops.append((score_delta, u, v, C))
 
         return valid_turn_ops
@@ -583,7 +500,6 @@ class GES(StructureEstimator):
         # Step 1: Initialize an empty model.
         current_model = PDAG()  # if model is None else model
         current_model.add_nodes_from(list(self.data.columns))
-        all_nodes = list(self.data.columns)
 
         # Step 2: Forward step: Iteratively add edges till score stops improving.
         while True:
@@ -608,15 +524,7 @@ class GES(StructureEstimator):
 
             current_model = self.insert(edge_to_add[0], edge_to_add[1], op_to_add[3], current_model)
 
-            if not self._is_dag(current_model):
-                new_model = current_model.to_dag()
-                current_model = new_model.to_pdag()
-
-            else:
-                dag = DAG()
-                dag.add_nodes_from(all_nodes)
-                dag.add_edges_from(current_model.edges)
-                current_model = dag.to_pdag()
+            current_model = current_model.to_cpdag()
 
             if debug:
                 print(f"Adding edge {edge_to_add[0]} -> {edge_to_add[1]}. Improves score by: {score_deltas.max()}")
@@ -644,14 +552,7 @@ class GES(StructureEstimator):
             op_to_delete = deletion_ops[np.argmax(score_deltas)]
             current_model = self.delete(edge_to_remove[0], edge_to_remove[1], op_to_delete[3], current_model)
 
-            if not self._is_dag(current_model):
-                new_model = current_model.to_dag()
-                current_model = new_model.to_pdag()
-            else:
-                dag = DAG()
-                dag.add_nodes_from(all_nodes)
-                dag.add_edges_from(current_model.edges)
-                current_model = dag.to_pdag()
+            current_model = current_model.to_cpdag()
 
             if debug:
                 print(
@@ -680,14 +581,7 @@ class GES(StructureEstimator):
             op_to_turn = turn_ops[np.argmax(score_deltas)]
             current_model = self.turn(edge_to_turn[0], edge_to_turn[1], op_to_turn[3], current_model)
 
-            if not self._is_dag(current_model):
-                new_model = current_model.to_dag()
-                current_model = new_model.to_pdag()
-            else:
-                dag = DAG()
-                dag.add_nodes_from(all_nodes)
-                dag.add_edges_from(current_model.edges)
-                current_model = dag.to_pdag()
+            current_model = current_model.to_cpdag()
 
             if debug:
                 print(f"Turning edge {edge_to_turn[0]} -> {edge_to_turn[1]}. Improves score by: {score_deltas.max()}")
