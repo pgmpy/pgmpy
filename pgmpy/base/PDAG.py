@@ -468,7 +468,7 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         self.undirected_edges = undirected
         self.directed_edges = directed
 
-    def to_cpdag(self) -> PDAG:
+    def to_cpdag(self):
         """
         Returns the CPDAG corresponding to one DAG extension of the PDAG.
         """
