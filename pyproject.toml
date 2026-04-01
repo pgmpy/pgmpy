@@ -106,6 +106,7 @@ norecursedirs = [".git", "ignore", "build", "__pycache__"]
 filterwarnings = ["default"]
 
 [tool.ruff]
+preview = true
 line-length = 120
 exclude = [".git", "examples/*", "docs/source/conf.py", "pgmpy/estimators/__init__.py",
 	   "pgmpy/factors/discrete/__init__.py", "pgmpy/identification/__init__.py", "pgmpy/inference/__init__.py",
@@ -128,6 +129,25 @@ select = [
   "PT014",   # pytest-duplicate-parametrize-test-cases.
   "PT006",   # Checks for the type of parameter names passed to pytest.mark.parametrize.
   "PT007",   # Checks for the type of parameter values passed to pytest.mark.parametrize.
+]
+extend-select = [
+  "D200",    # One-line docstring formatting.
+  "D205",    # Blank line after summary.
+  "D400",    # Summary ends with a period.
+  "D404",    # Disallow docstrings starting with "This".
+  "D407",    # Require dashed underlines after sections.
+  "D409",    # Match section underline length.
+  "D410",    # Require blank line after section.
+  "D411",    # Require blank line before section.
+  "D412",    # Avoid blank lines between section header and content.
+  "D414",    # Disallow empty sections.
+  "D417",    # Document function parameters.
+  "DOC102",  # Disallow parameters that are not in the signature.
+  "DOC201",  # Require Returns sections when a value is returned.
+  "DOC202",  # Disallow extraneous Returns sections.
+  "DOC402",  # Require Yields sections for generators.
+  "DOC403",  # Disallow extraneous Yields sections.
+  "DOC501",  # Require Raises sections for explicitly raised exceptions.
 ]
 
 ignore = [
@@ -167,3 +187,9 @@ ignore = [
   "UP026", # Replace mock with unittest.mock (external mock has different behavior).
   "UP031", # Use format specifier instead of %
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"pgmpy/tests/**/*.py" = ["D", "DOC"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"

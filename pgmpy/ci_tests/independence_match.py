@@ -1,9 +1,9 @@
 from pgmpy.independencies import IndependenceAssertion
 
-from ._base import _BaseCITest
+from ._base import BaseCITest
 
 
-class IndependenceMatch(_BaseCITest):
+class IndependenceMatch(BaseCITest):
     """
     Check if `X ⊥⊥ Y | Z` is in `independences`.
 
@@ -14,6 +14,13 @@ class IndependenceMatch(_BaseCITest):
     ----------
     independencies : pgmpy.independencies.Independencies
         The object containing the known independencies.
+
+    Attributes
+    ----------
+    statistic_ : float
+        The GCM test statistic. Set after calling the test.
+    p_value_ : float
+        The p-value for the test. Set after calling the test.
     """
 
     _tags = {
@@ -46,6 +53,11 @@ class IndependenceMatch(_BaseCITest):
             No test statistic (this is a lookup, not a statistical test).
         p_value : float
             1.0 if the assertion is found, 0.0 otherwise.
+
+        Raises
+        ------
+        ValueError
+            If ``independencies`` was not provided when the test was instantiated.
         """
         if self.independencies is None:
             raise ValueError("independencies must be provided in __init__.")

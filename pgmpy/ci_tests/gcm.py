@@ -4,10 +4,10 @@ from scipy import stats
 from sklearn.base import clone
 from sklearn.linear_model import LinearRegression
 
-from ._base import _BaseCITest
+from ._base import BaseCITest
 
 
-class GCM(_BaseCITest):
+class GCM(BaseCITest):
     r"""
     Generalized Covariance Measure (GCM) [1] test for conditional independence.
 
@@ -75,6 +75,13 @@ class GCM(_BaseCITest):
         Compute GCM statistic and p-value.
 
         Sets ``self.statistic_`` (t-statistic) and ``self.p_value_``.
+
+        Returns
+        -------
+        statistic : float
+            The GCM test statistic stored in ``self.statistic_``.
+        p_value : float
+            The p-value stored in ``self.p_value_``.
         """
         # Step 1: Append intercept column to ensure Z is never empty
         Z_data = np.column_stack([self.data.loc[:, list(Z)].values, np.ones(self.data.shape[0])])

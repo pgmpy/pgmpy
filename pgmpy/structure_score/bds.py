@@ -85,7 +85,14 @@ class BDs(BDeu):
         super().__init__(data, equivalent_sample_size, state_names=state_names)
 
     def structure_prior_ratio(self, operation) -> float:
-        """Compute the prior ratio for a graph edit."""
+        """
+        Compute the prior ratio for a graph edit.
+
+        Returns
+        -------
+        float
+            The log prior ratio contributed by adding or removing a single edge.
+        """
         if operation == "+":
             return -log(2.0)
         if operation == "-":
@@ -93,7 +100,14 @@ class BDs(BDeu):
         return 0
 
     def structure_prior(self, model) -> float:
-        """Compute the marginal uniform prior for a structure."""
+        """
+        Compute the marginal uniform prior for a structure.
+
+        Returns
+        -------
+        float
+            The log prior assigned to the model under the marginal uniform graph prior.
+        """
         nedges = float(len(model.edges()))
         nnodes = float(len(model.nodes()))
         possible_edges = nnodes * (nnodes - 1) / 2.0
