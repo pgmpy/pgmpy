@@ -11,7 +11,7 @@ from pgmpy.causal_discovery._base import _BaseCausalDiscovery
 
 
 class LiNGAM(_BaseCausalDiscovery):
-    """
+    r"""
     Continuous data causal discovery using the Linear Non-Gaussian Acyclic Model (LiNGAM).
 
     This class implements the LiNGAM algorithm [1]_ for causal discovery. Given a
@@ -26,6 +26,26 @@ class LiNGAM(_BaseCausalDiscovery):
 
     A model with these three properties is called a Linear, Non-Gaussian, Acyclic
     Model, abbreviated LiNGAM.
+
+    Algorithm
+    ---------
+    The LiNGAM algorithm estimates the causal structure using the following steps:
+    1. **Independent Component Analysis (ICA)**: Apply ICA to the data matrix $X$ to
+       obtain a decomposition $X = AS$, where $S$ contains the independent components
+       in its rows. We then compute the unmixing matrix $W = A^{-1}$.
+    2. **Row Permutation**: Find the unique row permutation of $W$ that yields a matrix
+       $W_{perm}$ with no zeros on its main diagonal. To account for estimation errors,
+       the optimal permutation is found by minimizing the cost function
+       $\sum_{i} \frac{1}{|(W_{perm})_{ii}|}$.
+    3. **Diagonal Scaling**: Normalize the rows of $W_{perm}$ by dividing each row
+       by its corresponding diagonal element, resulting in a matrix $W_{scaled}$ with
+       ones on the diagonal. Compute the connection strength matrix estimate as
+       $\hat{B} = I - W_{scaled}$.
+    4. **Causal Ordering**: Discover a valid causal ordering of the variables by
+       recursively identifying and removing nodes with no parents from $\hat{B}$.
+    5. **Edge Pruning**: Construct the lower triangular causal matrix $\tilde{B}$
+       by applying sparse regression (Adaptive Lasso) to prune statistically
+       insignificant edges based on the discovered causal ordering.
 
     Parameters
     ----------
@@ -106,7 +126,7 @@ class LiNGAM(_BaseCausalDiscovery):
         Parameters
         ----------
         X : pd.DataFrame
-            The data to learn the causal structure from.
+            The dataset from which to learn the causal structure.
 
         Returns
         -------
@@ -123,34 +143,27 @@ class LiNGAM(_BaseCausalDiscovery):
         self.n_features_in_ = n_features
         self.feature_names_in_ = list(X.columns)
 
-        # Step 1: Apply an ICA algorithm to obtain a decomposition X = AS where S has
-        # the same size as X and contains in its rows the independent components.
-        # From here on, we will exclusively work with W = A^-1.
+        # Step 1: Apply an ICA algorithm to obtain a decomposition
         ica = self.fast_ica
 
         ica.fit(X_vals)
         W = ica.components_
 
-        # Step 2: Find the one and only permutation of rows of W which yields a matrix
-        # W_perm without any zeros on the main diagonal. In practice, small estimation
-        # errors will cause all elements of W to be non-zero, and hence the permutation
-        # is sought which minimizes sum_i 1/|W_perm_ii|.
+        # Step 2: Find permutation of rows of W.
         cost_matrix = 1 / np.abs(W)
         row_ind, col_ind = linear_sum_assignment(cost_matrix)
 
         W_perm = np.zeros_like(W)
         W_perm[col_ind] = W[row_ind]
 
-        # Step 3: Divide each row of W_perm by its corresponding diagonal element, to
-        # yield a new matrix W_scaled with ones on the diagonal. Then, compute an
-        # estimate B_hat of B using B_hat = I - W_scaled.
+        # Step 3: Divide rows of permuted W by diagonal elements.
         W_scaled = W_perm / np.diag(W_perm)[:, np.newaxis]
         B_hat = np.eye(n_features) - W_scaled
 
         # Step 4: Find a causal order
         causal_order = self._causal_order(B_hat)
 
-        # Step 5: Construct the lower triangular causal matrix B_tilde
+        # Step 5: Construct the lower triangular causal matrix.
         if causal_order is None:
             raise ValueError("Could not find a valid causal order. Graph contains unresolvable cycles.")
 
@@ -167,18 +180,27 @@ class LiNGAM(_BaseCausalDiscovery):
         return self
 
     def _search_causal_order(self, B_hat: np.ndarray) -> list | None:
-        """Helper function for _causal_order to find a causal order from the given
-        matrix strictly. Implements the Algorithm B from section 5.2 of the paper.
+        """
+        Helper function to strictly determine a causal order from the given matrix.
+        Implements Algorithm B from section 5.2 of the paper.
+
+        Algorithm
+        ---------
+        1. **Identify Root Node**: Find a row index $i$ in the matrix where all
+           elements are zero.
+        2. **Append to Order**: Append $i$ to the end of the causal order list.
+        3. **Matrix Reduction**: Remove the $i$-th row and $i$-th column from
+           the matrix and repeat.
 
         Parameters
         ----------
         B_hat : np.ndarray
-            Weight matrix obtained from ICA with in absolute value set to zero.
+            Weight matrix obtained from ICA, where specific elements have been nullified.
 
         Returns
         -------
         causal_order : list | None
-            A causal order of the given matrix on success, None otherwise.
+            A valid causal ordering of nodes if one exists, otherwise None.
         """
         causal_order = []
 
@@ -186,18 +208,18 @@ class LiNGAM(_BaseCausalDiscovery):
         original_indices = np.arange(n_rows)
 
         while 0 < len(B_hat):
-            # find a row i such that all of which elements are zero
+            # Step 1: Find an all-zero row.
             row_indices = np.where(np.sum(np.abs(B_hat), axis=1) == 0)[0]
             if len(row_indices) == 0:
                 break
 
             target_index = row_indices[0]
 
-            # append i to the end of the list
+            # Step 2: Append root node to causal order.
             causal_order.append(original_indices[target_index])
             original_indices = np.delete(original_indices, target_index, axis=0)
 
-            # remove the i-th row and the i-th column from matrix
+            # Step 3: Remove the row and column from the matrix.
             mask = np.delete(np.arange(len(B_hat)), target_index, axis=0)
             B_hat = B_hat[mask][:, mask]
 
@@ -207,8 +229,17 @@ class LiNGAM(_BaseCausalDiscovery):
         return causal_order
 
     def _causal_order(self, B_hat: np.ndarray) -> list | None:
-        """Helper function to obtain a causal order from the given matrix approximately.
-        Implements the Algorithm C from section 5.2 of the paper.
+        r"""
+        Helper function to approximate a valid causal order from the given matrix.
+        Implements Algorithm C from section 5.2 of the paper.
+
+        Algorithm
+        ---------
+        1. **Nullify Minimal Elements**: Initially set the $m(m + 1)/2$ smallest
+           (in absolute value) elements of the weight matrix $\hat{B}$ to zero.
+        2. **Iterative Triangularization**: Sequentially set the next smallest
+           elements to zero and verify if $\hat{B}$ can be permuted into a strictly
+           lower triangular matrix using Algorithm B.
 
         Parameters
         ----------
@@ -218,12 +249,12 @@ class LiNGAM(_BaseCausalDiscovery):
         Returns
         -------
         causal_order : list | None
-            A causal order of the given matrix on success, None otherwise.
+            A valid causal ordering of nodes if one exists, otherwise None.
         """
         causal_order = None
         B_hat = B_hat.copy()
 
-        # Step 1: Set the m(m + 1)/2 smallest(in absolute value) elements of B_hat to zero
+        # Step 1: Nullify minimal absolute elements.
         pos_list = np.argsort(np.abs(B_hat), axis=None)
         pos_list = np.vstack(np.unravel_index(pos_list, B_hat.shape)).T
         initial_zero_num = int(B_hat.shape[0] * (B_hat.shape[0] + 1) / 2)
@@ -235,7 +266,7 @@ class LiNGAM(_BaseCausalDiscovery):
         if causal_order is not None:
             return causal_order
 
-        # Step 2: Test if B_hat can be permuted to a lower triangular matrix
+        # Step 2: Iteratively nullify remaining elements to find a strictly lower triangular form.
         for i, j in pos_list[initial_zero_num:]:
             B_hat[i, j] = 0
             causal_order = self._search_causal_order(B_hat)
@@ -246,7 +277,7 @@ class LiNGAM(_BaseCausalDiscovery):
 
     def _adaptive_lasso(self, X: np.ndarray, predictors: list, target: int) -> np.ndarray:
         r"""
-        This is a helper function which implements the Adaptive Lasso algorithm.
+        Helper function implementing the Adaptive Lasso algorithm for edge pruning.
 
         .. math::
             \beta^*_{(n)} = \arg\min_{\beta} \left\| \mathbf{y} - \sum_{j=1}^p \mathbf{x}_j \beta_j \right\|^2_2
@@ -267,6 +298,13 @@ class LiNGAM(_BaseCausalDiscovery):
         -------
         coef : np.ndarray
             The pruned coefficients.
+
+
+        References
+        ----------
+        .. [1] Zou, H. (2006). The adaptive lasso and its oracle properties.
+               Journal of the American Statistical Association, 101(476), 1418–1429.
+               https://doi.org/10.1198/016214506000000735
         """
 
         # Step 1: Standardize X
@@ -294,8 +332,7 @@ class LiNGAM(_BaseCausalDiscovery):
 
     def _prune_edges(self, X: np.ndarray, causal_order: list) -> np.ndarray:
         """
-        This function is used to prune the edges of the causal graph.
-        It uses the Adaptive Lasso algorithm to prune the edges of the causal graph.
+        Prunes insignificant edges from the causal graph by applying the Adaptive Lasso algorithm.
 
         Parameters
         ----------
@@ -308,12 +345,6 @@ class LiNGAM(_BaseCausalDiscovery):
         -------
         B_pruned : np.ndarray
             The pruned causal matrix.
-
-        References
-        ----------
-        .. [1] Zou, H. (2006). The adaptive lasso and its oracle properties.
-               Journal of the American Statistical Association, 101(476), 1418–1429.
-               https://doi.org/10.1198/016214506000000735
 
         See Also
         --------
