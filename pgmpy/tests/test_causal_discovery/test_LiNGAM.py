@@ -9,7 +9,6 @@ import numpy as np
 import numpy.testing as np_test
 import pandas as pd
 import pytest
-from sklearn.decomposition import FastICA
 
 from pgmpy.causal_discovery import LiNGAM
 from pgmpy.datasets import load_dataset
@@ -106,7 +105,7 @@ def mpg_data():
 def test_fit_rand(rand_data):
     # model = lingam.ICALiNGAM(random_state=42, max_iter=1000)
 
-    algo = LiNGAM(fast_ica=FastICA(random_state=42, max_iter=1000))
+    algo = LiNGAM(random_state=42)
     algo.fit(rand_data)
     graph = algo.causal_graph_
 
@@ -125,7 +124,7 @@ def test_fit_rand(rand_data):
 def test_fit_rand2(rand_data2):
     # model = lingam.ICALiNGAM(random_state=42)
 
-    algo = LiNGAM(fast_ica=FastICA(random_state=42))
+    algo = LiNGAM(random_state=42)
     algo.fit(rand_data2)
     graph = algo.causal_graph_
 
@@ -154,7 +153,7 @@ def test_fit_rand2(rand_data2):
 def test_large_lingam_data(large_lingam_data):
     # model = lingam.ICALiNGAM(random_state=42)
 
-    algo = LiNGAM(fast_ica=FastICA(random_state=42))
+    algo = LiNGAM(random_state=42)
     algo.fit(large_lingam_data)
     graph = algo.causal_graph_
 
@@ -198,9 +197,11 @@ def test_large_lingam_data(large_lingam_data):
         ]
     )
 
-    np_test.assert_almost_equal(Adj_matrix.to_numpy(), test_matrix)
+    # The test_matrix (adapted from the reference lingam package) stores edge weights in [target, source] orientation.
+    # Transpose it to match pgmpy's standard graph adjacency convention of [source, target].
+    np_test.assert_almost_equal(Adj_matrix.to_numpy(), test_matrix.T)
 
 
 def test_mpg_data(mpg_data):
-    algo = LiNGAM(fast_ica=FastICA(random_state=42))
+    algo = LiNGAM(random_state=42)
     algo.fit(mpg_data)

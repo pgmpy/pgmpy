@@ -43,7 +43,7 @@ class LiNGAM(_BaseCausalDiscovery):
        $\hat{B} = I - W_{scaled}$.
     4. **Causal Ordering**: Discover a valid causal ordering of the variables by
        recursively identifying and removing nodes with no parents from $\hat{B}$.
-    5. **Edge Pruning**: Construct the lower triangular causal matrix $\tilde{B}$
+    5. **Edge Pruning**: Construct the causal adjacency matrix $\tilde{B}$
        by applying sparse regression (Adaptive Lasso) to prune statistically
        insignificant edges based on the discovered causal ordering.
 
@@ -62,6 +62,15 @@ class LiNGAM(_BaseCausalDiscovery):
 
     return_type : str, default="dag"
         The type of graph to return. Currently only "dag" is supported.
+
+    random_state : int, default=None
+        Seed for the random number generator used by the ICA algorithm. Ensures
+        reproducibility across repeated algorithm runs. If a `fast_ica` instance
+        is passed, this will override its existing random state.
+
+    max_iter : int, default=None
+        Maximum number of iterations for the FastICA algorithm. Defaults to 1000.
+        If a `fast_ica` instance is passed, this will override its existing max_iter.
 
     Attributes
     ----------
@@ -105,11 +114,18 @@ class LiNGAM(_BaseCausalDiscovery):
         estimator=None,
         gamma: float = 1.0,
         return_type: str = "dag",
+        random_state: int | None = None,
+        max_iter: int | None = None,
     ):
         if fast_ica is None:
-            self.fast_ica = FastICA(max_iter=1000)
+            _max_iter = max_iter if max_iter is not None else 1000
+            self.fast_ica = FastICA(max_iter=_max_iter, random_state=random_state)
         else:
             self.fast_ica = fast_ica
+            if random_state is not None:
+                self.fast_ica.set_params(random_state=random_state)
+            if max_iter is not None:
+                self.fast_ica.set_params(max_iter=max_iter)
 
         if estimator is None:
             self.estimator = LinearRegression()
@@ -150,32 +166,35 @@ class LiNGAM(_BaseCausalDiscovery):
         W = ica.components_
 
         # Step 2: Find permutation of rows of W.
-        cost_matrix = 1 / np.abs(W)
+        epsilon = 1e-12
+        cost_matrix = 1 / (np.abs(W) + epsilon)
         row_ind, col_ind = linear_sum_assignment(cost_matrix)
 
         W_perm = np.zeros_like(W)
         W_perm[col_ind] = W[row_ind]
 
         # Step 3: Divide rows of permuted W by diagonal elements.
-        W_scaled = W_perm / np.diag(W_perm)[:, np.newaxis]
+        diag_W_perm = np.diag(W_perm)
+        if np.any(np.abs(diag_W_perm) < epsilon):
+            raise ValueError(
+                "ICA unmixing matrix contains near-zero diagonal elements after permutation. "
+                "Unable to compute valid causal connections reliably."
+            )
+        W_scaled = W_perm / diag_W_perm[:, np.newaxis]
         B_hat = np.eye(n_features) - W_scaled
 
         # Step 4: Find a causal order
         causal_order = self._causal_order(B_hat)
 
-        # Step 5: Construct the lower triangular causal matrix.
+        # Step 5: Construct the causal adjacency matrix.
         if causal_order is None:
             raise ValueError("Could not find a valid causal order. Graph contains unresolvable cycles.")
 
         B_tilde = self._prune_edges(X_vals, causal_order)
-
         self.adjacency_matrix_ = pd.DataFrame(B_tilde, index=self.feature_names_in_, columns=self.feature_names_in_)
 
         # Step 6: Construct graph
-        self.causal_graph_ = nx.from_numpy_array(B_tilde.T, create_using=DAG())
-        nx.relabel_nodes(
-            self.causal_graph_, mapping={i: name for i, name in enumerate(self.feature_names_in_)}, copy=False
-        )
+        self.causal_graph_ = nx.from_pandas_adjacency(self.adjacency_matrix_, create_using=DAG())
 
         return self
 
@@ -209,7 +228,8 @@ class LiNGAM(_BaseCausalDiscovery):
 
         while 0 < len(B_hat):
             # Step 1: Find an all-zero row.
-            row_indices = np.where(np.sum(np.abs(B_hat), axis=1) == 0)[0]
+            zero_row_mask = np.all(np.isclose(B_hat, 0.0, atol=1e-8), axis=1)
+            row_indices = np.where(zero_row_mask)[0]
             if len(row_indices) == 0:
                 break
 
@@ -314,7 +334,9 @@ class LiNGAM(_BaseCausalDiscovery):
         # Step 2: Pruning with Adaptive Lasso
         # Step 2.1: Fit the estimator to the standardized data
         self.estimator.fit(X_std[:, predictors], X_std[:, target])
-        weight = np.power(np.abs(self.estimator.coef_), self.gamma)
+
+        # Floor the base magnitude with epsilon before exponentiation to prevent zero weights
+        weight = np.power(np.maximum(np.abs(self.estimator.coef_), 1e-12), self.gamma)
 
         # Step 2.2: Fit the Lasso regression to the weighted standardized data
         lasso_reg = LassoLarsIC(criterion="bic")
@@ -359,6 +381,6 @@ class LiNGAM(_BaseCausalDiscovery):
             if len(predictors) == 0:
                 continue
 
-            B_pruned[target, predictors] = self._adaptive_lasso(X, predictors, target)
+            B_pruned[predictors, target] = self._adaptive_lasso(X, predictors, target)
 
         return B_pruned
