@@ -1,7 +1,7 @@
 [project]
 name = "pgmpy"
-version = "1.0.0"
-description = "Python Library for Causal and Probabilistic Modeling using Bayesian Networks"
+version = "1.1.0"
+description = "Python Toolkit for Causal and Probabilistic Reasoning"
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [
@@ -25,6 +25,7 @@ classifiers = [
 ]
 
 dependencies = [
+  "huggingface_hub>=0.23",
   "networkx>=3.0",
   "numpy>=2.0",
   "scipy>=1.10",

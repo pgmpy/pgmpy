@@ -63,7 +63,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
     >>> phi = DiscreteFactor(
     ...     variables=["x1", "x2", "x3"], cardinality=[2, 2, 2], values=np.ones(8)
     ... )
-    >>> phi
+    >>> phi #doctest: +ELLIPSIS
     <DiscreteFactor representing phi(x1:2, x2:2, x3:2) at 0x...>
     >>> print(phi)
     +-------+-------+-------+-----------------+
