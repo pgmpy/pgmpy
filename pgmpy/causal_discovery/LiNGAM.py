@@ -2,6 +2,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from scipy.optimize import linear_sum_assignment
+from sklearn.base import clone
 from sklearn.decomposition import FastICA
 from sklearn.linear_model import LassoLarsIC, LinearRegression
 from sklearn.preprocessing import StandardScaler
@@ -117,23 +118,12 @@ class LiNGAM(_BaseCausalDiscovery):
         random_state: int | None = None,
         max_iter: int | None = None,
     ):
-        if fast_ica is None:
-            _max_iter = max_iter if max_iter is not None else 1000
-            self.fast_ica = FastICA(max_iter=_max_iter, random_state=random_state)
-        else:
-            self.fast_ica = fast_ica
-            if random_state is not None:
-                self.fast_ica.set_params(random_state=random_state)
-            if max_iter is not None:
-                self.fast_ica.set_params(max_iter=max_iter)
-
-        if estimator is None:
-            self.estimator = LinearRegression()
-        else:
-            self.estimator = estimator
-
+        self.fast_ica = fast_ica
+        self.estimator = estimator
         self.gamma = gamma
         self.return_type = return_type
+        self.random_state = random_state
+        self.max_iter = max_iter
 
     def _fit(self, X: pd.DataFrame):
         """
@@ -152,18 +142,38 @@ class LiNGAM(_BaseCausalDiscovery):
 
         # Step 0: Validate inputs
         if self.return_type != "dag":
-            raise NotImplementedError(f"Return type {self.return_type} is not yet implemented. Use 'dag'.")
+            raise NotImplementedError("Only return_type='dag' is supported.")
 
-        X_vals = X.values
+        try:
+            X_vals = np.asarray(X.values, dtype=float)
+        except ValueError as e:
+            raise ValueError("All features must be numeric.") from e
+
         n_samples, n_features = X_vals.shape
         self.n_features_in_ = n_features
         self.feature_names_in_ = list(X.columns)
 
-        # Step 1: Apply an ICA algorithm to obtain a decomposition
-        ica = self.fast_ica
+        # Step 1: Resolve internal estimators and apply ICA
+        if self.estimator is None:
+            self._estimator = LinearRegression()
+        else:
+            self._estimator = clone(self.estimator)
+
+        if self.fast_ica is None:
+            _max_iter = self.max_iter if self.max_iter is not None else 1000
+            ica = FastICA(max_iter=_max_iter, random_state=self.random_state)
+        else:
+            ica = clone(self.fast_ica)
+            if self.random_state is not None:
+                ica.set_params(random_state=self.random_state)
+            if self.max_iter is not None:
+                ica.set_params(max_iter=self.max_iter)
 
         ica.fit(X_vals)
         W = ica.components_
+
+        if W.shape[0] != n_features:
+            raise ValueError(f"FastICA n_components must equal n_features (got {W.shape[0]} != {n_features}).")
 
         # Step 2: Find permutation of rows of W.
         epsilon = 1e-12
@@ -176,10 +186,7 @@ class LiNGAM(_BaseCausalDiscovery):
         # Step 3: Divide rows of permuted W by diagonal elements.
         diag_W_perm = np.diag(W_perm)
         if np.any(np.abs(diag_W_perm) < epsilon):
-            raise ValueError(
-                "ICA unmixing matrix contains near-zero diagonal elements after permutation. "
-                "Unable to compute valid causal connections reliably."
-            )
+            raise ValueError("Near-zero diagonal elements in ICA permutation.")
         W_scaled = W_perm / diag_W_perm[:, np.newaxis]
         B_hat = np.eye(n_features) - W_scaled
 
@@ -188,7 +195,7 @@ class LiNGAM(_BaseCausalDiscovery):
 
         # Step 5: Construct the causal adjacency matrix.
         if causal_order is None:
-            raise ValueError("Could not find a valid causal order. Graph contains unresolvable cycles.")
+            raise ValueError("Graph contains unresolvable cycles.")
 
         B_tilde = self._prune_edges(X_vals, causal_order)
         self.adjacency_matrix_ = pd.DataFrame(B_tilde, index=self.feature_names_in_, columns=self.feature_names_in_)
@@ -333,10 +340,10 @@ class LiNGAM(_BaseCausalDiscovery):
 
         # Step 2: Pruning with Adaptive Lasso
         # Step 2.1: Fit the estimator to the standardized data
-        self.estimator.fit(X_std[:, predictors], X_std[:, target])
+        self._estimator.fit(X_std[:, predictors], X_std[:, target])
 
         # Floor the base magnitude with epsilon before exponentiation to prevent zero weights
-        weight = np.power(np.maximum(np.abs(self.estimator.coef_), 1e-12), self.gamma)
+        weight = np.power(np.maximum(np.abs(self._estimator.coef_), 1e-12), self.gamma)
 
         # Step 2.2: Fit the Lasso regression to the weighted standardized data
         lasso_reg = LassoLarsIC(criterion="bic")
@@ -347,8 +354,8 @@ class LiNGAM(_BaseCausalDiscovery):
         coef = np.zeros(lasso_reg.coef_.shape)
         if pruned_idx.sum() > 0:
             pred = np.array(predictors)
-            self.estimator.fit(X[:, pred[pruned_idx]], X[:, target])
-            coef[pruned_idx] = self.estimator.coef_
+            self._estimator.fit(X[:, pred[pruned_idx]], X[:, target])
+            coef[pruned_idx] = self._estimator.coef_
 
         return coef
 
