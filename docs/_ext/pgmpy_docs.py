@@ -97,6 +97,28 @@ def load_versions_manifest(path: str | Path | None = None) -> dict[str, Any]:
     }
 
 
+def resolve_release_docs_metadata(release_tag: str, manifest: dict[str, Any]) -> dict[str, Any]:
+    match = re.fullmatch(r"v(\d+)\.(\d+)\.(\d+)", release_tag.strip())
+    if match is None:
+        raise ValueError(f"Unsupported release tag format: {release_tag}")
+
+    docs_version = f"v{match.group(1)}.{match.group(2)}"
+    releases = manifest.get("releases", [])
+    stable = manifest.get("stable")
+
+    if docs_version not in releases:
+        raise ValueError(
+            f"Release line {docs_version} is not listed in docs/versions.json. "
+            "Update the manifest before building or pushing the release tag."
+        )
+
+    return {
+        "release_tag": release_tag,
+        "docs_version": docs_version,
+        "build_stable_root": stable == docs_version,
+    }
+
+
 def _resolved_source_path(path: str | Path) -> Path:
     return Path(path).expanduser().resolve()
 

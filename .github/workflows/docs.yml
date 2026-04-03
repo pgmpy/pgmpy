@@ -10,6 +10,16 @@ on:
     tags: ["v*"]
   pull_request:
   merge_group:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Release tag to rebuild docs for (for example v1.1.0)
+        required: true
+        type: string
+      source_ref:
+        description: Git ref to build docs from. Defaults to release_tag for exact rebuilds.
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -24,7 +34,7 @@ env:
 jobs:
   build-docs:
     name: Build docs
-    if: github.event_name != 'push' || github.ref == 'refs/heads/dev'
+    if: github.event_name == 'pull_request' || github.event_name == 'merge_group' || (github.event_name == 'push' && github.ref == 'refs/heads/dev')
     runs-on: ubuntu-latest
 
     steps:
@@ -55,8 +65,8 @@ jobs:
             echo "PGMPY_DOCS_TARGET=preview" >> "${GITHUB_ENV}"
           fi
 
-      - name: Install graphviz
-        run: sudo apt-get update && sudo apt-get install graphviz libgraphviz-dev -y
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install graphviz libgraphviz-dev pandoc -y
 
       - name: Install dependencies
         run: |
@@ -127,15 +137,49 @@ jobs:
 
   build-release-docs:
     name: Build release docs
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     outputs:
+      release_tag: ${{ steps.select_release.outputs.release_tag }}
+      build_ref: ${{ steps.select_release.outputs.build_ref }}
       docs_version: ${{ steps.resolve.outputs.docs_version }}
       build_stable_root: ${{ steps.resolve.outputs.build_stable_root }}
 
     steps:
+      - name: Select release ref
+        id: select_release
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PUSH_RELEASE_TAG: ${{ github.ref_name }}
+          PUSH_RELEASE_REF: ${{ github.sha }}
+          MANUAL_RELEASE_TAG: ${{ github.event.inputs.release_tag }}
+          MANUAL_SOURCE_REF: ${{ github.event.inputs.source_ref }}
+        run: |
+          python - <<'PY'
+          import os
+          import pathlib
+
+          event_name = os.environ["EVENT_NAME"]
+          if event_name == "workflow_dispatch":
+              release_tag = os.environ["MANUAL_RELEASE_TAG"].strip()
+              build_ref = os.environ["MANUAL_SOURCE_REF"].strip() or release_tag
+          else:
+              release_tag = os.environ["PUSH_RELEASE_TAG"].strip()
+              build_ref = os.environ["PUSH_RELEASE_REF"].strip()
+
+          if not release_tag:
+              raise SystemExit("A release_tag input is required for manual docs rebuilds.")
+
+          github_output = pathlib.Path(os.environ["GITHUB_OUTPUT"])
+          with github_output.open("a", encoding="utf-8") as handle:
+              handle.write(f"release_tag={release_tag}\n")
+              handle.write(f"build_ref={build_ref}\n")
+          PY
+
       - name: Checkout released ref
         uses: actions/checkout@v6
+        with:
+          ref: ${{ steps.select_release.outputs.build_ref }}
 
       - name: Checkout tutorial notebooks
         uses: actions/checkout@v6
@@ -152,39 +196,29 @@ jobs:
       - name: Resolve release docs metadata
         id: resolve
         env:
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ steps.select_release.outputs.release_tag }}
         run: |
           python - <<'PY'
-          import json
           import os
           import pathlib
-          import re
+          import sys
 
-          release_tag = os.environ["RELEASE_TAG"]
-          match = re.fullmatch(r"v(\d+)\.(\d+)\.(\d+)", release_tag)
-          if match is None:
-              raise SystemExit(f"Unsupported release tag format: {release_tag}")
+          sys.path.insert(0, str(pathlib.Path("docs/_ext").resolve()))
 
-          docs_version = f"v{match.group(1)}.{match.group(2)}"
-          manifest = json.loads(pathlib.Path("docs/versions.json").read_text(encoding="utf-8"))
-          releases = manifest.get("releases", [])
-          stable = manifest.get("stable")
+          import pgmpy_docs
 
-          if docs_version not in releases:
-              raise SystemExit(
-                  f"Release line {docs_version} is not listed in docs/versions.json. "
-                  "Update the manifest before pushing the release tag."
-              )
-
-          build_stable_root = "true" if stable == docs_version else "false"
+          metadata = pgmpy_docs.resolve_release_docs_metadata(
+              release_tag=os.environ["RELEASE_TAG"],
+              manifest=pgmpy_docs.load_versions_manifest("docs/versions.json"),
+          )
           github_output = pathlib.Path(os.environ["GITHUB_OUTPUT"])
           with github_output.open("a", encoding="utf-8") as handle:
-              handle.write(f"docs_version={docs_version}\n")
-              handle.write(f"build_stable_root={build_stable_root}\n")
+              handle.write(f"docs_version={metadata['docs_version']}\n")
+              handle.write(f"build_stable_root={'true' if metadata['build_stable_root'] else 'false'}\n")
           PY
 
-      - name: Install graphviz
-        run: sudo apt-get update && sudo apt-get install graphviz libgraphviz-dev -y
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install graphviz libgraphviz-dev pandoc -y
 
       - name: Install dependencies
         run: |
@@ -227,7 +261,7 @@ jobs:
 
   deploy-release-docs:
     name: Publish release docs
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || github.event_name == 'workflow_dispatch'
     needs: build-release-docs
     runs-on: ubuntu-latest
     environment:
@@ -253,7 +287,7 @@ jobs:
         with:
           fetch-depth: 1
           path: source
-          ref: ${{ github.sha }}
+          ref: ${{ needs.build-release-docs.outputs.build_ref }}
 
       - name: Checkout documentation site
         uses: actions/checkout@v6
