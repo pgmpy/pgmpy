@@ -1554,7 +1554,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
     def copy(self):
         """Returns a copy of the DAG object."""
-        dag = DAG(ebunch=self.edges(), latents=self.latents)
+        dag = DAG(ebunch=self.edges())
         dag.add_nodes_from(self.nodes())
 
         for role, vars in self.get_role_dict().items():
