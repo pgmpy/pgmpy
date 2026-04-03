@@ -302,7 +302,7 @@ class LiNGAM(_BaseCausalDiscovery):
 
         return causal_order
 
-    def _adaptive_lasso(self, X: np.ndarray, predictors: list, target: int) -> np.ndarray:
+    def _adaptive_lasso(self, X: np.ndarray, X_std: np.ndarray, predictors: list, target: int) -> np.ndarray:
         r"""
         Helper function implementing the Adaptive Lasso algorithm for edge pruning.
 
@@ -314,6 +314,9 @@ class LiNGAM(_BaseCausalDiscovery):
         ----------
         X : np.ndarray
             The input data matrix.
+
+        X_std : np.ndarray
+            The standardized input data matrix.
 
         predictors : list
             The list of predictor variables.
@@ -334,23 +337,19 @@ class LiNGAM(_BaseCausalDiscovery):
                https://doi.org/10.1198/016214506000000735
         """
 
-        # Step 1: Standardize X
-        scaler = StandardScaler()
-        X_std = scaler.fit_transform(X)
-
-        # Step 2: Pruning with Adaptive Lasso
-        # Step 2.1: Fit the estimator to the standardized data
+        # Step 1: Pruning with Adaptive Lasso
+        # Step 1.1: Fit the estimator to the standardized data
         self._estimator.fit(X_std[:, predictors], X_std[:, target])
 
         # Floor the base magnitude with epsilon before exponentiation to prevent zero weights
         weight = np.power(np.maximum(np.abs(self._estimator.coef_), 1e-12), self.gamma)
 
-        # Step 2.2: Fit the Lasso regression to the weighted standardized data
+        # Step 1.2: Fit the Lasso regression to the weighted standardized data
         lasso_reg = LassoLarsIC(criterion="bic")
         lasso_reg.fit(X_std[:, predictors] * weight, X_std[:, target])
         pruned_idx = np.abs(lasso_reg.coef_ * weight) > 0.0
 
-        # Step 3: Calculate coefficients of the original scale
+        # Step 2: Calculate coefficients of the original scale
         coef = np.zeros(lasso_reg.coef_.shape)
         if pruned_idx.sum() > 0:
             pred = np.array(predictors)
@@ -380,6 +379,9 @@ class LiNGAM(_BaseCausalDiscovery):
         pgmpy.causal_discovery.LiNGAM._adaptive_lasso
         """
 
+        scaler = StandardScaler()
+        X_std = scaler.fit_transform(X)
+
         B_pruned = np.zeros((X.shape[1], X.shape[1]), dtype=float)
         for i in range(1, len(causal_order)):
             target = causal_order[i]
@@ -388,6 +390,6 @@ class LiNGAM(_BaseCausalDiscovery):
             if len(predictors) == 0:
                 continue
 
-            B_pruned[predictors, target] = self._adaptive_lasso(X, predictors, target)
+            B_pruned[predictors, target] = self._adaptive_lasso(X, X_std, predictors, target)
 
         return B_pruned
