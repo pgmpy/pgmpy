@@ -1178,7 +1178,8 @@ class LinearGaussianBayesianNetwork(DAG):
             return False
 
         # Test for structure equality using the DAG's __eq__ method.
-        super().__eq__(other)
+        if not super().__eq__(other):
+            return False
 
         # Test for LinearGaussianCPD equality.
         self_cpds = {cpd.variable: cpd for cpd in self.cpds}

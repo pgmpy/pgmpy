@@ -29,8 +29,12 @@ class UAIReader:
 
     Examples
     --------
-    >>> from pgmpy.readwrite import UAIReader
-    >>> reader = UAIReader("TestUai.uai")
+    >>> from pgmpy.readwrite import UAIReader, UAIWriter
+    >>> from pgmpy.example_models import load_model
+    >>> model = load_model("bnlearn/asia")
+    >>> writer = UAIWriter(model)
+    >>> writer.write("asia.uai")
+    >>> reader = UAIReader("asia.uai")
     >>> model = reader.get_model()
 
     Reference
@@ -99,10 +103,14 @@ class UAIReader:
 
         Examples
         --------
-        >>> from pgmpy.readwrite import UAIReader
-        >>> reader = UAIReader("TestUAI.uai")
+        >>> from pgmpy.readwrite import UAIReader, UAIWriter
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/asia")
+        >>> writer = UAIWriter(model)
+        >>> writer.write("asia.uai")
+        >>> reader = UAIReader("asia.uai")
         >>> reader.get_network_type()
-        'MARKOV'
+        'BAYES'
         """
         network_type = self.grammar.parse_string(self.network)
         return network_type["network_name"]
@@ -120,10 +128,14 @@ class UAIReader:
 
         Examples
         --------
-        >>> from pgmpy.readwrite import UAIReader
-        >>> reader = UAIReader("TestUAI.uai")
+        >>> from pgmpy.readwrite import UAIReader, UAIWriter
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/asia")
+        >>> writer = UAIWriter(model)
+        >>> writer.write("asia.uai")
+        >>> reader = UAIReader("asia.uai")
         >>> reader.get_variables()
-        ['var_0', 'var_1', 'var_2']
+        ['var_0', 'var_1', 'var_2', 'var_3', 'var_4', 'var_5', 'var_6', 'var_7']
         """
         variables = []
         for var in range(0, self.no_variables):
@@ -142,10 +154,15 @@ class UAIReader:
 
         Examples
         --------
-        >>> from pgmpy.readwrite import UAIReader
-        >>> reader = UAIReader("TestUAI.uai")
-        >>> reader.get_domain()
-        {'var_0': '2', 'var_1': '2', 'var_2': '3'}
+        >>> from pgmpy.readwrite import UAIReader, UAIWriter
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/asia")
+        >>> writer = UAIWriter(model)
+        >>> writer.write("asia.uai")
+        >>> reader = UAIReader("asia.uai")
+        >>> reader.get_domain() # doctest: +NORMALIZE_WHITESPACE
+        {'var_0': '2', 'var_1': '2', 'var_2': '2', 'var_3': '2',
+        'var_4': '2', 'var_5': '2', 'var_6': '2', 'var_7': '2'}
         """
         domain = {}
         var_domain = self.grammar.parse_string(self.network)["domain_variables"]
@@ -163,10 +180,15 @@ class UAIReader:
 
         Examples
         --------
-        >>> from pgmpy.readwrite import UAIReader
-        >>> reader = UAIReader("TestUAI.uai")
-        >>> reader.get_edges()
-        {('var_0', 'var_1'), ('var_0', 'var_2'), ('var_1', 'var_2')}
+        >>> from pgmpy.readwrite import UAIReader, UAIWriter
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/asia")
+        >>> writer = UAIWriter(model)
+        >>> writer.write("asia.uai")
+        >>> reader = UAIReader("asia.uai")
+        >>> sorted(reader.get_edges()) # doctest: +NORMALIZE_WHITESPACE
+        [('var_0', 'var_6'), ('var_1', 'var_2'), ('var_3', 'var_2'), ('var_3', 'var_7'),
+        ('var_4', 'var_3'), ('var_5', 'var_1'), ('var_5', 'var_4'), ('var_6', 'var_3')]
         """
         edges = []
         for function in range(0, self.no_functions):
@@ -195,13 +217,19 @@ class UAIReader:
 
         Examples
         --------
-        >>> from pgmpy.readwrite import UAIReader
-        >>> reader = UAIReader("TestUAI.uai")
-        >>> reader.get_tables()
-        [(['var_0', 'var_1'], ['4.000', '2.400', '1.000', '0.000']),
-         (['var_0', 'var_1', 'var_2'],
-          ['2.2500', '3.2500', '3.7500', '0.0000', '0.0000', '10.0000',
-           '1.8750', '4.0000', '3.3330', '2.0000', '2.0000', '3.4000'])]
+        >>> from pgmpy.readwrite import UAIReader, UAIWriter
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/asia")
+        >>> writer = UAIWriter(model)
+        >>> writer.write("asia.uai")
+        >>> reader = UAIReader("asia.uai")
+        >>> reader.get_tables() # doctest: +NORMALIZE_WHITESPACE
+        [('var_0', ['0.01', '0.99']), ('var_1', ['0.6', '0.3', '0.4', '0.7']),
+        ('var_2', ['0.9', '0.8', '0.7', '0.1', '0.1', '0.2', '0.3', '0.9']),
+        ('var_3', ['1.0', '1.0', '1.0', '0.0', '0.0', '0.0', '0.0', '1.0']),
+        ('var_4', ['0.1', '0.01', '0.9', '0.99']), ('var_5', ['0.5', '0.5']),
+        ('var_6', ['0.05', '0.01', '0.95', '0.99']),
+        ('var_7', ['0.98', '0.05', '0.02', '0.95'])]
         """
         tables = []
         for function in range(0, self.no_functions):
@@ -230,9 +258,14 @@ class UAIReader:
 
         Examples
         --------
-        >>> from pgmpy.readwrite import UAIReader
-        >>> reader = UAIReader("TestUAI.uai")
-        >>> reader.get_model()
+        >>> from pgmpy.readwrite import UAIReader, UAIWriter
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/asia")
+        >>> writer = UAIWriter(model)
+        >>> writer.write("asia.uai")
+        >>> reader = UAIReader("asia.uai")
+        >>> reader.get_model() # doctest: +ELLIPSIS
+        <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork object at 0x...>
         """
         if self.network_type == "BAYES":
             model = DiscreteBayesianNetwork()
@@ -293,7 +326,7 @@ class UAIWriter:
     >>> from pgmpy.readwrite import UAIWriter
     >>> from pgmpy.example_models import load_model
     >>> model = load_model("bnlearn/asia")
-    >>> writer = UAIWriter(asia)
+    >>> writer = UAIWriter(model)
     >>> writer.write("asia.uai")
     """
 
@@ -336,8 +369,11 @@ class UAIWriter:
         Examples
         --------
         >>> from pgmpy.readwrite import UAIWriter
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/asia")
         >>> writer = UAIWriter(model)
         >>> writer.get_nodes()
+        '8'
         """
         no_nodes = len(self.model.nodes())
         return str(no_nodes)
@@ -349,8 +385,11 @@ class UAIWriter:
         Examples
         --------
         >>> from pgmpy.readwrite import UAIWriter
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/asia")
         >>> writer = UAIWriter(model)
         >>> writer.get_domain()
+        {'asia': '2', 'bronc': '2', 'dysp': '2', 'either': '2', 'lung': '2', 'smoke': '2', 'tub': '2', 'xray': '2'}
         """
         if isinstance(self.model, DiscreteBayesianNetwork):
             cpds = self.model.get_cpds()
@@ -378,8 +417,12 @@ class UAIWriter:
         Examples
         -------_
         >>> from pgmpy.readwrite import UAIWriter
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/asia")
         >>> writer = UAIWriter(model)
-        >>> writer.get_functions()
+        >>> writer.get_functions() # doctest: +NORMALIZE_WHITESPACE
+        [['0'], ['5', '1'], ['3', '1', '2'], ['6', '4', '3'],
+        ['5', '4'], ['5'], ['0', '6'], ['3', '7']]
         """
         if isinstance(self.model, DiscreteBayesianNetwork):
             cpds = self.model.get_cpds()
@@ -412,8 +455,15 @@ class UAIWriter:
         Examples
         --------
         >>> from pgmpy.readwrite import UAIWriter
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/asia")
         >>> writer = UAIWriter(model)
-        >>> writer.get_tables()
+        >>> writer.get_tables() # doctest: +NORMALIZE_WHITESPACE
+        [['0.01', '0.99'], ['0.6', '0.3', '0.4', '0.7'],
+        ['0.9', '0.8', '0.7', '0.1', '0.1', '0.2', '0.3', '0.9'],
+        ['1.0', '1.0', '1.0', '0.0', '0.0', '0.0', '0.0', '1.0'],
+        ['0.1', '0.01', '0.9', '0.99'], ['0.5', '0.5'],
+        ['0.05', '0.01', '0.95', '0.99'], ['0.98', '0.05', '0.02', '0.95']]
         """
         if isinstance(self.model, DiscreteBayesianNetwork):
             cpds = self.model.get_cpds()
@@ -456,7 +506,7 @@ class UAIWriter:
         >>> from pgmpy.readwrite import UAIWriter
         >>> from pgmpy.example_models import load_model
         >>> model = load_model("bnlearn/asia")
-        >>> writer = UAIWriter(asia)
+        >>> writer = UAIWriter(model)
         >>> writer.write("asia.uai")
         """
         writer = self.__str__()
