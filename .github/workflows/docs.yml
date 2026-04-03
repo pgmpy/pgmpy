@@ -47,6 +47,7 @@ jobs:
         run: |
           echo "PGMPY_DOCS_SITE_ROOT=${DOCS_SITE_ROOT}" >> "${GITHUB_ENV}"
           echo "PGMPY_TUTORIALS_PATH=${GITHUB_WORKSPACE}/pgmpy_tutorials/notebooks" >> "${GITHUB_ENV}"
+          echo "PGMPY_EXAMPLES_PATH=${GITHUB_WORKSPACE}/examples" >> "${GITHUB_ENV}"
 
           if [ "${GITHUB_EVENT_NAME}" = "push" ] && [ "${GITHUB_REF}" = "refs/heads/dev" ]; then
             echo "PGMPY_DOCS_TARGET=dev" >> "${GITHUB_ENV}"
@@ -62,19 +63,8 @@ jobs:
           pip install --upgrade pip
           pip install .[all]
 
-      - name: Prepare tutorial sources
-        run: |
-          rm -rf docs/detailed_notebooks docs/csv docs/files docs/images
-
-          if [ -d pgmpy_tutorials/notebooks/detailed_notebooks ]; then
-            cp -R pgmpy_tutorials/notebooks/detailed_notebooks docs/detailed_notebooks
-          fi
-
-          for path in csv files images; do
-            if [ -d "pgmpy_tutorials/${path}" ]; then
-              cp -R "pgmpy_tutorials/${path}" "docs/${path}"
-            fi
-          done
+      - name: Prepare notebook sources
+        run: python docs/_ext/prepare_docs_sources.py
 
       - name: Build docs
         run: sphinx-build -b html docs docs/_build/html --keep-going
@@ -201,19 +191,11 @@ jobs:
           pip install --upgrade pip
           pip install .[all]
 
-      - name: Prepare tutorial sources
-        run: |
-          rm -rf docs/detailed_notebooks docs/csv docs/files docs/images
-
-          if [ -d pgmpy_tutorials/notebooks/detailed_notebooks ]; then
-            cp -R pgmpy_tutorials/notebooks/detailed_notebooks docs/detailed_notebooks
-          fi
-
-          for path in csv files images; do
-            if [ -d "pgmpy_tutorials/${path}" ]; then
-              cp -R "pgmpy_tutorials/${path}" "docs/${path}"
-            fi
-          done
+      - name: Prepare notebook sources
+        env:
+          PGMPY_TUTORIALS_PATH: ${{ github.workspace }}/pgmpy_tutorials/notebooks
+          PGMPY_EXAMPLES_PATH: ${{ github.workspace }}/examples
+        run: python docs/_ext/prepare_docs_sources.py
 
       - name: Build versioned docs
         run: |
