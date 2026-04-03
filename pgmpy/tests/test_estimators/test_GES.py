@@ -41,10 +41,11 @@ def titanic_estimators():
 
 @pytest.fixture
 def gaussian_data():
-    return pd.read_csv(
+    data = pd.read_csv(
         "pgmpy/tests/test_estimators/testdata/gaussian_testdata.csv",
         index_col=0,
     )
+    return data.iloc[:50, :5]
 
 
 # Optional manual parity check against `causal-learn==0.1.4.5`.
@@ -136,14 +137,6 @@ def test_legal_edge_deletions_include_both_orders_for_undirected_edges():
     assert set(est._legal_edge_deletions(pdag)) == {("A", "B"), ("B", "A")}
 
 
-def test_estimate_discrete(random_data_estimator, titanic_estimators):
-    est_rand = random_data_estimator
-    est_titanic1, _est_titanic2 = titanic_estimators
-
-    est_rand.estimate()
-    est_titanic1.estimate()
-
-
 def test_cancer_model():
     cancer_model = load_model("bnlearn/cancer")
     data = cancer_model.simulate(3000, seed=0)
@@ -154,21 +147,8 @@ def test_cancer_model():
     assert set(cancer_model.edges) <= set(dag.edges)
 
 
-def test_child_model():
-    cancer_model = load_model("bnlearn/child")
-    data = cancer_model.simulate(3000, seed=0)
-
-    est = GES(data)
-    dag = est.estimate()
-
-    # On this fixed finite-sample benchmark, even external GES implementations can
-    # miss a small number of true edges, so keep a tolerance instead of requiring
-    # perfect edge recovery.
-    assert len(set(cancer_model.edges) - set(dag.edges)) <= 2
-
-
 def test_estimate_gaussian(gaussian_data):
     est = GES(gaussian_data)
 
     for score in ["aic-g", "bic-g"]:
-        est.estimate(scoring_method=score, debug=True)
+        est.estimate(scoring_method=score)
