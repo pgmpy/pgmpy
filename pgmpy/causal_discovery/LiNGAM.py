@@ -341,13 +341,17 @@ class LiNGAM(_BaseCausalDiscovery):
         # Step 1.1: Fit the estimator to the standardized data
         self._estimator.fit(X_std[:, predictors], X_std[:, target])
 
-        # Floor the base magnitude with epsilon before exponentiation to prevent zero weights
-        weight = np.power(np.maximum(np.abs(self._estimator.coef_), 1e-12), self.gamma)
+        # Compute standard adaptive lasso weights w_j = 1 / |beta_init,j|^gamma
+        # using an epsilon floor to prevent division by zero.
+        weight = 1.0 / np.power(np.maximum(np.abs(self._estimator.coef_), 1e-12), self.gamma)
 
-        # Step 1.2: Fit the Lasso regression to the weighted standardized data
+        # Step 1.2: Fit the Lasso regression on predictors scaled by 1 / w.
+        # If z_j = x_j / w_j and theta_j are the lasso coefficients on z_j,
+        # then the adaptive lasso coefficients are beta_j = theta_j / w_j.
         lasso_reg = LassoLarsIC(criterion="bic")
-        lasso_reg.fit(X_std[:, predictors] * weight, X_std[:, target])
-        pruned_idx = np.abs(lasso_reg.coef_ * weight) > 0.0
+        lasso_reg.fit(X_std[:, predictors] / weight, X_std[:, target])
+        adaptive_coef = lasso_reg.coef_ / weight
+        pruned_idx = np.abs(adaptive_coef) > 0.0
 
         # Step 2: Calculate coefficients of the original scale
         coef = np.zeros(lasso_reg.coef_.shape)
