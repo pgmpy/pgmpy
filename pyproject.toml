@@ -65,6 +65,7 @@ tests = [
 ]
 docs = [
   "sphinx>=5.0",
+  "ipython",
   "nbsphinx",
   "numpydoc",
   "pydata-sphinx-theme",
