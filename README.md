@@ -1,7 +1,9 @@
 <div>
 
 <a href="https://www.pgmpy.org"><img src="https://raw.githubusercontent.com/pgmpy/pgmpy/dev/logo/logo_color.png" width="175" align="left" /></a>
-pgmpy is a Python library for causal and probabilistic modeling using graphical models. It provides a uniform API for building, learning, and analyzing models, such as Bayesian Networks, Dynamic Bayesian Networks, Directed Acyclic Graphs (DAGs), and Structural Equation Models (SEMs). By integrating tools from both probabilistic inference and causal inference, pgmpy enables users to seamlessly transition between predictive and causal analyses.
+pgmpy provides the building blocks for causal and probabilistic reasoning using graphical models. It implements data structures for a range of causal and graphical models such as DAGs, PDAGs, MAGs, PAGs, Bayesian Networks, Dynamic Bayesian Networks, and Structural Equation Models, along with algorithms for various tasks such as causal discovery, causal identification, causal and probabilistic inference, model validation, parameter estimation, simulations, and more.
+
+Algorithms for each task follow a unified composable API, making them modular and extensible. They are also scikit-learn compatible when possible. They can be used directly, combined in sklearn pipelines, or used to build higher-level tools on top of them.
 </div>
 
 
@@ -13,7 +15,7 @@ pgmpy is a Python library for causal and probabilistic modeling using graphical 
 | **CI/CD** | [![github-actions](https://img.shields.io/github/actions/workflow/status/pgmpy/pgmpy/ci.yml?logo=github)](https://github.com/pgmpy/pgmpy/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/pgmpy/pgmpy/graph/badge.svg?token=UaJMCdHaEF)](https://codecov.io/gh/pgmpy/pgmpy) [![asv](http://img.shields.io/badge/benchmarked%20by-asv-blue.svg?style=flat)](http://pgmpy.org/pgmpy-benchmarks/) [![platform](https://img.shields.io/conda/pn/conda-forge/pgmpy)](https://github.com/pgmpy/pgmpy) |
 | **Code** |  [![!pypi](https://img.shields.io/pypi/v/pgmpy?color=orange)](https://pypi.org/project/pgmpy/) [![!conda](https://img.shields.io/conda/vn/conda-forge/pgmpy)](https://anaconda.org/conda-forge/pgmpy) [![!python-versions](https://img.shields.io/pypi/pyversions/pgmpy)](https://www.python.org/) [![!black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)  |
 | **Downloads** | ![PyPI - Downloads](https://img.shields.io/pypi/dw/pgmpy) ![PyPI - Downloads](https://img.shields.io/pypi/dm/pgmpy) [![Downloads](https://static.pepy.tech/personalized-badge/pgmpy?period=total&units=international_system&left_color=grey&right_color=blue&left_text=cumulative%20(pypi))](https://pepy.tech/project/pgmpy) |
-| **Supported By** | [![GC.OS Sponsored](https://img.shields.io/badge/GC.OS-Sponsored%20Project-orange.svg?style=flat&colorA=0eac92&colorB=2077b4)](https://gc-os-ai.github.io/) [![FLOSS/FUND](https://floss.fund//static/badge.svg)](https://floss.fund/) |
+| **Supported By** | [![GC.OS Sponsored](https://img.shields.io/badge/GC.OS-Sponsored%20Project-orange.svg?style=flat&colorA=0eac92&colorB=2077b4)](https://gc-os-ai.github.io/) [![FLOSS/FUND](https://floss.fund//static/badge.svg)](https://floss.fund/) [![Affiliated with NumFOCUS](https://img.shields.io/badge/NumFOCUS-affiliated%20project-orange.svg?style=flat&colorA=E1523D&colorB=007D8A)](https://numfocus.org/sponsored-projects/affiliated-projects) |
 
 ## Key Features
 

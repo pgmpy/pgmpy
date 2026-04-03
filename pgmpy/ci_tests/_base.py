@@ -97,7 +97,7 @@ class _BaseCITest(BaseObject):
         if X == Y:
             raise ValueError("X and Y must be different variables.")
 
-        if not isinstance(Z, (list, tuple)):
+        if not isinstance(Z, (list, tuple, set)):
             raise ValueError(f"Z must be a list or tuple. Got {type(Z)}.")
 
         if X in Z or Y in Z:
