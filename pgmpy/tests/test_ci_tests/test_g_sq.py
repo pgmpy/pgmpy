@@ -6,25 +6,25 @@ from pgmpy.ci_tests import GSq
 
 
 @pytest.fixture
-def test_q_sq():
+def test_data():
     df_adult = pd.read_csv("pgmpy/tests/test_estimators/testdata/adult.csv")
     test = GSq(data=df_adult)
 
     return test
 
 
-def test_discrete_tests(test_q_sq):
-    assert not test_q_sq("Age", "Immigrant", [], significance_level=0.05)
-    assert not test_q_sq("Age", "Race", [], significance_level=0.05)
-    assert not test_q_sq("Age", "Sex", [], significance_level=0.05)
-    assert not test_q_sq(
+def test_discrete_tests(test_data):
+    assert not test_data("Age", "Immigrant", [], significance_level=0.05)
+    assert not test_data("Age", "Race", [], significance_level=0.05)
+    assert not test_data("Age", "Sex", [], significance_level=0.05)
+    assert not test_data(
         "Education",
         "HoursPerWeek",
         ["Age", "Immigrant", "Race", "Sex"],
         significance_level=0.05,
     )
-    assert test_q_sq("Immigrant", "Sex", [], significance_level=0.05)
-    assert not test_q_sq("Education", "MaritalStatus", ["Age", "Sex"], significance_level=0.05)
+    assert test_data("Immigrant", "Sex", [], significance_level=0.05)
+    assert not test_data("Education", "MaritalStatus", ["Age", "Sex"], significance_level=0.05)
 
 
 def test_exactly_same_vars():
