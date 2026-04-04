@@ -91,7 +91,7 @@ class DiBS(_BaseCausalDiscovery):
         pass
 
 
-    def _get_kernel(
+    def _get_kernel_matrix(
         self,
         particles: torch.Tensor,
     ):
@@ -108,10 +108,11 @@ class DiBS(_BaseCausalDiscovery):
             bandwidth = torch.median(distances[~ torch.eye(distances.shape[0], dtype=bool)])
 
         if kernel_name == "frobenius":
-            def frobenius_kernel(z1: torch.Tensor, z2: torch.Tensor) -> torch.float64:
-                diff = torch.linalg.matrix_norm(z1 - z2, ord='fro') ** 2
-                return torch.exp(- diff / bandwidth)
-            return frobenius_kernel
+            flat_particles = particles.view(particles.shape[0], -1)
+            interactions = flat_particles @ flat_particles.T
+            self_interactions = interactions.diagonal()
+            norm_diff = self_interactions.unsqueeze(1) + self_interactions.unsqueeze(0) - 2 * self_interactions
+            return torch.exp(- norm_diff / bandwidth)
 
 
     def _svgd_increment(
@@ -119,7 +120,7 @@ class DiBS(_BaseCausalDiscovery):
         scores: torch.Tensor,
         particles: torch.Tensor,
     ) -> torch.Tensor:
-        kernel = self._get_kernel(particles)
+        kernel_mat = self._get_kernel_matrix(particles)
 
 
 
