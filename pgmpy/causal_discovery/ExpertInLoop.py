@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from functools import partial
 from itertools import combinations
 
 import networkx as nx
@@ -175,9 +176,11 @@ class ExpertInLoop(_BaseCausalDiscovery):
         self.show_progress = show_progress
         self.max_iter = max_iter
 
-    def _test_all(self, ci_test, dag: DAG, data: pd.DataFrame, blacklisted: set[tuple[str, str]] | None = None) -> pd.DataFrame:
+    def _test_all(
+        self, ci_test, dag: DAG, data: pd.DataFrame, blacklisted: set[tuple[str, str]] | None = None
+    ) -> pd.DataFrame:
         """Runs CI tests on all possible combinations of variables.
-        
+
         If blacklisted is provided, skips recording non-edge candidates present in blacklist
         (either direction), reducing downstream filtering work.
         """
@@ -229,7 +232,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
     def _get_edge_orientation(self, u: str, v: str) -> tuple[str, str] | None:
         """Determines orientation robust to fit state."""
         expert_knowledge = getattr(self, "expert_knowledge_", self.expert_knowledge)
-        
+
         # 1. Check orientations directly on ExpertKnowledge
         if expert_knowledge and hasattr(expert_knowledge, "orientations") and expert_knowledge.orientations:
             if (u, v) in expert_knowledge.orientations:
@@ -245,7 +248,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
                 if u in to and v in to and to[res[0]] > to[res[1]]:
                     res = (res[1], res[0])
                 return res
-        
+
         # 2. Check orientations provided to constructor
         if self.orientations:
             if (u, v) in self.orientations:
@@ -274,10 +277,11 @@ class ExpertInLoop(_BaseCausalDiscovery):
         # 4. Check orientation function
         # Always prefer explicit orientation_fn if provided, then fallback to expert_knowledge
         orient_fn = self.orientation_fn or getattr(expert_knowledge, "orientation_fn", None)
-        
+
         if orient_fn is not None:
-            # Robust check for llm_pairwise_orient
-            is_llm = (orient_fn == llm_pairwise_orient) or (getattr(orient_fn, "__name__", "") == "llm_pairwise_orient")
+            # check for llm_pairwise_orient handling partial objects
+            test_fn = orient_fn.func if isinstance(orient_fn, partial) else orient_fn
+            is_llm = (test_fn == llm_pairwise_orient) or (getattr(test_fn, "__name__", "") == "llm_pairwise_orient")
             if is_llm:
                 descriptions = getattr(self, "descriptions", {})
                 if not descriptions:
@@ -285,19 +289,19 @@ class ExpertInLoop(_BaseCausalDiscovery):
                 res = orient_fn(u, v, descriptions=descriptions)
             else:
                 res = orient_fn(u, v)
-                
+
             # Enforce temporal ordering if available
             to = getattr(expert_knowledge, "temporal_ordering", {})
             if res and u in to and v in to and to[res[0]] > to[res[1]]:
                 res = (res[1], res[0])
-            
+
             if res and self.use_cache:
                 orientation_cache.add(res)
-            
+
             if (self.show_progress or config.SHOW_PROGRESS) and res:
                 logger.info(f"Queried for edge orientation: {u} - {v} -> {res}")
             return res
-        
+
         # 5. Fallback to temporal ordering if specified
         to = getattr(expert_knowledge, "temporal_ordering", {}) if expert_knowledge else {}
         if u in to and v in to:
@@ -314,9 +318,10 @@ class ExpertInLoop(_BaseCausalDiscovery):
     def _fit(self, X: pd.DataFrame):
         """Standard fit with underscored fitted attributes."""
         from pgmpy.estimators import ExpertKnowledge
+
         self.variables_ = list(X.columns)
         self.n_iter_ = 0
-        
+
         # PERSISTENT CACHE REWRITE: Initialize ONLY if not provided by user/test
         if not hasattr(self, "ci_cache_"):
             self.ci_cache_ = {}
@@ -344,7 +349,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
 
         dag = DAG()
         dag.add_nodes_from(self.variables_)
-        
+
         # Robust categorical detection
         cat_cols = X.select_dtypes(include=["category", "object"]).columns
         test_param = self.ci_test or ("chi_square" if len(cat_cols) > 0 else None)
@@ -359,10 +364,13 @@ class ExpertInLoop(_BaseCausalDiscovery):
             # Build blacklist set including reverse direction once per iteration
             bl_set_iter = set(blacklisted_edges) | {(v, u) for u, v in blacklisted_edges}
             all_effects = self._test_all(dag=dag, ci_test=ci_test, data=X, blacklisted=bl_set_iter)
-            if all_effects.empty: break
+            if all_effects.empty:
+                break
 
             edge_effects = all_effects[all_effects.edge_present]
-            edge_effects = edge_effects[(edge_effects.effect < self.effect_size_threshold) & (edge_effects.p_val > self.pval_threshold)]
+            edge_effects = edge_effects[
+                (edge_effects.effect < self.effect_size_threshold) & (edge_effects.p_val > self.pval_threshold)
+            ]
             remove_edges = [tuple(x) for x in edge_effects[["u", "v"]].values]
 
             if self.expert_knowledge_ and self.expert_knowledge_.required_edges:
@@ -370,10 +378,13 @@ class ExpertInLoop(_BaseCausalDiscovery):
                 req_set.update([(v, u) for u, v in self.expert_knowledge_.required_edges])
                 remove_edges = [edge for edge in remove_edges if edge not in req_set]
 
-            for edge in remove_edges: dag.remove_edge(edge[0], edge[1])
+            for edge in remove_edges:
+                dag.remove_edge(edge[0], edge[1])
 
             nonedge_effects = all_effects[~all_effects.edge_present]
-            nonedge_effects = nonedge_effects[(nonedge_effects.effect >= self.effect_size_threshold) & (nonedge_effects.p_val <= self.pval_threshold)]
+            nonedge_effects = nonedge_effects[
+                (nonedge_effects.effect >= self.effect_size_threshold) & (nonedge_effects.p_val <= self.pval_threshold)
+            ]
 
             if len(blacklisted_edges) > 0 and not nonedge_effects.empty:
                 # Vectorized blacklist filtering using MultiIndex membership
@@ -382,8 +393,10 @@ class ExpertInLoop(_BaseCausalDiscovery):
                 nonedge_effects = nonedge_effects[~mask]
 
             if nonedge_effects.empty:
-                if edge_effects.empty: break
-                else: continue
+                if edge_effects.empty:
+                    break
+                else:
+                    continue
 
             selected_edge = nonedge_effects.iloc[nonedge_effects.effect.argmax()]
             edge_direction = self._get_edge_orientation(selected_edge.u, selected_edge.v)
@@ -391,12 +404,22 @@ class ExpertInLoop(_BaseCausalDiscovery):
             if edge_direction is None:
                 blacklisted_edges.append((selected_edge.u, selected_edge.v))
             elif nx.has_path(dag, edge_direction[1], edge_direction[0]):
-                edges_to_remove = self._break_cycle(dag, edge_direction[0], edge_direction[1], ci_test, X, self.effect_size_threshold, self.pval_threshold)
-                if not edges_to_remove: 
+                edges_to_remove = self._break_cycle(
+                    dag,
+                    edge_direction[0],
+                    edge_direction[1],
+                    ci_test,
+                    X,
+                    self.effect_size_threshold,
+                    self.pval_threshold,
+                )
+                if not edges_to_remove:
                     blacklisted_edges.append(edge_direction)
                 elif [tuple(e) == tuple(edge_direction) for e in edges_to_remove].count(True) > 0:
                     if self.show_progress or config.SHOW_PROGRESS:
-                        logger.info(f"Cycle-breaking subroutine suggested removing the new edge {edge_direction}. Rejecting it.")
+                        logger.info(
+                            f"Cycle-breaking subroutine suggested removing the new edge {edge_direction}. Rejecting it."
+                        )
                     blacklisted_edges.append(edge_direction)
                 else:
                     blacklisted_edges.extend(edges_to_remove)

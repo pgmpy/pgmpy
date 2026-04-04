@@ -1,6 +1,7 @@
 import cProfile
 import io
 import pstats
+
 import numpy as np
 import pandas as pd
 
@@ -45,4 +46,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

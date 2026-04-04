@@ -4,6 +4,7 @@ Tests for the sklearn-compatible ExpertInLoop class in pgmpy.causal_discovery
 
 import logging
 import sys
+from functools import partial
 from unittest.mock import patch
 
 import networkx as nx
@@ -244,7 +245,7 @@ def test_estimate_with_custom_orient_fn(adult_data_small):
     """Test estimation with custom orientation function."""
 
     def custom_orient(var1, var2, **kwargs):
-        #orient edges from alphabetically first to second
+        # orient edges from alphabetically first to second
         if var1 < var2:
             return (var1, var2)
         else:
@@ -683,8 +684,7 @@ def test_orientation_fn_returns_none_blacklists_edge():
 
 
 def test_cycle_rejected_when_no_removable_edge():
-    """New edge is blacklisted when _break_cycle finds no weak edge to remove.
-    """
+    """New edge is blacklisted when _break_cycle finds no weak edge to remove."""
     np.random.seed(0)
     n = 30
     # Three perfectly correlated variables so all pairs have strong association
@@ -718,8 +718,7 @@ def test_cycle_rejected_when_no_removable_edge():
 
 
 def test_show_progress_logs_orientation(caplog):
-    """logger.info is called when show_progress=True and an edge is oriented.
-    """
+    """logger.info is called when show_progress=True and an edge is oriented."""
     np.random.seed(0)
     x = np.arange(50, dtype=float)
     data = pd.DataFrame({"A": x, "B": x + 1.0})
@@ -805,9 +804,7 @@ def test_required_edges_not_removed_even_if_weak():
     data = pd.DataFrame({"A": np.random.normal(size=n), "B": np.random.normal(size=n)})
 
     ek = ExpertKnowledge(required_edges=[("A", "B")])
-    estimator = ExpertInLoop(
-        expert_knowledge=ek, effect_size_threshold=0.8, pval_threshold=0.0, show_progress=False
-    )
+    estimator = ExpertInLoop(expert_knowledge=ek, effect_size_threshold=0.8, pval_threshold=0.0, show_progress=False)
     estimator.fit(data)
 
     assert ("A", "B") in estimator.causal_graph_.edges()
@@ -837,6 +834,7 @@ def test_use_cache_false_ignores_and_does_not_populate_cache():
     assert res2 == ("A", "B")
     assert call_count["n"] == 2
     assert ("A", "B") not in estimator.orientation_cache_
+
 
 def test_orientation_from_expertknowledge_orientations_with_temporal_override():
     ek = ExpertKnowledge(orientations=[("B", "A")], temporal_order=[["A"], ["B"]])
@@ -925,6 +923,7 @@ def test_blacklist_filter_no_false_positive_edges():
     """Blacklisted pairs should be matched by exact tuples only, not per-endpoint membership."""
     import numpy as np
     import pandas as pd
+
     from pgmpy.causal_discovery.ExpertInLoop import ExpertInLoop
     from pgmpy.estimators import ExpertKnowledge
 
@@ -960,6 +959,7 @@ def test_handles_empty_nonedge_effects_safely():
     """When all significant non-edges are blacklisted, selection should not crash."""
     import numpy as np
     import pandas as pd
+
     from pgmpy.causal_discovery.ExpertInLoop import ExpertInLoop
     from pgmpy.estimators import ExpertKnowledge
 
@@ -987,3 +987,40 @@ def test_handles_empty_nonedge_effects_safely():
     est.fit(data)
     assert ("A", "B") not in est.causal_graph_.edges()
     assert ("B", "A") not in est.causal_graph_.edges()
+
+
+def test_orientation_fn_partial_llm():
+    """Test that orientation_fn as a partial(llm_pairwise_orient, ...) works correctly."""
+
+    np.random.seed(42)
+    # Use highly correlated data to ensure an edge is found
+    A = np.random.normal(size=100)
+    B = A + 0.1 * np.random.normal(size=100)
+    data = pd.DataFrame({"A": A, "B": B})
+    descriptions = {"A": "Var A", "B": "Var B"}
+
+    # Patch the local reference in ExpertInLoop where it is called
+    with patch("pgmpy.causal_discovery.ExpertInLoop.llm_pairwise_orient") as mock_llm:
+        # Set __name__ so the internal is_llm = (...) check succeeds
+        mock_llm.__name__ = "llm_pairwise_orient"
+        mock_llm.return_value = ("A", "B")
+
+        # Create partial function using the mock object itself
+        partial_orient = partial(mock_llm, some_arg="test")
+
+        estimator = ExpertInLoop(
+            orientation_fn=partial_orient,
+            effect_size_threshold=0.01,
+            pval_threshold=0.1,
+            ci_test="pearsonr",
+            show_progress=False,
+        )
+        estimator.descriptions = descriptions
+        estimator.fit(data)
+
+        # Note: Depending on how combinations works, it might be called multiple times
+        assert mock_llm.called
+        args, kwargs = mock_llm.call_args
+        assert "descriptions" in kwargs
+        assert kwargs["descriptions"] == descriptions
+        assert kwargs["some_arg"] == "test"
