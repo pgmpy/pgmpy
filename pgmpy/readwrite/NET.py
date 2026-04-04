@@ -46,8 +46,8 @@ class NETWriter:
     >>> from pgmpy.example_models import load_model
     >>> asia = load_model("bnlearn/asia")
     >>> writer = NETWriter(asia)
-    >>> writer
-    <pgmpy.readwrite.NET.NETWriter at 0x7feac652c2b0>
+    >>> writer # doctest: +ELLIPSIS
+    <pgmpy.readwrite.NET.NETWriter object at 0x...>
     >>> writer.write("asia.net")
 
     Reference
@@ -180,27 +180,18 @@ class NETWriter:
         >>> from pgmpy.readwrite import NETWriter
         >>> asia = load_model("bnlearn/asia")
         >>> writer = NETWriter(asia)
-        >>> writer.get_cpds()
-        {'asia': array([0.01, 0.99]),
-        'bronc': array([[0.6, 0.3],
-                [0.4, 0.7]]),
-        'dysp': array([[[0.9, 0.8],
-                [0.7, 0.1]],
-
-                [[0.1, 0.2],
-                [0.3, 0.9]]]),
-        'either': array([[[1., 1.],
-                [1., 0.]],
-
-                [[0., 0.],
-                [0., 1.]]]),
-        'lung': array([[0.1 , 0.01],
-                [0.9 , 0.99]]),
-        'smoke': array([0.5, 0.5]),
-        'tub': array([[0.05, 0.01],
-                [0.95, 0.99]]),
-        'xray': array([[0.98, 0.05],
-                [0.02, 0.95]])}
+        >>> writer.get_cpds() # doctest: +NORMALIZE_WHITESPACE
+        {'asia': array([0.01, 0.99]), 'bronc': array([[0.6, 0.3],
+           [0.4, 0.7]]), 'dysp': array([[[0.9, 0.8],
+            [0.7, 0.1]],
+           [[0.1, 0.2],
+            [0.3, 0.9]]]), 'either': array([[[1., 1.],
+            [1., 0.]],
+           [[0., 0.],
+            [0., 1.]]]), 'lung': array([[0.1 , 0.01],
+           [0.9 , 0.99]]), 'smoke': array([0.5, 0.5]), 'tub': array([[0.05, 0.01],
+           [0.95, 0.99]]), 'xray': array([[0.98, 0.05],
+           [0.02, 0.95]])}
         """
         cpds = self.model.get_cpds()
         tables = {}
@@ -223,6 +214,7 @@ class NETWriter:
         >>> asia = load_model("bnlearn/asia")
         >>> writer = NETWriter(asia)
         >>> writer.get_properties()
+        {'asia': [], 'bronc': [], 'dysp': [], 'either': [], 'lung': [], 'smoke': [], 'tub': [], 'xray': []}
         """
         variables = self.model.nodes()
         property_tag = {}
@@ -249,15 +241,10 @@ class NETWriter:
         >>> from pgmpy.readwrite import NETWriter
         >>> asia = load_model("bnlearn/asia")
         >>> writer = NETWriter(asia)
-        >>> writer.get_states()
-        {'asia': ['yes', 'no'],
-        'bronc': ['yes', 'no'],
-        'dysp': ['yes', 'no'],
-        'either': ['yes', 'no'],
-        'lung': ['yes', 'no'],
-        'smoke': ['yes', 'no'],
-        'tub': ['yes', 'no'],
-        'xray': ['yes', 'no']}
+        >>> writer.get_states() # doctest: +NORMALIZE_WHITESPACE
+        {'asia': ['yes', 'no'], 'bronc': ['yes', 'no'], 'dysp': ['yes', 'no'],
+        'either': ['yes', 'no'], 'lung': ['yes', 'no'], 'smoke': ['yes', 'no'],
+        'tub': ['yes', 'no'], 'xray': ['yes', 'no']}
         """
 
         variable_states = {}
@@ -289,15 +276,10 @@ class NETWriter:
         >>> from pgmpy.readwrite import NETWriter
         >>> asia = load_model("bnlearn/asia")
         >>> writer = NETWriter(asia)
-        >>> writer.get_parents()
-        {'asia': [],
-        'bronc': ['smoke'],
-        'dysp': ['bronc', 'either'],
-        'either': ['lung', 'tub'],
-        'lung': ['smoke'],
-        'smoke': [],
-        'tub': ['asia'],
-        'xray': ['either']}
+        >>> writer.get_parents() # doctest: +NORMALIZE_WHITESPACE
+        {'asia': [], 'bronc': ['smoke'], 'dysp': ['bronc', 'either'],
+        'either': ['lung', 'tub'], 'lung': ['smoke'], 'smoke': [],
+        'tub': ['asia'], 'xray': ['either']}
         """
         cpds = self.model.get_cpds()
         variable_parents = {}
@@ -355,9 +337,13 @@ class NETReader:
     # asia.net file is present at
     # https://www.bnlearn.com/bnrepository/discrete-small.html#asia
     >>> from pgmpy.readwrite import NETReader
+    >>> from pgmpy.example_models import load_model
+    >>> asia = load_model("bnlearn/asia")
+    >>> writer = NETWriter(asia)
+    >>> writer.write("asia.net")
     >>> reader = NETReader("asia.net")
-    >>> reader
-    <pgmpy.readwrite.NET.NETReader at 0x7feac645c640>
+    >>> reader # doctest: +ELLIPSIS
+    <pgmpy.readwrite.NET.NETReader object at 0x...>
     >>> model = reader.get_model()
     """
 
@@ -455,6 +441,10 @@ class NETReader:
         # asia.net file is present at
         # https://www.bnlearn.com/bnrepository/discrete-small.html#asia
         >>> from pgmpy.readwrite import NETReader
+        >>> from pgmpy.example_models import load_model
+        >>> asia = load_model("bnlearn/asia")
+        >>> writer = NETWriter(asia)
+        >>> writer.write("asia.net")
         >>> reader = NETReader("asia.net")
         >>> reader.get_network_name()
         False
@@ -485,9 +475,13 @@ class NETReader:
         # asia.net file is present at
         # https://www.bnlearn.com/bnrepository/discrete-small.html#asia
         >>> from pgmpy.readwrite import NETReader
+        >>> from pgmpy.example_models import load_model
+        >>> asia = load_model("bnlearn/asia")
+        >>> writer = NETWriter(asia)
+        >>> writer.write("asia.net")
         >>> reader = NETReader("asia.net")
-        >>> reader.get_variables()
-        ['asia', 'tub', 'smoke', 'lung', 'bronc', 'either', 'xray', 'dysp']
+        >>> sorted(reader.get_variables())
+        ['asia', 'bronc', 'dysp', 'either', 'lung', 'smoke', 'tub', 'xray']
         """
         variable_names = []
 
@@ -507,16 +501,15 @@ class NETReader:
         # asia.net file is present at
         # https://www.bnlearn.com/bnrepository/discrete-small.html#asia
         >>> from pgmpy.readwrite import NETReader
+        >>> from pgmpy.example_models import load_model
+        >>> asia = load_model("bnlearn/asia")
+        >>> writer = NETWriter(asia)
+        >>> writer.write("asia.net")
         >>> reader = NETReader("asia.net")
-        >>> reader.get_states()
-        {'asia': ['yes', 'no'],
-        'tub': ['yes', 'no'],
-        'smoke': ['yes', 'no'],
-        'lung': ['yes', 'no'],
-        'bronc': ['yes', 'no'],
-        'either': ['yes', 'no'],
-        'xray': ['yes', 'no'],
-        'dysp': ['yes', 'no']}
+        >>> reader.get_states() # doctest: +NORMALIZE_WHITESPACE
+        {'asia': ['yes', 'no'], 'bronc': ['yes', 'no'], 'dysp': ['yes', 'no'],
+        'either': ['yes', 'no'], 'lung': ['yes', 'no'], 'smoke': ['yes', 'no'],
+        'tub': ['yes', 'no'], 'xray': ['yes', 'no']}
         """
 
         variable_states = {}
@@ -540,16 +533,13 @@ class NETReader:
         # asia.net file is present at
         # https://www.bnlearn.com/bnrepository/discrete-small.html#asia
         >>> from pgmpy.readwrite import NETReader
+        >>> from pgmpy.example_models import load_model
+        >>> asia = load_model("bnlearn/asia")
+        >>> writer = NETWriter(asia)
+        >>> writer.write("asia.net")
         >>> reader = NETReader("asia.net")
-        >>> reader.get_property()
-        {'asia': {},
-        'tub': {},
-        'smoke': {},
-        'lung': {},
-        'bronc': {},
-        'either': {},
-        'xray': {},
-        'dysp': {}}
+        >>> sorted(reader.get_property()) # doctest: +NORMALIZE_WHITESPACE
+        ['asia', 'bronc', 'dysp', 'either', 'lung', 'smoke', 'tub', 'xray']
         """
 
         variable_properties = {}
@@ -575,16 +565,15 @@ class NETReader:
         # asia.net file is present at
         # https://www.bnlearn.com/bnrepository/discrete-small.html#asia
         >>> from pgmpy.readwrite import NETReader
+        >>> from pgmpy.example_models import load_model
+        >>> asia = load_model("bnlearn/asia")
+        >>> writer = NETWriter(asia)
+        >>> writer.write("asia.net")
         >>> reader = NETReader("asia.net")
-        >>> reader.get_parents()
-        {'asia': [],
-        'tub': ['asia'],
-        'smoke': [],
-        'lung': ['smoke'],
-        'bronc': ['smoke'],
-        'either': ['lung', 'tub'],
-        'xray': ['either'],
-        'dysp': ['bronc', 'either']}
+        >>> reader.get_parents() # doctest: +NORMALIZE_WHITESPACE
+        {'asia': [], 'bronc': ['smoke'], 'dysp': ['bronc', 'either'],
+        'either': ['lung', 'tub'], 'lung': ['smoke'], 'smoke': [],
+        'tub': ['asia'], 'xray': ['either']}
         """
 
         variable_parents = {}
@@ -603,24 +592,21 @@ class NETReader:
         # asia.net file is present at
         # https://www.bnlearn.com/bnrepository/discrete-small.html#asia
         >>> from pgmpy.readwrite import NETReader
+        >>> from pgmpy.example_models import load_model
+        >>> asia = load_model("bnlearn/asia")
+        >>> writer = NETWriter(asia)
+        >>> writer.write("asia.net")
         >>> reader = NETReader("asia.net")
-        >>> reader.get_values()
+        >>> reader.get_values() # doctest: +NORMALIZE_WHITESPACE
         {'asia': array([[0.01],
-                        [0.99]]),
-        'tub': array([[0.05, 0.01],
-                        [0.95, 0.99]]),
-        'smoke': array([[0.5],
-                        [0.5]]),
-        'lung': array([[0.1 , 0.01],
-                        [0.9 , 0.99]]),
-        'bronc': array([[0.6, 0.3],
-                        [0.4, 0.7]]),
-        'either': array([[1., 1., 1., 0.],
-                        [0., 0., 0., 1.]]),
-        'xray': array([[0.98, 0.05],
-                        [0.02, 0.95]]),
-        'dysp': array([[0.9, 0.8, 0.7, 0.1],
-                        [0.1, 0.2, 0.3, 0.9]])}
+           [0.99]]), 'bronc': array([[0.6, 0.3],
+           [0.4, 0.7]]), 'dysp': array([[0.9, 0.8, 0.7, 0.1],
+           [0.1, 0.2, 0.3, 0.9]]), 'either': array([[1., 1., 1., 0.],
+           [0., 0., 0., 1.]]), 'lung': array([[0.1 , 0.01],
+           [0.9 , 0.99]]), 'smoke': array([[0.5],
+           [0.5]]), 'tub': array([[0.05, 0.01],
+           [0.95, 0.99]]), 'xray': array([[0.98, 0.05],
+           [0.02, 0.95]])}
         """
         variable_cpds = {}
 
@@ -653,16 +639,14 @@ class NETReader:
         # asia.net file is present at
         # https://www.bnlearn.com/bnrepository/discrete-small.html#asia
         >>> from pgmpy.readwrite import NETReader
+        >>> from pgmpy.example_models import load_model
+        >>> asia = load_model("bnlearn/asia")
+        >>> writer = NETWriter(asia)
+        >>> writer.write("asia.net")
         >>> reader = NETReader("asia.net")
-        >>> reader.get_edges()
-        [['asia', 'tub'],
-        ['smoke', 'lung'],
-        ['smoke', 'bronc'],
-        ['lung', 'either'],
-        ['tub', 'either'],
-        ['either', 'xray'],
-        ['bronc', 'dysp'],
-        ['either', 'dysp']]
+        >>> sorted(reader.get_edges()) # doctest: +NORMALIZE_WHITESPACE
+        [['asia', 'tub'], ['bronc', 'dysp'], ['either', 'dysp'], ['either', 'xray'],
+        ['lung', 'either'], ['smoke', 'bronc'], ['smoke', 'lung'], ['tub', 'either']]
 
         """
         edges = [[value, key] for key in self.variable_parents.keys() for value in self.variable_parents[key]]
@@ -682,9 +666,13 @@ class NETReader:
         # asia.net file is present at
         # https://www.bnlearn.com/bnrepository/discrete-small.html#asia
         >>> from pgmpy.readwrite import NETReader
+        >>> from pgmpy.example_models import load_model
+        >>> asia = load_model("bnlearn/asia")
+        >>> writer = NETWriter(asia)
+        >>> writer.write("asia.net")
         >>> reader = NETReader("asia.net")
-        >>> reader.get_model()
-        <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork at 0x7febc059b430>
+        >>> reader.get_model() # doctest: +ELLIPSIS
+        <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork object at 0x...>
         """
         try:
             model = DiscreteBayesianNetwork()
