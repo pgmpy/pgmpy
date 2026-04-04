@@ -567,10 +567,12 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
 
         Examples
         --------
-        >>> from pgmpy.example_models import load_model
-        >>> model = load_model("bnlearn/alarm")
-        >>> model.to_graphviz()  # doctest: +ELLIPSIS
-        <AGraph ...
+        >>> from pgmpy.base import PDAG
+        >>> model = PDAG(directed_ebunch=[("A", "B")], undirected_ebunch=[])
+        >>> model.to_graphviz()  # doctest: +SKIP
+
+        When ``pygraphviz`` is installed, this returns an ``AGraph`` instance.
+
         """
         return nx.nx_agraph.to_agraph(self)
 
