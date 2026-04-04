@@ -25,6 +25,7 @@ class StateNameMixin:
         ...     state_names=sn,
         ... )
         >>> print(phi.state_names)
+        {'speed': ['low', 'medium', 'high'], 'switch': ['on', 'off'], 'time': ['day', 'night']}
         """
         if state_names:
             for key, value in state_names.items():

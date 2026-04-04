@@ -731,3 +731,33 @@ def test_score():
     shd = est.score(true_graph=asia_model, metric="SHD")
     assert np.round(structure_score, 4) > -3e4
     assert shd, 2
+
+
+def test_stable_variant_order_independence():
+
+    rng = np.random.default_rng(seed=42)
+    n = 2000
+
+    data = pd.DataFrame(
+        rng.integers(0, 3, size=(n, 12)),
+        columns=[chr(65 + i) for i in range(12)],
+    )
+    data["M"] = (data["A"] + data["B"] + data["C"]) % 3
+    data["N"] = (data["D"] + data["E"] + data["F"]) % 3
+    data["O"] = (data["M"] + data["N"] + data["G"]) % 3
+
+    skeletons = []
+    for _ in range(5):
+        cols = list(rng.permutation(data.columns))
+        shuffled = data[cols]
+        pc = PC(
+            variant="stable",
+            ci_test="chi_square",
+            significance_level=0.05,
+            show_progress=False,
+        )
+        pc.fit(shuffled)
+        edges = frozenset(frozenset((u, v)) for u, v in pc.skeleton_.edges())
+        skeletons.append(edges)
+
+    assert all(s == skeletons[0] for s in skeletons)

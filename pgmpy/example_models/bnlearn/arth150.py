@@ -1,7 +1,7 @@
 from .._base import ContinuousMixin, _BaseExampleModel
 
 
-class arth150(ContinuousMixin, _BaseExampleModel):
+class Arth150(ContinuousMixin, _BaseExampleModel):
     """
     References
     ----------
