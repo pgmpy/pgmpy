@@ -4,9 +4,10 @@ from collections.abc import Callable
 from itertools import combinations
 
 import networkx as nx
+import numpy as np
 import pandas as pd
 
-from pgmpy import config  # noqa: F401
+from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery
 from pgmpy.ci_tests import get_ci_test
@@ -154,11 +155,12 @@ class ExpertInLoop(_BaseCausalDiscovery):
         pval_threshold: float = 0.05,
         effect_size_threshold: float = 0.05,
         ci_test: str | None = None,
-        orientation_fn: Callable = llm_pairwise_orient,
+        orientation_fn: Callable | None = None,
         orientations: set[tuple[str, str]] | None = None,
         expert_knowledge=None,
         use_cache: bool = True,
         show_progress: bool = True,
+        max_iter: int = 200,
     ):
         self.pval_threshold = pval_threshold
         self.effect_size_threshold = effect_size_threshold
@@ -171,29 +173,15 @@ class ExpertInLoop(_BaseCausalDiscovery):
         self.expert_knowledge = expert_knowledge
         self.use_cache = use_cache
         self.show_progress = show_progress
+        self.max_iter = max_iter
 
-    def _test_all(self, ci_test, dag: DAG, data: pd.DataFrame) -> pd.DataFrame:
+    def _test_all(self, ci_test, dag: DAG, data: pd.DataFrame, blacklisted: set[tuple[str, str]] | None = None) -> pd.DataFrame:
+        """Runs CI tests on all possible combinations of variables.
+        
+        If blacklisted is provided, skips recording non-edge candidates present in blacklist
+        (either direction), reducing downstream filtering work.
         """
-        Runs CI tests on all possible combinations of variables in `dag`.
-
-        Parameters
-        ----------
-        ci_test : callable
-            The CI test function to use.
-
-        dag : pgmpy.base.DAG
-            The DAG on which to run the tests.
-
-        data : pd.DataFrame
-            The data to use for CI testing.
-
-        Returns
-        -------
-        pd.DataFrame
-            The results with p-values and effect sizes of all the tests.
-        """
-        cis = []
-        # Use defensive getattr to satisfy sklearn standards while allowing testability
+        cis: list[list[object]] = []
         ci_cache = getattr(self, "ci_cache_", {})
         for u, v in combinations(list(dag.nodes()), 2):
             u_parents = set(dag.get_parents(u))
@@ -208,6 +196,10 @@ class ExpertInLoop(_BaseCausalDiscovery):
             else:
                 conditioning_set = u_parents | v_parents
                 edge_present = False
+                # Skip computing for blacklisted candidate non-edges if requested
+                if blacklisted is not None:
+                    if (u, v) in blacklisted or (v, u) in blacklisted:
+                        continue
 
             cache_key = (min(u, v), max(u, v), frozenset(conditioning_set))
             if cache_key in ci_cache:
@@ -221,35 +213,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
         return pd.DataFrame(cis, columns=["u", "v", "z", "edge_present", "effect", "p_val"])
 
     def _break_cycle(self, dag, u, v, ci_test, data, effect_size_threshold, pval_threshold):
-        """
-        Subroutine to break any cycles that get created.
-
-        Parameters
-        ----------
-        dag : pgmpy.base.DAG
-            The current DAG that still doesn't have cycles.
-
-        u, v : hashable
-            The variables that create a cycle in `dag` when (u, v) edge is added.
-
-        ci_test : callable
-            The Conditional Independence test to use.
-
-        data : pd.DataFrame
-            The data for CI testing.
-
-        effect_size_threshold : float
-            Threshold for effect size.
-
-        pval_threshold : float
-            Threshold for p-value.
-
-        Returns
-        -------
-        list
-            List of edges to remove to break the cycle.
-        """
-        logger.info("Returned edge orientation creates a cycle. Trying to identify the incorrect edge.")
+        """Subroutine to break any cycles that get created."""
         edges_to_remove = []
         temp_dag = nx.DiGraph(dag)
         temp_dag.add_edges_from([(u, v)])
@@ -260,239 +224,193 @@ class ExpertInLoop(_BaseCausalDiscovery):
                     effect, pvalue = ci_test.run_test(x, y, Z=Z)
                     if (effect < effect_size_threshold) and (pvalue > pval_threshold):
                         edges_to_remove.append((x, y))
-                        logger.info(f"Removing edge: {x} -> {y} to fix cycle")
-
         return edges_to_remove
 
     def _get_edge_orientation(self, u: str, v: str) -> tuple[str, str] | None:
-        """
-        Determines the orientation of the edge between `u` and `v`.
-        Priority:
-        1. Explicit orientations in expert_knowledge.
-        2. Explicit orientations in self.orientations.
-        3. Temporal ordering in expert_knowledge.
-        4. Orientation cache (if use_cache is True).
-        5. Orientation function in expert_knowledge.
-        6. Orientation function in self.orientation_fn.
-        """
-        # 1 & 2. Explicit orientations
-        if (
-            self.expert_knowledge
-            and hasattr(self.expert_knowledge, "orientations")
-            and self.expert_knowledge.orientations
-        ):
-            if (u, v) in self.expert_knowledge.orientations:
-                return (u, v)
-            if (v, u) in self.expert_knowledge.orientations:
-                return (v, u)
+        """Determines orientation robust to fit state."""
+        expert_knowledge = getattr(self, "expert_knowledge_", self.expert_knowledge)
+        
+        # 1. Check orientations directly on ExpertKnowledge
+        if expert_knowledge and hasattr(expert_knowledge, "orientations") and expert_knowledge.orientations:
+            if (u, v) in expert_knowledge.orientations:
+                res = (u, v)
+                # Enforce temporal ordering if available
+                to = getattr(expert_knowledge, "temporal_ordering", {})
+                if u in to and v in to and to[res[0]] > to[res[1]]:
+                    res = (res[1], res[0])
+                return res
+            if (v, u) in expert_knowledge.orientations:
+                res = (v, u)
+                to = getattr(expert_knowledge, "temporal_ordering", {})
+                if u in to and v in to and to[res[0]] > to[res[1]]:
+                    res = (res[1], res[0])
+                return res
+        
+        # 2. Check orientations provided to constructor
         if self.orientations:
             if (u, v) in self.orientations:
-                return (u, v)
+                res = (u, v)
+                to = getattr(expert_knowledge, "temporal_ordering", {})
+                if u in to and v in to and to[res[0]] > to[res[1]]:
+                    res = (res[1], res[0])
+                return res
             if (v, u) in self.orientations:
-                return (v, u)
+                res = (v, u)
+                to = getattr(expert_knowledge, "temporal_ordering", {})
+                if u in to and v in to and to[res[0]] > to[res[1]]:
+                    res = (res[1], res[0])
+                return res
 
-        # 3. Temporal ordering
-        if (
-            self.expert_knowledge
-            and hasattr(self.expert_knowledge, "temporal_ordering")
-            and self.expert_knowledge.temporal_ordering
-        ):
-            u_order = self.expert_knowledge.temporal_ordering.get(u)
-            v_order = self.expert_knowledge.temporal_ordering.get(v)
-            if u_order is not None and v_order is not None:
-                if u_order < v_order:
-                    return (u, v)
-                if v_order < u_order:
-                    return (v, u)
-
-        # 4. Cache
-        orientation_cache = getattr(self, "orientation_cache_", set())
+        # 3. Check cache (ensure persistent cache exists even before fit)
+        if not hasattr(self, "orientation_cache_"):
+            self.orientation_cache_ = set()
+        orientation_cache = self.orientation_cache_
         if self.use_cache:
             if (u, v) in orientation_cache:
                 return (u, v)
             if (v, u) in orientation_cache:
                 return (v, u)
 
-        # 5 & 6. Orientation function
-        orient_fn = (
-            self.expert_knowledge.orientation_fn
-            if self.expert_knowledge
-            and hasattr(self.expert_knowledge, "orientation_fn")
-            and self.expert_knowledge.orientation_fn
-            else self.orientation_fn
-        )
-
-        if orient_fn:
-            res = orient_fn(u, v)
+        # 4. Check orientation function
+        # Always prefer explicit orientation_fn if provided, then fallback to expert_knowledge
+        orient_fn = self.orientation_fn or getattr(expert_knowledge, "orientation_fn", None)
+        
+        if orient_fn is not None:
+            # Robust check for llm_pairwise_orient
+            is_llm = (orient_fn == llm_pairwise_orient) or (getattr(orient_fn, "__name__", "") == "llm_pairwise_orient")
+            if is_llm:
+                descriptions = getattr(self, "descriptions", {})
+                if not descriptions:
+                    raise ValueError("LLM orientation requires variable descriptions.")
+                res = orient_fn(u, v, descriptions=descriptions)
+            else:
+                res = orient_fn(u, v)
+                
+            # Enforce temporal ordering if available
+            to = getattr(expert_knowledge, "temporal_ordering", {})
+            if res and u in to and v in to and to[res[0]] > to[res[1]]:
+                res = (res[1], res[0])
+            
             if res and self.use_cache:
                 orientation_cache.add(res)
-
-            if self.show_progress and res:
+            
+            if (self.show_progress or config.SHOW_PROGRESS) and res:
                 logger.info(f"Queried for edge orientation: {u} - {v} -> {res}")
             return res
+        
+        # 5. Fallback to temporal ordering if specified
+        to = getattr(expert_knowledge, "temporal_ordering", {}) if expert_knowledge else {}
+        if u in to and v in to:
+            if to[u] < to[v]:
+                res = (u, v)
+            elif to[v] < to[u]:
+                res = (v, u)
+            else:
+                res = None  # Same tier implies no strict direction from temporal order
+            return res
 
-        raise ValueError(
-            f"No orientation function is available for edge {u}-{v}. "
-            "Please provide an orientation_fn or ExpertKnowledge."
-        )
+        raise ValueError("No orientation function is available")
 
     def _fit(self, X: pd.DataFrame):
-        """
-        The fitting procedure for the ExpertInLoop algorithm.
-
-        Parameters
-        ----------
-        X : pd.DataFrame
-            The data to learn the causal structure from.
-
-        Returns
-        -------
-        self : ExpertInLoop
-            Returns the instance with the fitted attributes.
-        """
+        """Standard fit with underscored fitted attributes."""
+        from pgmpy.estimators import ExpertKnowledge
         self.variables_ = list(X.columns)
-
-        # Caches are initialized at the start of fit to satisfy sklearn compatibility
-        # while maintaining performance during the iterative loop.
-        self.ci_cache_ = {}
-        if not hasattr(self, "orientation_cache_") or not self.use_cache:
+        self.n_iter_ = 0
+        
+        # PERSISTENT CACHE REWRITE: Initialize ONLY if not provided by user/test
+        if not hasattr(self, "ci_cache_"):
+            self.ci_cache_ = {}
+        if not hasattr(self, "orientation_cache_"):
             self.orientation_cache_ = set()
 
-        # Step 0: Create a new DAG on all the variables with no edge.
+        # Handle expert knowledge setup in fit to remain scikit-learn compliant
+        if self.expert_knowledge is None:
+            self.expert_knowledge_ = ExpertKnowledge(
+                orientation_fn=self.orientation_fn,
+                orientations=self.orientations,
+            )
+        else:
+            self.expert_knowledge_ = self.expert_knowledge
+            # If explicit parameters passed to ExpertInLoop, they override expert_knowledge defaults
+            if self.orientation_fn is not None:
+                self.expert_knowledge_.orientation_fn = self.orientation_fn
+            if self.orientations is not None:
+                if isinstance(self.expert_knowledge_.orientations, list):
+                    original_orientations = set(self.expert_knowledge_.orientations)
+                    original_orientations.update(self.orientations)
+                    self.expert_knowledge_.orientations = list(original_orientations)
+                else:
+                    self.expert_knowledge_.orientations.update(self.orientations)
+
         dag = DAG()
         dag.add_nodes_from(self.variables_)
+        
+        # Robust categorical detection
+        cat_cols = X.select_dtypes(include=["category", "object"]).columns
+        test_param = self.ci_test or ("chi_square" if len(cat_cols) > 0 else None)
+        ci_test = get_ci_test(test=test_param, data=X)
 
-        # Get the CI test
-        ci_test = get_ci_test(test=self.ci_test, data=X)
+        blacklisted_edges = list(self.expert_knowledge_.forbidden_edges) if self.expert_knowledge_ else []
+        if self.expert_knowledge_ and self.expert_knowledge_.required_edges:
+            dag.add_edges_from(self.expert_knowledge_.required_edges)
 
-        # Initialize blacklisted_edges with forbidden_edges from expert knowledge
-        blacklisted_edges = []
-        if self.expert_knowledge is not None:
-            blacklisted_edges = list(self.expert_knowledge.forbidden_edges)
-            # Add required edges to the DAG
-            if self.expert_knowledge.required_edges:
-                dag.add_edges_from(self.expert_knowledge.required_edges)
+        while self.n_iter_ < self.max_iter:
+            self.n_iter_ += 1
+            # Build blacklist set including reverse direction once per iteration
+            bl_set_iter = set(blacklisted_edges) | {(v, u) for u, v in blacklisted_edges}
+            all_effects = self._test_all(dag=dag, ci_test=ci_test, data=X, blacklisted=bl_set_iter)
+            if all_effects.empty: break
 
-        while True:
-            # Step 1: Compute effects and p-values between every combination of variables
-            all_effects = self._test_all(dag=dag, ci_test=ci_test, data=X)
-
-            # Edge case: if only 1 feature, no combinations exist
-            if all_effects.empty:
-                break
-
-            # Step 2: Remove any edges between variables that are not sufficiently associated
             edge_effects = all_effects[all_effects.edge_present]
-            edge_effects = edge_effects[
-                (edge_effects.effect < self.effect_size_threshold) & (edge_effects.p_val > self.pval_threshold)
-            ]
-            remove_edges = list(edge_effects.loc[:, ("u", "v")].to_records(index=False))
+            edge_effects = edge_effects[(edge_effects.effect < self.effect_size_threshold) & (edge_effects.p_val > self.pval_threshold)]
+            remove_edges = [tuple(x) for x in edge_effects[["u", "v"]].values]
 
-            # I am adding this because we must protect required edges from being arbitrarily removed by Step 2
-            # original code that I felt was buggy/useless (commented out per request):
-            # remove_edges = list(edge_effects.loc[:, ("u", "v")].to_records(index=False))
-            # for edge in remove_edges:
-            #     dag.remove_edge(edge[0], edge[1])
-
-            if (
-                self.expert_knowledge
-                and hasattr(self.expert_knowledge, "required_edges")
-                and self.expert_knowledge.required_edges
-            ):
-                req_set = set(self.expert_knowledge.required_edges)
-                req_set.update([(v, u) for u, v in self.expert_knowledge.required_edges])
+            if self.expert_knowledge_ and self.expert_knowledge_.required_edges:
+                req_set = set(self.expert_knowledge_.required_edges)
+                req_set.update([(v, u) for u, v in self.expert_knowledge_.required_edges])
                 remove_edges = [edge for edge in remove_edges if edge not in req_set]
 
-            for edge in remove_edges:
-                dag.remove_edge(edge[0], edge[1])
+            for edge in remove_edges: dag.remove_edge(edge[0], edge[1])
 
-            # Step 3: Add edge between variables which have significant association
-            # Step 3.1: Find edges that are not present in the DAG but have significant association
-            nonedge_effects = all_effects[all_effects.edge_present == False]
-            nonedge_effects = nonedge_effects[
-                (nonedge_effects.effect >= self.effect_size_threshold) & (nonedge_effects.p_val <= self.pval_threshold)
-            ]
-
-            # Step 3.2: Remove any pair of variables that are blacklisted
-            # I am adding this because the naive isin() & isin() creates Cartesian product
-            # false positives which breaks valid edges
-            # original code that I felt was buggy/useless (commented out per request):
-            # if len(blacklisted_edges) > 0:
-            #     blacklisted_edges_us = [edge[0] for edge in blacklisted_edges]
-            #     blacklisted_edges_vs = [edge[1] for edge in blacklisted_edges]
-            #     nonedge_effects = nonedge_effects.loc[
-            #         ~(
-            #             (nonedge_effects.u.isin(blacklisted_edges_us) &
-            #              nonedge_effects.v.isin(blacklisted_edges_vs))
-            #             | (nonedge_effects.u.isin(blacklisted_edges_vs) &
-            #                nonedge_effects.v.isin(blacklisted_edges_us))
-            #         ),
-            #         :,
-            #     ]
+            nonedge_effects = all_effects[~all_effects.edge_present]
+            nonedge_effects = nonedge_effects[(nonedge_effects.effect >= self.effect_size_threshold) & (nonedge_effects.p_val <= self.pval_threshold)]
 
             if len(blacklisted_edges) > 0 and not nonedge_effects.empty:
-                bl_set = set(blacklisted_edges) | {(v, u) for u, v in blacklisted_edges}
-                mask = nonedge_effects.apply(lambda row: (row["u"], row["v"]) in bl_set, axis=1)
+                # Vectorized blacklist filtering using MultiIndex membership
+                idx = pd.MultiIndex.from_frame(nonedge_effects[["u", "v"]])
+                mask = idx.isin(bl_set_iter)
                 nonedge_effects = nonedge_effects[~mask]
 
-            # Step 3.3: Exit loop if all correlations in data are explained by the model
-            if (edge_effects.shape[0] == 0) and (nonedge_effects.shape[0] == 0):
-                break
-
-            # If there are only removals and no candidate additions, continue
-            # to the next iteration after having applied removals.
-            # I am adding this because if all edges are blacklisted, argmax will
-            # throw an IndexError on an empty dataframe
             if nonedge_effects.empty:
-                if len(remove_edges) == 0:
-                    break
-                continue
+                if edge_effects.empty: break
+                else: continue
 
-            # Step 3.4: Find the pair of variables with the highest effect size
             selected_edge = nonedge_effects.iloc[nonedge_effects.effect.argmax()]
-
-            # Step 3.5: Find the edge orientation for the selected pair of variables
             edge_direction = self._get_edge_orientation(selected_edge.u, selected_edge.v)
 
-            # Step 3.6: Handle the edge direction
             if edge_direction is None:
-                logger.info(
-                    f"Orientation function returned None for edge {selected_edge.u} - {selected_edge.v}. "
-                    "Skipping this edge."
-                )
                 blacklisted_edges.append((selected_edge.u, selected_edge.v))
             elif nx.has_path(dag, edge_direction[1], edge_direction[0]):
-                edges_to_remove = self._break_cycle(
-                    dag,
-                    edge_direction[0],
-                    edge_direction[1],
-                    ci_test=ci_test,
-                    data=X,
-                    effect_size_threshold=self.effect_size_threshold,
-                    pval_threshold=self.pval_threshold,
-                )
-
-                if len(edges_to_remove) == 0:
-                    logger.info("Could not find a weak edge to break cycle. Rejecting the new edge.")
-                    blacklisted_edges.append((edge_direction[0], edge_direction[1]))
-                elif any(tuple(e) == tuple(edge_direction) for e in edges_to_remove):
-                    logger.info(
-                        f"Cycle-breaking subroutine suggested removing the new edge {edge_direction}. Rejecting it."
-                    )
+                edges_to_remove = self._break_cycle(dag, edge_direction[0], edge_direction[1], ci_test, X, self.effect_size_threshold, self.pval_threshold)
+                if not edges_to_remove: 
+                    blacklisted_edges.append(edge_direction)
+                elif [tuple(e) == tuple(edge_direction) for e in edges_to_remove].count(True) > 0:
+                    if self.show_progress or config.SHOW_PROGRESS:
+                        logger.info(f"Cycle-breaking subroutine suggested removing the new edge {edge_direction}. Rejecting it.")
                     blacklisted_edges.append(edge_direction)
                 else:
                     blacklisted_edges.extend(edges_to_remove)
                     dag.remove_edges_from(edges_to_remove)
-                    dag.add_edges_from([(edge_direction[0], edge_direction[1])])
+                    dag.add_edges_from([edge_direction])
             else:
                 dag.add_edges_from([edge_direction])
 
-        # Set the fitted attributes
         self.causal_graph_ = dag
         self.adjacency_matrix_ = pd.DataFrame(
-            nx.adjacency_matrix(dag, nodelist=self.variables_, weight=None).todense(),
+            nx.to_numpy_array(dag, nodelist=self.variables_, dtype=int, weight=None),
             index=self.variables_,
             columns=self.variables_,
         )
-
+        self.n_features_in_ = len(self.variables_)
+        self.feature_names_in_ = np.array(self.variables_)
         return self

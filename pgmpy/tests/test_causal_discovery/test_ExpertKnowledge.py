@@ -54,3 +54,30 @@ class TestExpertKnowledge:
         ek = ExpertKnowledge()
         with pytest.raises(TypeError, match="edge_list must be a list, tuple, or set"):
             ek._validate_edges("invalid")
+
+    def test_validate_edges_rejects_bad_formats(self):
+        with pytest.raises(TypeError):
+            ExpertKnowledge(forbidden_edges="A->B")
+        with pytest.raises(ValueError):
+            ExpertKnowledge(forbidden_edges=[("A", "B", "C")])
+        # Accepts list/tuple, coerces to set of tuples
+        ek = ExpertKnowledge(required_edges=[["A", "B"], ("C", "D")])
+        assert ("A", "B") in ek.required_edges and ("C", "D") in ek.required_edges
+
+    def test_temporal_ordering_duplicate_raises(self):
+        with pytest.raises(ValueError, match="present in multiple tiers"):
+            ExpertKnowledge(temporal_order=[["A"], ["A"]])._get_temporal_ordering([["A"], ["A"]])
+
+    def test_validate_temporal_order_missing_nodes_raises(self):
+        ek = ExpertKnowledge(temporal_order=[["A"], ["B"]])
+        with pytest.raises(ValueError, match="Missing nodes in temporal order"):
+            ek._validate_temporal_order(nodes=["A", "B", "C"])
+
+    def test_limit_search_space_adds_forbidden(self):
+        labels = {"A", "B", "C"}
+        # search_space allows only A->B
+        ek = ExpertKnowledge(search_space=[("A", "B")])
+        ek.limit_search_space(labels)
+        # Then all other directed pairs become forbidden
+        expected_forbidden = {("A", "C"), ("B", "A"), ("B", "C"), ("C", "A"), ("C", "B")}
+        assert expected_forbidden.issubset(ek.forbidden_edges)

@@ -48,8 +48,6 @@ def test_expertinloop_compatibility(estimator, check):
 
 
 # --- Fixtures ---
-
-
 @pytest.fixture
 def adult_data():
     """Load and preprocess the adult dataset."""
@@ -95,7 +93,6 @@ def adult_data():
 
 @pytest.fixture
 def adult_data_small(adult_data):
-    """Subset of adult data for faster tests (equivalent to self.estimator_small.data in legacy)."""
     return adult_data[["Age", "Education", "Race", "Sex", "Income"]]
 
 
@@ -163,9 +160,6 @@ def true_dag_edges():
     ]
 
 
-# --- Tests ---
-
-
 @pytest.mark.skipif(
     not _check_soft_dependencies("xgboost", severity="none"),
     reason="execute only if required dependency present",
@@ -224,7 +218,7 @@ def test_estimate_with_orientations(adult_data_small, orientations_small):
 )
 def test_estimate_with_cache(adult_data_small, orientations_small):
     """Test estimation with cached orientations."""
-    # Create estimator and set the orientation cache
+    # Created estimator and set the orientation cache
     estimator = ExpertInLoop(
         orientation_fn=simple_orient,
         use_cache=True,
@@ -250,7 +244,7 @@ def test_estimate_with_custom_orient_fn(adult_data_small):
     """Test estimation with custom orientation function."""
 
     def custom_orient(var1, var2, **kwargs):
-        # Always orient edges from alphabetically first to second
+        #orient edges from alphabetically first to second
         if var1 < var2:
             return (var1, var2)
         else:
@@ -652,11 +646,6 @@ class TestBreakCycle:
 
 
 def test_no_orientation_fn_raises():
-    """ValueError is raised during fitting when no orientation function is configured.
-
-    Covers ExpertInLoop._get_edge_orientation lines 319-323: the ``orient_fn is None``
-    branch that now raises instead of silently returning None.
-    """
     np.random.seed(0)
     # Strongly correlated data so at least one candidate edge is found
     x = np.arange(50, dtype=float)
@@ -673,10 +662,6 @@ def test_no_orientation_fn_raises():
 
 
 def test_orientation_fn_returns_none_blacklists_edge():
-    """When orientation_fn returns None the candidate edge is blacklisted, not added.
-
-    Covers ExpertInLoop._fit lines 456-461: the ``edge_direction is None`` branch.
-    """
     np.random.seed(0)
     x = np.arange(50, dtype=float)
     data = pd.DataFrame({"A": x, "B": x + 1.0})
@@ -699,10 +684,6 @@ def test_orientation_fn_returns_none_blacklists_edge():
 
 def test_cycle_rejected_when_no_removable_edge():
     """New edge is blacklisted when _break_cycle finds no weak edge to remove.
-
-    Covers ExpertInLoop._fit lines 478-480: the ``len(edges_to_remove) == 0`` branch.
-    Uses a cyclic orientation function + StrongCI (all edges look strong so
-    _break_cycle returns []) to trigger the rejection path naturally.
     """
     np.random.seed(0)
     n = 30
@@ -738,8 +719,6 @@ def test_cycle_rejected_when_no_removable_edge():
 
 def test_show_progress_logs_orientation(caplog):
     """logger.info is called when show_progress=True and an edge is oriented.
-
-    Covers ExpertInLoop._get_edge_orientation lines 327-330.
     """
     np.random.seed(0)
     x = np.arange(50, dtype=float)
@@ -763,50 +742,31 @@ def test_show_progress_logs_orientation(caplog):
 
 
 def test_get_edge_orientation_expert_knowledge_orientations():
-    """ExpertKnowledge orientations are correctly used in _get_edge_orientation.
-    Covers ExpertInLoop.py line 280, 284-287.
-    """
     ek = ExpertKnowledge(orientations=[("A", "B")])
     estimator = ExpertInLoop(expert_knowledge=ek)
-    # Forward hit (line 285)
     assert estimator._get_edge_orientation("A", "B") == ("A", "B")
-    # Reversed hit (line 287)
     assert estimator._get_edge_orientation("B", "A") == ("A", "B")
 
 
 def test_get_edge_orientation_temporal_ordering_both_directions():
-    """temporal_ordering covers both u < v and v < u directions.
-    Covers ExpertInLoop.py lines 290-300.
-    """
     ek = ExpertKnowledge(temporal_order=[["A"], ["B"]])
     estimator = ExpertInLoop(expert_knowledge=ek)
-    # Forward: A < B (line 298)
     assert estimator._get_edge_orientation("A", "B") == ("A", "B")
-    # Reversed: B > A (line 300)
     assert estimator._get_edge_orientation("B", "A") == ("A", "B")
 
 
 def test_get_edge_orientation_expert_knowledge_fn():
-    """ExpertKnowledge orientation_fn is correctly used in _get_edge_orientation.
-    Covers ExpertInLoop.py line 315.
-    """
-
     def ek_orient(u, v, **kwargs):
         return (v, u)
 
     ek = ExpertKnowledge(orientation_fn=ek_orient)
     estimator = ExpertInLoop(expert_knowledge=ek)
-    # Orientation from ExpertKnowledge.orientation_fn should be prioritized
     assert estimator._get_edge_orientation("A", "B") == ("B", "A")
 
 
 def test_fit_nonedge_empty_breaks():
-    """_fit breaks when nonedge_effects is empty and no removals occurred.
-    Covers ExpertInLoop.py lines 445-446.
-    """
     n = 20
     data = pd.DataFrame({"A": np.random.normal(size=n)})
-    # ExpertInLoop on single variable will have no candidate edges
     estimator = ExpertInLoop(orientation_fn=simple_orient)
     estimator.fit(data)
     assert estimator.causal_graph_.number_of_nodes() == 1
@@ -814,18 +774,11 @@ def test_fit_nonedge_empty_breaks():
 
 
 def test_fit_cycle_broken_successfully():
-    """A cycle that is identified is broken by removing a weak edge.
-    Covers ExpertInLoop.py lines 482-484.
-    """
     np.random.seed(0)
     data = pd.DataFrame({"A": [1, 2, 3, 4, 5], "B": [1, 2, 3, 4, 5], "C": [1, 2, 3, 4, 5]})
     estimator = ExpertInLoop(effect_size_threshold=0.0, pval_threshold=1.0)
 
-    # We must ensure variables_ is set before fit is called if we are mocking parts of fit,
-    # but estimator.fit(data) will set it.
-
     def det_orient(u, v):
-        # Always return a fixed orientation regardless of call order to force A->B, B->C, C->A
         edges = {
             ("A", "B"): ("A", "B"),
             ("B", "A"): ("A", "B"),
@@ -837,12 +790,200 @@ def test_fit_cycle_broken_successfully():
         return edges.get((u, v))
 
     with patch.object(estimator, "_get_edge_orientation", side_effect=det_orient):
-        # Mock _break_cycle on the instance to return A->B
         with patch.object(ExpertInLoop, "_break_cycle", return_value=[("A", "B")]):
             estimator.fit(data)
 
-    # Final graph should have B->C and C->A, but NOT A->B.
     assert ("A", "B") not in estimator.causal_graph_.edges()
     assert ("B", "C") in estimator.causal_graph_.edges()
     assert ("C", "A") in estimator.causal_graph_.edges()
     assert nx.is_directed_acyclic_graph(estimator.causal_graph_)
+
+
+def test_required_edges_not_removed_even_if_weak():
+    np.random.seed(42)
+    n = 100
+    data = pd.DataFrame({"A": np.random.normal(size=n), "B": np.random.normal(size=n)})
+
+    ek = ExpertKnowledge(required_edges=[("A", "B")])
+    estimator = ExpertInLoop(
+        expert_knowledge=ek, effect_size_threshold=0.8, pval_threshold=0.0, show_progress=False
+    )
+    estimator.fit(data)
+
+    assert ("A", "B") in estimator.causal_graph_.edges()
+
+
+def test_use_cache_false_ignores_and_does_not_populate_cache():
+
+    call_count = {"n": 0}
+
+    def count_orient(u, v):
+        call_count["n"] += 1
+        return (u, v)
+
+    ek = ExpertKnowledge(orientation_fn=count_orient)
+    estimator = ExpertInLoop(expert_knowledge=ek, use_cache=False)
+
+    # Pre-populate cache with something that would normally be returned
+    estimator.orientation_cache_ = {("X", "Y")}
+
+    # 1. Call for something IN cache - should still call orientation_fn
+    res1 = estimator._get_edge_orientation("X", "Y")
+    assert res1 == ("X", "Y")
+    assert call_count["n"] == 1
+
+    # 2. Call for something NOT in cache - should call orientation_fn and NOT add to cache
+    res2 = estimator._get_edge_orientation("A", "B")
+    assert res2 == ("A", "B")
+    assert call_count["n"] == 2
+    assert ("A", "B") not in estimator.orientation_cache_
+
+def test_orientation_from_expertknowledge_orientations_with_temporal_override():
+    ek = ExpertKnowledge(orientations=[("B", "A")], temporal_order=[["A"], ["B"]])
+    est = ExpertInLoop(expert_knowledge=ek)
+    # Explicit says B->A, temporal says A before B, so override to A->B
+    assert est._get_edge_orientation("A", "B") == ("A", "B")
+    assert est._get_edge_orientation("B", "A") == ("A", "B")
+
+
+def test_orientation_from_ctor_orientations_with_temporal_override():
+    ek = ExpertKnowledge(temporal_order=[["X"], ["Y"]])
+    est = ExpertInLoop(expert_knowledge=ek, orientations={("Y", "X")})
+    assert est._get_edge_orientation("X", "Y") == ("X", "Y")
+
+
+def test_orientation_fn_llm_requires_descriptions():
+    # Local import to avoid altering top-level imports
+    from pgmpy.utils import llm_pairwise_orient
+
+    ek = ExpertKnowledge(temporal_order=[["A"], ["B"]])
+    est = ExpertInLoop(expert_knowledge=ek, orientation_fn=llm_pairwise_orient)
+    with pytest.raises(ValueError, match="LLM orientation requires variable descriptions"):
+        est._get_edge_orientation("A", "B")
+
+
+def test_orientation_fn_with_cache_and_use_cache_true():
+    calls = {"n": 0}
+
+    def count_orient(u, v):
+        calls["n"] += 1
+        return (u, v)
+
+    ek = ExpertKnowledge(orientation_fn=count_orient)
+    est = ExpertInLoop(expert_knowledge=ek, use_cache=True)
+    r1 = est._get_edge_orientation("A", "B")
+    r2 = est._get_edge_orientation("A", "B")
+    assert r1 == ("A", "B") and r2 == ("A", "B")
+    # first call hits fn, second should be served from cache
+    assert calls["n"] == 1
+
+
+def test_temporal_fallback_when_no_other_orientation_available():
+    ek = ExpertKnowledge(temporal_order=[["A"], ["B"]])
+    est = ExpertInLoop(expert_knowledge=ek)  # no fn, no orientations
+    assert est._get_edge_orientation("A", "B") == ("A", "B")
+    assert est._get_edge_orientation("B", "A") == ("A", "B")
+
+
+def test_required_edges_protection_and_blacklist_skip_in_fit():
+    np.random.seed(0)
+    n = 200
+    # Make A->B correlated, C independent
+    A = np.random.randn(n)
+    B = A + 0.05 * np.random.randn(n)
+    C = np.random.randn(n)
+    data = pd.DataFrame({"A": A, "B": B, "C": C})
+
+    # Required A->B must persist; forbid B->C to test blacklist skip
+    ek = ExpertKnowledge(required_edges=[("A", "B")], forbidden_edges=[("B", "C")])
+
+    def orient(u, v):
+        return (u, v)
+
+    estimator = ExpertInLoop(
+        expert_knowledge=ek,
+        orientation_fn=orient,
+        effect_size_threshold=0.0,
+        pval_threshold=1.0,
+        show_progress=False,
+        max_iter=10,
+    )
+    estimator.fit(data)
+
+    # Required edge must remain
+    assert ("A", "B") in estimator.causal_graph_.edges()
+    # Forbidden should not appear in either direction
+    assert ("B", "C") not in estimator.causal_graph_.edges()
+    assert ("C", "B") not in estimator.causal_graph_.edges()
+
+    # adjacency_matrix_ shape and dtype sanity (via to_numpy_array)
+    assert estimator.adjacency_matrix_.shape == (3, 3)
+    assert estimator.adjacency_matrix_.values.dtype.kind in ("i", "b")
+
+
+def test_blacklist_filter_no_false_positive_edges():
+    """Blacklisted pairs should be matched by exact tuples only, not per-endpoint membership."""
+    import numpy as np
+    import pandas as pd
+    from pgmpy.causal_discovery.ExpertInLoop import ExpertInLoop
+    from pgmpy.estimators import ExpertKnowledge
+
+    np.random.seed(0)
+    n = 200
+    # Construct data with correlation only between A and D
+    A = np.random.randn(n)
+    D = A + 0.05 * np.random.randn(n)
+    B = np.random.randn(n)
+    C = np.random.randn(n)
+    data = pd.DataFrame({"A": A, "B": B, "C": C, "D": D})
+
+    # Blacklist (A,B) and (C,D) only
+    ek = ExpertKnowledge(forbidden_edges=[("A", "B"), ("C", "D")])
+
+    def orient(u, v):
+        return (u, v)
+
+    est = ExpertInLoop(
+        expert_knowledge=ek,
+        orientation_fn=orient,
+        effect_size_threshold=0.0,
+        pval_threshold=1.0,
+        show_progress=False,
+        max_iter=10,
+    )
+    est.fit(data)
+    # Edge A->D should be learnable and present (not blocked by blacklist of (A,B) or (C,D))
+    assert ("A", "D") in est.causal_graph_.edges() or ("D", "A") in est.causal_graph_.edges()
+
+
+def test_handles_empty_nonedge_effects_safely():
+    """When all significant non-edges are blacklisted, selection should not crash."""
+    import numpy as np
+    import pandas as pd
+    from pgmpy.causal_discovery.ExpertInLoop import ExpertInLoop
+    from pgmpy.estimators import ExpertKnowledge
+
+    np.random.seed(0)
+    n = 100
+    A = np.random.randn(n)
+    B = A + 0.01 * np.random.randn(n)
+    data = pd.DataFrame({"A": A, "B": B})
+
+    # Blacklist both directions for the only correlated pair
+    ek = ExpertKnowledge(forbidden_edges=[("A", "B"), ("B", "A")])
+
+    def orient(u, v):
+        return (u, v)
+
+    est = ExpertInLoop(
+        expert_knowledge=ek,
+        orientation_fn=orient,
+        effect_size_threshold=0.0,
+        pval_threshold=1.0,
+        show_progress=False,
+        max_iter=5,
+    )
+    # Should not raise; graph may end up with 0 edges due to blacklist
+    est.fit(data)
+    assert ("A", "B") not in est.causal_graph_.edges()
+    assert ("B", "A") not in est.causal_graph_.edges()
