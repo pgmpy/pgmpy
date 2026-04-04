@@ -47,12 +47,28 @@ class FisherC(_BaseUnsupervisedMetric):
 
     Examples
     --------
-    >>> from pgmpy.example_models import load_model
-    >>> model = load_model("bnlearn/cancer")
-    >>> df = model.simulate(int(1e3))
-    >>> fisher_c = FisherC(ci_test="chi_square", compute_rmsea=False)
+    >>> import numpy as np
+    >>> from pgmpy.factors.discrete import TabularCPD
+    >>> from pgmpy.global_vars import config
+    >>> from pgmpy.metrics import FisherC
+    >>> from pgmpy.models import DiscreteBayesianNetwork
+    >>> config.SHOW_PROGRESS = False
+    >>> model = DiscreteBayesianNetwork([("A", "B"), ("B", "C")])
+    >>> model.add_cpds(
+    ...     TabularCPD("A", 2, [[0.5], [0.5]]),
+    ...     TabularCPD(
+    ...         "B", 2, [[0.8, 0.2], [0.2, 0.8]], evidence=["A"], evidence_card=[2]
+    ...     ),
+    ...     TabularCPD(
+    ...         "C", 2, [[0.9, 0.1], [0.1, 0.9]], evidence=["B"], evidence_card=[2]
+    ...     ),
+    ... )
+    >>> model.check_model()
+    True
+    >>> df = model.simulate(int(2000), seed=42)
+    >>> fisher_c = FisherC(ci_test="chi_square", compute_rmsea=False, show_progress=False)
     >>> fisher_c(X=df, causal_graph=model)
-    0.7504
+    np.float64(0.9628013964088273)
     """
 
     _tags = {

@@ -35,19 +35,28 @@ class ImpliedCIs(_BaseUnsupervisedMetric):
 
     Examples
     --------
-    >>> from pgmpy.example_models import load_model
+    >>> from pgmpy.factors.discrete import TabularCPD
+    >>> from pgmpy.global_vars import config
     >>> from pgmpy.metrics import ImpliedCIs
-    >>> model = load_model("bnlearn/cancer")
-    >>> df = model.simulate(int(1e3))
+    >>> from pgmpy.models import DiscreteBayesianNetwork
+    >>> config.SHOW_PROGRESS = False
+    >>> model = DiscreteBayesianNetwork([("A", "B"), ("B", "C")])
+    >>> model.add_cpds(
+    ...     TabularCPD("A", 2, [[0.5], [0.5]]),
+    ...     TabularCPD(
+    ...         "B", 2, [[0.8, 0.2], [0.2, 0.8]], evidence=["A"], evidence_card=[2]
+    ...     ),
+    ...     TabularCPD(
+    ...         "C", 2, [[0.9, 0.1], [0.1, 0.9]], evidence=["B"], evidence_card=[2]
+    ...     ),
+    ... )
+    >>> model.check_model()
+    True
+    >>> df = model.simulate(int(2000), seed=42)
     >>> implied_cis = ImpliedCIs(ci_test="chi_square", show_progress=False)
     >>> implied_cis.evaluate(X=df, causal_graph=model)
-           u         v cond_vars   p-value
-    0  Pollution    Smoker        []  0.189851
-    1  Pollution      Xray  [Cancer]  0.404149
-    2  Pollution  Dyspnoea  [Cancer]  0.613370
-    3     Smoker      Xray  [Cancer]  0.352665
-    4     Smoker  Dyspnoea  [Cancer]  1.000000
-    5       Xray  Dyspnoea  [Cancer]  0.888619
+       u  v cond_vars   p-value
+    0  A  C       [B]  0.962801
     """
 
     _tags = {
