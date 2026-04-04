@@ -282,6 +282,18 @@ class TestMarkovChain(unittest.TestCase):
         expected_samples = [[State("a", 1), State("b", 0)]] * 2
         self.assertEqual(samples, expected_samples)
 
+    def test_generate_sample_seed(self):
+        model = MC(["a"], [2])
+        model.transition_models["a"] = {0: {0: 0.5, 1: 0.5}, 1: {0: 0.5, 1: 0.5}}
+        model.set_start_state([State("a", 0)])
+
+        gen = model.generate_sample(size=20, seed=42)
+        samples = [sample[0].state for sample in gen]
+
+        # Test that the sequence features state transitions (i.e., not a single repeated state)
+        # which would occur if the random seed was incorrectly reset on every loop iteration
+        self.assertTrue(len(set(samples)) > 1)
+
     def test_random_state(self):
         model = MC(["a", "b"], [2, 3])
         state = model.random_state()
