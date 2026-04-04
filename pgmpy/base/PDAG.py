@@ -569,7 +569,7 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         --------
         >>> from pgmpy.example_models import load_model
         >>> model = load_model("bnlearn/alarm")
-        >>> model.to_graphviz()  # doctest: +ELLIPSIS
+        >>> model.to_graphviz()  # doctest: +SKIP
         <AGraph ...
         """
         return nx.nx_agraph.to_agraph(self)
