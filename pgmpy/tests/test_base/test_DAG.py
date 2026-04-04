@@ -302,6 +302,15 @@ class TestDAGCreation(unittest.TestCase):
         dag_lat5 = DAG([("A", "B"), ("B", "C"), ("A", "D"), ("D", "E"), ("E", "C")], latents={"E"})
         self.assertEqual(dag_lat5.minimal_dseparator(start="A", end="C"), {"B", "D"})
 
+    def test_copy(self):
+        model = load_model("dagitty/m_bias")
+        model_copy = model.copy()
+
+        self.assertFalse(id(model) == id(model_copy))
+        self.assertEqual(sorted(model.nodes()), sorted(model_copy.nodes()))
+        self.assertEqual(sorted(model.edges()), sorted(model_copy.edges()))
+        self.assertEqual(sorted(model.get_role_dict()), sorted(model_copy.get_role_dict()))
+
     @unittest.skipUnless(
         _check_soft_dependencies("daft-pgm", severity="none"),
         reason="execute only if required dependency present",

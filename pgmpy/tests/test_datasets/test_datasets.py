@@ -1,3 +1,5 @@
+import random
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -116,6 +118,16 @@ def test_load_tubingen_dataset():
         assert list(dataset.data.columns) == ["x", "y"]
 
         assert isinstance(dataset.ground_truth, DAG)
+
+
+def test_tubingen_missing_data_tag():
+    for i in random.sample(range(1, 109), 5):
+        dataset = load_dataset(f"tubingen/{i}")
+        actual_missing = dataset.data.isnull().any().any()
+        assert dataset.tags["has_missing_data"] == actual_missing, (
+            f"tubingen/{i}: has_missing_data tag is {dataset.tags['has_missing_data']} "
+            f"but actual NaN presence is {actual_missing}"
+        )
 
 
 def test_tubingen_invalid_format():
