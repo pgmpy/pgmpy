@@ -149,7 +149,7 @@ def stage_docs_sources(docs_root: str | Path, environ: dict[str, str] | None = N
     examples_path = _resolved_source_path(env.get(EXAMPLES_PATH_ENV_VAR, docs_path.parent / "examples"))
     ignore_patterns = shutil.ignore_patterns(".ipynb_checkpoints", "__pycache__")
 
-    _replace_tree(tutorials_path / "detailed_notebooks", docs_path / "detailed_notebooks", ignore=ignore_patterns)
+    _replace_tree(tutorials_path, docs_path / "detailed_notebooks", ignore=ignore_patterns)
     for asset_dir in ("csv", "files", "images"):
         _replace_tree(tutorials_assets_root / asset_dir, docs_path / asset_dir, ignore=ignore_patterns)
 
