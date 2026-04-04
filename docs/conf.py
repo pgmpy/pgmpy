@@ -114,10 +114,10 @@ html_theme_options = {
     "show_nav_level": 1,
     "show_toc_level": 2,
     "secondary_sidebar_items": {
-        "**": ["page-toc", "sidebar-ethical-ads"],
+        "**": ["page-toc"],
         "index": [],
     },
-    "primary_sidebar_end": [],
+    "primary_sidebar_end": ["pgmpy-ethical-ads"],
     "footer_start": ["copyright"],
     "footer_center": [],
     "footer_end": [],

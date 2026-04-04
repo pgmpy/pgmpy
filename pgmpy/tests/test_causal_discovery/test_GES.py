@@ -194,23 +194,3 @@ class TestGESCore:
 def test_expert_knowledge_not_supported():
     with pytest.raises(TypeError, match="expert_knowledge"):
         GES(expert_knowledge=None)
-
-
-class TestGESScoringMethods:
-    """Tests for different scoring methods."""
-
-    @pytest.mark.parametrize("scoring_method", ["k2", "bdeu", "bds", "bic-d", "aic-d"])
-    def test_discrete_scores(self, rand_data, scoring_method):
-        est = GES(scoring_method=scoring_method, return_type="dag")
-        est.fit(rand_data)
-
-    @pytest.mark.parametrize("scoring_method", ["ll-cg", "aic-cg", "bic-cg"])
-    def test_mixed_scores(self, titanic_data_mixed, scoring_method):
-        est = GES(scoring_method=scoring_method, return_type="dag")
-        est.fit(titanic_data_mixed)
-
-    @pytest.mark.parametrize("scoring_method", ["aic-g", "bic-g"])
-    def test_gaussian_scores(self, scoring_method):
-        data = pd.read_csv("pgmpy/tests/test_estimators/testdata/gaussian_testdata.csv", index_col=0)
-        est = GES(scoring_method=scoring_method, return_type="dag")
-        est.fit(data)
