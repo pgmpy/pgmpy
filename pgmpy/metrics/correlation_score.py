@@ -55,26 +55,40 @@ class CorrelationScore(_BaseUnsupervisedMetric):
 
     Examples
     --------
-    >>> from pgmpy.example_models import load_model
+    >>> from pgmpy.factors.discrete import TabularCPD
+    >>> from pgmpy.global_vars import config
     >>> from pgmpy.metrics import CorrelationScore
-    >>> alarm = load_model("bnlearn/alarm")
-    >>> data = alarm.simulate(int(1e4))
+    >>> from pgmpy.models import DiscreteBayesianNetwork
+    >>> config.SHOW_PROGRESS = False
+    >>> model = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
+    >>> model.add_cpds(
+    ...     TabularCPD("A", 2, [[0.5], [0.5]]),
+    ...     TabularCPD("B", 2, [[0.5], [0.5]]),
+    ...     TabularCPD(
+    ...         "C",
+    ...         2,
+    ...         [[0.9, 0.1, 0.1, 0.5], [0.1, 0.9, 0.9, 0.5]],
+    ...         evidence=["A", "B"],
+    ...         evidence_card=[2, 2],
+    ...     ),
+    ... )
+    >>> model.check_model()
+    True
+    >>> data = model.simulate(int(5000), seed=42)
     >>> scorer = CorrelationScore(
     ...     ci_test="chi_square", significance_level=0.05, return_summary=False
     ... )
-    >>> scorer(X=data, causal_graph=alarm)
-    0.911957950065703
+    >>> scorer(X=data, causal_graph=model)
+    1.0
 
     >>> scorer = CorrelationScore(
     ...     ci_test="chi_square", significance_level=0.05, return_summary=True
     ... )
-    >>> scorer(X=data, causal_graph=alarm).head()
-        var1            var2  stat_test  d_connected
-    0   HISTORY          CVP      False        False
-    1   HISTORY         PCWP      False        False
-    2   HISTORY  HYPOVOLEMIA       True         True
-    3   HISTORY   LVEDVOLUME      False        False
-    4   HISTORY    LVFAILURE      False        False
+    >>> scorer(X=data, causal_graph=model).head()
+      var1 var2  stat_test  d_connected
+    0    A    C      False        False
+    1    A    B       True         True
+    2    C    B      False        False
     """
 
     _tags = {
