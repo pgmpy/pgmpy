@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from joblib.externals.loky import get_reusable_executor
+from sklearn.metrics import mutual_info_score
 
 from pgmpy.estimators import TreeSearch
 from pgmpy.example_models import load_model
@@ -314,6 +315,34 @@ def test_tan_real_dataset(alarm_df):
     est = TreeSearch(alarm_df[features + [target]], root_node=features[0])
     edges = est.estimate(estimator_type="tan", class_node=target, show_progress=False).edges()
     assert set(expected_edges) == set(edges)
+
+
+def test_get_weights_uses_array_inputs_for_custom_callable(data12):
+    def array_only_edge_weights(x, y):
+        assert isinstance(x, np.ndarray)
+        assert isinstance(y, np.ndarray)
+        return mutual_info_score(x, y)
+
+    weights = TreeSearch._get_weights(data12, edge_weights_fn=array_only_edge_weights, n_jobs=1, show_progress=False)
+
+    assert weights.shape == (len(data12.columns), len(data12.columns))
+
+
+def test_get_conditional_weights_uses_array_inputs_for_custom_callable(data22):
+    def array_only_edge_weights(x, y):
+        assert isinstance(x, np.ndarray)
+        assert isinstance(y, np.ndarray)
+        return mutual_info_score(x, y)
+
+    weights = TreeSearch._get_conditional_weights(
+        data22,
+        class_node="A",
+        edge_weights_fn=array_only_edge_weights,
+        n_jobs=1,
+        show_progress=False,
+    )
+
+    assert weights.shape == (len(data22.columns), len(data22.columns))
 
 
 @pytest.fixture(autouse=True)

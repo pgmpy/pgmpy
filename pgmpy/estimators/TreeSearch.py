@@ -231,11 +231,12 @@ class TreeSearch(StructureEstimator):
 
         # Step 1: Compute edge weights for a fully connected graph.
         n_vars = len(data.columns)
-        pbar = combinations(data.columns, 2)
+        data_array = data.to_numpy(copy=False).T
+        pbar = combinations(range(n_vars), 2)
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(pbar, total=(n_vars * (n_vars - 1) / 2), desc="Building tree")
 
-        vals = Parallel(n_jobs=n_jobs)(delayed(edge_weights_fn)(data.loc[:, u], data.loc[:, v]) for u, v in pbar)
+        vals = Parallel(n_jobs=n_jobs)(delayed(edge_weights_fn)(data_array[u], data_array[v]) for u, v in pbar)
         weights = np.zeros((n_vars, n_vars))
         indices = np.triu_indices(n_vars, k=1)
         weights[indices] = vals
@@ -304,7 +305,15 @@ class TreeSearch(StructureEstimator):
 
         # Step 1: Compute edge weights for a fully connected graph.
         n_vars = len(data.columns)
-        pbar = combinations(data.columns, 2)
+        data_array = data.to_numpy(copy=False)
+        class_node_idx = data.columns.get_loc(class_node)
+        class_values = data_array[:, class_node_idx]
+        unique_values, counts = np.unique(class_values, return_counts=True)
+        conditional_subsets = [
+            (count / data.shape[0], data_array[class_values == value]) for value, count in zip(unique_values, counts)
+        ]
+
+        pbar = combinations(range(n_vars), 2)
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(pbar, total=(n_vars * (n_vars - 1) / 2), desc="Building tree")
 
@@ -312,11 +321,9 @@ class TreeSearch(StructureEstimator):
             """
             Computes the conditional edge weight of variable index u and v conditioned on class_node
             """
-            cond_marginal = data.loc[:, class_node].value_counts() / data.shape[0]
             cond_edge_weight = 0
-            for index, marg_prob in cond_marginal.items():
-                df_cond_subset = data[data.loc[:, class_node] == index]
-                cond_edge_weight += marg_prob * edge_weights_fn(df_cond_subset.loc[:, u], df_cond_subset.loc[:, v])
+            for marg_prob, conditional_data in conditional_subsets:
+                cond_edge_weight += marg_prob * edge_weights_fn(conditional_data[:, u], conditional_data[:, v])
             return cond_edge_weight
 
         vals = Parallel(n_jobs=n_jobs)(delayed(_conditional_edge_weights_fn)(u, v) for u, v in pbar)
