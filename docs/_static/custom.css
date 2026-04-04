@@ -121,6 +121,12 @@ body {
     line-height: 1.45;
 }
 
+.pgmpy-primary-sidebar-ad {
+    border-top: 1px solid var(--pgmpy-divider);
+    margin-top: 1rem;
+    padding-top: 1rem;
+}
+
 @media (min-width: 960px) {
     .bd-sidebar-primary {
         flex-basis: 17rem;
