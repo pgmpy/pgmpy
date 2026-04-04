@@ -23,13 +23,24 @@ class StructureScore(_BaseUnsupervisedMetric):
 
     Examples
     --------
-    >>> from pgmpy.example_models import load_model
+    >>> from pgmpy.factors.discrete import TabularCPD
+    >>> from pgmpy.global_vars import config
     >>> from pgmpy.metrics import StructureScore
-    >>> model = load_model("bnlearn/alarm")
-    >>> data = model.simulate(int(1e4), seed=42)
+    >>> from pgmpy.models import DiscreteBayesianNetwork
+    >>> config.SHOW_PROGRESS = False
+    >>> model = DiscreteBayesianNetwork([("A", "B")])
+    >>> model.add_cpds(
+    ...     TabularCPD("A", 2, [[0.6], [0.4]]),
+    ...     TabularCPD(
+    ...         "B", 2, [[0.7, 0.2], [0.3, 0.8]], evidence=["A"], evidence_card=[2]
+    ...     ),
+    ... )
+    >>> model.check_model()
+    True
+    >>> data = model.simulate(int(10000), seed=42)
     >>> scorer = StructureScore(scoring_method="bic-d")
     >>> scorer(X=data, causal_graph=model)
-    np.float64(-106325.43476616534)
+    np.float64(-12425.623548763984)
     """
 
     _tags = {
