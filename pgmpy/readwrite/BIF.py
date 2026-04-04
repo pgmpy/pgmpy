@@ -46,12 +46,14 @@ class BIFReader:
 
     Examples
     --------
-    >>> # dog-problem.bif file is present at
-    >>> # http://www.cs.cmu.edu/~javabayes/Examples/DogProblem/dog-problem.bif
     >>> from pgmpy.readwrite import BIFReader
-    >>> reader = BIFReader("bif_test.bif")
-    <pgmpy.readwrite.BIF.BIFReader object at 0x7f2375621cf8>
+    >>> bif_string = ('network unknown {}\\n'
+    ...     'variable A { type discrete [ 2 ] { a0, a1 }; }\\n'
+    ...     'probability ( A ) { table 0.4, 0.6 ; }\\n')
+    >>> reader = BIFReader(string=bif_string)
     >>> model = reader.get_model()
+    >>> sorted(model.nodes())
+    ['A']
 
     Reference
     ---------
@@ -261,9 +263,13 @@ class BIFReader:
         Example
         ----------
         >>> from pgmpy.readwrite import BIFReader
-        >>> reader = BIFReader("bif_test.bif")
-        >>> reader.get_model()
-        <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork object at 0x7f20af154320>
+        >>> bif_string = ('network unknown {}\\n'
+        ...     'variable A { type discrete [ 2 ] { a0, a1 }; }\\n'
+        ...     'probability ( A ) { table 0.4, 0.6 ; }\\n')
+        >>> reader = BIFReader(string=bif_string)
+        >>> model = reader.get_model()
+        >>> sorted(model.nodes())
+        ['A']
         """
         model = DiscreteBayesianNetwork()
         model.add_nodes_from(self.variable_names)
@@ -311,13 +317,18 @@ class BIFWriter:
 
     Examples
     ---------
-    >>> from pgmpy.readwrite import BIFWriter
-    >>> from pgmpy.example_models import load_model
-    >>> asia = load_model("bnlearn/asia")
-    >>> writer = BIFWriter(asia)
-    >>> writer
-    <writer_BIF.BIFWriter at 0x7f05e5ea27b8>
-    >>> writer.write("asia.bif")
+    >>> from pgmpy.readwrite import BIFReader, BIFWriter
+    >>> bif_string = ('network unknown {}\\n'
+    ...     'variable A { type discrete [ 2 ] { a0, a1 }; }\\n'
+    ...     'variable B { type discrete [ 2 ] { b0, b1 }; }\\n'
+    ...     'probability ( A ) { table 0.4, 0.6 ; }\\n'
+    ...     'probability ( B | A ) {\\n'
+    ...     '    (a0) 0.2, 0.8 ;\\n'
+    ...     '    (a1) 0.75, 0.25 ; }\\n')
+    >>> model = BIFReader(string=bif_string).get_model()
+    >>> writer = BIFWriter(model)
+    >>> writer                              # doctest: +ELLIPSIS
+    <pgmpy.readwrite.BIF.BIFWriter object at 0x...>
     """
 
     def __init__(self, model, round_values=None):
@@ -454,10 +465,17 @@ $values
         Example
         -------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
-        >>> model = BIFReader("dog-problem.bif").get_model()
+        >>> bif_string = ('network unknown {}\\n'
+        ...     'variable A { type discrete [ 2 ] { a0, a1 }; }\\n'
+        ...     'variable B { type discrete [ 2 ] { b0, b1 }; }\\n'
+        ...     'probability ( A ) { table 0.4, 0.6 ; }\\n'
+        ...     'probability ( B | A ) {\\n'
+        ...     '    (a0) 0.2, 0.8 ;\\n'
+        ...     '    (a1) 0.75, 0.25 ; }\\n')
+        >>> model = BIFReader(string=bif_string).get_model()
         >>> writer = BIFWriter(model)
-        >>> writer.get_variables()
-        ['bowel-problem', 'family-out', 'hear-bark', 'light-on', 'dog-out']
+        >>> sorted(writer.get_variables())
+        ['A', 'B']
         """
         variables = self.model.nodes()
         return variables
@@ -473,14 +491,17 @@ $values
         Example
         -------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
-        >>> model = BIFReader("dog-problem.bif").get_model()
+        >>> bif_string = ('network unknown {}\\n'
+        ...     'variable A { type discrete [ 2 ] { a0, a1 }; }\\n'
+        ...     'variable B { type discrete [ 2 ] { b0, b1 }; }\\n'
+        ...     'probability ( A ) { table 0.4, 0.6 ; }\\n'
+        ...     'probability ( B | A ) {\\n'
+        ...     '    (a0) 0.2, 0.8 ;\\n'
+        ...     '    (a1) 0.75, 0.25 ; }\\n')
+        >>> model = BIFReader(string=bif_string).get_model()
         >>> writer = BIFWriter(model)
         >>> writer.get_states()
-        {'bowel-problem': ['bowel-problem_0', 'bowel-problem_1'],
-         'dog-out': ['dog-out_0', 'dog-out_1'],
-         'family-out': ['family-out_0', 'family-out_1'],
-         'hear-bark': ['hear-bark_0', 'hear-bark_1'],
-         'light-on': ['light-on_0', 'light-on_1']}
+        {'A': ['a0', 'a1'], 'B': ['b0', 'b1']}
         """
         variable_states = {}
         cpds = self.model.get_cpds()
@@ -510,14 +531,17 @@ $values
         Example
         -------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
-        >>> model = BIFReader("dog-problem.bif").get_model()
+        >>> bif_string = ('network unknown {}\\n'
+        ...     'variable A { type discrete [ 2 ] { a0, a1 }; }\\n'
+        ...     'variable B { type discrete [ 2 ] { b0, b1 }; }\\n'
+        ...     'probability ( A ) { table 0.4, 0.6 ; }\\n'
+        ...     'probability ( B | A ) {\\n'
+        ...     '    (a0) 0.2, 0.8 ;\\n'
+        ...     '    (a1) 0.75, 0.25 ; }\\n')
+        >>> model = BIFReader(string=bif_string).get_model()
         >>> writer = BIFWriter(model)
         >>> writer.get_properties()
-        {'bowel-problem': ['position = (335, 99)'],
-         'dog-out': ['position = (300, 195)'],
-         'family-out': ['position = (257, 99)'],
-         'hear-bark': ['position = (296, 268)'],
-         'light-on': ['position = (218, 195)']}
+        {'A': [], 'B': []}
         """
         variables = self.model.nodes()
         property_tag = {}
@@ -537,14 +561,17 @@ $values
         Example
         -------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
-        >>> model = BIFReader("dog-problem.bif").get_model()
+        >>> bif_string = ('network unknown {}\\n'
+        ...     'variable A { type discrete [ 2 ] { a0, a1 }; }\\n'
+        ...     'variable B { type discrete [ 2 ] { b0, b1 }; }\\n'
+        ...     'probability ( A ) { table 0.4, 0.6 ; }\\n'
+        ...     'probability ( B | A ) {\\n'
+        ...     '    (a0) 0.2, 0.8 ;\\n'
+        ...     '    (a1) 0.75, 0.25 ; }\\n')
+        >>> model = BIFReader(string=bif_string).get_model()
         >>> writer = BIFWriter(model)
         >>> writer.get_parents()
-        {'bowel-problem': [],
-         'dog-out': ['bowel-problem', 'family-out'],
-         'family-out': [],
-         'hear-bark': ['dog-out'],
-         'light-on': ['family-out']}
+        {'A': [], 'B': ['A']}
         """
         cpds = self.model.get_cpds()
         variable_parents = {}
@@ -563,14 +590,17 @@ $values
         Example
         -------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
-        >>> model = BIFReader("dog-problem.bif").get_model()
+        >>> bif_string = ('network unknown {}\\n'
+        ...     'variable A { type discrete [ 2 ] { a0, a1 }; }\\n'
+        ...     'variable B { type discrete [ 2 ] { b0, b1 }; }\\n'
+        ...     'probability ( A ) { table 0.4, 0.6 ; }\\n'
+        ...     'probability ( B | A ) {\\n'
+        ...     '    (a0) 0.2, 0.8 ;\\n'
+        ...     '    (a1) 0.75, 0.25 ; }\\n')
+        >>> model = BIFReader(string=bif_string).get_model()
         >>> writer = BIFWriter(model)
         >>> writer.get_cpds()
-        {'bowel-problem': array([ 0.01,  0.99]),
-         'dog-out': array([ 0.99,  0.97,  0.9 ,  0.3 ,  0.01,  0.03,  0.1 ,  0.7 ]),
-         'family-out': array([ 0.15,  0.85]),
-         'hear-bark': array([ 0.7 ,  0.01,  0.3 ,  0.99]),
-         'light-on': array([ 0.6 ,  0.05,  0.4 ,  0.95])}
+        {'A': array([0.4, 0.6]), 'B': array([0.2 , 0.75, 0.8 , 0.25])}
         """
         cpds = self.model.get_cpds()
         tables = {}
@@ -588,11 +618,12 @@ $values
 
         Example
         -------
-        >>> from pgmpy.example_models import load_model
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
-        >>> asia = load_model("bnlearn/asia")
-        >>> writer = BIFWriter(asia)
-        >>> writer.write(filename="asia.bif")
+        >>> bif_string = ('network unknown {}\\n'
+        ...     'variable A { type discrete [ 2 ] { a0, a1 }; }\\n'
+        ...     'probability ( A ) { table 0.4, 0.6 ; }\\n')
+        >>> writer = BIFWriter(BIFReader(string=bif_string).get_model())
+        >>> writer.write(filename="test_output.bif")  # doctest: +SKIP
         """
         writer = self.__str__()
         with open(filename, "w") as fout:
