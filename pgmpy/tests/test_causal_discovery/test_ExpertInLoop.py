@@ -990,7 +990,8 @@ def test_handles_empty_nonedge_effects_safely():
 
 
 def test_orientation_fn_partial_llm():
-    """Test that orientation_fn as a partial(llm_pairwise_orient, ...) works correctly."""
+    """Test that orientation_fn as a partial(mock_llm, ...) works correctly and merges keywords."""
+    from unittest.mock import MagicMock
 
     np.random.seed(42)
     # Use highly correlated data to ensure an edge is found
@@ -999,28 +1000,26 @@ def test_orientation_fn_partial_llm():
     data = pd.DataFrame({"A": A, "B": B})
     descriptions = {"A": "Var A", "B": "Var B"}
 
-    # Patch the local reference in ExpertInLoop where it is called
-    with patch("pgmpy.causal_discovery.ExpertInLoop.llm_pairwise_orient") as mock_llm:
-        # Set __name__ so the internal is_llm = (...) check succeeds
-        mock_llm.__name__ = "llm_pairwise_orient"
-        mock_llm.return_value = ("A", "B")
+    # Create a mock that simulates the llm_pairwise_orient function
+    mock_llm = MagicMock()
+    mock_llm.__name__ = "llm_pairwise_orient"
+    mock_llm.return_value = ("A", "B")
 
-        # Create partial function using the mock object itself
-        partial_orient = partial(mock_llm, some_arg="test")
+    # Create a partial wrapping the mock
+    partial_orient = partial(mock_llm, some_arg="test")
 
-        estimator = ExpertInLoop(
-            orientation_fn=partial_orient,
-            effect_size_threshold=0.01,
-            pval_threshold=0.1,
-            ci_test="pearsonr",
-            show_progress=False,
-        )
-        estimator.descriptions = descriptions
-        estimator.fit(data)
+    estimator = ExpertInLoop(
+        orientation_fn=partial_orient,
+        effect_size_threshold=0.01,
+        pval_threshold=0.1,
+        ci_test="pearsonr",
+        show_progress=False,
+    )
+    estimator.descriptions = descriptions
+    estimator.fit(data)
 
-        # Note: Depending on how combinations works, it might be called multiple times
-        assert mock_llm.called
-        args, kwargs = mock_llm.call_args
-        assert "descriptions" in kwargs
-        assert kwargs["descriptions"] == descriptions
-        assert kwargs["some_arg"] == "test"
+    # Verify that mock_llm was correctly identified by name and called with merged keywords
+    assert mock_llm.called
+    _, kwargs = mock_llm.call_args
+    assert kwargs["descriptions"] == descriptions
+    assert kwargs["some_arg"] == "test"

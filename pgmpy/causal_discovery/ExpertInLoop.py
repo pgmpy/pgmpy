@@ -286,6 +286,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
                 descriptions = getattr(self, "descriptions", {})
                 if not descriptions:
                     raise ValueError("LLM orientation requires variable descriptions.")
+                # We call the orient_fn directly. If it's a partial, it will merge descriptions.
                 res = orient_fn(u, v, descriptions=descriptions)
             else:
                 res = orient_fn(u, v)
