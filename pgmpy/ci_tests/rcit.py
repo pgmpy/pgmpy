@@ -54,8 +54,8 @@ def _partial_covariance(f_x, f_y, f_z, reg=1e-10):
     """
     Compute the partial cross-covariance C_{xy.z} = C_{xy} - C_{xz} * inv(C_{zz} + reg*I) * C_{zy}.
 
-    Also returns the residuals res_x = f_x - f_z * inv(C_{zz}) * C_{xz}.T
-    and res_y = f_y - f_z * inv(C_{zz}) * C_{zy} used for the null distribution.
+    Also returns the residuals res_x = f_x - f_z * inv(C_{zz} + reg*I) * C_{xz}.T
+    and res_y = f_y - f_z * inv(C_{zz} + reg*I) * C_{zy} used for the null distribution.
     """
     num_z = f_z.shape[1]
 
@@ -75,14 +75,16 @@ def _partial_covariance(f_x, f_y, f_z, reg=1e-10):
     C_zz = np.cov(f_z, rowvar=False)  # num_z x num_z
     C_xy = cov_xy_block[:num_x, num_x:]  # num_x x num_y
 
-    i_Czz = np.linalg.inv(C_zz + np.eye(num_z) * reg)
+    reg_Czz = C_zz + np.eye(num_z) * reg
+    solve_Czy = np.linalg.solve(reg_Czz, C_zy)
+    solve_Cxz_t = np.linalg.solve(reg_Czz, C_xz.T)
 
     # Partial cross-covariance.
-    C_xy_z = C_xy - C_xz @ i_Czz @ C_zy
+    C_xy_z = C_xy - C_xz @ solve_Czy
 
     # Residuals for the null distribution.
-    res_x = f_x - f_z @ i_Czz @ C_xz.T  # n x num_x
-    res_y = f_y - f_z @ i_Czz @ C_zy  # n x num_y
+    res_x = f_x - f_z @ solve_Cxz_t  # n x num_x
+    res_y = f_y - f_z @ solve_Czy  # n x num_y
 
     return C_xy_z, res_x, res_y
 
@@ -161,6 +163,8 @@ class RCIT(_BaseCITest):
     ----------
     statistic_ : float
         The RCIT test statistic :math:`n \cdot \|\hat{C}_{XY \mid Z}\|_F^2`.
+        When Z is empty the fallback :class:`Pearsonr` is used and
+        ``statistic_`` holds Pearson's r instead.
         Set after calling the test.
     p_value_ : float
         The p-value for the test. Set after calling the test.
@@ -302,6 +306,8 @@ class RCoT(_BaseCITest):
     ----------
     statistic_ : float
         The RCoT test statistic :math:`n \cdot \|\hat{C}_{XY \mid Z}\|_F^2`.
+        When Z is empty the fallback :class:`Pearsonr` is used and
+        ``statistic_`` holds Pearson's r instead.
         Set after calling the test.
     p_value_ : float
         The p-value for the test. Set after calling the test.

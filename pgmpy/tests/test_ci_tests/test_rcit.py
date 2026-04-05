@@ -21,6 +21,12 @@ class TestRCIT(unittest.TestCase):
         x_dep = z + rng.standard_normal(n)
         self.df_dep = pd.DataFrame({"X": x_dep, "Y": z + x_dep + rng.standard_normal(n), "Z": z})
 
+        # X _|_ Y | {Z1, Z2}  (two common causes)
+        z1, z2 = rng.standard_normal(n), rng.standard_normal(n)
+        self.df_multi = pd.DataFrame(
+            {"X": z1 + z2 + rng.standard_normal(n), "Y": z1 + z2 + rng.standard_normal(n), "Z1": z1, "Z2": z2}
+        )
+
     def test_rcit(self):
         test = RCIT(data=self.df_cind, seed=0)
 
@@ -37,6 +43,11 @@ class TestRCIT(unittest.TestCase):
         test("X", "Y", ["Z"])
         self.assertLess(test.p_value_, 0.05)
 
+        # Multi-dimensional conditioning set: X _|_ Y | {Z1, Z2}.
+        test = RCIT(data=self.df_multi, seed=0)
+        test("X", "Y", ["Z1", "Z2"])
+        self.assertGreater(test.p_value_, 0.05)
+
 
 @unittest.skipIf(os.getenv("GITHUB_ACTIONS") == "true", "Skipping RCoT tests on GitHub Actions.")
 class TestRCoT(unittest.TestCase):
@@ -51,6 +62,12 @@ class TestRCoT(unittest.TestCase):
         # X -> Y, Z -> X, Z -> Y  (X and Y are dependent given Z)
         x_dep = z + rng.standard_normal(n)
         self.df_dep = pd.DataFrame({"X": x_dep, "Y": z + x_dep + rng.standard_normal(n), "Z": z})
+
+        # X _|_ Y | {Z1, Z2}  (two common causes)
+        z1, z2 = rng.standard_normal(n), rng.standard_normal(n)
+        self.df_multi = pd.DataFrame(
+            {"X": z1 + z2 + rng.standard_normal(n), "Y": z1 + z2 + rng.standard_normal(n), "Z1": z1, "Z2": z2}
+        )
 
     def test_rcot(self):
         test = RCoT(data=self.df_cind, seed=0)
@@ -67,3 +84,8 @@ class TestRCoT(unittest.TestCase):
         test = RCoT(data=self.df_dep, seed=0)
         test("X", "Y", ["Z"])
         self.assertLess(test.p_value_, 0.05)
+
+        # Multi-dimensional conditioning set: X _|_ Y | {Z1, Z2}.
+        test = RCoT(data=self.df_multi, seed=0)
+        test("X", "Y", ["Z1", "Z2"])
+        self.assertGreater(test.p_value_, 0.05)
