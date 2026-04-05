@@ -104,29 +104,40 @@ class ExpertKnowledge:
         self.orientation_fn = orientation_fn
 
     def _validate_edges(self, edge_list):
-        """
-        Validate the edge list provided by the user.
-
-        Parameters
-        ----------
-        edge_list: iterable
-            The edge list to validate.
-
-        Returns
-        -------
-        set
-            The validated set of directed edges as tuples (u, v).
-        """
         if edge_list is None:
             return set()
-        if not isinstance(edge_list, (list, tuple, set)):
-            raise TypeError("edge_list must be a list, tuple, or set")
-        # Ensure each element is a tuple of length 2
+        try:
+            edge_list = list(edge_list)
+        except TypeError:
+            raise TypeError(f"edge_list must be iterable. Got {type(edge_list)}")
+        
         edges = set()
         for edge in edge_list:
+            if isinstance(edge, str):
+                if not edge:
+                    raise ValueError(f"Invalid edge format: empty string. Expected 'u->v' or 'u-v'.")
+                if "->" in edge:
+                    parts = edge.split("->")
+                    if len(parts) != 2:
+                        raise ValueError(f"Invalid edge format: {edge}. Expected 'u->v' with exactly one '->'")
+                    u, v = parts
+                    edges.add((u.strip(), v.strip()))
+                    continue
+                
+                if "-" in edge:
+                    parts = edge.split("-")
+                    if len(parts) != 2:
+                        raise ValueError(f"Invalid edge format: {edge}. Expected 'u-v' with exactly one '-'")
+                    u, v = parts
+                    edges.add((u.strip(), v.strip()))
+                    continue
+                
+                raise ValueError(f"Invalid edge format: {edge}. Expected 'u->v' or 'u-v' string.")
+            
             if not isinstance(edge, (list, tuple)) or len(edge) != 2:
-                raise ValueError(f"Invalid edge format: {edge}. Expected (u, v) pair.")
+                raise ValueError(f"Invalid edge format: {edge}. Expected (u, v) pair or 'u->v' string.")
             edges.add(tuple(edge))
+        
         return edges
 
     def __repr__(self):

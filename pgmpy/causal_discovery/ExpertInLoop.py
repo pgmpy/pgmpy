@@ -161,7 +161,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
         expert_knowledge=None,
         use_cache: bool = True,
         show_progress: bool = True,
-        max_iter: int = 200,
+        max_iter: int = 1000,
     ):
         self.pval_threshold = pval_threshold
         self.effect_size_threshold = effect_size_threshold
