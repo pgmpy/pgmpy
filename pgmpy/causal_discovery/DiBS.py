@@ -2,10 +2,10 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import torch
+from torch.func import grad
 
 from typing import Callable, Tuple, List
 
-from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery
 
 
@@ -48,7 +48,7 @@ class DiBS(_BaseCausalDiscovery):
         self,
         n_particles: int = 30,
         n_steps: int = 2000,
-        learning_rate: float = 5e-3,
+        learning_rate: float = 5e-3, # TODO: together with RMSProp schedule, or possibly adam.
         edge_prob_threshold: float = 0.1,
         kernel: str = "frobenius",
         kernel_bandwidth: float | str = "median",
@@ -91,28 +91,42 @@ class DiBS(_BaseCausalDiscovery):
         pass
 
 
-    def _get_kernel_matrix(
-        self,
-        particles: torch.Tensor,
-    ):
+    def _get_kernel(
+            self,
+            particles: torch.Tensor,
+    ) -> Tuple[torch.Tensor, Callable]:
         kernel_name = self.kernel
         bandwidth = self.kernel_bandwidth
 
-        if bandwidth == "median":
-            flat_particles = particles.view(particles.shape[0], -1)
+        flat_particles = particles.reshape(particles.shape[0], -1)
 
-            # compute all pairwise distances between particles
+        if bandwidth == "median":
             distances = torch.cdist(flat_particles, flat_particles)
 
-            # compute median distance between particles, excluding the diagonal
-            bandwidth = torch.median(distances[~ torch.eye(distances.shape[0], dtype=bool)])
+            mask = ~torch.eye(
+                distances.shape[0],
+                dtype=torch.bool,
+                device=distances.device,
+            )
+            bandwidth = torch.median(distances[mask]).clamp_min(1e-8)
 
         if kernel_name == "frobenius":
-            flat_particles = particles.view(particles.shape[0], -1)
             interactions = flat_particles @ flat_particles.T
             self_interactions = interactions.diagonal()
-            norm_diff = self_interactions.unsqueeze(1) + self_interactions.unsqueeze(0) - 2 * self_interactions
-            return torch.exp(- norm_diff / bandwidth)
+
+            # using ||A-B||_F^2 = ||A||_F^2 + ||B||_F^2 - 2<A,B>_F
+            norm_diff = (
+                    self_interactions.unsqueeze(1)
+                    + self_interactions.unsqueeze(0)
+                    - 2 * interactions
+            )
+
+            def k(x, y):
+                # flatten particles:
+                x, y = x.flatten(), y.flatten()
+                return torch.exp(- ((x - y) ** 2).sum() / bandwidth)
+
+            return torch.exp(-norm_diff / bandwidth), k
 
 
     def _svgd_increment(
@@ -120,7 +134,34 @@ class DiBS(_BaseCausalDiscovery):
         scores: torch.Tensor,
         particles: torch.Tensor,
     ) -> torch.Tensor:
-        kernel_mat = self._get_kernel_matrix(particles)
+        M = particles.shape[0]
+        kernel_mat, kernel_fn = self._get_kernel(particles)
+
+        # from definition of phi in line 5 of algorithm 1.
+        # https://arxiv.org/pdf/2105.11839
+
+        # k(z_k, *) grad_{z_k} log p(z_k | D)
+        # but also vectorized over m
+        driving_term = torch.einsum('ij,i...->j...', kernel_mat, scores)
+
+        # grad_{z_k} k(z_k, *)
+        # also vectorized over m
+        grad_first = grad(kernel_fn, argnums=0)
+
+        # for some fixed particle z_m as the second argument, vectorize over the first argument (z_k)
+        grad_over_k = torch.vmap(
+            grad_first,
+            in_dims=(0, None),
+        )
+
+        # vectorize over second argument (z_m)
+        grad_over_m = torch.vmap(
+            grad_over_k,
+            in_dims=(None, 0),
+        )
+        repulsive_term = grad_over_m(particles, particles).sum(dim=1)
+
+        return (driving_term + repulsive_term) / M
 
 
 
@@ -141,18 +182,21 @@ class DiBS(_BaseCausalDiscovery):
         """
         X_t = torch.tensor(X.to_numpy(), device=self.device)
         n_nodes = X.shape[1]
-        particles = self._initialize_particles(n_nodes).to(self.device)
+        particles = torch.nn.Parameter(self._initialize_particles(n_nodes).to(self.device))
+        optimizer = torch.optim.RMSprop([particles], lr=self.learning_rate, maximize=True)
 
         for t in range(self.n_steps):
+            optimizer.zero_grad()
             # estimate score grad_Z log p(Z | D)
             scores = self._compute_particle_scores(X_t, particles)
 
             # run svgd update: Z_new = Z_old + eta_t phi_t(Z_old)
-            particles = torch.add(particles, self._svgd_increment(scores, particles))
+            particles.grad = self._svgd_increment(scores, particles).detach()
+            optimizer.step()
 
         # compute G_infty(Z):
-        U, V = torch.chunk(particles, 2, dim=2)
-        graphs_infty = ((U @ V) > 0) * ~ torch.eye(n_nodes, dtype=bool).to(self.device)
+        U, V = torch.chunk(particles.detach(), 2, dim=2)
+        graphs_infty = ((U @ V) > 0) * ~ torch.eye(n_nodes, dtype=bool, device=self.device)
         return graphs_infty
 
 
