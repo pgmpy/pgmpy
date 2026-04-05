@@ -177,8 +177,30 @@ class ExpertInLoop(_BaseCausalDiscovery):
         self.max_iter = max_iter
 
     def _test_all(self, ci_test, dag, data, blacklisted=None):
-        cis = []
+        """
+        Runs CI tests on all possible combinations of variables.
 
+        If blacklisted is provided, skips recording non-edge candidates present
+        in blacklist (either direction), reducing downstream filtering work.
+
+        Parameters
+        ----------
+        ci_test : callable
+            The CI test function to use.
+        dag : DAG
+            The current DAG structure.
+        data : pd.DataFrame
+            The data for CI testing.
+        blacklisted : set, optional
+            Set of edges to skip as non-edge candidates.
+
+        Returns
+        -------
+        pd.DataFrame
+            Results with columns: u, v, z, edge_present, effect, p_val
+        """
+
+        cis = []
         if not hasattr(self, "ci_cache_"):
             self.ci_cache_ = {}
 
@@ -214,7 +236,29 @@ class ExpertInLoop(_BaseCausalDiscovery):
         return pd.DataFrame(cis, columns=["u", "v", "z", "edge_present", "effect", "p_val"])
 
     def _break_cycle(self, dag, u, v, ci_test, data, effect_size_threshold, pval_threshold):
-        """Subroutine to break any cycles that get created."""
+        """
+        Subroutine to break any cycles that get created.
+
+        Parameters
+        ----------
+        dag : DAG
+            The current DAG that still doesn't have cycles.
+        u, v : hashable
+            The variables that create a cycle when (u, v) edge is added.
+        ci_test : callable
+            The Conditional Independence test to use.
+        data : pd.DataFrame
+            The data for CI testing.
+        effect_size_threshold : float
+            Threshold for effect size.
+        pval_threshold : float
+            Threshold for p-value.
+
+        Returns
+        -------
+        list
+            List of edges to remove to break the cycle.
+        """
         edges_to_remove = []
         temp_dag = nx.DiGraph(dag)
         temp_dag.add_edges_from([(u, v)])
@@ -225,6 +269,8 @@ class ExpertInLoop(_BaseCausalDiscovery):
                     effect, pvalue = ci_test.run_test(x, y, Z=Z)
                     if (effect < effect_size_threshold) and (pvalue > pval_threshold):
                         edges_to_remove.append((x, y))
+                        if self.show_progress or config.SHOW_PROGRESS:
+                            logger.info(f"Removing edge: {x} -> {y} to fix cycle")
         return edges_to_remove
 
     def _get_edge_orientation(self, u: str, v: str) -> tuple[str, str] | None:
@@ -315,7 +361,19 @@ class ExpertInLoop(_BaseCausalDiscovery):
         raise ValueError("No orientation function is available")
 
     def _fit(self, X: pd.DataFrame):
-        """Standard fit with underscored fitted attributes."""
+        """
+        Fit the ExpertInLoop causal discovery algorithm.
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            The data to learn the causal structure from.
+
+        Returns
+        -------
+        self : ExpertInLoop
+            Returns the instance with the fitted attributes.
+        """
         from pgmpy.estimators import ExpertKnowledge
 
         self.variables_ = list(X.columns)
@@ -402,8 +460,14 @@ class ExpertInLoop(_BaseCausalDiscovery):
             edge_direction = self._get_edge_orientation(selected_edge.u, selected_edge.v)
 
             if edge_direction is None:
+                if self.show_progress or config.SHOW_PROGRESS:
+                    logger.info(
+                        f"Orientation function returned None for edge {selected_edge.u}-{selected_edge.v}. Skipping."
+                    )
                 blacklisted_edges.append((selected_edge.u, selected_edge.v))
             elif nx.has_path(dag, edge_direction[1], edge_direction[0]):
+                if self.show_progress or config.SHOW_PROGRESS:
+                    logger.info("Returned edge orientation creates a cycle. Trying to identify the incorrect edge.")
                 edges_to_remove = self._break_cycle(
                     dag,
                     edge_direction[0],
