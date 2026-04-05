@@ -1101,3 +1101,66 @@ def test_fit_only_removals_iteration():
     with patch.object(est, "_test_all", side_effect=side_effect):
         est.fit(data)
     assert est.n_iter_ == 3
+
+
+def test_max_iter_warning(caplog):
+    np.random.seed(0)
+    n = 100
+    data = pd.DataFrame(
+        {
+            "A": np.random.randn(n),
+            "B": np.random.randn(n) + 0.9 * np.random.randn(n),
+            "C": np.random.randn(n) + 0.9 * np.random.randn(n),
+            "D": np.random.randn(n) + 0.9 * np.random.randn(n),
+        }
+    )
+
+    def always_orient(u, v):
+        return (u, v)
+
+    estimator = ExpertInLoop(
+        orientation_fn=always_orient,
+        effect_size_threshold=0.0,
+        pval_threshold=1.0,
+        max_iter=2,
+        show_progress=True,
+    )
+
+    with caplog.at_level(logging.WARNING, logger="pgmpy"):
+        estimator.fit(data)
+
+    assert any("stopped after reaching max_iter" in record.message for record in caplog.records)
+
+
+def test_cache_cleared_between_fits():
+    np.random.seed(0)
+    data1 = pd.DataFrame({"A": np.random.randn(100), "B": np.random.randn(100)})
+    data2 = pd.DataFrame({"X": np.random.randn(100), "Y": np.random.randn(100)})
+
+    call_count = {"n": 0}
+
+    def counting_orient(u, v):
+        call_count["n"] += 1
+        return (u, v)
+
+    estimator = ExpertInLoop(
+        orientation_fn=counting_orient,
+        use_cache=True,
+        effect_size_threshold=0.0,
+        pval_threshold=1.0,
+        show_progress=False,
+    )
+
+    class AlwaysSignificantCI:
+        def run_test(self, X, Y, Z):
+            return (0.5, 0.001)
+
+    with patch("pgmpy.causal_discovery.ExpertInLoop.get_ci_test", return_value=AlwaysSignificantCI()):
+        estimator.fit(data1)
+        first_call_count = call_count["n"]
+        assert first_call_count > 0
+
+        estimator.fit(data2)
+        second_call_count = call_count["n"]
+
+        assert second_call_count > first_call_count

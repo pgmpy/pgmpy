@@ -176,16 +176,14 @@ class ExpertInLoop(_BaseCausalDiscovery):
         self.show_progress = show_progress
         self.max_iter = max_iter
 
-    def _test_all(
-        self, ci_test, dag: DAG, data: pd.DataFrame, blacklisted: set[tuple[str, str]] | None = None
-    ) -> pd.DataFrame:
-        """Runs CI tests on all possible combinations of variables.
+    def _test_all(self, ci_test, dag, data, blacklisted=None):
+        cis = []
 
-        If blacklisted is provided, skips recording non-edge candidates present in blacklist
-        (either direction), reducing downstream filtering work.
-        """
-        cis: list[list[object]] = []
-        ci_cache = getattr(self, "ci_cache_", {})
+        if not hasattr(self, "ci_cache_"):
+            self.ci_cache_ = {}
+
+        ci_cache = self.ci_cache_
+
         for u, v in combinations(list(dag.nodes()), 2):
             u_parents = set(dag.get_parents(u))
             v_parents = set(dag.get_parents(v))
@@ -199,12 +197,12 @@ class ExpertInLoop(_BaseCausalDiscovery):
             else:
                 conditioning_set = u_parents | v_parents
                 edge_present = False
-                # Skip computing for blacklisted candidate non-edges if requested
                 if blacklisted is not None:
                     if (u, v) in blacklisted or (v, u) in blacklisted:
                         continue
 
             cache_key = (min(u, v), max(u, v), frozenset(conditioning_set))
+
             if cache_key in ci_cache:
                 effect, p_value = ci_cache[cache_key]
             else:
@@ -323,11 +321,12 @@ class ExpertInLoop(_BaseCausalDiscovery):
         self.variables_ = list(X.columns)
         self.n_iter_ = 0
 
-        # PERSISTENT CACHE REWRITE: Initialize ONLY if not provided by user/test
-        if not hasattr(self, "ci_cache_"):
-            self.ci_cache_ = {}
-        if not hasattr(self, "orientation_cache_"):
-            self.orientation_cache_ = set()
+        # Initialize or clear caches for fresh fit
+        self.ci_cache_ = getattr(self, "ci_cache_", {})
+        self.ci_cache_.clear()
+
+        self.orientation_cache_ = getattr(self, "orientation_cache_", set())
+        self.orientation_cache_.clear()
 
         # Handle expert knowledge setup in fit to remain scikit-learn compliant
         if self.expert_knowledge is None:
@@ -428,6 +427,12 @@ class ExpertInLoop(_BaseCausalDiscovery):
                     dag.add_edges_from([edge_direction])
             else:
                 dag.add_edges_from([edge_direction])
+
+        if self.n_iter_ >= self.max_iter and self.show_progress:
+            logger.warning(
+                f"ExpertInLoop stopped after reaching max_iter={self.max_iter}. "
+                f"Graph may be incomplete. Increase max_iter if needed."
+            )
 
         self.causal_graph_ = dag
         self.adjacency_matrix_ = pd.DataFrame(
