@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 from skbase.lookup import all_objects
 
-from pgmpy.ci_tests import ChiSquare, FisherZ, IndependenceMatch, Pearsonr, RCIT, RCoT, _BaseCITest, get_ci_test
+from pgmpy.ci_tests import RCIT, ChiSquare, FisherZ, IndependenceMatch, Pearsonr, RCoT, _BaseCITest, get_ci_test
 
 
 def test_ci_registry():
