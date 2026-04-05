@@ -110,12 +110,12 @@ class ExpertKnowledge:
             edge_list = list(edge_list)
         except TypeError:
             raise TypeError(f"edge_list must be iterable. Got {type(edge_list)}")
-        
+
         edges = set()
         for edge in edge_list:
             if isinstance(edge, str):
                 if not edge:
-                    raise ValueError(f"Invalid edge format: empty string. Expected 'u->v' or 'u-v'.")
+                    raise ValueError("Invalid edge format: empty string. Expected 'u->v' or 'u-v'.")
                 if "->" in edge:
                     parts = edge.split("->")
                     if len(parts) != 2:
@@ -123,7 +123,7 @@ class ExpertKnowledge:
                     u, v = parts
                     edges.add((u.strip(), v.strip()))
                     continue
-                
+
                 if "-" in edge:
                     parts = edge.split("-")
                     if len(parts) != 2:
@@ -131,13 +131,13 @@ class ExpertKnowledge:
                     u, v = parts
                     edges.add((u.strip(), v.strip()))
                     continue
-                
+
                 raise ValueError(f"Invalid edge format: {edge}. Expected 'u->v' or 'u-v' string.")
-            
+
             if not isinstance(edge, (list, tuple)) or len(edge) != 2:
                 raise ValueError(f"Invalid edge format: {edge}. Expected (u, v) pair or 'u->v' string.")
             edges.add(tuple(edge))
-        
+
         return edges
 
     def __repr__(self):

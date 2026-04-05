@@ -45,19 +45,19 @@ class TestExpertKnowledge:
     def test_validate_edges_rejects_bad_formats(self):
         ek1 = ExpertKnowledge(forbidden_edges=["A->B"])
         assert ("A", "B") in ek1.forbidden_edges
-        
+
         ek2 = ExpertKnowledge(forbidden_edges=["C-D"])
         assert ("C", "D") in ek2.forbidden_edges
-        
+
         with pytest.raises(ValueError, match="Invalid edge format.*Expected.*pair"):
             ExpertKnowledge(forbidden_edges=[("A", "B", "C")])
-        
+
         with pytest.raises(ValueError, match="Invalid edge format: A"):
             ExpertKnowledge(forbidden_edges=["A"])
-        
+
         with pytest.raises(TypeError, match="iterable"):
             ExpertKnowledge(forbidden_edges=12345)
-        
+
         ek3 = ExpertKnowledge(required_edges=[["A", "B"], ("C", "D")])
         assert ("A", "B") in ek3.required_edges and ("C", "D") in ek3.required_edges
 
@@ -81,11 +81,11 @@ class TestExpertKnowledge:
         ek1 = ExpertKnowledge(required_edges=["A->B", "C->D"])
         assert ("A", "B") in ek1.required_edges
         assert ("C", "D") in ek1.required_edges
-        
+
         ek2 = ExpertKnowledge(forbidden_edges=["E-F", "G-H"])
         assert ("E", "F") in ek2.forbidden_edges
         assert ("G", "H") in ek2.forbidden_edges
-        
+
         ek3 = ExpertKnowledge(search_space=["X->Y", "Z-W"])
         assert ("X", "Y") in ek3.search_space
         assert ("Z", "W") in ek3.search_space
@@ -109,14 +109,15 @@ class TestExpertKnowledge:
         gen = (("A", "B") for _ in range(1))
         ek1 = ExpertKnowledge(required_edges=gen)
         assert ("A", "B") in ek1.required_edges
-        
-        ek2 = ExpertKnowledge(forbidden_edges=map(lambda x: (x, x+"1"), ["A", "B"]))
+
+        ek2 = ExpertKnowledge(forbidden_edges=map(lambda x: (x, x + "1"), ["A", "B"]))
         assert ("A", "A1") in ek2.forbidden_edges
         assert ("B", "B1") in ek2.forbidden_edges
+
         class EdgeIterable:
             def __iter__(self):
                 return iter([("X", "Y"), ("Y", "Z")])
-        
+
         ek3 = ExpertKnowledge(search_space=EdgeIterable())
         assert ("X", "Y") in ek3.search_space
         assert ("Y", "Z") in ek3.search_space
