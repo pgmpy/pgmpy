@@ -11,7 +11,7 @@ from pgmpy.ci_tests import RCIT, RCoT
 class TestRCIT(unittest.TestCase):
     def setUp(self):
         rng = np.random.default_rng(42)
-        n = 2000
+        n = 3000
 
         # X _|_ Y | Z  (Z is a common cause)
         z = rng.standard_normal(n)
@@ -42,7 +42,7 @@ class TestRCIT(unittest.TestCase):
 class TestRCoT(unittest.TestCase):
     def setUp(self):
         rng = np.random.default_rng(42)
-        n = 2000
+        n = 3000
 
         # X _|_ Y | Z  (Z is a common cause)
         z = rng.standard_normal(n)
