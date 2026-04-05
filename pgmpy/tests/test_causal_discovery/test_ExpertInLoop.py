@@ -1155,7 +1155,8 @@ def test_cache_cleared_between_fits():
         def run_test(self, X, Y, Z):
             return (0.5, 0.001)
 
-    with patch("pgmpy.causal_discovery.ExpertInLoop.get_ci_test", return_value=AlwaysSignificantCI()):
+    eiul_module = sys.modules["pgmpy.causal_discovery.ExpertInLoop"]
+    with patch.object(eiul_module, "get_ci_test", return_value=AlwaysSignificantCI()):
         estimator.fit(data1)
         first_call_count = call_count["n"]
         assert first_call_count > 0
