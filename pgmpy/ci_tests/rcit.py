@@ -57,7 +57,6 @@ def _partial_covariance(f_x, f_y, f_z, reg=1e-10):
     Also returns the residuals res_x = f_x - f_z * inv(C_{zz}) * C_{xz}.T
     and res_y = f_y - f_z * inv(C_{zz}) * C_{zy} used for the null distribution.
     """
-    n = f_x.shape[0]
     num_z = f_z.shape[1]
 
     # Sample covariances (using n-1 denominator via np.cov).
