@@ -411,19 +411,14 @@ class ExpertInLoop(_BaseCausalDiscovery):
 
         orientation_cache = self.orientation_cache_
 
+        cache_key = (u, v, tuple(sorted(to.items())) if to else None)
+        cache_key_rev = (v, u, tuple(sorted(to.items())) if to else None)
+        
         if self.use_cache:
-            if (u, v) in orientation_cache:
-                res = (u, v)
-                # Apply temporal override to cached result (optional safety check)
-                if u in to and v in to and to[u] > to[v]:
-                    res = (v, u)
-                return res
-            if (v, u) in orientation_cache:
-                res = (v, u)
-                # Apply temporal override to cached result
-                if u in to and v in to and to[u] > to[v]:
-                    res = (v, u)
-                return res
+            if cache_key in orientation_cache:
+                return orientation_cache[cache_key]
+            if cache_key_rev in orientation_cache:
+                return orientation_cache[cache_key_rev]
 
         orient_fn = self.orientation_fn or getattr(expert_knowledge, "orientation_fn", None)
 
