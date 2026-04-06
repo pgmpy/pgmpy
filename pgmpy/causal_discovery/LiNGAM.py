@@ -85,7 +85,7 @@ class LiNGAM(_BaseCausalDiscovery):
     n_features_in_ : int
         The number of features in the dataset used to learn the causal graph.
 
-    feature_names_in_ : list
+    feature_names_in_ : np.ndarray
         The feature names in the dataset used to learn the causal graph.
 
     Examples
@@ -149,9 +149,7 @@ class LiNGAM(_BaseCausalDiscovery):
         except ValueError as e:
             raise ValueError("All features must be numeric.") from e
 
-        n_samples, n_features = X_vals.shape
-        self.n_features_in_ = n_features
-        self.feature_names_in_ = list(X.columns)
+        _, n_features = X_vals.shape
 
         # Step 1: Resolve internal estimators and apply ICA
         if self.estimator is None:
