@@ -162,19 +162,18 @@ class ExpertInLoop(_BaseCausalDiscovery):
         use_cache: bool = True,
         show_progress: bool = True,
         max_iter: int = 1000,
+        descriptions: dict[str, str] | None = None,  
     ):
         self.pval_threshold = pval_threshold
         self.effect_size_threshold = effect_size_threshold
         self.ci_test = ci_test
-        # I am adding this because scikit-learn's get_params matches __init__ arguments to self.attributes exactly
         self.orientation_fn = orientation_fn
         self.orientations = orientations
-
-        # I am adding this because scikit-learn forbids mutating passed parameters inside __init__
         self.expert_knowledge = expert_knowledge
         self.use_cache = use_cache
         self.show_progress = show_progress
         self.max_iter = max_iter
+        self.descriptions = descriptions  
 
     def _test_all(self, ci_test, dag, data, blacklisted=None):
         """
