@@ -308,9 +308,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
             Results with columns: u, v, z, edge_present, effect, p_val
         """
         cis = []
-        if not hasattr(self, "ci_cache_"):
-            self.ci_cache_ = {}
-    
+        # ci_cache_ is initialized in _fit() before this method is called
         ci_cache = self.ci_cache_
     
         for u, v in combinations(list(dag.nodes()), 2):
@@ -514,12 +512,10 @@ class ExpertInLoop(_BaseCausalDiscovery):
         self.variables_ = list(X.columns)
         self.n_iter_ = 0
 
-        # Initialize or clear caches for fresh fit
-        self.ci_cache_ = getattr(self, "ci_cache_", {})
-        self.ci_cache_.clear()
-
-        self.orientation_cache_ = getattr(self, "orientation_cache_", set())
-        self.orientation_cache_.clear()
+        # Initialize caches FIRST - these are required by _test_all() and 
+        # _get_edge_orientation() which are called in the main loop below
+        self.ci_cache_ = {}  
+        self.orientation_cache_ = set() 
 
         # Handle expert knowledge setup in fit to remain scikit-learn compliant
         if self.expert_knowledge is None:
@@ -637,9 +633,10 @@ class ExpertInLoop(_BaseCausalDiscovery):
                 f"Graph may be incomplete. Increase max_iter if needed."
             )
 
+        # In _fit method, around line 501-506
         self.causal_graph_ = dag
         self.adjacency_matrix_ = pd.DataFrame(
-            nx.to_numpy_array(dag, nodelist=self.variables_, dtype=int, weight=None),
+            nx.adjacency_matrix(dag, nodelist=self.variables_, weight=None).toarray().astype(int),
             index=self.variables_,
             columns=self.variables_,
         )
