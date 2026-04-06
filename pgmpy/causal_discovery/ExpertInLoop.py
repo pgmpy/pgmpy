@@ -243,7 +243,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
     ):
         """
         Initialize the ExpertInLoop causal discovery estimator.
-    
+
         Parameters
         ----------
         pval_threshold : float, default=0.05
@@ -267,7 +267,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
         descriptions : dict[str, str], default=None
             Variable descriptions required for LLM-based orientation.
             Maps variable names to natural language descriptions.
-    
+
         Raises
         ------
         ValueError
@@ -287,10 +287,10 @@ class ExpertInLoop(_BaseCausalDiscovery):
     def _test_all(self, ci_test, dag, data, blacklisted=None):
         """
         Runs CI tests on all possible combinations of variables.
-    
+
         If blacklisted is provided, skips recording non-edge candidates present
         in blacklist (either direction), reducing downstream filtering work.
-    
+
         Parameters
         ----------
         ci_test : callable
@@ -301,7 +301,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
             The data for CI testing.
         blacklisted : set, optional
             Set of edges to skip as non-edge candidates.
-    
+
         Returns
         -------
         pd.DataFrame
@@ -310,11 +310,11 @@ class ExpertInLoop(_BaseCausalDiscovery):
         cis = []
         # ci_cache_ is initialized in _fit() before this method is called
         ci_cache = self.ci_cache_
-    
+
         for u, v in combinations(list(dag.nodes()), 2):
             u_parents = set(dag.get_parents(u))
             v_parents = set(dag.get_parents(v))
-    
+
             if v in u_parents:
                 conditioning_set = u_parents - {v}
                 edge_present = True
@@ -327,19 +327,20 @@ class ExpertInLoop(_BaseCausalDiscovery):
                 if blacklisted is not None:
                     if (u, v) in blacklisted or (v, u) in blacklisted:
                         continue
-    
+
             # FIXED: Keep (u, v) in order to preserve directionality
             cache_key = (u, v, frozenset(conditioning_set))
-    
+
             if cache_key in ci_cache:
                 effect, p_value = ci_cache[cache_key]
             else:
                 effect, p_value = ci_test.run_test(X=u, Y=v, Z=list(conditioning_set))
                 ci_cache[cache_key] = (effect, p_value)
-    
+
             cis.append([u, v, list(conditioning_set), edge_present, effect, p_value])
-    
+
         return pd.DataFrame(cis, columns=["u", "v", "z", "edge_present", "effect", "p_val"])
+
     def _break_cycle(self, dag, u, v, ci_test, data, effect_size_threshold, pval_threshold):
         """
         Subroutine to break any cycles that get created.
@@ -381,7 +382,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
     def _get_edge_orientation(self, u: str, v: str) -> tuple[str, str] | None:
         """
         Determines orientation robust to fit state.
-        
+
         Priority order:
         1. Explicit orientations (from ExpertKnowledge or constructor)
         2. Orientation function result
@@ -389,7 +390,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
         """
         expert_knowledge = getattr(self, "expert_knowledge_", self.expert_knowledge)
         to = getattr(expert_knowledge, "temporal_ordering", {}) if expert_knowledge else {}
-        
+
         # 1a. Check ExpertKnowledge orientations
         if expert_knowledge and hasattr(expert_knowledge, "orientations") and expert_knowledge.orientations:
             if (u, v) in expert_knowledge.orientations:
@@ -397,19 +398,19 @@ class ExpertInLoop(_BaseCausalDiscovery):
                 return (u, v)
             if (v, u) in expert_knowledge.orientations:
                 return (v, u)
-        
+
         # 1b. Check constructor orientations
         if self.orientations:
             if (u, v) in self.orientations:
                 return (u, v)
             if (v, u) in self.orientations:
                 return (v, u)
-    
+
         if not hasattr(self, "orientation_cache_"):
             self.orientation_cache_ = set()
-        
+
         orientation_cache = self.orientation_cache_
-        
+
         if self.use_cache:
             if (u, v) in orientation_cache:
                 res = (u, v)
@@ -423,32 +424,30 @@ class ExpertInLoop(_BaseCausalDiscovery):
                 if u in to and v in to and to[u] > to[v]:
                     res = (v, u)
                 return res
-        
+
         orient_fn = self.orientation_fn or getattr(expert_knowledge, "orientation_fn", None)
-        
+
         if orient_fn is not None:
             # Check for llm_pairwise_orient (handles partial objects)
             test_fn = orient_fn.func if isinstance(orient_fn, partial) else orient_fn
-            is_llm = (test_fn == llm_pairwise_orient) or (
-                getattr(test_fn, "__name__", "") == "llm_pairwise_orient"
-            )
-            
+            is_llm = (test_fn == llm_pairwise_orient) or (getattr(test_fn, "__name__", "") == "llm_pairwise_orient")
+
             if is_llm:
                 # Get descriptions from various sources in priority order:
                 # 1. Descriptions passed as partial() argument
                 # 2. Descriptions from __init__ parameter
                 # 3. Descriptions attribute set on instance
-                
+
                 descriptions = None
-                
+
                 # Check if partial has descriptions already
                 if isinstance(orient_fn, partial) and "descriptions" in orient_fn.keywords:
                     descriptions = orient_fn.keywords["descriptions"]
-                
+
                 # Fallback to __init__ parameter or instance attribute
                 if not descriptions:
                     descriptions = self.descriptions or getattr(self, "_descriptions", {})
-                
+
                 if not descriptions:
                     raise ValueError(
                         "LLM orientation requires variable descriptions. "
@@ -457,7 +456,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
                         "  2. partial(llm_pairwise_orient, descriptions={...})\n"
                         "  3. estimator.descriptions = {...} before calling fit()"
                     )
-                
+
                 # Call orientation function with descriptions
                 # Only pass descriptions if not already in partial keywords
                 if isinstance(orient_fn, partial) and "descriptions" in orient_fn.keywords:
@@ -466,19 +465,19 @@ class ExpertInLoop(_BaseCausalDiscovery):
                     res = orient_fn(u, v, descriptions=descriptions)
             else:
                 res = orient_fn(u, v)
-            
+
             # Enforce temporal ordering if available
             to = getattr(expert_knowledge, "temporal_ordering", {})
             if res and u in to and v in to and to[res[0]] > to[res[1]]:
                 res = (res[1], res[0])
-            
+
             if res and self.use_cache:
                 orientation_cache.add(res)
-            
+
             if (self.show_progress or config.SHOW_PROGRESS) and res:
                 logger.info(f"Queried for edge orientation: {u} - {v} -> {res}")
             return res
-        
+
         if u in to and v in to:
             if to[u] < to[v]:
                 return (u, v)
@@ -487,7 +486,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
             else:
                 # Same temporal tier - no direction can be determined
                 return None
-        
+
         raise ValueError(
             "No orientation function is available. "
             "Provide at least one of: orientation_fn, orientations, expert_knowledge, or temporal_order."
@@ -512,10 +511,10 @@ class ExpertInLoop(_BaseCausalDiscovery):
         self.variables_ = list(X.columns)
         self.n_iter_ = 0
 
-        # Initialize caches FIRST - these are required by _test_all() and 
+        # Initialize caches FIRST - these are required by _test_all() and
         # _get_edge_orientation() which are called in the main loop below
-        self.ci_cache_ = {}  
-        self.orientation_cache_ = set() 
+        self.ci_cache_ = {}
+        self.orientation_cache_ = set()
 
         # Handle expert knowledge setup in fit to remain scikit-learn compliant
         if self.expert_knowledge is None:
@@ -579,10 +578,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
                 bl_set_iter = set(blacklisted_edges) | {(v, u) for u, v in blacklisted_edges}
 
                 nonedge_effects = nonedge_effects[
-                    ~nonedge_effects[['u', 'v']].apply(
-                        lambda row: tuple(row) in bl_set_iter, 
-                        axis=1
-                    )
+                    ~nonedge_effects[["u", "v"]].apply(lambda row: tuple(row) in bl_set_iter, axis=1)
                 ]
 
             if nonedge_effects.empty:
