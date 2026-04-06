@@ -50,7 +50,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
         tries to automatically detect a suitable CI test based on the variable
         types. See :mod:`pgmpy.estimators.CITests` for available tests.
 
-    orientation_fn : callable, default=llm_pairwise_orient
+    orientation_fn : callable, default=None
         A function to determine edge orientation. The function should take at
         least two arguments (the names of the two variables) and return either:
         - A tuple (source, target) representing the directed edge from source
@@ -61,7 +61,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
         - `pgmpy.utils.manual_pairwise_orient`: Prompts the user to specify direction.
         - `pgmpy.utils.llm_pairwise_orient`: Uses an LLM to determine direction.
 
-    orientations : set, default=set()
+    orientations : set, default=None
         A set of edges that will be used as the preferred orientation over
         the output of `orientation_fn`. Edges should be specified as tuples
         (source, target).
@@ -71,6 +71,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
         - forbidden_edges: Edges that should not be present in the final model
         - required_edges: Edges that must be present in the final model
         - temporal_order: The temporal ordering of variables
+        - orientation_fn: Function to determine edge orientations
 
         Note: Explicit orientations in the `orientations` parameter take
         precedence over temporal ordering.
@@ -81,6 +82,23 @@ class ExpertInLoop(_BaseCausalDiscovery):
 
     show_progress : bool, default=True
         If True, prints information about the running status.
+
+    max_iter : int, default=1000
+        Maximum number of iterations for the main learning loop. Useful for
+        controlling runtime on large datasets.
+
+    descriptions : dict[str, str], default=None
+        A dictionary mapping variable names to their natural language descriptions.
+        REQUIRED ONLY when using LLM-based orientation (llm_pairwise_orient).
+        Can also be provided via functools.partial() wrapping the orientation function.
+
+        Example::
+
+            descriptions = {
+                "Age": "Person's age in years",
+                "Income": "Annual household income in USD",
+                "Education": "Years of formal education completed",
+            }
 
     Attributes
     ----------
@@ -98,6 +116,9 @@ class ExpertInLoop(_BaseCausalDiscovery):
 
     orientation_cache_ : set
         Cache of edge orientations learned during fitting.
+
+    ci_cache_ : dict
+        Cache of conditional independence test results.
 
     Examples
     --------
@@ -129,21 +150,77 @@ class ExpertInLoop(_BaseCausalDiscovery):
     >>> eil = ExpertInLoop(expert_knowledge=expert, effect_size_threshold=0.0001)
     >>> eil.fit(df)
 
-    Using LLM-based orientation (requires API key):
+    Using LLM-based orientation with descriptions in __init__ (Method 1):
+
+    >>> from pgmpy.utils import llm_pairwise_orient
+    >>> descriptions = {
+    ...     "Smoker": "Whether a person smokes (True/False)",
+    ...     "Cancer": "Whether a person has lung cancer (True/False)",
+    ... }
+    >>> eil = ExpertInLoop(
+    ...     orientation_fn=llm_pairwise_orient,
+    ...     descriptions=descriptions,
+    ...     effect_size_threshold=0.0001,
+    ... )
+    >>> eil.fit(df)  # doctest: +SKIP
+
+    Using LLM-based orientation with partial() (Method 2 - Recommended):
 
     >>> from functools import partial
     >>> from pgmpy.utils import llm_pairwise_orient
-    >>> variable_descriptions = {
+    >>> descriptions = {
+    ...     "Smoker": "Whether a person smokes (True/False)",
+    ...     "Cancer": "Whether a person has lung cancer (True/False)",
+    ... }
+    >>> orientation_fn = partial(
+    ...     llm_pairwise_orient,
+    ...     descriptions=descriptions,
+    ...     llm_model="gemini/gemini-1.5-flash",
+    ... )
+    >>> eil = ExpertInLoop(
+    ...     orientation_fn=orientation_fn,
+    ...     effect_size_threshold=0.0001,
+    ... )
+    >>> eil.fit(df)  # doctest: +SKIP
+
+    Using LLM-based orientation with attribute assignment (Method 3):
+
+    >>> from pgmpy.utils import llm_pairwise_orient
+    >>> descriptions = {
+    ...     "Smoker": "Whether a person smokes (True/False)",
+    ...     "Cancer": "Whether a person has lung cancer (True/False)",
+    ... }
+    >>> eil = ExpertInLoop(
+    ...     orientation_fn=llm_pairwise_orient,
+    ...     effect_size_threshold=0.0001,
+    ... )
+    >>> eil.descriptions = descriptions  # Set before calling fit()
+    >>> eil.fit(df)  # doctest: +SKIP
+
+    Combining LLM orientation with expert knowledge:
+
+    >>> from functools import partial
+    >>> from pgmpy.utils import llm_pairwise_orient
+    >>> from pgmpy.estimators import ExpertKnowledge
+    >>> descriptions = {
     ...     "Smoker": "Whether a person smokes",
     ...     "Cancer": "Whether a person has cancer",
     ... }
     >>> orientation_fn = partial(
     ...     llm_pairwise_orient,
-    ...     variable_descriptions=variable_descriptions,
+    ...     descriptions=descriptions,
     ...     llm_model="gemini/gemini-1.5-flash",
     ... )
-    >>> eil = ExpertInLoop(orientation_fn=orientation_fn)
-    >>> eil.fit(df)
+    >>> expert = ExpertKnowledge(
+    ...     forbidden_edges=[("Cancer", "Smoker")],  # Cancer doesn't cause smoking
+    ...     temporal_order=[["Age"], ["Smoker"], ["Cancer"]],  # Age -> Smoker -> Cancer
+    ... )
+    >>> eil = ExpertInLoop(
+    ...     orientation_fn=orientation_fn,
+    ...     expert_knowledge=expert,
+    ...     effect_size_threshold=0.0001,
+    ... )
+    >>> eil.fit(df)  # doctest: +SKIP
 
     References
     ----------
@@ -162,8 +239,40 @@ class ExpertInLoop(_BaseCausalDiscovery):
         use_cache: bool = True,
         show_progress: bool = True,
         max_iter: int = 1000,
-        descriptions: dict[str, str] | None = None,  
+        descriptions: dict[str, str] | None = None,
     ):
+        """
+        Initialize the ExpertInLoop causal discovery estimator.
+    
+        Parameters
+        ----------
+        pval_threshold : float, default=0.05
+            The p-value threshold for conditional independence tests.
+        effect_size_threshold : float, default=0.05
+            The effect size threshold for adding/removing edges.
+        ci_test : str or callable, default=None
+            The conditional independence test to use.
+        orientation_fn : callable, default=None
+            Function to orient edges. If None, temporal_order from expert_knowledge is used.
+        orientations : set of tuple, default=None
+            Pre-specified edge orientations.
+        expert_knowledge : ExpertKnowledge, default=None
+            Expert knowledge about the graph structure.
+        use_cache : bool, default=True
+            Whether to cache orientation and CI test results.
+        show_progress : bool, default=True
+            Whether to print progress information.
+        max_iter : int, default=1000
+            Maximum number of algorithm iterations.
+        descriptions : dict[str, str], default=None
+            Variable descriptions required for LLM-based orientation.
+            Maps variable names to natural language descriptions.
+    
+        Raises
+        ------
+        ValueError
+            If LLM orientation is used without providing descriptions.
+        """
         self.pval_threshold = pval_threshold
         self.effect_size_threshold = effect_size_threshold
         self.ci_test = ci_test
@@ -173,7 +282,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
         self.use_cache = use_cache
         self.show_progress = show_progress
         self.max_iter = max_iter
-        self.descriptions = descriptions  
+        self.descriptions = descriptions
 
     def _test_all(self, ci_test, dag, data, blacklisted=None):
         """
@@ -320,35 +429,56 @@ class ExpertInLoop(_BaseCausalDiscovery):
         orient_fn = self.orientation_fn or getattr(expert_knowledge, "orientation_fn", None)
         
         if orient_fn is not None:
-            # Detect if this is an LLM orientation function
+            # Check for llm_pairwise_orient (handles partial objects)
             test_fn = orient_fn.func if isinstance(orient_fn, partial) else orient_fn
             is_llm = (test_fn == llm_pairwise_orient) or (
                 getattr(test_fn, "__name__", "") == "llm_pairwise_orient"
             )
             
             if is_llm:
-                # LLM orientation requires variable descriptions
-                descriptions = getattr(self, "descriptions", {})
+                # Get descriptions from various sources in priority order:
+                # 1. Descriptions passed as partial() argument
+                # 2. Descriptions from __init__ parameter
+                # 3. Descriptions attribute set on instance
+                
+                descriptions = None
+                
+                # Check if partial has descriptions already
+                if isinstance(orient_fn, partial) and "descriptions" in orient_fn.keywords:
+                    descriptions = orient_fn.keywords["descriptions"]
+                
+                # Fallback to __init__ parameter or instance attribute
+                if not descriptions:
+                    descriptions = self.descriptions or getattr(self, "_descriptions", {})
+                
                 if not descriptions:
                     raise ValueError(
                         "LLM orientation requires variable descriptions. "
-                        "Set estimator.descriptions = {...} before calling fit()."
+                        "Provide via one of these methods:\n"
+                        "  1. ExpertInLoop(descriptions={'var1': 'description1', ...})\n"
+                        "  2. partial(llm_pairwise_orient, descriptions={...})\n"
+                        "  3. estimator.descriptions = {...} before calling fit()"
                     )
-                res = orient_fn(u, v, descriptions=descriptions)
+                
+                # Call orientation function with descriptions
+                # Only pass descriptions if not already in partial keywords
+                if isinstance(orient_fn, partial) and "descriptions" in orient_fn.keywords:
+                    res = orient_fn(u, v)  # partial already has descriptions
+                else:
+                    res = orient_fn(u, v, descriptions=descriptions)
             else:
                 res = orient_fn(u, v)
             
-            # Apply temporal override to function result
-            if res:
-                if u in to and v in to and to[res[0]] > to[res[1]]:
-                    res = (res[1], res[0])
-                
-                if self.use_cache:
-                    orientation_cache.add(res)
-                
-                if self.show_progress or config.SHOW_PROGRESS:
-                    logger.info(f"Queried for edge orientation: {u} - {v} -> {res}")
+            # Enforce temporal ordering if available
+            to = getattr(expert_knowledge, "temporal_ordering", {})
+            if res and u in to and v in to and to[res[0]] > to[res[1]]:
+                res = (res[1], res[0])
             
+            if res and self.use_cache:
+                orientation_cache.add(res)
+            
+            if (self.show_progress or config.SHOW_PROGRESS) and res:
+                logger.info(f"Queried for edge orientation: {u} - {v} -> {res}")
             return res
         
         if u in to and v in to:
