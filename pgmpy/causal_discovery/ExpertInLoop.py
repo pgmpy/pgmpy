@@ -423,26 +423,19 @@ class ExpertInLoop(_BaseCausalDiscovery):
         orient_fn = self.orientation_fn or getattr(expert_knowledge, "orientation_fn", None)
 
         if orient_fn is not None:
-            # Check for llm_pairwise_orient (handles partial objects)
-            test_fn = orient_fn.func if isinstance(orient_fn, partial) else orient_fn
+            # Safely extract function and keywords
+            test_fn = self._get_partial_func(orient_fn)
+            keywords = self._get_partial_keywords(orient_fn)
+            
             is_llm = (test_fn == llm_pairwise_orient) or (getattr(test_fn, "__name__", "") == "llm_pairwise_orient")
-
+            
             if is_llm:
-                # Get descriptions from various sources in priority order:
-                # 1. Descriptions passed as partial() argument
-                # 2. Descriptions from __init__ parameter
-                # 3. Descriptions attribute set on instance
-
-                descriptions = None
-
-                # Check if partial has descriptions already
-                if isinstance(orient_fn, partial) and "descriptions" in orient_fn.keywords:
-                    descriptions = orient_fn.keywords["descriptions"]
-
-                # Fallback to __init__ parameter or instance attribute
+                # Get descriptions with robust fallback chain
+                descriptions = keywords.get("descriptions")
+                
                 if not descriptions:
                     descriptions = self.descriptions or getattr(self, "_descriptions", {})
-
+                
                 if not descriptions:
                     raise ValueError(
                         "LLM orientation requires variable descriptions. "
@@ -451,37 +444,49 @@ class ExpertInLoop(_BaseCausalDiscovery):
                         "  2. partial(llm_pairwise_orient, descriptions={...})\n"
                         "  3. estimator.descriptions = {...} before calling fit()"
                     )
-
-                # Call orientation function with descriptions
-                # Only pass descriptions if not already in partial keywords
-                if isinstance(orient_fn, partial) and "descriptions" in orient_fn.keywords:
-                    res = orient_fn(u, v)  # partial already has descriptions
-                else:
-                    res = orient_fn(u, v, descriptions=descriptions)
+                
+                # Call with merged keywords
+                try:
+                    if "descriptions" in keywords:
+                        # Already in partial, just call it
+                        res = orient_fn(u, v)
+                    else:
+                        # Need to pass descriptions
+                        res = orient_fn(u, v, descriptions=descriptions)
+                except TypeError as e:
+                    # Fallback if keyword merging fails
+                    logger.warning(
+                        f"Error calling orientation function with merged keywords: {e}. "
+                        f"Attempting direct call."
+                    )
+                    res = orient_fn(u, v)
             else:
                 res = orient_fn(u, v)
-
-            # Enforce temporal ordering if available
-            to = getattr(expert_knowledge, "temporal_ordering", {})
+            
+            # Apply temporal ordering constraint
             if res and u in to and v in to and to[res[0]] > to[res[1]]:
                 res = (res[1], res[0])
-
+            
             if res and self.use_cache:
-                orientation_cache.add(res)
-
+                orientation_cache[cache_key] = res
+            
             if (self.show_progress or config.SHOW_PROGRESS) and res:
                 logger.info(f"Queried for edge orientation: {u} - {v} -> {res}")
             return res
-
+        
+        # Temporal ordering fallback
         if u in to and v in to:
             if to[u] < to[v]:
-                return (u, v)
+                result = (u, v)
             elif to[v] < to[u]:
-                return (v, u)
+                result = (v, u)
             else:
-                # Same temporal tier - no direction can be determined
                 return None
-
+            
+            if self.use_cache:
+                orientation_cache[cache_key] = result
+            return result
+        
         raise ValueError(
             "No orientation function is available. "
             "Provide at least one of: orientation_fn, orientations, expert_knowledge, or temporal_order."
@@ -634,3 +639,92 @@ class ExpertInLoop(_BaseCausalDiscovery):
         self.n_features_in_ = len(self.variables_)
         self.feature_names_in_ = np.array(self.variables_)
         return self
+
+   def _get_partial_keywords(self, partial_fn) -> dict:
+        """
+        Safely extract keywords from a functools.partial object.
+        
+        Parameters
+        ----------
+        partial_fn : partial or callable
+            The function to extract keywords from.
+        
+        Returns
+        -------
+        dict
+            Keywords dictionary if partial, empty dict otherwise.
+        
+        Raises
+        ------
+        TypeError
+            If keywords exist but are not a dict.
+        """
+        if not isinstance(partial_fn, partial):
+            return {}
+        
+        try:
+            if not hasattr(partial_fn, "keywords"):
+                logger.warning(
+                    f"partial object missing 'keywords' attribute. "
+                    f"Type: {type(partial_fn)}. Returning empty dict."
+                )
+                return {}
+            
+            keywords = partial_fn.keywords
+            
+            if not isinstance(keywords, dict):
+                raise TypeError(
+                    f"Expected partial.keywords to be dict, got {type(keywords).__name__}. "
+                    f"Partial object may be malformed."
+                )
+            
+            return keywords
+            
+        except Exception as e:
+            logger.warning(
+                f"Error extracting keywords from partial object: {e}. "
+                f"This may indicate a malformed partial object. Returning empty dict."
+            )
+            return {}
+    
+   def _get_partial_func(self, partial_fn) -> Callable:
+        """
+        Safely extract the underlying function from a functools.partial object.
+        
+        Parameters
+        ----------
+        partial_fn : partial or callable
+            The function to extract from.
+        
+        Returns
+        -------
+        Callable
+            The underlying function, or the input if not a partial.
+        """
+        if not isinstance(partial_fn, partial):
+            return partial_fn
+        
+        try:
+            if not hasattr(partial_fn, "func"):
+                logger.warning(
+                    f"partial object missing 'func' attribute. "
+                    f"Type: {type(partial_fn)}. Returning original object."
+                )
+                return partial_fn
+            
+            func = partial_fn.func
+            if not callable(func):
+                logger.warning(
+                    f"partial.func is not callable. Type: {type(func).__name__}. "
+                    f"Returning original object."
+                )
+                return partial_fn
+            
+            return func
+            
+        except Exception as e:
+            logger.warning(
+                f"Error extracting func from partial object: {e}. "
+                f"Returning original object."
+            )
+            return partial_fn
