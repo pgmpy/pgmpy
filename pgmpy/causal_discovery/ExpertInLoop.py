@@ -273,91 +273,98 @@ class ExpertInLoop(_BaseCausalDiscovery):
         return edges_to_remove
 
     def _get_edge_orientation(self, u: str, v: str) -> tuple[str, str] | None:
-        """Determines orientation robust to fit state."""
+        """
+        Determines orientation robust to fit state.
+        
+        Priority order:
+        1. Explicit orientations (from ExpertKnowledge or constructor)
+        2. Orientation function result
+        3. Temporal ordering as fallback
+        """
         expert_knowledge = getattr(self, "expert_knowledge_", self.expert_knowledge)
-
-        # 1. Check orientations directly on ExpertKnowledge
+        to = getattr(expert_knowledge, "temporal_ordering", {}) if expert_knowledge else {}
+        
+        # 1a. Check ExpertKnowledge orientations
         if expert_knowledge and hasattr(expert_knowledge, "orientations") and expert_knowledge.orientations:
             if (u, v) in expert_knowledge.orientations:
-                res = (u, v)
-                # Enforce temporal ordering if available
-                to = getattr(expert_knowledge, "temporal_ordering", {})
-                if u in to and v in to and to[res[0]] > to[res[1]]:
-                    res = (res[1], res[0])
-                return res
+                # Return explicit orientation as-is (DO NOT override with temporal)
+                return (u, v)
             if (v, u) in expert_knowledge.orientations:
-                res = (v, u)
-                to = getattr(expert_knowledge, "temporal_ordering", {})
-                if u in to and v in to and to[res[0]] > to[res[1]]:
-                    res = (res[1], res[0])
-                return res
-
-        # 2. Check orientations provided to constructor
+                return (v, u)
+        
+        # 1b. Check constructor orientations
         if self.orientations:
             if (u, v) in self.orientations:
-                res = (u, v)
-                to = getattr(expert_knowledge, "temporal_ordering", {})
-                if u in to and v in to and to[res[0]] > to[res[1]]:
-                    res = (res[1], res[0])
-                return res
+                return (u, v)
             if (v, u) in self.orientations:
-                res = (v, u)
-                to = getattr(expert_knowledge, "temporal_ordering", {})
-                if u in to and v in to and to[res[0]] > to[res[1]]:
-                    res = (res[1], res[0])
-                return res
-
-        # 3. Check cache (ensure persistent cache exists even before fit)
+                return (v, u)
+    
         if not hasattr(self, "orientation_cache_"):
             self.orientation_cache_ = set()
+        
         orientation_cache = self.orientation_cache_
+        
         if self.use_cache:
             if (u, v) in orientation_cache:
-                return (u, v)
+                res = (u, v)
+                # Apply temporal override to cached result (optional safety check)
+                if u in to and v in to and to[u] > to[v]:
+                    res = (v, u)
+                return res
             if (v, u) in orientation_cache:
-                return (v, u)
-
-        # 4. Check orientation function
-        # Always prefer explicit orientation_fn if provided, then fallback to expert_knowledge
+                res = (v, u)
+                # Apply temporal override to cached result
+                if u in to and v in to and to[u] > to[v]:
+                    res = (v, u)
+                return res
+        
         orient_fn = self.orientation_fn or getattr(expert_knowledge, "orientation_fn", None)
-
+        
         if orient_fn is not None:
-            # check for llm_pairwise_orient handling partial objects
+            # Detect if this is an LLM orientation function
             test_fn = orient_fn.func if isinstance(orient_fn, partial) else orient_fn
-            is_llm = (test_fn == llm_pairwise_orient) or (getattr(test_fn, "__name__", "") == "llm_pairwise_orient")
+            is_llm = (test_fn == llm_pairwise_orient) or (
+                getattr(test_fn, "__name__", "") == "llm_pairwise_orient"
+            )
+            
             if is_llm:
+                # LLM orientation requires variable descriptions
                 descriptions = getattr(self, "descriptions", {})
                 if not descriptions:
-                    raise ValueError("LLM orientation requires variable descriptions.")
-                # We call the orient_fn directly. If it's a partial, it will merge descriptions.
+                    raise ValueError(
+                        "LLM orientation requires variable descriptions. "
+                        "Set estimator.descriptions = {...} before calling fit()."
+                    )
                 res = orient_fn(u, v, descriptions=descriptions)
             else:
                 res = orient_fn(u, v)
-
-            # Enforce temporal ordering if available
-            to = getattr(expert_knowledge, "temporal_ordering", {})
-            if res and u in to and v in to and to[res[0]] > to[res[1]]:
-                res = (res[1], res[0])
-
-            if res and self.use_cache:
-                orientation_cache.add(res)
-
-            if (self.show_progress or config.SHOW_PROGRESS) and res:
-                logger.info(f"Queried for edge orientation: {u} - {v} -> {res}")
+            
+            # Apply temporal override to function result
+            if res:
+                if u in to and v in to and to[res[0]] > to[res[1]]:
+                    res = (res[1], res[0])
+                
+                if self.use_cache:
+                    orientation_cache.add(res)
+                
+                if self.show_progress or config.SHOW_PROGRESS:
+                    logger.info(f"Queried for edge orientation: {u} - {v} -> {res}")
+            
             return res
-
-        # 5. Fallback to temporal ordering if specified
-        to = getattr(expert_knowledge, "temporal_ordering", {}) if expert_knowledge else {}
+        
         if u in to and v in to:
             if to[u] < to[v]:
-                res = (u, v)
+                return (u, v)
             elif to[v] < to[u]:
-                res = (v, u)
+                return (v, u)
             else:
-                res = None  # Same tier implies no strict direction from temporal order
-            return res
-
-        raise ValueError("No orientation function is available")
+                # Same temporal tier - no direction can be determined
+                return None
+        
+        raise ValueError(
+            "No orientation function is available. "
+            "Provide at least one of: orientation_fn, orientations, expert_knowledge, or temporal_order."
+        )
 
     def _fit(self, X: pd.DataFrame):
         """
