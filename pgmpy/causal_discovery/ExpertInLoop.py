@@ -179,10 +179,10 @@ class ExpertInLoop(_BaseCausalDiscovery):
     def _test_all(self, ci_test, dag, data, blacklisted=None):
         """
         Runs CI tests on all possible combinations of variables.
-
+    
         If blacklisted is provided, skips recording non-edge candidates present
         in blacklist (either direction), reducing downstream filtering work.
-
+    
         Parameters
         ----------
         ci_test : callable
@@ -193,23 +193,22 @@ class ExpertInLoop(_BaseCausalDiscovery):
             The data for CI testing.
         blacklisted : set, optional
             Set of edges to skip as non-edge candidates.
-
+    
         Returns
         -------
         pd.DataFrame
             Results with columns: u, v, z, edge_present, effect, p_val
         """
-
         cis = []
         if not hasattr(self, "ci_cache_"):
             self.ci_cache_ = {}
-
+    
         ci_cache = self.ci_cache_
-
+    
         for u, v in combinations(list(dag.nodes()), 2):
             u_parents = set(dag.get_parents(u))
             v_parents = set(dag.get_parents(v))
-
+    
             if v in u_parents:
                 conditioning_set = u_parents - {v}
                 edge_present = True
@@ -222,19 +221,19 @@ class ExpertInLoop(_BaseCausalDiscovery):
                 if blacklisted is not None:
                     if (u, v) in blacklisted or (v, u) in blacklisted:
                         continue
-
-            cache_key = (min(u, v), max(u, v), frozenset(conditioning_set))
-
+    
+            # FIXED: Keep (u, v) in order to preserve directionality
+            cache_key = (u, v, frozenset(conditioning_set))
+    
             if cache_key in ci_cache:
                 effect, p_value = ci_cache[cache_key]
             else:
                 effect, p_value = ci_test.run_test(X=u, Y=v, Z=list(conditioning_set))
                 ci_cache[cache_key] = (effect, p_value)
-
+    
             cis.append([u, v, list(conditioning_set), edge_present, effect, p_value])
-
+    
         return pd.DataFrame(cis, columns=["u", "v", "z", "edge_present", "effect", "p_val"])
-
     def _break_cycle(self, dag, u, v, ci_test, data, effect_size_threshold, pval_threshold):
         """
         Subroutine to break any cycles that get created.
@@ -445,10 +444,14 @@ class ExpertInLoop(_BaseCausalDiscovery):
             ]
 
             if len(blacklisted_edges) > 0 and not nonedge_effects.empty:
-                # Vectorized blacklist filtering using MultiIndex membership
-                idx = pd.MultiIndex.from_frame(nonedge_effects[["u", "v"]])
-                mask = idx.isin(bl_set_iter)
-                nonedge_effects = nonedge_effects[~mask]
+                bl_set_iter = set(blacklisted_edges) | {(v, u) for u, v in blacklisted_edges}
+
+                nonedge_effects = nonedge_effects[
+                    ~nonedge_effects[['u', 'v']].apply(
+                        lambda row: tuple(row) in bl_set_iter, 
+                        axis=1
+                    )
+                ]
 
             if nonedge_effects.empty:
                 if edge_effects.empty:
