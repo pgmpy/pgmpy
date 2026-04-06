@@ -470,6 +470,12 @@ class TestLGBNMethods(unittest.TestCase):
     def tearDown(self):
         del self.model, self.cpd1, self.cpd2, self.cpd3
 
+    def test_structure_mismatch_with_same_cpds(self):
+        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+        other = LinearGaussianBayesianNetwork([("x1", "x3"), ("x3", "x2")])
+        other.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+        self.assertNotEqual(self.model, other)
+
 
 class TestLGBNCreation(unittest.TestCase):
     def test_class_init_with_adj_matrix_dict_of_dict(self):

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import warnings
 from collections import deque
 from collections.abc import Callable, Generator, Hashable

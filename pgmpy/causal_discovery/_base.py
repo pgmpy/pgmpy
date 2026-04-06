@@ -12,7 +12,6 @@ from tqdm.auto import tqdm
 
 from pgmpy import config, logger
 from pgmpy.base import DAG, UndirectedGraph
-from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.ci_tests import IndependenceMatch, get_ci_test
 from pgmpy.independencies import Independencies
 from pgmpy.metrics import get_metrics
@@ -192,7 +191,7 @@ class _ConstraintMixin:
         ci_test: str | Callable | None = None,
         significance_level: float = 0.01,
         max_cond_vars: int = 5,
-        expert_knowledge: ExpertKnowledge | None = None,
+        expert_knowledge=None,
         enforce_expert_knowledge: bool = False,
         n_jobs: int = -1,
         show_progress: bool = True,
@@ -312,6 +311,8 @@ class _ConstraintMixin:
             ci_test = get_ci_test(test=ci_test, data=data)
 
         if expert_knowledge is None:
+            from pgmpy.causal_discovery import ExpertKnowledge
+
             expert_knowledge = ExpertKnowledge()
 
         if expert_knowledge.search_space:

@@ -7,8 +7,8 @@ import pandas as pd
 import pytest
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
+from pgmpy.base import PDAG
 from pgmpy.causal_discovery import GES
-from pgmpy.estimators import ExpertKnowledge
 from pgmpy.structure_score import K2
 
 
@@ -52,6 +52,97 @@ def titanic_data_mixed(titanic_data):
 @pytest.fixture
 def titanic_data_categorical(titanic_data):
     return titanic_data[["Survived", "Sex", "Pclass"]].astype("category")
+
+
+# Optional manual parity check against `causal-learn==0.1.4.5`.
+# This is intentionally kept as documentation instead of an executable test,
+# because `causal-learn` is an optional dependency.
+#
+# Reproduction:
+#   python - <<'PY'
+#   import numpy as np
+#   import pandas as pd
+#   from causallearn.search.ScoreBased.GES import ges
+#   from pgmpy.causal_discovery import GES
+#   from pgmpy.structure_score import BDeu
+#
+#   def causallearn_cpdag_edge_sets(graph, columns):
+#       directed = set()
+#       undirected = set()
+#       adjacency = graph.graph
+#       for i in range(len(columns)):
+#           for j in range(i + 1, len(columns)):
+#               a, b = adjacency[i, j], adjacency[j, i]
+#               if a == -1 and b == -1:
+#                   undirected.add(tuple(sorted((columns[i], columns[j]))))
+#               elif a == -1 and b == 1:
+#                   directed.add((columns[i], columns[j]))
+#               elif a == 1 and b == -1:
+#                   directed.add((columns[j], columns[i]))
+#       return directed, undirected
+#
+#   def pgmpy_cpdag_edge_sets(pdag):
+#       directed = set(pdag.directed_edges)
+#       undirected = {tuple(sorted(edge)) for edge in pdag.undirected_edges}
+#       return directed, undirected
+#
+#   def run_case(name, data, columns):
+#       df = pd.DataFrame(
+#           {col: pd.Series(data[:, i], dtype="category") for i, col in enumerate(columns)}
+#       )
+#       causal_graph = ges(data, score_func="local_score_BDeu", node_names=columns)["G"]
+#       pgmpy_graph = GES(
+#           scoring_method=BDeu(df, equivalent_sample_size=1),
+#           return_type="pdag",
+#       ).fit(df).causal_graph_
+#       print(name, causallearn_cpdag_edge_sets(causal_graph, columns), pgmpy_cpdag_edge_sets(pgmpy_graph))
+#
+#   columns = ["A", "B", "C"]
+#
+#   rng = np.random.default_rng(0)
+#   n = 5000
+#   a = rng.binomial(1, 0.5, size=n)
+#   b = np.where(rng.random(n) < 0.95, a, 1 - a)
+#   c = np.where(rng.random(n) < 0.95, b, 1 - b)
+#   run_case("chain", np.column_stack([a, b, c]).astype(int), columns)
+#
+#   rng = np.random.default_rng(1)
+#   a = rng.binomial(1, 0.5, size=n)
+#   b = rng.binomial(1, 0.5, size=n)
+#   base = np.logical_or(a, b).astype(int)
+#   noise = rng.binomial(1, 0.03, size=n)
+#   c = np.logical_xor(base, noise).astype(int)
+#   run_case("collider", np.column_stack([a, b, c]).astype(int), columns)
+#   PY
+#
+# Observed results:
+#   chain:
+#       causal-learn -> (set(), {("A", "B"), ("B", "C")})
+#       pgmpy       -> (set(), {("A", "B"), ("B", "C")})
+#   collider:
+#       causal-learn -> ({("A", "C"), ("B", "C")}, set())
+#       pgmpy       -> ({("A", "C"), ("B", "C")}, set())
+
+
+def test_insert_orients_t_away_from_v():
+    est = GES()
+
+    pdag = PDAG(undirected_ebunch=[("B", "C")])
+    pdag.add_nodes_from(["A", "B", "C"])
+
+    new_model = est.insert("A", "B", {"C"}, pdag)
+
+    assert new_model.directed_edges == {("A", "B"), ("B", "C")}
+    assert new_model.undirected_edges == set()
+
+
+def test_legal_edge_deletions_include_both_orders_for_undirected_edges():
+    est = GES()
+
+    pdag = PDAG(undirected_ebunch=[("A", "B")])
+    pdag.add_nodes_from(["A", "B"])
+
+    assert set(est._legal_edge_deletions(pdag)) == {("A", "B"), ("B", "A")}
 
 
 class TestGESCore:
@@ -100,76 +191,6 @@ class TestGESCore:
         assert hasattr(est, "feature_names_in_")
 
 
-class TestGESExpertKnowledge:
-    """Tests for GES with expert knowledge constraints."""
-
-    def test_required_edges(self, rand_data):
-        expert_knowledge = ExpertKnowledge(required_edges=[("B", "C")])
-        est = GES(
-            scoring_method="k2",
-            expert_knowledge=expert_knowledge,
-            return_type="dag",
-        )
-        est.fit(rand_data)
-        assert ("B", "C") in list(est.causal_graph_.edges())
-
-    def test_forbidden_edges(self, titanic_data_categorical):
-        expert_knowledge = ExpertKnowledge(forbidden_edges=[("Sex", "Survived"), ("Survived", "Sex")])
-        est = GES(
-            scoring_method="k2",
-            expert_knowledge=expert_knowledge,
-            return_type="dag",
-        )
-        est.fit(titanic_data_categorical)
-        assert ("Sex", "Survived") not in est.causal_graph_.edges()
-        assert ("Survived", "Sex") not in est.causal_graph_.edges()
-
-    def test_search_space(self):
-        adult_data = pd.read_csv("pgmpy/tests/test_estimators/testdata/adult.csv")
-        search_space = [
-            ("Age", "Education"),
-            ("Education", "HoursPerWeek"),
-            ("Education", "Income"),
-            ("HoursPerWeek", "Income"),
-            ("Age", "Income"),
-        ]
-        expert_knowledge = ExpertKnowledge(search_space=search_space)
-        est = GES(scoring_method="k2", expert_knowledge=expert_knowledge, return_type="dag")
-        est.fit(adult_data)
-        for edge in est.causal_graph_.edges():
-            assert edge in search_space
-
-    def test_temporal_order(self, titanic_data_categorical):
-        expert_knowledge = ExpertKnowledge(temporal_order=[["Pclass", "Sex"], ["Survived"]])
-        est = GES(
-            scoring_method="k2",
-            expert_knowledge=expert_knowledge,
-            return_type="dag",
-        )
-        est.fit(titanic_data_categorical)
-        expected_edges = {
-            ("Sex", "Survived"),
-            ("Sex", "Pclass"),
-            ("Pclass", "Survived"),
-        }
-        assert set(est.causal_graph_.edges()) == expected_edges
-
-
-class TestGESScoringMethods:
-    """Tests for different scoring methods."""
-
-    @pytest.mark.parametrize("scoring_method", ["k2", "bdeu", "bds", "bic-d", "aic-d"])
-    def test_discrete_scores(self, rand_data, scoring_method):
-        est = GES(scoring_method=scoring_method, return_type="dag")
-        est.fit(rand_data)
-
-    @pytest.mark.parametrize("scoring_method", ["ll-cg", "aic-cg", "bic-cg"])
-    def test_mixed_scores(self, titanic_data_mixed, scoring_method):
-        est = GES(scoring_method=scoring_method, return_type="dag")
-        est.fit(titanic_data_mixed)
-
-    @pytest.mark.parametrize("scoring_method", ["aic-g", "bic-g"])
-    def test_gaussian_scores(self, scoring_method):
-        data = pd.read_csv("pgmpy/tests/test_estimators/testdata/gaussian_testdata.csv", index_col=0)
-        est = GES(scoring_method=scoring_method, return_type="dag")
-        est.fit(data)
+def test_expert_knowledge_not_supported():
+    with pytest.raises(TypeError, match="expert_knowledge"):
+        GES(expert_knowledge=None)

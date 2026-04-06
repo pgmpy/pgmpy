@@ -4,6 +4,7 @@
 # pgmpy/base/DAG.py
 pgmpy/base/ADMG.py
 pgmpy/base/DAG.py
+pgmpy/base/PDAG.py
 pgmpy/base/MAG.py
 pgmpy/base/SimpleCausalModel.py
 pgmpy/base/UndirectedGraph.py
@@ -51,6 +52,7 @@ pgmpy/models/JunctionTree.py
 pgmpy/models/LinearGaussianBayesianNetwork.py
 pgmpy/models/MarkovChain.py
 pgmpy/models/NaiveBayes.py
+pgmpy/prediction/DoubleMLRegressor.py
 pgmpy/structure_score/_base.py
 pgmpy/structure_score/aic.py
 pgmpy/structure_score/aic_cond_gauss.py
@@ -66,3 +68,7 @@ pgmpy/structure_score/log_likelihood_cond_gauss.py
 pgmpy/structure_score/log_likelihood_gauss.py
 pgmpy/utils/mathext.py
 pgmpy/utils/state_name.py
+pgmpy/readwrite/BIF.py
+pgmpy/readwrite/NET.py
+pgmpy/readwrite/UAI.py
+pgmpy/readwrite/XMLBIF.py

@@ -100,6 +100,31 @@ class ExpertKnowledge:
         self.temporal_order = temporal_order if temporal_order is not None else [[]]
         self.temporal_ordering = self._get_temporal_ordering(self.temporal_order)
 
+    def __repr__(self):
+        # Calculate total number of nodes in temporal order
+        n_temporal_nodes = sum(len(tier) for tier in self.temporal_order)
+
+        return (
+            f"Expert Knowledge: {len(self.required_edges)} required edges, "
+            f"{len(self.forbidden_edges)} forbidden edges, "
+            f"temporal order on {n_temporal_nodes} nodes, and "
+            f"{len(self.search_space)} search space edges"
+        )
+
+    def __str__(self):
+        lines = ["Expert Knowledge:"]
+
+        if self.required_edges:
+            lines.append(f"Required Edges: {self.required_edges}")
+        if self.forbidden_edges:
+            lines.append(f"Forbidden Edges: {self.forbidden_edges}")
+        if self.search_space:
+            lines.append(f"Search Space: {self.search_space}")
+        if self.temporal_order and self.temporal_order != [[]]:
+            lines.append(f"Temporal Order: {self.temporal_order}")
+
+        return "\n".join(lines)
+
     def _validate_edges(self, edge_list):
         if not hasattr(edge_list, "__iter__"):
             raise TypeError(f"Expected iterator type for edge information. Got {type(edge_list)} instead.")
