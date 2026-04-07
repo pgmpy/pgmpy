@@ -37,6 +37,15 @@ class ExpertKnowledge:
             (parental) variables are at the start while the priority decreases
             as we go move towards the end of the structure (iterator).
 
+    orientation_fn: callable (default: None)
+        A function to determine edge orientation between variable pairs.
+        The function should accept (u, v) and return either a directed
+        tuple (source, target) or None.
+
+    orientations: iterable (default: None)
+        A set of pre-specified edge orientations as tuples (source, target).
+        These take precedence over orientation_fn results.
+
     Examples
     --------
     Import an example model from pgmpy.utils

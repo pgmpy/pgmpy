@@ -523,12 +523,11 @@ class ExpertInLoop(_BaseCausalDiscovery):
             if self.orientation_fn is not None:
                 self.expert_knowledge_.orientation_fn = self.orientation_fn
             if self.orientations is not None:
-                if isinstance(self.expert_knowledge_.orientations, list):
-                    original_orientations = set(self.expert_knowledge_.orientations)
-                    original_orientations.update(self.orientations)
-                    self.expert_knowledge_.orientations = list(original_orientations)
-                else:
-                    self.expert_knowledge_.orientations.update(self.orientations)
+                existing_orientations = getattr(self.expert_knowledge_, "orientations", set())
+                if isinstance(existing_orientations, list):
+                    existing_orientations = set(existing_orientations)
+                merged_orientations = existing_orientations | self.orientations
+                self.expert_knowledge_.orientations = merged_orientations
 
         dag = DAG()
         dag.add_nodes_from(self.variables_)
@@ -571,7 +570,6 @@ class ExpertInLoop(_BaseCausalDiscovery):
 
             if len(blacklisted_edges) > 0 and not nonedge_effects.empty:
                 bl_set_iter = set(blacklisted_edges) | {(v, u) for u, v in blacklisted_edges}
-
                 nonedge_effects = nonedge_effects[
                     ~nonedge_effects[["u", "v"]].apply(lambda row: tuple(row) in bl_set_iter, axis=1)
                 ]
@@ -605,7 +603,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
                 )
                 if not edges_to_remove:
                     blacklisted_edges.append(edge_direction)
-                elif [tuple(e) == tuple(edge_direction) for e in edges_to_remove].count(True) > 0:
+                elif any(tuple(e) == tuple(edge_direction) for e in edges_to_remove): 
                     if self.show_progress or config.SHOW_PROGRESS:
                         logger.info(
                             f"Cycle-breaking subroutine suggested removing the new edge {edge_direction}. Rejecting it."
@@ -624,7 +622,6 @@ class ExpertInLoop(_BaseCausalDiscovery):
                 f"Graph may be incomplete. Increase max_iter if needed."
             )
 
-        # In _fit method, around line 501-506
         self.causal_graph_ = dag
         self.adjacency_matrix_ = pd.DataFrame(
             nx.adjacency_matrix(dag, nodelist=self.variables_, weight=None).toarray().astype(int),
