@@ -114,7 +114,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
     feature_names_in_ : np.ndarray
         The feature names in the data used to learn the causal graph.
 
-    orientation_cache_ : set
+    orientation_cache_ : dict
         Cache of edge orientations learned during fitting.
 
     ci_cache_ : dict
@@ -407,7 +407,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
                 return (v, u)
 
         if not hasattr(self, "orientation_cache_"):
-            self.orientation_cache_ = set()
+            self.orientation_cache_ = {}
 
         orientation_cache = self.orientation_cache_
 
@@ -467,7 +467,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
                 res = (res[1], res[0])
 
             if res and self.use_cache:
-                orientation_cache.add(res)
+                orientation_cache[cache_key] = res
 
             if (self.show_progress or config.SHOW_PROGRESS) and res:
                 logger.info(f"Queried for edge orientation: {u} - {v} -> {res}")
@@ -509,7 +509,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
         # Initialize caches FIRST - these are required by _test_all() and
         # _get_edge_orientation() which are called in the main loop below
         self.ci_cache_ = {}
-        self.orientation_cache_ = set()
+        self.orientation_cache_ = {}
 
         # Handle expert knowledge setup in fit to remain scikit-learn compliant
         if self.expert_knowledge is None:

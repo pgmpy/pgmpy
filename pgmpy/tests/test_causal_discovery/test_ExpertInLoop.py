@@ -839,7 +839,6 @@ def test_orientation_from_expertknowledge_orientations_with_temporal_override():
     ek = ExpertKnowledge(orientations=[("B", "A")], temporal_order=[["A"], ["B"]])
     est = ExpertInLoop(expert_knowledge=ek)
     # Explicit says B->A, temporal says A before B.
-    # New behavior: orientations take precedence over temporal.
     assert est._get_edge_orientation("A", "B") == ("B", "A")
     assert est._get_edge_orientation("B", "A") == ("B", "A")
 
@@ -848,7 +847,6 @@ def test_orientation_from_ctor_orientations_with_temporal_override():
     ek = ExpertKnowledge(temporal_order=[["X"], ["Y"]])
     est = ExpertInLoop(expert_knowledge=ek, orientations={("Y", "X")})
     # Explicit says Y->X, temporal says X before Y.
-    # New behavior: orientations take precedence over temporal.
     assert est._get_edge_orientation("X", "Y") == ("Y", "X")
 
 
