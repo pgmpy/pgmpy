@@ -413,7 +413,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
 
         cache_key = (u, v, tuple(sorted(to.items())) if to else None)
         cache_key_rev = (v, u, tuple(sorted(to.items())) if to else None)
-        
+
         if self.use_cache:
             if cache_key in orientation_cache:
                 return orientation_cache[cache_key]

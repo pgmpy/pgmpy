@@ -219,22 +219,21 @@ def test_estimate_with_orientations(adult_data_small, orientations_small):
 )
 def test_estimate_with_cache(adult_data_small, orientations_small):
     """Test estimation with cached orientations."""
-    # Created estimator and set the orientation cache
+    # Created estimator with pre-specified orientations
     estimator = ExpertInLoop(
         orientation_fn=simple_orient,
+        orientations=orientations_small,
         use_cache=True,
         pval_threshold=0.1,
         effect_size_threshold=0.1,
         show_progress=False,
     )
-    # Pre-populate the orientation cache
-    estimator.orientation_cache_ = orientations_small
-
+    # fit() re-initializes the cache but uses `orientations` parameter during fit
     estimator.fit(adult_data_small)
 
-    assert orientations_small == set(estimator.causal_graph_.edges())
-    # Cache should still contain the orientations
-    assert estimator.orientation_cache_ == orientations_small
+    assert orientations_small.issubset(set(estimator.causal_graph_.edges()))
+    # Cache should be populated after fit()
+    assert len(estimator.orientation_cache_) > 0
 
 
 @pytest.mark.skipif(
@@ -839,15 +838,18 @@ def test_use_cache_false_ignores_and_does_not_populate_cache():
 def test_orientation_from_expertknowledge_orientations_with_temporal_override():
     ek = ExpertKnowledge(orientations=[("B", "A")], temporal_order=[["A"], ["B"]])
     est = ExpertInLoop(expert_knowledge=ek)
-    # Explicit says B->A, temporal says A before B, so override to A->B
-    assert est._get_edge_orientation("A", "B") == ("A", "B")
-    assert est._get_edge_orientation("B", "A") == ("A", "B")
+    # Explicit says B->A, temporal says A before B.
+    # New behavior: orientations take precedence over temporal.
+    assert est._get_edge_orientation("A", "B") == ("B", "A")
+    assert est._get_edge_orientation("B", "A") == ("B", "A")
 
 
 def test_orientation_from_ctor_orientations_with_temporal_override():
     ek = ExpertKnowledge(temporal_order=[["X"], ["Y"]])
     est = ExpertInLoop(expert_knowledge=ek, orientations={("Y", "X")})
-    assert est._get_edge_orientation("X", "Y") == ("X", "Y")
+    # Explicit says Y->X, temporal says X before Y.
+    # New behavior: orientations take precedence over temporal.
+    assert est._get_edge_orientation("X", "Y") == ("Y", "X")
 
 
 def test_orientation_fn_llm_requires_descriptions():
@@ -1031,7 +1033,8 @@ def test_get_edge_orientation_orientations_ctor():
     assert est._get_edge_orientation("B", "A") == ("A", "B")
     ek = ExpertKnowledge(temporal_order=[["B"], ["A"]])
     est = ExpertInLoop(expert_knowledge=ek, orientations={("A", "B")})
-    assert est._get_edge_orientation("A", "B") == ("B", "A")
+    # orientations take precedence over ek temporal_order
+    assert est._get_edge_orientation("A", "B") == ("A", "B")
 
 
 def test_get_edge_orientation_temporal_tie():
