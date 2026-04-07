@@ -394,7 +394,6 @@ class ExpertInLoop(_BaseCausalDiscovery):
         # 1a. Check ExpertKnowledge orientations
         if expert_knowledge and hasattr(expert_knowledge, "orientations") and expert_knowledge.orientations:
             if (u, v) in expert_knowledge.orientations:
-                # Return explicit orientation as-is (DO NOT override with temporal)
                 return (u, v)
             if (v, u) in expert_knowledge.orientations:
                 return (v, u)
@@ -523,6 +522,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
             if self.orientation_fn is not None:
                 self.expert_knowledge_.orientation_fn = self.orientation_fn
             if self.orientations is not None:
+                # Merge orientations - constructor orientations override expert knowledge
                 existing_orientations = getattr(self.expert_knowledge_, "orientations", set())
                 if isinstance(existing_orientations, list):
                     existing_orientations = set(existing_orientations)
@@ -603,7 +603,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
                 )
                 if not edges_to_remove:
                     blacklisted_edges.append(edge_direction)
-                elif any(tuple(e) == tuple(edge_direction) for e in edges_to_remove): 
+                elif any(tuple(e) == tuple(edge_direction) for e in edges_to_remove):
                     if self.show_progress or config.SHOW_PROGRESS:
                         logger.info(
                             f"Cycle-breaking subroutine suggested removing the new edge {edge_direction}. Rejecting it."

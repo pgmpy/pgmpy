@@ -106,13 +106,26 @@ class ExpertKnowledge:
         self.forbidden_edges = self._validate_edges(forbidden_edges)
         self.required_edges = self._validate_edges(required_edges)
         self.search_space = self._validate_edges(search_space)
-        self.orientations = self._validate_edges(orientations) if orientations is not None else set()
+        self.orientations = self._validate_edges(orientations)
 
         self.temporal_order = temporal_order if temporal_order is not None else [[]]
         self.temporal_ordering = self._get_temporal_ordering(self.temporal_order)
         self.orientation_fn = orientation_fn
 
     def _validate_edges(self, edge_list):
+        """
+        Validate and convert edge list to a set of tuples.
+
+        Parameters
+        ----------
+        edge_list : iterable or None
+            Edges as tuples, lists, or strings ('u->v' or 'u-v')
+
+        Returns
+        -------
+        set
+            Set of (u, v) edge tuples
+        """
         if edge_list is None:
             return set()
         try:
