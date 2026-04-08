@@ -131,7 +131,7 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         """
         Return all edges that can be considered for deletion.
         """
-        return list(current_model.edges())
+        return sorted(current_model.edges())
 
     def insert(
         self,
@@ -256,7 +256,7 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         # Step 2: Forward phase. Iteratively add edges till score stops improving.
         while True:
             potential_edges = []
-            for u, v in combinations(current_model.nodes(), 2):
+            for u, v in combinations(sorted(current_model.nodes()), 2):
                 if not current_model.has_edge(u, v) and not current_model.has_edge(v, u):
                     potential_edges.append((u, v))
                     potential_edges.append((v, u))
@@ -371,7 +371,7 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         # Step 4: Turning phase. Iteratively reorient edges till score stops improving.
         while True:
             potential_turns = []
-            for u, v in current_model.edges():
+            for u, v in sorted(current_model.edges()):
                 potential_turns.append((v, u))
 
             score_deltas = np.zeros(len(potential_turns))
