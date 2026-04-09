@@ -173,10 +173,68 @@ class DiBS(_BaseCausalDiscovery):
         return grad_z / expec_pgz[:, None, None]
 
 
+    def _grad_z_likelihood_gumbel(
+        self,
+        X_t: torch.Tensor,
+        particles: torch.Tensor,
+        t: int,
+    ):
+        """
+        # todo: implementation of eq. 12.
+        Parameters
+        ----------
+        X_t
+        particles
+        t
 
-    def _grad_z_likelihood_gumbel(self):
-        # TODO
-        pass
+        Returns
+        -------
+
+        """
+
+        # Use inverse transform sampling to get samples from logistic distribution with
+        # location 0 and scale 1.
+        # To this, end, use that the quantile function is given by Q(p) = log p / (1-p)
+        # See https://en.wikipedia.org/wiki/Logistic_distribution#Quantile_function
+        n_nodes = X_t.shape[1]
+        uniform_samples = torch.rand((particles.shape[0], self.n_grad_mc_samples, n_nodes, n_nodes), device=particles.device, dtype=particles.dtype)
+        logistic_samples = torch.log(uniform_samples / (1 - uniform_samples))
+
+
+        # todo: discuss correctness of eq. 12 with ankur; is the chain rule applied correctly?
+        # todo: for the time being, use a custom stable rewrite and use autodiff.
+
+        def graph_tau(L, Z):
+            # equation 13:
+            U, V = Z.chunk(2, dim=-1)
+            interactions = U @ V.transpose(-1, -2)
+            graph_taus = torch.sigmoid(self.tau * (L + self.alpha(t) * interactions))
+            graph_taus = graph_taus * (1 - torch.eye(n_nodes, device=graph_taus.device, dtype=graph_taus.dtype))
+            return graph_taus
+
+        marginal_log_likelihood = lambda g: self.log_likelihood(X_t, g)
+        composition = lambda l, z: marginal_log_likelihood(graph_tau(l, z))
+
+        # using grad_z f = f * grad_z log f:
+        # grad_z marginal_log_likelihood(G_tau(L, Z))
+        gradz_marg_ll = torch.vmap(
+            torch.vmap(grad(composition, argnums=1), in_dims=(0, None)),
+            in_dims=(0, 0),
+        )(logistic_samples, particles)
+
+        # likelihood(G_tau(L, Z))
+        log_marg_likelihoods = torch.vmap(
+            torch.vmap(composition, in_dims=(0, None)),
+            in_dims=(0, 0),
+        )(logistic_samples, particles)
+
+        # Stable computation of
+        #   [sum_m exp(log_marg_likelihoods_m) * gradz_marg_ll_m] /
+        #   [sum_m exp(log_marg_likelihoods_m)]
+        weights = torch.softmax(log_marg_likelihoods, dim=1)
+        ratio = (weights[..., None, None] * gradz_marg_ll).sum(dim=1)
+
+        return ratio
 
 
     def _make_likelihood_grad_estimator(self, name: str):
