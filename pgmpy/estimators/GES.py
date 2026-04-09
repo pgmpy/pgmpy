@@ -84,7 +84,7 @@ class GES(StructureEstimator):
         """
         legal_edges: list[tuple[Hashable, Hashable]] = []
 
-        for u, v in combinations(current_model.nodes(), 2):
+        for u, v in combinations(sorted(current_model.nodes()), 2):
             # Nodes must not be adjacent in any direction
             if not current_model.has_edge(u, v) and not current_model.has_edge(v, u):
                 legal_edges.append((u, v))
@@ -99,7 +99,7 @@ class GES(StructureEstimator):
         """
         Return all edges that can be considered for deletion.
         """
-        return list(current_model.edges())
+        return sorted(current_model.edges())
 
     def _legal_edge_turns(
         self,
@@ -110,7 +110,7 @@ class GES(StructureEstimator):
         """
         legal_turns: list[tuple[Hashable, Hashable]] = []
 
-        for u, v in current_model.edges():
+        for u, v in sorted(current_model.edges()):
             legal_turns.append((v, u))
 
         return legal_turns
