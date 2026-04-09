@@ -413,8 +413,8 @@ class TestResidualMethods(unittest.TestCase):
         reason="execute only if required dependency present",
     )
     def test_pillai_indep(self):
-        indep_coefs = [0.0014, 0.0023, 0.0041, 0.0213, 0.0041]
-        indep_pvalues = [0.2430, 0.0161, 0.0522, 0.0184, 0.0522]
+        indep_coefs = [0.0014, 0.0058, 0.0084, 0.0214, 0.0084]
+        indep_pvalues = [0.243, 0.0161, 0.0384, 0.0108, 0.0384]
 
         computed_coefs = []
         computed_pvalues = []
@@ -452,7 +452,7 @@ class TestResidualMethods(unittest.TestCase):
         reason="execute only if required dependency present",
     )
     def test_pillai_dependent(self):
-        dep_coefs = np.array([0.1322, 0.1609, 0.1182, 0.1330, 0.1182])
+        dep_coefs = np.array([0.1322, 0.1609, 0.1214, 0.136, 0.1214])
         dep_pvalues = np.array([0, 0, 0, 0, 0])
 
         computed_coefs = []

@@ -45,7 +45,7 @@ def test_implied_cis_cancer():
 
     tests = implied_ci_tests(df, model)
     assert tests.shape[0] == 6
-    assert_pvalues(tests, [0.9816, 1.0, 0.3491, 0.8061, 0.8960, 0.9917])
+    assert_pvalues(tests, [0.5829, 0.7911, 1.0, 0.2496, 0.0231, 0.9993])
 
 
 def test_implied_cis_alarm_true_and_random(rng):

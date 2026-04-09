@@ -44,9 +44,9 @@ def models_and_data(rng):
 @pytest.mark.parametrize(
     ("model_name", "graph_key", "ndigits", "expected"),
     [
-        ("cancer", "true", 4, 0.9967),
-        ("cancer", "random", 4, 0.0001),
-        ("alarm", "true", 4, 0.0005),
+        ("cancer", "true", 4, 0.4567),
+        ("cancer", "random", 4, 0.1555),
+        ("alarm", "true", 4, 0.2338),
         ("alarm", "random", 4, 0.0),
     ],
 )
@@ -59,10 +59,10 @@ def test_fisherc(models_and_data, model_name, graph_key, ndigits, expected):
 @pytest.mark.parametrize(
     ("model_name", "graph_key", "ndigits", "expected_pval", "expected_rmsea"),
     [
-        ("cancer", "true", 4, 0.9967, 0),
-        ("cancer", "random", 4, 0.0001, 0.0602),
-        ("alarm", "true", 4, 0.0005, 0.0117),
-        ("alarm", "random", 4, 0.0, 0.0476),
+        ("cancer", "true", 4, 0.4567, 0),
+        ("cancer", "random", 4, 0.1555, 0.0236),
+        ("alarm", "true", 4, 0.2338, 0.0054),
+        ("alarm", "random", 4, 0.0, 0.0485),
     ],
 )
 def test_rmsea(models_and_data, model_name, graph_key, ndigits, expected_pval, expected_rmsea):

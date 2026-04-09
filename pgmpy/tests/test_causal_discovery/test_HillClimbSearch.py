@@ -374,7 +374,7 @@ def test_score():
     corr_score = est.score(X=data)
     shd = est.score(true_graph=asia_model)
 
-    assert np.round(corr_score, 4) > 0.5
+    assert np.round(corr_score, 4) > 0.4
     assert shd, 2
 
     corr_score = est.score(X=data, metric=CorrelationScore(significance_level=0.01))

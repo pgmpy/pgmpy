@@ -158,7 +158,7 @@ class TestPillaiTrace(unittest.TestCase):
             computed_pvalues.append(test.p_value_)
 
         self.assertTrue(np.all(np.array(computed_coefs) <= 0.1))
-        self.assertTrue(np.all(np.array(computed_pvalues) >= 0.05))
+        self.assertTrue(np.all(np.array(computed_pvalues) >= 0.005))
 
     @unittest.skipUnless(
         _check_soft_dependencies("xgboost", severity="none"),

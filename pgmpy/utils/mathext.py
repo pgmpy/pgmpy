@@ -125,18 +125,17 @@ def sample_discrete(values, weights: np.ndarray | list[np.ndarray], size=1, seed
     >>> sample_discrete(values, probabilities, 10, seed=0).tolist()
     ['v_1', 'v_2', 'v_1', 'v_1', 'v_1', 'v_1', 'v_1', 'v_2', 'v_2', 'v_1']
     """
-    if seed is not None:
-        np.random.seed(seed)
+    rng = np.random.default_rng(seed)
     weights = compat_fns.to_numpy(weights)
     if weights.ndim == 1:
-        return np.random.choice(compat_fns.to_numpy(values), size=size, p=_adjusted_weights(weights))
+        return rng.choice(compat_fns.to_numpy(values), size=size, p=_adjusted_weights(weights))
     else:
         samples = np.zeros(size, dtype=int)
         unique_weights, counts = np.unique(weights, axis=0, return_counts=True)
-        for index, size in enumerate(counts):
-            samples[(weights == unique_weights[index]).all(axis=1)] = np.random.choice(
+        for index, size_val in enumerate(counts):
+            samples[(weights == unique_weights[index]).all(axis=1)] = rng.choice(
                 compat_fns.to_numpy(values),
-                size=size,
+                size=size_val,
                 p=_adjusted_weights(unique_weights[index]),
             )
         return samples
@@ -183,8 +182,7 @@ def sample_discrete_maps(
     >>> sample_discrete(values, probabilities, 10, seed=0).tolist()
     ['v_1', 'v_2', 'v_1', 'v_1', 'v_1', 'v_1', 'v_1', 'v_2', 'v_2', 'v_1']
     """
-    if seed is not None:
-        np.random.seed(seed)
+    rng = np.random.default_rng(seed)
 
     # TODO: Remove this conversion and find a way to do this natively in torch.
     states = np.array(states)
@@ -196,7 +194,7 @@ def sample_discrete_maps(
     unique_weight_indices, counts = np.unique(weight_indices, return_counts=True)
 
     for weight_size, weight_index in zip(counts, unique_weight_indices):
-        samples[(weight_indices == weight_index)] = np.random.choice(
+        samples[(weight_indices == weight_index)] = rng.choice(
             states, size=weight_size, p=_adjusted_weights(index_to_weight[weight_index])
         )
     return samples
