@@ -1,5 +1,7 @@
 import itertools
 
+from uritemplate import variables
+
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.models import DiscreteBayesianNetwork, DynamicBayesianNetwork
 from pgmpy.utils import compat_fns
@@ -30,22 +32,28 @@ class ApproxInference:
 
     @staticmethod
     def _get_factor_from_df(df, state_names):
-        """
-        Takes a groupby dataframe and converts it into a pgmpy.factors.discrete.DiscreteFactor object.
-        """
         variables = list(df.index.names)
+
+    # Create full index grid
         if len(variables) == 1:
-            df_index = state_names[variables[0]]
+            full_index = state_names[variables[0]]
         else:
-            df_index = itertools.product(*[state_names[var] for var in variables])
-        # state_names = {var: list(df.index.unique(var)) for var in variables}
+            full_index = list(itertools.product(*[state_names[var] for var in variables]))
+
+        # Reindex properly
+        df = df.reindex(full_index, fill_value=0)
+
+        # Ensure correct shape
         cardinality = [len(state_names[var]) for var in variables]
+
+        values = df.to_numpy().reshape(cardinality)
+
         return DiscreteFactor(
             variables=variables,
             cardinality=cardinality,
-            values=df.reindex(df_index).fillna(0).values,
+            values=values,
             state_names=state_names,
-        )
+    )
 
     def get_distribution(self, samples, variables, state_names=None, joint=True):
         """
@@ -71,15 +79,20 @@ class ApproxInference:
         if isinstance(variables, (set, tuple)):
             variables = list(variables)
 
-        if joint == True:
+        if joint:
+            counts = samples.groupby(variables, observed=False).size()
+            probs = counts / counts.sum()
+
             return self._get_factor_from_df(
-                samples.groupby(variables, observed=False).size() / samples.shape[0],
+                probs,
                 state_names,
             )
         else:
             return {
                 var: self._get_factor_from_df(
-                    samples.groupby([var], observed=False).size() / samples.shape[0],
+                    (lambda c: c / c.sum())(
+                        samples.groupby([var], observed=False).size()
+                    ),
                     state_names,
                 )
                 for var in variables
@@ -189,9 +202,15 @@ class ApproxInference:
 
         # Step 2: Infer state_names from samples.
         if isinstance(self.model, DiscreteBayesianNetwork):
-            state_names = {var: list(samples.loc[:, var].unique()) for var in variables}
+            state_names = {
+                var: sorted(samples.loc[:, var].unique())
+                for var in variables
+            }
         elif isinstance(self.model, DynamicBayesianNetwork):
-            state_names = {var: list(samples.loc[:, [var]].iloc[:, 0].unique()) for var in variables}
+            state_names = {
+                var: sorted(samples.loc[:, [var]].iloc[:, 0].unique()) 
+                for var in variables
+            }
 
         # Step 3: Compute the distributions and return it.
         return self.get_distribution(samples, variables=variables, state_names=state_names, joint=joint)
