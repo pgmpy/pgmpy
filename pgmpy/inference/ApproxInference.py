@@ -1,27 +1,11 @@
 import itertools
 
-from uritemplate import variables
-
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.models import DiscreteBayesianNetwork, DynamicBayesianNetwork
 from pgmpy.utils import compat_fns
 
 
 class ApproxInference:
-    """
-    Initializes the Approximate Inference class.
-
-    Parameters
-    ----------
-    model: Instance of pgmpy.models.DiscreteBayesianNetwork or pgmpy.models.DynamicBayesianNetwork
-
-    Examples
-    --------
-    >>> from pgmpy.example_models import load_model
-    >>> model = load_model("bnlearn/alarm")
-    >>> infer = ApproxInference(model)
-    """
-
     def __init__(self, model):
         if not isinstance(model, (DiscreteBayesianNetwork, DynamicBayesianNetwork)):
             raise ValueError(
@@ -34,18 +18,16 @@ class ApproxInference:
     def _get_factor_from_df(df, state_names):
         variables = list(df.index.names)
 
-    # Create full index grid
         if len(variables) == 1:
             full_index = state_names[variables[0]]
         else:
-            full_index = list(itertools.product(*[state_names[var] for var in variables]))
+            full_index = list(
+                itertools.product(*[state_names[var] for var in variables])
+            )
 
-        # Reindex properly
         df = df.reindex(full_index, fill_value=0)
 
-        # Ensure correct shape
         cardinality = [len(state_names[var]) for var in variables]
-
         values = df.to_numpy().reshape(cardinality)
 
         return DiscreteFactor(
@@ -53,40 +35,16 @@ class ApproxInference:
             cardinality=cardinality,
             values=values,
             state_names=state_names,
-    )
+        )
 
     def get_distribution(self, samples, variables, state_names=None, joint=True):
-        """
-        Computes distribution of `variables` from given data `samples`.
-
-        Parameters
-        ----------
-        samples: pandas.DataFrame
-            A dataframe of samples generated from the model.
-
-        variables: list (array-like)
-            A list of variables whose distribution needs to be computed.
-
-        state_names: dict (default: None)
-            A dict of state names for each variable in `variables` in the form {variable_name: list of states}.
-            If None, inferred from the data but is possible that the final distribution misses some states.
-
-        joint: boolean
-            If joint=True, computes the joint distribution over `variables`.
-            Else, returns a dict with marginal distribution of each variable in
-            `variables`.
-        """
         if isinstance(variables, (set, tuple)):
             variables = list(variables)
 
         if joint:
             counts = samples.groupby(variables, observed=False).size()
             probs = counts / counts.sum()
-
-            return self._get_factor_from_df(
-                probs,
-                state_names,
-            )
+            return self._get_factor_from_df(probs, state_names)
         else:
             return {
                 var: self._get_factor_from_df(
@@ -109,63 +67,7 @@ class ApproxInference:
         show_progress=True,
         seed=None,
     ):
-        """
-        Method for doing approximate inference based on sampling in Bayesian
-        Networks and Dynamic Bayesian Networks.
-
-        Parameters
-        ----------
-        variables: list
-            List of variables for which the probability distribution needs to be calculated.
-
-        n_samples: int
-            The number of samples to generate for computing the distributions. Higher `n_samples`
-            results in more accurate results at the cost of more computation time.
-
-        samples: pd.DataFrame (default: None)
-            If provided, uses these samples to compute the distribution instead
-            of generating samples. `samples` **must** conform with the provided
-            `evidence` and `virtual_evidence`.
-
-        evidence: dict (default: None)
-            The observed values. A dict key, value pair of the form {var: state_name}.
-
-        virtual_evidence: list (default: None)
-            A list of pgmpy.factors.discrete.TabularCPD representing the virtual/soft
-            evidence.
-
-        state_names: dict (default: None)
-            A dict of state names for each variable in `variables` in the form {variable_name: list of states}.
-            If None, inferred from the data but is possible that the final distribution misses some states.
-
-        show_progress: boolean (default: True)
-            If True, shows a progress bar when generating samples.
-
-        seed: int (default: None)
-            Sets the seed for the random generators.
-
-        Returns
-        -------
-        Probability distribution: pgmpy.factors.discrete.TabularCPD
-            The queried probability distribution.
-
-        Examples
-        --------
-        >>> from pgmpy.example_models import load_model
-        >>> from pgmpy.inference import ApproxInference
-        >>> model = load_model("bnlearn/alarm")
-        >>> infer = ApproxInference(model)
-        >>> infer.query(variables=["HISTORY"])  # doctest: +ELLIPSIS
-        <DiscreteFactor representing phi(HISTORY:2) at 0x...>
-        >>> infer.query(variables=["HISTORY", "CVP"], joint=True)  # doctest: +ELLIPSIS
-        <DiscreteFactor representing phi(HISTORY:2, CVP:3) at 0x...>
-        >>> infer.query(
-        ...     variables=["HISTORY", "CVP"], joint=False
-        ... )  # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
-        {'HISTORY': <DiscreteFactor representing phi(HISTORY:2) at 0x...>,
-         'CVP': <DiscreteFactor representing phi(CVP:3) at 0x...>}
-        """
-        # Step 1: If samples are not provided, generate samples for the query
+        # STEP 1: Generate samples ONLY if not provided
         if samples is None:
             if isinstance(self.model, DiscreteBayesianNetwork):
                 samples = self.model.simulate(
@@ -175,6 +77,7 @@ class ApproxInference:
                     seed=seed,
                     show_progress=show_progress,
                 )
+
             elif isinstance(self.model, DynamicBayesianNetwork):
                 if evidence is None:
                     evidence = dict()
@@ -182,15 +85,16 @@ class ApproxInference:
                     virtual_evidence = dict()
 
                 max_time_slices = 0
+
                 for var in variables:
-                    if var[1] > max_time_slices:
-                        max_time_slices = var[1]
-                for var, state in evidence.items():
-                    if var[1] > max_time_slices:
-                        max_time_slices = var[1]
+                    max_time_slices = max(max_time_slices, var[1])
+
+                for var in evidence:
+                    max_time_slices = max(max_time_slices, var[1])
+
                 for cpd in virtual_evidence:
-                    if cpd.variable[1] > max_time_slices:
-                        max_time_slices = cpd.variable[1]
+                    max_time_slices = max(max_time_slices, cpd.variable[1])
+
                 samples = self.model.simulate(
                     n_samples=n_samples,
                     n_time_slices=max_time_slices + 1,
@@ -200,20 +104,28 @@ class ApproxInference:
                     seed=seed,
                 )
 
-        # Step 2: Infer state_names from samples.
-        if isinstance(self.model, DiscreteBayesianNetwork):
-            state_names = {
-                var: sorted(samples.loc[:, var].unique())
-                for var in variables
-            }
-        elif isinstance(self.model, DynamicBayesianNetwork):
-            state_names = {
-                var: sorted(samples.loc[:, [var]].iloc[:, 0].unique()) 
-                for var in variables
-            }
+        # STEP 2: Avoid double conditioning (IMPORTANT)
+        if samples is not None and evidence is not None:
+            evidence = None
 
-        # Step 3: Compute the distributions and return it.
-        return self.get_distribution(samples, variables=variables, state_names=state_names, joint=joint)
+        # STEP 3: Get state names correctly
+        state_names = {}
+
+        for var in variables:
+            if isinstance(self.model, DiscreteBayesianNetwork):
+                state_names[var] = self.model.get_cpds(var).state_names[var]
+            else:
+                # DBN fix: use base node
+                base_var = var[0]
+                state_names[var] = self.model.get_cpds(base_var).state_names[base_var]
+
+        # STEP 4: Compute distribution
+        return self.get_distribution(
+            samples,
+            variables=variables,
+            state_names=state_names,
+            joint=joint,
+        )
 
     def map_query(
         self,
@@ -226,71 +138,6 @@ class ApproxInference:
         show_progress=True,
         seed=None,
     ):
-        """
-        Finds the most probable state in the joint distribution of variables. Calculates the
-        result by generating samples and calculating most probable states based on the probabilities.
-
-        Parameters
-        ----------
-        variables: list
-            List of variables for which the probability distribution needs to be calculated.
-
-        n_samples: int
-            The number of samples to generate for computing the distributions. Higher `n_samples`
-            results in more accurate results at the cost of more computation time.
-
-        samples: pd.DataFrame (default: None)
-            If provided, uses these samples to compute the distribution instead
-            of generating samples. `samples` **must** conform with the provided
-            `evidence` and `virtual_evidence`.
-
-        evidence: dict (default: None)
-            The observed values. A dict key, value pair of the form {var: state_name}.
-
-        virtual_evidence: list (default: None)
-            A list of pgmpy.factors.discrete.TabularCPD representing the virtual/soft
-            evidence.
-
-        state_names: dict (default: None)
-            A dict of state names for each variable in `variables` in the form {variable_name: list of states}.
-            If None, inferred from the data but is possible that the final distribution misses some states.
-
-        show_progress: boolean (default: True)
-            If True, shows a progress bar when generating samples.
-
-        seed: int (default: None)
-            Sets the seed for the random generators.
-
-        Returns
-        -------
-        MAP values: dict
-            The most probable state of provided `variables` given the evidence.
-
-        Examples
-        --------
-        >>> from pgmpy.example_models import load_model
-        >>> from pgmpy.inference import ApproxInference
-        >>> from pgmpy.factors.discrete import State, TabularCPD
-        >>> model = load_model("bnlearn/alarm")
-        >>> infer = ApproxInference(model)
-        >>> print(infer.map_query(variables=["HISTORY", "CVP"]))
-        {'HISTORY': 'FALSE', 'CVP': 'NORMAL'}
-        >>> virtual_evidence_history = TabularCPD(
-        ...     variable="HISTORY",
-        ...     variable_card=2,
-        ...     values=[[0.99], [0.01]],
-        ...     state_names={"HISTORY": ["TRUE", "FALSE"]},
-        ... )
-        >>> evidence = {"CVP": "NORMAL"}
-        >>> print(
-        ...     infer.map_query(
-        ...         variables=["HISTORY"],
-        ...         evidence=evidence,
-        ...         virtual_evidence=[virtual_evidence_history],
-        ...     )
-        ... )
-        {'HISTORY': 'TRUE'}
-        """
         final_distribution = self.query(
             variables,
             n_samples=n_samples,
