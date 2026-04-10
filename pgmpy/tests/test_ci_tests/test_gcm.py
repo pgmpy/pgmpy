@@ -1,3 +1,5 @@
+import os
+
 import pytest
 from sklearn.ensemble import RandomForestRegressor
 
@@ -53,7 +55,7 @@ def df_dep():
     return df_dep
 
 
-@pytest.mark.skipif(True, reason="Skipping exact residual tests on GitHub Actions.")
+@pytest.mark.skipif(os.getenv("GITHUB_ACTIONS") == "true", reason="Skipping exact residual tests on GitHub Actions.")
 def test_gcm_exact(df_dep, df_indep):
     test = GCM(data=df_indep)
 
