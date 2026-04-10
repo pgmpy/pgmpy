@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 import sys
 import unittest
+from unittest.mock import call, patch
 
 import numpy as np
 import pytest
-from mock import call, patch
 from pandas import DataFrame
 
 from pgmpy.factors.discrete import State

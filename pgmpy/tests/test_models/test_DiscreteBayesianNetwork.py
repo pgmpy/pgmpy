@@ -351,9 +351,15 @@ class TestBayesianNetworkMethods(unittest.TestCase):
         self.assertFalse(G1.is_iequivalent(G2))
 
     def test_copy(self):
+        self.G1.with_role(role="exposure", variables="diff", inplace=True)
+        self.G1.with_role(role="outcomes", variables="grade", inplace=True)
+        self.G1.with_role(role="latents", variables="intel", inplace=True)
+
         model_copy = self.G1.copy()
         self.assertEqual(sorted(self.G1.nodes()), sorted(model_copy.nodes()))
         self.assertEqual(sorted(self.G1.edges()), sorted(model_copy.edges()))
+        self.assertEqual(self.G1.get_role_dict(), model_copy.get_role_dict())
+        self.assertEqual(self.G1.latents, model_copy.latents)
         self.assertNotEqual(id(self.G1.get_cpds("diff")), id(model_copy.get_cpds("diff")))
 
         self.G1.remove_cpds("diff")

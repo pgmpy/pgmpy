@@ -1,6 +1,7 @@
+from unittest.mock import MagicMock, Mock, call
+
 import pandas as pd
 import pytest
-from mock import MagicMock, Mock, call
 
 from pgmpy.estimators import BIC
 from pgmpy.estimators.ScoreCache import LRUCache, ScoreCache

@@ -1,6 +1,7 @@
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pytest
-from mock import MagicMock, patch
 
 from pgmpy.factors.discrete import DiscreteFactor, State, TabularCPD
 from pgmpy.inference import VariableElimination

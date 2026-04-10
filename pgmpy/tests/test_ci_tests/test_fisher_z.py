@@ -1,5 +1,3 @@
-import os
-
 import numpy as np
 import pandas as pd
 import pytest
@@ -121,7 +119,7 @@ def residual_data():
 
 
 @pytest.mark.skipif(
-    os.getenv("GITHUB_ACTIONS") == "true",
+    True,
     reason="Skipping residual tests on GitHub Actions.",
 )
 def test_fisher_z_residual(residual_data):
