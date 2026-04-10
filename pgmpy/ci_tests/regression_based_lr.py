@@ -52,13 +52,15 @@ class RegressionBasedLR(_BaseCITest):
 
     Tests the null hypothesis :math:`X \perp Y \mid Z` by comparing two nested
     regression models via a likelihood-ratio (or equivalent F-) test.
-    The regression family is chosen automatically based on the data type of *X*
-    as inferred by :func:`pgmpy.utils.preprocess_data`:
 
-    * **Continuous X** -- OLS linear regression, F-test.
-    * **Binary X** -- Binary logistic regression, chi-squared LR test.
+    The ``regression_family`` parameter controls which model class is used.
+    When set to ``"auto"`` (default), the family is selected from the data type
+    of *X* as inferred by :func:`pgmpy.utils.preprocess_data`:
+
+    * **Continuous X** -- OLS linear regression, F-test (``"linear"``).
+    * **Binary X** -- Binary logistic regression, chi-squared LR test (``"logistic"``).
     * **Categorical X (>2 levels)** -- Multinomial logistic regression,
-      chi-squared LR test.
+      chi-squared LR test (``"multinomial"``).
 
     Predictor variables (*Y* and *Z*) of any type are one-hot encoded
     internally via ``pd.get_dummies(drop_first=True)``. This makes the test
@@ -70,6 +72,11 @@ class RegressionBasedLR(_BaseCITest):
         The dataset in which to test the independence condition. Columns with
         dtype ``object``, ``category``, or ``bool`` are treated as categorical;
         all others are treated as continuous.
+    regression_family : str, default ``"auto"``
+        Regression model to use. One of ``"auto"``, ``"linear"``,
+        ``"logistic"``, ``"multinomial"``, or ``"ordinal"``. When ``"auto"``,
+        the family is inferred from the data type of *X*. ``"ordinal"`` is
+        reserved for a future release and raises ``NotImplementedError``.
 
     Attributes
     ----------
@@ -101,19 +108,17 @@ class RegressionBasedLR(_BaseCITest):
 
     Examples
     --------
-    >>> import numpy as np
-    >>> import pandas as pd
     >>> from pgmpy.ci_tests import RegressionBasedLR
-    >>> rng = np.random.default_rng(42)
-    >>> n = 500
-    >>> Z = rng.standard_normal(n)
-    >>> X = 2 * Z + rng.standard_normal(n)
-    >>> Y = 3 * Z + rng.standard_normal(n)
-    >>> data = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
-    >>> test = RegressionBasedLR(data=data)
-    >>> test("X", "Y", ["Z"], significance_level=0.05)
-    True
-    >>> round(test.p_value_, 2) >= 0.05
+    >>> from pgmpy.models import LinearGaussianBayesianNetwork
+    >>> from pgmpy.factors.continuous import LinearGaussianCPD
+    >>> model = LinearGaussianBayesianNetwork([('Z', 'X'), ('Z', 'Y')])
+    >>> model.add_cpds(
+    ...     LinearGaussianCPD('Z', [0], 1),
+    ...     LinearGaussianCPD('X', [0, 2], 1, ['Z']),
+    ...     LinearGaussianCPD('Y', [0, 3], 1, ['Z']))
+    >>> data = model.simulate(n_samples=500, seed=42)
+    >>> test = RegressionBasedLR(data)
+    >>> test('X', 'Y', ['Z'], significance_level=0.05)
     True
     """
 
@@ -124,8 +129,16 @@ class RegressionBasedLR(_BaseCITest):
         "requires_data": True,
     }
 
-    def __init__(self, data: pd.DataFrame):
+    def __init__(self, data: pd.DataFrame, regression_family: str = "auto"):
         self.data = data
+        if regression_family not in ("auto", "linear", "logistic", "multinomial", "ordinal"):
+            raise ValueError(
+                f"regression_family must be one of 'auto', 'linear', 'logistic', 'multinomial', or 'ordinal'. "
+                f"Got {regression_family!r}."
+            )
+        if regression_family == "ordinal":
+            raise NotImplementedError("Ordinal regression is not yet supported. It will be added in a future release.")
+        self.regression_family = regression_family
         super().__init__()
 
     def run_test(self, X: str, Y: str, Z: list):
@@ -143,22 +156,20 @@ class RegressionBasedLR(_BaseCITest):
         Z : list of str
             Conditioning set. May be empty.
         """
-        relevant_cols = [X, Y] + Z
-        data = self.data[relevant_cols].dropna()
+        # Step 1: Drop missing values and classify column data types.
+        data = self.data[[X, Y] + Z].dropna()
         n = len(data)
 
         if n == 0:
             raise ValueError("No valid observations remain after dropping missing values.")
 
-        # Use pgmpy's preprocess_data to classify column types
         _, dtypes = preprocess_data(data)
 
-        # Encode predictors (Y and Z): continuous kept as-is, categorical one-hot
-        Z_enc = _encode_features(data, Z, dtypes)  # (n, q_z)
-        Y_enc = _encode_features(data, [Y], dtypes)  # (n, q_y)
-        q_y = Y_enc.shape[1]  # extra parameters contributed by Y
+        # Step 2: Encode Y and Z into numeric design matrices (one-hot for categorical).
+        Z_enc = _encode_features(data, Z, dtypes)
+        Y_enc = _encode_features(data, [Y], dtypes)
+        q_y = Y_enc.shape[1]
 
-        # Build design matrices (always include intercept)
         ones = np.ones((n, 1))
         if Z_enc.shape[1] > 0:
             restricted_exog = np.column_stack([ones, Z_enc])
@@ -167,10 +178,18 @@ class RegressionBasedLR(_BaseCITest):
             restricted_exog = ones
             full_exog = np.column_stack([ones, Y_enc])
 
-        x_is_categorical = dtypes[X] in ("C", "O")
+        # Step 3: Determine the regression family from the data type of X if not specified.
+        family = self.regression_family
+        if family == "auto":
+            x_is_categorical = dtypes[X] in ("C", "O")
+            if x_is_categorical:
+                x_encoded, uniques = pd.factorize(data[X])
+                family = "logistic" if len(uniques) == 2 else "multinomial"
+            else:
+                family = "linear"
 
-        if not x_is_categorical:
-            # ---- CONTINUOUS X: OLS + F-test --------------------------------
+        # Step 4: Fit restricted and full models and compute the test statistic.
+        if family == "linear":
             x_values = data[X].values.astype(float)
 
             rank = np.linalg.matrix_rank(full_exog)
@@ -183,67 +202,63 @@ class RegressionBasedLR(_BaseCITest):
             model_r = sm.OLS(x_values, restricted_exog).fit()
             model_f = sm.OLS(x_values, full_exog).fit()
 
-            rss_r = model_r.ssr
-            rss_f = model_f.ssr
             df1 = q_y
             df2 = n - full_exog.shape[1]
 
-            if df1 <= 0 or df2 <= 0 or rss_f <= 0:
-                self.statistic_ = 0.0
-                self.p_value_ = 1.0
-                self.dof_ = df1
+            if df1 <= 0 or df2 <= 0 or model_f.ssr <= 0:
+                self.statistic_, self.p_value_, self.dof_ = 0.0, 1.0, df1
                 return self.statistic_, self.p_value_
 
-            f_stat = ((rss_r - rss_f) / df1) / (rss_f / df2)
-            p_value = stats.f.sf(f_stat, df1, df2)
-
+            # F-test is the exact finite-sample equivalent of the LR test under Gaussian errors.
+            f_stat = ((model_r.ssr - model_f.ssr) / df1) / (model_f.ssr / df2)
             self.statistic_ = f_stat
-            self.p_value_ = p_value
             self.dof_ = df1
 
         else:
-            # ---- CATEGORICAL X: Logistic / MNLogit + chi^2 LR test --------
-            x_encoded, uniques = pd.factorize(data[X])
-            n_classes = len(uniques)
-
-            if n_classes < 2:
-                # Constant response: independence is trivially true
-                self.statistic_ = 0.0
-                self.p_value_ = 1.0
-                self.dof_ = 0
-                return self.statistic_, self.p_value_
-
-            try:
-                if n_classes == 2:
+            if family == "logistic":
+                x_encoded, _ = pd.factorize(data[X])
+                dof = q_y
+                try:
                     model_r = sm.Logit(x_encoded, restricted_exog).fit(disp=0, method="lbfgs", maxiter=200)
                     model_f = sm.Logit(x_encoded, full_exog).fit(disp=0, method="lbfgs", maxiter=200)
-                    dof = q_y
-                else:
+                except (np.linalg.LinAlgError, sm_exceptions.PerfectSeparationError) as e:
+                    logger.warning(
+                        f"regression_based_lr: model fitting failed ({type(e).__name__}: {e}). "
+                        "Returning independence (conservative)."
+                    )
+                    self.statistic_, self.p_value_, self.dof_ = 0.0, 1.0, 0
+                    return self.statistic_, self.p_value_
+            else:
+                x_encoded, uniques = pd.factorize(data[X])
+                n_classes = len(uniques)
+
+                if n_classes < 2:
+                    self.statistic_, self.p_value_, self.dof_ = 0.0, 1.0, 0
+                    return self.statistic_, self.p_value_
+
+                dof = q_y * (n_classes - 1)
+                try:
                     model_r = sm.MNLogit(x_encoded, restricted_exog).fit(disp=0, method="lbfgs", maxiter=200)
                     model_f = sm.MNLogit(x_encoded, full_exog).fit(disp=0, method="lbfgs", maxiter=200)
-                    dof = q_y * (n_classes - 1)
-            except (np.linalg.LinAlgError, sm_exceptions.PerfectSeparationError) as e:
-                logger.warning(
-                    f"regression_based_lr: model fitting failed ({type(e).__name__}: {e}). "
-                    "Returning independence (conservative)."
-                )
-                self.statistic_ = 0.0
-                self.p_value_ = 1.0
-                self.dof_ = 0
-                return self.statistic_, self.p_value_
-
-            lr_stat = max(-2.0 * (model_r.llf - model_f.llf), 0.0)
+                except (np.linalg.LinAlgError, sm_exceptions.PerfectSeparationError) as e:
+                    logger.warning(
+                        f"regression_based_lr: model fitting failed ({type(e).__name__}: {e}). "
+                        "Returning independence (conservative)."
+                    )
+                    self.statistic_, self.p_value_, self.dof_ = 0.0, 1.0, 0
+                    return self.statistic_, self.p_value_
 
             if dof <= 0:  # pragma: no cover
-                self.statistic_ = 0.0
-                self.p_value_ = 1.0
-                self.dof_ = 0
+                self.statistic_, self.p_value_, self.dof_ = 0.0, 1.0, 0
                 return self.statistic_, self.p_value_
 
-            p_value = stats.chi2.sf(lr_stat, dof)
-
-            self.statistic_ = lr_stat
-            self.p_value_ = p_value
+            self.statistic_ = max(-2.0 * (model_r.llf - model_f.llf), 0.0)
             self.dof_ = dof
+
+        # Step 5: Compute and return the p-value.
+        if family == "linear":
+            self.p_value_ = float(stats.f.sf(self.statistic_, self.dof_, df2))
+        else:
+            self.p_value_ = float(stats.chi2.sf(self.statistic_, self.dof_))
 
         return self.statistic_, self.p_value_
