@@ -102,7 +102,6 @@ def from_sktime_to_dbn(
             panel_df["__instance__"] = 0
             panel_df.set_index(["__instance__", panel_df.index], inplace=True)
             panel_df.index.set_names(["instance", "time"], inplace=True)
-            panel_df.drop(columns="__instance__", inplace=True)
         else:
             if instance_col not in df.columns:
                 raise KeyError(f"instance_col '{instance_col}' not found in df.columns")
