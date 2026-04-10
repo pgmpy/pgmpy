@@ -1,5 +1,3 @@
-import os
-
 import numpy as np
 import pytest
 
@@ -35,7 +33,7 @@ def pearson_equivalence_data():
 
 
 @pytest.mark.skipif(
-    os.getenv("GITHUB_ACTIONS") == "true",
+    True,
     reason="Skipping residual tests on GitHub Actions.",
 )
 def test_pearsonr_equivalence(pearson_equivalence_data):

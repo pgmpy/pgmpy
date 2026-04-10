@@ -1099,9 +1099,10 @@ class DiscreteBayesianNetwork(DAG):
         model_copy = DiscreteBayesianNetwork()
         model_copy.add_nodes_from(self.nodes())
         model_copy.add_edges_from(self.edges())
+        for role, variables in self.get_role_dict().items():
+            model_copy.with_role(role=role, variables=variables, inplace=True)
         if self.cpds:
             model_copy.add_cpds(*[cpd.copy() for cpd in self.cpds])
-        model_copy.latents = self.latents
         return model_copy
 
     def get_markov_blanket(self, node: Hashable) -> list[Hashable]:
