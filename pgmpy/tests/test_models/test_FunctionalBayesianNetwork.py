@@ -856,3 +856,44 @@ class TestDAGParser(unittest.TestCase):
         model_from_str = FunctionalBayesianNetwork.from_dagitty(string=model_str)
         expected_edges = {("X", "Y")}
         self.assertEqual(set(model_from_str.edges()), expected_edges)
+
+
+import pytest
+
+try:
+    import torch
+
+    from pgmpy.factors.hybrid import FunctionalCPD
+    from pgmpy.global_vars import config
+    from pgmpy.models import FunctionalBayesianNetwork
+
+    config.set_backend("torch")
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
+
+
+@pytest.mark.skipif(not HAS_TORCH, reason="requires torch")
+class TestFunctionalBayesianNetworkRandom:
+    def test_get_random(self):
+        model = FunctionalBayesianNetwork.get_random(n_nodes=5, edge_prob=0.5, seed=42)
+        assert len(model.nodes()) == 5
+        assert len(model.get_cpds()) == 5
+        assert isinstance(model, FunctionalBayesianNetwork)
+        assert isinstance(model.get_cpds()[0], FunctionalCPD)
+
+        # Check simulation
+        samples = model.simulate(n_samples=10)
+        assert samples.shape == (10, 5)
+
+    def test_get_random_cpds(self):
+        model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        cpds = model.get_random_cpds(inplace=False, seed=42)
+        assert len(cpds) == 3
+        assert isinstance(cpds[0], FunctionalCPD)
+        assert len(model.get_cpds()) == 0
+
+        model.get_random_cpds(inplace=True, seed=42)
+        assert len(model.get_cpds()) == 3
+        samples = model.simulate(n_samples=10)
+        assert samples.shape == (10, 3)

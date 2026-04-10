@@ -151,6 +151,95 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
             else:
                 self.cpds.append(cpd)
 
+    def get_random_cpds(
+        self,
+        additive: bool = True,
+        inplace: bool = False,
+        seed: int | None = None,
+    ) -> None | list[FunctionalCPD]:
+        """
+        Generates random Functional CPDs for the model. The functions are randomly
+        chosen from a set of mathematically stable functions (identity, sin, cos, tanh, sigmoid)
+        with random coefficients for the parents.
+
+        Parameters
+        ----------
+        additive: bool (default: True)
+            Whether to use an additive noise model: X = fn(parents) + Normal(0, 1)
+            or non-additive: X = fn(parents + Normal(0, 1)).
+        inplace: bool (default: False)
+            If True, adds the generated FunctionalCPDs to the model;
+            otherwise returns them.
+        seed: int (optional)
+            Seed for the random number generator.
+
+        Returns
+        -------
+        list[FunctionalCPD] or None
+        """
+        rng = np.random.default_rng(seed)
+        cpds = []
+        for i, var in enumerate(self.nodes()):
+            parents = self.get_parents(var)
+            cpds.append(
+                FunctionalCPD.get_random(
+                    variable=var,
+                    evidence=parents,
+                    additive=additive,
+                    seed=int(rng.integers(0, 2**31)),
+                )
+            )
+        if inplace:
+            self.add_cpds(*cpds)
+        else:
+            return cpds
+
+    @staticmethod
+    def get_random(
+        n_nodes: int = 5,
+        edge_prob: float = 0.5,
+        node_names: list[Hashable] | None = None,
+        latents: bool = False,
+        additive: bool = True,
+        seed: int | None = None,
+    ) -> FunctionalBayesianNetwork:
+        """
+        Returns a randomly generated FunctionalBayesianNetwork.
+
+        Parameters
+        ----------
+        n_nodes: int
+            The number of nodes in the generated network.
+
+        edge_prob: float
+            The probability of edge between any two nodes in the generated graph.
+
+        node_names: list (default: None)
+            The name of the nodes to use in the network. If None, the nodes
+            are automatically generated as integers 0 to n_nodes-1.
+
+        latents: bool (default: False)
+            If True, includes latent variables in the generated network.
+
+        additive: bool (default: True)
+            Whether to use an additive noise model.
+
+        seed: int (optional)
+            Seed for the random number generator.
+
+        Returns
+        -------
+        FunctionalBayesianNetwork
+        """
+        from pgmpy.base import DAG
+
+        dag = DAG.get_random(n_nodes=n_nodes, edge_prob=edge_prob, node_names=node_names, latents=latents, seed=seed)
+        model = FunctionalBayesianNetwork(dag)
+        model.latents = dag.latents
+
+        model.get_random_cpds(additive=additive, inplace=True, seed=seed)
+        return model
+
     def get_cpds(self, node: Any | None = None) -> list[FunctionalCPD] | FunctionalCPD:
         """
         Returns the cpd of the node. If node is not specified returns all the CPDs
