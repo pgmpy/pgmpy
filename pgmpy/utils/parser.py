@@ -10,18 +10,18 @@ def parse_lavaan(lines):
     # Step 1: Define the grammar for each type of string.
     var = Word(alphanums)
     reg_gram = (
-        OneOrMore(var.setResultsName("predictors", listAllMatches=True) + Optional(Suppress("+")))
+        OneOrMore(var.set_results_name("predictors", list_all_matches=True) + Optional(Suppress("+")))
         + "~"
-        + OneOrMore(var.setResultsName("covariates", listAllMatches=True) + Optional(Suppress("+")))
+        + OneOrMore(var.set_results_name("covariates", list_all_matches=True) + Optional(Suppress("+")))
     )
     intercept_gram = var("inter_var") + "~" + Word("1")
     covar_gram = (
         var("covar_var1")
         + "~~"
-        + OneOrMore(var.setResultsName("covar_var2", listAllMatches=True) + Optional(Suppress("+")))
+        + OneOrMore(var.set_results_name("covar_var2", list_all_matches=True) + Optional(Suppress("+")))
     )
     latent_gram = (
-        var("latent") + "=~" + OneOrMore(var.setResultsName("obs", listAllMatches=True) + Optional(Suppress("+")))
+        var("latent") + "=~" + OneOrMore(var.set_results_name("obs", list_all_matches=True) + Optional(Suppress("+")))
     )
 
     # Step 2: Preprocess string to lines
@@ -37,16 +37,16 @@ def parse_lavaan(lines):
             if intercept_gram.matches(line):
                 continue
             elif reg_gram.matches(line):
-                results = reg_gram.parseString(line, parseAll=True)
+                results = reg_gram.parse_string(line, parse_all=True)
                 for pred in results["predictors"]:
                     ebunch.extend([(covariate, pred) for covariate in results["covariates"]])
             elif covar_gram.matches(line):
-                results = covar_gram.parseString(line, parseAll=True)
+                results = covar_gram.parse_string(line, parse_all=True)
                 for var in results["covar_var2"]:
                     err_corr.append((results["covar_var1"], var))
 
             elif latent_gram.matches(line):
-                results = latent_gram.parseString(line, parseAll=True)
+                results = latent_gram.parse_string(line, parse_all=True)
                 latents.append(results["latent"])
                 ebunch.extend([(results["latent"], obs) for obs in results["obs"]])
     return ebunch, latents, err_corr, err_var
@@ -198,7 +198,7 @@ def parse_dagitty(lines):
             Word,
             ZeroOrMore,
             alphanums,
-            nestedExpr,
+            nested_expr,
             pyparsing_common,
         )
     except ImportError as e:
@@ -225,9 +225,9 @@ def parse_dagitty(lines):
     # Step 1: DAGitty Grammar in pyparsing
     # Variable name like X.1, a_b, 123. Support single or double quoted names with spaces
     var = Word(alphanums + "_" + ".") ^ QuotedString('"') ^ QuotedString("'")
-    option = nestedExpr("[", "]")
+    option = nested_expr("[", "]")
     var_stat = var + Optional(option)
-    subgraph = nestedExpr("{", "}")
+    subgraph = nested_expr("{", "}")
     var_or_subgraph = subgraph ^ var
 
     # include '@' (Dagitty's circle character) when parsing PAG; map later to 'o'
@@ -236,15 +236,15 @@ def parse_dagitty(lines):
 
     beta = Suppress("[") + Group(Word("beta") + Suppress("=") + pyparsing_common.number()) + Suppress("]")
 
-    edge_relation = var_or_subgraph + OneOrMore(edge + var_or_subgraph) + Optional(beta.setResultsName("annotation"))
+    edge_relation = var_or_subgraph + OneOrMore(edge + var_or_subgraph) + Optional(beta.set_results_name("annotation"))
 
     bb_re = Combine("bb=" + QuotedString('"'))
     pos_re = Combine("[pos=" + QuotedString('"') + "]")
 
     statement = (
-        edge_relation.setResultsName("edge_stat*")
-        ^ var_stat.setResultsName("var_stat*")
-        ^ subgraph.setResultsName("edge_stat*")  # <-- Add subgraph as a valid statement
+        edge_relation.set_results_name("edge_stat*")
+        ^ var_stat.set_results_name("var_stat*")
+        ^ subgraph.set_results_name("edge_stat*")  # <-- Add subgraph as a valid statement
         ^ bb_re
         ^ pos_re
     )
@@ -295,7 +295,7 @@ def parse_dagitty(lines):
     for line in lines:
         line = line.strip()
         if line != "":
-            results = dagitty_line.parseString(line, parseAll=True)
+            results = dagitty_line.parse_string(line, parse_all=True)
 
             for var_stat in results.get("var_stat", []):
                 name = var_stat[0]

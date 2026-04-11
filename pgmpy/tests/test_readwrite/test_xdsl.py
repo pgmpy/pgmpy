@@ -258,7 +258,7 @@ class TestXDSLWriterMethods(unittest.TestCase):
             self.assertEqual(cpds_expected, cpds_got)
 
     def test_writer_cpds(self):
-        self.writer_dummy.write_xdsl(filename="dummy_model.xdsl")
+        self.writer_dummy.write(filename="dummy_model.xdsl")
         with open("dummy_model.xdsl") as f:
             reader = XDSLReader(f)
         model = reader.get_model(state_name_type=int)
@@ -266,7 +266,7 @@ class TestXDSLWriterMethods(unittest.TestCase):
         os.remove("dummy_model.xdsl")
 
     def test_alarm_model(self):
-        XDSLWriter(self.alarm_model_bn).write_xdsl("alarm_model.xdsl")
+        XDSLWriter(self.alarm_model_bn).write("alarm_model.xdsl")
 
         with open("alarm_model.xdsl") as f:
             file_text = f.read()
@@ -436,7 +436,7 @@ class TestXDSLWriterMethodsTorch(unittest.TestCase):
             self.assertEqual(cpds_expected, cpds_got)
 
     def test_writer_cpds(self):
-        self.writer_dummy.write_xdsl(filename="dummy_model.xdsl")
+        self.writer_dummy.write(filename="dummy_model.xdsl")
         with open("dummy_model.xdsl") as f:
             reader = XDSLReader(f)
         model = reader.get_model(state_name_type=int)
@@ -444,7 +444,7 @@ class TestXDSLWriterMethodsTorch(unittest.TestCase):
         os.remove("dummy_model.xdsl")
 
     def test_alarm_model(self):
-        XDSLWriter(self.alarm_model_bn).write_xdsl("alarm_model.xdsl")
+        XDSLWriter(self.alarm_model_bn).write("alarm_model.xdsl")
         with open("alarm_model.xdsl") as f:
             file_text = f.read()
         alarm_model_bn_test = XDSLReader(string=file_text).get_model()
@@ -485,7 +485,7 @@ class TestXDSLCommaWarning(unittest.TestCase):
         try:
             with self.assertLogs("pgmpy", level="WARNING") as cm:
                 writer = XDSLWriter(model)
-                writer.write_xdsl(tmp_path)
+                writer.write(tmp_path)
 
                 # Verify the warning was logged
                 self.assertIn(
