@@ -183,7 +183,7 @@ potential (xray | either){
             with tempfile.NamedTemporaryFile(suffix=".net", delete=False) as tmp:
                 tmp_path = tmp.name
             try:
-                writer.write_net(tmp_path)
+                writer.write(tmp_path)
 
                 # Verify the warning was logged
                 self.assertIn(

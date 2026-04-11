@@ -494,7 +494,7 @@ probability ( light-on | family-out ) {
         self.assertEqual(self.writer.__str__(), self.expected_string)
 
     def test_write_read_equal(self):
-        self.writer.write_bif("test_bif.bif")
+        self.writer.write("test_bif.bif")
         reader = BIFReader("test_bif.bif")
         read_model = reader.get_model(state_name_type=int)
         self.assertEqual(sorted(self.model.nodes()), sorted(read_model.nodes()))
@@ -529,7 +529,7 @@ probability ( light-on | family-out ) {
         try:
             with self.assertLogs("pgmpy", level="WARNING") as cm:
                 writer = BIFWriter(model)
-                writer.write_bif(tmp_path)
+                writer.write(tmp_path)
 
                 # Verify the warning was logged
                 self.assertIn(
@@ -1041,7 +1041,7 @@ probability ( light-on | family-out ) {
         self.assertEqual(self.writer.__str__(), self.expected_string)
 
     def test_write_read_equal(self):
-        self.writer.write_bif("test_bif.bif")
+        self.writer.write("test_bif.bif")
         reader = BIFReader("test_bif.bif")
         read_model = reader.get_model(state_name_type=int)
         self.assertEqual(sorted(self.model.nodes()), sorted(read_model.nodes()))

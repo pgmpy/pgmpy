@@ -125,6 +125,7 @@ class TestPreprocessData(unittest.TestCase):
         )
 
 
+@pytest.mark.filterwarnings("ignore::FutureWarning")
 class TestGetExampleModel(unittest.TestCase):
     def test_get_categorical_models(self):
         """Test loading of categorical Bayesian network models."""

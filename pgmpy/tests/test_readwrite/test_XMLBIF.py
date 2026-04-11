@@ -358,8 +358,8 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
         self.model_stateless.add_cpds(self.cpd_d, self.cpd_i, self.cpd_g, self.cpd_l, self.cpd_s)
         self.writer_stateless = XMLBIFWriter(self.model_stateless)
 
-    def test_write_xmlbif_statefull(self):
-        self.writer.write_xmlbif("dog_problem_output.xbif")
+    def test_write_statefull(self):
+        self.writer.write("dog_problem_output.xbif")
         with open("dog_problem_output.xbif") as f:
             file_text = f.read()
         reader = XMLBIFReader(string=file_text)
@@ -367,8 +367,8 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
         self.assert_models_equivelent(self.expected_model, model)
         os.remove("dog_problem_output.xbif")
 
-    def test_write_xmlbif_stateless(self):
-        self.writer_stateless.write_xmlbif("grade_problem_output.xbif")
+    def test_write_stateless(self):
+        self.writer_stateless.write("grade_problem_output.xbif")
         with open("grade_problem_output.xbif") as f:
             reader = XMLBIFReader(f)
         model = reader.get_model(state_name_type=int)
@@ -615,8 +615,8 @@ class TestXMLBIFWriterMethodsStringTorch(unittest.TestCase):
         self.model_stateless.add_cpds(self.cpd_d, self.cpd_i, self.cpd_g, self.cpd_l, self.cpd_s)
         self.writer_stateless = XMLBIFWriter(self.model_stateless)
 
-    def test_write_xmlbif_statefull(self):
-        self.writer.write_xmlbif("dog_problem_output.xbif")
+    def test_write_statefull(self):
+        self.writer.write("dog_problem_output.xbif")
         with open("dog_problem_output.xbif") as f:
             file_text = f.read()
         reader = XMLBIFReader(string=file_text)
@@ -624,8 +624,8 @@ class TestXMLBIFWriterMethodsStringTorch(unittest.TestCase):
         self.assert_models_equivelent(self.expected_model, model)
         os.remove("dog_problem_output.xbif")
 
-    def test_write_xmlbif_stateless(self):
-        self.writer_stateless.write_xmlbif("grade_problem_output.xbif")
+    def test_write_stateless(self):
+        self.writer_stateless.write("grade_problem_output.xbif")
         with open("grade_problem_output.xbif") as f:
             reader = XMLBIFReader(f)
         model = reader.get_model(state_name_type=int)
@@ -667,7 +667,7 @@ class TestXMLBIFWriterMethodsStringTorch(unittest.TestCase):
         try:
             with self.assertLogs("pgmpy", level="WARNING") as cm:
                 writer = XMLBIFWriter(model)
-                writer.write_xmlbif(tmp_path)
+                writer.write(tmp_path)
 
                 # Verify the warning was logged with the correct variable name
                 self.assertTrue(
