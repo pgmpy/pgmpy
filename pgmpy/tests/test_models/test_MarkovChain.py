@@ -48,7 +48,7 @@ class TestMarkovChain(unittest.TestCase):
         del self.model
         del self.sample
 
-    @patch("pgmpy.models.MarkovChain._check_state", autospec=True)
+    @patch.object(MC, "_check_state", autospec=True)
     def test_init(self, check_state):
         model = MC(self.variables, self.card, self.start_state)
         self.assertListEqual(model.variables, self.variables)
@@ -76,7 +76,7 @@ class TestMarkovChain(unittest.TestCase):
         self.assertDictEqual(model.transition_models, {})
         self.assertIsNone(model.state)
 
-    @patch("pgmpy.models.MarkovChain._check_state", autospec=True)
+    @patch.object(MC, "_check_state", autospec=True)
     def test_set_start_state_list(self, check_state):
         model = MC(["b", "a"], [1, 2])
         check_state.return_value = True
@@ -146,7 +146,7 @@ class TestMarkovChain(unittest.TestCase):
         self.assertEqual(copy.transition_models["a"], {0: {0: 0.1, 1: 0.9}, 1: {0: 0.2, 1: 0.8}})
         self.assertEqual(copy.transition_models["b"], {0: {0: 0.3, 1: 0.7}, 1: {0: 0.4, 1: 0.6}})
 
-    @patch("pgmpy.models.MarkovChain.add_variable", autospec=True)
+    @patch.object(MC, "add_variable", autospec=True)
     def test_add_variables_from(self, add_var):
         model = MC()
         model.add_variables_from(self.variables, self.card)
@@ -214,7 +214,7 @@ class TestMarkovChain(unittest.TestCase):
         self.assertTrue(list(sample.loc[0]) in [[0, 0], [0, 1], [1, 0], [1, 1]])
         self.assertTrue(list(sample.loc[1]) in [[0, 0], [0, 1], [1, 0], [1, 1]])
 
-    @patch("pgmpy.models.MarkovChain.random_state", autospec=True)
+    @patch.object(MC, "random_state", autospec=True)
     def test_sample_less_arg(self, random_state):
         model = MC(["a", "b"], [2, 2])
         random_state.return_value = [State("a", 0), State("b", 1)]
@@ -225,7 +225,7 @@ class TestMarkovChain(unittest.TestCase):
         self.assertEqual(list(sample.columns), ["a", "b"])
         self.assertEqual(list(sample.loc[0]), [0, 1])
 
-    @patch("pgmpy.models.MarkovChain.sample", autospec=True)
+    @patch.object(MC, "sample", autospec=True)
     def test_prob_from_sample(self, sample):
         model = MC(["a", "b"], [2, 2])
         sample.return_value = self.sample
@@ -270,7 +270,7 @@ class TestMarkovChain(unittest.TestCase):
         self.assertEqual(samples, expected_samples)
 
     @patch.object(sys.modules["pgmpy.models.MarkovChain"], "sample_discrete")
-    @patch("pgmpy.models.MarkovChain.random_state", autospec=True)
+    @patch.object(MC, "random_state", autospec=True)
     def test_generate_sample_less_arg(self, random_state, sample_discrete):
         model = MC(["a", "b"], [2, 2])
         model.transition_models["a"] = {0: {0: 0.1, 1: 0.9}, 1: {0: 0.2, 1: 0.8}}
