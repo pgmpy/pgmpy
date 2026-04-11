@@ -36,7 +36,7 @@ values (barring dtype up-casts caused by ``NaN`` filling).
 
 from __future__ import annotations
 
-from typing import Hashable, List, Optional
+from collections.abc import Hashable
 
 import numpy as np
 import pandas as pd
@@ -46,7 +46,7 @@ import pandas as pd
 # ---------------------------------------------------------------------------
 
 
-def _canonical_time_order(index: pd.Index) -> List[Hashable]:
+def _canonical_time_order(index: pd.Index) -> list[Hashable]:
     """Return *sorted* list of unique time labels."""
     if isinstance(index, pd.MultiIndex):
         time_labels = index.get_level_values(-1)
@@ -55,7 +55,7 @@ def _canonical_time_order(index: pd.Index) -> List[Hashable]:
     return sorted(pd.unique(time_labels))
 
 
-def _build_time_mapping(time_labels: List[Hashable]):
+def _build_time_mapping(time_labels: list[Hashable]):
     """Map arbitrary time labels -> contiguous ints starting at 0."""
     return {lbl: i for i, lbl in enumerate(time_labels)}
 
@@ -65,9 +65,7 @@ def _build_time_mapping(time_labels: List[Hashable]):
 # ---------------------------------------------------------------------------
 
 
-def from_sktime_to_dbn(
-    df: pd.DataFrame, *, instance_col: Optional[str] = None
-) -> pd.DataFrame:  # noqa: D401
+def from_sktime_to_dbn(df: pd.DataFrame, *, instance_col: str | None = None) -> pd.DataFrame:  # noqa: D401
     """Convert an *sktime* style panel dataframe to pgmpy-compatible DBN format.
 
     Parameters
@@ -90,9 +88,7 @@ def from_sktime_to_dbn(
     # ---------------------------------------------------------------------
     if isinstance(df.index, pd.MultiIndex):
         if df.index.nlevels != 2:
-            raise ValueError(
-                "df.index must have exactly 2 levels (instance, time) or provide instance_col."
-            )
+            raise ValueError("df.index must have exactly 2 levels (instance, time) or provide instance_col.")
         panel_df = df.copy()
         panel_df.index.set_names(["instance", "time"], inplace=True)
     else:
@@ -145,9 +141,7 @@ def from_sktime_to_dbn(
     wide_df = pd.DataFrame(wide_rows, index=row_index)
 
     # Ensure deterministic column order: sort by time then variable
-    wide_df = wide_df.reindex(
-        sorted(wide_df.columns, key=lambda x: (x[1], x[0])), axis=1
-    )
+    wide_df = wide_df.reindex(sorted(wide_df.columns, key=lambda x: (x[1], x[0])), axis=1)
 
     # Persist mapping so we can reconstruct original labels later
     wide_df.attrs["_time_reverse_map"] = reverse_time_map
@@ -179,9 +173,7 @@ def from_dbn_to_sktime(dbn_df: pd.DataFrame) -> pd.DataFrame:  # noqa: D401
 
     # Build proper MultiIndex columns
     tmp = dbn_df.copy()
-    tmp.columns = pd.MultiIndex.from_tuples(
-        dbn_df.columns, names=["variable", "time_int"]
-    )
+    tmp.columns = pd.MultiIndex.from_tuples(dbn_df.columns, names=["variable", "time_int"])
 
     # Stack time dimension -> becomes row index level
     long = tmp.stack(level="time_int", future_stack=True)
