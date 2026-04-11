@@ -166,21 +166,6 @@ def test_iterative_without_parent():
     assert np.isfinite(samples).all()
 
 
-import pytest
-
-try:
-    import torch
-
-    from pgmpy.factors.hybrid import FunctionalCPD
-    from pgmpy.global_vars import config
-
-    config.set_backend("torch")
-    HAS_TORCH = True
-except ImportError:
-    HAS_TORCH = False
-
-
-@pytest.mark.skipif(not HAS_TORCH, reason="requires torch")
 class TestFunctionalCPDRandom:
     def test_get_random(self):
         cpd = FunctionalCPD.get_random("x1", additive=True, seed=42)
@@ -192,8 +177,6 @@ class TestFunctionalCPDRandom:
         assert cpd.parents == ["x1"]
 
         # Test simulation
-        import pandas as pd
-
         parent_samples = pd.DataFrame({"x1": [1.0, 2.0, 3.0]})
         samples = cpd.sample(n_samples=3, parent_sample=parent_samples)
         assert len(samples) == 3
