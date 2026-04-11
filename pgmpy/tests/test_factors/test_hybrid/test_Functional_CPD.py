@@ -164,3 +164,19 @@ def test_iterative_without_parent():
     samples = cpd.sample(n_samples=1000)
     assert len(samples) == 1000
     assert np.isfinite(samples).all()
+
+
+class TestFunctionalCPDRandom:
+    def test_get_random(self):
+        cpd = FunctionalCPD.get_random("x1", additive=True, seed=42)
+        assert cpd.variable == "x1"
+        assert not cpd.parents
+
+        cpd = FunctionalCPD.get_random("x2", evidence=["x1"], additive=False, seed=42)
+        assert cpd.variable == "x2"
+        assert cpd.parents == ["x1"]
+
+        # Test simulation
+        parent_samples = pd.DataFrame({"x1": [1.0, 2.0, 3.0]})
+        samples = cpd.sample(n_samples=3, parent_sample=parent_samples)
+        assert len(samples) == 3

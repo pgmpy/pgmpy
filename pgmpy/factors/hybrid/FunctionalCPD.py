@@ -59,6 +59,68 @@ class FunctionalCPD(BaseFactor):
 
         _check_soft_dependencies("pyro-ppl", obj=self)
 
+    @classmethod
+    def get_random(cls, variable, evidence=None, additive=True, seed=None):
+        """
+        Generates a random FunctionalCPD for the given variable.
+
+        Parameters
+        ----------
+        variable: str
+            Name of the variable for which the CPD is generated.
+        evidence: list[str], optional
+            List of parent variable names (default is None for no parents).
+        additive: bool, optional
+            Whether to use an additive noise model: X = fn(parents) + Normal(0, 1)
+            or non-additive: X = fn(parents + Normal(0, 1)). Default is True.
+        seed: int, optional
+            Seed for the random number generator.
+
+        Returns
+        -------
+        FunctionalCPD
+            A randomly generated FunctionalCPD.
+        """
+        import numpy as np
+        import pyro.distributions as dist
+
+        evidence = evidence if evidence else []
+        rng = np.random.default_rng(seed)
+
+        # A list of mathematically stable functions
+        funcs = [
+            ("identity", lambda x: x),
+            ("sin", torch.sin),
+            ("cos", torch.cos),
+            ("tanh", torch.tanh),
+            ("sigmoid", torch.sigmoid),
+        ]
+        func_idx = rng.integers(0, len(funcs))
+        func_name, func = funcs[func_idx]
+
+        # Generate random weights between -1 and 1
+        weights = {p: (rng.random() * 2 - 1) for p in evidence}
+
+        def fn(parent_samples):
+            # Ensure val is a tensor
+            val = torch.tensor(0.0, dtype=config.get_dtype(), device=config.get_device())
+            for p in evidence:
+                val = val + weights[p] * parent_samples[p]
+
+            if additive:
+                # Additive noise model: result = func(val) + Normal(0, 1)
+                result = func(val)
+                return dist.Normal(result, 1.0)
+            else:
+                # Non-additive noise model: func(val + Normal(0, 1))
+                # Sample noise internally and return a Delta distribution
+                noise = pyro.sample(f"{variable}_noise", dist.Normal(0.0, 1.0))
+                result = func(val + noise)
+                return dist.Delta(result)
+
+        fn.__name__ = f"{func_name}_{'additive' if additive else 'non_additive'}"
+        return cls(variable=variable, fn=fn, parents=evidence)
+
     def sample(self, n_samples=100, parent_sample=None):
         """
         Simulates a value for the variable based on its CPD.

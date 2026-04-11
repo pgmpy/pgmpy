@@ -856,3 +856,35 @@ class TestDAGParser(unittest.TestCase):
         model_from_str = FunctionalBayesianNetwork.from_dagitty(string=model_str)
         expected_edges = {("X", "Y")}
         self.assertEqual(set(model_from_str.edges()), expected_edges)
+
+
+@unittest.skipUnless(
+    _check_soft_dependencies("pyro-ppl", severity="none"),
+    reason="execute only if required dependency present",
+)
+class TestFunctionalBayesianNetworkRandom(unittest.TestCase):
+    def setUp(self):
+        config.set_backend("torch")
+
+    def test_get_random(self):
+        model = FunctionalBayesianNetwork.get_random(n_nodes=5, edge_prob=0.5, seed=42)
+        self.assertEqual(len(model.nodes()), 5)
+        self.assertEqual(len(model.get_cpds()), 5)
+        self.assertIsInstance(model, FunctionalBayesianNetwork)
+        self.assertIsInstance(model.get_cpds()[0], FunctionalCPD)
+
+        # Check simulation
+        samples = model.simulate(n_samples=10)
+        self.assertEqual(samples.shape, (10, 5))
+
+    def test_get_random_cpds(self):
+        model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        cpds = model.get_random_cpds(inplace=False, seed=42)
+        self.assertEqual(len(cpds), 3)
+        self.assertIsInstance(cpds[0], FunctionalCPD)
+        self.assertEqual(len(model.get_cpds()), 0)
+
+        model.get_random_cpds(inplace=True, seed=42)
+        self.assertEqual(len(model.get_cpds()), 3)
+        samples = model.simulate(n_samples=10)
+        self.assertEqual(samples.shape, (10, 3))
