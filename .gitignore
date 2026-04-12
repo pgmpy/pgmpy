@@ -203,9 +203,3 @@ temp.*
 
 # Editor temporary files
 vim
-
-
-#Local development
-venv312/
-test_fix.py
-pgmpy/estimators/test_fix.py
