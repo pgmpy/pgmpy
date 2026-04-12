@@ -36,35 +36,43 @@ class SHD(_BaseSupervisedMetric):
         "is_default": True,
     }
 
-    def _evaluate(self, true_causal_graph, est_causal_graph):
-        nodes_list = true_causal_graph.nodes()
+def _evaluate(self, true_causal_graph, est_causal_graph, double_for_reverse=False):
+    nodes_list = true_causal_graph.nodes()
 
-        dag_true = nx.DiGraph(true_causal_graph.edges())
-        dag_true.add_nodes_from(list(nx.isolates(true_causal_graph)))
-        m1 = nx.adjacency_matrix(dag_true, nodelist=nodes_list).todense()
+    dag_true = nx.DiGraph(true_causal_graph.edges())
+    dag_true.add_nodes_from(list(nx.isolates(true_causal_graph)))
+    m1 = nx.adjacency_matrix(dag_true, nodelist=nodes_list).todense()
 
-        dag_est = nx.DiGraph(est_causal_graph.edges())
-        dag_est.add_nodes_from(list(nx.isolates(est_causal_graph)))
-        m2 = nx.adjacency_matrix(dag_est, nodelist=nodes_list).todense()
+    dag_est = nx.DiGraph(est_causal_graph.edges())
+    dag_est.add_nodes_from(list(nx.isolates(est_causal_graph)))
+    m2 = nx.adjacency_matrix(dag_est, nodelist=nodes_list).todense()
 
-        shd = 0
+    shd = 0
 
-        s1 = m1 + m1.T
-        s2 = m2 + m2.T
+    s1 = m1 + m1.T
+    s2 = m2 + m2.T
 
-        # Edges that are in m1 but not in m2 (deletions from m1)
-        ds = s1 - s2
-        ind = np.where(ds > 0)
-        m1[ind] = 0
-        shd = shd + (len(ind[0]) / 2)
+    # Deletions
+    ds = s1 - s2
+    ind = np.where(ds > 0)
+    m1[ind] = 0
+    shd += (len(ind[0]) / 2)
 
-        # Edges that are in m2 but not in m1 (additions to m1)
-        ind = np.where(ds < 0)
-        m1[ind] = m2[ind]
-        shd = shd + (len(ind[0]) / 2)
+    # Additions
+    ind = np.where(ds < 0)
+    m1[ind] = m2[ind]
+    shd += (len(ind[0]) / 2)
 
-        # Edges that need to be simply reversed
-        d = np.abs(m1 - m2)
-        shd = shd + (np.sum((d + d.T) > 0) / 2)
+    # Reversals
+    d = np.abs(m1 - m2)
+    if double_for_reverse:
+        # Count reversed edges as 2
+        reversals = np.logical_and(m1.T > 0, m2 > 0)
+        shd += np.sum(reversals) * 2
+        # Subtract reversals from the normal difference count
+        shd += (np.sum((d + d.T) > 0) / 2) - np.sum(reversals)
+    else:
+        # Standard SHD: reversals count as 1
+        shd += (np.sum((d + d.T) > 0) / 2)
 
-        return int(shd)
+    return int(shd)
