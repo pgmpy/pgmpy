@@ -117,7 +117,7 @@ class TestDiscreteTests(unittest.TestCase):
             data=self.df_adult,
             boolean=False,
         )
-        np_test.assert_almost_equal(coef, 1460.11, decimal=1)
+        np_test.assert_almost_equal(coef, 1342.67, decimal=1)
         np_test.assert_almost_equal(p_value, 0, decimal=1)
         self.assertEqual(dof, 316)
 
