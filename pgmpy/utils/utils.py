@@ -364,48 +364,84 @@ def manual_pairwise_orient(x, y):
         return None
 
 
+# def preprocess_data(df):
+#     """
+#     Tries to figure out the data type of each variable `df`.
+
+#     Assigns one of (numerical, categorical unordered, categorical ordered) datatypes to each column in `df`. Also
+#     changes any object datatypes to categorical.
+
+#     Parameters
+#     ----------
+#     df: pd.DataFrame
+#         A pandas dataframe.
+
+#     Returns
+#     -------
+#     (pd.DataFrame, dtypes): tuple of transformed dataframe and a dictionary with inferred datatype of each column.
+#     """
+#     df = df.copy()
+#     dtypes = {}
+#     for col in df.columns:
+#         if pd.api.types.is_integer_dtype(df[col]):
+#             df[col] = df[col].astype("int")
+#             dtypes[col] = "N"
+#         elif pd.api.types.is_numeric_dtype(df[col]):
+#             dtypes[col] = "N"
+#         elif pd.api.types.is_object_dtype(df[col]) or pd.api.types.is_string_dtype(df[col]):
+#             dtypes[col] = "C"
+#             df[col] = df[col].astype("category")
+#         elif isinstance(df[col].dtype, pd.CategoricalDtype):
+#             if df[col].dtype.ordered:
+#                 dtypes[col] = "O"
+#             else:
+#                 dtypes[col] = "C"
+#         else:
+#             raise ValueError(
+#                 f"Couldn't infer datatype of column: {col} from data. "
+#                 "Try specifying the appropriate datatype to the column."
+#             )
+
+#     logger.info(
+#         f" Datatype (N=numerical, C=Categorical Unordered,O=Categorical Ordered)inferred from data: \n {dtypes}"
+#     )
+#     return (df, dtypes)
+
 def preprocess_data(df):
     """
-    Tries to figure out the data type of each variable `df`.
-
-    Assigns one of (numerical, categorical unordered, categorical ordered) datatypes to each column in `df`. Also
-    changes any object datatypes to categorical.
-
-    Parameters
-    ----------
-    df: pd.DataFrame
-        A pandas dataframe.
-
-    Returns
-    -------
-    (pd.DataFrame, dtypes): tuple of transformed dataframe and a dictionary with inferred datatype of each column.
+    Infers datatype of each column:
+    N = Numerical
+    C = Categorical (unordered)
+    O = Categorical (ordered)
     """
     df = df.copy()
     dtypes = {}
+
     for col in df.columns:
-        if pd.api.types.is_integer_dtype(df[col]):
-            df[col] = df[col].astype("int")
+        col_data = df[col]
+
+        if pd.api.types.is_numeric_dtype(col_data):
+            # Covers both int and float
             dtypes[col] = "N"
-        elif pd.api.types.is_numeric_dtype(df[col]):
-            dtypes[col] = "N"
-        elif pd.api.types.is_object_dtype(df[col]) or pd.api.types.is_string_dtype(df[col]):
+
+        elif isinstance(col_data.dtype, pd.CategoricalDtype):
+            dtypes[col] = "O" if col_data.dtype.ordered else "C"
+
+        elif pd.api.types.is_object_dtype(col_data) or pd.api.types.is_string_dtype(col_data):
+            df[col] = col_data.astype("category")
             dtypes[col] = "C"
-            df[col] = df[col].astype("category")
-        elif isinstance(df[col].dtype, pd.CategoricalDtype):
-            if df[col].dtype.ordered:
-                dtypes[col] = "O"
-            else:
-                dtypes[col] = "C"
+
         else:
             raise ValueError(
-                f"Couldn't infer datatype of column: {col} from data. "
-                "Try specifying the appropriate datatype to the column."
+                f"Couldn't infer datatype of column: {col}. "
+                "Try specifying the appropriate datatype."
             )
 
     logger.info(
-        f" Datatype (N=numerical, C=Categorical Unordered,O=Categorical Ordered)inferred from data: \n {dtypes}"
+        f"Datatype inferred (N=numerical, C=categorical, O=ordered):\n{dtypes}"
     )
-    return (df, dtypes)
+
+    return df, dtypes
 
 
 def _heuristic_categorical_detection(df, dtypes):
