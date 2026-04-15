@@ -58,8 +58,8 @@ class BICCondGauss(LogLikelihoodCondGauss):
         "is_parameteric": False,
     }
 
-    def __init__(self, data, state_names=None):
-        super().__init__(data, state_names=state_names)
+    def __init__(self, data, state_names=None, cache_size=10000):
+        super().__init__(data, state_names=state_names, cache_size=cache_size)
 
     def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
         ll = self._log_likelihood(variable=variable, parents=parents)
