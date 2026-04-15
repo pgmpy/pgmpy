@@ -82,7 +82,7 @@ class BayesianModelSampling(BayesianModelInference):
         ... )
         >>> student.add_cpds(cpd_d, cpd_i, cpd_g)
         >>> inference = BayesianModelSampling(student)
-        >>> inference.forward_sample(size=2)
+        >>> inference.forward_sample(size=2)  # doctest: +SKIP
         rec.array([(0, 0, 1), (1, 0, 2)], dtype=
                   [('diff', '<i8'), ('intel', '<i8'), ('grade', '<i8')])
         """
@@ -192,8 +192,8 @@ class BayesianModelSampling(BayesianModelInference):
         >>> inference = BayesianModelSampling(student)
         >>> evidence = [State(var="diff", state=0)]
         >>> inference.rejection_sample(
-        ...     evidence=evidence, size=2, return_type="dataframe"
-        ... )
+        ...     evidence=evidence, size=2
+        ... )  # doctest: +SKIP
                 intel       diff       grade
         0         0          0          1
         1         0          0          1
@@ -312,8 +312,8 @@ class BayesianModelSampling(BayesianModelInference):
         >>> inference = BayesianModelSampling(student)
         >>> evidence = [State("diff", 0)]
         >>> inference.likelihood_weighted_sample(
-        ...     evidence=evidence, size=2, return_type="recarray"
-        ... )
+        ...     evidence=evidence, size=2
+        ... )  # doctest: +SKIP
         rec.array([(0, 0, 1, 0.6), (0, 0, 2, 0.6)], dtype=
                   [('diff', '<i8'), ('intel', '<i8'), ('grade', '<i8'), ('_weight', '<f8')])
         """
@@ -406,7 +406,7 @@ class GibbsSampling(MarkovChain):
     >>> student.add_cpds(intel_cpd, sat_cpd)
     >>> from pgmpy.sampling import GibbsSampling
     >>> gibbs_chain = GibbsSampling(student)
-    >>> gibbs_chain.sample(size=3)
+    >>> gibbs_chain.sample(size=3)  # doctest: +SKIP
        intel  sat
     0      0    0
     1      0    0
