@@ -6,9 +6,13 @@ from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
 from pgmpy.base import DAG
-from pgmpy.estimators import BayesianEstimator
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
+from pgmpy.parameter_estimator import BayesianEstimator
+
+
+def get_cpd(estimator, variable):
+    return next(cpd for cpd in estimator.parameters_ if cpd.variable == variable)
 
 
 @pytest.fixture(autouse=True)
@@ -42,13 +46,15 @@ def models():
         }
     )
 
-    est1 = BayesianEstimator(m1, d1)
-    est2 = BayesianEstimator(m1, d1, state_names={"A": [0, 1, 2], "B": [0, 1], "C": [0, 1, 23]})
-    est3 = BayesianEstimator(m1, d2)
+    est1 = BayesianEstimator().fit(m1, d1)
+    est2 = BayesianEstimator(state_names={"A": [0, 1, 2], "B": [0, 1], "C": [0, 1, 23]}).fit(m1, d1)
+    est3 = BayesianEstimator().fit(m1, d2)
     return {
+        "m1": m1,
         "model_latent": model_latent,
         "dag_with_latents": dag_with_latents,
         "d1": d1,
+        "d2": d2,
         "est1": est1,
         "est2": est2,
         "est3": est3,
@@ -57,15 +63,22 @@ def models():
 
 def test_error_latent_model(models):
     with pytest.raises(ValueError):
-        BayesianEstimator(models["model_latent"], models["d1"])
+        BayesianEstimator().fit(models["model_latent"], models["d1"])
     with pytest.raises(ValueError):
-        BayesianEstimator(models["dag_with_latents"], models["d1"])
+        BayesianEstimator().fit(models["dag_with_latents"], models["d1"])
+
+
+def test_fit_sets_fitted_attributes(models):
+    estimator = BayesianEstimator()
+
+    assert estimator.fit(models["m1"], models["d1"]) is estimator
+    assert estimator.state_names_ == {"A": [0, 1], "B": [0, 1], "C": [0, 1]}
 
 
 def test_estimate_cpd_dirichlet(models):
-    est1 = models["est1"]
+    est1 = BayesianEstimator(prior_type="dirichlet", pseudo_counts={"A": [[0], [1]]}).fit(models["m1"], models["d1"])
 
-    cpd_A = est1.estimate_cpd("A", prior_type="dirichlet", pseudo_counts=[[0], [1]])
+    cpd_A = get_cpd(est1, "A")
     cpd_A_exp = TabularCPD(
         variable="A",
         variable_card=2,
@@ -75,19 +88,21 @@ def test_estimate_cpd_dirichlet(models):
 
     assert cpd_A == cpd_A_exp
 
-    pseudo_counts = np.array([[0], [1]])
-    cpd_A = est1.estimate_cpd("A", prior_type="dirichlet", pseudo_counts=pseudo_counts)
-    assert cpd_A == cpd_A_exp
+    est1 = BayesianEstimator(prior_type="dirichlet", pseudo_counts={"A": np.array([[0], [1]])}).fit(
+        models["m1"], models["d1"]
+    )
+    assert get_cpd(est1, "A") == cpd_A_exp
 
-    cpd_B = est1.estimate_cpd("B", prior_type="dirichlet", pseudo_counts=[[9], [3]])
+    est1 = BayesianEstimator(prior_type="dirichlet", pseudo_counts={"B": [[9], [3]]}).fit(models["m1"], models["d1"])
+    cpd_B = get_cpd(est1, "B")
     cpd_B_exp = TabularCPD("B", 2, [[11.0 / 15], [4.0 / 15]], state_names={"B": [0, 1]})
     assert cpd_B == cpd_B_exp
 
-    cpd_C = est1.estimate_cpd(
-        "C",
+    est1 = BayesianEstimator(
         prior_type="dirichlet",
-        pseudo_counts=[[0.4, 0.4, 0.4, 0.4], [0.6, 0.6, 0.6, 0.6]],
-    )
+        pseudo_counts={"C": [[0.4, 0.4, 0.4, 0.4], [0.6, 0.6, 0.6, 0.6]]},
+    ).fit(models["m1"], models["d1"])
+    cpd_C = get_cpd(est1, "C")
     cpd_C_exp = TabularCPD(
         "C",
         2,
@@ -100,7 +115,11 @@ def test_estimate_cpd_dirichlet(models):
 
 
 def test_estimate_cpd_improper_prior(models):
-    cpd_C = models["est1"].estimate_cpd("C", prior_type="dirichlet", pseudo_counts=[[0, 0, 0, 0], [0, 0, 0, 0]])
+    estimator = BayesianEstimator(
+        prior_type="dirichlet",
+        pseudo_counts={"C": [[0, 0, 0, 0], [0, 0, 0, 0]]},
+    ).fit(models["m1"], models["d1"])
+    cpd_C = get_cpd(estimator, "C")
     cpd_C_correct = TabularCPD(
         "C",
         2,
@@ -114,9 +133,14 @@ def test_estimate_cpd_improper_prior(models):
 
 
 def test_estimate_cpd_shortcuts(models):
-    est2, est3 = models["est2"], models["est3"]
+    est2 = BayesianEstimator(
+        state_names={"A": [0, 1, 2], "B": [0, 1], "C": [0, 1, 23]},
+        prior_type="BDeu",
+        equivalent_sample_size=9,
+    ).fit(models["m1"], models["d1"])
+    est3 = BayesianEstimator(prior_type="K2").fit(models["m1"], models["d2"])
 
-    cpd_C1 = est2.estimate_cpd("C", prior_type="BDeu", equivalent_sample_size=9)
+    cpd_C1 = get_cpd(est2, "C")
     cpd_C1_correct = TabularCPD(
         "C",
         3,
@@ -131,7 +155,7 @@ def test_estimate_cpd_shortcuts(models):
     )
     assert cpd_C1 == cpd_C1_correct
 
-    cpd_C2 = est3.estimate_cpd("C", prior_type="K2")
+    cpd_C2 = get_cpd(est3, "C")
     cpd_C2_correct = TabularCPD(
         "C",
         2,
@@ -147,68 +171,58 @@ def test_estimate_cpd_shortcuts(models):
     assert cpd_C2 == cpd_C2_correct
 
 
-def test_get_parameters(models):
+def test_parameters(models):
     est3 = models["est3"]
-    cpds = {
-        est3.estimate_cpd("A"),
-        est3.estimate_cpd("B"),
-        est3.estimate_cpd("C"),
-    }
+    cpds = {get_cpd(est3, "A"), get_cpd(est3, "B"), get_cpd(est3, "C")}
 
-    assert set(est3.get_parameters(n_jobs=1)) == cpds
+    assert set(est3.parameters_) == cpds
 
 
-def test_get_parameters2(models):
-    est3 = models["est3"]
+def test_parameters2(models):
     pseudo_counts = {
         "A": [[1], [2], [3]],
         "B": [[4], [5]],
         "C": [[6, 6, 6, 6, 6, 6], [7, 7, 7, 7, 7, 7]],
     }
 
-    cpds = {
-        est3.estimate_cpd("A", prior_type="dirichlet", pseudo_counts=pseudo_counts["A"]),
-        est3.estimate_cpd("B", prior_type="dirichlet", pseudo_counts=pseudo_counts["B"]),
-        est3.estimate_cpd("C", prior_type="dirichlet", pseudo_counts=pseudo_counts["C"]),
-    }
+    est3 = BayesianEstimator(prior_type="dirichlet", pseudo_counts=pseudo_counts).fit(models["m1"], models["d2"])
+    cpds = {get_cpd(est3, "A"), get_cpd(est3, "B"), get_cpd(est3, "C")}
 
-    assert set(est3.get_parameters(prior_type="dirichlet", pseudo_counts=pseudo_counts, n_jobs=1)) == cpds
+    assert set(est3.parameters_) == cpds
 
 
-def test_get_parameters3(models):
-    est3 = models["est3"]
-    pseudo_counts = 0.1
-    cpds = {
-        est3.estimate_cpd("A", prior_type="dirichlet", pseudo_counts=pseudo_counts),
-        est3.estimate_cpd("B", prior_type="dirichlet", pseudo_counts=pseudo_counts),
-        est3.estimate_cpd("C", prior_type="dirichlet", pseudo_counts=pseudo_counts),
-    }
-    assert set(est3.get_parameters(prior_type="dirichlet", pseudo_counts=pseudo_counts, n_jobs=1)) == cpds
+def test_parameters3(models):
+    est3 = BayesianEstimator(prior_type="dirichlet", pseudo_counts=0.1).fit(models["m1"], models["d2"])
+    cpds = {get_cpd(est3, "A"), get_cpd(est3, "B"), get_cpd(est3, "C")}
+    assert set(est3.parameters_) == cpds
 
 
 def test_node_specific_equivalent_sample_size(models):
-    est3 = models["est3"]
     ess_dict = {"A": 10, "B": 20, "C": 15}
-    cpds_dict = est3.get_parameters(prior_type="bdeu", equivalent_sample_size=ess_dict, n_jobs=1)
-    cpds_manual = {
-        est3.estimate_cpd("A", prior_type="bdeu", equivalent_sample_size=10),
-        est3.estimate_cpd("B", prior_type="bdeu", equivalent_sample_size=20),
-        est3.estimate_cpd("C", prior_type="bdeu", equivalent_sample_size=15),
-    }
+    est3 = BayesianEstimator(prior_type="bdeu", equivalent_sample_size=ess_dict).fit(models["m1"], models["d2"])
+    cpds_dict = est3.parameters_
+    cpds_manual = {get_cpd(est3, "A"), get_cpd(est3, "B"), get_cpd(est3, "C")}
     assert set(cpds_dict) == cpds_manual
 
 
 def test_node_specific_ess_partial_dict(models):
-    est3 = models["est3"]
-    """Test that unspecified nodes default to 0 (or equivalent behavior) when dict is partial."""
     ess_dict = {"A": 10, "C": 15}
-    cpd_A_dict = est3.estimate_cpd("A", prior_type="bdeu", equivalent_sample_size=ess_dict)
-    cpd_B_dict = est3.estimate_cpd("B", prior_type="bdeu", equivalent_sample_size=ess_dict)
-    cpd_C_dict = est3.estimate_cpd("C", prior_type="bdeu", equivalent_sample_size=ess_dict)
+    est3 = BayesianEstimator(prior_type="bdeu", equivalent_sample_size=ess_dict).fit(models["m1"], models["d2"])
 
-    cpd_A_manual = est3.estimate_cpd("A", prior_type="bdeu", equivalent_sample_size=10)
-    cpd_C_manual = est3.estimate_cpd("C", prior_type="bdeu", equivalent_sample_size=15)
-    cpd_B_manual = est3.estimate_cpd("B", prior_type="bdeu", equivalent_sample_size=0)
+    cpd_A_dict = get_cpd(est3, "A")
+    cpd_B_dict = get_cpd(est3, "B")
+    cpd_C_dict = get_cpd(est3, "C")
+
+    cpd_A_manual = get_cpd(
+        BayesianEstimator(prior_type="bdeu", equivalent_sample_size=10).fit(models["m1"], models["d2"]), "A"
+    )
+    cpd_C_manual = get_cpd(
+        BayesianEstimator(prior_type="bdeu", equivalent_sample_size=15).fit(models["m1"], models["d2"]), "C"
+    )
+    cpd_B_manual = get_cpd(
+        BayesianEstimator(prior_type="bdeu", equivalent_sample_size=0).fit(models["m1"], models["d2"]),
+        "B",
+    )
 
     assert cpd_A_dict == cpd_A_manual
     assert cpd_B_dict == cpd_B_manual
@@ -216,12 +230,18 @@ def test_node_specific_ess_partial_dict(models):
 
 
 def test_node_specific_ess_matches_uniform_ess(models):
-    est3 = models["est3"]
-    """Test that uniform ESS dict matches scalar ESS."""
     ess_value = 12
     ess_dict = {"A": ess_value, "B": ess_value, "C": ess_value}
-    cpds_scalar = est3.get_parameters(prior_type="bdeu", equivalent_sample_size=ess_value, n_jobs=1)
-    cpds_dict = est3.get_parameters(prior_type="bdeu", equivalent_sample_size=ess_dict, n_jobs=1)
+    cpds_scalar = (
+        BayesianEstimator(prior_type="bdeu", equivalent_sample_size=ess_value)
+        .fit(models["m1"], models["d2"])
+        .parameters_
+    )
+    cpds_dict = (
+        BayesianEstimator(prior_type="bdeu", equivalent_sample_size=ess_dict)
+        .fit(models["m1"], models["d2"])
+        .parameters_
+    )
     assert set(cpds_scalar) == set(cpds_dict)
 
 
@@ -238,12 +258,14 @@ def torch_models():
             "C": [1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
         }
     )
-    est1 = BayesianEstimator(m1, d1)
-    est2 = BayesianEstimator(m1, d1, state_names={"A": [0, 1, 2], "B": [0, 1], "C": [0, 1, 23]})
-    est3 = BayesianEstimator(m1, d2)
+    est1 = BayesianEstimator().fit(m1, d1)
+    est2 = BayesianEstimator(state_names={"A": [0, 1, 2], "B": [0, 1], "C": [0, 1, 23]}).fit(m1, d1)
+    est3 = BayesianEstimator().fit(m1, d2)
     yield {
+        "m1": m1,
         "model_latent": model_latent,
         "d1": d1,
+        "d2": d2,
         "est1": est1,
         "est2": est2,
         "est3": est3,
@@ -254,14 +276,16 @@ def torch_models():
 @requires_torch
 def test_error_latent_model_torch(torch_models):
     with pytest.raises(ValueError):
-        BayesianEstimator(torch_models["model_latent"], torch_models["d1"])
+        BayesianEstimator().fit(torch_models["model_latent"], torch_models["d1"])
 
 
 @requires_daft
 @requires_torch
 def test_estimate_cpd_dirichlet_torch(torch_models):
-    est1 = torch_models["est1"]
-    cpd_A = est1.estimate_cpd("A", prior_type="dirichlet", pseudo_counts=[[0], [1]])
+    est1 = BayesianEstimator(prior_type="dirichlet", pseudo_counts={"A": [[0], [1]]}).fit(
+        torch_models["m1"], torch_models["d1"]
+    )
+    cpd_A = get_cpd(est1, "A")
     cpd_A_exp = TabularCPD(
         variable="A",
         variable_card=2,
@@ -270,20 +294,23 @@ def test_estimate_cpd_dirichlet_torch(torch_models):
     )
     assert cpd_A == cpd_A_exp
 
-    # also test passing pseudo_counts as np.array
-    pseudo_counts = np.array([[0], [1]])
-    cpd_A = est1.estimate_cpd("A", prior_type="dirichlet", pseudo_counts=pseudo_counts)
-    assert cpd_A == cpd_A_exp
+    est1 = BayesianEstimator(prior_type="dirichlet", pseudo_counts={"A": np.array([[0], [1]])}).fit(
+        torch_models["m1"], torch_models["d1"]
+    )
+    assert get_cpd(est1, "A") == cpd_A_exp
 
-    cpd_B = est1.estimate_cpd("B", prior_type="dirichlet", pseudo_counts=[[9], [3]])
+    est1 = BayesianEstimator(prior_type="dirichlet", pseudo_counts={"B": [[9], [3]]}).fit(
+        torch_models["m1"], torch_models["d1"]
+    )
+    cpd_B = get_cpd(est1, "B")
     cpd_B_exp = TabularCPD("B", 2, [[11.0 / 15], [4.0 / 15]], state_names={"B": [0, 1]})
     assert cpd_B == cpd_B_exp
 
-    cpd_C = est1.estimate_cpd(
-        "C",
+    est1 = BayesianEstimator(
         prior_type="dirichlet",
-        pseudo_counts=[[0.4, 0.4, 0.4, 0.4], [0.6, 0.6, 0.6, 0.6]],
-    )
+        pseudo_counts={"C": [[0.4, 0.4, 0.4, 0.4], [0.6, 0.6, 0.6, 0.6]]},
+    ).fit(torch_models["m1"], torch_models["d1"])
+    cpd_C = get_cpd(est1, "C")
     cpd_C_exp = TabularCPD(
         "C",
         2,
@@ -297,7 +324,11 @@ def test_estimate_cpd_dirichlet_torch(torch_models):
 
 @requires_torch
 def test_estimate_cpd_improper_prior_torch(torch_models):
-    cpd_C = torch_models["est1"].estimate_cpd("C", prior_type="dirichlet", pseudo_counts=[[0, 0, 0, 0], [0, 0, 0, 0]])
+    estimator = BayesianEstimator(
+        prior_type="dirichlet",
+        pseudo_counts={"C": [[0, 0, 0, 0], [0, 0, 0, 0]]},
+    ).fit(torch_models["m1"], torch_models["d1"])
+    cpd_C = get_cpd(estimator, "C")
     cpd_C_correct = TabularCPD(
         "C",
         2,
@@ -307,7 +338,6 @@ def test_estimate_cpd_improper_prior_torch(torch_models):
         state_names={"A": [0, 1], "B": [0, 1], "C": [0, 1]},
     )
     backend = config.get_compute_backend()
-    # manual comparison because np.nan != np.nan
     assert (
         (cpd_C.values == cpd_C_correct.values) | backend.isnan(cpd_C.values) & backend.isnan(cpd_C_correct.values)
     ).all()
@@ -316,8 +346,14 @@ def test_estimate_cpd_improper_prior_torch(torch_models):
 @requires_daft
 @requires_torch
 def test_estimate_cpd_shortcuts_torch(torch_models):
-    est2, est3 = torch_models["est2"], torch_models["est3"]
-    cpd_C1 = est2.estimate_cpd("C", prior_type="BDeu", equivalent_sample_size=9)
+    est2 = BayesianEstimator(
+        state_names={"A": [0, 1, 2], "B": [0, 1], "C": [0, 1, 23]},
+        prior_type="BDeu",
+        equivalent_sample_size=9,
+    ).fit(torch_models["m1"], torch_models["d1"])
+    est3 = BayesianEstimator(prior_type="K2").fit(torch_models["m1"], torch_models["d2"])
+
+    cpd_C1 = get_cpd(est2, "C")
     cpd_C1_correct = TabularCPD(
         "C",
         3,
@@ -332,7 +368,7 @@ def test_estimate_cpd_shortcuts_torch(torch_models):
     )
     assert cpd_C1 == cpd_C1_correct
 
-    cpd_C2 = est3.estimate_cpd("C", prior_type="K2")
+    cpd_C2 = get_cpd(est3, "C")
     cpd_C2_correct = TabularCPD(
         "C",
         2,
@@ -349,45 +385,34 @@ def test_estimate_cpd_shortcuts_torch(torch_models):
 
 @requires_daft
 @requires_torch
-def test_get_parameters_torch(torch_models):
+def test_parameters_torch(torch_models):
     est3 = torch_models["est3"]
-    cpds = [
-        est3.estimate_cpd("A"),
-        est3.estimate_cpd("B"),
-        est3.estimate_cpd("C"),
-    ]
-    all_cpds = est3.get_parameters(n_jobs=1)
+    cpds = [get_cpd(est3, "A"), get_cpd(est3, "B"), get_cpd(est3, "C")]
+    all_cpds = est3.parameters_
     assert sorted(cpds, key=lambda t: t.variables[0]) == sorted(all_cpds, key=lambda t: t.variables[0])
 
 
 @requires_daft
 @requires_torch
-def test_get_parameters2_torch(torch_models):
-    est3 = torch_models["est3"]
+def test_parameters2_torch(torch_models):
     pseudo_counts = {
         "A": [[1], [2], [3]],
         "B": [[4], [5]],
         "C": [[6, 6, 6, 6, 6, 6], [7, 7, 7, 7, 7, 7]],
     }
-    cpds = {
-        est3.estimate_cpd("A", prior_type="dirichlet", pseudo_counts=pseudo_counts["A"]),
-        est3.estimate_cpd("B", prior_type="dirichlet", pseudo_counts=pseudo_counts["B"]),
-        est3.estimate_cpd("C", prior_type="dirichlet", pseudo_counts=pseudo_counts["C"]),
-    }
-    all_cpds = est3.get_parameters(prior_type="dirichlet", pseudo_counts=pseudo_counts, n_jobs=1)
+    est3 = BayesianEstimator(prior_type="dirichlet", pseudo_counts=pseudo_counts).fit(
+        torch_models["m1"], torch_models["d2"]
+    )
+    cpds = {get_cpd(est3, "A"), get_cpd(est3, "B"), get_cpd(est3, "C")}
+    all_cpds = est3.parameters_
     assert sorted(cpds, key=lambda t: t.variables[0]) == sorted(all_cpds, key=lambda t: t.variables[0])
 
 
 @requires_daft
 @requires_torch
-def test_get_parameters3_torch(torch_models):
-    est3 = torch_models["est3"]
-    pseudo_counts = 0.1
-    cpds = {
-        est3.estimate_cpd("A", prior_type="dirichlet", pseudo_counts=pseudo_counts),
-        est3.estimate_cpd("B", prior_type="dirichlet", pseudo_counts=pseudo_counts),
-        est3.estimate_cpd("C", prior_type="dirichlet", pseudo_counts=pseudo_counts),
-    }
-    all_cpds = est3.get_parameters(prior_type="dirichlet", pseudo_counts=pseudo_counts, n_jobs=1)
+def test_parameters3_torch(torch_models):
+    est3 = BayesianEstimator(prior_type="dirichlet", pseudo_counts=0.1).fit(torch_models["m1"], torch_models["d2"])
+    cpds = {get_cpd(est3, "A"), get_cpd(est3, "B"), get_cpd(est3, "C")}
+    all_cpds = est3.parameters_
 
     assert sorted(cpds, key=lambda t: t.variables[0]) == sorted(all_cpds, key=lambda t: t.variables[0])

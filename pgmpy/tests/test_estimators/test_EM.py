@@ -7,10 +7,11 @@ from joblib.externals.loky import get_reusable_executor
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
-from pgmpy.estimators import ExpectationMaximization as EM
 from pgmpy.example_models import load_model
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
+from pgmpy.parameter_estimator import BayesianEstimator
+from pgmpy.parameter_estimator import ExpectationMaximization as EM
 from pgmpy.utils import compat_fns
 
 
@@ -23,18 +24,21 @@ class TestEM(unittest.TestCase):
         self.model2.add_cpds(*self.model1.cpds)
         self.data2 = self.model2.simulate(int(1e4), seed=42)
 
-    def test_get_parameters(self):
-        # All observed
-        est = EM(self.model1, self.data1)
-        cpds = est.get_parameters(seed=42, n_jobs=1, show_progress=False)
+    def test_fit_sets_fitted_attributes(self):
+        est = EM(show_progress=False)
+        self.assertIs(est.fit(self.model1, self.data1), est)
+        self.assertIn("Cancer", est.state_names_)
+
+    def test_parameters(self):
+        est = EM(seed=42, n_jobs=1, show_progress=False)
+        cpds = est.fit(self.model1, self.data1).parameters_
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
             self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
 
-        # Latent variables
-        est = EM(self.model2, self.data2)
-        cpds = est.get_parameters(seed=42, n_jobs=1, show_progress=False)
+        est = EM(seed=42, n_jobs=1, show_progress=False)
+        cpds = est.fit(self.model2, self.data2).parameters_
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model2.get_cpds(var)
@@ -43,30 +47,26 @@ class TestEM(unittest.TestCase):
                 orig_cpd.state_names["Smoker"] = [1, 0]
             self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
 
-    def test_get_parameters_smoothing_k2(self):
-        # All observed
-        est = EM(self.model1, self.data1)
-        cpds = est.get_parameters(
+    def test_parameters_smoothing_k2(self):
+        est = EM(
             seed=42,
             n_jobs=1,
-            apply_smoothing=True,
-            prior_type="k2",
+            m_step_estimator=BayesianEstimator(weighted=True, prior_type="k2"),
             show_progress=False,
         )
+        cpds = est.fit(self.model1, self.data1).parameters_
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
             self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
 
-        # Latent variables
-        est = EM(self.model2, self.data2)
-        cpds = est.get_parameters(
+        est = EM(
             seed=42,
             n_jobs=1,
-            apply_smoothing=True,
-            prior_type="k2",
+            m_step_estimator=BayesianEstimator(weighted=True, prior_type="k2"),
             show_progress=False,
         )
+        cpds = est.fit(self.model2, self.data2).parameters_
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model2.get_cpds(var)
@@ -75,32 +75,26 @@ class TestEM(unittest.TestCase):
                 orig_cpd.state_names["Smoker"] = [1, 0]
             self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
 
-    def test_get_parameters_smoothing_bdeu(self):
-        # All observed
-        est = EM(self.model1, self.data1)
-        cpds = est.get_parameters(
+    def test_parameters_smoothing_bdeu(self):
+        est = EM(
             seed=42,
             n_jobs=1,
-            apply_smoothing=True,
-            prior_type="bdeu",
-            equivalent_sample_size=1,
+            m_step_estimator=BayesianEstimator(weighted=True, prior_type="bdeu", equivalent_sample_size=1),
             show_progress=False,
         )
+        cpds = est.fit(self.model1, self.data1).parameters_
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
             self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
 
-        # Latent variables
-        est = EM(self.model2, self.data2)
-        cpds = est.get_parameters(
+        est = EM(
             seed=42,
             n_jobs=1,
-            apply_smoothing=True,
-            prior_type="bdeu",
-            equivalent_sample_size=1,
+            m_step_estimator=BayesianEstimator(weighted=True, prior_type="bdeu", equivalent_sample_size=1),
             show_progress=False,
         )
+        cpds = est.fit(self.model2, self.data2).parameters_
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model2.get_cpds(var)
@@ -109,34 +103,29 @@ class TestEM(unittest.TestCase):
                 orig_cpd.state_names["Smoker"] = [1, 0]
             self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
 
-    def test_get_parameters_initial_cpds(self):
-        # All observed. Specify initial CPDs.
-        est = EM(self.model1, self.data1)
+    def test_parameters_initial_cpds(self):
         smoker_initial = TabularCPD("Smoker", 2, [[0.1], [0.9]], state_names={"Smoker": ["True", "False"]})
-        cpds = est.get_parameters(init_cpds={"Smoker": smoker_initial}, seed=42, n_jobs=1, show_progress=False)
+
+        est = EM(init_cpds={"Smoker": smoker_initial}, seed=42, n_jobs=1, show_progress=False)
+        cpds = est.fit(self.model1, self.data1).parameters_
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
             self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
 
-        # With latents. Specify initial CPDs only for latent.
-        est = EM(self.model2, self.data2)
-        cpds = est.get_parameters(init_cpds={"Smoker": smoker_initial}, seed=42, n_jobs=1, show_progress=False)
+        est = EM(init_cpds={"Smoker": smoker_initial}, seed=42, n_jobs=1, show_progress=False)
+        cpds = est.fit(self.model2, self.data2).parameters_
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
             if "Smoker" in orig_cpd.variables:
                 orig_cpd.state_names["Smoker"] = [1, 0]
 
-            # The latent variable doesn't converge to the true value when
-            # the initial CPD is specified.
             if orig_cpd.variables[0] == "Smoker":
                 self.assertTrue(np.allclose(est_cpd.values, np.array([0.123, 0.877]), atol=0.01))
             else:
                 self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
 
-        # With latents. Specify initial CPDs for both latents and observed.
-        est = EM(self.model2, self.data2)
         xray_initial = TabularCPD(
             variable="Xray",
             variable_card=2,
@@ -145,12 +134,13 @@ class TestEM(unittest.TestCase):
             evidence_card=[2],
             state_names={"Xray": ["positive", "negative"], "Cancer": ["True", "False"]},
         )
-        cpds = est.get_parameters(
+        est = EM(
             init_cpds={"Smoker": smoker_initial, "Xray": xray_initial},
             seed=42,
             n_jobs=1,
             show_progress=False,
         )
+        cpds = est.fit(self.model2, self.data2).parameters_
 
         for est_cpd in cpds:
             var = est_cpd.variables[0]
@@ -158,8 +148,6 @@ class TestEM(unittest.TestCase):
             if "Smoker" in orig_cpd.variables:
                 orig_cpd.state_names["Smoker"] = [1, 0]
 
-            # The latent variable doesn't converge to the true value when
-            # the initial CPD is specified.
             if orig_cpd.variables[0] == "Smoker":
                 self.assertTrue(np.allclose(est_cpd.values, np.array([0.123, 0.877]), atol=0.01))
             elif orig_cpd.variables[0] == "Xray":
@@ -175,59 +163,53 @@ class TestEM(unittest.TestCase):
 
     def test_em_init_missing_data_handling(self):
         df = pd.DataFrame({"A": [1, 2, 3], "B": [None, None, None], "C": [1, None, 3], "D": [4, 5, 6]})
+        model = DiscreteBayesianNetwork([("A", "C"), ("C", "D")])
 
         with warnings.catch_warnings(record=True):
             warnings.simplefilter("always")
-            est = EM(self.model1, df)
+            est = EM(show_progress=False)
+            est.fit(model, df)
 
-        # Data shape and column removal
-        self.assertEqual(est.data.shape, (2, 3))
-        self.assertNotIn("B", est.data.columns)
+        self.assertEqual(est._data.shape, (2, 3))
+        self.assertNotIn("B", est._data.columns)
 
-    def test_get_parameters_random_init_cpds(self):
-        est = EM(self.model1, self.data1)
-        cpds = est.get_parameters(init_cpds="random", seed=42, n_jobs=1, show_progress=False)
+    def test_parameters_random_init_cpds(self):
+        est = EM(init_cpds="random", seed=42, n_jobs=1, show_progress=False)
+        cpds = est.fit(self.model1, self.data1).parameters_
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
             self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
 
-    def test_get_parameters_uniform_init_cpds(self):
-        est = EM(self.model1, self.data1)
-        cpds = est.get_parameters(init_cpds="uniform", n_jobs=1, show_progress=False)
+    def test_parameters_uniform_init_cpds(self):
+        est = EM(init_cpds="uniform", n_jobs=1, show_progress=False)
+        cpds = est.fit(self.model1, self.data1).parameters_
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
             self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
 
-    def test_get_parameters_node_specific_ess_bdeu(self):
-        """Test EM with node-specific equivalent_sample_size dict for BDeu."""
-        # All observed
-        est = EM(self.model1, self.data1)
+    def test_parameters_node_specific_ess_bdeu(self):
         ess_dict = {"Smoker": 10, "Cancer": 5, "Xray": 8}
-        cpds = est.get_parameters(
+        est = EM(
             seed=42,
             n_jobs=1,
-            apply_smoothing=True,
-            prior_type="bdeu",
-            equivalent_sample_size=ess_dict,
+            m_step_estimator=BayesianEstimator(weighted=True, prior_type="bdeu", equivalent_sample_size=ess_dict),
             show_progress=False,
         )
+        cpds = est.fit(self.model1, self.data1).parameters_
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
             self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
 
-        # With latent variables
-        est = EM(self.model2, self.data2)
-        cpds = est.get_parameters(
+        est = EM(
             seed=42,
             n_jobs=1,
-            apply_smoothing=True,
-            prior_type="bdeu",
-            equivalent_sample_size=ess_dict,
+            m_step_estimator=BayesianEstimator(weighted=True, prior_type="bdeu", equivalent_sample_size=ess_dict),
             show_progress=False,
         )
+        cpds = est.fit(self.model2, self.data2).parameters_
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model2.get_cpds(var)
@@ -236,32 +218,26 @@ class TestEM(unittest.TestCase):
                 orig_cpd.state_names["Smoker"] = [1, 0]
             self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
 
-    def test_get_parameters_ess_dict_vs_scalar(self):
-        """Test that uniform ESS dict matches scalar ESS."""
+    def test_parameters_ess_dict_vs_scalar(self):
         ess_value = 7
-        ess_dict = {"Smoker": ess_value, "Cancer": ess_value, "Xray": ess_value}
+        ess_dict = dict.fromkeys(self.model1.nodes(), ess_value)
 
-        est_scalar = EM(self.model1, self.data1)
-        cpds_scalar = est_scalar.get_parameters(
+        est_scalar = EM(
             seed=42,
             n_jobs=1,
-            apply_smoothing=True,
-            prior_type="bdeu",
-            equivalent_sample_size=ess_value,
+            m_step_estimator=BayesianEstimator(weighted=True, prior_type="bdeu", equivalent_sample_size=ess_value),
             show_progress=False,
         )
+        cpds_scalar = est_scalar.fit(self.model1, self.data1).parameters_
 
-        est_dict = EM(self.model1, self.data1)
-        cpds_dict = est_dict.get_parameters(
+        est_dict = EM(
             seed=42,
             n_jobs=1,
-            apply_smoothing=True,
-            prior_type="bdeu",
-            equivalent_sample_size=ess_dict,
+            m_step_estimator=BayesianEstimator(weighted=True, prior_type="bdeu", equivalent_sample_size=ess_dict),
             show_progress=False,
         )
+        cpds_dict = est_dict.fit(self.model1, self.data1).parameters_
 
-        # Results should be identical
         for cpd_scalar, cpd_dict in zip(
             sorted(cpds_scalar, key=lambda x: x.variables[0]),
             sorted(cpds_dict, key=lambda x: x.variables[0]),
@@ -292,16 +268,16 @@ class TestEMTorch(TestEM):
         self.model2.add_cpds(*self.model1.cpds)
         self.data2 = self.model2.simulate(int(1e4), seed=42)
 
-    def test_get_parameters(self):
-        est = EM(self.model1, self.data1)
-        cpds = est.get_parameters(seed=42, n_jobs=1, show_progress=False)
+    def test_parameters(self):
+        est = EM(seed=42, n_jobs=1, show_progress=False)
+        cpds = est.fit(self.model1, self.data1).parameters_
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
             self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
 
-        est = EM(self.model2, self.data2)
-        cpds = est.get_parameters(seed=42, n_jobs=1, show_progress=False)
+        est = EM(seed=42, n_jobs=1, show_progress=False)
+        cpds = est.fit(self.model2, self.data2).parameters_
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model2.get_cpds(var)
@@ -311,27 +287,23 @@ class TestEMTorch(TestEM):
 
             self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
 
-    def test_get_parameters_initial_cpds(self):
-        # All observed. Specify initial CPDs.
-        est = EM(self.model1, self.data1)
+    def test_parameters_initial_cpds(self):
         smoker_initial = TabularCPD("Smoker", 2, [[0.1], [0.9]], state_names={"Smoker": ["True", "False"]})
-        cpds = est.get_parameters(init_cpds={"Smoker": smoker_initial}, seed=42, n_jobs=1, show_progress=False)
+        est = EM(init_cpds={"Smoker": smoker_initial}, seed=42, n_jobs=1, show_progress=False)
+        cpds = est.fit(self.model1, self.data1).parameters_
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
             self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
 
-        # With latents. Specify initial CPDs only for latent.
-        est = EM(self.model2, self.data2)
-        cpds = est.get_parameters(init_cpds={"Smoker": smoker_initial}, seed=42, n_jobs=1, show_progress=False)
+        est = EM(init_cpds={"Smoker": smoker_initial}, seed=42, n_jobs=1, show_progress=False)
+        cpds = est.fit(self.model2, self.data2).parameters_
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
             if "Smoker" in orig_cpd.variables:
                 orig_cpd.state_names["Smoker"] = [1, 0]
 
-            # The latent variable doesn't converge to the true value when
-            # the initial CPD is specified.
             if orig_cpd.variables[0] == "Smoker":
                 self.assertTrue(
                     np.allclose(
@@ -343,8 +315,6 @@ class TestEMTorch(TestEM):
             else:
                 self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
 
-        # With latents. Specify initial CPDs for both latents and observed.
-        est = EM(self.model2, self.data2)
         xray_initial = TabularCPD(
             variable="Xray",
             variable_card=2,
@@ -353,12 +323,13 @@ class TestEMTorch(TestEM):
             evidence_card=[2],
             state_names={"Xray": ["positive", "negative"], "Cancer": ["True", "False"]},
         )
-        cpds = est.get_parameters(
+        est = EM(
             init_cpds={"Smoker": smoker_initial, "Xray": xray_initial},
             seed=42,
             n_jobs=1,
             show_progress=False,
         )
+        cpds = est.fit(self.model2, self.data2).parameters_
 
         for est_cpd in cpds:
             var = est_cpd.variables[0]
@@ -366,8 +337,6 @@ class TestEMTorch(TestEM):
             if "Smoker" in orig_cpd.variables:
                 orig_cpd.state_names["Smoker"] = [1, 0]
 
-            # The latent variable doesn't converge to the true value when
-            # the initial CPD is specified.
             if orig_cpd.variables[0] == "Smoker":
                 self.assertTrue(
                     np.allclose(
