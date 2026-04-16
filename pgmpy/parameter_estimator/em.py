@@ -12,11 +12,11 @@ from tqdm.auto import tqdm
 from pgmpy import config, logger
 from pgmpy.factors.discrete import TabularCPD
 
-from .base import DiscreteParameterEstimator
+from .base import _BaseDiscreteParameterEstimator
 from .mle import MaximumLikelihoodEstimator
 
 
-class ExpectationMaximization(DiscreteParameterEstimator):
+class ExpectationMaximization(_BaseDiscreteParameterEstimator):
     """
     Class used to compute parameters for a model using Expectation Maximization (EM).
 
@@ -36,7 +36,7 @@ class ExpectationMaximization(DiscreteParameterEstimator):
         cardinality (number of states) of each latent variable. If None,
         assumes `2` states for each latent variable.
 
-    m_step_estimator: pgmpy.parameter_estimator.DiscreteParameterEstimator, optional
+    m_step_estimator: discrete parameter estimator instance, optional
         Estimator instance to use in the M-step. The estimator must support
         weighted data. If not specified, uses
         `MaximumLikelihoodEstimator(weighted=True)`.
@@ -91,7 +91,7 @@ class ExpectationMaximization(DiscreteParameterEstimator):
     """
 
     _tags = {
-        "supported_model_types": DiscreteParameterEstimator._tags["supported_model_types"],
+        "supported_model_types": _BaseDiscreteParameterEstimator._tags["supported_model_types"],
         "supports_latent_variables": True,
         "supports_weighted_data": False,
     }
@@ -100,7 +100,7 @@ class ExpectationMaximization(DiscreteParameterEstimator):
         self,
         state_names: dict | None = None,
         latent_card: dict[str, int] | None = None,
-        m_step_estimator: DiscreteParameterEstimator | None = None,
+        m_step_estimator: _BaseDiscreteParameterEstimator | None = None,
         max_iter: int = 100,
         atol: float = 1e-08,
         n_jobs: int = 1,
@@ -225,8 +225,10 @@ class ExpectationMaximization(DiscreteParameterEstimator):
         order = {var: index for index, var in enumerate(self._model.nodes())}
         return sorted(parameters, key=lambda cpd: order[cpd.variable])
 
-    def _clone_m_step_estimator(self, weighted: bool) -> DiscreteParameterEstimator:
-        if isinstance(self.m_step_estimator, type) or not isinstance(self.m_step_estimator, DiscreteParameterEstimator):
+    def _clone_m_step_estimator(self, weighted: bool) -> _BaseDiscreteParameterEstimator:
+        if isinstance(self.m_step_estimator, type) or not isinstance(
+            self.m_step_estimator, _BaseDiscreteParameterEstimator
+        ):
             raise TypeError(
                 "m_step_estimator should be an instance of a discrete parameter estimator. "
                 "Pass an initialized estimator, for example `MaximumLikelihoodEstimator(weighted=True)`."

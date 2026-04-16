@@ -8,10 +8,10 @@ from joblib import Parallel, delayed
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.utils import get_state_counts
 
-from .base import DiscreteParameterEstimator
+from .base import _BaseDiscreteParameterEstimator
 
 
-class MaximumLikelihoodEstimator(DiscreteParameterEstimator):
+class MaximumLikelihoodEstimator(_BaseDiscreteParameterEstimator):
     """
     Class used to compute parameters for a model using Maximum Likelihood Estimation.
 
@@ -50,7 +50,7 @@ class MaximumLikelihoodEstimator(DiscreteParameterEstimator):
     """
 
     _tags = {
-        "supported_model_types": DiscreteParameterEstimator._tags["supported_model_types"],
+        "supported_model_types": _BaseDiscreteParameterEstimator._tags["supported_model_types"],
         "supports_latent_variables": False,
         "supports_weighted_data": True,
     }

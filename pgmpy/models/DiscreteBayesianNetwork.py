@@ -600,7 +600,7 @@ class DiscreteBayesianNetwork(DAG):
             (If some values in the data are missing the data cells should be set to `numpy.nan`.
             Note that pandas converts each column containing `numpy.nan`s to dtype `float`.)
 
-        estimator: pgmpy.parameter_estimator.DiscreteParameterEstimator instance
+        estimator: discrete parameter estimator instance
             Discrete parameter estimator instance to use for fitting. If not specified,
             uses `pgmpy.parameter_estimator.MaximumLikelihoodEstimator()`.
 
@@ -626,14 +626,12 @@ class DiscreteBayesianNetwork(DAG):
         <TabularCPD representing P(C:2 | A:2, B:2) at 0x...>,
         <TabularCPD representing P(B:2) at 0x...>]
         """
-        from pgmpy.parameter_estimator import (
-            DiscreteParameterEstimator,
-            MaximumLikelihoodEstimator,
-        )
+        from pgmpy.parameter_estimator import MaximumLikelihoodEstimator
+        from pgmpy.parameter_estimator.base import _BaseDiscreteParameterEstimator
 
         if estimator is None:
             estimator = MaximumLikelihoodEstimator()
-        elif isinstance(estimator, type) or not isinstance(estimator, DiscreteParameterEstimator):
+        elif isinstance(estimator, type) or not isinstance(estimator, _BaseDiscreteParameterEstimator):
             raise TypeError(
                 "Estimator should be an instance of a discrete parameter estimator. "
                 "Pass an initialized estimator, for example `MaximumLikelihoodEstimator()`."

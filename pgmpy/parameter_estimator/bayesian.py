@@ -11,10 +11,10 @@ from pgmpy import logger
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.utils import get_state_counts
 
-from .base import DiscreteParameterEstimator
+from .base import _BaseDiscreteParameterEstimator
 
 
-class BayesianEstimator(DiscreteParameterEstimator):
+class BayesianEstimator(_BaseDiscreteParameterEstimator):
     """
     Class used to compute parameters for a model using Bayesian Parameter Estimation.
 
@@ -71,7 +71,7 @@ class BayesianEstimator(DiscreteParameterEstimator):
     """
 
     _tags = {
-        "supported_model_types": DiscreteParameterEstimator._tags["supported_model_types"],
+        "supported_model_types": _BaseDiscreteParameterEstimator._tags["supported_model_types"],
         "supports_latent_variables": False,
         "supports_weighted_data": True,
     }

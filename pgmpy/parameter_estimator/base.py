@@ -7,7 +7,7 @@ from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import build_state_names, preprocess_data
 
 
-class DiscreteParameterEstimator(BaseEstimator):
+class _BaseDiscreteParameterEstimator(BaseEstimator):
     """
     Base class for fit-based discrete parameter estimators.
 
@@ -45,7 +45,7 @@ class DiscreteParameterEstimator(BaseEstimator):
 
         Returns
         -------
-        self: DiscreteParameterEstimator
+        self
             Fitted estimator with learned parameters stored in `parameters_`
             and inferred state names stored in `state_names_`.
         """
