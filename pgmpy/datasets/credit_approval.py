@@ -5,7 +5,7 @@ class CreditApproval(_BaseDataset):
     """
     References
     ----------
-    .. [1] https://archive.ics.uci.edu/ml/datasets/Credit+Approval
+    - :cite:p:`https_noyear_92`
     """
 
     _tags = {

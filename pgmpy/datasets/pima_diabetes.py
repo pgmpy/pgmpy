@@ -5,7 +5,7 @@ class PimaDiabetes(_BaseDataset):
     """
     References
     ----------
-    .. [1] https://www.kaggle.com/uciml/pima-indians-diabetes-database
+    - :cite:p:`https_noyear_112`
     """
 
     _tags = {

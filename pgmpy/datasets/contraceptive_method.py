@@ -5,7 +5,7 @@ class ContraceptiveMethod(_BaseDataset):
     """
     References
     ----------
-    .. [1] https://archive.ics.uci.edu/ml/datasets/Contraceptive+Method+Choice
+    - :cite:p:`https_noyear_91`
     """
 
     _tags = {

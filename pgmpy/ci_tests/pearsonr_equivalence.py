@@ -69,8 +69,7 @@ class PearsonrEquivalence(Pearsonr):
 
     References
     ----------
-    .. [1] Malinsky, Daniel. "A cautious approach to constraint-based causal model selection." arXiv preprint
-            arXiv:2404.18232 (2024).
+    - :cite:p:`malinsky_2024_44`
     """
 
     _tags = {

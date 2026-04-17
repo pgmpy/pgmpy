@@ -88,9 +88,7 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
 
     References
     ----------
-    .. [1] Chickering, David Maxwell. "Optimal structure identification with
-           greedy search." Journal of machine learning research 3.Nov (2002):
-           507-554.
+    - :cite:p:`chickering_2002_11`
     """
 
     def __init__(

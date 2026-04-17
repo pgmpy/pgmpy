@@ -27,7 +27,7 @@ class GSq(PowerDivergence):
 
     References
     ----------
-    .. [1] https://en.wikipedia.org/wiki/G-test
+    - :cite:p:`https_noyear_49`
 
     Examples
     --------

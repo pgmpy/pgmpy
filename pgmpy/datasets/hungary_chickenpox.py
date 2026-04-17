@@ -5,10 +5,8 @@ class HungaryChickenpox(_BaseDataset):
     """
     References
     ----------
-    .. [1] Rozemberczki, B., Scherer, P., Kiss, O., Sarkar, R., & Ferenci, T. (2021). Chickenpox cases in hungary:
-           a benchmark dataset for spatiotemporal signal processing with graph neural networks.
-           arXiv preprint arXiv:2102.08100.
-    .. [2] https://archive.ics.uci.edu/ml/datasets/Hungarian+Chickenpox+Cases
+    - :cite:p:`rozemberczki_2021_84`
+    - :cite:p:`https_noyear_95`
     """
 
     _tags = {

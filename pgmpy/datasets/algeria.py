@@ -5,8 +5,8 @@ class Algeria(_BaseDataset):
     """
     References
     ----------
-    .. [1] https://archive.ics.uci.edu/ml/datasets/Algerian+Forest+Fires+Dataset++
-    .. [2] https://www.nwcg.gov/publications/pms437/cffdrs/fire-weather-index-system
+    - :cite:p:`https_noyear_90`
+    - :cite:p:`https_noyear_113`
     """
 
     _tags = {

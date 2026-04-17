@@ -5,8 +5,7 @@ class Spartina(_CovarianceMixin, _BaseDataset):
     """
         References
         ----------
-        .. [1] Spirtes, P., Glymour, C. N., Scheines, R., & Heckerman, D. (2000). Causation,
-    prediction, and search. MIT press, p. 18.
+        - :cite:p:`spirtes_2000_86`
     """
 
     _tags = {

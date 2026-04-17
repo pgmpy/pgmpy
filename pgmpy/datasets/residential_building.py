@@ -5,7 +5,7 @@ class ResidentialBuilding(_BaseDataset):
     """
     References
     ----------
-    .. [1] https://archive.ics.uci.edu/ml/datasets/Residential+Building+Data+Set
+    - :cite:p:`https_noyear_98`
     """
 
     _tags = {

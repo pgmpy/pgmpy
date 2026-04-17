@@ -476,9 +476,7 @@ class CausalInference:
 
         References
         ----------
-        .. [1] Van Der Zander, B., Textor, J., & Liskiewicz, M. (2015, June). Efficiently finding
-               conditional instruments for causal inference. In Twenty-Fourth International Joint
-               Conference on Artificial Intelligence.
+        - :cite:p:`zander_2015_39`
 
         Examples
         --------

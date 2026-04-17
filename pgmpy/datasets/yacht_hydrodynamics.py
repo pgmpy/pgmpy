@@ -5,7 +5,7 @@ class YachtHydrodynamics(_BaseDataset):
     """
     References
     ----------
-    .. [1] https://archive.ics.uci.edu/ml/datasets/yacht+hydrodynamics
+    - :cite:p:`https_noyear_106`
     """
 
     _tags = {

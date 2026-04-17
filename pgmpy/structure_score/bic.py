@@ -48,9 +48,8 @@ class BIC(LogLikelihood):
 
     References
     ----------
-    .. [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009, Section 18.3.4-18.3.6.
-    .. [2] AM Carvalho, Scoring functions for learning Bayesian networks,
-        http://www.lx.it.pt/~asmc/pub/talks/09-TA/ta_pres.pdf
+    - :cite:p:`koller_2009_15`
+    - :cite:p:`carvalho_noyear_9`
     """
 
     _tags = {

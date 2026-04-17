@@ -5,7 +5,7 @@ class Adult(_BaseDataset):
     """
     References
     ----------
-    .. [1] https://archive.ics.uci.edu/ml/datasets/adult
+    - :cite:p:`https_noyear_101`
     """
 
     _tags = {

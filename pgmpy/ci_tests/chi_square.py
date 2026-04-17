@@ -27,7 +27,7 @@ class ChiSquare(PowerDivergence):
 
     References
     ----------
-    .. [1] https://en.wikipedia.org/wiki/Chi-squared_test
+    - :cite:p:`https_noyear_48`
 
     Examples
     --------
