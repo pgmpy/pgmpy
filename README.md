@@ -21,12 +21,14 @@ Algorithms for each task follow a unified composable API, making them modular an
 
 | Feature | Description |
 |--------|-------------|
-| [**Causal Discovery / Structure Learning**](https://pgmpy.org/examples/Structure%20Learning%20in%20Bayesian%20Networks.html) | Learn the model structure from data, with optional integration of **expert knowledge**. |
-| [**Causal Validation**](https://pgmpy.org/metrics/metrics.html) | Assess how compatible the causal structure is with the data. |
-| [**Parameter Learning**](https://pgmpy.org/examples/Learning%20Parameters%20in%20Discrete%20Bayesian%20Networks.html) | Estimate model parameters (e.g., conditional probability distributions) from observed data. |
-| [**Probabilistic Inference**](https://pgmpy.org/examples/Inference%20in%20Discrete%20Bayesian%20Networks.html) | Compute posterior distributions conditioned on observed evidence. |
-| [**Causal Inference**](https://pgmpy.org/examples/Causal%20Inference.html) | Compute interventional and counterfactual distributions using do-calculus. |
-| [**Simulations**](https://github.com/pgmpy/pgmpy/blob/dev/examples/Simulating_Data.ipynb) | Generate synthetic data under specified evidence or interventions. |
+| [**Causal Discovery / Structure Learning**](https://pgmpy.org/guides/causal_discovery.html) | Learn the model structure from data, with optional integration of **expert knowledge**. |
+| [**Causal Validation**](https://pgmpy.org/guides/metrics.html) | Assess how compatible the causal structure is with the data. |
+| [**Parameter Learning**](https://pgmpy.org/guides/parameter_estimation.html) | Estimate model parameters (e.g., conditional probability distributions) from observed data. |
+| [**Probabilistic Inference**](https://pgmpy.org/guides/probabilistic_inference.html) | Compute posterior distributions conditioned on observed evidence. |
+| [**Causal Inference**](https://pgmpy.org/api/causal_inference.html) | Compute interventional and counterfactual distributions using do-calculus. |
+| [**Simulations**](https://pgmpy.org/guides/simulations.html) | Generate synthetic data under specified evidence or interventions. |
+| **Example** [**Datasets**](https://pgmpy.org/guides/datasets.html) **and** [**Models**](https://pgmpy.org/guides/example_models.html) | Collection of datasets and models from various sources. |
+| [**Plotting**](https://pgmpy.org/guides/plotting.html) | Flexible plotting functionality. |
 
 ### Resources and Links
 - **Example Notebooks:** [Examples](https://github.com/pgmpy/pgmpy/tree/dev/examples)
