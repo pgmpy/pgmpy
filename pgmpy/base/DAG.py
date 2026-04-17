@@ -1750,15 +1750,60 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         n_latent_nodes : int
             Number of latent (unobserved) nodes in the DAG.
 
+        Causal statistics : only computed if exposures and outcomes are provided.
+        n_exposures : int
+            Number of exposure nodes.
+        n_outcomes : int
+            Number of outcome nodes.
+        n_causal_paths : int
+            Number of directed paths from exposures to outcomes.
+        n_direct_paths : int
+            Number of causal paths with no mediator.
+        n_mediated_paths : int
+            Number of causal paths through at least one mediator.
+        n_mediators : int
+            Number of nodes mediating at least one exposure-outcome path.
+        n_confounding_paths : int
+            Number of backdoor paths from exposures to outcomes.
+
         Examples
         --------
         >>> from pgmpy.base import DAG
-        >>> dag = DAG([("D", "G"), ("I", "G"), ("G", "L"), ("I", "S")])
-        >>> stats = dag.get_stats()
-        >>> stats["n_nodes"]
-        5
-        >>> stats["n_v_structures"]
-        1
+        >>> from pprint import pprint
+        >>> dag = DAG([('D', 'G'), ('I', 'G'), ('G', 'L'), ('I', 'S')])
+        >>> pprint(dag.get_stats())
+        {'avg_n_parents': 0.8,
+         'edge_density': 0.4,
+         'max_n_parents': 2,
+         'n_connected_components': 1,
+         'n_edges': 4,
+         'n_latent_nodes': 0,
+         'n_leaf_nodes': 2,
+         'n_nodes': 5,
+         'n_root_nodes': 2,
+         'n_v_structures': 1}
+        >>> dag2 = DAG(
+        ...     ebunch=[('D', 'G'), ('I', 'G'), ('G', 'L'), ('I', 'S')],
+        ...     roles={'exposures': 'D', 'outcomes': 'L'}
+        ... )
+        >>> pprint(dag2.get_stats())
+        {'avg_n_parents': 0.8,
+         'edge_density': 0.4,
+         'max_n_parents': 2,
+         'n_causal_paths': 1,
+         'n_confounding_paths': 0,
+         'n_connected_components': 1,
+         'n_direct_paths': 0,
+         'n_edges': 4,
+         'n_exposures': 1,
+         'n_latent_nodes': 0,
+         'n_leaf_nodes': 2,
+         'n_mediated_paths': 1,
+         'n_mediators': 1,
+         'n_nodes': 5,
+         'n_outcomes': 1,
+         'n_root_nodes': 2,
+         'n_v_structures': 1}
         """
         no_of_nodes = self.number_of_nodes()
         no_of_edges = self.number_of_edges()
@@ -1768,7 +1813,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         n_v_structures = sum(len(pairs) for pairs in self.get_immoralities().values())
 
-        return {
+        stats = {
             "n_nodes": no_of_nodes,
             "n_edges": no_of_edges,
             "n_root_nodes": sum(d == 0 for d in in_degrees.values()),
@@ -1780,3 +1825,74 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             "max_n_parents": max(in_degrees.values()) if in_degrees else 0,
             "n_latent_nodes": len(getattr(self, "latents", [])),
         }
+
+        exposures = self.get_role("exposures")
+        outcomes = self.get_role("outcomes")
+
+        if len(exposures) > 0 and len(outcomes) > 0:
+            exposures = set(exposures)
+            outcomes = set(outcomes)
+            # Used for calculation of n_causal_paths and n_compounding_paths
+            topo_order = list(nx.topological_sort(self))
+
+            # n_causal_paths
+            paths_fwd = dict.fromkeys(self.nodes(), 0)
+            for exp in exposures:
+                paths_fwd[exp] = 1
+
+            for node in topo_order:
+                for child in self.successors(node):
+                    paths_fwd[child] += paths_fwd[node]
+
+            n_causal_paths = sum(paths_fwd[out] for out in outcomes)
+
+            # n_direct_paths
+            n_direct_paths = sum(self.has_edge(exp, out) for exp in exposures for out in outcomes)
+
+            # n_mediated_paths
+            n_mediated_paths = n_causal_paths - n_direct_paths
+
+            # n_mediators
+            reachable_from_exp = set()
+            for exp in exposures:
+                reachable_from_exp |= nx.descendants(self, exp)
+
+            can_reach_outcome = set()
+            for out in outcomes:
+                can_reach_outcome |= nx.ancestors(self, out)
+
+            mediator_nodes = (reachable_from_exp & can_reach_outcome) - exposures - outcomes
+            n_mediators = len(mediator_nodes)
+
+            # n_confounding_paths
+            relevant_nodes = set(self.nodes()) - exposures
+            blocked_graph = self.subgraph(relevant_nodes)
+
+            n_confounding_paths = 0
+
+            for exp in exposures:
+                for parent in self.predecessors(exp):
+                    paths_conf = dict.fromkeys(blocked_graph.nodes(), 0)
+                    if parent in paths_conf:
+                        paths_conf[parent] = 1
+                    for node in topo_order:
+                        if node not in blocked_graph:
+                            continue
+                        for child in blocked_graph.successors(node):
+                            paths_conf[child] += paths_conf[node]
+
+                    n_confounding_paths += sum(paths_conf[out] for out in outcomes if out in paths_conf)
+
+            stats.update(
+                {
+                    "n_exposures": len(exposures),
+                    "n_outcomes": len(outcomes),
+                    "n_causal_paths": n_causal_paths,
+                    "n_direct_paths": n_direct_paths,
+                    "n_mediated_paths": n_mediated_paths,
+                    "n_mediators": n_mediators,
+                    "n_confounding_paths": n_confounding_paths,
+                }
+            )
+
+        return stats
