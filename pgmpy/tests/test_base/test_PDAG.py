@@ -181,6 +181,51 @@ class TestPDAG(unittest.TestCase):
         self.assertEqual(pdag.undirected_neighbors(node="C"), set())
         self.assertEqual(pdag.undirected_neighbors(node="D"), {"B"})
 
+    def test_chain_component(self):
+        pdag = PDAG(
+            directed_ebunch=[("E", "F")],
+            undirected_ebunch=[("A", "B"), ("B", "C"), ("D", "C")],
+        )
+
+        self.assertEqual(pdag.chain_component("A"), {"A", "B", "C", "D"})
+        self.assertEqual(pdag.chain_component("C"), {"A", "B", "C", "D"})
+        self.assertEqual(pdag.chain_component("E"), {"E"})
+        self.assertEqual(pdag.chain_component("F"), {"F"})
+
+    def test_has_semidirected_path(self):
+        pdag = PDAG(
+            directed_ebunch=[("A", "B"), ("C", "D")],
+            undirected_ebunch=[("B", "C")],
+        )
+
+        self.assertTrue(pdag.has_semidirected_path("A", "D"))
+        self.assertFalse(pdag.has_semidirected_path("D", "A"))
+        self.assertFalse(pdag.has_semidirected_path("A", "D", blocked_nodes={"C"}))
+        self.assertFalse(pdag.has_semidirected_path("A", "B", ignore_direct_edge=True))
+
+    def test_has_acyclic_extension(self):
+        pdag = PDAG(
+            directed_ebunch=[("A", "B")],
+            undirected_ebunch=[("B", "C")],
+        )
+        directed_cycle = PDAG(
+            directed_ebunch=[("A", "B"), ("B", "C"), ("C", "A")],
+        )
+
+        self.assertTrue(pdag.has_acyclic_extension())
+        self.assertFalse(directed_cycle.has_acyclic_extension())
+
+    def test_to_cpdag(self):
+        pdag = PDAG(
+            directed_ebunch=[("A", "B")],
+            undirected_ebunch=[("B", "C")],
+        )
+
+        cpdag = pdag.to_cpdag()
+
+        self.assertEqual(cpdag.directed_edges, set())
+        self.assertEqual(cpdag.undirected_edges, {("A", "B"), ("B", "C")})
+
     def test_orient_undirected_edge(self):
         directed_edges = [("A", "C"), ("D", "C")]
         undirected_edges = [("B", "A"), ("B", "D")]

@@ -1,7 +1,7 @@
 [project]
 name = "pgmpy"
-version = "1.0.0"
-description = "Python Library for Causal and Probabilistic Modeling using Bayesian Networks"
+version = "1.1.0"
+description = "Python Toolkit for Causal and Probabilistic Reasoning"
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [
@@ -65,13 +65,15 @@ tests = [
 ]
 docs = [
   "sphinx>=5.0",
+  "ipython",
   "nbsphinx",
   "numpydoc",
-  "sphinx_rtd_theme",
+  "pydata-sphinx-theme",
   "sphinx-copybutton",
   "sphinx-design",
   "sphinxext-opengraph",
   "sphinx_sitemap",
+  "myst_parser",
 ]
 all = [
   "pgmpy[optional,tests,docs]",
@@ -107,7 +109,7 @@ filterwarnings = ["default"]
 
 [tool.ruff]
 line-length = 120
-exclude = [".git", "examples/*", "docs/source/conf.py", "pgmpy/estimators/__init__.py",
+exclude = [".git", "examples/*", "docs/conf.py", "pgmpy/estimators/__init__.py",
 	   "pgmpy/factors/discrete/__init__.py", "pgmpy/identification/__init__.py", "pgmpy/inference/__init__.py",
            "pgmpy/extern/*", "pgmpy/.github/*"]
 target-version = "py314"

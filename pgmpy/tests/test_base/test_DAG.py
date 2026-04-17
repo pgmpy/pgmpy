@@ -302,6 +302,15 @@ class TestDAGCreation(unittest.TestCase):
         dag_lat5 = DAG([("A", "B"), ("B", "C"), ("A", "D"), ("D", "E"), ("E", "C")], latents={"E"})
         self.assertEqual(dag_lat5.minimal_dseparator(start="A", end="C"), {"B", "D"})
 
+    def test_copy(self):
+        model = load_model("dagitty/m_bias")
+        model_copy = model.copy()
+
+        self.assertFalse(id(model) == id(model_copy))
+        self.assertEqual(sorted(model.nodes()), sorted(model_copy.nodes()))
+        self.assertEqual(sorted(model.edges()), sorted(model_copy.edges()))
+        self.assertEqual(sorted(model.get_role_dict()), sorted(model_copy.get_role_dict()))
+
     @unittest.skipUnless(
         _check_soft_dependencies("daft-pgm", severity="none"),
         reason="execute only if required dependency present",
@@ -696,6 +705,44 @@ class TestDAGCreation(unittest.TestCase):
         self.assertAlmostEqual(stats["avg_n_parents"], 17 / 11, places=5)
         self.assertEqual(stats["max_n_parents"], 3)
         self.assertEqual(stats["n_latent_nodes"], 0)
+
+        self.assertNotIn("n_exposures", stats)
+        self.assertNotIn("n_outcomes", stats)
+        self.assertNotIn("n_causal_paths", stats)
+        self.assertNotIn("n_direct_paths", stats)
+        self.assertNotIn("n_mediated_paths", stats)
+        self.assertNotIn("n_mediators", stats)
+        self.assertNotIn("n_confounding_paths", stats)
+
+        model.with_role("exposures", {"Raf"}, inplace=True)
+        model.with_role("outcomes", {"Mek"}, inplace=True)
+        stats = model.get_stats()
+        self.assertEqual(stats["n_nodes"], 11)
+        self.assertEqual(stats["n_edges"], 17)
+        self.assertEqual(stats["n_root_nodes"], 2)
+        self.assertEqual(stats["n_leaf_nodes"], 4)
+        self.assertEqual(stats["n_v_structures"], 0)
+        self.assertEqual(stats["n_connected_components"], 2)
+        self.assertAlmostEqual(stats["edge_density"], 17 / (11 * 10 / 2), places=5)
+        self.assertAlmostEqual(stats["avg_n_parents"], 17 / 11, places=5)
+        self.assertEqual(stats["max_n_parents"], 3)
+        self.assertEqual(stats["n_latent_nodes"], 0)
+
+        self.assertEqual(stats["n_exposures"], 1)
+        self.assertEqual(stats["n_outcomes"], 1)
+        self.assertEqual(stats["n_causal_paths"], 1)
+        self.assertEqual(stats["n_direct_paths"], 1)
+        self.assertEqual(stats["n_mediated_paths"], 0)
+        self.assertEqual(stats["n_mediators"], 0)
+        self.assertEqual(stats["n_confounding_paths"], 3)
+
+        dag_test = DAG(ebunch=[("D", "G"), ("I", "G"), ("G", "L"), ("I", "S")], roles={"exposures": "D"})
+        stats = dag_test.get_stats()
+        self.assertNotIn("n_causal_paths", stats)
+
+        dag_test2 = DAG(ebunch=[("D", "G"), ("I", "G"), ("G", "L"), ("I", "S")], roles={"outcomes": "L"})
+        stats = dag_test2.get_stats()
+        self.assertNotIn("n_causal_paths", stats)
 
 
 class TestDAGParser(unittest.TestCase):
