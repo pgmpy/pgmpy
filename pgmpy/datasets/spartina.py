@@ -3,9 +3,9 @@ from pgmpy.datasets._base import _BaseDataset, _CovarianceMixin
 
 class Spartina(_CovarianceMixin, _BaseDataset):
     """
-        References
-        ----------
-        - :cite:p:`spirtes_2000_86`
+    References
+    ----------
+    - :cite:p:`spirtes_2000_86`
     """
 
     _tags = {
