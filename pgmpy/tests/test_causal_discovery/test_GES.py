@@ -5,8 +5,10 @@ Tests for the sklearn-compatible GES class in pgmpy.causal_discovery.
 import numpy as np
 import pandas as pd
 import pytest
-import sempler
-import sempler.generators
+
+sempler = pytest.importorskip("sempler")
+pytest.importorskip("sempler.generators")
+
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.base import PDAG
