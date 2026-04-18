@@ -33,14 +33,16 @@ class Pearsonr(_BaseCITest):
     >>> import pandas as pd
     >>> from pgmpy.ci_tests import Pearsonr
     >>> rng = np.random.default_rng(seed=42)
-    >>> data = pd.DataFrame(rng.standard_normal((1000, 3)), columns=["X", "Y", "Z"])
+    >>> data = pd.DataFrame(data=rng.standard_normal(size=(1000, 3)), columns=["X", "Y", "Z"])
     >>> test = Pearsonr(data=data)
-    >>> test("X", "Y", ["Z"], significance_level=0.05)
+    >>> test(X="X", Y="Y", Z=["Z"], significance_level=0.05)
     np.True_
     >>> round(test.statistic_, 2)
     np.float64(0.01)
     >>> round(test.p_value_, 2)
-    np.float(0.87)
+    np.float64(0.87)
+    >>> test.dof_
+    997
 
     Attributes
     ----------

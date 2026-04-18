@@ -428,6 +428,10 @@ class TestLGBNMethods(unittest.TestCase):
         self.assertIsInstance(model1, LinearGaussianBayesianNetwork, "Incorrect instance")
         self.assertIsInstance(model2, LinearGaussianBayesianNetwork, "Incorrect instance")
 
+        model_fixed = LinearGaussianBayesianNetwork.get_random(n_nodes=7, n_edges=6)
+        self.assertEqual(len(model_fixed.edges()), 6)
+        self.assertIsInstance(model_fixed, LinearGaussianBayesianNetwork, "Incorrect instance")
+
         node_names = ["a", "aa", "aaa", "aaaa", "aaaaa"]
         model3 = LinearGaussianBayesianNetwork.get_random(n_nodes=5, edge_prob=0.5, node_names=node_names)
         self.assertEqual(len(model3.nodes()), 5)
@@ -469,6 +473,12 @@ class TestLGBNMethods(unittest.TestCase):
 
     def tearDown(self):
         del self.model, self.cpd1, self.cpd2, self.cpd3
+
+    def test_structure_mismatch_with_same_cpds(self):
+        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+        other = LinearGaussianBayesianNetwork([("x1", "x3"), ("x3", "x2")])
+        other.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+        self.assertNotEqual(self.model, other)
 
 
 class TestLGBNCreation(unittest.TestCase):

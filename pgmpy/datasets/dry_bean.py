@@ -24,11 +24,11 @@ class DryBean(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/dry-bean/"
+    base_url = "real/dry-bean"
 
-    data_url = base_url + "data/drybean.data.mixed.maximum.7.txt"
+    data_url = "data/drybean.data.mixed.maximum.7.txt"
     ground_truth_url = None
-    expert_knowledge_url = base_url + "ground.truth/dry-bean.knowledge.txt"
+    expert_knowledge_url = "ground.truth/dry-bean.knowledge.txt"
 
     categorical_variables = ["Class"]
     ordinal_variables = dict()
