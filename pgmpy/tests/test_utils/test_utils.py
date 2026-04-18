@@ -124,6 +124,12 @@ class TestPreprocessData(unittest.TestCase):
             },
         )
 
+    def test_integer_dtype_handling(self):
+        df = pd.DataFrame({"int_col": [1, 2, 3, 4]})
+        df_processed, dtypes = preprocess_data(df)
+
+        assert dtypes["int_col"] == "N"
+
 
 class TestGetExampleModel(unittest.TestCase):
     def test_get_categorical_models(self):
