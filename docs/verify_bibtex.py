@@ -22,8 +22,8 @@ from __future__ import annotations
 
 import re
 import sys
-import time
 import textwrap
+import time
 from pathlib import Path
 
 try:
@@ -43,17 +43,23 @@ CROSSREF_URL = "https://api.crossref.org/works/{doi}/transform/application/x-bib
 # CrossRef "polite pool" asks for a mailto in the User-Agent
 MAILTO = "pgmpy-dev@example.com"
 
-REQUEST_DELAY_S = 0.5   # polite pause between HTTP requests (seconds)
-REQUEST_TIMEOUT = 20    # per-request network timeout (seconds)
+REQUEST_DELAY_S = 0.5  # polite pause between HTTP requests (seconds)
+REQUEST_TIMEOUT = 20  # per-request network timeout (seconds)
 
 # DOI prefixes that CrossRef does not hold records for – skip, don't warn.
-SKIP_PREFIXES = ("10.48550",)   # arXiv
+SKIP_PREFIXES = ("10.48550",)  # arXiv
 
 # Fields to compare (normalised to lower-case)
 COMPARE_FIELDS = {
-    "author", "title", "year",
-    "journal", "booktitle",
-    "volume", "pages", "doi", "number",
+    "author",
+    "title",
+    "year",
+    "journal",
+    "booktitle",
+    "volume",
+    "pages",
+    "doi",
+    "number",
 }
 
 # ---------------------------------------------------------------------------
@@ -80,10 +86,7 @@ _BRACED_FIELD_RE = re.compile(
 
 def _parse_local_body(body: str) -> dict[str, str]:
     """Extract field→value pairs from a multi-line BibTeX entry body."""
-    return {
-        m.group(1).lower(): m.group(2).strip()
-        for m in _BRACED_FIELD_RE.finditer(body)
-    }
+    return {m.group(1).lower(): m.group(2).strip() for m in _BRACED_FIELD_RE.finditer(body)}
 
 
 def parse_bib(path: Path) -> list[dict]:
@@ -112,12 +115,7 @@ _BARE_FIELD_RE = re.compile(
 
 def _html_decode(text: str) -> str:
     """Decode HTML entities that CrossRef occasionally embeds in BibTeX."""
-    return (
-        text.replace("&amp;", "&")
-            .replace("&lt;", "<")
-            .replace("&gt;", ">")
-            .replace("&quot;", '"')
-    )
+    return text.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", '"')
 
 
 def _parse_crossref_body(body: str) -> dict[str, str]:
@@ -157,7 +155,7 @@ def _parse_crossref_bibtex(raw: str) -> dict | None:
         if ch == "{":
             depth += 1
             if depth == 1:
-                start = i          # opening brace of the entry
+                start = i  # opening brace of the entry
         elif ch == "}":
             depth -= 1
             if depth == 0 and start is not None:
@@ -169,12 +167,13 @@ def _parse_crossref_bibtex(raw: str) -> dict | None:
             body_start = i + 1
             comma_seen = True
 
-    return None   # unmatched braces
+    return None  # unmatched braces
 
 
 # ---------------------------------------------------------------------------
 # Normalisation for comparison
 # ---------------------------------------------------------------------------
+
 
 def _norm(text: str) -> str:
     """
@@ -188,28 +187,26 @@ def _norm(text: str) -> str:
     """
     text = _html_decode(text)
     # Numeric HTML entities for dashes that _html_decode doesn't cover
-    text = re.sub(r'&#(?:8211|8212|45);', '-', text)
+    text = re.sub(r"&#(?:8211|8212|45);", "-", text)
     text = re.sub(r"\{([^{}]+)\}", r"\1", text)
     # Comprehensive Unicode dash normalisation – covers en-dash (U+2013),
     # em-dash (U+2014), figure-dash (U+2012), minus (U+2212), soft-hyphen
     # (U+00AD), and several others CrossRef or LaTeX might produce.
-    text = re.sub(
-        r'[\u00AD\u2010\u2011\u2012\u2013\u2014\u2015\u2212\uFE58\uFE63\uFF0D]',
-        '-', text
-    )
-    text = re.sub(r'-{2,}', '-', text)       # -- or --- -> single -
-    text = text.replace('\\&', '&')          # LaTeX \& -> &
+    text = re.sub(r"[\u00AD\u2010\u2011\u2012\u2013\u2014\u2015\u2212\uFE58\uFE63\uFF0D]", "-", text)
+    text = re.sub(r"-{2,}", "-", text)  # -- or --- -> single -
+    text = text.replace("\\&", "&")  # LaTeX \& -> &
     # Strip ® © ™ that CrossRef embeds in some journal names
-    text = re.sub(r'[\u00ae\u00a9\u2122]', '', text)
+    text = re.sub(r"[\u00ae\u00a9\u2122]", "", text)
     # Normalise spaces after initials:  'R. C.' -> 'R.C.'
-    text = re.sub(r'\.\s+([A-Z]\.)', r'.\1', text)
-    text = ' '.join(text.split())
+    text = re.sub(r"\.\s+([A-Z]\.)", r".\1", text)
+    text = " ".join(text.split())
     return text.lower().strip()
 
 
 # ---------------------------------------------------------------------------
 # CrossRef fetch
 # ---------------------------------------------------------------------------
+
 
 def fetch_canonical(doi: str) -> dict:
     """
@@ -247,10 +244,12 @@ def fetch_canonical(doi: str) -> dict:
     # The journal field will read 'Crossref Listing of Deleted DOIs'.
     journal = fields.get("journal", "")
     if "deleted" in _norm(journal) and "crossref" in _norm(journal):
-        return {"_error": (
-            f"DOI {doi} is listed as deleted in CrossRef "
-            "(DOI may have been retired or reassigned; entry cannot be verified)"
-        )}
+        return {
+            "_error": (
+                f"DOI {doi} is listed as deleted in CrossRef "
+                "(DOI may have been retired or reassigned; entry cannot be verified)"
+            )
+        }
 
     return fields
 
@@ -258,6 +257,7 @@ def fetch_canonical(doi: str) -> dict:
 # ---------------------------------------------------------------------------
 # Comparison
 # ---------------------------------------------------------------------------
+
 
 def compare_entries(local: dict, canonical: dict) -> list[str]:
     """
@@ -272,17 +272,17 @@ def compare_entries(local: dict, canonical: dict) -> list[str]:
       older papers (e.g. Annals of Statistics).  Not counted as a mismatch.
     """
     diffs = []
-    loc_journal   = _norm(local.get('journal',   ''))
-    loc_booktitle = _norm(local.get('booktitle', ''))
-    can_journal   = _norm(canonical.get('journal',   ''))
-    can_booktitle = _norm(canonical.get('booktitle', ''))
+    loc_journal = _norm(local.get("journal", ""))
+    loc_booktitle = _norm(local.get("booktitle", ""))
+    can_journal = _norm(canonical.get("journal", ""))
+    can_booktitle = _norm(canonical.get("booktitle", ""))
 
     for field in sorted(COMPARE_FIELDS):
-        loc_val = _norm(local.get(field, ''))
-        can_val = _norm(canonical.get(field, ''))
+        loc_val = _norm(local.get(field, ""))
+        can_val = _norm(canonical.get(field, ""))
 
         # journal/booktitle symmetry – handle CrossRef article/inproceedings quirk
-        if field in ('journal', 'booktitle'):
+        if field in ("journal", "booktitle"):
             can_venue = can_journal or can_booktitle
             loc_venue = loc_journal or loc_booktitle
             if loc_val and loc_val == can_venue:
@@ -291,16 +291,14 @@ def compare_entries(local: dict, canonical: dict) -> list[str]:
                 continue
 
         # Pages absent on CrossRef side only – not a data error in our file
-        if field == 'pages' and loc_val and not can_val:
+        if field == "pages" and loc_val and not can_val:
             continue
 
         if not loc_val and not can_val:
-            continue   # both absent
+            continue  # both absent
         if loc_val != can_val:
             diffs.append(
-                f"  Field '{field}':\n"
-                f"    LOCAL    : {loc_val or '(missing)'}\n"
-                f"    CANONICAL: {can_val or '(missing)'}"
+                f"  Field '{field}':\n    LOCAL    : {loc_val or '(missing)'}\n    CANONICAL: {can_val or '(missing)'}"
             )
     return diffs
 
@@ -308,6 +306,7 @@ def compare_entries(local: dict, canonical: dict) -> list[str]:
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main() -> int:
     if not BIB_FILE.exists():
@@ -317,19 +316,16 @@ def main() -> int:
     entries = parse_bib(BIB_FILE)
     doi_entries = [e for e in entries if "doi" in e]
 
-    checkable = [e for e in doi_entries
-                 if not e["doi"].strip().startswith(SKIP_PREFIXES)]
-    skipped   = [e for e in doi_entries
-                 if e["doi"].strip().startswith(SKIP_PREFIXES)]
+    checkable = [e for e in doi_entries if not e["doi"].strip().startswith(SKIP_PREFIXES)]
+    skipped = [e for e in doi_entries if e["doi"].strip().startswith(SKIP_PREFIXES)]
 
     print(f"[INFO] Parsed  : {len(entries)} total entries from {BIB_FILE.name}")
     print(f"[INFO] DOI entries : {len(doi_entries)}")
     print(f"[INFO]   To verify : {len(checkable)}")
-    print(f"[INFO]   Skipped   : {len(skipped)}  "
-          f"(prefixes not in CrossRef: {SKIP_PREFIXES})")
-    print(f"[INFO] Querying CrossRef API...\n")
+    print(f"[INFO]   Skipped   : {len(skipped)}  (prefixes not in CrossRef: {SKIP_PREFIXES})")
+    print("[INFO] Querying CrossRef API...\n")
 
-    errors:   list[str] = []
+    errors: list[str] = []
     warnings: list[str] = []
 
     for i, entry in enumerate(checkable, 1):
@@ -385,8 +381,7 @@ def main() -> int:
         return 1
 
     if warnings and not errors:
-        print("\n[PASS] No mismatches found."
-              " Some entries could not be fetched (see warnings above).")
+        print("\n[PASS] No mismatches found. Some entries could not be fetched (see warnings above).")
         return 0
 
     print("\n[PASS] All checkable DOI-bearing entries verified successfully.")
