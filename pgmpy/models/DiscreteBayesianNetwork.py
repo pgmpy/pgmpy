@@ -1153,7 +1153,8 @@ class DiscreteBayesianNetwork(DAG):
     @staticmethod
     def get_random(
         n_nodes: int = 5,
-        edge_prob: float = 0.5,
+        n_edges: int | None = None,
+        edge_prob: float | None = None,
         node_names: list[Hashable] | None = None,
         n_states: int | dict[Hashable, int] | None = None,
         latents: bool = False,
@@ -1168,13 +1169,16 @@ class DiscreteBayesianNetwork(DAG):
         n_nodes: int
             The number of nodes in the randomly generated DAG.
 
-        edge_prob: float
+        n_edges: int or None (default: None)
+            The number of edges in the randomly generated DAG.
+
+        edge_prob: float or None
             The probability of edge between any two nodes in the topologically
             sorted DAG.
 
         node_names: list (default: None)
             A list of variables names to use in the random graph.
-            If None, the node names are integer values starting from 0.
+            If None, the node names are "X_0", "X_1", ..., "X_{n-1}".
 
         n_states: int or dict (default: None)
             The number of states of each variable in the form
@@ -1222,6 +1226,7 @@ class DiscreteBayesianNetwork(DAG):
 
         dag = DAG.get_random(
             n_nodes=n_nodes,
+            n_edges=n_edges,
             edge_prob=edge_prob,
             node_names=node_names,
             latents=latents,
