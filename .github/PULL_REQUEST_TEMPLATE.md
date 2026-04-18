@@ -11,13 +11,13 @@ Your PR will be closed if you remove the checklist. Use of LLMs is **strictly fo
 If you have used AI/LLMs for any assistance, please answer the following questions. Please refer [#2622](https://github.com/pgmpy/pgmpy/pull/2622) for an example of the level of detail we expect:
 
 - [ ] Have you reviewed our [AI usage policy](https://github.com/pgmpy/pgmpy/blob/dev/Contributing.md#ai-usage-policy)?
-- [ ] Are you able to fully explain your changes? We expect you to fully understand the algorithm and take full responsibility for any changes in this PR.
+- [ ] Are you able to fully explain your changes? We expect you to fully understand the algorithm and take full responsibility for any changes in this PR.  
 
 - Please describe in **detail** how and what you used AI assistance for? Please outline your whole workflow with the AI tool.
 
 [Please replace this with your answer]
 
-- What steps have you taken to verify that the changes correctly address the issue? What edge cases have you considered? Other than running tests, what else have you verified?
+- What steps have you taken to verify that the changes correctly address the issue? What edge cases have you considered? Other than running tests, what else have you verified?  
 
 [Please replace this with your answer]
 

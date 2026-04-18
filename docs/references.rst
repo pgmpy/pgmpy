@@ -45,6 +45,12 @@ Metrics and Independence Tests
 .. bibliography:: references.bib
    :filter: 'metrics_and_independence_tests' in keyword
 
+Structure Score
+---------------
+
+.. bibliography:: references.bib
+   :filter: 'structure_score' in keyword
+
 Example Models
 --------------
 
