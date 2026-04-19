@@ -6,6 +6,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
+from skbase.base import BaseObject
 from sklearn.base import BaseEstimator
 from sklearn.utils.validation import check_is_fitted, validate_data
 from tqdm.auto import tqdm
@@ -18,12 +19,19 @@ from pgmpy.metrics import get_metrics
 from pgmpy.structure_score import BaseStructureScore
 
 
-class _BaseCausalDiscovery(BaseEstimator):
+class _BaseCausalDiscovery(BaseEstimator, BaseObject):
     """
     Base class for all causal discovery estimators in pgmpy.
 
     Sets the sklearn tags and defines a method to check the input data for fitting.
     """
+
+    _tags = {
+        "data_types": (),
+        "assumed_relationship": (),
+        "supports_expert_knowledge": (),
+        "noise_term": "",
+    }
 
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
@@ -360,7 +368,12 @@ class _ConstraintMixin:
                 for u, v in graph.edges():
                     if (enforce_expert_knowledge is False) or ((u, v) not in expert_knowledge.required_edges):
                         for separating_set in self._get_potential_sepsets(
-                            u, v, temporal_ordering, graph, lim_neighbors, neighbors=neighbors
+                            u,
+                            v,
+                            temporal_ordering,
+                            graph,
+                            lim_neighbors,
+                            neighbors=neighbors,
                         ):
                             # If a conditioning set exists remove the edge, store the
                             # separating set and move on to finding conditioning set for next edge.

@@ -181,6 +181,13 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
            arXiv preprint arXiv:1302.4972 (2013).
     """
 
+    _tags = {
+        "data_types": ("depends_on_ci_test"),
+        "assumed_relationship": (),
+        "supports_expert_knowledge": ("forbidden_edges", "required_edges", "search_space", "temporal_order"),
+        "noise_term": "",
+    }
+
     def __init__(
         self,
         variant: str = "parallel",
