@@ -9,6 +9,7 @@ from sklearn.preprocessing import StandardScaler
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery
+from pgmpy.utils import preprocess_data
 
 
 class LiNGAM(_BaseCausalDiscovery):
@@ -28,50 +29,30 @@ class LiNGAM(_BaseCausalDiscovery):
     A model with these three properties is called a Linear, Non-Gaussian, Acyclic
     Model, abbreviated LiNGAM.
 
-    Algorithm
-    ---------
-    The LiNGAM algorithm estimates the causal structure using the following steps:
-    1. **Independent Component Analysis (ICA)**: Apply ICA to the data matrix $X$ to
-       obtain a decomposition $X = AS$, where $S$ contains the independent components
-       in its rows. We then compute the unmixing matrix $W = A^{-1}$.
-    2. **Row Permutation**: Find the unique row permutation of $W$ that yields a matrix
-       $W_{perm}$ with no zeros on its main diagonal. To account for estimation errors,
-       the optimal permutation is found by minimizing the cost function
-       $\sum_{i} \frac{1}{|(W_{perm})_{ii}|}$.
-    3. **Diagonal Scaling**: Normalize the rows of $W_{perm}$ by dividing each row
-       by its corresponding diagonal element, resulting in a matrix $W_{scaled}$ with
-       ones on the diagonal. Compute the connection strength matrix estimate as
-       $\hat{B} = I - W_{scaled}$.
-    4. **Causal Ordering**: Discover a valid causal ordering of the variables by
-       recursively identifying and removing nodes with no parents from $\hat{B}$.
-    5. **Edge Pruning**: Construct the causal adjacency matrix $\tilde{B}$
-       by applying sparse regression (Adaptive Lasso) to prune statistically
-       insignificant edges based on the discovered causal ordering.
+    The LiNGAM model assumes $x = Bx + e$, where $B$ is a weight matrix representing
+    a DAG and $e$ is non-Gaussian noise. The algorithm uses ICA to estimate $x = Ae$
+    (where $W = A^{-1}$), followed by a permutation and scaling of $W$ to recover
+    the causal order. Finally, pruning is done using sparse regression to obtain a
+    sparser structure.
 
     Parameters
     ----------
-    fast_ica : sklearn.decomposition.FastICA
+    ica : sklearn.decomposition.FastICA
         An instance of FastICA to use for independent component analysis. If None,
         a default FastICA instance with `max_iter=1000` is used.
 
-    estimator : sklearn.linear_model._base.LinearModel
-        An instance of a linear model to use for estimating the causal relationships.
+    pruning_estimator : sklearn.linear_model._base.LinearModel
+        An instance of a linear model to use for the Adaptive Lasso pruning step.
         If None, a default LinearRegression instance is used.
 
     gamma : float, default=1.0
         The exponent used to calculate the adaptive weights in the Adaptive Lasso.
 
-    return_type : str, default="dag"
-        The type of graph to return. Currently only "dag" is supported.
+    return_type : str, default='pdag'
+        The type of graph to return. Options are:
 
-    random_state : int, default=None
-        Seed for the random number generator used by the ICA algorithm. Ensures
-        reproducibility across repeated algorithm runs. If a `fast_ica` instance
-        is passed, this will override its existing random state.
-
-    max_iter : int, default=None
-        Maximum number of iterations for the FastICA algorithm. Defaults to 1000.
-        If a `fast_ica` instance is passed, this will override its existing max_iter.
+        - 'dag': Returns a directed acyclic graph (DAG).
+        - 'pdag': Returns a partially directed acyclic graph (PDAG).
 
     Attributes
     ----------
@@ -111,19 +92,15 @@ class LiNGAM(_BaseCausalDiscovery):
 
     def __init__(
         self,
-        fast_ica: FastICA | None = None,
-        estimator=None,
+        ica: FastICA | None = None,
+        pruning_estimator=None,
         gamma: float = 1.0,
         return_type: str = "dag",
-        random_state: int | None = None,
-        max_iter: int | None = None,
     ):
-        self.fast_ica = fast_ica
-        self.estimator = estimator
+        self.ica = ica
+        self.pruning_estimator = pruning_estimator
         self.gamma = gamma
         self.return_type = return_type
-        self.random_state = random_state
-        self.max_iter = max_iter
 
     def _fit(self, X: pd.DataFrame):
         """
@@ -144,24 +121,24 @@ class LiNGAM(_BaseCausalDiscovery):
         if self.return_type != "dag":
             raise NotImplementedError("Only return_type='dag' is supported.")
 
-        try:
-            X_vals = np.asarray(X.values, dtype=float)
-        except ValueError as e:
-            raise ValueError("All features must be numeric.") from e
+        X, dtypes = preprocess_data(X)
+        if any(dtype != "N" for dtype in dtypes.values()):
+            raise ValueError("All features must be numeric.")
 
+        X_vals = X.values.astype(float)
         _, n_features = X_vals.shape
 
         # Step 1: Resolve internal estimators and apply ICA
-        if self.estimator is None:
-            self._estimator = LinearRegression()
+        if self.pruning_estimator is None:
+            self._pruning_estimator = LinearRegression()
         else:
-            self._estimator = clone(self.estimator)
+            self._pruning_estimator = clone(self.pruning_estimator)
 
-        if self.fast_ica is None:
+        if self.ica is None:
             _max_iter = self.max_iter if self.max_iter is not None else 1000
             ica = FastICA(max_iter=_max_iter, random_state=self.random_state)
         else:
-            ica = clone(self.fast_ica)
+            ica = clone(self.ica)
             if self.random_state is not None:
                 ica.set_params(random_state=self.random_state)
             if self.max_iter is not None:
@@ -337,11 +314,11 @@ class LiNGAM(_BaseCausalDiscovery):
 
         # Step 1: Pruning with Adaptive Lasso
         # Step 1.1: Fit the estimator to the standardized data
-        self._estimator.fit(X_std[:, predictors], X_std[:, target])
+        self._pruning_estimator.fit(X_std[:, predictors], X_std[:, target])
 
         # Compute standard adaptive lasso weights w_j = 1 / |beta_init,j|^gamma
         # using an epsilon floor to prevent division by zero.
-        weight = 1.0 / np.power(np.maximum(np.abs(self._estimator.coef_), 1e-12), self.gamma)
+        weight = 1.0 / np.power(np.maximum(np.abs(self._pruning_estimator.coef_), 1e-12), self.gamma)
 
         # Step 1.2: Fit the Lasso regression on predictors scaled by 1 / w.
         # If z_j = x_j / w_j and theta_j are the lasso coefficients on z_j,
@@ -355,8 +332,8 @@ class LiNGAM(_BaseCausalDiscovery):
         coef = np.zeros(lasso_reg.coef_.shape)
         if pruned_idx.sum() > 0:
             pred = np.array(predictors)
-            self._estimator.fit(X[:, pred[pruned_idx]], X[:, target])
-            coef[pruned_idx] = self._estimator.coef_
+            self._pruning_estimator.fit(X[:, pred[pruned_idx]], X[:, target])
+            coef[pruned_idx] = self._pruning_estimator.coef_
 
         return coef
 

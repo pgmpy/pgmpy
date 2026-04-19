@@ -13,7 +13,6 @@ from sklearn.decomposition import FastICA
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.causal_discovery import LiNGAM
-from pgmpy.datasets import load_dataset
 
 
 def expected_failed_checks(estimator):
@@ -112,13 +111,6 @@ def large_lingam_data():
     data["J"] = -0.7 * data["H"] + 0.9 * data["I"] + data["J"]
 
     return data
-
-
-@pytest.fixture
-def mpg_data():
-    data = load_dataset("auto_mpg").data.dropna()
-    continuous_cols = ["displacement", "horsepower", "weight", "acceleration", "mpg"]
-    return data[continuous_cols]
 
 
 def test_fit_rand(rand_data):
@@ -241,6 +233,6 @@ def test_lingam_error_unsupported_return_type(rand_data):
 
 
 def test_lingam_error_dimensionality_mismatch(rand_data):
-    lingam = LiNGAM(fast_ica=FastICA(n_components=1))
+    lingam = LiNGAM(ica=FastICA(n_components=1))
     with pytest.raises(ValueError, match="n_components must equal n_features"):
         lingam.fit(rand_data)
