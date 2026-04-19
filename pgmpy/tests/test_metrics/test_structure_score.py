@@ -1,12 +1,12 @@
 import pytest
 
+from pgmpy.example_models import load_model
 from pgmpy.metrics import StructureScore
-from pgmpy.utils import get_example_model
 
 
 @pytest.fixture(scope="module")
 def alarm_and_data():
-    alarm = get_example_model("alarm")
+    alarm = load_model("bnlearn/alarm")
     data = alarm.simulate(int(1e4), show_progress=False)
 
     alarm_no_cpd = alarm.copy()
@@ -27,7 +27,7 @@ class TestStructureScore:
 
             for scoring_method in ("bdeu", "bds"):
                 scorer = StructureScore(scoring_method=scoring_method)
-                metric = scorer(X=data, causal_graph=model, equivalent_sample_size=10)
+                metric = scorer(X=data, causal_graph=model)
                 assert isinstance(metric, float)
 
     def test_input(self, alarm_and_data):

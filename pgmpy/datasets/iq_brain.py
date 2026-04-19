@@ -15,6 +15,7 @@ class IQBrainSize(_BaseDataset):
         "has_ground_truth": False,
         "has_expert_knowledge": False,
         "has_missing_data": False,
+        "has_index_col": False,
         "is_simulated": False,
         "is_interventional": False,
         "is_discrete": False,
@@ -23,12 +24,9 @@ class IQBrainSize(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = (
-        "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/"
-        "real/iq-brain-size/"
-    )
+    base_url = "real/iq-brain-size"
 
-    data_url = base_url + "data/iq_brain_size.continuous.txt"
+    data_url = "data/iq_brain_size.continuous.txt"
     ground_truth_url = None
     expert_knowledge_url = None
 

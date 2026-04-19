@@ -2,12 +2,12 @@ import unittest
 
 import numpy as np
 import numpy.testing as npt
-from pgmpy.utils._safe_import import _safe_import
-
-torch = _safe_import("torch")
+from skbase.utils.dependencies import _safe_import
 
 from pgmpy import config
 from pgmpy.utils import optimize, pinverse
+
+torch = _safe_import("torch")
 
 
 class TestOptimize(unittest.TestCase):
@@ -17,12 +17,8 @@ class TestOptimize(unittest.TestCase):
     """
 
     def setUp(self):
-        self.A = torch.randn(
-            5, 5, device=config.DEVICE, dtype=config.DTYPE, requires_grad=True
-        )
-        self.B = torch.ones(
-            5, 5, device=config.DEVICE, dtype=config.DTYPE, requires_grad=False
-        )
+        self.A = torch.randn(5, 5, device=config.DEVICE, dtype=config.DTYPE, requires_grad=True)
+        self.B = torch.ones(5, 5, device=config.DEVICE, dtype=config.DTYPE, requires_grad=False)
 
     def loss_fn(self, params, loss_params):
         A = params["A"]
@@ -34,12 +30,8 @@ class TestOptimize(unittest.TestCase):
     def test_optimize(self):
         # TODO: Add tests for other optimizers
         for opt in ["adadelta", "adam", "adamax", "asgd", "lbfgs", "rmsprop", "rprop"]:
-            A = torch.randn(
-                5, 5, device=config.DEVICE, dtype=config.DTYPE, requires_grad=True
-            )
-            B = torch.ones(
-                5, 5, device=config.DEVICE, dtype=config.DTYPE, requires_grad=False
-            )
+            A = torch.randn(5, 5, device=config.DEVICE, dtype=config.DTYPE, requires_grad=True)
+            B = torch.ones(5, 5, device=config.DEVICE, dtype=config.DTYPE, requires_grad=False)
             params = optimize(
                 self.loss_fn,
                 params={"A": A},

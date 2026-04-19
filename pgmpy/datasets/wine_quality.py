@@ -1,11 +1,7 @@
 from pgmpy.datasets._base import _BaseDataset
 
-BASE_URL = (
-    "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/heads/main/"
-    "real/wine-quality/"
-)
-
-EXPERT_URL = BASE_URL + "ground.truth/wine.quality.knowledge.txt"
+BASE_URL = "real/wine-quality"
+EXPERT_URL = "ground.truth/wine.quality.knowledge.txt"
 
 
 class WineQualityRed(_BaseDataset):
@@ -22,6 +18,7 @@ class WineQualityRed(_BaseDataset):
         "has_ground_truth": False,
         "has_expert_knowledge": True,
         "has_missing_data": False,
+        "has_index_col": False,
         "is_simulated": False,
         "is_interventional": False,
         "is_discrete": False,
@@ -31,7 +28,7 @@ class WineQualityRed(_BaseDataset):
     }
 
     base_url = BASE_URL
-    data_url = BASE_URL + "data/winequality-red.continuous.txt"
+    data_url = "data/winequality-red.continuous.txt"
     ground_truth_url = None
     expert_knowledge_url = EXPERT_URL
 
@@ -53,6 +50,7 @@ class WineQualityWhite(_BaseDataset):
         "has_ground_truth": False,
         "has_expert_knowledge": True,
         "has_missing_data": False,
+        "has_index_col": False,
         "is_simulated": False,
         "is_interventional": False,
         "is_discrete": False,
@@ -62,7 +60,7 @@ class WineQualityWhite(_BaseDataset):
     }
 
     base_url = BASE_URL
-    data_url = BASE_URL + "data/winequality-white.continuous.txt"
+    data_url = "data/winequality-white.continuous.txt"
     ground_truth_url = None
     expert_knowledge_url = EXPERT_URL
 
@@ -84,6 +82,7 @@ class WineQualityRedWhiteMixed(_BaseDataset):
         "has_ground_truth": False,
         "has_expert_knowledge": True,
         "has_missing_data": False,
+        "has_index_col": False,
         "is_simulated": False,
         "is_interventional": False,
         "is_discrete": False,
@@ -93,7 +92,7 @@ class WineQualityRedWhiteMixed(_BaseDataset):
     }
 
     base_url = BASE_URL
-    data_url = BASE_URL + "data/winequality-red-white.mixed.maximum.2.txt"
+    data_url = "data/winequality-red-white.mixed.maximum.2.txt"
     ground_truth_url = None
     expert_knowledge_url = EXPERT_URL
 

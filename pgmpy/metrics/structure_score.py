@@ -1,6 +1,6 @@
 from pgmpy.base import DAG
-from pgmpy.estimators.StructureScore import get_scoring_method
 from pgmpy.metrics import _BaseUnsupervisedMetric
+from pgmpy.structure_score import get_scoring_method
 
 
 class StructureScore(_BaseUnsupervisedMetric):
@@ -16,10 +16,6 @@ class StructureScore(_BaseUnsupervisedMetric):
     scoring_method: str
         Options are: k2, bdeu, bds, bic-d, aic-d, ll-g, aic-g, bic-g, ll-cg, aic-cg, bic-cg
 
-    kwargs: kwargs
-        Any additional parameters that needs to be passed to the
-        scoring method. Check pgmpy.estimators.StructureScore for details.
-
     Returns
     -------
     Model score: float
@@ -27,13 +23,13 @@ class StructureScore(_BaseUnsupervisedMetric):
 
     Examples
     --------
-    >>> from pgmpy.utils import get_example_model
+    >>> from pgmpy.example_models import load_model
     >>> from pgmpy.metrics import StructureScore
-    >>> model = get_example_model("alarm")
-    >>> data = model.simulate(int(1e4))
-    >>> scorer = StructureScore(scoring_method="bic-g")
+    >>> model = load_model("bnlearn/alarm")
+    >>> data = model.simulate(int(1e4), seed=42)
+    >>> scorer = StructureScore(scoring_method="bic-d")
     >>> scorer(X=data, causal_graph=model)
-    -106665.9383064447
+    np.float64(-106325.43476616534)
     """
 
     _tags = {
@@ -42,13 +38,12 @@ class StructureScore(_BaseUnsupervisedMetric):
         "requires_data": True,
         "lower_is_better": False,
         "supported_graph_types": (DAG,),
+        "is_default": False,
     }
 
     def __init__(self, scoring_method=None):
         self.scoring_method = scoring_method
 
-    def _evaluate(self, X, causal_graph, **kwargs):
-        scoring_method = get_scoring_method(
-            self.scoring_method, data=X, use_cache=False, **kwargs
-        )[0]
+    def _evaluate(self, X, causal_graph):
+        scoring_method = get_scoring_method(self.scoring_method, data=X)
         return scoring_method.score(causal_graph)

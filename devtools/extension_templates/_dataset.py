@@ -4,8 +4,7 @@
 # 1. Copy this file to `pgmpy/datasets` and rename the file as `your_dataset_name.py` (e.g., `my_dataset.py`).
 #    Note: Do NOT start the filename with an underscore `_`, otherwise it won't be discovered.
 # 2. Go through the file and address all the TODOs.
-# 3. Add an import statement in the `pgmpy/datasets/__init__.py` file (e.g. `from .my_dataset import MyDataset`).
-# 4. If you would like to contribute the dataset to pgmpy, please add the dataset name to ALL_DATASETS in
+# 3. If you would like to contribute the dataset to pgmpy, please add the dataset name to ALL_DATASETS in
 #   `pgmpy/tests/test_datasets/test_datasets.py` file.
 
 import pandas
@@ -18,7 +17,6 @@ from pgmpy.estimators import ExpertKnowledge
 # TODO: Rename the class for your dataset. If the data file is reading a covariance matrix instead of tabular data, the
 # class signature should be `class YourDatasetClass(_CovarianceMixin, _BaseDataset):`.
 class YourDatasetClass(_BaseDataset):
-
     # TODO: Fill in the tags for your dataset.
     # Note: 'name' is mandatory and must match the string used in load_dataset().
     _tags = {
@@ -28,6 +26,7 @@ class YourDatasetClass(_BaseDataset):
         "has_ground_truth": bool,
         "has_expert_knowledge": bool,
         "has_missing_data": bool,
+        "has_index_col": bool,
         "is_simulated": bool,
         "is_interventional": bool,
         "is_discrete": bool,
@@ -36,19 +35,27 @@ class YourDatasetClass(_BaseDataset):
         "is_ordinal": bool,
     }
 
-    # TODO: Add the URL to the dataset. The current parser expects the dataset to be in a tabular form with the first
-    # row containing the names of the columns.
-    data_url = None
+    # TODO: Add the dataset-specific base directory within the example_datasets repository.
+    base_url = "real/your-dataset"
 
-    # TODO: Add the URL for the ground truth. The current parser expects the ground truth to be a dagitty model string.
-    ground_truth_url = None
+    # TODO: Add the path to the dataset. The current parser expects the dataset to be in a tabular form with the first
+    # row containing the names of the columns. Paths are relative to `base_url`.
+    data_url = "<link_to_data_file>"
 
-    # TODO: Add the URL for the expert knowledge. An example of the expected format can be found at:
-    # https://github.com/pgmpy/example-causal-datasets/blob/main/real/abalone/ground.truth/abalone.knowledge.txt
-    expert_knowledge_url = None
+    # TODO: Add the path for the ground truth. The current parser expects the ground truth to be a dagitty model
+    # string. Paths are relative to `base_url`.
+    ground_truth_url = "<link_to_gt_file>"
+
+    # TODO: Add the path for the expert knowledge. An example of the expected format can be found in the
+    # example_datasets repository under `real/abalone/ground.truth/abalone.knowledge.txt`. Paths are relative to
+    # `base_url`.
+    expert_knowledge_url = "<link_to_expert_knowledge_file>"
 
     # TODO: If the tag `has_missing_data=True`, add the marker that is used for missing values in the dataset.
     missing_values_marker = None
+
+    # TODO: If the delimiter of the dataset is not tab ("\t"), set the correct delimiter.
+    # sep = "\t"
 
     # TODO: If the dataset has categorical variables, list them here.
     categorical_variables = []
@@ -62,9 +69,7 @@ class YourDatasetClass(_BaseDataset):
         if not cls.get_class_tag("has_ground_truth"):
             return None
 
-        _ = cls._get_raw_data("ground_truth", cls.ground_truth_url).decode(
-            "utf-8-sig", errors="ignore"
-        )
+        _ = cls._get_raw_data(cls.ground_truth_url).decode("utf-8-sig", errors="ignore")
         # TODO: Add logic for parsing the data from the line above into a `pgmpy.base.DAG` object.
         dag = None
         return dag
@@ -72,7 +77,7 @@ class YourDatasetClass(_BaseDataset):
     # TODO: If the data is in tabular text format, remove the following `load_dataframe` method.
     @classmethod
     def load_dataframe(cls) -> pandas.DataFrame:
-        _ = cls._get_raw_data("data", cls.data_url)
+        _ = cls._get_raw_data(cls.data_url)
 
         # TODO: Add logic to construct a pandas DataFrame object from data in line above.
         dataframe = None
@@ -84,7 +89,7 @@ class YourDatasetClass(_BaseDataset):
         if not cls.get_class_tag("has_expert_knowledge"):
             return None
 
-        _ = cls._get_raw_data("expert_knowledge", cls.expert_knowledge_url)
+        _ = cls._get_raw_data(cls.expert_knowledge_url)
 
         # TODO: Add logic to construct a `pgmpy.estimator.ExpertKnowledge` object from data in line above.
         expert_knowledge = None

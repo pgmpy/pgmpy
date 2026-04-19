@@ -16,6 +16,7 @@ class Algeria(_BaseDataset):
         "has_ground_truth": False,
         "has_expert_knowledge": True,
         "has_missing_data": False,
+        "has_index_col": False,
         "is_simulated": False,
         "is_interventional": False,
         "is_discrete": False,
@@ -24,14 +25,11 @@ class Algeria(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = (
-        "https://raw.githubusercontent.com/pgmpy/example-causal-datasets/refs/"
-        "heads/main/real/algerian-forest-fires/"
-    )
+    base_url = "real/algerian-forest-fires"
 
-    data_url = base_url + "data/algerian-forest-fires.mixed.maximum.2.txt"
+    data_url = "data/algerian-forest-fires.mixed.maximum.2.txt"
     ground_truth_url = None
-    expert_knowledge_url = base_url + "ground.truth/algerian-forest-fires.knowledge.txt"
+    expert_knowledge_url = "ground.truth/algerian-forest-fires.knowledge.txt"
 
     categorical_variables = [
         "Region",

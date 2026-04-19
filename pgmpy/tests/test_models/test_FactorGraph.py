@@ -17,9 +17,7 @@ class TestFactorGraphCreation(unittest.TestCase):
     def test_class_init_data_string(self):
         self.graph = FactorGraph([("a", "phi1"), ("b", "phi1")])
         self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "phi1"])
-        self.assertListEqual(
-            hf.recursive_sorted(self.graph.edges()), [["a", "phi1"], ["b", "phi1"]]
-        )
+        self.assertListEqual(hf.recursive_sorted(self.graph.edges()), [["a", "phi1"], ["b", "phi1"]])
 
     def test_add_single_node(self):
         self.graph.add_node("phi1")
@@ -37,9 +35,7 @@ class TestFactorGraphCreation(unittest.TestCase):
     def test_add_multiple_edges(self):
         self.graph.add_edges_from([("a", "phi1"), ("b", "phi1")])
         self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "phi1"])
-        self.assertListEqual(
-            hf.recursive_sorted(self.graph.edges()), [["a", "phi1"], ["b", "phi1"]]
-        )
+        self.assertListEqual(hf.recursive_sorted(self.graph.edges()), [["a", "phi1"], ["b", "phi1"]])
 
     def test_add_self_loop_raises_error(self):
         self.assertRaises(ValueError, self.graph.add_edge, "a", "a")
@@ -86,14 +82,10 @@ class TestFactorGraphFactorOperations(unittest.TestCase):
         self.graph.add_edges_from([("a", phi1), ("b", phi1), ("b", phi2), ("c", phi2)])
         self.graph.add_factors(phi1, phi2)
         self.graph.remove_factors(phi1)
-        self.assertEqual(set(self.graph.factors), set([phi2]))
-        self.assertTrue(
-            (("c", phi2) in self.graph.edges()) or ((phi2, "c") in self.graph.edges())
-        )
-        self.assertTrue(
-            (("b", phi2) in self.graph.edges()) or ((phi2, "b") in self.graph.edges())
-        )
-        self.assertEqual(set(self.graph.nodes()), set(["a", "b", "c", phi2]))
+        self.assertEqual(set(self.graph.factors), {phi2})
+        self.assertTrue((("c", phi2) in self.graph.edges()) or ((phi2, "c") in self.graph.edges()))
+        self.assertTrue((("b", phi2) in self.graph.edges()) or ((phi2, "b") in self.graph.edges()))
+        self.assertEqual(set(self.graph.nodes()), {"a", "b", "c", phi2})
 
     def test_get_partition_function(self):
         phi1 = DiscreteFactor(["a", "b"], [2, 2], range(4))
@@ -149,15 +141,11 @@ class TestFactorGraphMethods(unittest.TestCase):
         phi1 = DiscreteFactor(["a", "b"], [2, 2], np.random.rand(4))
         phi2 = DiscreteFactor(["c", "d"], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi1, phi2)
-        self.assertDictEqual(
-            self.graph.get_cardinality(), {"d": 2, "a": 2, "b": 2, "c": 1}
-        )
+        self.assertDictEqual(self.graph.get_cardinality(), {"d": 2, "a": 2, "b": 2, "c": 1})
 
         phi3 = DiscreteFactor(["d", "a"], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi3)
-        self.assertDictEqual(
-            self.graph.get_cardinality(), {"d": 1, "c": 1, "b": 2, "a": 2}
-        )
+        self.assertDictEqual(self.graph.get_cardinality(), {"d": 1, "c": 1, "b": 2, "a": 2})
 
         self.graph.remove_factors(phi1, phi2, phi3)
         self.assertDictEqual(self.graph.get_cardinality(), {})
@@ -189,9 +177,7 @@ class TestFactorGraphMethods(unittest.TestCase):
         self.assertCountEqual(self.graph.get_variable_nodes(), ["a", "b", "c"])
 
     def test_get_variable_nodes_raises_error(self):
-        self.graph.add_edges_from(
-            [("a", "phi1"), ("b", "phi1"), ("b", "phi2"), ("c", "phi2")]
-        )
+        self.graph.add_edges_from([("a", "phi1"), ("b", "phi1"), ("b", "phi2"), ("c", "phi2")])
         self.assertRaises(ValueError, self.graph.get_variable_nodes)
 
     def test_to_markov_model(self):
@@ -203,9 +189,7 @@ class TestFactorGraphMethods(unittest.TestCase):
         self.assertIsInstance(mm, DiscreteMarkovNetwork)
         self.assertListEqual(sorted(mm.nodes()), ["a", "b", "c"])
         self.assertListEqual(hf.recursive_sorted(mm.edges()), [["a", "b"], ["b", "c"]])
-        self.assertListEqual(
-            sorted(mm.get_factors(), key=lambda x: x.scope()), [phi1, phi2]
-        )
+        self.assertListEqual(sorted(mm.get_factors(), key=lambda x: x.scope()), [phi1, phi2])
 
     def test_to_junction_tree(self):
         phi1 = DiscreteFactor(["a", "b"], [2, 2], np.random.rand(4))
@@ -297,9 +281,7 @@ class TestFactorGraphMethods(unittest.TestCase):
         self.assertTrue(graph_copy.check_model())
         self.assertEqual(self.graph.get_factors(), graph_copy.get_factors())
         self.graph.remove_factors(phi1, phi2)
-        self.assertTrue(
-            phi1 not in self.graph.factors and phi2 not in self.graph.factors
-        )
+        self.assertTrue(phi1 not in self.graph.factors and phi2 not in self.graph.factors)
         self.assertTrue(phi1 in graph_copy.factors and phi2 in graph_copy.factors)
         self.graph.add_factors(phi1, phi2)
         self.graph.factors[0] = DiscreteFactor(["a", "b"], [2, 2], np.random.rand(4))

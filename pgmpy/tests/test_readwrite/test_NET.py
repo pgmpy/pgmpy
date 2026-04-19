@@ -6,15 +6,16 @@ import numpy as np
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
+from pgmpy.example_models import load_model
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.readwrite import NETReader, NETWriter
-from pgmpy.utils import compat_fns, get_example_model
+from pgmpy.utils import compat_fns
 
 
 class TestNETWriter(unittest.TestCase):
     def setUp(self):
-        asia = get_example_model("asia")
+        asia = load_model("bnlearn/asia")
         self.writer = NETWriter(asia)
 
     def test_get_variables(self):
@@ -56,14 +57,8 @@ class TestNETWriter(unittest.TestCase):
     def test_get_cpds(self):
         cpds = self.writer.get_cpds()
         # np.testing.assert_array_equal returns None if equal
-        self.assertIsNone(
-            np.testing.assert_array_equal(cpds["asia"], np.array([0.01, 0.99]))
-        )
-        self.assertIsNone(
-            np.testing.assert_array_equal(
-                cpds["bronc"], np.array([[0.6, 0.3], [0.4, 0.7]])
-            )
-        )
+        self.assertIsNone(np.testing.assert_array_equal(cpds["asia"], np.array([0.01, 0.99])))
+        self.assertIsNone(np.testing.assert_array_equal(cpds["bronc"], np.array([[0.6, 0.3], [0.4, 0.7]])))
         self.assertIsNone(
             np.testing.assert_array_equal(
                 cpds["dysp"],
@@ -76,24 +71,10 @@ class TestNETWriter(unittest.TestCase):
                 np.array([[[1.0, 1.0], [1.0, 0.0]], [[0.0, 0.0], [0.0, 1.0]]]),
             )
         )
-        self.assertIsNone(
-            np.testing.assert_array_equal(
-                cpds["lung"], np.array([[0.1, 0.01], [0.9, 0.99]])
-            )
-        )
-        self.assertIsNone(
-            np.testing.assert_array_equal(cpds["smoke"], np.array([0.5, 0.5]))
-        )
-        self.assertIsNone(
-            np.testing.assert_array_equal(
-                cpds["tub"], np.array([[0.05, 0.01], [0.95, 0.99]])
-            )
-        )
-        self.assertIsNone(
-            np.testing.assert_array_equal(
-                cpds["xray"], np.array([[0.98, 0.05], [0.02, 0.95]])
-            )
-        )
+        self.assertIsNone(np.testing.assert_array_equal(cpds["lung"], np.array([[0.1, 0.01], [0.9, 0.99]])))
+        self.assertIsNone(np.testing.assert_array_equal(cpds["smoke"], np.array([0.5, 0.5])))
+        self.assertIsNone(np.testing.assert_array_equal(cpds["tub"], np.array([[0.05, 0.01], [0.95, 0.99]])))
+        self.assertIsNone(np.testing.assert_array_equal(cpds["xray"], np.array([[0.98, 0.05], [0.02, 0.95]])))
 
     def test_net_cpd(self):
         self.assertEqual(self.writer.net_cpd("asia"), "(0.01 0.99)")
@@ -394,11 +375,7 @@ class TestNETReader(unittest.TestCase):
         }
         values = self.reader.get_values()
         for variable in values_expected:
-            self.assertIsNone(
-                np.testing.assert_array_almost_equal(
-                    values_expected[variable], values[variable]
-                )
-            )
+            self.assertIsNone(np.testing.assert_array_almost_equal(values_expected[variable], values[variable]))
 
     def test_get_edges(self):
         edges_expected = [
@@ -430,7 +407,7 @@ class TestNETWriterTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
 
-        asia = get_example_model("asia")
+        asia = load_model("bnlearn/asia")
         self.writer = NETWriter(asia)
 
     def test_get_variables(self):
@@ -471,9 +448,7 @@ class TestNETWriterTorch(unittest.TestCase):
 
     def test_get_cpds(self):
         cpds = self.writer.get_cpds()
-        np.testing.assert_array_equal(
-            compat_fns.to_numpy(cpds["asia"], decimals=2), np.array([0.01, 0.99])
-        )
+        np.testing.assert_array_equal(compat_fns.to_numpy(cpds["asia"], decimals=2), np.array([0.01, 0.99]))
         np.testing.assert_array_equal(
             compat_fns.to_numpy(cpds["bronc"], decimals=2),
             np.array([[0.6, 0.3], [0.4, 0.7]]),
@@ -490,9 +465,7 @@ class TestNETWriterTorch(unittest.TestCase):
             compat_fns.to_numpy(cpds["lung"], decimals=2),
             np.array([[0.1, 0.01], [0.9, 0.99]]),
         )
-        np.testing.assert_array_equal(
-            compat_fns.to_numpy(cpds["smoke"], decimals=2), np.array([0.5, 0.5])
-        )
+        np.testing.assert_array_equal(compat_fns.to_numpy(cpds["smoke"], decimals=2), np.array([0.5, 0.5]))
         np.testing.assert_array_equal(
             compat_fns.to_numpy(cpds["tub"], decimals=2),
             np.array([[0.05, 0.01], [0.95, 0.99]]),
@@ -769,11 +742,7 @@ class TestNETReaderTorch(unittest.TestCase):
         }
         values = self.reader.get_values()
         for variable in values_expected:
-            self.assertIsNone(
-                np.testing.assert_array_almost_equal(
-                    values_expected[variable], values[variable]
-                )
-            )
+            self.assertIsNone(np.testing.assert_array_almost_equal(values_expected[variable], values[variable]))
 
     def test_get_edges(self):
         edges_expected = [

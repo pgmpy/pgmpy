@@ -9,9 +9,9 @@ class Frontdoor(_BaseIdentification):
     """
     Given a causal graph, finds the set of variables satisfying frontdoor criterion.
 
-    Given a causal graph with `exposure` and `outcome` roles specified, the
+    Given a causal graph with `exposures` and `outcomes` roles specified, the
     `FrontdoorIdentification` class provides methods to find the set of variables
-    satisfying the frontdoor criterion with respect to `exposure` and `outcome` in
+    satisfying the frontdoor criterion with respect to `exposures` and `outcomes` in
     the causal graph.
 
     Parameters
@@ -32,10 +32,10 @@ class Frontdoor(_BaseIdentification):
     ...     ],
     ...     roles={"exposures": "X", "outcomes": "Y"},
     ... )
-    >>> dag_with_adj, is_identified = FrontdoorIdentification().identify(dag)
-    >>> dag_with_adj.roles
-    {'exposure': 'x1', 'outcome': 'y1', 'frontdoor': ['M']}
-    >>> FrontdoorIdentification.validate(dag)
+    >>> dag_with_adj, is_identified = Frontdoor().identify(dag)
+    >>> dag_with_adj.get_role_dict()
+    {'exposures': ['X'], 'outcomes': ['Y'], 'frontdoor': ['M']}
+    >>> Frontdoor().validate(dag_with_adj)
     True
     """
 
@@ -47,9 +47,7 @@ class Frontdoor(_BaseIdentification):
         exposure = causal_graph.get_role("exposures")
         outcome = causal_graph.get_role("outcomes")
 
-        possible_frontdoor_vars = (
-            set(causal_graph.observed) - set(exposure) - set(outcome)
-        )
+        possible_frontdoor_vars = set(causal_graph.observed) - set(exposure) - set(outcome)
 
         valid_frontdoor_graphs = []
         for s in _powerset(possible_frontdoor_vars):
@@ -90,20 +88,14 @@ class Frontdoor(_BaseIdentification):
             return False
 
         # 1. Z intercepts all directed paths from X to Y
-        unblocked_directed_paths = [
-            path for path in directed_paths if not any(zz in path for zz in Z)
-        ]
+        unblocked_directed_paths = [path for path in directed_paths if not any(zz in path for zz in Z)]
 
         if len(unblocked_directed_paths) > 0:
             return False
 
         # 2. There is no backdoor path from X to Z.
         unblocked_backdoor_paths_X_Z = [
-            zz
-            for zz in Z
-            if not self._is_valid_adjustment_set(
-                causal_graph, X=exposure, Y=zz, Z=set()
-            )
+            zz for zz in Z if not self._is_valid_adjustment_set(causal_graph, X=exposure, Y=zz, Z=set())
         ]
 
         if unblocked_backdoor_paths_X_Z:
@@ -113,9 +105,7 @@ class Frontdoor(_BaseIdentification):
         valid_backdoor_sets = []
 
         for zz in Z:
-            valid_backdoor_sets.append(
-                self._is_valid_adjustment_set(causal_graph, X=zz, Y=outcome, Z=exposure)
-            )
+            valid_backdoor_sets.append(self._is_valid_adjustment_set(causal_graph, X=zz, Y=outcome, Z=exposure))
         if not all(valid_backdoor_sets):
             return False
 

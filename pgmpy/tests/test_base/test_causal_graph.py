@@ -25,7 +25,6 @@ def edges():
 
 
 class TestDAG:
-
     def test_init_with_edges_and_roles(self, cg):
         assert cg.get_role("exposures") == ["X"]
         assert cg.get_role("outcomes") == ["Y"]
