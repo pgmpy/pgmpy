@@ -80,6 +80,7 @@ class FunctionalCPD(BaseFactor):
         Examples
         --------
         >>> import torch
+        >>> import pandas as pd
         >>> from pgmpy.factors.hybrid import FunctionalCPD
         >>> import pyro.distributions as dist
         >>> seed_generator = torch.manual_seed(42)
@@ -93,7 +94,7 @@ class FunctionalCPD(BaseFactor):
 
         >>> parent_samples = pd.DataFrame({"x1": [5, 10], "x2": [1, -1]})
         >>> cpd.sample(2, parent_samples)
-        array([2.63669038, 2.8288095 ])
+        array([2.63669035, 2.82880941])
         """
         sampled_values = []
 
@@ -115,7 +116,7 @@ class FunctionalCPD(BaseFactor):
                 for i in range(n_samples):
                     row = parent_sample.iloc[i]
                     parents_t = {
-                        p: torch.as_tensor(row[p], dtype=config.get_dtype(), device=config.get_device())
+                        p: torch.as_tensor(row[p], dtype=getattr(torch, config.get_dtype()), device=config.get_device())
                         for p in self.parents
                     }
                     sampled_values.append(pyro.sample(f"{self.variable}", self.fn(parents_t)).item())
