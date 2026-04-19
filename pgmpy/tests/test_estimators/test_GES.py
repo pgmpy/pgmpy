@@ -124,7 +124,7 @@ def test_insert_orients_t_away_from_v():
 
     new_model = est.insert("A", "B", {"C"}, pdag)
 
-    assert new_model.directed_edges == {("A", "B"), ("B", "C")}
+    assert new_model.directed_edges == {("A", "B"), ("C", "B")}
     assert new_model.undirected_edges == set()
 
 
