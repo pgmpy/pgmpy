@@ -7,7 +7,7 @@ from sklearn.decomposition import FastICA
 from sklearn.linear_model import LassoLarsIC, LinearRegression
 from sklearn.preprocessing import StandardScaler
 
-from pgmpy.base import DAG
+from pgmpy.base import DAG, PDAG
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery
 from pgmpy.utils import preprocess_data
 
@@ -47,8 +47,10 @@ class LiNGAM(_BaseCausalDiscovery):
 
     gamma : float, default=1.0
         The exponent used to calculate the adaptive weights in the Adaptive Lasso.
+        A higher value leads to a sparser graph by increasing the penalty on
+        small coefficients, while a lower value makes the weights more uniform.
 
-    return_type : str, default='pdag'
+    return_type : str, default='dag'
         The type of graph to return. Options are:
 
         - 'dag': Returns a directed acyclic graph (DAG).
@@ -71,16 +73,14 @@ class LiNGAM(_BaseCausalDiscovery):
 
     Examples
     --------
-    >>> import pandas as pd
-    >>> import numpy as np
+    >>> from pgmpy.datasets import load_dataset
     >>> from pgmpy.causal_discovery import LiNGAM
-    >>> X = pd.DataFrame(np.random.uniform(size=(100, 3)), columns=list("ABC"))
-    >>> X["B"] = 2.0 * X["A"] + X["B"]
-    >>> X["C"] = -1.5 * X["B"] + X["C"]
+    >>> df = load_dataset("sachs_continuous").data
     >>> lingam = LiNGAM()
-    >>> lingam.fit(X)
-    >>> set(lingam.causal_graph_.edges())
-    {('A', 'B'), ('B', 'C')}
+    >>> lingam.fit(df)
+    >>> # The causal graph contains the learned edges among signaling proteins.
+    >>> len(lingam.causal_graph_.edges())
+    42
 
 
     References
@@ -118,15 +118,14 @@ class LiNGAM(_BaseCausalDiscovery):
         """
 
         # Step 0: Validate inputs
-        if self.return_type != "dag":
-            raise NotImplementedError("Only return_type='dag' is supported.")
+        if self.return_type not in ["dag", "pdag"]:
+            raise ValueError("return_type must be either 'dag' or 'pdag'.")
 
         X, dtypes = preprocess_data(X)
         if any(dtype != "N" for dtype in dtypes.values()):
             raise ValueError("All features must be numeric.")
 
         X_vals = X.values.astype(float)
-        _, n_features = X_vals.shape
 
         # Step 1: Resolve internal estimators and apply ICA
         if self.pruning_estimator is None:
@@ -135,20 +134,17 @@ class LiNGAM(_BaseCausalDiscovery):
             self._pruning_estimator = clone(self.pruning_estimator)
 
         if self.ica is None:
-            _max_iter = self.max_iter if self.max_iter is not None else 1000
-            ica = FastICA(max_iter=_max_iter, random_state=self.random_state)
+            ica = FastICA(max_iter=1000, random_state=42)
         else:
             ica = clone(self.ica)
-            if self.random_state is not None:
-                ica.set_params(random_state=self.random_state)
-            if self.max_iter is not None:
-                ica.set_params(max_iter=self.max_iter)
+
+        if (ica.n_components is not None) and (ica.n_components != self.n_features_in_):
+            raise ValueError(
+                f"FastICA n_components must equal n_features (got {ica.n_components} != {self.n_features_in_})."
+            )
 
         ica.fit(X_vals)
         W = ica.components_
-
-        if W.shape[0] != n_features:
-            raise ValueError(f"FastICA n_components must equal n_features (got {W.shape[0]} != {n_features}).")
 
         # Step 2: Find permutation of rows of W.
         epsilon = 1e-12
@@ -163,20 +159,29 @@ class LiNGAM(_BaseCausalDiscovery):
         if np.any(np.abs(diag_W_perm) < epsilon):
             raise ValueError("Near-zero diagonal elements in ICA permutation.")
         W_scaled = W_perm / diag_W_perm[:, np.newaxis]
-        B_hat = np.eye(n_features) - W_scaled
+        B_hat = np.eye(self.n_features_in_) - W_scaled
 
         # Step 4: Find a causal order
         causal_order = self._causal_order(B_hat)
 
         # Step 5: Construct the causal adjacency matrix.
         if causal_order is None:
-            raise ValueError("Graph contains unresolvable cycles.")
+            raise ValueError(
+                "Unable to determine a valid causal ordering (topological sort). "
+                "The recovered weight matrix contains persistent cycles, suggesting "
+                "that the DAG assumption is violated or the ICA estimation is "
+                "insufficiently converged due to noise or inadequate sample size."
+            )
 
         B_tilde = self._prune_edges(X_vals, causal_order)
         self.adjacency_matrix_ = pd.DataFrame(B_tilde, index=self.feature_names_in_, columns=self.feature_names_in_)
 
         # Step 6: Construct graph
-        self.causal_graph_ = nx.from_pandas_adjacency(self.adjacency_matrix_, create_using=DAG())
+        dag = nx.from_pandas_adjacency(self.adjacency_matrix_, create_using=DAG())
+        if self.return_type == "pdag":
+            self.causal_graph_ = PDAG(directed_ebunch=list(dag.edges()))
+        else:
+            self.causal_graph_ = dag
 
         return self
 

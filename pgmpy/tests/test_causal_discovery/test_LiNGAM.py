@@ -21,11 +21,12 @@ def expected_failed_checks(estimator):
         "check_n_features_in_after_fitting": "Failing for score method (not for fit) for unknown reason.",
         "check_pipeline_consistency": "FastICA generates NaNs internally on sklearn degenerate testing matrices.",
         "check_estimators_pickle": "FastICA generates NaNs internally on sklearn degenerate testing matrices.",
+        "check_dtype_object": "LiNGAM only supports numeric data; object-dtype columns are rejected.",
     }
 
 
 @parametrize_with_checks(
-    [LiNGAM(return_type="dag", random_state=42)],
+    [LiNGAM(return_type="dag", ica=FastICA(random_state=42))],
     expected_failed_checks=expected_failed_checks,
 )
 def test_lingam_compatibility(estimator, check):
@@ -116,7 +117,7 @@ def large_lingam_data():
 def test_fit_rand(rand_data):
     # model = lingam.ICALiNGAM(random_state=42, max_iter=1000)
 
-    lingam = LiNGAM(random_state=42)
+    lingam = LiNGAM(ica=FastICA(random_state=42))
     lingam.fit(rand_data)
     graph = lingam.causal_graph_
 
@@ -135,7 +136,7 @@ def test_fit_rand(rand_data):
 def test_fit_rand2(rand_data2):
     # model = lingam.ICALiNGAM(random_state=42)
 
-    lingam = LiNGAM(random_state=42)
+    lingam = LiNGAM(ica=FastICA(random_state=42))
     lingam.fit(rand_data2)
     graph = lingam.causal_graph_
 
@@ -164,7 +165,7 @@ def test_fit_rand2(rand_data2):
 def test_large_lingam_data(large_lingam_data):
     # model = lingam.ICALiNGAM(random_state=42)
 
-    lingam = LiNGAM(random_state=42)
+    lingam = LiNGAM(ica=FastICA(random_state=42))
     lingam.fit(large_lingam_data)
     graph = lingam.causal_graph_
 
@@ -226,13 +227,22 @@ def test_lingam_error_non_numeric_data(rand_data):
         lingam.fit(rand_data)
 
 
-def test_lingam_error_unsupported_return_type(rand_data):
-    lingam = LiNGAM(return_type="pdag")
-    with pytest.raises(NotImplementedError, match="Only return_type='dag' is supported."):
+def test_lingam_pdag_return_type(rand_data):
+    lingam = LiNGAM(return_type="pdag", ica=FastICA(random_state=42))
+    lingam.fit(rand_data)
+    from pgmpy.base import PDAG
+
+    assert isinstance(lingam.causal_graph_, PDAG)
+    assert set(lingam.causal_graph_.edges()) == {("A", "B"), ("B", "C")}
+
+
+def test_lingam_error_invalid_return_type(rand_data):
+    lingam = LiNGAM(return_type="invalid")
+    with pytest.raises(ValueError, match="return_type must be either 'dag' or 'pdag'."):
         lingam.fit(rand_data)
 
 
 def test_lingam_error_dimensionality_mismatch(rand_data):
     lingam = LiNGAM(ica=FastICA(n_components=1))
-    with pytest.raises(ValueError, match="n_components must equal n_features"):
+    with pytest.raises(ValueError, match=r"FastICA n_components must equal n_features \(got 1 != 3\)."):
         lingam.fit(rand_data)
