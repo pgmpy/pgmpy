@@ -23,6 +23,7 @@ pgmpy/ci_tests/pearsonr.py
 pgmpy/ci_tests/pearsonr_equivalence.py
 pgmpy/ci_tests/pillai_trace.py
 pgmpy/ci_tests/power_divergence.py
+pgmpy/ci_tests/rcit.py
 pgmpy/estimators/BayesianEstimator.py
 pgmpy/estimators/EM.py
 pgmpy/estimators/ExhaustiveSearch.py

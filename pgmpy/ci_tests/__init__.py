@@ -10,6 +10,7 @@ from .pearsonr import Pearsonr
 from .pearsonr_equivalence import PearsonrEquivalence
 from .pillai_trace import PillaiTrace
 from .power_divergence import PowerDivergence
+from .rcit import RCIT, RCoT
 
 __all__ = [
     "_BaseCITest",
@@ -25,4 +26,6 @@ __all__ = [
     "PearsonrEquivalence",
     "PillaiTrace",
     "PowerDivergence",
+    "RCIT",
+    "RCoT",
 ]
