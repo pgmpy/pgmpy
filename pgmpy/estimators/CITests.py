@@ -145,7 +145,8 @@ def independence_match(X, Y, Z, independencies, **kwargs):
         True if the independence assertion is present in `independences`, else False.
     """
     warnings.warn(
-        "`independence_match` is deprecated. Please use `pgmpy.ci_tests.IndependenceMatch` instead.",
+        """`independence_match` is deprecated and will be removed in v1.3.0. Please use
+        `pgmpy.ci_tests.IndependenceMatch` instead.""",
         FutureWarning,
         stacklevel=2,
     )
@@ -193,7 +194,9 @@ def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
     .. [2] https://en.wikipedia.org/wiki/Partial_correlation#Using_linear_regression
     """
     warnings.warn(
-        "`pearsonr` is deprecated. Please use `pgmpy.ci_tests.Pearsonr` instead.", FutureWarning, stacklevel=2
+        "`pearsonr` is deprecated and will be removed in v1.3.0. Please use `pgmpy.ci_tests.Pearsonr` instead.",
+        FutureWarning,
+        stacklevel=2,
     )
     # Step 1: Test if the inputs are correct
     if not hasattr(Z, "__iter__"):
@@ -301,7 +304,8 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
 
     """
     warnings.warn(
-        "`power_divergence` is deprecated. Please use `pgmpy.ci_tests.PowerDivergence` instead.",
+        """`power_divergence` is deprecated and will be removed in v1.3.0. Please use `pgmpy.ci_tests.PowerDivergence`
+        instead.""",
         FutureWarning,
         stacklevel=2,
     )
@@ -413,7 +417,9 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
     np.False_
     """
     warnings.warn(
-        "`chi_square` is deprecated. Please use `pgmpy.ci_tests.ChiSquare` instead.", FutureWarning, stacklevel=2
+        "`chi_square` is deprecated and will be removed in v1.3.0. Please use `pgmpy.ci_tests.ChiSquare` instead.",
+        FutureWarning,
+        stacklevel=2,
     )
     return power_divergence(X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="pearson", **kwargs)
 
@@ -475,7 +481,11 @@ def g_sq(X, Y, Z, data, boolean=True, **kwargs):
     ... )
     np.False_
     """
-    warnings.warn("`g_sq` is deprecated. Please use `pgmpy.ci_tests.GSq` instead.", FutureWarning, stacklevel=2)
+    warnings.warn(
+        "`g_sq` is deprecated and will be removed in v1.3.0. Please use `pgmpy.ci_tests.GSq` instead.",
+        FutureWarning,
+        stacklevel=2,
+    )
     return power_divergence(X=X, Y=Y, Z=Z, data=data, boolean=boolean, lambda_="log-likelihood", **kwargs)
 
 
@@ -545,7 +555,8 @@ def log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
     np.False_
     """
     warnings.warn(
-        "`log_likelihood` is deprecated. Please use `pgmpy.ci_tests.LogLikelihood` instead.",
+        """`log_likelihood` is deprecated and will be removed in v1.3.0. Please use `pgmpy.ci_tests.LogLikelihood`
+        instead.""",
         FutureWarning,
         stacklevel=2,
     )
@@ -613,7 +624,8 @@ def modified_log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
     np.False_
     """
     warnings.warn(
-        "`modified_log_likelihood` is deprecated. Please use `pgmpy.ci_tests.ModifiedLogLikelihood` instead.",
+        """`modified_log_likelihood` is deprecated and will be removed in v1.3.0. Please use
+        `pgmpy.ci_tests.ModifiedLogLikelihood` instead.""",
         FutureWarning,
         stacklevel=2,
     )
@@ -721,7 +733,9 @@ def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
            general linear hypothesis. Computational Statistics & Data Analysis.
     """
     warnings.warn(
-        "`pillai_trace` is deprecated. Please use `pgmpy.ci_tests.PillaiTrace` instead.", FutureWarning, stacklevel=2
+        "`pillai_trace` is deprecated and will be removed in v1.3.0. Please use `pgmpy.ci_tests.PillaiTrace` instead.",
+        FutureWarning,
+        stacklevel=2,
     )
     # Step 1: Test if the inputs are correct
     if not hasattr(Z, "__iter__"):
@@ -823,7 +837,11 @@ def gcm(X, Y, Z, data, boolean=True, **kwargs):
     .. [1] Rajen D. Shah, and Jonas Peters. "The Hardness of Conditional Independence Testing and the Generalised
         Covariance Measure".
     """
-    warnings.warn("`gcm` is deprecated. Please use `pgmpy.ci_tests.GCM` instead.", FutureWarning, stacklevel=2)
+    warnings.warn(
+        "`gcm` is deprecated and will be removed in v1.3.0. Please use `pgmpy.ci_tests.GCM` instead.",
+        FutureWarning,
+        stacklevel=2,
+    )
     # Step 1: Test if the inputs are correct
     if not hasattr(Z, "__iter__"):
         raise ValueError(f"Variable Z. Expected type: iterable. Got type: {type(Z)}")
@@ -897,7 +915,8 @@ def pearsonr_equivalence(X, Y, Z, data, boolean=True, delta_threshold=0.1, **kwa
             arXiv:2404.18232 (2024).
     """
     warnings.warn(
-        "`pearsonr_equivalence` is deprecated. Please use `pgmpy.ci_tests.PearsonrEquivalence` instead.",
+        """`pearsonr_equivalence` is deprecated and will be removed in v1.3.0. Please use
+        `pgmpy.ci_tests.PearsonrEquivalence` instead.""",
         FutureWarning,
         stacklevel=2,
     )
