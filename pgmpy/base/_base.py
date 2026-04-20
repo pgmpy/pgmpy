@@ -858,9 +858,7 @@ class _CoreGraph(nx.MultiGraph, _GraphRolesMixin):
 
     def _validate_edges(
         self,
-        ebunch: (
-            Iterable[tuple[Hashable, Hashable, Hashable]] | Iterable[tuple[Hashable, Hashable, Hashable, Hashable]]
-        ),
+        ebunch: Iterable[tuple[Hashable, Hashable, Hashable]] | Iterable[tuple[Hashable, Hashable, Hashable, Hashable]],
     ):
         """
         Validates the value input by the user, then either raises an error.

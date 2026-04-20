@@ -270,8 +270,7 @@ def test_multiple_instrument_variables_and_noise_columns():
 def test_naiveiv_recovers_theta_high_dim():
     """Use pgmpy DAG + simulator to generate linear-Gaussian data and check theta recovery in high-dim setting."""
 
-    dag = DAG.from_dagitty(
-        """dag { D -> Y [beta=0.6]
+    dag = DAG.from_dagitty("""dag { D -> Y [beta=0.6]
                Z1 -> D [beta=0.4]
                Z2 -> D [beta=-0.3]
                Z3 -> D [beta=0.2]
@@ -281,8 +280,7 @@ def test_naiveiv_recovers_theta_high_dim():
                Z7 -> D [beta=-0.2]
                Z8 -> D [beta=0.3]
                Z9 -> D [beta=0.2]
-               Z10 -> D [beta=-0.3]}"""
-    )
+               Z10 -> D [beta=-0.3]}""")
 
     data = dag.simulate(10000, seed=42)
 

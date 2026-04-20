@@ -386,8 +386,7 @@ class TestXBNWriter(unittest.TestCase):
         self.writer = XMLBeliefNetwork.XBNWriter(model=model)
 
     def test_file(self):
-        self.expected_xml = etree.XML(
-            """<ANALYSISNOTEBOOK>
+        self.expected_xml = etree.XML("""<ANALYSISNOTEBOOK>
   <BNMODEL>
     <VARIABLES>
       <VAR NAME="a" TYPE="discrete" XPOS="13495" YPOS="10465">
@@ -486,8 +485,7 @@ class TestXBNWriter(unittest.TestCase):
       </DIST>
     </DISTRIBUTIONS>
   </BNMODEL>
-</ANALYSISNOTEBOOK>"""
-        )
+</ANALYSISNOTEBOOK>""")
         self.assertEqual(
             etree.canonicalize(self.writer.__str__()[:-1]),
             etree.canonicalize(etree.tostring(self.expected_xml)),
@@ -870,8 +868,7 @@ class TestXBNWriterTorch(unittest.TestCase):
         self.writer = XMLBeliefNetwork.XBNWriter(model=model)
 
     def test_file(self):
-        self.expected_xml = etree.XML(
-            """<ANALYSISNOTEBOOK>
+        self.expected_xml = etree.XML("""<ANALYSISNOTEBOOK>
   <BNMODEL>
     <VARIABLES>
       <VAR NAME="a" TYPE="discrete" XPOS="13495" YPOS="10465">
@@ -970,8 +967,7 @@ class TestXBNWriterTorch(unittest.TestCase):
       </DIST>
     </DISTRIBUTIONS>
   </BNMODEL>
-</ANALYSISNOTEBOOK>"""
-        )
+</ANALYSISNOTEBOOK>""")
         self.assertEqual(
             etree.canonicalize(self.writer.__str__()[:-1]),
             etree.canonicalize(etree.tostring(self.expected_xml)),

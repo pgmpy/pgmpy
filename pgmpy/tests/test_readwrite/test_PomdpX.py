@@ -1000,8 +1000,7 @@ class TestPomdpXWriter(unittest.TestCase):
         self.writer = PomdpXWriter(model_data=self.model_data)
 
     def test_variables(self):
-        expected_variables = etree.XML(
-            """
+        expected_variables = etree.XML("""
 <Variable>
   <StateVar fullyObs="true" vnameCurr="rover_1" vnamePrev="rover_0">
     <NumValues>3</NumValues>
@@ -1016,8 +1015,7 @@ class TestPomdpXWriter(unittest.TestCase):
     <ValueEnum>amw ame ac as</ValueEnum>
   </ActionVar>
   <RewardVar vname="reward_rover" />
-</Variable>"""
-        )
+</Variable>""")
         self.maxDiff = None
         self.assertEqual(
             etree.canonicalize(self.writer.get_variables()),
@@ -1025,8 +1023,7 @@ class TestPomdpXWriter(unittest.TestCase):
         )
 
     def test_add_initial_belief(self):
-        expected_belief_xml = etree.XML(
-            """
+        expected_belief_xml = etree.XML("""
 <InitialStateBelief>
   <CondProb>
     <Var>rover_0</Var>
@@ -1048,8 +1045,7 @@ class TestPomdpXWriter(unittest.TestCase):
       </Entry>
     </Parameter>
   </CondProb>
-</InitialStateBelief>"""
-        )
+</InitialStateBelief>""")
         self.maxDiff = None
         self.assertEqual(
             str(self.writer.add_initial_belief()),
@@ -1057,8 +1053,7 @@ class TestPomdpXWriter(unittest.TestCase):
         )
 
     def test_add_transition_function(self):
-        expected_transition_xml = etree.XML(
-            """
+        expected_transition_xml = etree.XML("""
 <StateTransitionFunction>
   <CondProb>
     <Var>rover_1</Var>
@@ -1128,8 +1123,7 @@ class TestPomdpXWriter(unittest.TestCase):
       </Entry>
     </Parameter>
   </CondProb>
-</StateTransitionFunction>"""
-        )
+</StateTransitionFunction>""")
         self.maxDiff = None
         self.assertEqual(
             self.writer.add_state_transition_function(),
@@ -1137,8 +1131,7 @@ class TestPomdpXWriter(unittest.TestCase):
         )
 
     def test_add_obs_function(self):
-        expected_obs_xml = etree.XML(
-            """
+        expected_obs_xml = etree.XML("""
 <ObsFunction>
   <CondProb>
     <Var>obs_sensor</Var>
@@ -1170,14 +1163,12 @@ class TestPomdpXWriter(unittest.TestCase):
       </Entry>
     </Parameter>
   </CondProb>
-</ObsFunction>"""
-        )
+</ObsFunction>""")
         self.maxDiff = None
         self.assertEqual(self.writer.add_obs_function(), etree.tostring(expected_obs_xml))
 
     def test_add_reward_function(self):
-        expected_reward_xml = etree.XML(
-            """
+        expected_reward_xml = etree.XML("""
 <RewardFunction>
   <Func>
     <Var>reward_rover</Var>
@@ -1205,8 +1196,7 @@ class TestPomdpXWriter(unittest.TestCase):
       </Entry>
     </Parameter>
   </Func>
-</RewardFunction>"""
-        )
+</RewardFunction>""")
         self.maxDiff = None
         self.assertEqual(self.writer.add_reward_function(), etree.tostring(expected_reward_xml))
 
@@ -1228,8 +1218,7 @@ class TestPomdpXWriter(unittest.TestCase):
             ]
         }
         self.writer = PomdpXWriter(model_data=self.model_data)
-        expected_xml = etree.XML(
-            """
+        expected_xml = etree.XML("""
 <InitialStateBelief>
   <CondProb>
     <Var>rover_0</Var>
@@ -1250,8 +1239,7 @@ class TestPomdpXWriter(unittest.TestCase):
       </DAG>
     </Parameter>
   </CondProb>
-</InitialStateBelief>"""
-        )
+</InitialStateBelief>""")
         self.maxDiff = None
         self.assertEqual(
             self.writer.add_initial_belief().decode("utf-8").replace(" ", ""),
@@ -1355,8 +1343,7 @@ class TestPomdpXWriter(unittest.TestCase):
         }
 
         self.writer = PomdpXWriter(model_data=self.model_data)
-        expected_xml = etree.XML(
-            """
+        expected_xml = etree.XML("""
 <StateTransitionFunction>
   <CondProb>
     <Var>rover_1</Var>
@@ -1442,8 +1429,7 @@ class TestPomdpXWriter(unittest.TestCase):
       </DAG>
     </Parameter>
   </CondProb>
-</StateTransitionFunction>"""
-        )
+</StateTransitionFunction>""")
         self.maxDiff = None
         self.assertEqual(
             etree.canonicalize(self.writer.add_state_transition_function()),
@@ -1508,8 +1494,7 @@ class TestPomdpXWriter(unittest.TestCase):
         }
 
         self.writer = PomdpXWriter(model_data=self.model_data)
-        expected_xml = etree.XML(
-            """
+        expected_xml = etree.XML("""
 <ObsFunction>
   <CondProb>
     <Var>obs_sensor</Var>
@@ -1574,8 +1559,7 @@ class TestPomdpXWriter(unittest.TestCase):
       </SubDAGTemplate>
     </Parameter>
   </CondProb>
-</ObsFunction>"""
-        )
+</ObsFunction>""")
         self.maxDiff = None
         self.assertEqual(
             etree.canonicalize(self.writer.add_obs_function()),
@@ -1608,8 +1592,7 @@ class TestPomdpXWriter(unittest.TestCase):
         }
 
         self.writer = PomdpXWriter(model_data=self.model_data)
-        expected_xml = etree.XML(
-            """
+        expected_xml = etree.XML("""
 <RewardFunction>
   <Func>
     <Var>reward_rover</Var>
@@ -1670,8 +1653,7 @@ class TestPomdpXWriter(unittest.TestCase):
       </DAG>
     </Parameter>
   </Func>
-</RewardFunction>"""
-        )
+</RewardFunction>""")
         self.maxDiff = None
         self.assertEqual(self.writer.add_reward_function(), etree.tostring(expected_xml))
 
@@ -2669,8 +2651,7 @@ class TestPomdpXWriterTorch(unittest.TestCase):
         self.writer = PomdpXWriter(model_data=self.model_data)
 
     def test_variables(self):
-        expected_variables = etree.XML(
-            """
+        expected_variables = etree.XML("""
 <Variable>
   <StateVar fullyObs="true" vnameCurr="rover_1" vnamePrev="rover_0">
     <NumValues>3</NumValues>
@@ -2685,8 +2666,7 @@ class TestPomdpXWriterTorch(unittest.TestCase):
     <ValueEnum>amw ame ac as</ValueEnum>
   </ActionVar>
   <RewardVar vname="reward_rover" />
-</Variable>"""
-        )
+</Variable>""")
         self.maxDiff = None
         self.assertEqual(
             etree.canonicalize(self.writer.get_variables()),
@@ -2694,8 +2674,7 @@ class TestPomdpXWriterTorch(unittest.TestCase):
         )
 
     def test_add_initial_belief(self):
-        expected_belief_xml = etree.XML(
-            """
+        expected_belief_xml = etree.XML("""
 <InitialStateBelief>
   <CondProb>
     <Var>rover_0</Var>
@@ -2717,8 +2696,7 @@ class TestPomdpXWriterTorch(unittest.TestCase):
       </Entry>
     </Parameter>
   </CondProb>
-</InitialStateBelief>"""
-        )
+</InitialStateBelief>""")
         self.maxDiff = None
         self.assertEqual(
             str(self.writer.add_initial_belief()),
@@ -2726,8 +2704,7 @@ class TestPomdpXWriterTorch(unittest.TestCase):
         )
 
     def test_add_transition_function(self):
-        expected_transition_xml = etree.XML(
-            """
+        expected_transition_xml = etree.XML("""
 <StateTransitionFunction>
   <CondProb>
     <Var>rover_1</Var>
@@ -2797,8 +2774,7 @@ class TestPomdpXWriterTorch(unittest.TestCase):
       </Entry>
     </Parameter>
   </CondProb>
-</StateTransitionFunction>"""
-        )
+</StateTransitionFunction>""")
         self.maxDiff = None
         self.assertEqual(
             self.writer.add_state_transition_function(),
@@ -2806,8 +2782,7 @@ class TestPomdpXWriterTorch(unittest.TestCase):
         )
 
     def test_add_obs_function(self):
-        expected_obs_xml = etree.XML(
-            """
+        expected_obs_xml = etree.XML("""
 <ObsFunction>
   <CondProb>
     <Var>obs_sensor</Var>
@@ -2839,14 +2814,12 @@ class TestPomdpXWriterTorch(unittest.TestCase):
       </Entry>
     </Parameter>
   </CondProb>
-</ObsFunction>"""
-        )
+</ObsFunction>""")
         self.maxDiff = None
         self.assertEqual(self.writer.add_obs_function(), etree.tostring(expected_obs_xml))
 
     def test_add_reward_function(self):
-        expected_reward_xml = etree.XML(
-            """
+        expected_reward_xml = etree.XML("""
 <RewardFunction>
   <Func>
     <Var>reward_rover</Var>
@@ -2874,8 +2847,7 @@ class TestPomdpXWriterTorch(unittest.TestCase):
       </Entry>
     </Parameter>
   </Func>
-</RewardFunction>"""
-        )
+</RewardFunction>""")
         self.maxDiff = None
         self.assertEqual(self.writer.add_reward_function(), etree.tostring(expected_reward_xml))
 
@@ -2897,8 +2869,7 @@ class TestPomdpXWriterTorch(unittest.TestCase):
             ]
         }
         self.writer = PomdpXWriter(model_data=self.model_data)
-        expected_xml = etree.XML(
-            """
+        expected_xml = etree.XML("""
 <InitialStateBelief>
   <CondProb>
     <Var>rover_0</Var>
@@ -2919,8 +2890,7 @@ class TestPomdpXWriterTorch(unittest.TestCase):
       </DAG>
     </Parameter>
   </CondProb>
-</InitialStateBelief>"""
-        )
+</InitialStateBelief>""")
         self.maxDiff = None
         self.assertEqual(
             self.writer.add_initial_belief().decode("utf-8").replace(" ", ""),
@@ -3024,8 +2994,7 @@ class TestPomdpXWriterTorch(unittest.TestCase):
         }
 
         self.writer = PomdpXWriter(model_data=self.model_data)
-        expected_xml = etree.XML(
-            """
+        expected_xml = etree.XML("""
 <StateTransitionFunction>
   <CondProb>
     <Var>rover_1</Var>
@@ -3111,8 +3080,7 @@ class TestPomdpXWriterTorch(unittest.TestCase):
       </DAG>
     </Parameter>
   </CondProb>
-</StateTransitionFunction>"""
-        )
+</StateTransitionFunction>""")
         self.maxDiff = None
         self.assertEqual(
             etree.canonicalize(self.writer.add_state_transition_function()),
@@ -3177,8 +3145,7 @@ class TestPomdpXWriterTorch(unittest.TestCase):
         }
 
         self.writer = PomdpXWriter(model_data=self.model_data)
-        expected_xml = etree.XML(
-            """
+        expected_xml = etree.XML("""
 <ObsFunction>
   <CondProb>
     <Var>obs_sensor</Var>
@@ -3243,8 +3210,7 @@ class TestPomdpXWriterTorch(unittest.TestCase):
       </SubDAGTemplate>
     </Parameter>
   </CondProb>
-</ObsFunction>"""
-        )
+</ObsFunction>""")
         self.maxDiff = None
         self.assertEqual(
             etree.canonicalize(self.writer.add_obs_function()),
@@ -3277,8 +3243,7 @@ class TestPomdpXWriterTorch(unittest.TestCase):
         }
 
         self.writer = PomdpXWriter(model_data=self.model_data)
-        expected_xml = etree.XML(
-            """
+        expected_xml = etree.XML("""
 <RewardFunction>
   <Func>
     <Var>reward_rover</Var>
@@ -3339,7 +3304,6 @@ class TestPomdpXWriterTorch(unittest.TestCase):
       </DAG>
     </Parameter>
   </Func>
-</RewardFunction>"""
-        )
+</RewardFunction>""")
         self.maxDiff = None
         self.assertEqual(self.writer.add_reward_function(), etree.tostring(expected_xml))

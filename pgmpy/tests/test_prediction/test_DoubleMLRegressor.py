@@ -311,8 +311,7 @@ def test_doubleml_recovers_theta_with_RF():
 def test_doubleml_recovers_theta_high_dim():
     """Use pgmpy DAG + simulator to generate linear-Gaussian data and check theta recovery in high-dim setting."""
 
-    dag = DAG.from_dagitty(
-        """dag { D -> Y [beta=0.6]
+    dag = DAG.from_dagitty("""dag { D -> Y [beta=0.6]
                Z1 -> D [beta=0.4]
                Z1 -> Y [beta=0.6]
                Z2 -> D [beta=-0.3]
@@ -332,8 +331,7 @@ def test_doubleml_recovers_theta_high_dim():
                Z9 -> D [beta=0.2]
                Z9 -> Y [beta=0.2]
                Z10 -> D [beta=-0.3]
-               Z10 -> Y [beta=0.1]}"""
-    )
+               Z10 -> Y [beta=0.1]}""")
 
     data = dag.simulate(10000, seed=42)
 

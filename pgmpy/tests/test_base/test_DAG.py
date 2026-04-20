@@ -932,8 +932,7 @@ class TestDAGParser(unittest.TestCase):
         self.assertEqual(set(dag.latents), {"X"})
 
     def test_from_dagitty_multiline_with_display_info(self):
-        dag = DAG.from_dagitty(
-            """
+        dag = DAG.from_dagitty("""
                 dag {
                 bb="-1.728,-4.67,2.587,4.156"
                 123 [pos="2.087,3.420"]
@@ -944,19 +943,16 @@ class TestDAGParser(unittest.TestCase):
                 X.1 -> Z
                 Z -> 123
                 }
-        """
-        )
+        """)
         self.assertEqual(set(dag.edges()), {("X.1", "Y"), ("X.1", "Z"), ("Z", "123")})
         self.assertEqual(set(dag.latents), {"Z"})
 
     def test_from_dagitty_empty(self):
-        dag1 = DAG.from_dagitty(
-            """
+        dag1 = DAG.from_dagitty("""
                 dag {
 
                 }
-            """
-        )
+            """)
         dag2 = DAG.from_dagitty("""dag { }""")
         dag = DAG()
         self.assertEqual(dag1, dag)

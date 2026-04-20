@@ -108,6 +108,9 @@ addopts = "-p no:doctest"
 norecursedirs = [".git", "ignore", "build", "__pycache__"]
 filterwarnings = ["default"]
 
+[tool.black]
+line-length = 120
+
 [tool.ruff]
 line-length = 120
 exclude = [".git", "examples/*", "docs/conf.py", "pgmpy/estimators/__init__.py",

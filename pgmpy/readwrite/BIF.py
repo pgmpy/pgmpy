@@ -347,24 +347,18 @@ class BIFWriter:
         network_template = Template("network $name {\n}\n")
         # property tag may or may not be present in model,and since no of properties
         # can be more than one, will replace them according to format otherwise null
-        variable_template = Template(
-            """variable $name {
+        variable_template = Template("""variable $name {
     type discrete [ $no_of_states ] { $states };
-$properties}\n"""
-        )
+$properties}\n""")
         property_template = Template("    property $prop ;\n")
         # $variable_ here is name of variable, used underscore for clarity
-        probability_template = Template(
-            """probability ( $variable_$separator_$parents ) {
+        probability_template = Template("""probability ( $variable_$separator_$parents ) {
     table $values ;
-}\n"""
-        )
+}\n""")
 
-        conditional_probability_template_total = Template(
-            """probability ( $variable_$separator_$parents ) {
+        conditional_probability_template_total = Template("""probability ( $variable_$separator_$parents ) {
 $values
-}\n"""
-        )
+}\n""")
 
         conditional_probability_template = Template("""    ( $state ) $values;\n""")
 
