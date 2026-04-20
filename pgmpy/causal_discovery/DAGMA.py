@@ -15,6 +15,7 @@ from pgmpy.causal_discovery._base import _BaseCausalDiscovery
 from pgmpy.utils import compat_fns
 
 torch = _safe_import("torch")
+LBFGS = _safe_import("torch.optim", "LBFGS", soft=True)
 
 
 class DagmaLinear(_BaseCausalDiscovery):
@@ -185,13 +186,11 @@ class DagmaLinear(_BaseCausalDiscovery):
                 )
                 W_est = res.x.reshape(self.n_features_in_, self.n_features_in_).copy()
             else:  # Pytorch
-                if torch is None:
+                if torch is None or LBFGS is None:
                     raise ImportError(
-                        "PyTorch backend selected but torch is not installed. "
+                        "PyTorch backend selected but torch or LBFGS is not installed. "
                         "Install it using `pip install pgmpy[torch]`"
                     )
-
-                from torch.optim import LBFGS
 
                 # Convert W_est to a PyTorch parameter using global config
                 W_tensor = torch.nn.Parameter(
@@ -199,11 +198,13 @@ class DagmaLinear(_BaseCausalDiscovery):
                 )
 
                 # Initialize the PyTorch LBFGS optimizer
-                lbfgs = LBFGS([W_tensor], max_iter=100, line_search_fn="strong_wolfe")
+                lbfgs = LBFGS([W_tensor], max_iter=self.max_iter, line_search_fn="strong_wolfe")
 
                 def closure():
                     lbfgs.zero_grad()  # Clear previous gradients
                     loss = self._objective(W_tensor, mu, backend, return_grad=False)
+                    if torch.isinf(loss):
+                        return loss.detach()  # Return non-attached tensor if barrier hit
                     loss.backward()  # Automatically computes the gradients
                     return loss
 
@@ -230,12 +231,30 @@ class DagmaLinear(_BaseCausalDiscovery):
         self,
         w_in: np.ndarray | torch.Tensor,
         mu: float,
-        backend,
+        backend: type,
         return_grad: bool = True,
     ) -> tuple[float, np.ndarray] | torch.Tensor:
         """
-        The objective function for the continuous optimization, combining
-        the Least Squares score, L1 penalty, and Log-Det acyclicity constraint.
+        Compute the DAGMA objective function and optionally its gradient.
+
+        The objective combines the Least Squares score, L1 penalty, and
+        Log-Det acyclicity constraint.
+
+        Parameters
+        ----------
+        w_in : np.ndarray | torch.Tensor
+            Flattened or tensor adjacency matrix.
+        mu : float
+            Central path parameter.
+        backend : type
+            Computation backend (numpy or torch).
+        return_grad : bool, optional
+            If True, returns (objective, gradient). If False, returns only objective.
+
+        Returns
+        -------
+        tuple[float, np.ndarray] | torch.Tensor
+            Objective value and gradient (if return_grad=True), else objective only.
         """
 
         if backend == np:
@@ -294,7 +313,7 @@ class DagmaLinear(_BaseCausalDiscovery):
 
             # Barrier Protection
             if sign <= 0:
-                return torch.tensor(float("inf"), requires_grad=True)
+                return torch.tensor(float("inf"), requires_grad=False)
 
             h = -logdet + self.n_features_in_ * math.log(self.s)
 
