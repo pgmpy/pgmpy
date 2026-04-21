@@ -12,20 +12,17 @@ class HotellingLawley(_ResidualMixin, _BaseCITest):
     r"""
     Hotelling-Lawley trace CI test for mixed data [1].
 
-    This test first residualizes :math:`X` and :math:`Y` with respect to :math:`[1, Z]`
-    (see :class:`~pgmpy.ci_tests.PillaiTrace` for residualization details). The
-    Hotelling-Lawley trace statistic is the sum of eigenvalue ratios of the canonical
-    correlations between :math:`R_X \in \mathbb{R}^{n \times p}` and
-    :math:`R_Y \in \mathbb{R}^{n \times q}`:
+    This test first residualizes :math:`X` and :math:`Y` with respect to :math:`[1, Z]` The Hotelling-Lawley trace
+    statistic is the sum of eigenvalue ratios of the canonical correlations between
+    :math:`R_X \in \mathbb{R}^{n \times p}` and :math:`R_Y \in \mathbb{R}^{n \times q}`:
 
     .. math::
         \text{HLT} = \sum_{k=1}^{s} \frac{\hat{\rho}_k^2}{1 - \hat{\rho}_k^2}
-                   = \operatorname{tr}\!\left(HE^{-1}\right),
 
-    where :math:`s = \min(p, q)` and :math:`\hat{\rho}_k` are the canonical correlations.
+    where :math:`\hat{\rho}_k` are the :math:`s = \min(p, q)` canonical correlations.
     HLT is an analog of the ANOVA F statistic for the multivariate setting.
 
-    The p-value is computed using Pillai's F-approximation [1, 2]:
+    The p-value is computed using Pillai's F-approximation [1]:
 
     .. math::
         F_{\text{HLT}} = \frac{A_{\text{HLT}} / (pq)}{(1 - A_{\text{HLT}}) / \left[s(n - q - 1) + 2\right]},
@@ -59,8 +56,6 @@ class HotellingLawley(_ResidualMixin, _BaseCITest):
     .. [1] Muller, K. E. and Peterson B. L. (1984) Practical Methods for computing power in
            testing the multivariate general linear hypothesis. Computational Statistics &
            Data Analysis.
-    .. [2] Pillai, K. C. S. (1960). Statistical Tables for Tests of Multivariate Hypotheses.
-           University of the Philippines, Statistical Center, Manila.
     """
 
     _tags = {
