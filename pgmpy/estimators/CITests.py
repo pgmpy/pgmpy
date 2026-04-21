@@ -332,7 +332,7 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
             x_inv = np.searchsorted(unique_x, df[X].values)
             y_inv = np.searchsorted(unique_y, df[Y].values)
             contingency = np.bincount(x_inv * len(unique_y) + y_inv, minlength=len(unique_x) * len(unique_y)).reshape(
-                len(unique_x), len(unique_y)
+                len(unique_x), len(unique_y) 
             )
 
             # If all values of a column in the contingency table are zeros, skip the test.
