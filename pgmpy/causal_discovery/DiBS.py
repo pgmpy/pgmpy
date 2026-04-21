@@ -50,7 +50,7 @@ class DiBS(_BaseCausalDiscovery):
         self,
         n_particles: int = 30,
         n_steps: int = 2000,
-        log_likelihood: Callable | None = None, # TODO
+        log_likelihood: Callable | None = None,
         learning_rate: float = 5e-3,
         edge_prob_threshold: float = 0.1,
         kernel: str = "frobenius",
@@ -69,14 +69,16 @@ class DiBS(_BaseCausalDiscovery):
         self.n_steps = n_steps
         if log_likelihood is None:
             self.log_likelihood = self._lgbn_log_likelihood
+        else:
+            self.log_likelihood = log_likelihood
         self.learning_rate = learning_rate
         self.edge_prob_threshold = edge_prob_threshold # Used for summarization of the graphs later.
         self.kernel = kernel
         self.kernel_bandwidth = kernel_bandwidth
         self.grad_estimator_z = grad_estimator_z
         self.baseline = baseline
-        self.alpha = lambda t: alpha_linear * t
-        self.beta = lambda t: beta_linear * t
+        self.alpha = lambda t: alpha_linear * (t + 1)
+        self.beta = lambda t: beta_linear * (t + 1)
         self.latent_dim = latent_dim # dimension of each U_i and V_i.
         self.n_grad_mc_samples = n_grad_mc_samples
         self.n_acyclicity_mc_samples = n_acyclicity_mc_samples
@@ -96,17 +98,87 @@ class DiBS(_BaseCausalDiscovery):
         graph: torch.Tensor,
     ):
         """
-        Default implementation for log p(D|G) using linear Gaussian Bayesian Network as the model.
+        Compute a local linear-Gaussian log-likelihood score for one graph or a batch
+        of graphs.
+
         Parameters
         ----------
-        data
-        graph
+        data : torch.Tensor
+            Shape (n_samples, n_nodes). Each column is a variable and each row is an
+            observation.
+        graph : torch.Tensor
+            Shape (n_nodes, n_nodes) or (batch..., n_nodes, n_nodes).
+            Binary adjacency matrix with convention graph[parent, child] = 1.
 
         Returns
         -------
-
+        torch.Tensor
+            Scalar if a single graph is passed, else shape graph.shape[:-2].
         """
-        pass
+        if data.ndim != 2:
+            raise ValueError(f"`data` must have shape (n_samples, n_nodes). Got {data.shape}")
+        if graph.ndim < 2 or graph.shape[-1] != graph.shape[-2]:
+            raise ValueError(f"`graph` must have shape (..., n_nodes, n_nodes). Got {graph.shape}")
+
+        n_samples, n_nodes = data.shape
+        if graph.shape[-1] != n_nodes:
+            raise ValueError(
+                f"Mismatch: data has {n_nodes} variables but graph has {graph.shape[-1]} nodes."
+            )
+
+        single_graph = graph.ndim == 2
+        if single_graph:
+            graph = graph.unsqueeze(0)
+
+        batch_shape = graph.shape[:-2]
+        graphs = graph.reshape(-1, n_nodes, n_nodes)
+
+        data = data.to(graphs.device)
+        dtype = data.dtype
+        device = data.device
+
+        # Prevent self loops from participating in the regressions.
+        eye = torch.eye(n_nodes, device=device, dtype=graphs.dtype)
+        graphs = graphs * (1 - eye)
+
+        scores = []
+
+        for g in graphs:
+            total_ll = torch.zeros((), device=device, dtype=dtype)
+
+            for child in range(n_nodes):
+                # parents = {i : i -> child}
+                parent_mask = g[:, child].bool()
+                parent_mask[child] = False
+
+                y = data[:, child]  # (n_samples,)
+
+                if parent_mask.any():
+                    X_par = data[:, parent_mask]  # (n_samples, n_parents)
+                    design = torch.cat(
+                        [torch.ones((n_samples, 1), device=device, dtype=dtype), X_par],
+                        dim=1,
+                    )
+                else:
+                    # Intercept-only model when there are no parents.
+                    design = torch.ones((n_samples, 1), device=device, dtype=dtype)
+
+                # Least-squares fit for the local linear Gaussian model.
+                beta = torch.linalg.lstsq(design, y.unsqueeze(1)).solution  # (p+1, 1)
+                resid = y.unsqueeze(1) - design @ beta  # (n_samples, 1)
+                rss = (resid.squeeze(1) ** 2).sum()
+
+                # MLE of Gaussian noise variance.
+                sigma2 = (rss / n_samples).clamp_min(1e-8)
+
+                # Local Gaussian log-likelihood with MLE plug-in.
+                local_ll = -0.5 * n_samples * (torch.log(2 * torch.pi * sigma2) + 1.0)
+                total_ll = total_ll + local_ll
+
+            scores.append(total_ll)
+
+        scores = torch.stack(scores).reshape(batch_shape)
+        return scores[0] if single_graph else scores
 
 
     def _initialize_particles(
@@ -118,7 +190,7 @@ class DiBS(_BaseCausalDiscovery):
         # TODO: maybe divide by sqrt of latent_dim so that every row in U and V have unit variance.
         # last dim is self.latent_dim * 2 since Z = [U, V] and each U_i and V_i are of dim self.latent_dim.
         # Ignore acyclicity part in prior as no (efficient) sampler exists.
-        return torch.randn((n, n_nodes, self.latent_dim * 2))
+        return self.latent_prior_std * torch.randn((n, n_nodes, self.latent_dim * 2))
 
 
     def _grad_z_likelihood_score_function(
@@ -269,7 +341,6 @@ class DiBS(_BaseCausalDiscovery):
             return self._grad_z_likelihood_gumbel
         raise ValueError(f"Unknown grad estimator: {name}")
 
-
     def _compute_particle_posterior_scores(
         self,
         X_t: torch.Tensor,
@@ -277,45 +348,96 @@ class DiBS(_BaseCausalDiscovery):
         t: int,
     ) -> torch.Tensor:
         """
-        # todo: computes grad_z log p(z|D) vectorized over the particles.
-        Parameters
-        ----------
-        X
-        particles
-        t
+        Computes grad_Z log p(Z | D) for all particles.
 
-        Returns
-        -------
+        This matches the authors' DiBS prior-gradient structure more closely:
+            grad_Z log p(Z)
+            = - beta(t) * grad_Z E_{p(G|Z)}[ h(G) ]
+              - Z / sigma_z^2
+              [+ optional extra graph-prior term, if implemented]
 
+        For the acyclicity term, use a Gumbel-softmax / Concrete
+        reparameterization estimator with `n_acyclicity_mc_samples`.
         """
         alpha, beta = self.alpha(t), self.beta(t)
 
-        # compute eq. (A.34): grad_z log p(z) = -beta grad_z E_p(G|Z)[ h(G) ] - 1/sigma**2 Z:
         particles = particles.detach().requires_grad_(True)
-        U, V = particles.chunk(2, dim=-1)
+        p, d, _ = particles.shape
+        device = particles.device
+        dtype = particles.dtype
 
-        graph_probs = torch.sigmoid(alpha * U @ V.transpose(-1, -2)) # compute the soft graph
-        d = graph_probs.shape[-1]
-        eye = torch.eye(d, device=graph_probs.device, dtype=graph_probs.dtype)
-        graph_probs = graph_probs * (1.0 - eye.unsqueeze(0)) # with masked diagonal to prevent self loops
+        eye = torch.eye(d, device=device, dtype=dtype)
 
-        # Compute the expectation:
-        def h(G):
-            d = G.shape[-1]
-            id = torch.eye(d, device=G.device, dtype=G.dtype)
-            return torch.trace(torch.linalg.matrix_power(id + G / d, d)) - d
+        def h(G: torch.Tensor) -> torch.Tensor:
+            """
+            Acyclicity surrogate:
+                tr((I + G / d)^d) - d
 
-        acyclicity_soft = torch.vmap(h)(graph_probs) # It is assumed E_p(G|Z)[ h(G) ] is approximated by h(G_soft)
-        softgraph_score, = torch.autograd.grad(acyclicity_soft.sum(), particles)
+            Supports G of shape (..., d, d).
+            Returns shape (...,).
+            """
+            I = torch.eye(d, device=G.device, dtype=G.dtype)
+            M = I + G / d
 
-        log_prior_score = -beta * softgraph_score - particles / (self.latent_prior_std ** 2)
+            flat_M = M.reshape(-1, d, d)
+            vals = torch.stack(
+                [torch.trace(torch.linalg.matrix_power(A, d)) - d for A in flat_M],
+                dim=0,
+            )
+            return vals.reshape(G.shape[:-2])
 
-        # Now compute the second term of eq. 9 by using eq 12.
+        def soft_graph_from_latent(Z: torch.Tensor, eps: torch.Tensor) -> torch.Tensor:
+            """
+            Gumbel-softmax / Concrete sample:
+                sigmoid(tau * (eps + alpha(t) * U V^T))
+            with zero diagonal.
+            Z:   (d, 2k)
+            eps: (d, d)
+            returns: (d, d)
+            """
+            U, V = Z.chunk(2, dim=-1)  # (d, k), (d, k)
+            scores = U @ V.transpose(-1, -2)  # (d, d)
+            G_soft = torch.sigmoid(self.tau * (eps + alpha * scores))
+            return G_soft * (1.0 - eye)
+
+        def constraint_gumbel(single_z: torch.Tensor, single_eps: torch.Tensor) -> torch.Tensor:
+            """
+            h(G_tau(eps, z))
+            """
+            G_soft = soft_graph_from_latent(single_z, single_eps)
+            return h(G_soft)
+
+        def grad_constraint_gumbel(single_z: torch.Tensor) -> torch.Tensor:
+            """
+            Reparameterization estimator for
+                grad_Z E_{p(G|Z)} [ h(G) ]
+            using Logistic(0,1) noise and n_acyclicity_mc_samples MC samples.
+            """
+            eps_u = torch.rand(
+                (self.n_acyclicity_mc_samples, d, d),
+                device=device,
+                dtype=dtype,
+            )
+            finfo = torch.finfo(dtype)
+            eps_u = eps_u.clamp(min=finfo.eps, max=1.0 - finfo.eps)
+            eps = torch.log(eps_u) - torch.log1p(-eps_u)  # Logistic(0,1)
+
+            grad_fn = grad(constraint_gumbel, argnums=0)
+            mc_grads = torch.vmap(grad_fn, in_dims=(None, 0))(single_z, eps)
+            return mc_grads.mean(dim=0)
+
+        # Batched prior score:
+        #   - beta * grad E[h(G)] - Z / sigma^2
+        grad_expected_h = torch.vmap(grad_constraint_gumbel, in_dims=0)(particles)
+        log_prior_score = -beta * grad_expected_h - particles / (self.latent_prior_std ** 2)
+
+        # Likelihood-ratio / reparam estimator for the likelihood term
         strategy = self._make_likelihood_grad_estimator(self.grad_estimator_z)
-        ratio = strategy(X_t, particles, t) # second term in eq. 9
+        ratio = strategy(X_t, particles, t)
 
         score = log_prior_score + ratio
         return score
+
 
     def _get_kernel(
             self,
@@ -424,6 +546,9 @@ class DiBS(_BaseCausalDiscovery):
         # compute G_infty(Z):
         U, V = torch.chunk(particles.detach(), 2, dim=2)
         graphs_infty = ((U @ V.transpose(-1, -2)) > 0) * ~ torch.eye(n_nodes, dtype=torch.bool, device=self.device)
+
+        self._graph_particle_samples = graphs_infty.detach().cpu()
+
         return graphs_infty
 
 
