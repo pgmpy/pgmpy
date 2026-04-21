@@ -1,13 +1,15 @@
 import numpy as np
 
 from pgmpy.ci_tests import RoysLargestRoot
+from pgmpy.tests.test_ci_tests import _multivariate_fixtures
 
-from pgmpy.tests.test_ci_tests._multivariate_fixtures import pillai_data, skip_gh_actions
+pillai_data = _multivariate_fixtures.pillai_data
+skip_gh_actions = _multivariate_fixtures.skip_gh_actions
 
 
 @skip_gh_actions
 def test_roys_no_cond(pillai_data):
-    expected_stats = [0.1572, 0.1572, 0.1523, 0.1234, 0.1523]
+    expected_stats = [0.1572, 0.1572, 0.1359, 0.1000, 0.1359]
     expected_pvalues = [0.0000, 0.0000, 0.0000, 0.0000, 0.0000]
 
     computed_stats, computed_pvalues = [], []
@@ -23,8 +25,8 @@ def test_roys_no_cond(pillai_data):
 
 @skip_gh_actions
 def test_roys_indep(pillai_data):
-    expected_stats = [0.0016, 0.0007, 0.0020, 0.0080, 0.0020]
-    expected_pvalues = [0.2125, 0.4154, 0.5741, 0.0452, 0.5741]
+    expected_stats = [0.0016, 0.0007, 0.0044, 0.0053, 0.0044]
+    expected_pvalues = [0.2125, 0.4154, 0.1118, 0.0715, 0.1118]
 
     computed_stats, computed_pvalues = [], []
     for df in pillai_data["indep"]:
@@ -39,7 +41,7 @@ def test_roys_indep(pillai_data):
 
 @skip_gh_actions
 def test_roys_dependent(pillai_data):
-    expected_stats = [0.1700, 0.2159, 0.1717, 0.1428, 0.1717]
+    expected_stats = [0.1700, 0.2159, 0.1336, 0.1008, 0.1336]
     expected_pvalues = [0.0000, 0.0000, 0.0000, 0.0000, 0.0000]
 
     computed_stats, computed_pvalues = [], []
@@ -60,7 +62,7 @@ def test_roys_approx(pillai_data):
         assert test.statistic_ >= 0.05
         assert test.p_value_ <= 0.05
 
-    for df in pillai_data["indep"][:3] + pillai_data["indep"][4:]:
+    for df in pillai_data["indep"]:
         test = RoysLargestRoot(data=df)
         test("X", "Y", ["Z1", "Z2", "Z3"])
         assert test.statistic_ <= 0.1

@@ -1,8 +1,7 @@
 import numpy as np
 
 from pgmpy.ci_tests import HotellingLawley
-
-from . import _multivariate_fixtures
+from pgmpy.tests.test_ci_tests import _multivariate_fixtures
 
 pillai_data = _multivariate_fixtures.pillai_data
 skip_gh_actions = _multivariate_fixtures.skip_gh_actions
@@ -10,7 +9,7 @@ skip_gh_actions = _multivariate_fixtures.skip_gh_actions
 
 @skip_gh_actions
 def test_hotelling_no_cond(pillai_data):
-    expected_stats = [0.1865, 0.1865, 0.1797, 0.1647, 0.1797]
+    expected_stats = [0.1865, 0.1865, 0.1572, 0.1180, 0.1572]
     expected_pvalues = [0.0000, 0.0000, 0.0000, 0.0000, 0.0000]
 
     computed_stats, computed_pvalues = [], []
@@ -26,8 +25,8 @@ def test_hotelling_no_cond(pillai_data):
 
 @skip_gh_actions
 def test_hotelling_indep(pillai_data):
-    expected_stats = [0.0016, 0.0007, 0.0020, 0.0138, 0.0020]
-    expected_pvalues = [0.2125, 0.4154, 0.5741, 0.1343, 0.5741]
+    expected_stats = [0.0016, 0.0007, 0.0044, 0.0055, 0.0044]
+    expected_pvalues = [0.2125, 0.4154, 0.1118, 0.2405, 0.1118]
 
     computed_stats, computed_pvalues = [], []
     for df in pillai_data["indep"]:
@@ -42,7 +41,7 @@ def test_hotelling_indep(pillai_data):
 
 @skip_gh_actions
 def test_hotelling_dependent(pillai_data):
-    expected_stats = [0.2049, 0.2754, 0.2073, 0.2488, 0.2073]
+    expected_stats = [0.2049, 0.2754, 0.1542, 0.1745, 0.1542]
     expected_pvalues = [0.0000, 0.0000, 0.0000, 0.0000, 0.0000]
 
     computed_stats, computed_pvalues = [], []

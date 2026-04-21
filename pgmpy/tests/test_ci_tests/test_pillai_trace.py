@@ -4,13 +4,15 @@ import pytest
 from sklearn.linear_model import LinearRegression
 
 from pgmpy.ci_tests import PillaiTrace
+from pgmpy.tests.test_ci_tests import _multivariate_fixtures
 
-from pgmpy.tests.test_ci_tests._multivariate_fixtures import pillai_data, skip_gh_actions
+pillai_data = _multivariate_fixtures.pillai_data
+skip_gh_actions = _multivariate_fixtures.skip_gh_actions
 
 
 @skip_gh_actions
 def test_pillai_no_cond(pillai_data):
-    expected_coefs = [0.1572, 0.1572, 0.1523, 0.1468, 0.1523]
+    expected_coefs = [0.1572, 0.1572, 0.1359, 0.1068, 0.1359]
     expected_pvalues = [0.0000, 0.0000, 0.0000, 0.0000, 0.0000]
 
     computed_coefs = []
@@ -27,8 +29,8 @@ def test_pillai_no_cond(pillai_data):
 
 @skip_gh_actions
 def test_pillai_indep(pillai_data):
-    expected_coefs = [0.0016, 0.0007, 0.0020, 0.0137, 0.0020]
-    expected_pvalues = [0.2125, 0.4154, 0.5741, 0.1333, 0.5741]
+    expected_coefs = [0.0016, 0.0007, 0.0044, 0.0055, 0.0044]
+    expected_pvalues = [0.2125, 0.4154, 0.1118, 0.2406, 0.1118]
 
     computed_coefs = []
     computed_pvalues = []
@@ -44,7 +46,7 @@ def test_pillai_indep(pillai_data):
 
 @skip_gh_actions
 def test_pillai_dependent(pillai_data):
-    expected_coefs = [0.1700, 0.2159, 0.1717, 0.2203, 0.1717]
+    expected_coefs = [0.1700, 0.2159, 0.1336, 0.1595, 0.1336]
     expected_pvalues = [0.0000, 0.0000, 0.0000, 0.0000, 0.0000]
 
     computed_coefs = []

@@ -52,27 +52,27 @@ def _make_variants(df: pd.DataFrame) -> list[pd.DataFrame]:
     df_cat_cont = df_cont_cont.copy()
     df_cat_cont["X"] = pd.cut(
         df_cat_cont["X"],
-        bins=4,
+        bins=3,
         ordered=False,
-        labels=["x1", "x2", "x3", "x4"],
+        labels=["x1", "x2", "x3"],
     )
 
     df_cat_cat = df_cont_cont.copy()
     df_cat_cat["X"] = pd.cut(
         df_cat_cat["X"],
-        bins=4,
+        bins=3,
         ordered=False,
-        labels=["x1", "x2", "x3", "x4"],
+        labels=["x1", "x2", "x3"],
     )
     df_cat_cat["Y"] = pd.cut(
         df_cat_cat["Y"],
-        bins=4,
+        bins=3,
         ordered=False,
-        labels=["y1", "y2", "y3", "y4"],
+        labels=["y1", "y2", "y3"],
     )
 
     df_ord_cont = df_cont_cont.copy()
-    df_ord_cont["X"] = pd.cut(df_ord_cont["X"], bins=4)
+    df_ord_cont["X"] = pd.cut(df_ord_cont["X"], bins=3)
 
     return [df.copy(), df_cont_cont, df_cat_cont, df_cat_cat, df_ord_cont]
 

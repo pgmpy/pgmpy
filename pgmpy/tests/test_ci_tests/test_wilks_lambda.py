@@ -1,13 +1,15 @@
 import numpy as np
 
 from pgmpy.ci_tests import WilksLambda
+from pgmpy.tests.test_ci_tests import _multivariate_fixtures
 
-from pgmpy.tests.test_ci_tests._multivariate_fixtures import pillai_data, skip_gh_actions
+pillai_data = _multivariate_fixtures.pillai_data
+skip_gh_actions = _multivariate_fixtures.skip_gh_actions
 
 
 @skip_gh_actions
 def test_wilks_no_cond(pillai_data):
-    expected_stats = [0.8428, 0.8428, 0.8477, 0.8561, 0.8477]
+    expected_stats = [0.8428, 0.8428, 0.8641, 0.8939, 0.8641]
     expected_pvalues = [0.0000, 0.0000, 0.0000, 0.0000, 0.0000]
 
     computed_stats, computed_pvalues = [], []
@@ -23,8 +25,8 @@ def test_wilks_no_cond(pillai_data):
 
 @skip_gh_actions
 def test_wilks_indep(pillai_data):
-    expected_stats = [0.9984, 0.9993, 0.9980, 0.9863, 0.9980]
-    expected_pvalues = [0.2125, 0.4154, 0.5741, 0.1338, 0.5741]
+    expected_stats = [0.9984, 0.9993, 0.9956, 0.9945, 0.9956]
+    expected_pvalues = [0.2125, 0.4154, 0.1118, 0.2405, 0.1118]
 
     computed_stats, computed_pvalues = [], []
     for df in pillai_data["indep"]:
@@ -39,7 +41,7 @@ def test_wilks_indep(pillai_data):
 
 @skip_gh_actions
 def test_wilks_dependent(pillai_data):
-    expected_stats = [0.8300, 0.7841, 0.8283, 0.7914, 0.8283]
+    expected_stats = [0.8300, 0.7841, 0.8664, 0.8464, 0.8664]
     expected_pvalues = [0.0000, 0.0000, 0.0000, 0.0000, 0.0000]
 
     computed_stats, computed_pvalues = [], []
