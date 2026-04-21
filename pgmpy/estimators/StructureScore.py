@@ -13,7 +13,7 @@ from pgmpy.estimators import BaseEstimator
 from pgmpy.utils import get_dataset_type
 
 warnings.warn(
-    "`pgmpy.estimators.StructureScore` is deprecated and will be removed in a future release. "
+    "`pgmpy.estimators.StructureScore` is deprecated and will be removed in v1.3.0. "
     "Use `pgmpy.structure_score` instead.",
     FutureWarning,
     stacklevel=2,
