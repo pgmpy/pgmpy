@@ -1,125 +1,14 @@
-import os
-
 import numpy as np
 import pandas as pd
 import pytest
 from sklearn.linear_model import LinearRegression
 
 from pgmpy.ci_tests import PillaiTrace
-from pgmpy.factors.continuous import LinearGaussianCPD
-from pgmpy.models import LinearGaussianBayesianNetwork
 
-skip_gh_actions = pytest.mark.skipif(
-    os.getenv("GITHUB_ACTIONS") == "true",
-    reason="Skipping residual tests on GitHub Actions.",
-)
+from . import _multivariate_fixtures
 
-
-@pytest.fixture
-def pillai_data():
-    model_indep = LinearGaussianBayesianNetwork(
-        [
-            ("Z1", "X"),
-            ("Z2", "X"),
-            ("Z3", "X"),
-            ("Z1", "Y"),
-            ("Z2", "Y"),
-            ("Z3", "Y"),
-        ]
-    )
-    cpd_z1 = LinearGaussianCPD("Z1", [0], 1)
-    cpd_z2 = LinearGaussianCPD("Z2", [0], 1)
-    cpd_z3 = LinearGaussianCPD("Z3", [0], 1)
-    cpd_x = LinearGaussianCPD("X", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
-    cpd_y_indep = LinearGaussianCPD("Y", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
-    model_indep.add_cpds(cpd_z1, cpd_z2, cpd_z3, cpd_x, cpd_y_indep)
-    df_indep = model_indep.simulate(n_samples=1000, seed=42)
-
-    df_indep_cont_cont = df_indep.copy()
-    df_indep_cont_cont.Z2 = pd.cut(
-        df_indep_cont_cont.Z2,
-        bins=4,
-        ordered=False,
-        labels=["z21", "z22", "z23", "z24"],
-    )
-
-    df_indep_cat_cont = df_indep_cont_cont.copy()
-    df_indep_cat_cont.X = pd.cut(
-        df_indep_cat_cont.X,
-        bins=4,
-        ordered=False,
-        labels=["x1", "x2", "x3", "x4"],
-    )
-
-    df_indep_cat_cat = df_indep_cont_cont.copy()
-    df_indep_cat_cat.X = pd.cut(
-        df_indep_cat_cat.X,
-        bins=4,
-        ordered=False,
-        labels=["x1", "x2", "x3", "x4"],
-    )
-    df_indep_cat_cat.Y = pd.cut(
-        df_indep_cat_cat.Y,
-        bins=4,
-        ordered=False,
-        labels=["y1", "y2", "y3", "y4"],
-    )
-
-    df_indep_ord_cont = df_indep_cont_cont.copy()
-    df_indep_ord_cont.X = pd.cut(df_indep_ord_cont.X, bins=4)
-
-    model_dep = LinearGaussianBayesianNetwork(
-        [
-            ("Z1", "X"),
-            ("Z2", "X"),
-            ("Z3", "X"),
-            ("Z1", "Y"),
-            ("Z2", "Y"),
-            ("Z3", "Y"),
-            ("X", "Y"),
-        ]
-    )
-    cpd_y_dep = LinearGaussianCPD("Y", [0, 0.5, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3", "X"])
-    model_dep.add_cpds(cpd_z1, cpd_z2, cpd_z3, cpd_x, cpd_y_dep)
-    df_dep = model_dep.simulate(n_samples=1000, seed=42)
-
-    df_dep_cont_cont = df_dep.copy()
-    df_dep_cont_cont.Z2 = pd.cut(
-        df_dep_cont_cont.Z2,
-        bins=4,
-        ordered=False,
-        labels=["z21", "z22", "z23", "z24"],
-    )
-
-    df_dep_cat_cont = df_dep_cont_cont.copy()
-    df_dep_cat_cont.X = pd.cut(
-        df_dep_cat_cont.X,
-        bins=4,
-        ordered=False,
-        labels=["x1", "x2", "x3", "x4"],
-    )
-
-    df_dep_cat_cat = df_dep_cont_cont.copy()
-    df_dep_cat_cat.X = pd.cut(
-        df_dep_cat_cat.X,
-        bins=4,
-        ordered=False,
-        labels=["x1", "x2", "x3", "x4"],
-    )
-    df_dep_cat_cat.Y = pd.cut(
-        df_dep_cat_cat.Y,
-        bins=4,
-        ordered=False,
-        labels=["y1", "y2", "y3", "y4"],
-    )
-
-    df_dep_ord_cont = df_dep_cont_cont.copy()
-    df_dep_ord_cont.X = pd.cut(df_dep_ord_cont.X, bins=4)
-
-    return {
-        "indep": [df_indep, df_indep_cont_cont, df_indep_cat_cont, df_indep_cat_cat, df_indep_ord_cont],
-        "dep": [df_dep, df_dep_cont_cont, df_dep_cat_cont, df_dep_cat_cat, df_dep_ord_cont],
-    }
+pillai_data = _multivariate_fixtures.pillai_data
+skip_gh_actions = _multivariate_fixtures.skip_gh_actions
 
 
 @skip_gh_actions

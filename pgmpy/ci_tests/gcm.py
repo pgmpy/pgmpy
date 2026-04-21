@@ -1,13 +1,14 @@
 import numpy as np
 import pandas as pd
 from scipy import stats
-from sklearn.base import clone
 from sklearn.linear_model import LinearRegression
 
-from ._base import _BaseCITest
+from pgmpy.utils import preprocess_data
+
+from ._base import _BaseCITest, _ResidualMixin
 
 
-class GCM(_BaseCITest):
+class GCM(_ResidualMixin, _BaseCITest):
     r"""
     Generalized Covariance Measure (GCM) [1] test for conditional independence.
 
@@ -49,19 +50,8 @@ class GCM(_BaseCITest):
     }
 
     def __init__(self, data: pd.DataFrame, estimator=None):
-        self.data = data
-
-        if estimator is None:
-            self.estimator = LinearRegression()
-        else:
-            # Check if estimator is sklearn compatible.
-            required_methods = ["fit", "predict", "get_params", "set_params"]
-            if not all(hasattr(estimator, method) for method in required_methods):
-                raise ValueError(
-                    "`estimator` must be a scikit-learn compatible.",
-                    "It must have fit, predict methods and be clonable.",
-                )
-            self.estimator = estimator
+        self.data, self.dtypes = preprocess_data(data)
+        self.estimator = LinearRegression() if estimator is None else estimator
 
         super().__init__()
 
@@ -76,22 +66,15 @@ class GCM(_BaseCITest):
 
         Sets ``self.statistic_`` (t-statistic) and ``self.p_value_``.
         """
-        # Step 1: Append intercept column to ensure Z is never empty
-        Z_data = np.column_stack([self.data.loc[:, list(Z)].values, np.ones(self.data.shape[0])])
+        # Step 1: Compute residuals of X and Y given Z.
+        res_x = np.asarray(self.get_residuals(X, Z))
+        res_y = np.asarray(self.get_residuals(Y, Z))
 
-        # Step 2: Compute residuals using the provided estimator
-        est_x = clone(self.estimator)
-        est_y = clone(self.estimator)
-        est_x.fit(Z_data, self.data.loc[:, X])
-        est_y.fit(Z_data, self.data.loc[:, Y])
-        res_x = self.data.loc[:, X] - est_x.predict(Z_data)
-        res_y = self.data.loc[:, Y] - est_y.predict(Z_data)
-
-        # Step 3: Compute the Generalised Covariance Measure.
+        # Step 2: Compute the Generalised Covariance Measure.
         n = res_x.shape[0]
         t_stat = (1 / np.sqrt(n)) * np.dot(res_x, res_y) / np.std(res_x * res_y)
 
-        # Step 4: Compute p-value using standard normal distribution.
+        # Step 3: Compute p-value using standard normal distribution.
         p_value = 2 * stats.norm.sf(np.abs(t_stat))
 
         self.statistic_ = t_stat
