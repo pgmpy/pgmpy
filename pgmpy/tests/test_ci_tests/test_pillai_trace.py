@@ -5,10 +5,7 @@ from sklearn.linear_model import LinearRegression
 
 from pgmpy.ci_tests import PillaiTrace
 
-from . import _multivariate_fixtures
-
-pillai_data = _multivariate_fixtures.pillai_data
-skip_gh_actions = _multivariate_fixtures.skip_gh_actions
+from pgmpy.tests.test_ci_tests._multivariate_fixtures import pillai_data, skip_gh_actions
 
 
 @skip_gh_actions
