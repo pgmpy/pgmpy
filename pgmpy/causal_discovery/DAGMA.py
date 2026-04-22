@@ -5,77 +5,72 @@ import math
 import networkx as nx
 import numpy as np
 import pandas as pd
-import scipy.linalg as slin
-import scipy.optimize as sopt
 from skbase.utils.dependencies import _safe_import
 
 from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery
-from pgmpy.utils import compat_fns
 
 torch = _safe_import("torch")
-LBFGS = _safe_import("torch.optim", "LBFGS", soft=True)
+LBFGS = torch.optim.LBFGS
 
 
-class DagmaLinear(_BaseCausalDiscovery):
+class DAGMALinear(_BaseCausalDiscovery):
     """
-    DagmaLinear is a continuous optimization algorithm for causal discovery.
+    DAGMA is a continuous optimization algorithm for causal discovery.
 
-    It learns a Directed Acyclic Graph (DAG) from observational data by
-    optimizing a continuous score function (Least Squares) subject to a
-    novel log-determinant acyclicity constraint.
+    It learns a Directed Acyclic Graph (DAG) from observational data by optimizing a continuous score function
+    (Least Squares) subject to a novel log-determinant acyclicity constraint.
 
-    Unlike older methods that rely on the Augmented Lagrangian scheme, DAGMA
-    uses a central path method. It solves a sequence of unconstrained
-    optimization problems where a central path parameter `mu` is progressively
-    decayed. As `mu` approaches zero, the solution is mathematically guaranteed
-    to be a DAG.
-
-    DAGMA is continuos optimization method that:
-    1. Starts by initializing a continuous weighted adjacency matrix W
-       with all zeros.
-    2. Evaluates the exact mathematical gradient of the entire graph
-       simultaneously.
-    3. Uses a gradient-based numerical solver (like L-BFGS-B or Adam)
-       to update all edge weights in the matrix W.
-    4. It wraps the continuous optimizer in a loop that progressively decays
-       the central path parameter μ.
-    5. As μ approaches zero, the force of the log-determinant barrier becomes
-       absolute, mathematically guaranteeing that the continuous matrix W
-       converges to a perfect Directed Acyclic Graph.
+    Unlike older methods that rely on the Augmented Lagrangian scheme, DAGMA uses a central path method. It solves a
+    sequence of unconstrained optimization problems where a central path parameter `mu` is progressively decayed.
+    As `mu` approaches zero, the solution is mathematically guaranteedto be a DAG.
 
     The exact continuous optimization objective being minimized is:
-    min_{W}  mu * (Q(W; X) + lambda1 * ||W||_1) + h(W)
+
+    .. math::
+        min_{W} \\mu \\cdot (Q(W; X) + \\lambda_1 \\|W\\|_1) + h(W)
 
     Where:
-        - mu is the central path parameter.
-        - Q(W; X) = 1/(2n) * ||X - XW||_F^2  (Least Squares Loss)
-        - h(W) = -log det(sI - W ∘ W) + d * log(s)
-                    (Log-Det Acyclicity Constraint)
-        - ||W||_1 is the L1 penalty to enforce sparsity.
-        - lambda1 is L1 regularization (enforce sparsity)
+        - ``mu`` is the central path parameter.
+        - ``Q(W; X) = 1/(2n) \\cdot \\|X - XW\\|_F^2`` (Least Squares Loss)
+        - ``h(W) = -\\log \\det(sI - W \\circ W) + d \\log s``
+          (Log-Det Acyclicity Constraint)
+        - ``\\|W\\|_1`` is the L1 penalty to enforce sparsity.
+        - ``lambda1`` is L1 regularization (enforce sparsity)
 
     Parameters
     ----------
     s : float, optional (default=1.0)
         Controls the domain of the M-matrices for the log-det constraint.
+        Higher values (e.g., 2.0) make the acyclicity constraint more permissive, potentially allowing denser graphs.
+        Lower values (e.g., 0.5) make it stricter, encouraging sparser solutions.
 
     lambda1 : float, optional (default=0.05)
-        L1 regularization coefficient to enforce sparsity in the estimated
-        graph.
+        L1 regularization coefficient to enforce sparsity in the estimated graph.
+        Higher values (e.g., 0.1) promote sparsity by shrinking edge weights to zero. Low values (e.g.,0.01) allow more
+        edges in the estimated structure.
 
     mu_init : float, optional (default=1.0)
         Initial penalty parameter for the central path barrier method.
+        Controls how strongly the acyclicity constraint is enforced at the start of optimization. Higher values start
+        more aggressively enforcing acyclicity.
 
     mu_factor : float, optional (default=0.1)
         Decay factor for the penalty parameter.
+        After each outer iteration, mu is multiplied by this factor (mu *= mu_factor). Smaller values (e.g., 0.01)
+        decay faster, reaching the DAG constraint sooner but with potentially less optimization of the least squares
+        fit. Larger values (e.g., 0.5) decay slower, allowing more fitting iterations but requiring more outer loops.
 
     max_iter : int, optional (default=100)
         Maximum number of iterations for the central path optimization.
+        Each iteration performs one L-BFGS optimization step on the current mu value. More iterations allow better
+        convergence but increase computation time.
 
     w_threshold : float, optional (default=0.3)
-        Threshold for pruning small edge weights in the final adjacency matrix.
+        Threshold for pruning small edge weights in the final adjacency matrix. Edges with absolute weight less than
+        this threshold are set to zero. Higher values (e.g., 0.5) produce sparser graphs. Lower values (e.g., 0.1)
+        retain more edges.
 
     Attributes
     ----------
@@ -93,32 +88,27 @@ class DagmaLinear(_BaseCausalDiscovery):
 
     Examples
     --------
-    Simulate some data to use for causal discovery
+    Load a continuous dataset and discover causal structure:
 
-    >>> from pgmpy.example_models import load_model
-    >>> model = load_model("bnlearn/alarm")
-    >>> data = model.simulate(n_samples=1000, seed=42)
+    >>> from pgmpy.causal_discovery import DAGMALinear
+    >>> from pgmpy.datasets import load_dataset
 
-    Or create a random data with causal relation
+    Load the Sachs continuous dataset (11 variables, 7466 samples):
 
-    >>> import numpy as np
-    >>> import pandas as pd
-    >>> data = pd.DataFrame(np.random.normal(size=(1000, 3)),
-    >>>                     columns=['X', 'Y', 'Z'])
-    >>> data['Y'] += 2.0 * data['X']
-    >>> data['Z'] += 1.5 * data['Y']
+    >>> data = load_dataset("sachs_continuous")
 
-    Use DagmaLinear algorith to learn causal structure
+    Learn the causal structure:
 
-    >>> from pgmpy.causal_discovery import DagmaLinear
-    >>> est = DagmaLinear()
-    >>> est.fit(data)
-    >>> est.causal_graph_.edges()
+    >>> est = DAGMALinear()
+    >>> est.fit(data.data)
+    >>> print(list(est.causal_graph_.edges()))
+
+    >>> Output: [('raf', 'mek'), ('plc', 'pip2'), ('erk', 'akt'), ('erk', 'pka'),('akt', 'pka'), ('pkc', 'p38'),
+    ('pkc', 'jnk'), ('jnk', 'p38')]
 
     References
     ----------
-    .. [1] DAGMA: Learning DAGs via M-matrices and a Log-Determinant Acyclicity
-           Characterization.
+    .. [1] DAGMA: Learning DAGs via M-matrices and a Log-Determinant Acyclicity Characterization.
            Kevin Bello, Bryon Aragam, Pradeep Ravikumar.
            Booth School of Business, University of Chicago, Chicago, IL 60637.
            Machine Learning Department, Carnegie Mellon University,
@@ -135,7 +125,7 @@ class DagmaLinear(_BaseCausalDiscovery):
         w_threshold=0.3,
     ):
         """
-        Initialize the DagmaLinear estimator with hyperparameters
+        Initialize the DAGMALinear estimator with hyperparameters
         """
 
         self.s = s
@@ -149,176 +139,124 @@ class DagmaLinear(_BaseCausalDiscovery):
         """
         Core flow of the DAGMA continuous optimization algorithm.
 
+        The algorithm uses a central path method that optimizes a sequence of unconstrained problems. As mu decays to
+        zero, the solution converges to a DAG.
+
         Parameters
         ----------
-        X : pd.DataFrame or np.ndarray
+        X : pd.DataFrame
             The data to learn the causal structure from.
         """
-        # Step 1: Initialize states and extract feature dimensions
-        self.feature_names_in_ = X.columns.values
-        self.n_features_in_ = len(self.feature_names_in_)
+        # Step 1: Resolve device and dtype from pgmpy config
+        # This allows the algorithm to run on GPU if available
+        device = config.get_device()
+        dtype = config.get_dtype()
+        if isinstance(dtype, str):
+            dtype = getattr(torch, dtype)
 
-        # Step 2: Data Preparation & Covariance pre-computation
+        # Step 2: Pre-compute covariance matrix
         data_np = X.values
         data_np = data_np - np.mean(data_np, axis=0, keepdims=True)
-        self.cov_ = (data_np.T @ data_np) / float(data_np.shape[0])
+        cov = (data_np.T @ data_np) / float(data_np.shape[0] - 1)
+        cov_tensor = torch.tensor(cov, device=device, dtype=dtype)
 
-        # Step 3: Configure bounds to strictly prevent self-loops
-        bounds = [
-            (0, 0) if i == j else (None, None) for i in range(self.n_features_in_) for j in range(self.n_features_in_)
-        ]
-
-        # Step 4: The Central Path Optimization Loop
+        # Step 3: Initialize the weight matrix and central path parameter
         W_est = np.zeros((self.n_features_in_, self.n_features_in_))
         mu = self.mu_init
-        backend = compat_fns.get_compute_backend()
 
-        for _ in range(self.max_iter):
-            if backend == np:
-                # Use L-BFGS-B from SciPy for the NumPy backend
-                res = sopt.minimize(
-                    fun=self._objective,
-                    x0=W_est.flatten(),
-                    args=(mu, backend, True),  # return_grad=True
-                    method="L-BFGS-B",
-                    jac=True,
-                    bounds=bounds,
-                )
-                W_est = res.x.reshape(self.n_features_in_, self.n_features_in_).copy()
-            else:  # Pytorch
-                if torch is None or LBFGS is None:
-                    raise ImportError(
-                        "PyTorch backend selected but torch or LBFGS is not installed. "
-                        "Install it using `pip install pgmpy[torch]`"
-                    )
+        # Step 4: Central Path Optimization Loop
+        # Each iteration:
+        #   a. Creates a new PyTorch parameter for W
+        #   b. Runs L-BFGS to optimize the objective at current mu
+        #   c. Decreases mu by mu_factor (central path decay)
+        # As mu decreases, the acyclicity constraint becomes stricter
+        for i in range(self.max_iter):
+            # Create PyTorch parameter for current W estimate
+            W_tensor = torch.nn.Parameter(torch.from_numpy(W_est).to(device=device, dtype=dtype))
 
-                # Convert W_est to a PyTorch parameter using global config
-                W_tensor = torch.nn.Parameter(
-                    torch.tensor(W_est, dtype=config.get_dtype(), device=config.get_device(), requires_grad=True)
-                )
+            # Initialize L-BFGS optimizer
+            optimizer = LBFGS([W_tensor], max_iter=10, line_search_fn="strong_wolfe")
 
-                # Initialize the PyTorch LBFGS optimizer
-                lbfgs = LBFGS([W_tensor], max_iter=self.max_iter, line_search_fn="strong_wolfe")
+            def closure(W=W_tensor):
+                optimizer.zero_grad()
+                loss = self._objective(W, mu, cov_tensor)
+                loss.backward()
+                return loss
 
-                def closure():
-                    lbfgs.zero_grad()  # Clear previous gradients
-                    loss = self._objective(W_tensor, mu, backend, return_grad=False)
-                    if torch.isinf(loss):
-                        return loss.detach()  # Return non-attached tensor if barrier hit
-                    loss.backward()  # Automatically computes the gradients
-                    return loss
+            optimizer.step(closure)
 
-                # Take an optimization step
-                lbfgs.step(closure)
-
-                # Extract the updated numpy array for the next loop
-                W_est = W_tensor.detach().numpy().copy()
-
+            # Extract updated W for next iteration
+            W_est = W_tensor.detach().cpu().numpy()
+            # Decay mu to tighten acyclicity constraint
             mu *= self.mu_factor
 
-        # Step 5: Thresholding and Graph Creation
+        # Step 5: Post-processing
         W_est[np.abs(W_est) < self.w_threshold] = 0
         self.adjacency_matrix_ = W_est
-        # Panda data frame to map data features
+
+        # Step 6: Convert to pgmpy DAG object
+        # Create DataFrame with feature names for clear edge labels
         df_adj = pd.DataFrame(W_est, index=self.feature_names_in_, columns=self.feature_names_in_)
-        # Convert to a NetworkX DiGraph, for passing to pgmpy's DAG
+        # Convert to NetworkX DiGraph, then to pgmpy's DAG wrapper
         nx_graph = nx.from_pandas_adjacency(df_adj, create_using=nx.DiGraph)
         self.causal_graph_ = DAG(nx_graph)
 
         return self
 
-    def _objective(
-        self,
-        w_in: np.ndarray | torch.Tensor,
-        mu: float,
-        backend: type,
-        return_grad: bool = True,
-    ) -> tuple[float, np.ndarray] | torch.Tensor:
+    def _objective(self, W: torch.Tensor, mu: float, cov: torch.Tensor) -> torch.Tensor:
         """
-        Compute the DAGMA objective function and optionally its gradient.
+        Compute the DAGMA objective function.
 
-        The objective combines the Least Squares score, L1 penalty, and
-        Log-Det acyclicity constraint.
+        The objective combines three components:
+        1. Least Squares loss: Measures how well W explains the data
+        2. L1 penalty: Promotes sparsity in the estimated graph
+        3. Log-Det barrier: Enforces acyclicity via the central path method
 
         Parameters
         ----------
-        w_in : np.ndarray | torch.Tensor
-            Flattened or tensor adjacency matrix.
+        W : torch.Tensor
+            The adjacency matrix as a PyTorch tensor.
         mu : float
-            Central path parameter.
-        backend : type
-            Computation backend (numpy or torch).
-        return_grad : bool, optional
-            If True, returns (objective, gradient). If False, returns only objective.
+            Central path parameter. Controls the strength of the acyclicity constraint relative to the data fit.
+        cov : torch.Tensor
+            Pre-computed covariance matrix as a PyTorch tensor.
 
         Returns
         -------
-        tuple[float, np.ndarray] | torch.Tensor
-            Objective value and gradient (if return_grad=True), else objective only.
+        torch.Tensor
+            The objective value.
         """
+        n = self.n_features_in_
+        eye = torch.eye(n, dtype=W.dtype, device=W.device)
 
-        if backend == np:
-            # Step 1: Reshape the flat 1D array back into a 2D adjacency matrix
-            W = w_in.reshape(self.n_features_in_, self.n_features_in_)
+        # Component 1: Least Squares Score
+        # Q(W; X) = 1/(2n) * ||X - XW||_F^2 = 1/(2n) * ||I - W||_F^2 wrt covariance
+        # This measures how well the current W explains the observed covariance
+        # dif = I - W, so (I - W) @ cov gives the residual
+        dif = eye - W
+        rhs = cov @ dif
+        score = 0.5 * torch.trace(dif.T @ rhs)
 
-            # Step 2: Compute the Least Squares loss and gradient
-            dif = np.eye(self.n_features_in_) - W
-            rhs = self.cov_ @ dif
-            score = 0.5 * np.trace(dif.T @ rhs)
-            G_score = -rhs
+        # Component 2: Log-Determinant Acyclicity Constraint
+        M = self.s * eye - (W * W)
+        sign, logdet = torch.linalg.slogdet(M)
 
-            # Step 3: Compute the Log-Determinant Acyclicity Constraint
-            # and gradient
-            M = self.s * np.eye(self.n_features_in_) - (W * W)
-            sign, logdet = np.linalg.slogdet(M)
+        # Barrier Protection: If we step outside the valid M-matrix domain, return a large finite loss to force the
+        # optimizer to backtrack.
+        if sign <= 0:
+            # Return large loss while maintaining computation graph
+            h = mu * (self.lambda1 * torch.abs(W).sum() + 1e10)
+            return h
 
-            # Barrier Protection: Force backtrack if we step out
-            # of the valid DAG domain
-            if sign <= 0:
-                return np.inf, np.zeros_like(w_in)
+        h = -logdet + n * math.log(self.s)
 
-            h = -logdet + self.n_features_in_ * np.log(self.s)
-            M_inv = slin.inv(M)
-            Grad_h = 2 * W * M_inv.T
+        # Component 3: L1 Penalty for Sparsity
+        l1_penalty = self.lambda1 * torch.abs(W).sum()
 
-            # Step 4: Combine into the final DAGMA Central Path Objective
-            l1_penalty = self.lambda1 * np.abs(W).sum()
-            obj = mu * (score + l1_penalty) + h
+        # Combined Objective: Central Path formulation
+        # obj = mu * (score + l1_penalty) + h
+        # As mu -> 0, the h(W) term dominates, enforcing acyclicity
+        # As mu -> inf, the (score + l1_penalty) term dominates, fitting the data
+        obj = mu * (score + l1_penalty) + h
 
-            # Step 5: Combine gradients
-            # (np.sign(W) is the subgradient of the L1 norm)
-            G_obj = mu * (G_score + self.lambda1 * np.sign(W)) + Grad_h
-
-            # SciPy expects a flat 1D gradient array if return_grad is True
-            if return_grad:
-                return obj, G_obj.flatten()
-            return obj
-
-        else:  # for pythorch
-            W = w_in
-
-            if not isinstance(self.cov_, torch.Tensor):
-                self.cov_ = torch.tensor(self.cov_, dtype=W.dtype, device=W.device)
-
-            eye = torch.eye(self.n_features_in_, dtype=W.dtype, device=W.device)
-
-            # Step 1: Compute the Least Squares loss
-            dif = eye - W
-            rhs = self.cov_ @ dif
-            score = 0.5 * torch.trace(dif.T @ rhs)
-
-            # Step 2: Compute the Log-Determinant Acyclicity Constraint
-            M = self.s * eye - (W * W)
-            sign, logdet = torch.linalg.slogdet(M)
-
-            # Barrier Protection
-            if sign <= 0:
-                return torch.tensor(float("inf"), requires_grad=False)
-
-            h = -logdet + self.n_features_in_ * math.log(self.s)
-
-            # Step 3: DAGMA Central Path Objective
-            l1_penalty = self.lambda1 * torch.abs(W).sum()
-            obj = mu * (score + l1_penalty) + h
-
-            return obj
+        return obj
