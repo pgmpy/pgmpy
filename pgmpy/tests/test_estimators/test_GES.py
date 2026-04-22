@@ -141,14 +141,14 @@ def test_cancer_model():
     cancer_model = load_model("bnlearn/cancer")
     data = cancer_model.simulate(3000, seed=0)
 
-    est = GES(data)
+    est = GES(data, use_cache=True)
     dag = est.estimate()
 
     assert set(cancer_model.edges) <= set(dag.edges)
 
 
 def test_estimate_gaussian(gaussian_data):
-    est = GES(gaussian_data)
+    est = GES(gaussian_data, use_cache=True)
 
     for score in ["aic-g", "bic-g"]:
         est.estimate(scoring_method=score)
