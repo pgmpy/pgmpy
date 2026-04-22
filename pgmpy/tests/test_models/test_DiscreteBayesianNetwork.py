@@ -372,6 +372,10 @@ class TestBayesianNetworkMethods(unittest.TestCase):
         for cpd in model.cpds:
             self.assertTrue(np.allclose(np.sum(cpd.get_values(), axis=0), 1, atol=0.01))
 
+        model = DiscreteBayesianNetwork.get_random(n_nodes=5, n_edges=4, seed=42)
+        self.assertEqual(len(model.edges()), 4)
+        self.assertEqual(len(model.cpds), 5)
+
         # With node names
         node_names = ["a", "aa", "aaa", "aaaa", "aaaaa"]
         model = DiscreteBayesianNetwork.get_random(n_nodes=5, edge_prob=0.5, node_names=node_names)
