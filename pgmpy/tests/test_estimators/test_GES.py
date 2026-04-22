@@ -8,30 +8,6 @@ from pgmpy.example_models import load_model
 
 
 @pytest.fixture
-def random_data_estimator():
-    rand_data = pd.DataFrame(
-        np.random.randint(0, 5, size=(int(1e4), 2)),
-        columns=list("AB"),
-        dtype="category",
-    )
-    rand_data["C"] = rand_data["B"]
-    return GES(rand_data, use_cache=True)
-
-
-@pytest.fixture
-def titanic_estimators():
-    titanic_data = pd.read_csv("pgmpy/tests/test_estimators/testdata/titanic_train.csv")
-
-    titanic_data1 = titanic_data[["Survived", "Sex", "Pclass", "Age", "Embarked"]]
-    est1 = GES(titanic_data1, use_cache=True)
-
-    titanic_data2 = titanic_data[["Survived", "Sex", "Pclass"]].astype("category")
-    est2 = GES(titanic_data2, use_cache=True)
-
-    return est1, est2
-
-
-@pytest.fixture
 def gaussian_data():
     data = pd.read_csv(
         "pgmpy/tests/test_estimators/testdata/gaussian_testdata.csv",
