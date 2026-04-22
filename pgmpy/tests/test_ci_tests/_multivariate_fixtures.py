@@ -6,13 +6,15 @@ import pytest
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.models import LinearGaussianBayesianNetwork
 
+MULTIVARIATE_FIXTURE_SEED = 42
+
 skip_gh_actions = pytest.mark.skipif(
     os.getenv("GITHUB_ACTIONS") == "true",
     reason="Skipping residual tests on GitHub Actions.",
 )
 
 
-def _simulate_data(dependent: bool) -> pd.DataFrame:
+def _simulate_data(dependent: bool, seed: int = MULTIVARIATE_FIXTURE_SEED) -> pd.DataFrame:
     edges = [
         ("Z1", "X"),
         ("Z2", "X"),
@@ -37,7 +39,7 @@ def _simulate_data(dependent: bool) -> pd.DataFrame:
     )
     model.add_cpds(cpd_z1, cpd_z2, cpd_z3, cpd_x, cpd_y)
 
-    return model.simulate(n_samples=1000, seed=42)
+    return model.simulate(n_samples=1000, seed=seed)
 
 
 def _make_variants(df: pd.DataFrame) -> list[pd.DataFrame]:
@@ -77,9 +79,13 @@ def _make_variants(df: pd.DataFrame) -> list[pd.DataFrame]:
     return [df.copy(), df_cont_cont, df_cat_cont, df_cat_cat, df_ord_cont]
 
 
+def _build_pillai_data(seed: int = MULTIVARIATE_FIXTURE_SEED) -> dict[str, list[pd.DataFrame]]:
+    return {
+        "indep": _make_variants(_simulate_data(dependent=False, seed=seed)),
+        "dep": _make_variants(_simulate_data(dependent=True, seed=seed)),
+    }
+
+
 @pytest.fixture
 def pillai_data():
-    return {
-        "indep": _make_variants(_simulate_data(dependent=False)),
-        "dep": _make_variants(_simulate_data(dependent=True)),
-    }
+    return _build_pillai_data()

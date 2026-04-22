@@ -111,19 +111,19 @@ class HotellingLawley(_ResidualMixin, _BaseCITest):
         # Clip to avoid division by zero when a canonical correlation is exactly 1.
         cancor2 = np.clip(cancor2, 0.0, 1.0 - 1e-10)
 
-        HLT = float(np.sum(cancor2 / (1.0 - cancor2)))
+        HLT = np.sum(cancor2 / (1.0 - cancor2))
 
         # Step 3: Pillai's F-approximation.
         # Using a=p (predictor dims), b=q (response dims), n=N-p-1 (error df).
         # df2 = s*(n-b-1)+2 = s*(N-p-q-2)+2, which is symmetric in p and q.
         n = self.data.shape[0] - p - 1
 
-        df1 = float(p * q)
-        df2 = float(s * (n - q - 1) + 2)
+        df1 = p * q
+        df2 = s * (n - q - 1) + 2
 
         A_HLT = (HLT / s) / (1.0 + HLT / s)  # in [0, 1]
         F_stat = (A_HLT / df1) / ((1.0 - A_HLT) / df2)
-        p_value = float(1.0 - stats.f.cdf(F_stat, df1, df2))
+        p_value = 1.0 - stats.f.cdf(F_stat, df1, df2)
 
         self.statistic_ = HLT
         self.p_value_ = p_value

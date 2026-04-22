@@ -113,7 +113,7 @@ class RoysLargestRoot(_ResidualMixin, _BaseCITest):
 
         cancor2 = np.array([np.corrcoef(res_x_c[:, i], res_y_c[:, i])[0, 1] ** 2 for i in range(s)])
 
-        RLR = float(np.max(cancor2))
+        RLR = np.max(cancor2)
 
         # Step 3: F upper bound (eq. 28 in [1]).
         # The paper uses the predictor-side rank a = p and error df n = N - p - 1,
@@ -121,13 +121,13 @@ class RoysLargestRoot(_ResidualMixin, _BaseCITest):
         a = p
         n = self.data.shape[0] - p - 1
 
-        df1 = float(a)
-        df2 = float(n)
+        df1 = a
+        df2 = n
 
         # Clip to avoid division by zero if RLR is numerically 1.
         RLR_clipped = min(RLR, 1.0 - 1e-10)
         F_stat = (RLR_clipped / a) / ((1.0 - RLR_clipped) / n)
-        p_value = float(1.0 - stats.f.cdf(F_stat, df1, df2))
+        p_value = 1.0 - stats.f.cdf(F_stat, df1, df2)
 
         self.statistic_ = RLR
         self.p_value_ = p_value

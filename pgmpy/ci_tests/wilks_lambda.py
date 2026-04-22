@@ -122,7 +122,7 @@ class WilksLambda(_ResidualMixin, _BaseCITest):
 
         cancor2 = np.array([np.corrcoef(res_x_c[:, i], res_y_c[:, i])[0, 1] ** 2 for i in range(s)])
 
-        W = float(np.prod(1.0 - cancor2))
+        W = np.prod(1.0 - cancor2)
 
         # Step 3: Rao's F-approximation.
         # Using a=p (predictor dims), b=q (response dims), n=N-p-1 (error df).
@@ -136,12 +136,12 @@ class WilksLambda(_ResidualMixin, _BaseCITest):
         else:
             g = np.sqrt((a**2 * b**2 - 4.0) / (a**2 + b**2 - 5.0))
 
-        df1 = float(ab)
+        df1 = ab
         df2 = g * (n - (b - a + 1) / 2.0) - (ab - 2) / 2.0
 
         W_1g = W ** (1.0 / g)
         F_stat = ((1.0 - W_1g) * df2) / (W_1g * df1)
-        p_value = float(1.0 - stats.f.cdf(F_stat, df1, df2))
+        p_value = 1.0 - stats.f.cdf(F_stat, df1, df2)
 
         self.statistic_ = W
         self.p_value_ = p_value

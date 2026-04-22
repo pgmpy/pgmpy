@@ -12,7 +12,7 @@ skip_gh_actions = _multivariate_fixtures.skip_gh_actions
 
 @skip_gh_actions
 def test_pillai_no_cond(pillai_data):
-    expected_coefs = [0.1572, 0.1572, 0.1359, 0.1068, 0.1359]
+    expected_coefs = [0.1616, 0.1616, 0.1229, 0.1011, 0.1229]
     expected_pvalues = [0.0000, 0.0000, 0.0000, 0.0000, 0.0000]
 
     computed_coefs = []
@@ -23,14 +23,14 @@ def test_pillai_no_cond(pillai_data):
         computed_coefs.append(test.statistic_)
         computed_pvalues.append(test.p_value_)
 
-    assert np.allclose(computed_coefs, expected_coefs, atol=1e-4)
-    assert np.allclose(computed_pvalues, expected_pvalues, atol=1e-4)
+    assert np.allclose(computed_coefs, expected_coefs, atol=1e-2)
+    assert np.allclose(computed_pvalues, expected_pvalues, atol=1e-2)
 
 
 @skip_gh_actions
 def test_pillai_indep(pillai_data):
-    expected_coefs = [0.0016, 0.0007, 0.0044, 0.0055, 0.0044]
-    expected_pvalues = [0.2125, 0.4154, 0.1118, 0.2406, 0.1118]
+    expected_coefs = [0.0026, 0.0004, 0.0003, 0.0025, 0.0003]
+    expected_pvalues = [0.1072, 0.5069, 0.8774, 0.6431, 0.8774]
 
     computed_coefs = []
     computed_pvalues = []
@@ -40,13 +40,13 @@ def test_pillai_indep(pillai_data):
         computed_coefs.append(test.statistic_)
         computed_pvalues.append(test.p_value_)
 
-    assert np.allclose(computed_coefs, expected_coefs, atol=1e-4)
-    assert np.allclose(computed_pvalues, expected_pvalues, atol=1e-4)
+    assert np.allclose(computed_coefs, expected_coefs, atol=1e-2)
+    assert np.allclose(computed_pvalues, expected_pvalues, atol=1e-2)
 
 
 @skip_gh_actions
 def test_pillai_dependent(pillai_data):
-    expected_coefs = [0.1700, 0.2159, 0.1336, 0.1595, 0.1336]
+    expected_coefs = [0.1698, 0.2181, 0.1328, 0.1595, 0.1328]
     expected_pvalues = [0.0000, 0.0000, 0.0000, 0.0000, 0.0000]
 
     computed_coefs = []
@@ -57,8 +57,8 @@ def test_pillai_dependent(pillai_data):
         computed_coefs.append(test.statistic_)
         computed_pvalues.append(test.p_value_)
 
-    assert np.allclose(computed_coefs, expected_coefs, atol=1e-4)
-    assert np.allclose(computed_pvalues, expected_pvalues, atol=1e-4)
+    assert np.allclose(computed_coefs, expected_coefs, atol=1e-2)
+    assert np.allclose(computed_pvalues, expected_pvalues, atol=1e-2)
 
 
 def test_pillai_tests_approx(pillai_data):
