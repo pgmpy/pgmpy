@@ -223,8 +223,7 @@ class _BaseCITest(BaseObject):
         self._validate_inputs(X, Y, Z)
         Z = list(Z)
 
-        use_cache = self.use_cache and getattr(self, "_cache_allowed", True)
-        if use_cache:
+        if self.use_cache:
             if self.get_tag("is_symmetric", tag_value_default=True):
                 x_key, y_key = sorted((X, Y), key=repr)
             else:
@@ -252,11 +251,6 @@ class _BaseCITest(BaseObject):
         Subclasses must implement this method and return a ``_CITestResult``.
         """
         raise NotImplementedError(f"{self.__class__.__name__} must implement _compute_result.")
-
-    def set_params(self, **params):
-        result = super().set_params(**params)
-        self._result_cache.clear()
-        return result
 
     def _validate_inputs(self, X, Y, Z):
         if X == Y:

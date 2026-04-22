@@ -66,8 +66,6 @@ class YourCITest(_BaseCITest):
         self.param1 = param1
         self.param2 = param2
 
-        # TODO: If the test is stochastic for repeated identical queries, optionally
-        # disable caching by setting `self._cache_allowed = False` (or conditionally).
         super().__init__(use_cache=use_cache)
 
     def _compute_result(

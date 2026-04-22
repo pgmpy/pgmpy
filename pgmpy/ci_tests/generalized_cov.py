@@ -90,13 +90,7 @@ class GeneralizedCov(_ResidualMixin, _BaseCITest):
         self.estimator = estimator
         self.n_permutations = n_permutations
         self.random_state = random_state
-        self._cache_allowed = random_state is not None
         super().__init__(use_cache=use_cache)
-
-    def set_params(self, **params):
-        result = super().set_params(**params)
-        self._cache_allowed = self.random_state is not None
-        return result
 
     @staticmethod
     def _cross_covariance_statistic(res_x: pd.DataFrame, res_y: pd.DataFrame) -> float:
