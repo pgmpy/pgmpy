@@ -93,7 +93,7 @@ class DAGMALinear(_BaseCausalDiscovery):
     >>> from pgmpy.causal_discovery import DAGMALinear
     >>> from pgmpy.datasets import load_dataset
 
-    Load the Sachs continuous dataset (11 variables, 7466 samples):
+    Load the Sachs continuous dataset:
 
     >>> data = load_dataset("sachs_continuous").data
 
