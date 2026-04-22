@@ -12,7 +12,6 @@ from .pearsonr import Pearsonr
 from .pearsonr_equivalence import PearsonrEquivalence
 from .pillai_trace import PillaiTrace
 from .power_divergence import PowerDivergence
-from .prod_cov import ProdCov
 from .roys_largest_root import RoysLargestRoot
 from .wilks_lambda import WilksLambda
 
