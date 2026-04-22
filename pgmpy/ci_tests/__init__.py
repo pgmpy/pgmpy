@@ -3,6 +3,7 @@ from .chi_square import ChiSquare
 from .fisher_z import FisherZ
 from .g_sq import GSq
 from .gcm import GCM
+from .generalized_cov import GeneralizedCov
 from .hotelling_lawley import HotellingLawley
 from .independence_match import IndependenceMatch
 from .log_likelihood import LogLikelihood
@@ -22,6 +23,7 @@ __all__ = [
     "FisherZ",
     "GSq",
     "GCM",
+    "GeneralizedCov",
     "HotellingLawley",
     "IndependenceMatch",
     "LogLikelihood",
