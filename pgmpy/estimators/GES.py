@@ -40,13 +40,16 @@ class GES(StructureEstimator):
 
     References
     ----------
-    Chickering, David Maxwell. "Optimal structure identification with greedy search."
+    [1] Chickering, David Maxwell. "Optimal structure identification with greedy search."
       Journal of machine learning research 3.Nov (2002): 507-554.
+
+    [2] https://github.com/juangamella/ges
+
     """
 
     def __init__(self, data: pd.DataFrame, use_cache: bool = False, **kwargs):
         warnings.warn(
-            "GES is deprecated. Please use pgmpy.causal_discovery.GES instead.",
+            "GES is deprecated and will be removed in v1.3.0. Please use pgmpy.causal_discovery.GES instead.",
             FutureWarning,
             stacklevel=2,
         )
@@ -143,8 +146,8 @@ class GES(StructureEstimator):
         # Add directed edge u -> v
         new_model.add_edge(u, v)
 
-        # Orient v - t as v -> t for all t in T
-        remove_edges = [(t, v) for t in T]
+        # Orient v - t as t -> v for all t in T
+        remove_edges = [(v, t) for t in T]
         new_model.remove_edges_from(remove_edges)
 
         new_model.calibrate_directed_undirected_edges()

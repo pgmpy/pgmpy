@@ -360,11 +360,85 @@ class TestDAGCreation(unittest.TestCase):
                 "aaaaaaa",
                 "aaaaaaaa",
             ]
+            original_node_names = list(node_names)
             dag = DAG.get_random(n_nodes=n_nodes, edge_prob=edge_prob, node_names=node_names)
             self.assertEqual(len(dag.nodes()), n_nodes)
             self.assertEqual(sorted(dag.nodes()), node_names)
+            self.assertEqual(node_names, original_node_names)
             self.assertTrue(nx.is_directed_acyclic_graph(dag))
             self.assertTrue(len(dag.latents) == 0)
+
+    def test_random_dag_fixed_n_edges(self):
+        def assert_dag_props(dag, exp_nodes, exp_edges):
+            self.assertEqual(len(dag.nodes()), exp_nodes)
+            self.assertEqual(len(dag.edges()), exp_edges)
+            self.assertTrue(nx.is_directed_acyclic_graph(dag))
+
+        n_nodes = 8
+        max_edges = n_nodes * (n_nodes - 1) // 2
+
+        for n_edges in [0, 5, max_edges]:
+            dag = DAG.get_random(n_nodes=n_nodes, n_edges=n_edges, seed=7)
+            assert_dag_props(dag, n_nodes, n_edges)
+
+        with self.assertRaisesRegex(ValueError, "Only one of n_edges or edge_prob can be specified"):
+            DAG.get_random(n_nodes=n_nodes, n_edges=6, edge_prob=0.0, seed=11)
+
+        node_names = [
+            "a",
+            "aa",
+            "aaa",
+            "aaaa",
+            "aaaaa",
+            "aaaaaa",
+            "aaaaaaa",
+            "aaaaaaaa",
+        ]
+        original_node_names = list(node_names)
+        dag = DAG.get_random(
+            n_nodes=n_nodes,
+            n_edges=6,
+            node_names=node_names,
+            seed=11,
+        )
+        self.assertEqual(sorted(dag.nodes()), node_names)
+        self.assertEqual(node_names, original_node_names)
+        assert_dag_props(dag, n_nodes, 6)
+
+        dag = DAG.get_random(n_nodes=6, n_edges=4, latents=True, seed=3)
+        self.assertIsInstance(dag.latents, set)
+        self.assertTrue(dag.latents.issubset(dag.nodes()))
+        assert_dag_props(dag, 6, 4)
+
+        dag_a = DAG.get_random(n_nodes=5, n_edges=4, seed=42)
+        dag_b = DAG.get_random(n_nodes=5, n_edges=4, seed=42)
+        self.assertEqual(set(dag_a.edges()), set(dag_b.edges()))
+
+        node_names = [f"X_{i}" for i in range(6)]
+        dag = DAG.get_random(n_nodes=6, n_edges=15, node_names=node_names, seed=0)
+        node_order = {node: idx for idx, node in enumerate(node_names)}
+        self.assertTrue(any(node_order[u] > node_order[v] for u, v in dag.edges()))
+
+    def test_random_dag_fixed_n_edges_invalid(self):
+        n_nodes = 5
+        max_edges = n_nodes * (n_nodes - 1) // 2
+
+        with self.assertRaisesRegex(ValueError, "Invalid n_edges="):
+            DAG.get_random(n_nodes=n_nodes, n_edges=-1)
+
+        with self.assertRaisesRegex(ValueError, "Invalid n_edges="):
+            DAG.get_random(n_nodes=n_nodes, n_edges=max_edges + 1)
+
+        with self.assertRaisesRegex(ValueError, "Length of node_names"):
+            DAG.get_random(n_nodes=n_nodes, n_edges=3, node_names=["a", "b", "c"])
+
+    def test_random_dag_edge_prob_default(self):
+        with self.assertLogs("pgmpy", level="INFO") as cm:
+            dag = DAG.get_random(n_nodes=5, n_edges=None, edge_prob=None, seed=13)
+
+        self.assertEqual(len(dag.nodes()), 5)
+        self.assertTrue(nx.is_directed_acyclic_graph(dag))
+        self.assertTrue(any("Using default edge_prob=0.5" in msg for msg in cm.output))
 
     def tearDown(self):
         del self.graph
@@ -705,6 +779,44 @@ class TestDAGCreation(unittest.TestCase):
         self.assertAlmostEqual(stats["avg_n_parents"], 17 / 11, places=5)
         self.assertEqual(stats["max_n_parents"], 3)
         self.assertEqual(stats["n_latent_nodes"], 0)
+
+        self.assertNotIn("n_exposures", stats)
+        self.assertNotIn("n_outcomes", stats)
+        self.assertNotIn("n_causal_paths", stats)
+        self.assertNotIn("n_direct_paths", stats)
+        self.assertNotIn("n_mediated_paths", stats)
+        self.assertNotIn("n_mediators", stats)
+        self.assertNotIn("n_confounding_paths", stats)
+
+        model.with_role("exposures", {"Raf"}, inplace=True)
+        model.with_role("outcomes", {"Mek"}, inplace=True)
+        stats = model.get_stats()
+        self.assertEqual(stats["n_nodes"], 11)
+        self.assertEqual(stats["n_edges"], 17)
+        self.assertEqual(stats["n_root_nodes"], 2)
+        self.assertEqual(stats["n_leaf_nodes"], 4)
+        self.assertEqual(stats["n_v_structures"], 0)
+        self.assertEqual(stats["n_connected_components"], 2)
+        self.assertAlmostEqual(stats["edge_density"], 17 / (11 * 10 / 2), places=5)
+        self.assertAlmostEqual(stats["avg_n_parents"], 17 / 11, places=5)
+        self.assertEqual(stats["max_n_parents"], 3)
+        self.assertEqual(stats["n_latent_nodes"], 0)
+
+        self.assertEqual(stats["n_exposures"], 1)
+        self.assertEqual(stats["n_outcomes"], 1)
+        self.assertEqual(stats["n_causal_paths"], 1)
+        self.assertEqual(stats["n_direct_paths"], 1)
+        self.assertEqual(stats["n_mediated_paths"], 0)
+        self.assertEqual(stats["n_mediators"], 0)
+        self.assertEqual(stats["n_confounding_paths"], 3)
+
+        dag_test = DAG(ebunch=[("D", "G"), ("I", "G"), ("G", "L"), ("I", "S")], roles={"exposures": "D"})
+        stats = dag_test.get_stats()
+        self.assertNotIn("n_causal_paths", stats)
+
+        dag_test2 = DAG(ebunch=[("D", "G"), ("I", "G"), ("G", "L"), ("I", "S")], roles={"outcomes": "L"})
+        stats = dag_test2.get_stats()
+        self.assertNotIn("n_causal_paths", stats)
 
 
 class TestDAGParser(unittest.TestCase):

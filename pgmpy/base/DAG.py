@@ -1310,27 +1310,34 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
     @staticmethod
     def get_random(
         n_nodes=5,
-        edge_prob=0.5,
+        n_edges: int | None = None,
+        edge_prob: float | None = None,
         node_names: list[Hashable] | None = None,
         latents=False,
         seed: int | None = None,
     ) -> DAG:
         """
-        Returns a randomly generated DAG with `n_nodes` number of nodes with
-        edge probability being `edge_prob`.
+        Returns a randomly generated DAG with `n_nodes` number of nodes.
+
+        If `n_edges` is specified, generates a DAG with exactly that many edges.
+        If `n_edges` is None, edges are added randomly with probability `edge_prob`.
+        If both `n_edges` and `edge_prob` are None, uses default `edge_prob=0.5`.
 
         Parameters
         ----------
         n_nodes: int
             The number of nodes in the randomly generated DAG.
 
-        edge_prob: float
+        n_edges: int or None (default: None)
+            The number of edges in the randomly generated DAG.
+
+        edge_prob: float or None
             The probability of edge between any two nodes in the topologically
             sorted DAG.
 
         node_names: list (default: None)
             A list of variables names to use in the random graph.
-            If None, the node names are integer values starting from 0.
+            If None, the node names are "X_0", "X_1", ..., "X_{n-1}".
 
         latents: bool (default: False)
             If True, includes latent variables in the generated DAG.
@@ -1343,6 +1350,13 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         Random DAG: pgmpy.base.DAG
             The randomly generated DAG.
 
+        Raises
+        ------
+        ValueError
+            If `len(node_names) != n_nodes`.
+            If `n_edges` is outside `[0, n_nodes * (n_nodes - 1) // 2]`.
+            If both `n_edges` and `edge_prob` are specified.
+
         Examples
         --------
         >>> from pgmpy.base import DAG
@@ -1350,22 +1364,55 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> sorted(random_dag.nodes())
         ['X_0', 'X_1', 'X_2', 'X_3', 'X_4', 'X_5', 'X_6', 'X_7', 'X_8', 'X_9']
         >>> sorted(random_dag.edges())  # doctest: +NORMALIZE_WHITESPACE
-        [('X_0', 'X_2'), ('X_0', 'X_5'), ('X_0', 'X_6'), ('X_0', 'X_7'),
-         ('X_1', 'X_3'), ('X_1', 'X_8'), ('X_2', 'X_3'), ('X_2', 'X_4'),
-         ('X_4', 'X_5'), ('X_7', 'X_9')]
-        """
-        # Step 1: Generate a matrix of 0 and 1. Prob of choosing 1 = edge_prob
-        gen = np.random.default_rng(seed=seed)
-        adj_mat = gen.choice([0, 1], size=(n_nodes, n_nodes), p=[1 - edge_prob, edge_prob])
+        [('X_0', 'X_2'), ('X_0', 'X_3'), ('X_2', 'X_9'), ('X_3', 'X_1'),
+         ('X_3', 'X_4'), ('X_3', 'X_8'), ('X_5', 'X_2'), ('X_5', 'X_6'),
+         ('X_5', 'X_9'), ('X_6', 'X_0'), ('X_6', 'X_1'), ('X_6', 'X_3'),
+         ('X_6', 'X_4'), ('X_6', 'X_9'), ('X_7', 'X_1'), ('X_7', 'X_2'),
+         ('X_7', 'X_4'), ('X_7', 'X_8')]
 
-        # Step 2: Use the upper triangular part of the matrix as adjacency.
+        >>> dag = DAG.get_random(n_nodes=5, n_edges=6, seed=42)
+        >>> dag.number_of_edges()
+        6
+        """
+        gen = np.random.default_rng(seed=seed)
+
         if node_names is None:
             node_names = [f"X_{i}" for i in range(n_nodes)]
 
-        adj_pd = pd.DataFrame(np.triu(adj_mat, k=1), columns=node_names, index=node_names)
-        nx_dag = nx.from_pandas_adjacency(adj_pd, create_using=nx.DiGraph)
+        if len(node_names) != n_nodes:
+            raise ValueError(f"Length of node_names ({len(node_names)}) must be equal to n_nodes ({n_nodes}).")
 
+        if n_edges is not None and edge_prob is not None:
+            raise ValueError("Only one of n_edges or edge_prob can be specified.")
+
+        if n_edges is None and edge_prob is None:
+            edge_prob = 0.5
+            logger.info("Using default edge_prob=0.5 since neither n_edges nor edge_prob were specified.")
+
+        shuffled_names = list(node_names)
+        gen.shuffle(shuffled_names)
+        if n_edges is not None:
+            max_edges = n_nodes * (n_nodes - 1) // 2
+            if n_edges < 0 or n_edges > max_edges:
+                raise ValueError(f"Invalid n_edges={n_edges}. For n_nodes={n_nodes}, valid range is [0, {max_edges}].")
+            # Apply a random node permutation to avoid label-order bias
+            perm = gen.permutation(n_nodes)
+            upper_i, upper_j = np.triu_indices(n_nodes, k=1)
+            chosen = gen.choice(len(upper_i), size=n_edges, replace=False)
+
+            adj_mat = np.zeros((n_nodes, n_nodes), dtype=int)
+            adj_mat[perm[upper_i[chosen]], perm[upper_j[chosen]]] = 1
+            adj_pd = pd.DataFrame(adj_mat, columns=shuffled_names, index=shuffled_names)
+
+        else:
+            # Step 1: Generate a matrix of 0 and 1. Prob of choosing 1 = edge_prob
+            adj_mat = gen.choice([0, 1], size=(n_nodes, n_nodes), p=[1 - edge_prob, edge_prob])
+            # Step 2: Use the upper triangular part of the matrix as adjacency.
+            adj_pd = pd.DataFrame(np.triu(adj_mat, k=1), columns=shuffled_names, index=shuffled_names)
+
+        nx_dag = nx.from_pandas_adjacency(adj_pd, create_using=nx.DiGraph)
         dag = DAG(nx_dag)
+
         dag.add_nodes_from(node_names)
 
         if latents:
@@ -1750,15 +1797,60 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         n_latent_nodes : int
             Number of latent (unobserved) nodes in the DAG.
 
+        Causal statistics : only computed if exposures and outcomes are provided.
+        n_exposures : int
+            Number of exposure nodes.
+        n_outcomes : int
+            Number of outcome nodes.
+        n_causal_paths : int
+            Number of directed paths from exposures to outcomes.
+        n_direct_paths : int
+            Number of causal paths with no mediator.
+        n_mediated_paths : int
+            Number of causal paths through at least one mediator.
+        n_mediators : int
+            Number of nodes mediating at least one exposure-outcome path.
+        n_confounding_paths : int
+            Number of backdoor paths from exposures to outcomes.
+
         Examples
         --------
         >>> from pgmpy.base import DAG
-        >>> dag = DAG([("D", "G"), ("I", "G"), ("G", "L"), ("I", "S")])
-        >>> stats = dag.get_stats()
-        >>> stats["n_nodes"]
-        5
-        >>> stats["n_v_structures"]
-        1
+        >>> from pprint import pprint
+        >>> dag = DAG([('D', 'G'), ('I', 'G'), ('G', 'L'), ('I', 'S')])
+        >>> pprint(dag.get_stats())
+        {'avg_n_parents': 0.8,
+         'edge_density': 0.4,
+         'max_n_parents': 2,
+         'n_connected_components': 1,
+         'n_edges': 4,
+         'n_latent_nodes': 0,
+         'n_leaf_nodes': 2,
+         'n_nodes': 5,
+         'n_root_nodes': 2,
+         'n_v_structures': 1}
+        >>> dag2 = DAG(
+        ...     ebunch=[('D', 'G'), ('I', 'G'), ('G', 'L'), ('I', 'S')],
+        ...     roles={'exposures': 'D', 'outcomes': 'L'}
+        ... )
+        >>> pprint(dag2.get_stats())
+        {'avg_n_parents': 0.8,
+         'edge_density': 0.4,
+         'max_n_parents': 2,
+         'n_causal_paths': 1,
+         'n_confounding_paths': 0,
+         'n_connected_components': 1,
+         'n_direct_paths': 0,
+         'n_edges': 4,
+         'n_exposures': 1,
+         'n_latent_nodes': 0,
+         'n_leaf_nodes': 2,
+         'n_mediated_paths': 1,
+         'n_mediators': 1,
+         'n_nodes': 5,
+         'n_outcomes': 1,
+         'n_root_nodes': 2,
+         'n_v_structures': 1}
         """
         no_of_nodes = self.number_of_nodes()
         no_of_edges = self.number_of_edges()
@@ -1768,7 +1860,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         n_v_structures = sum(len(pairs) for pairs in self.get_immoralities().values())
 
-        return {
+        stats = {
             "n_nodes": no_of_nodes,
             "n_edges": no_of_edges,
             "n_root_nodes": sum(d == 0 for d in in_degrees.values()),
@@ -1780,3 +1872,74 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             "max_n_parents": max(in_degrees.values()) if in_degrees else 0,
             "n_latent_nodes": len(getattr(self, "latents", [])),
         }
+
+        exposures = self.get_role("exposures")
+        outcomes = self.get_role("outcomes")
+
+        if len(exposures) > 0 and len(outcomes) > 0:
+            exposures = set(exposures)
+            outcomes = set(outcomes)
+            # Used for calculation of n_causal_paths and n_compounding_paths
+            topo_order = list(nx.topological_sort(self))
+
+            # n_causal_paths
+            paths_fwd = dict.fromkeys(self.nodes(), 0)
+            for exp in exposures:
+                paths_fwd[exp] = 1
+
+            for node in topo_order:
+                for child in self.successors(node):
+                    paths_fwd[child] += paths_fwd[node]
+
+            n_causal_paths = sum(paths_fwd[out] for out in outcomes)
+
+            # n_direct_paths
+            n_direct_paths = sum(self.has_edge(exp, out) for exp in exposures for out in outcomes)
+
+            # n_mediated_paths
+            n_mediated_paths = n_causal_paths - n_direct_paths
+
+            # n_mediators
+            reachable_from_exp = set()
+            for exp in exposures:
+                reachable_from_exp |= nx.descendants(self, exp)
+
+            can_reach_outcome = set()
+            for out in outcomes:
+                can_reach_outcome |= nx.ancestors(self, out)
+
+            mediator_nodes = (reachable_from_exp & can_reach_outcome) - exposures - outcomes
+            n_mediators = len(mediator_nodes)
+
+            # n_confounding_paths
+            relevant_nodes = set(self.nodes()) - exposures
+            blocked_graph = self.subgraph(relevant_nodes)
+
+            n_confounding_paths = 0
+
+            for exp in exposures:
+                for parent in self.predecessors(exp):
+                    paths_conf = dict.fromkeys(blocked_graph.nodes(), 0)
+                    if parent in paths_conf:
+                        paths_conf[parent] = 1
+                    for node in topo_order:
+                        if node not in blocked_graph:
+                            continue
+                        for child in blocked_graph.successors(node):
+                            paths_conf[child] += paths_conf[node]
+
+                    n_confounding_paths += sum(paths_conf[out] for out in outcomes if out in paths_conf)
+
+            stats.update(
+                {
+                    "n_exposures": len(exposures),
+                    "n_outcomes": len(outcomes),
+                    "n_causal_paths": n_causal_paths,
+                    "n_direct_paths": n_direct_paths,
+                    "n_mediated_paths": n_mediated_paths,
+                    "n_mediators": n_mediators,
+                    "n_confounding_paths": n_confounding_paths,
+                }
+            )
+
+        return stats
