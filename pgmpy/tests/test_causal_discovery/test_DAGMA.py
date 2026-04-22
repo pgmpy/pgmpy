@@ -43,16 +43,16 @@ def continuous_data():
     Set up a simple synthetic dataset using LinearGaussianBN.
     Creates a chain X -> Y -> Z with known causal relationships.
     """
-    from pgmpy.factors.continuous import LinearGaussianCPD
-
-    model = LinearGaussianBayesianNetwork([("X", "Y"), ("Y", "Z")])
-    # X ~ N(0, 1): beta=[0], std=1
-    cpd_x = LinearGaussianCPD("X", [0], 1)
-    # Y = 2.0*X + N(0, 0.5): beta=[0, 2.0], std=0.5
-    cpd_y = LinearGaussianCPD("Y", [0, 2.0], 0.5, evidence=["X"])
-    # Z = 1.5*Y + N(0, 0.5): beta=[0, 1.5], std=0.5
-    cpd_z = LinearGaussianCPD("Z", [0, 1.5], 0.5, evidence=["Y"])
-    model.add_cpds(cpd_x, cpd_y, cpd_z)
+    dagitty_str = """
+    dag {
+    X [exposure]
+    Y
+    Z [outcome]
+    X -> Y [beta=2.0]
+    Y -> Z [beta=1.5]
+    }
+    """
+    model = DAG.from_dagitty(string=dagitty_str)
     data = model.simulate(n_samples=1000, seed=42)
     return data
 
@@ -98,23 +98,18 @@ class TestDagmaLinearCore:
         """
         Test with 5-10 variables. Verifies the algorithm scales and maintains acyclicity.
         """
-        from pgmpy.factors.continuous import LinearGaussianCPD
-
-        model = LinearGaussianBayesianNetwork(
-            [("V1", "V2"), ("V1", "V3"), ("V2", "V3"), ("V3", "V5"), ("V4", "V7"), ("V5", "V7")]
-        )
-        model.add_node("V6")
-
-        cpd_v1 = LinearGaussianCPD("V1", [0], 1)
-        cpd_v4 = LinearGaussianCPD("V4", [0], 1)
-        cpd_v6 = LinearGaussianCPD("V6", [0], 1)
-
-        cpd_v2 = LinearGaussianCPD("V2", [0, 1.5], 0.5, evidence=["V1"])
-        cpd_v3 = LinearGaussianCPD("V3", [0, 2.0, 0.5], 0.5, evidence=["V1", "V2"])
-        cpd_v5 = LinearGaussianCPD("V5", [0, 1.0], 0.5, evidence=["V3"])
-        cpd_v7 = LinearGaussianCPD("V7", [0, 0.8, 1.2], 0.5, evidence=["V4", "V5"])
-
-        model.add_cpds(cpd_v1, cpd_v2, cpd_v3, cpd_v4, cpd_v5, cpd_v6, cpd_v7)
+        dagitty_str = """
+        dag {
+        V1 -> V2 [beta=1.5]
+        V1 -> V3 [beta=2.0]
+        V2 -> V3 [beta=0.5]
+        V3 -> V5 [beta=1.0]
+        V4 -> V7 [beta=0.8]
+        V5 -> V7 [beta=1.2]
+        V6
+        }
+        """
+        model = DAG.from_dagitty(string=dagitty_str)
         data = model.simulate(n_samples=1000, seed=42)
 
         est = DAGMALinear()
@@ -129,16 +124,16 @@ class TestDagmaLinearCore:
         Use LinearGaussianBN to generate data with known causal structure
         as specified in SPEC.md Section 5.1.
         """
-        from pgmpy.factors.continuous import LinearGaussianCPD
-
         if LinearGaussianBayesianNetwork is None:
             pytest.skip("LinearGaussianBayesianNetwork not available")
 
-        model = LinearGaussianBayesianNetwork([("X1", "X2"), ("X2", "X3")])
-        cpd_x1 = LinearGaussianCPD("X1", [0], 1)
-        cpd_x2 = LinearGaussianCPD("X2", [0, 2.0], 0.5, evidence=["X1"])
-        cpd_x3 = LinearGaussianCPD("X3", [0, 1.5], 0.5, evidence=["X2"])
-        model.add_cpds(cpd_x1, cpd_x2, cpd_x3)
+        dagitty_str = """
+        dag {
+        X1 -> X2 [beta=2.0]
+        X2 -> X3 [beta=1.5]
+        }
+        """
+        model = DAG.from_dagitty(string=dagitty_str)
         data = model.simulate(n_samples=1000, seed=42)
 
         est = DAGMALinear()
@@ -173,11 +168,7 @@ class TestDagmaLinearCore:
         from pgmpy.datasets import load_dataset
 
         # 1. Load Sachs continuous dataset
-        try:
-            data_obj = load_dataset("sachs_continuous")
-            data = data_obj.data
-        except Exception:
-            pytest.skip("Sachs dataset not available.")
+        data = load_dataset("sachs_continuous").data
 
         # Standardize for comparison consistency across different optimizers
         data = (data - data.mean()) / data.std()
@@ -212,13 +203,13 @@ class TestDagmaLinear:
     @pytest.fixture
     def data(self):
         """Set up a simple synthetic dataset using LinearGaussianBN."""
-        from pgmpy.factors.continuous import LinearGaussianCPD
-
-        model = LinearGaussianBayesianNetwork([("X", "Y"), ("Y", "Z")])
-        cpd_x = LinearGaussianCPD("X", [0], 1)
-        cpd_y = LinearGaussianCPD("Y", [0, 2.0], 0.5, evidence=["X"])
-        cpd_z = LinearGaussianCPD("Z", [0, 1.5], 0.5, evidence=["Y"])
-        model.add_cpds(cpd_x, cpd_y, cpd_z)
+        dagitty_str = """
+        dag {
+        X -> Y [beta=2.0]
+        Y -> Z [beta=1.5]
+        }
+        """
+        model = DAG.from_dagitty(string=dagitty_str)
         data = model.simulate(n_samples=1000, seed=42)
         return data
 

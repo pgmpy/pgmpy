@@ -95,12 +95,12 @@ class DAGMALinear(_BaseCausalDiscovery):
 
     Load the Sachs continuous dataset (11 variables, 7466 samples):
 
-    >>> data = load_dataset("sachs_continuous")
+    >>> data = load_dataset("sachs_continuous").data
 
     Learn the causal structure:
 
     >>> est = DAGMALinear()
-    >>> est.fit(data.data)
+    >>> est.fit(data)
     >>> print(list(est.causal_graph_.edges()))
 
     >>> Output: [('raf', 'mek'), ('plc', 'pip2'), ('erk', 'akt'), ('erk', 'pka'),('akt', 'pka'), ('pkc', 'p38'),
@@ -165,11 +165,6 @@ class DAGMALinear(_BaseCausalDiscovery):
         mu = self.mu_init
 
         # Step 4: Central Path Optimization Loop
-        # Each iteration:
-        #   a. Creates a new PyTorch parameter for W
-        #   b. Runs L-BFGS to optimize the objective at current mu
-        #   c. Decreases mu by mu_factor (central path decay)
-        # As mu decreases, the acyclicity constraint becomes stricter
         for i in range(self.max_iter):
             # Create PyTorch parameter for current W estimate
             W_tensor = torch.nn.Parameter(torch.from_numpy(W_est).to(device=device, dtype=dtype))
@@ -195,7 +190,6 @@ class DAGMALinear(_BaseCausalDiscovery):
         self.adjacency_matrix_ = W_est
 
         # Step 6: Convert to pgmpy DAG object
-        # Create DataFrame with feature names for clear edge labels
         df_adj = pd.DataFrame(W_est, index=self.feature_names_in_, columns=self.feature_names_in_)
         # Convert to NetworkX DiGraph, then to pgmpy's DAG wrapper
         nx_graph = nx.from_pandas_adjacency(df_adj, create_using=nx.DiGraph)
@@ -230,9 +224,6 @@ class DAGMALinear(_BaseCausalDiscovery):
         eye = torch.eye(n, dtype=W.dtype, device=W.device)
 
         # Component 1: Least Squares Score
-        # Q(W; X) = 1/(2n) * ||X - XW||_F^2 = 1/(2n) * ||I - W||_F^2 wrt covariance
-        # This measures how well the current W explains the observed covariance
-        # dif = I - W, so (I - W) @ cov gives the residual
         dif = eye - W
         rhs = cov @ dif
         score = 0.5 * torch.trace(dif.T @ rhs)
@@ -241,7 +232,7 @@ class DAGMALinear(_BaseCausalDiscovery):
         M = self.s * eye - (W * W)
         sign, logdet = torch.linalg.slogdet(M)
 
-        # Barrier Protection: If we step outside the valid M-matrix domain, return a large finite loss to force the
+        # Barrier Protection: If it step outside the valid M-matrix domain, return a large finite loss to force the
         # optimizer to backtrack.
         if sign <= 0:
             # Return large loss while maintaining computation graph
@@ -254,7 +245,6 @@ class DAGMALinear(_BaseCausalDiscovery):
         l1_penalty = self.lambda1 * torch.abs(W).sum()
 
         # Combined Objective: Central Path formulation
-        # obj = mu * (score + l1_penalty) + h
         # As mu -> 0, the h(W) term dominates, enforcing acyclicity
         # As mu -> inf, the (score + l1_penalty) term dominates, fitting the data
         obj = mu * (score + l1_penalty) + h
