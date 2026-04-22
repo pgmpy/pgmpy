@@ -234,200 +234,6 @@ class TOPIC(_BaseCausalDiscovery):
         return improvement_matrix
 
 
-    def _fit(self, X: pd.DataFrame):
-        """
-        The fitting procedure for the TOPIC algorithm.
-
-        Parameters
-        ----------
-        X: pd.DataFrame
-            The input dataset
-        """
-
-        # 0. Initialization
-        score_c: ScoreCache | StructureScore
-        score, score_c = get_scoring_method(self.scoring_method, X, self.use_cache)
-        score_fn = score.local_score
-
-        self.n_features_in_ = X.shape[1]
-        self.feature_names_in_ = np.asarray(X.columns, dtype=object)
-
-        dag_current = DAG()
-        dag_current.add_nodes_from(list(X.columns))
-        candidates_ = list(dag_current.nodes)
-        topological_order_ = []
-        topic_history_ = []
-
-        # 1. Discover a topological order, prune and add edges
-        n_nodes = len(dag_current.nodes)
-        pbar = (
-            tqdm(total=n_nodes, desc="Topological order", unit="node")
-            if self.show_progress and config.SHOW_PROGRESS
-            else None
-        )
-
-        it = 0
-        while it < n_nodes:
-            source, source_hist = self._next_node_in_topological_order(
-                candidates_, dag_current, score_fn
-            )
-            candidates_.remove(source)
-            topological_order_.append(source)
-
-            if pbar is not None:
-                pbar.set_description(f"Processing: {source}")
-                pbar.set_postfix_str(f"remaining={len(candidates_)}")
-
-            edges_added_hist, considered_adding_hist = self._add_outgoing_edges(
-                source, candidates_, dag_current, score_fn=score_fn
-            )
-            edges_pruned_hist, considered_pruning_hist = self._remove_ingoing_edges(
-                source, dag_current, score_fn
-            )
-
-            topic_history_.append(
-                {
-                    "iteration": it,
-                    "source": source,
-                    "topological_order": [n for n in topological_order_],
-                    "remaining_candidates": [c for c in candidates_],
-                    "source_selection": source_hist,
-                    "edges_added": edges_added_hist,
-                    "edges_pruned": edges_pruned_hist,
-                    "considered_adding": considered_adding_hist,
-                    "considered_pruning": considered_pruning_hist,
-                }
-            )
-
-            if pbar is not None:
-                pbar.update(1)
-            it += 1
-
-        if pbar is not None:
-            pbar.set_description("Topological order")
-            pbar.set_postfix_str("")
-            pbar.close()
-
-        if self.return_type == "dag":
-            self.causal_graph_ = dag_current
-        elif self.return_type == "pdag":
-            self.causal_graph_ = dag_current.to_pdag()
-        else:
-            raise ValueError(
-                f"return_type must be one of: dag, pdag, got {self.return_type}"
-            )
-
-        self.adjacency_matrix_ = nx.to_pandas_adjacency(self.causal_graph_)
-        self.topological_order_ = topological_order_
-        self.history_ = topic_history_
-
-        return self
-
-
-    def _add_outgoing_edges(
-        self, source: int | str, candidates: List[int | str], dag_current: DAG, score_fn,
-    ) -> tuple[list[dict], list[dict]]:
-        """Adds outgoing edges from source node
-
-        Parameters
-        ----------
-        source:
-            source node
-        candidates:
-            candidate nodes; by construction not upstream from source in the topological order
-
-        Returns
-        -------
-        added_edges: List
-             added edges
-        considered_edges: List
-             all considered edges
-        """
-        added_edges = []
-        considered_edges = []
-
-        for node in candidates:
-            if node == source:
-                continue
-
-            current_parents = list(dag_current.get_parents(node)).copy()
-            old_score = score_fn(node, current_parents)
-            current_parents.append(source)
-            new_score = score_fn(node, current_parents)
-
-            gain = new_score - old_score #self._addition_gain(source, node, dag_current)
-            print("Gain - ", old_score, new_score)
-            significant = gain > self.min_improvement
-
-            considered_edges.append(
-                {
-                    "from": str(source),
-                    "to": str(node),
-                    "gain": gain,
-                    "significant": significant,
-                }
-            )
-
-            if significant:
-                dag_current.add_edge(source, node)
-                added_edges.append({"from": str(source), "to": str(node), "gain": gain})
-
-        return added_edges, considered_edges
-
-    def _remove_ingoing_edges(
-        self,
-        source: int | str,
-        dag_current: DAG,
-        score_fn=None,
-    ) -> [List, List]:
-        """Removes ingoing edges from source node
-
-        Parameters
-        ----------
-        source:
-            source node
-        dag_current:
-            current model
-
-        Returns
-        -------
-        added_edges: List
-             removed edges
-        considered_edges: List
-             all considered edges
-        """
-        pruned_edges = []
-        considered_edges = []
-        current_parents = list(dag_current.get_parents(source)).copy()
-
-        while len(current_parents) > 0:
-            removed_found, removed_parent, best_diff, candidate_diffs = (
-                self._find_removable_edge(current_parents, source, score_fn)
-            )
-
-            for parent, diff in candidate_diffs:
-                considered_edges.append(
-                    {
-                        "from": str(parent),
-                        "to": str(source),
-                        "diff": diff,
-                    }
-                )
-
-            if removed_parent is None:
-                break
-            dag_current.remove_edge(removed_parent, source)
-            current_parents.remove(removed_parent)
-
-            pruned_edges.append(
-                {
-                    "from": str(removed_parent),
-                    "to": str(source),
-                    "diff": best_diff,
-                }
-            )
-        return pruned_edges, considered_edges
-
     def _find_removable_edge(
         self, parents: List[int | str], child: int | str, score_fn, noise_epsilon: float = 1e-10,
     ):
@@ -475,3 +281,148 @@ class TOPIC(_BaseCausalDiscovery):
 
         return True, best_parent, best_harm, candidate_stats
 
+
+    def _fit(self, X: pd.DataFrame):
+        """
+        The fitting procedure for the TOPIC algorithm.
+
+        Parameters
+        ----------
+        X: pd.DataFrame
+            The input dataset
+        """
+
+        # 0. Initialization
+        score_c: ScoreCache | StructureScore
+        score, score_c = get_scoring_method(self.scoring_method, X, self.use_cache)
+        score_fn = score.local_score
+
+        self.n_features_in_ = X.shape[1]
+        self.feature_names_in_ = np.asarray(X.columns, dtype=object)
+
+        dag_current = DAG()
+        dag_current.add_nodes_from(list(X.columns))
+        candidates = list(dag_current.nodes)
+        topological_order_ = []
+        topic_history_ = []
+
+        # 1. Discover a topological order, prune and add edges
+        n_nodes = len(dag_current.nodes)
+        pbar = (
+            tqdm(total=n_nodes, desc="Topological order", unit="node")
+            if self.show_progress and config.SHOW_PROGRESS
+            else None
+        )
+
+        it = 0
+        while it < n_nodes:
+            source, source_hist = self._next_node_in_topological_order(
+                candidates, dag_current, score_fn
+            )
+            candidates.remove(source)
+            topological_order_.append(source)
+
+            if pbar is not None:
+                pbar.set_description(f"Processing: {source}")
+                pbar.set_postfix_str(f"remaining={len(candidates)}")
+
+            added_edges = []
+            considered_edges = []
+
+            for node in candidates:
+                if node == source:
+                    continue
+
+                current_parents = list(dag_current.get_parents(node)).copy()
+                old_score = score_fn(node, current_parents)
+                current_parents.append(source)
+                new_score = score_fn(node, current_parents)
+
+                gain = new_score - old_score
+                significant = gain > self.min_improvement
+
+                considered_edges.append(
+                    {
+                        "from": str(source),
+                        "to": str(node),
+                        "gain": gain,
+                        "significant": significant,
+                    }
+                )
+
+                if significant:
+                    dag_current.add_edge(source, node)
+                    added_edges.append({"from": str(source), "to": str(node), "gain": gain})
+
+            # return added_edges, considered_edges
+            edges_added_hist, considered_adding_hist = added_edges, considered_edges
+
+            pruned_edges = []
+            considered_edges = []
+            current_parents = list(dag_current.get_parents(source)).copy()
+
+            while len(current_parents) > 0:
+                removed_found, removed_parent, best_diff, candidate_diffs = (
+                    self._find_removable_edge(current_parents, source, score_fn)
+                )
+
+                for parent, diff in candidate_diffs:
+                    considered_edges.append(
+                        {
+                            "from": str(parent),
+                            "to": str(source),
+                            "diff": diff,
+                        }
+                    )
+
+                if removed_parent is None:
+                    break
+                dag_current.remove_edge(removed_parent, source)
+                current_parents.remove(removed_parent)
+
+                pruned_edges.append(
+                    {
+                        "from": str(removed_parent),
+                        "to": str(source),
+                        "diff": best_diff,
+                    }
+                )
+            # return pruned_edges, considered_edges
+            edges_pruned_hist, considered_pruning_hist = pruned_edges, considered_edges
+            topic_history_.append(
+                {
+                    "iteration": it,
+                    "source": source,
+                    "topological_order": [n for n in topological_order_],
+                    "remaining_candidates": [c for c in candidates],
+                    "source_selection": source_hist,
+                    "edges_added": edges_added_hist,
+                    "edges_pruned": edges_pruned_hist,
+                    "considered_adding": considered_adding_hist,
+                    "considered_pruning": considered_pruning_hist,
+                }
+            )
+
+            if pbar is not None:
+                pbar.update(1)
+            it += 1
+
+        if pbar is not None:
+            pbar.set_description("Topological order")
+            pbar.set_postfix_str("")
+            pbar.close()
+
+        if self.return_type == "dag":
+            self.causal_graph_ = dag_current
+        elif self.return_type == "pdag":
+            self.causal_graph_ = dag_current.to_pdag()
+        else:
+            raise ValueError(
+                f"return_type must be one of: dag, pdag, got {self.return_type}"
+            )
+
+        self.adjacency_matrix_ = nx.to_pandas_adjacency(self.causal_graph_)
+        self.topological_order_ = topological_order_
+        self.history_ = topic_history_
+
+        return self
