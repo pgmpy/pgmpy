@@ -25,6 +25,9 @@ def test_ci_registry():
     assert "pillai" in all_tests
     assert "gcm" in all_tests
     assert "generalized_cov" in all_tests
+    assert "wilks_lambda" in all_tests
+    assert "roys_largest_root" in all_tests
+    assert "hotelling_lawley" in all_tests
 
 
 @pytest.fixture

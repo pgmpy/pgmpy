@@ -31,7 +31,6 @@ __all__ = [
     "PearsonrEquivalence",
     "PillaiTrace",
     "PowerDivergence",
-    "ProdCov",
     "RoysLargestRoot",
     "WilksLambda",
 ]
