@@ -3,7 +3,7 @@ import pandas as pd
 
 from pgmpy.utils import preprocess_data
 
-from ._base import _BaseCITest, _ResidualMixin
+from ._base import _BaseCITest, _CITestResult, _ResidualMixin
 
 
 class GeneralizedCov(_ResidualMixin, _BaseCITest):
@@ -84,12 +84,19 @@ class GeneralizedCov(_ResidualMixin, _BaseCITest):
         estimator=None,
         n_permutations: int = 1000,
         random_state=None,
+        use_cache: bool = True,
     ):
         self.data, self.dtypes = preprocess_data(data)
         self.estimator = estimator
         self.n_permutations = n_permutations
         self.random_state = random_state
-        super().__init__()
+        self._cache_allowed = random_state is not None
+        super().__init__(use_cache=use_cache)
+
+    def set_params(self, **params):
+        result = super().set_params(**params)
+        self._cache_allowed = self.random_state is not None
+        return result
 
     @staticmethod
     def _cross_covariance_statistic(res_x: pd.DataFrame, res_y: pd.DataFrame) -> float:
@@ -110,12 +117,11 @@ class GeneralizedCov(_ResidualMixin, _BaseCITest):
         singular_values = np.linalg.svd(cross_cov, compute_uv=False)
         return float(np.prod(singular_values))
 
-    def run_test(self, X: str, Y: str, Z: list):
+    def _compute_result(self, X: str, Y: str, Z: list):
         """
         Compute the determinant-style cross-covariance statistic and its permutation p-value.
 
-        Sets ``self.statistic_`` (determinant-style cross-covariance statistic) and
-        ``self.p_value_``.
+        Returns the determinant-style cross-covariance statistic and p-value.
 
         Parameters
         ----------
@@ -156,6 +162,4 @@ class GeneralizedCov(_ResidualMixin, _BaseCITest):
         # Phipson-Smyth +1 correction so that p-value is never exactly zero.
         p_value = (float(np.sum(perm_stats >= statistic)) + 1.0) / (self.n_permutations + 1.0)
 
-        self.statistic_ = statistic
-        self.p_value_ = p_value
-        return self.statistic_, self.p_value_
+        return _CITestResult(statistic=statistic, p_value=p_value)

@@ -5,7 +5,7 @@ from sklearn.cross_decomposition import CCA
 
 from pgmpy.utils import preprocess_data
 
-from ._base import _BaseCITest, _ResidualMixin
+from ._base import _BaseCITest, _CITestResult, _ResidualMixin
 
 
 class RoysLargestRoot(_ResidualMixin, _BaseCITest):
@@ -67,18 +67,19 @@ class RoysLargestRoot(_ResidualMixin, _BaseCITest):
         "data_types": ("discrete", "continuous", "mixed"),
         "default_for": None,
         "requires_data": True,
+        "is_symmetric": False,
     }
 
-    def __init__(self, data: pd.DataFrame, estimator=None):
+    def __init__(self, data: pd.DataFrame, estimator=None, use_cache: bool = True):
         self.data, self.dtypes = preprocess_data(data)
         self.estimator = estimator
-        super().__init__()
+        super().__init__(use_cache=use_cache)
 
-    def run_test(self, X: str, Y: str, Z: list):
+    def _compute_result(self, X: str, Y: str, Z: list):
         """
         Compute Roy's largest root statistic and its upper-bound p-value.
 
-        Sets ``self.statistic_`` (:math:`\\hat{\\rho}_1^2`) and ``self.p_value_``.
+        Returns Roy's largest root statistic and its p-value.
 
         Parameters
         ----------
@@ -129,6 +130,4 @@ class RoysLargestRoot(_ResidualMixin, _BaseCITest):
         F_stat = (RLR_clipped / a) / ((1.0 - RLR_clipped) / n)
         p_value = 1.0 - stats.f.cdf(F_stat, df1, df2)
 
-        self.statistic_ = RLR
-        self.p_value_ = p_value
-        return self.statistic_, self.p_value_
+        return _CITestResult(statistic=RLR, p_value=p_value)

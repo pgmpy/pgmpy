@@ -5,7 +5,7 @@ from sklearn.cross_decomposition import CCA
 
 from pgmpy.utils import preprocess_data
 
-from ._base import _BaseCITest, _ResidualMixin
+from ._base import _BaseCITest, _CITestResult, _ResidualMixin
 
 
 class PillaiTrace(_ResidualMixin, _BaseCITest):
@@ -79,12 +79,12 @@ class PillaiTrace(_ResidualMixin, _BaseCITest):
         "requires_data": True,
     }
 
-    def __init__(self, data: pd.DataFrame, estimator=None):
+    def __init__(self, data: pd.DataFrame, estimator=None, use_cache: bool = True):
         self.data, self.dtypes = preprocess_data(data)
         self.estimator = estimator
-        super().__init__()
+        super().__init__(use_cache=use_cache)
 
-    def run_test(
+    def _compute_result(
         self,
         X: str,
         Y: str,
@@ -93,7 +93,7 @@ class PillaiTrace(_ResidualMixin, _BaseCITest):
         """
         Compute Pillai's trace statistic and p-value.
 
-        Sets ``self.statistic_`` (Pillai's trace) and ``self.p_value_``.
+        Returns Pillai's trace statistic and p-value.
 
         Parameters
         ----------
@@ -138,7 +138,4 @@ class PillaiTrace(_ResidualMixin, _BaseCITest):
         f_stat = (coef / df1) * (df2 / (s - coef))
         p_value = 1 - stats.f.cdf(f_stat, df1, df2)
 
-        self.statistic_ = coef
-        self.p_value_ = p_value
-
-        return self.statistic_, self.p_value_
+        return _CITestResult(statistic=coef, p_value=p_value)

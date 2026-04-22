@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from ._base import _BaseCITest
+from ._base import _BaseCITest, _CITestResult
 
 
 class Pearsonr(_BaseCITest):
@@ -65,11 +65,11 @@ class Pearsonr(_BaseCITest):
         "requires_data": True,
     }
 
-    def __init__(self, data: pd.DataFrame):
+    def __init__(self, data: pd.DataFrame, use_cache: bool = True):
         self.data = data
-        super().__init__()
+        super().__init__(use_cache=use_cache)
 
-    def run_test(
+    def _compute_result(
         self,
         X: str,
         Y: str,
@@ -78,12 +78,13 @@ class Pearsonr(_BaseCITest):
         """
         Compute Pearson correlation coefficient and p-value.
 
-        Sets ``self.statistic_`` (Pearson's r) and ``self.p_value_``.
+        Returns Pearson's r, p-value, and optional degrees of freedom metadata.
         """
         data = self.data
         n_samples = data.shape[0]
 
         # Step 1: If Z is empty compute a non-conditional test.
+        attributes = {}
         if len(Z) == 0:
             coef, p_value = stats.pearsonr(data.loc[:, X], data.loc[:, Y])
 
@@ -97,11 +98,9 @@ class Pearsonr(_BaseCITest):
             residual_Y = data.loc[:, Y] - design_matrix @ Y_coef
 
             coef = np.corrcoef(residual_X, residual_Y)[0, 1]
-            self.dof_ = n_samples - len(Z) - 2
-            t_statistic = coef * np.sqrt(self.dof_ / (1 - coef**2))
-            p_value = 2 * stats.t.sf(np.abs(t_statistic), df=self.dof_)
+            dof = n_samples - len(Z) - 2
+            t_statistic = coef * np.sqrt(dof / (1 - coef**2))
+            p_value = 2 * stats.t.sf(np.abs(t_statistic), df=dof)
+            attributes["dof_"] = dof
 
-        self.statistic_ = coef
-        self.p_value_ = p_value
-
-        return self.statistic_, self.p_value_
+        return _CITestResult(statistic=coef, p_value=p_value, attributes=attributes)

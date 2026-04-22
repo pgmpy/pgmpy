@@ -5,7 +5,7 @@ from sklearn.linear_model import LinearRegression
 
 from pgmpy.utils import preprocess_data
 
-from ._base import _BaseCITest, _ResidualMixin
+from ._base import _BaseCITest, _CITestResult, _ResidualMixin
 
 
 class GCM(_ResidualMixin, _BaseCITest):
@@ -49,13 +49,13 @@ class GCM(_ResidualMixin, _BaseCITest):
         "requires_data": True,
     }
 
-    def __init__(self, data: pd.DataFrame, estimator=None):
+    def __init__(self, data: pd.DataFrame, estimator=None, use_cache: bool = True):
         self.data, self.dtypes = preprocess_data(data)
         self.estimator = LinearRegression() if estimator is None else estimator
 
-        super().__init__()
+        super().__init__(use_cache=use_cache)
 
-    def run_test(
+    def _compute_result(
         self,
         X: str,
         Y: str,
@@ -64,7 +64,7 @@ class GCM(_ResidualMixin, _BaseCITest):
         """
         Compute GCM statistic and p-value.
 
-        Sets ``self.statistic_`` (t-statistic) and ``self.p_value_``.
+        Returns the t-statistic and p-value.
         """
         # Step 1: Compute residuals of X and Y given Z.
         res_x = np.asarray(self.get_residuals(X, Z))
@@ -77,7 +77,4 @@ class GCM(_ResidualMixin, _BaseCITest):
         # Step 3: Compute p-value using standard normal distribution.
         p_value = 2 * stats.norm.sf(np.abs(t_stat))
 
-        self.statistic_ = t_stat
-        self.p_value_ = p_value
-
-        return self.statistic_, self.p_value_
+        return _CITestResult(statistic=t_stat, p_value=p_value)

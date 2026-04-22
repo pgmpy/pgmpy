@@ -60,5 +60,5 @@ class ChiSquare(PowerDivergence):
         "requires_data": True,
     }
 
-    def __init__(self, data: pd.DataFrame):
-        super().__init__(data=data, lambda_="pearson")
+    def __init__(self, data: pd.DataFrame, use_cache: bool = True):
+        super().__init__(data=data, lambda_="pearson", use_cache=use_cache)

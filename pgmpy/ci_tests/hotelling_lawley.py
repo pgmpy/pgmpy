@@ -5,7 +5,7 @@ from sklearn.cross_decomposition import CCA
 
 from pgmpy.utils import preprocess_data
 
-from ._base import _BaseCITest, _ResidualMixin
+from ._base import _BaseCITest, _CITestResult, _ResidualMixin
 
 
 class HotellingLawley(_ResidualMixin, _BaseCITest):
@@ -65,16 +65,16 @@ class HotellingLawley(_ResidualMixin, _BaseCITest):
         "requires_data": True,
     }
 
-    def __init__(self, data: pd.DataFrame, estimator=None):
+    def __init__(self, data: pd.DataFrame, estimator=None, use_cache: bool = True):
         self.data, self.dtypes = preprocess_data(data)
         self.estimator = estimator
-        super().__init__()
+        super().__init__(use_cache=use_cache)
 
-    def run_test(self, X: str, Y: str, Z: list):
+    def _compute_result(self, X: str, Y: str, Z: list):
         """
         Compute the Hotelling-Lawley trace statistic and p-value.
 
-        Sets ``self.statistic_`` (:math:`\\text{HLT}`) and ``self.p_value_``.
+        Returns the Hotelling-Lawley trace and p-value.
 
         Parameters
         ----------
@@ -125,6 +125,4 @@ class HotellingLawley(_ResidualMixin, _BaseCITest):
         F_stat = (A_HLT / df1) / ((1.0 - A_HLT) / df2)
         p_value = 1.0 - stats.f.cdf(F_stat, df1, df2)
 
-        self.statistic_ = HLT
-        self.p_value_ = p_value
-        return self.statistic_, self.p_value_
+        return _CITestResult(statistic=HLT, p_value=p_value)
