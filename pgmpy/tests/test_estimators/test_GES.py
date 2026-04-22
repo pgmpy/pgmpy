@@ -12,7 +12,7 @@ def test_ges_deprecation_warning():
         FutureWarning,
         match="GES is deprecated. Please use pgmpy.causal_discovery.GES instead.",
     ):
-        GES(pd.DataFrame({"A": [0, 1], "B": [0, 1]}), use_cache=False)
+        GES(pd.DataFrame({"A": [0, 1], "B": [0, 1]}), use_cache=True)
 
 
 @pytest.fixture
@@ -23,7 +23,7 @@ def random_data_estimator():
         dtype="category",
     )
     rand_data["C"] = rand_data["B"]
-    return GES(rand_data, use_cache=False)
+    return GES(rand_data, use_cache=True)
 
 
 @pytest.fixture
@@ -31,10 +31,10 @@ def titanic_estimators():
     titanic_data = pd.read_csv("pgmpy/tests/test_estimators/testdata/titanic_train.csv")
 
     titanic_data1 = titanic_data[["Survived", "Sex", "Pclass", "Age", "Embarked"]]
-    est1 = GES(titanic_data1, use_cache=False)
+    est1 = GES(titanic_data1, use_cache=True)
 
     titanic_data2 = titanic_data[["Survived", "Sex", "Pclass"]].astype("category")
-    est2 = GES(titanic_data2, use_cache=False)
+    est2 = GES(titanic_data2, use_cache=True)
 
     return est1, est2
 
@@ -84,7 +84,7 @@ def gaussian_data():
 #           {col: pd.Series(data[:, i], dtype="category") for i, col in enumerate(columns)}
 #       )
 #       causal_graph = ges(data, score_func="local_score_BDeu", node_names=columns)["G"]
-#       pgmpy_graph = GES(df, use_cache=False).estimate(
+#       pgmpy_graph = GES(df, use_cache=True).estimate(
 #           scoring_method=BDeu(df, equivalent_sample_size=1)
 #       )
 #       print(name, causallearn_cpdag_edge_sets(causal_graph, columns), pgmpy_cpdag_edge_sets(pgmpy_graph))
@@ -117,7 +117,7 @@ def gaussian_data():
 
 
 def test_insert_orients_t_away_from_v():
-    est = GES(pd.DataFrame({"A": [0, 1], "B": [0, 1], "C": [0, 1]}), use_cache=False)
+    est = GES(pd.DataFrame({"A": [0, 1], "B": [0, 1], "C": [0, 1]}), use_cache=True)
 
     pdag = PDAG(undirected_ebunch=[("B", "C")])
     pdag.add_nodes_from(["A", "B", "C"])
@@ -129,7 +129,7 @@ def test_insert_orients_t_away_from_v():
 
 
 def test_legal_edge_deletions_include_both_orders_for_undirected_edges():
-    est = GES(pd.DataFrame({"A": [0, 1], "B": [0, 1]}), use_cache=False)
+    est = GES(pd.DataFrame({"A": [0, 1], "B": [0, 1]}), use_cache=True)
 
     pdag = PDAG(undirected_ebunch=[("A", "B")])
     pdag.add_nodes_from(["A", "B"])
