@@ -190,7 +190,7 @@ class DAGMALinear(_BaseCausalDiscovery):
         self.adjacency_matrix_ = W_est
 
         # Step 6: Convert to pgmpy DAG object
-        df_adj = pd.DataFrame(W_est, index=self.feature_names_in_, columns=self.feature_names_in_)
+        df_adj = pd.DataFrame(W_est.astype(np.float64), index=self.feature_names_in_, columns=self.feature_names_in_)
         # Convert to NetworkX DiGraph, then to pgmpy's DAG wrapper
         nx_graph = nx.from_pandas_adjacency(df_adj, create_using=nx.DiGraph)
         self.causal_graph_ = DAG(nx_graph)

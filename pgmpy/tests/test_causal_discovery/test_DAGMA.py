@@ -142,7 +142,7 @@ class TestDagmaLinearCore:
         # Verify DAG property
         assert nx.is_directed_acyclic_graph(est.causal_graph_)
 
-        # We verify the estimated graph has correct structure
+        # Verify the estimated graph has correct structure
         edges = list(est.causal_graph_.edges())
         assert len(edges) >= 2  # At least X1->X2 and X2->X3
 
@@ -164,37 +164,37 @@ class TestDagmaLinearCore:
         with the official dagma package implementation on the Sachs dataset.
         """
         dagma_mod = pytest.importorskip("dagma.linear")
-        OfficialDagmaLinear = dagma_mod.DagmaLinear
-        from pgmpy.datasets import load_dataset
+        OfficialDagmaLinear = dagma_mod.DagmaLinear  # pragma: no cover
+        from pgmpy.datasets import load_dataset  # pragma: no cover
 
         # 1. Load Sachs continuous dataset
-        data = load_dataset("sachs_continuous").data
+        data = load_dataset("sachs_continuous").data  # pragma: no cover
 
         # Standardize for comparison consistency across different optimizers
-        data = (data - data.mean()) / data.std()
-        data_np = data.to_numpy().copy()
-        nodes = data.columns.tolist()
+        data = (data - data.mean()) / data.std()  # pragma: no cover
+        data_np = data.to_numpy().copy()  # pragma: no cover
+        nodes = data.columns.tolist()  # pragma: no cover
 
         # 2. Run official DAGMA
-        # We force s=1.0 and T=5 to match pgmpy's default single-stage behavior
-        model_official = OfficialDagmaLinear(loss_type="l2")
-        W_official = model_official.fit(data_np, lambda1=0.05, w_threshold=0.3, s=1.0, T=5)
+        # Force s=1.0 and T=5 to match pgmpy's default single-stage behavior
+        model_official = OfficialDagmaLinear(loss_type="l2")  # pragma: no cover
+        W_official = model_official.fit(data_np, lambda1=0.05, w_threshold=0.3, s=1.0, T=5)  # pragma: no cover
 
         # 3. Run pgmpy's DAGMA
-        est = DAGMALinear(lambda1=0.05, w_threshold=0.3, s=1.0)
-        est.fit(data)
+        est = DAGMALinear(lambda1=0.05, w_threshold=0.3, s=1.0)  # pragma: no cover
+        est.fit(data)  # pragma: no cover
 
         # 4. Compare structures using Structural Hamming Distance (SHD)
         # Convert official adjacency to pgmpy DAG for metric calculation
-        df_adj = pd.DataFrame(W_official, index=nodes, columns=nodes)
-        nx_official = nx.from_pandas_adjacency(df_adj, create_using=nx.DiGraph)
-        dag_official = DAG(nx_official)
+        df_adj = pd.DataFrame(W_official, index=nodes, columns=nodes)  # pragma: no cover
+        nx_official = nx.from_pandas_adjacency(df_adj, create_using=nx.DiGraph)  # pragma: no cover
+        dag_official = DAG(nx_official)  # pragma: no cover
 
-        shd_metric = SHD()
-        shd_val = shd_metric(true_causal_graph=dag_official, est_causal_graph=est.causal_graph_)
+        shd_metric = SHD()  # pragma: no cover
+        shd_val = shd_metric(true_causal_graph=dag_official, est_causal_graph=est.causal_graph_)  # pragma: no cover
 
         # SHD <= 6 indicates high structural similarity for 11 nodes
-        assert shd_val <= 6
+        assert shd_val <= 6  # pragma: no cover
 
 
 class TestDagmaLinear:
