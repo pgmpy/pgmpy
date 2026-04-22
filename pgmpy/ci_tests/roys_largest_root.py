@@ -23,17 +23,18 @@ class RoysLargestRoot(_ResidualMixin, _BaseCITest):
     The p-value is computed using the following F upper bound [1]:
 
     .. math::
-        F_{\max} = \frac{\text{RLR} / v}{(1 - \text{RLR}) / n},
+        F_{\max} = \frac{\text{RLR} / a}{(1 - \text{RLR}) / n},
 
-    with numerator degrees of freedom :math:`df_1 = v` and denominator degrees of freedom
-    :math:`df_2 = n`, where :math:`v = \max(p, q)` and :math:`n = N - v - 1`.
+    with numerator degrees of freedom :math:`df_1 = a` and denominator degrees of freedom
+    :math:`df_2 = n`, where :math:`a = p` is the dimension of the first residual block
+    :math:`R_X \in \mathbb{R}^{N \times p}` and :math:`n = N - p - 1`.
 
     .. warning::
         This F-approximation yields an *upper bound* on the true significance level
-        (i.e., the resulting p-value is optimistically small). When :math:`s = \min(p,q) = 1`
-        or when the test is univariate (:math:`p = q = 1`), the approximation is exact [1].
-        For :math:`s > 1`, it is advisable to corroborate a significant result with one of
-        the other multivariate tests.
+        (i.e., the resulting p-value is optimistically small). The paper notes that the
+        exact F result holds only for univariate tests (:math:`p = q = 1`) [1]. Because
+        the upper bound uses :math:`a = p`, this approximation is not symmetric in
+        :math:`X` and :math:`Y` when :math:`p \neq q`.
 
     Parameters
     ----------
@@ -115,17 +116,17 @@ class RoysLargestRoot(_ResidualMixin, _BaseCITest):
         RLR = float(np.max(cancor2))
 
         # Step 3: F upper bound (eq. 28 in [1]).
-        # v = max(p, q) and n = N - v - 1 give a formula that is symmetric in p and q
-        # and reduces to the exact F-test for the univariate case (p = q = 1).
-        v = max(p, q)
-        n = self.data.shape[0] - v - 1
+        # The paper uses the predictor-side rank a = p and error df n = N - p - 1,
+        # so the approximation is intentionally not symmetric in X and Y when p != q.
+        a = p
+        n = self.data.shape[0] - p - 1
 
-        df1 = float(v)
+        df1 = float(a)
         df2 = float(n)
 
         # Clip to avoid division by zero if RLR is numerically 1.
         RLR_clipped = min(RLR, 1.0 - 1e-10)
-        F_stat = (RLR_clipped / v) / ((1.0 - RLR_clipped) / n)
+        F_stat = (RLR_clipped / a) / ((1.0 - RLR_clipped) / n)
         p_value = float(1.0 - stats.f.cdf(F_stat, df1, df2))
 
         self.statistic_ = RLR
