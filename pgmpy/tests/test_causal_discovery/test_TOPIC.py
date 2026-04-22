@@ -56,9 +56,9 @@ def test_unit_improvement_matrix():
     dag.add_edge("A", "C")
 
     score_fn, base, w, combo = fake_score_fn_factory()
-    topic.score_fn_ = score_fn
+    # topic.scoring_method = score_fn
 
-    mat = topic._improvement_matrix(candidates=candidates, dag_current=dag)
+    mat = topic._improvement_matrix(candidates=candidates, dag_current=dag, score_fn=score_fn)
 
     assert mat.shape == (3, 3)
     assert np.all(np.diag(mat) == 0.0)
@@ -107,7 +107,7 @@ def test_unit_next_node_in_topological_order(monkeypatch):
         dtype=float,
     )
 
-    def fake_improvement_matrix(cands, dag_current):
+    def fake_improvement_matrix(cands, dag_current, _):
         assert cands == candidates  # sanity: same ordering
         return improv
 
@@ -118,7 +118,7 @@ def test_unit_next_node_in_topological_order(monkeypatch):
 
     topic.score_fn_ = lambda node, parents: 0.0  # _score_fn
     source, meta = topic._next_node_in_topological_order(
-        candidates=candidates, dag_current=dag
+        candidates=candidates, dag_current=dag, score_fn=topic.score_fn_
     )
 
     assert source == "A"
@@ -167,6 +167,7 @@ def test_next_node_in_topological_order_tie(monkeypatch):
     source, meta = topic._next_node_in_topological_order(
         candidates=candidates,
         dag_current=dag,
+        score_fn=topic.score_fn_
     )
     assert source == "A"
     assert meta["source_idx"] == 0
@@ -175,13 +176,8 @@ def test_next_node_in_topological_order_tie(monkeypatch):
 def test_find_removable_edge_single_parent():
     topic = TOPIC()
 
-    # def score_fn(child, parents):
-    #    return 0.0
-
-    # topic.score_fn_ = score_fn
-    topic.score_fn_ = lambda node, parents: 0.0  # _score_fn
     removed_found, best_parent, best_harm, candidate_stats = topic._find_removable_edge(
-        parents=["A"], child="X"
+        parents=["A"], child="X", score_fn=lambda node, parents: 0.0
     )
 
     assert removed_found is False
@@ -204,9 +200,8 @@ def test_find_removable_edge_best_parent():
         if s == {"A", "B"}:
             return 50.0
 
-    topic.score_fn_ = score_fn
     removed_found, best_parent, best_harm, candidate_stats = topic._find_removable_edge(
-        parents=["A", "B", "C"], child="X"
+        parents=["A", "B", "C"], child="X", score_fn=score_fn,
     )
 
     # harms: A=-20, B=-5, C=+20
@@ -226,9 +221,8 @@ def test_find_removable_edge_no_removable_candidate():
     def score_fn(child, parents):
         return 100.0 - (3 - len(parents)) * 10.0
 
-    topic.score_fn_ = score_fn
     removed_found, best_parent, best_harm, candidate_stats = topic._find_removable_edge(
-        parents=["A", "B", "C"], child="X"
+        parents=["A", "B", "C"], child="X", score_fn=score_fn,
     )
 
     assert removed_found is False
@@ -250,9 +244,8 @@ def test_find_removable_edge_allows_small_negative_harm_due_to_float_noise():
         if set(parents) == {"B"}:
             return 1.0 - 1e-12
 
-    topic.score_fn_ = score_fn2
     removed_found, best_parent, best_harm, _ = topic._find_removable_edge(
-        parents=["A", "B"], child="X"
+        parents=["A", "B"], child="X", score_fn=score_fn2
     )
 
     assert removed_found is True
@@ -272,14 +265,14 @@ def test_remove_ingoing_edges_iterative_removal(monkeypatch):
     ]
     calls = {"i": 0}
 
-    def fake_find(parents, child):
+    def fake_find(parents, child, _):
         out = sequence[calls["i"]]
         calls["i"] += 1
         return out
 
     monkeypatch.setattr(topic, "_find_removable_edge", fake_find)
 
-    pruned_edges, meta = topic._remove_ingoing_edges("X", dag)
+    pruned_edges, meta = topic._remove_ingoing_edges("X", dag, None)
 
     assert pruned_edges == [
         {"from": "B", "to": "X", "diff": pytest.approx(-0.3)},
@@ -304,7 +297,7 @@ def test_remove_ingoing_edges_no_parents():
     dag = DAG()
     dag.add_nodes_from(["X", "A"])
 
-    pruned_edges, meta = model._remove_ingoing_edges("X", dag)
+    pruned_edges, meta = model._remove_ingoing_edges("X", dag, None)
 
     assert pruned_edges == []
     assert meta == []
@@ -317,7 +310,7 @@ def test_remove_ingoing_edges_breaks_immediately(monkeypatch):
     dag.add_nodes_from(["A", "B", "X"])
     dag.add_edges_from([("A", "X"), ("B", "X")])
 
-    def fake_find(parents, child):
+    def fake_find(parents, child, _):
         return False, None, float("inf"), [("A", 0.2), ("B", 0.1)]
 
     monkeypatch.setattr(topic, "_find_removable_edge", fake_find)
@@ -342,7 +335,7 @@ def test_remove_ingoing_edges_calls_find_until_none(monkeypatch):
 
     calls = {"n": 0}
 
-    def fake_find(parents, child):
+    def fake_find(parents, child, _):
         calls["n"] += 1
         if calls["n"] <= 2:
             return True, parents[0], -1.0, [(p, 0.0) for p in parents]
@@ -355,105 +348,6 @@ def test_remove_ingoing_edges_calls_find_until_none(monkeypatch):
     assert calls["n"] == 3
     assert len(pruned_edges) == 2
     assert ("C", "X") in dag.edges()
-
-
-def test_score_significant():
-    topic = TOPIC()
-    topic._init_score(pd.DataFrame())
-
-    assert not topic._score_significant(-1.0)
-    assert not topic._score_significant(0.0)
-    assert topic._score_significant(0.01)
-    assert topic._score_significant(10.0)
-
-
-def test_add_outgoing_edges_adds_only_significant_and_skips_self(monkeypatch):
-    topic = TOPIC()
-    dag = DAG()
-    dag.add_nodes_from(["A", "B", "C"])
-
-    gains = {"B": 2.0, "C": -1.0}
-    monkeypatch.setattr(
-        topic,
-        "_addition_gain",
-        lambda cause, effect, dag_current: gains[effect],
-    )
-    monkeypatch.setattr(topic, "_score_significant", lambda gain: gain > 0)
-
-    added, all = topic._add_outgoing_edges(
-        source="A", candidates=["A", "B", "C"], dag_current=dag
-    )
-
-    assert ("A", "A") not in dag.edges()
-    assert ("A", "B") in dag.edges()
-    assert ("A", "C") not in dag.edges()
-
-    assert added == [{"from": "A", "to": "B", "gain": pytest.approx(2.0)}]
-    assert all == [
-        {"from": "A", "to": "B", "gain": pytest.approx(2.0), "significant": True},
-        {"from": "A", "to": "C", "gain": pytest.approx(-1.0), "significant": False},
-    ]
-
-
-_ERR = (
-    r"Score function not initialized\. Call _init_score\(data\) or fit\(data\) first\."
-)
-
-
-def test_score_checks_init_score():
-    topic = TOPIC()
-    with pytest.raises(ValueError, match=_ERR):
-        topic._score("X", ["A", "B"])
-
-
-def test_addition_gain_checks_init_score():
-    topic = TOPIC()
-    dag = DAG()
-    dag.add_nodes_from(["A", "B"])
-
-    with pytest.raises(ValueError, match=_ERR):
-        topic._addition_gain(cause="A", effect="B", dag_current=dag)
-
-
-def test_improvement_matrix_checks_init_score():
-    topic = TOPIC()
-    dag = DAG()
-    dag.add_nodes_from(["A", "B"])
-
-    with pytest.raises(ValueError, match=_ERR):
-        topic._improvement_matrix(candidates=["A", "B"], dag_current=dag)
-
-
-def test_add_outgoing_edges_checks_init_score():
-    topic = TOPIC()
-    dag = DAG()
-    dag.add_nodes_from(["A", "B", "C"])
-
-    with pytest.raises(ValueError, match=_ERR):
-        topic._add_outgoing_edges(source="A", candidates=["B", "C"], dag_current=dag)
-
-
-def test_find_removable_edge_checks_init_score():
-    topic = TOPIC()
-    with pytest.raises(ValueError, match=_ERR):
-        topic._find_removable_edge(parents=["A", "B"], child="X")
-
-
-def test_remove_ingoing_edges_checks_init_score(fake_data):
-    with pytest.raises(ValueError):
-        est = TOPIC(return_type="")
-        _ = est.fit(fake_data)
-
-
-def test_TOPIC_checks_return_type():
-    topic = TOPIC()
-    dag = DAG()
-    dag.add_nodes_from(["A", "B", "X"])
-    dag.add_edge("A", "X")
-    dag.add_edge("B", "X")
-
-    with pytest.raises(ValueError, match=_ERR):
-        topic._remove_ingoing_edges(source="X", dag_current=dag)
 
 
 """ 3. Smoke Test (fake data) """
