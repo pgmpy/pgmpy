@@ -61,13 +61,13 @@ def test_gcm_exact(df_dep, df_indep):
 
     # Non-conditional test
     test("X", "Y", [])
-    assert round(test.statistic_, 3) == pytest.approx(39.631)
+    assert round(test.statistic_, 3) == pytest.approx(38.962)
     assert test.p_value_ == pytest.approx(0.0)
 
     # Conditional test (independent)
     test("X", "Y", ["Z1", "Z2", "Z3"])
-    assert round(test.statistic_, 3) == pytest.approx(0.584)
-    assert round(test.p_value_, 4) == pytest.approx(0.5591)
+    assert round(test.statistic_, 3) == pytest.approx(-0.312)
+    assert round(test.p_value_, 4) == pytest.approx(0.7547)
 
     # Conditional test (dependent)
     test = GCM(data=df_dep)

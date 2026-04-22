@@ -2,11 +2,11 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from ._base import _BaseCITest
+from ._base import _CITestResult
 from .pearsonr import Pearsonr
 
 
-class FisherZ(_BaseCITest):
+class FisherZ(Pearsonr):
     r"""
     Fisher's Z test for conditional independence on continuous data.
 
@@ -54,11 +54,10 @@ class FisherZ(_BaseCITest):
         "requires_data": True,
     }
 
-    def __init__(self, data: pd.DataFrame):
-        self.data = data
-        super().__init__()
+    def __init__(self, data: pd.DataFrame, use_cache: bool = True):
+        super().__init__(data=data, use_cache=use_cache)
 
-    def run_test(
+    def _compute_result(
         self,
         X: str,
         Y: str,
@@ -67,12 +66,13 @@ class FisherZ(_BaseCITest):
         """
         Compute the Fisher Z statistic and p-value.
 
-        Sets ``self.statistic_``, ``self.transformed_statistic_``, and ``self.p_value_``.
+        Returns the Fisher Z statistic and p-value.
         """
-        partial_corr, _ = Pearsonr(data=self.data).run_test(X=X, Y=Y, Z=Z)
+        pearsonr_result = super()._compute_result(X=X, Y=Y, Z=Z)
+        partial_corr = pearsonr_result.statistic
 
         rho = np.clip(partial_corr, -0.999999, 0.999999)
-        self.statistic_ = np.sqrt(self.data.shape[0] - len(Z) - 3) * np.arctanh(rho)
-        self.p_value_ = 2 * stats.norm.sf(np.abs(self.statistic_))
+        statistic = np.sqrt(self.data.shape[0] - len(Z) - 3) * np.arctanh(rho)
+        p_value = 2 * stats.norm.sf(np.abs(statistic))
 
-        return self.statistic_, self.p_value_
+        return _CITestResult(statistic=statistic, p_value=p_value)
