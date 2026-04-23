@@ -16,16 +16,37 @@ Estimator Base Classes
    ~pgmpy.estimators.StructureEstimator
    ~pgmpy.estimators.MarginalEstimator
 
-Bayesian Network and SEM Estimators
------------------------------------
+Discrete Bayesian Network Estimators
+------------------------------------
+
+Estimators for :class:`~pgmpy.models.DiscreteBayesianNetwork` models.
 
 .. autosummary::
    :toctree: generated/parameter_estimation
    :template: autosummary/class.rst
 
-   ~pgmpy.estimators.MaximumLikelihoodEstimator
-   ~pgmpy.estimators.BayesianEstimator
-   ~pgmpy.estimators.ExpectationMaximization
+   ~pgmpy.parameter_estimator.DiscreteMLE
+   ~pgmpy.parameter_estimator.DiscreteBayesianEstimator
+   ~pgmpy.parameter_estimator.DiscreteEM
+
+Linear Gaussian Bayesian Network Estimators
+-------------------------------------------
+
+Estimators for :class:`~pgmpy.models.LinearGaussianBayesianNetwork` models.
+
+.. autosummary::
+   :toctree: generated/parameter_estimation
+   :template: autosummary/class.rst
+
+   ~pgmpy.parameter_estimator.LinearGaussianMLE
+
+Structural Equation Model Estimators
+------------------------------------
+
+.. autosummary::
+   :toctree: generated/parameter_estimation
+   :template: autosummary/class.rst
+
    ~pgmpy.estimators.SEMEstimator
    ~pgmpy.estimators.IVEstimator
 
