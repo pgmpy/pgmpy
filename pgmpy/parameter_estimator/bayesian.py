@@ -71,7 +71,6 @@ class BayesianEstimator(_BaseDiscreteParameterEstimator):
     """
 
     _tags = {
-        "supported_model_types": _BaseDiscreteParameterEstimator._tags["supported_model_types"],
         "supports_latent_variables": False,
         "supports_weighted_data": True,
     }
@@ -145,9 +144,8 @@ class BayesianEstimator(_BaseDiscreteParameterEstimator):
 
         return resolved_pseudo_counts, parents, parents_cardinalities, node_cardinality
 
-    @classmethod
+    @staticmethod
     def _estimate_cpd(
-        cls,
         model,
         data,
         state_names: dict,
@@ -157,13 +155,15 @@ class BayesianEstimator(_BaseDiscreteParameterEstimator):
         pseudo_counts: int | float | dict[Any, np.ndarray | list[list[float]]] | None = None,
         weighted: bool = False,
     ) -> TabularCPD:
-        resolved_pseudo_counts, parents, parents_cardinalities, node_cardinality = cls._resolve_pseudo_counts(
-            model=model,
-            state_names=state_names,
-            node=node,
-            prior_type=prior_type,
-            equivalent_sample_size=equivalent_sample_size,
-            pseudo_counts=pseudo_counts,
+        resolved_pseudo_counts, parents, parents_cardinalities, node_cardinality = (
+            BayesianEstimator._resolve_pseudo_counts(
+                model=model,
+                state_names=state_names,
+                node=node,
+                prior_type=prior_type,
+                equivalent_sample_size=equivalent_sample_size,
+                pseudo_counts=pseudo_counts,
+            )
         )
         state_counts = get_state_counts(
             data=data,
@@ -225,7 +225,7 @@ class BayesianEstimator(_BaseDiscreteParameterEstimator):
         self._initialize_fit(model, data)
 
         parameters = Parallel(n_jobs=self.n_jobs)(
-            delayed(type(self)._estimate_cpd)(
+            delayed(BayesianEstimator._estimate_cpd)(
                 model=self._model,
                 data=self._data,
                 state_names=self.state_names_,

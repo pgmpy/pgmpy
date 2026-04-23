@@ -91,7 +91,6 @@ class ExpectationMaximization(_BaseDiscreteParameterEstimator):
     """
 
     _tags = {
-        "supported_model_types": _BaseDiscreteParameterEstimator._tags["supported_model_types"],
         "supports_latent_variables": True,
         "supports_weighted_data": False,
     }
@@ -110,9 +109,7 @@ class ExpectationMaximization(_BaseDiscreteParameterEstimator):
         show_progress: bool = True,
     ) -> None:
         self.latent_card = latent_card
-        self.m_step_estimator = (
-            MaximumLikelihoodEstimator(weighted=True) if m_step_estimator is None else m_step_estimator
-        )
+        self.m_step_estimator = m_step_estimator
         self.max_iter = max_iter
         self.atol = atol
         self.n_jobs = n_jobs
@@ -222,24 +219,24 @@ class ExpectationMaximization(_BaseDiscreteParameterEstimator):
         return True
 
     def _clone_m_step_estimator(self, weighted: bool) -> _BaseDiscreteParameterEstimator:
-        if isinstance(self.m_step_estimator, type) or not isinstance(
-            self.m_step_estimator, _BaseDiscreteParameterEstimator
-        ):
+        estimator = (
+            self.m_step_estimator if self.m_step_estimator is not None else MaximumLikelihoodEstimator(weighted=True)
+        )
+
+        if isinstance(estimator, type) or not isinstance(estimator, _BaseDiscreteParameterEstimator):
             raise TypeError(
                 "m_step_estimator should be an instance of a discrete parameter estimator. "
                 "Pass an initialized estimator, for example `MaximumLikelihoodEstimator(weighted=True)`."
             )
 
-        if not bool(self.m_step_estimator._tags["supports_weighted_data"]):
-            raise ValueError(
-                f"{type(self.m_step_estimator).__name__} doesn't support weighted data and can't be used in EM."
-            )
+        if not bool(estimator.get_tag("supports_weighted_data")):
+            raise ValueError(f"{type(estimator).__name__} doesn't support weighted data and can't be used in EM.")
 
-        params = self.m_step_estimator.get_params(deep=False)
+        params = estimator.get_params(deep=False)
         params["state_names"] = self.state_names_
         if "weighted" in params:
             params["weighted"] = weighted
-        return type(self.m_step_estimator)(**params)
+        return type(estimator)(**params)
 
     def _fit_parameters(self, model, data, weighted: bool) -> list[TabularCPD]:
         estimator = self._clone_m_step_estimator(weighted=weighted)

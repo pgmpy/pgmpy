@@ -50,7 +50,6 @@ class MaximumLikelihoodEstimator(_BaseDiscreteParameterEstimator):
     """
 
     _tags = {
-        "supported_model_types": _BaseDiscreteParameterEstimator._tags["supported_model_types"],
         "supports_latent_variables": False,
         "supports_weighted_data": True,
     }

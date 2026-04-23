@@ -52,7 +52,7 @@ class _BaseDiscreteParameterEstimator(BaseEstimator):
         raise NotImplementedError
 
     def _coerce_model(self, model: DAG | DiscreteBayesianNetwork) -> DiscreteBayesianNetwork:
-        supported_model_types = self._tags["supported_model_types"]
+        supported_model_types = self.get_tag("supported_model_types")
 
         if not isinstance(model, supported_model_types):
             raise NotImplementedError(
@@ -89,7 +89,7 @@ class _BaseDiscreteParameterEstimator(BaseEstimator):
         return sorted(parameters, key=lambda cpd: order[cpd.variable])
 
     def _validate_model_data(self, model: DiscreteBayesianNetwork, data) -> None:
-        supports_latent_variables = bool(self._tags["supports_latent_variables"])
+        supports_latent_variables = self.get_tag("supports_latent_variables")
         if (not supports_latent_variables) and model.latents:
             raise ValueError(
                 f"Found latent variables: {model.latents}. {type(self).__name__} doesn't support latent variables."
@@ -103,7 +103,7 @@ class _BaseDiscreteParameterEstimator(BaseEstimator):
                 f"{missing_nodes}. Refine the model so that all parameters can be estimated from the data."
             )
 
-        supports_weighted_data = bool(self._tags["supports_weighted_data"])
+        supports_weighted_data = self.get_tag("supports_weighted_data")
         if not supports_weighted_data and "_weight" in data.columns:
             from pgmpy import logger
 
