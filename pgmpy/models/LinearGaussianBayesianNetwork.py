@@ -890,8 +890,9 @@ class LinearGaussianBayesianNetwork(DAG):
         data : pd.DataFrame
             Continuous-valued data containing all model variables.
 
-        estimator : _BaseGaussianParameterEstimator instance, optional
-            Estimator instance to use for fitting. If not specified, uses
+        estimator : LinearGaussianMLE, optional
+            An initialized Gaussian parameter estimator from
+            `pgmpy.parameter_estimator`. If not specified, defaults to
             ``LinearGaussianMLE()``.
 
         Returns

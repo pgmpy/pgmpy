@@ -600,9 +600,10 @@ class DiscreteBayesianNetwork(DAG):
             (If some values in the data are missing the data cells should be set to `numpy.nan`.
             Note that pandas converts each column containing `numpy.nan`s to dtype `float`.)
 
-        estimator: discrete parameter estimator instance
-            Discrete parameter estimator instance to use for fitting. If not specified,
-            uses `pgmpy.parameter_estimator.DiscreteMLE()`.
+        estimator: DiscreteMLE, DiscreteBayesianEstimator, or DiscreteEM, optional
+            An initialized discrete parameter estimator from
+            `pgmpy.parameter_estimator`. If not specified, defaults to
+            `DiscreteMLE()`.
 
         Returns
         -------
