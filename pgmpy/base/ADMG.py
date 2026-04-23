@@ -427,6 +427,50 @@ class ADMG(_GraphRolesMixin, MultiDiGraph):
             all_districts.update(district_components)
         return all_districts
 
+    def get_c_components(self):
+        """
+        Return the c-components (confounded components) of the ADMG.
+
+        A c-component is a maximal set of nodes connected via bidirected edges
+        (i.e., nodes sharing a latent common cause). This method partitions the
+        entire graph into its unique c-components by leveraging the existing
+        ``get_district`` method.
+
+        Returns
+        -------
+        list of set
+            A list of sets, where each set contains the nodes belonging to a
+            single c-component.
+
+        Examples
+        --------
+        >>> from pgmpy.base.ADMG import ADMG
+        >>> admg = ADMG(
+        ...     directed_ebunch=[("X", "Y")], bidirected_ebunch=[("X", "Z")]
+        ... )
+        >>> sorted([sorted(c) for c in admg.get_c_components()])
+        [['X', 'Z'], ['Y']]
+        >>> admg2 = ADMG(
+        ...     directed_ebunch=[("A", "B"), ("B", "C")],
+        ...     bidirected_ebunch=[("A", "B"), ("B", "C")],
+        ... )
+        >>> sorted([sorted(c) for c in admg2.get_c_components()])
+        [['A', 'B', 'C']]
+        >>> admg3 = ADMG(directed_ebunch=[("A", "B"), ("B", "C")])
+        >>> sorted([sorted(c) for c in admg3.get_c_components()])
+        [['A'], ['B'], ['C']]
+        """
+        seen = set()
+        c_components = []
+
+        for node in self.nodes():
+            if node not in seen:
+                district = self.get_district(node)
+                seen.update(district)
+                c_components.append(district)
+
+        return c_components
+
     def get_ancestral_graph(self, nodes):
         """
         Return the ancestral graph induced by the input nodes.
