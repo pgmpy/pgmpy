@@ -613,18 +613,22 @@ class DiscreteBayesianNetwork(DAG):
 
         Examples
         --------
-        >>> import pandas as pd
+        >>> from pgmpy.datasets import load_dataset
         >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.parameter_estimator import DiscreteMLE
-        >>> data = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
-        >>> model = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
+        >>> data = load_dataset("college_plans").data
+        >>> model = DiscreteBayesianNetwork(
+        ...     [("ses", "iq"), ("sex", "pe"), ("ses", "pe"), ("iq", "cp"), ("pe", "cp")]
+        ... )
         >>> fitted_model = model.fit(data, estimator=DiscreteMLE())
         >>> len(fitted_model.get_cpds())
-        3
+        5
         >>> fitted_model.get_cpds()  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-        [<TabularCPD representing P(A:2) at 0x...>,
-        <TabularCPD representing P(C:2 | A:2, B:2) at 0x...>,
-        <TabularCPD representing P(B:2) at 0x...>]
+        [<TabularCPD representing P(ses:4) at 0x...>,
+         <TabularCPD representing P(iq:4 | ses:4) at 0x...>,
+         <TabularCPD representing P(sex:2) at 0x...>,
+         <TabularCPD representing P(pe:2 | ses:4, sex:2) at 0x...>,
+         <TabularCPD representing P(cp:2 | iq:4, pe:2) at 0x...>]
         """
         from pgmpy.parameter_estimator import DiscreteMLE
         from pgmpy.parameter_estimator.base import _BaseDiscreteParameterEstimator
