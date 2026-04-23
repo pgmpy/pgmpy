@@ -631,7 +631,7 @@ class DiscreteBayesianNetwork(DAG):
 
         if estimator is None:
             estimator = DiscreteMLE()
-        elif isinstance(estimator, type) or not isinstance(estimator, _BaseDiscreteParameterEstimator):
+        elif not isinstance(estimator, _BaseDiscreteParameterEstimator):
             raise TypeError(
                 "Estimator should be an instance of a discrete parameter estimator. "
                 "Pass an initialized estimator, for example `DiscreteMLE()`."

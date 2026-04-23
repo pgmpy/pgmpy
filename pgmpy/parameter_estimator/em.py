@@ -220,7 +220,7 @@ class DiscreteEM(_BaseDiscreteParameterEstimator):
     def _clone_m_step_estimator(self, weighted: bool) -> _BaseDiscreteParameterEstimator:
         estimator = self.m_step_estimator if self.m_step_estimator is not None else DiscreteMLE(weighted=True)
 
-        if isinstance(estimator, type) or not isinstance(estimator, _BaseDiscreteParameterEstimator):
+        if not isinstance(estimator, _BaseDiscreteParameterEstimator):
             raise TypeError(
                 "m_step_estimator should be an instance of a discrete parameter estimator. "
                 "Pass an initialized estimator, for example `DiscreteMLE(weighted=True)`."

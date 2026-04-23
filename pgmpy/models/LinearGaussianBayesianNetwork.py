@@ -923,7 +923,7 @@ class LinearGaussianBayesianNetwork(DAG):
 
         if estimator is None:
             estimator = LinearGaussianMLE()
-        elif isinstance(estimator, type) or not isinstance(estimator, _BaseGaussianParameterEstimator):
+        elif not isinstance(estimator, _BaseGaussianParameterEstimator):
             raise TypeError(
                 "estimator must be an instance of a Gaussian parameter estimator. "
                 "Pass an initialized estimator, for example `LinearGaussianMLE()`."
