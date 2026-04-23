@@ -1,8 +1,4 @@
-from typing import (
-    List,
-    Optional,
-    Union,
-)
+from typing import Callable
 
 import networkx as nx
 import numpy as np
@@ -13,28 +9,27 @@ from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery
 from pgmpy.estimators.ScoreCache import ScoreCache
-from pgmpy.estimators.StructureScore import BICGauss, StructureScore, get_scoring_method
+from pgmpy.estimators.StructureScore import StructureScore, get_scoring_method
 
 
 class TOPIC(_BaseCausalDiscovery):
-    """
-    The TOPIC algorithm for causal discovery / structure learning.
+    """The TOPIC algorithm for causal discovery / structure learning.
 
     This class implements the TOPIC algorithm [1] for causal discovery. Given a
     tabular dataset, TOPIC estimates the causal structure among the
     variables in the data in a Directed Acyclic Graph (DAG). The algorithm works by
     establishing a topological ordering among the variables using a local scoring
-    criterion, and in the process adds respectively prunes directed edges among the
+    criterion, and in the process adds and respectively prunes directed edges among the
     variables that are consistent with the topological ordering.
 
     Parameters
     ----------
-    variant: str, default="orig"
+    variant : str, default="orig"
         The variant of TOPIC to run.
 
         - "orig": The original TOPIC algorithm. Might not give the same results in different runs.
 
-    scoring_method: str or StructureScore instance
+    scoring_method : str or StructureScore instance
         The score to be optimized during structure estimation.  Supported
         structure scores: k2, bdeu, bds, bic-d, aic-d, ll-g, aic-g, bic-g,
         ll-cg, aic-cg, bic-cg. Also accepts a custom score, but it should
@@ -54,7 +49,7 @@ class TOPIC(_BaseCausalDiscovery):
         to be considered significant for edge addition and removal.
 
     min_improvement : float, default=1e-6
-        The minimal score improvement used for edge addition and removal
+        The minimal score improvement used for edge addition and removal.
         If the structure_score specified in `scoring_method` is not an MDL score but BIC, AIC, etc.,
         this  `min_improvement` will be used to check whether score differences are large enough
         to be considered sufficient for edge  addition and  removal.
@@ -82,12 +77,12 @@ class TOPIC(_BaseCausalDiscovery):
     feature_names_in_ : np.ndarray
         The feature names in the data used to learn the causal graph.
 
+    debug : bool
+        If True, displays every edge added or removed along with the score imporvement.
+
     Examples
     --------
     Simulate some data to use for causal discovery:
-
-    >>> import logging
-    >>> logging.getLogger("pgmpy").setLevel(logging.ERROR)
 
     >>> from pgmpy.utils import get_example_model
     >>> model = get_example_model("ecoli70")
@@ -110,16 +105,16 @@ class TOPIC(_BaseCausalDiscovery):
 
     """
 
-
     def __init__(
         self,
         variant: str = "orig",
-        scoring_method: Optional[Union[str, StructureScore]] = None,
+        scoring_method: str | StructureScore | None = None,
         return_type: str = "dag",
         significance_level: float = 0.05,
         min_improvement: float = 1e-6,
         show_progress: bool = False,
         use_cache: bool = True,
+        debug: bool = False,
     ):
         self.variant = variant
         self.return_type = return_type
@@ -128,24 +123,72 @@ class TOPIC(_BaseCausalDiscovery):
         self.min_improvement = min_improvement
         self.show_progress = show_progress
         self.use_cache = use_cache
+        self.debug = debug
 
-    def _next_node_in_topological_order(
-            self, candidates: List[int | str], dag_current: DAG, score_fn
-        ) -> tuple[int | str, dict]:
-        """
-        Returns the next node in topological order.
+    def _improvement_matrix(
+        self,
+        candidates: list,
+        dag_current: DAG,
+        score_fn: Callable,
+    ) -> np.ndarray:
+        """Pair-wise improvement matrix: score improvements for each pair-wise edge under the current model.
 
         Parameters
         ----------
-        candidates: List
-            Remaining nodes that are candidates to be the next node in topological order
+        candidates : list
+            Pair-wise edge candidates.
+
+        dag_current : DAG
+            Current DAG.
+
+        score_fn : Callable
+            Score function to be used.
+
+        Returns
+        -------
+        improvement_matrix : np.ndarray
+            Score improvement for each pair-wise edge.
+
+        """
+        improvement_matrix = np.zeros((len(candidates), len(candidates)))
+        idx = {node: i for i, node in enumerate(candidates)}
+        for cause in candidates:
+            for effect in candidates:
+                if cause == effect:
+                    continue
+
+                current_parents = list(dag_current.get_parents(effect)).copy()
+                old_score = score_fn(effect, current_parents)
+                current_parents.append(cause)
+                new_score = score_fn(effect, current_parents)
+
+                score_improv = new_score - old_score
+                improvement_matrix[idx[cause], idx[effect]] = score_improv
+        return improvement_matrix
+
+    def _next_node_in_topological_order(
+        self,
+        candidates: list[int | str],
+        dag_current: DAG,
+        score_fn: Callable,
+    ) -> tuple[int | str, dict]:
+        """Returns the next node in topological order.
+
+        Parameters
+        ----------
+        candidates: list
+            Remaining nodes that are candidates to be the next node in topological order.
+
         dag_current: DAG
-            The causal graph constructed so far; by construction, all edges are outgoing from nodes not in candidates
+            The causal graph constructed so far; by construction, all edges are outgoing from nodes not in candidates.
+
+        score_fn: Callable
+            Score function to be used.
 
         Returns
         -------
         next_node: int
-            The next node in topological order
+            The next node in topological order.
 
         Examples
         --------
@@ -165,8 +208,8 @@ class TOPIC(_BaseCausalDiscovery):
         >>> next_node = model._next_node_in_topological_order(list(data.columns), dag)
         >>> next_node[0] in list(data.columns)
         True
-        """
 
+        """
         improvement = self._improvement_matrix(candidates, dag_current, score_fn)
         delta = improvement - improvement.T
         np.fill_diagonal(delta, -np.inf)
@@ -196,63 +239,35 @@ class TOPIC(_BaseCausalDiscovery):
         }
         return source, meta
 
-
-    def _improvement_matrix(
-        self,
-        candidates: List,
-        dag_current: DAG,
-        score_fn,
-    ) -> np.ndarray:
-        """Pair-wise improvement matrix: score improvements for each pair-wise edge under the current model
-
-        Parameters
-        ----------
-        candidates:
-            pair-wise edge candidates
-        dag_current:
-            current DAG
-
-        Returns
-        -------
-        improvement_matrix: np.ndarray
-             score improvement for each pair-wise edge
-        """
-        improvement_matrix = np.zeros((len(candidates), len(candidates)))
-        idx = {node: i for i, node in enumerate(candidates)}
-        for cause in candidates:
-            for effect in candidates:
-                if cause == effect:
-                    continue
-
-                current_parents = list(dag_current.get_parents(effect)).copy()
-                old_score = score_fn(effect, current_parents)
-                current_parents.append(cause)
-                new_score = score_fn(effect, current_parents)
-
-                score_improv = new_score - old_score #self._addition_gain(source, node, dag_current)
-                improvement_matrix[idx[cause], idx[effect]] = score_improv
-        return improvement_matrix
-
-
     def _find_removable_edge(
-        self, parents: List[int | str], child: int | str, score_fn, noise_epsilon: float = 1e-10,
+        self,
+        parents: list[int | str],
+        child: int | str,
+        score_fn: Callable,
+        noise_epsilon: float = 1e-10,
     ):
-        """Helper function for finding removable edges from a parent set to
+        """Helper function for finding removable edges from a parent set to a child node.
 
         Parameters
         ----------
-        parents:
-            parent nodes
-        child:
-            child node
-        noise_epsilon:
-            noise threshold
+        parents : list
+            Parent nodes being considered for removal.
+
+        child : int or str
+            Child node.
+
+        score_fn : Callable
+            Score function to be used.
+
+        noise_epsilon : float
+            Noise threshold.
+
         """
         old_score = score_fn(child, parents)
 
         best_parent = None
         best_harm = float("-inf")
-        candidate_stats: List[tuple[int | str, float]] = []
+        candidate_stats: list[tuple[int | str, float]] = []
 
         for parent in parents:
             new_parents = [p for p in parents if p != parent]
@@ -281,21 +296,19 @@ class TOPIC(_BaseCausalDiscovery):
 
         return True, best_parent, best_harm, candidate_stats
 
-
     def _fit(self, X: pd.DataFrame):
-        """
-        The fitting procedure for the TOPIC algorithm.
+        """The fitting procedure for the TOPIC algorithm.
 
         Parameters
         ----------
         X: pd.DataFrame
-            The input dataset
-        """
+            The input dataset.
 
+        """
         # 0. Initialization
         score_c: ScoreCache | StructureScore
         score, score_c = get_scoring_method(self.scoring_method, X, self.use_cache)
-        score_fn = score.local_score
+        score_fn = score_c.local_score
 
         self.n_features_in_ = X.shape[1]
         self.feature_names_in_ = np.asarray(X.columns, dtype=object)
@@ -327,7 +340,7 @@ class TOPIC(_BaseCausalDiscovery):
                 pbar.set_postfix_str(f"remaining={len(candidates)}")
 
             added_edges = []
-            considered_edges = []
+            considered_edges_adding = []
 
             for node in candidates:
                 if node == source:
@@ -341,7 +354,7 @@ class TOPIC(_BaseCausalDiscovery):
                 gain = new_score - old_score
                 significant = gain > self.min_improvement
 
-                considered_edges.append(
+                considered_edges_adding.append(
                     {
                         "from": str(source),
                         "to": str(node),
@@ -349,16 +362,19 @@ class TOPIC(_BaseCausalDiscovery):
                         "significant": significant,
                     }
                 )
-
                 if significant:
                     dag_current.add_edge(source, node)
-                    added_edges.append({"from": str(source), "to": str(node), "gain": gain})
+                    if self.debug:
+                        print(
+                            f"Adding edge {source} -> {node}. Improves score by: {gain}"
+                        )
 
-            # return added_edges, considered_edges
-            edges_added_hist, considered_adding_hist = added_edges, considered_edges
+                    added_edges.append(
+                        {"from": str(source), "to": str(node), "gain": gain}
+                    )
 
             pruned_edges = []
-            considered_edges = []
+            considered_edges_pruning = []
             current_parents = list(dag_current.get_parents(source)).copy()
 
             while len(current_parents) > 0:
@@ -367,7 +383,7 @@ class TOPIC(_BaseCausalDiscovery):
                 )
 
                 for parent, diff in candidate_diffs:
-                    considered_edges.append(
+                    considered_edges_pruning.append(
                         {
                             "from": str(parent),
                             "to": str(source),
@@ -378,6 +394,10 @@ class TOPIC(_BaseCausalDiscovery):
                 if removed_parent is None:
                     break
                 dag_current.remove_edge(removed_parent, source)
+                if self.debug:
+                    print(
+                        f"Removing edge {removed_parent} -> {source}. Improves score by: {best_diff}"
+                    )
                 current_parents.remove(removed_parent)
 
                 pruned_edges.append(
@@ -387,8 +407,7 @@ class TOPIC(_BaseCausalDiscovery):
                         "diff": best_diff,
                     }
                 )
-            # return pruned_edges, considered_edges
-            edges_pruned_hist, considered_pruning_hist = pruned_edges, considered_edges
+
             topic_history_.append(
                 {
                     "iteration": it,
@@ -396,10 +415,10 @@ class TOPIC(_BaseCausalDiscovery):
                     "topological_order": [n for n in topological_order_],
                     "remaining_candidates": [c for c in candidates],
                     "source_selection": source_hist,
-                    "edges_added": edges_added_hist,
-                    "edges_pruned": edges_pruned_hist,
-                    "considered_adding": considered_adding_hist,
-                    "considered_pruning": considered_pruning_hist,
+                    "edges_added": added_edges,
+                    "edges_pruned": pruned_edges,
+                    "considered_adding": considered_edges_adding,
+                    "considered_pruning": considered_edges_pruning,
                 }
             )
 
