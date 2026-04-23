@@ -221,10 +221,6 @@ class ExpectationMaximization(_BaseDiscreteParameterEstimator):
                 return False
         return True
 
-    def _sort_parameters(self, parameters: list[TabularCPD]) -> list[TabularCPD]:
-        order = {var: index for index, var in enumerate(self._model.nodes())}
-        return sorted(parameters, key=lambda cpd: order[cpd.variable])
-
     def _clone_m_step_estimator(self, weighted: bool) -> _BaseDiscreteParameterEstimator:
         if isinstance(self.m_step_estimator, type) or not isinstance(
             self.m_step_estimator, _BaseDiscreteParameterEstimator

@@ -84,6 +84,10 @@ class _BaseDiscreteParameterEstimator(BaseEstimator):
 
         return {var: list(states) for var, states in state_names.items()}
 
+    def _sort_parameters(self, parameters: list) -> list:
+        order = {var: index for index, var in enumerate(self._model.nodes())}
+        return sorted(parameters, key=lambda cpd: order[cpd.variable])
+
     def _validate_model_data(self, model: DiscreteBayesianNetwork, data) -> None:
         supports_latent_variables = bool(self._tags["supports_latent_variables"])
         if (not supports_latent_variables) and model.latents:
@@ -97,6 +101,19 @@ class _BaseDiscreteParameterEstimator(BaseEstimator):
             raise ValueError(
                 "Nodes detected in the model that are not present in the dataset: "
                 f"{missing_nodes}. Refine the model so that all parameters can be estimated from the data."
+            )
+
+        supports_weighted_data = bool(self._tags["supports_weighted_data"])
+        if not supports_weighted_data and "_weight" in data.columns:
+            from pgmpy import logger
+
+            logger.warning(
+                f"{type(self).__name__} doesn't support weighted data. "
+                "The '_weight' column in the data will be ignored."
+            )
+        if supports_weighted_data and getattr(self, "weighted", False) and "_weight" not in data.columns:
+            raise ValueError(
+                "weighted=True but no '_weight' column found in data. Add a '_weight' column or set weighted=False."
             )
 
     def _initialize_fit(self, model: DAG | DiscreteBayesianNetwork, data) -> None:

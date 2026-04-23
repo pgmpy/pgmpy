@@ -176,14 +176,16 @@ def test_estimate_cpd_shortcuts(models):
 
 
 def test_get_parameters(models):
+    # Default BDeu (ess=5) on d2; columns of C ordered (A=0,B=X),(A=0,B=Y),(A=1,B=X),(A=1,B=Y),(A=2,B=X),(A=2,B=Y)
     est3 = models["est3"]
-    cpds = {
-        get_cpd(est3, "A"),
-        get_cpd(est3, "B"),
-        get_cpd(est3, "C"),
-    }
-
-    assert set(est3.parameters_) == cpds
+    assert len(est3.parameters_) == 3
+    np.testing.assert_allclose(get_cpd(est3, "A").get_values(), [[4 / 9], [11 / 45], [14 / 45]], atol=1e-6)
+    np.testing.assert_allclose(get_cpd(est3, "B").get_values(), [[0.5], [0.5]], atol=1e-6)
+    np.testing.assert_allclose(
+        get_cpd(est3, "C").get_values(),
+        [[0.5, 29 / 46, 5 / 22, 17 / 22, 29 / 34, 17 / 22], [0.5, 17 / 46, 17 / 22, 5 / 22, 5 / 34, 5 / 22]],
+        atol=1e-6,
+    )
 
 
 def test_get_parameters2(models):
@@ -193,23 +195,26 @@ def test_get_parameters2(models):
         "C": [[6, 6, 6, 6, 6, 6], [7, 7, 7, 7, 7, 7]],
     }
     est3 = BayesianEstimator(prior_type="dirichlet", pseudo_counts=pseudo_counts).fit(models["m1"], models["d2"])
-    cpds = {
-        get_cpd(est3, "A"),
-        get_cpd(est3, "B"),
-        get_cpd(est3, "C"),
-    }
-
-    assert set(est3.parameters_) == cpds
+    assert len(est3.parameters_) == 3
+    np.testing.assert_allclose(get_cpd(est3, "A").get_values(), [[3 / 8], [1 / 4], [3 / 8]], atol=1e-6)
+    np.testing.assert_allclose(get_cpd(est3, "B").get_values(), [[9 / 19], [10 / 19]], atol=1e-6)
+    np.testing.assert_allclose(
+        get_cpd(est3, "C").get_values(),
+        [[7 / 15, 0.5, 3 / 7, 0.5, 8 / 15, 0.5], [8 / 15, 0.5, 4 / 7, 0.5, 7 / 15, 0.5]],
+        atol=1e-6,
+    )
 
 
 def test_get_parameters3(models):
     est3 = BayesianEstimator(prior_type="dirichlet", pseudo_counts=0.1).fit(models["m1"], models["d2"])
-    cpds = {
-        get_cpd(est3, "A"),
-        get_cpd(est3, "B"),
-        get_cpd(est3, "C"),
-    }
-    assert set(est3.parameters_) == cpds
+    assert len(est3.parameters_) == 3
+    np.testing.assert_allclose(get_cpd(est3, "A").get_values(), [[51 / 103], [21 / 103], [31 / 103]], atol=1e-6)
+    np.testing.assert_allclose(get_cpd(est3, "B").get_values(), [[0.5], [0.5]], atol=1e-6)
+    np.testing.assert_allclose(
+        get_cpd(est3, "C").get_values(),
+        [[0.5, 21 / 32, 1 / 12, 11 / 12, 21 / 22, 11 / 12], [0.5, 11 / 32, 11 / 12, 1 / 12, 1 / 22, 1 / 12]],
+        atol=1e-6,
+    )
 
 
 def test_node_specific_equivalent_sample_size(models):

@@ -13,7 +13,7 @@ from .base import _BaseDiscreteParameterEstimator
 
 class MaximumLikelihoodEstimator(_BaseDiscreteParameterEstimator):
     """
-    Class used to compute parameters for a model using Maximum Likelihood Estimation.
+    Computes parameters for a given model using Maximum Likelihood Estimation.
 
     Parameters
     ----------
@@ -140,5 +140,5 @@ class MaximumLikelihoodEstimator(_BaseDiscreteParameterEstimator):
             )
             for node in self._model.nodes()
         )
-        self.parameters_ = parameters
+        self.parameters_ = self._sort_parameters(parameters)
         return self

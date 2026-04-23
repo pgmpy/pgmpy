@@ -237,5 +237,5 @@ class BayesianEstimator(_BaseDiscreteParameterEstimator):
             )
             for node in self._model.nodes()
         )
-        self.parameters_ = parameters
+        self.parameters_ = self._sort_parameters(parameters)
         return self
