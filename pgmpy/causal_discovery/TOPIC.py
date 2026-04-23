@@ -1,4 +1,4 @@
-from typing import Callable
+from collections.abc import Callable
 
 import networkx as nx
 import numpy as np
@@ -329,9 +329,7 @@ class TOPIC(_BaseCausalDiscovery):
 
         it = 0
         while it < n_nodes:
-            source, source_hist = self._next_node_in_topological_order(
-                candidates, dag_current, score_fn
-            )
+            source, source_hist = self._next_node_in_topological_order(candidates, dag_current, score_fn)
             candidates.remove(source)
             topological_order_.append(source)
 
@@ -365,21 +363,17 @@ class TOPIC(_BaseCausalDiscovery):
                 if significant:
                     dag_current.add_edge(source, node)
                     if self.debug:
-                        print(
-                            f"Adding edge {source} -> {node}. Improves score by: {gain}"
-                        )
+                        print(f"Adding edge {source} -> {node}. Improves score by: {gain}")
 
-                    added_edges.append(
-                        {"from": str(source), "to": str(node), "gain": gain}
-                    )
+                    added_edges.append({"from": str(source), "to": str(node), "gain": gain})
 
             pruned_edges = []
             considered_edges_pruning = []
             current_parents = list(dag_current.get_parents(source)).copy()
 
             while len(current_parents) > 0:
-                removed_found, removed_parent, best_diff, candidate_diffs = (
-                    self._find_removable_edge(current_parents, source, score_fn)
+                removed_found, removed_parent, best_diff, candidate_diffs = self._find_removable_edge(
+                    current_parents, source, score_fn
                 )
 
                 for parent, diff in candidate_diffs:
@@ -395,9 +389,7 @@ class TOPIC(_BaseCausalDiscovery):
                     break
                 dag_current.remove_edge(removed_parent, source)
                 if self.debug:
-                    print(
-                        f"Removing edge {removed_parent} -> {source}. Improves score by: {best_diff}"
-                    )
+                    print(f"Removing edge {removed_parent} -> {source}. Improves score by: {best_diff}")
                 current_parents.remove(removed_parent)
 
                 pruned_edges.append(
@@ -436,9 +428,7 @@ class TOPIC(_BaseCausalDiscovery):
         elif self.return_type == "pdag":
             self.causal_graph_ = dag_current.to_pdag()
         else:
-            raise ValueError(
-                f"return_type must be one of: dag, pdag, got {self.return_type}"
-            )
+            raise ValueError(f"return_type must be one of: dag, pdag, got {self.return_type}")
 
         self.adjacency_matrix_ = nx.to_pandas_adjacency(self.causal_graph_)
         self.topological_order_ = topological_order_
