@@ -12,6 +12,13 @@ class _BaseParameterEstimator(BaseEstimator):
     Thin base class for all parameter estimators.
 
     Subclasses must set the `supported_model_types` tag and implement `fit`.
+
+    Attributes
+    ----------
+    parameters_ : list
+        Learned parameters produced by `fit`. The element type depends on the
+        concrete subclass (for example, `TabularCPD` for discrete estimators
+        and `LinearGaussianCPD` for Gaussian estimators).
     """
 
     _tags = {
@@ -53,6 +60,17 @@ class _BaseDiscreteParameterEstimator(_BaseParameterEstimator):
         A dict indicating, for each variable, the discrete set of states
         that the variable can take. If unspecified, the observed values
         in the data set are taken to be the only possible states.
+
+    Attributes
+    ----------
+    parameters_ : list of TabularCPD
+        Learned conditional probability distributions, one per variable in the
+        model, ordered by `self._model.nodes()`. Populated by `fit`.
+
+    state_names_ : dict
+        Mapping from variable name to the list of states for that variable,
+        inferred from the data (or taken from `state_names` when supplied).
+        Populated by `fit`.
     """
 
     _tags = {
@@ -146,6 +164,13 @@ class _BaseDiscreteParameterEstimator(_BaseParameterEstimator):
 class _BaseGaussianParameterEstimator(_BaseParameterEstimator):
     """
     Base class for LinearGaussian parameter estimators.
+
+    Attributes
+    ----------
+    parameters_ : list of LinearGaussianCPD
+        Learned Gaussian conditional probability distributions, one per
+        variable in the model, ordered by `self._model.nodes()`. Populated by
+        `fit`.
     """
 
     _tags = {

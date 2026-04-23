@@ -25,6 +25,13 @@ class LinearGaussianMLE(_BaseGaussianParameterEstimator):
           for non-root nodes.
         - ``"mle"``: uses ``ddof = 0`` (biased, maximum likelihood estimate).
 
+    Attributes
+    ----------
+    parameters_ : list of LinearGaussianCPD
+        Learned Gaussian conditional probability distributions, one per
+        variable in the model, ordered by `self._model.nodes()`. Populated by
+        `fit`.
+
     Examples
     --------
     >>> import numpy as np

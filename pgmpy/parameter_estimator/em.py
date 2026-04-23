@@ -69,6 +69,19 @@ class DiscreteEM(_BaseDiscreteParameterEstimator):
     show_progress: bool, default=True
         Whether to show a progress bar for iterations.
 
+    Attributes
+    ----------
+    parameters_ : list of TabularCPD
+        Learned conditional probability distributions, one per variable in the
+        model (including latent variables), ordered by `self._model.nodes()`.
+        Populated by `fit`.
+
+    state_names_ : dict
+        Mapping from variable name to the list of states for that variable.
+        For observed variables the states are inferred from the data; for
+        latent variables they are taken from `latent_card` (or default to
+        `[0, 1]` if unspecified). Populated by `fit`.
+
     Examples
     --------
     >>> from pgmpy.datasets import load_dataset

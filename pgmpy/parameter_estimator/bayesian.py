@@ -50,6 +50,17 @@ class DiscreteBayesianEstimator(_BaseDiscreteParameterEstimator):
         If `weighted=True`, the data passed to `fit` must contain a `_weight`
         column specifying the weight of each datapoint (row).
 
+    Attributes
+    ----------
+    parameters_ : list of TabularCPD
+        Learned conditional probability distributions, one per variable in the
+        model, ordered by `self._model.nodes()`. Populated by `fit`.
+
+    state_names_ : dict
+        Mapping from variable name to the list of states for that variable,
+        inferred from the data (or taken from the `state_names` constructor
+        argument when supplied). Populated by `fit`.
+
     Examples
     --------
     >>> from pgmpy.datasets import load_dataset
