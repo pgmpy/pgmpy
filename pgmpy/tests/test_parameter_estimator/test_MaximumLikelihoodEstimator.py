@@ -8,7 +8,7 @@ from pgmpy import config
 from pgmpy.factors import FactorDict
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork, JunctionTree
-from pgmpy.parameter_estimator import MaximumLikelihoodEstimator
+from pgmpy.parameter_estimator import DiscreteMLE
 
 
 def get_cpd(estimator, variable):
@@ -71,7 +71,7 @@ def setup_data():
     potentials2 = FactorDict.from_dataframe(df=d1, marginals=m3.nodes)
     m3.clique_beliefs = potentials2
 
-    mle1 = MaximumLikelihoodEstimator().fit(m1, d1)
+    mle1 = DiscreteMLE().fit(m1, d1)
 
     yield {
         "m1": m1,
@@ -94,7 +94,7 @@ def setup_data():
 def test_error_latent_model(setup_data, backend):
     data = setup_data
     with pytest.raises(ValueError):
-        MaximumLikelihoodEstimator().fit(data["model_latents"], data["data_latents"])
+        DiscreteMLE().fit(data["model_latents"], data["data_latents"])
 
 
 def test_get_parameters_incomplete_data(setup_data, backend):
@@ -123,7 +123,7 @@ def test_state_names1(backend):
         evidence_card=[3],
         state_names={"A": [2, 3, 8], "B": ["O", "X"]},
     )
-    mle2 = MaximumLikelihoodEstimator().fit(m, d)
+    mle2 = DiscreteMLE().fit(m, d)
     assert get_cpd(mle2, "B") == cpd_b
 
 
@@ -148,13 +148,13 @@ def test_state_names2(backend):
             "Fruit": ["Apple", "Banana"],
         },
     )
-    mle2 = MaximumLikelihoodEstimator().fit(m, d)
+    mle2 = DiscreteMLE().fit(m, d)
     assert get_cpd(mle2, "Color") == color_cpd
 
 
 def test_class_init(setup_data, backend):
     data = setup_data
-    mle = MaximumLikelihoodEstimator(state_names={"A": [0, 1], "B": [0, 1], "C": [0, 1]}).fit(data["m1"], data["d1"])
+    mle = DiscreteMLE(state_names={"A": [0, 1], "B": [0, 1], "C": [0, 1]}).fit(data["m1"], data["d1"])
     assert get_cpd(mle, "A") == data["cpds"][0]
     assert get_cpd(mle, "B") == data["cpds"][1]
     assert get_cpd(mle, "C") == data["cpds"][2]
@@ -163,7 +163,7 @@ def test_class_init(setup_data, backend):
 
 def test_nonoccurring_values(setup_data, backend):
     data = setup_data
-    mle = MaximumLikelihoodEstimator(
+    mle = DiscreteMLE(
         state_names={"A": [0, 1, 23], "B": [0, 1], "C": [0, 42, 1], 1: [2]},
     ).fit(data["m1"], data["d1"])
     cpds = [
@@ -190,7 +190,7 @@ def test_nonoccurring_values(setup_data, backend):
 
 def test_missing_data(setup_data, backend):
     data = setup_data
-    e1 = MaximumLikelihoodEstimator(state_names={"C": [0, 1]}).fit(data["m1"], data["d2"])
+    e1 = DiscreteMLE(state_names={"C": [0, 1]}).fit(data["m1"], data["d2"])
     cpds1 = [
         TabularCPD("A", 2, [[0.5], [0.5]]),
         TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]]),

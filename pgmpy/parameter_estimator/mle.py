@@ -6,12 +6,12 @@ import numpy as np
 from joblib import Parallel, delayed
 
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.utils import get_state_counts
+from pgmpy.utils import get_state_counts, preprocess_data
 
 from .base import _BaseDiscreteParameterEstimator
 
 
-class MaximumLikelihoodEstimator(_BaseDiscreteParameterEstimator):
+class DiscreteMLE(_BaseDiscreteParameterEstimator):
     """
     Computes parameters for a given model using Maximum Likelihood Estimation.
 
@@ -127,7 +127,12 @@ class MaximumLikelihoodEstimator(_BaseDiscreteParameterEstimator):
         <TabularCPD representing P(C:2) at 0x...>,
         <TabularCPD representing P(D:2 | C:2) at 0x...>]
         """
-        self._initialize_fit(model, data)
+        model = self._coerce_model(model)
+        data, _ = preprocess_data(data)
+        self._validate_model_data(model, data)
+        self._model = model
+        self._data = data
+        self.state_names_ = self._build_fitted_state_names(model, data)
 
         parameters = Parallel(n_jobs=self.n_jobs)(
             delayed(type(self)._estimate_cpd)(

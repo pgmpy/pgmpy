@@ -9,12 +9,12 @@ from joblib import Parallel, delayed
 
 from pgmpy import logger
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.utils import get_state_counts
+from pgmpy.utils import get_state_counts, preprocess_data
 
 from .base import _BaseDiscreteParameterEstimator
 
 
-class BayesianEstimator(_BaseDiscreteParameterEstimator):
+class DiscreteBayesianEstimator(_BaseDiscreteParameterEstimator):
     """
     Class used to compute parameters for a model using Bayesian Parameter Estimation.
 
@@ -156,7 +156,7 @@ class BayesianEstimator(_BaseDiscreteParameterEstimator):
         weighted: bool = False,
     ) -> TabularCPD:
         resolved_pseudo_counts, parents, parents_cardinalities, node_cardinality = (
-            BayesianEstimator._resolve_pseudo_counts(
+            DiscreteBayesianEstimator._resolve_pseudo_counts(
                 model=model,
                 state_names=state_names,
                 node=node,
@@ -222,10 +222,15 @@ class BayesianEstimator(_BaseDiscreteParameterEstimator):
          <TabularCPD representing P(C:2) at 0x...>,
          <TabularCPD representing P(D:2 | C:2) at 0x...>]
         """
-        self._initialize_fit(model, data)
+        model = self._coerce_model(model)
+        data, _ = preprocess_data(data)
+        self._validate_model_data(model, data)
+        self._model = model
+        self._data = data
+        self.state_names_ = self._build_fitted_state_names(model, data)
 
         parameters = Parallel(n_jobs=self.n_jobs)(
-            delayed(BayesianEstimator._estimate_cpd)(
+            delayed(DiscreteBayesianEstimator._estimate_cpd)(
                 model=self._model,
                 data=self._data,
                 state_names=self.state_names_,

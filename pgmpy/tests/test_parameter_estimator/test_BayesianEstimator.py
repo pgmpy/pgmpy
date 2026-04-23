@@ -8,7 +8,7 @@ from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
-from pgmpy.parameter_estimator import BayesianEstimator
+from pgmpy.parameter_estimator import DiscreteBayesianEstimator
 
 
 def get_cpd(estimator, variable):
@@ -47,9 +47,9 @@ def models():
         }
     )
 
-    est1 = BayesianEstimator().fit(m1, d1)
-    est2 = BayesianEstimator(state_names={"A": [0, 1, 2], "B": [0, 1], "C": [0, 1, 23]}).fit(m1, d1)
-    est3 = BayesianEstimator().fit(m1, d2)
+    est1 = DiscreteBayesianEstimator().fit(m1, d1)
+    est2 = DiscreteBayesianEstimator(state_names={"A": [0, 1, 2], "B": [0, 1], "C": [0, 1, 23]}).fit(m1, d1)
+    est3 = DiscreteBayesianEstimator().fit(m1, d2)
     return {
         "m1": m1,
         "model_latent": model_latent,
@@ -64,14 +64,16 @@ def models():
 
 def test_error_latent_model(models):
     with pytest.raises(ValueError):
-        BayesianEstimator().fit(models["model_latent"], models["d1"])
+        DiscreteBayesianEstimator().fit(models["model_latent"], models["d1"])
     with pytest.raises(ValueError):
-        BayesianEstimator().fit(models["dag_with_latents"], models["d1"])
+        DiscreteBayesianEstimator().fit(models["dag_with_latents"], models["d1"])
 
 
 def test_estimate_cpd_dirichlet(models):
     cpd_A = get_cpd(
-        BayesianEstimator(prior_type="dirichlet", pseudo_counts={"A": [[0], [1]]}).fit(models["m1"], models["d1"]),
+        DiscreteBayesianEstimator(prior_type="dirichlet", pseudo_counts={"A": [[0], [1]]}).fit(
+            models["m1"], models["d1"]
+        ),
         "A",
     )
     cpd_A_exp = TabularCPD(
@@ -84,7 +86,7 @@ def test_estimate_cpd_dirichlet(models):
     assert cpd_A == cpd_A_exp
 
     cpd_A = get_cpd(
-        BayesianEstimator(prior_type="dirichlet", pseudo_counts={"A": np.array([[0], [1]])}).fit(
+        DiscreteBayesianEstimator(prior_type="dirichlet", pseudo_counts={"A": np.array([[0], [1]])}).fit(
             models["m1"], models["d1"]
         ),
         "A",
@@ -92,14 +94,16 @@ def test_estimate_cpd_dirichlet(models):
     assert cpd_A == cpd_A_exp
 
     cpd_B = get_cpd(
-        BayesianEstimator(prior_type="dirichlet", pseudo_counts={"B": [[9], [3]]}).fit(models["m1"], models["d1"]),
+        DiscreteBayesianEstimator(prior_type="dirichlet", pseudo_counts={"B": [[9], [3]]}).fit(
+            models["m1"], models["d1"]
+        ),
         "B",
     )
     cpd_B_exp = TabularCPD("B", 2, [[11.0 / 15], [4.0 / 15]], state_names={"B": [0, 1]})
     assert cpd_B == cpd_B_exp
 
     cpd_C = get_cpd(
-        BayesianEstimator(
+        DiscreteBayesianEstimator(
             prior_type="dirichlet",
             pseudo_counts={"C": [[0.4, 0.4, 0.4, 0.4], [0.6, 0.6, 0.6, 0.6]]},
         ).fit(models["m1"], models["d1"]),
@@ -118,7 +122,7 @@ def test_estimate_cpd_dirichlet(models):
 
 def test_estimate_cpd_improper_prior(models):
     cpd_C = get_cpd(
-        BayesianEstimator(
+        DiscreteBayesianEstimator(
             prior_type="dirichlet",
             pseudo_counts={"C": [[0, 0, 0, 0], [0, 0, 0, 0]]},
         ).fit(models["m1"], models["d1"]),
@@ -137,12 +141,12 @@ def test_estimate_cpd_improper_prior(models):
 
 
 def test_estimate_cpd_shortcuts(models):
-    est2 = BayesianEstimator(
+    est2 = DiscreteBayesianEstimator(
         state_names={"A": [0, 1, 2], "B": [0, 1], "C": [0, 1, 23]},
         prior_type="BDeu",
         equivalent_sample_size=9,
     ).fit(models["m1"], models["d1"])
-    est3 = BayesianEstimator(prior_type="K2").fit(models["m1"], models["d2"])
+    est3 = DiscreteBayesianEstimator(prior_type="K2").fit(models["m1"], models["d2"])
 
     cpd_C1 = get_cpd(est2, "C")
     cpd_C1_correct = TabularCPD(
@@ -194,7 +198,9 @@ def test_get_parameters2(models):
         "B": [[4], [5]],
         "C": [[6, 6, 6, 6, 6, 6], [7, 7, 7, 7, 7, 7]],
     }
-    est3 = BayesianEstimator(prior_type="dirichlet", pseudo_counts=pseudo_counts).fit(models["m1"], models["d2"])
+    est3 = DiscreteBayesianEstimator(prior_type="dirichlet", pseudo_counts=pseudo_counts).fit(
+        models["m1"], models["d2"]
+    )
     assert len(est3.parameters_) == 3
     np.testing.assert_allclose(get_cpd(est3, "A").get_values(), [[3 / 8], [1 / 4], [3 / 8]], atol=1e-6)
     np.testing.assert_allclose(get_cpd(est3, "B").get_values(), [[9 / 19], [10 / 19]], atol=1e-6)
@@ -206,7 +212,7 @@ def test_get_parameters2(models):
 
 
 def test_get_parameters3(models):
-    est3 = BayesianEstimator(prior_type="dirichlet", pseudo_counts=0.1).fit(models["m1"], models["d2"])
+    est3 = DiscreteBayesianEstimator(prior_type="dirichlet", pseudo_counts=0.1).fit(models["m1"], models["d2"])
     assert len(est3.parameters_) == 3
     np.testing.assert_allclose(get_cpd(est3, "A").get_values(), [[51 / 103], [21 / 103], [31 / 103]], atol=1e-6)
     np.testing.assert_allclose(get_cpd(est3, "B").get_values(), [[0.5], [0.5]], atol=1e-6)
@@ -219,19 +225,19 @@ def test_get_parameters3(models):
 
 def test_node_specific_equivalent_sample_size(models):
     ess_dict = {"A": 10, "B": 20, "C": 15}
-    est3 = BayesianEstimator(prior_type="bdeu", equivalent_sample_size=ess_dict).fit(models["m1"], models["d2"])
+    est3 = DiscreteBayesianEstimator(prior_type="bdeu", equivalent_sample_size=ess_dict).fit(models["m1"], models["d2"])
     cpds_dict = est3.parameters_
     cpds_manual = {
         get_cpd(
-            BayesianEstimator(prior_type="bdeu", equivalent_sample_size=10).fit(models["m1"], models["d2"]),
+            DiscreteBayesianEstimator(prior_type="bdeu", equivalent_sample_size=10).fit(models["m1"], models["d2"]),
             "A",
         ),
         get_cpd(
-            BayesianEstimator(prior_type="bdeu", equivalent_sample_size=20).fit(models["m1"], models["d2"]),
+            DiscreteBayesianEstimator(prior_type="bdeu", equivalent_sample_size=20).fit(models["m1"], models["d2"]),
             "B",
         ),
         get_cpd(
-            BayesianEstimator(prior_type="bdeu", equivalent_sample_size=15).fit(models["m1"], models["d2"]),
+            DiscreteBayesianEstimator(prior_type="bdeu", equivalent_sample_size=15).fit(models["m1"], models["d2"]),
             "C",
         ),
     }
@@ -241,21 +247,21 @@ def test_node_specific_equivalent_sample_size(models):
 def test_node_specific_ess_partial_dict(models):
     """Test that unspecified nodes default to 0 (or equivalent behavior) when dict is partial."""
     ess_dict = {"A": 10, "C": 15}
-    est3 = BayesianEstimator(prior_type="bdeu", equivalent_sample_size=ess_dict).fit(models["m1"], models["d2"])
+    est3 = DiscreteBayesianEstimator(prior_type="bdeu", equivalent_sample_size=ess_dict).fit(models["m1"], models["d2"])
     cpd_A_dict = get_cpd(est3, "A")
     cpd_B_dict = get_cpd(est3, "B")
     cpd_C_dict = get_cpd(est3, "C")
 
     cpd_A_manual = get_cpd(
-        BayesianEstimator(prior_type="bdeu", equivalent_sample_size=10).fit(models["m1"], models["d2"]),
+        DiscreteBayesianEstimator(prior_type="bdeu", equivalent_sample_size=10).fit(models["m1"], models["d2"]),
         "A",
     )
     cpd_C_manual = get_cpd(
-        BayesianEstimator(prior_type="bdeu", equivalent_sample_size=15).fit(models["m1"], models["d2"]),
+        DiscreteBayesianEstimator(prior_type="bdeu", equivalent_sample_size=15).fit(models["m1"], models["d2"]),
         "C",
     )
     cpd_B_manual = get_cpd(
-        BayesianEstimator(prior_type="bdeu", equivalent_sample_size=0).fit(models["m1"], models["d2"]),
+        DiscreteBayesianEstimator(prior_type="bdeu", equivalent_sample_size=0).fit(models["m1"], models["d2"]),
         "B",
     )
 
@@ -269,12 +275,12 @@ def test_node_specific_ess_matches_uniform_ess(models):
     ess_value = 12
     ess_dict = {"A": ess_value, "B": ess_value, "C": ess_value}
     cpds_scalar = (
-        BayesianEstimator(prior_type="bdeu", equivalent_sample_size=ess_value)
+        DiscreteBayesianEstimator(prior_type="bdeu", equivalent_sample_size=ess_value)
         .fit(models["m1"], models["d2"])
         .parameters_
     )
     cpds_dict = (
-        BayesianEstimator(prior_type="bdeu", equivalent_sample_size=ess_dict)
+        DiscreteBayesianEstimator(prior_type="bdeu", equivalent_sample_size=ess_dict)
         .fit(models["m1"], models["d2"])
         .parameters_
     )
@@ -294,9 +300,9 @@ def torch_models():
             "C": [1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
         }
     )
-    est1 = BayesianEstimator().fit(m1, d1)
-    est2 = BayesianEstimator(state_names={"A": [0, 1, 2], "B": [0, 1], "C": [0, 1, 23]}).fit(m1, d1)
-    est3 = BayesianEstimator().fit(m1, d2)
+    est1 = DiscreteBayesianEstimator().fit(m1, d1)
+    est2 = DiscreteBayesianEstimator(state_names={"A": [0, 1, 2], "B": [0, 1], "C": [0, 1, 23]}).fit(m1, d1)
+    est3 = DiscreteBayesianEstimator().fit(m1, d2)
     yield {
         "m1": m1,
         "model_latent": model_latent,
@@ -312,14 +318,14 @@ def torch_models():
 @requires_torch
 def test_error_latent_model_torch(torch_models):
     with pytest.raises(ValueError):
-        BayesianEstimator().fit(torch_models["model_latent"], torch_models["d1"])
+        DiscreteBayesianEstimator().fit(torch_models["model_latent"], torch_models["d1"])
 
 
 @requires_daft
 @requires_torch
 def test_estimate_cpd_dirichlet_torch(torch_models):
     cpd_A = get_cpd(
-        BayesianEstimator(prior_type="dirichlet", pseudo_counts={"A": [[0], [1]]}).fit(
+        DiscreteBayesianEstimator(prior_type="dirichlet", pseudo_counts={"A": [[0], [1]]}).fit(
             torch_models["m1"], torch_models["d1"]
         ),
         "A",
@@ -333,7 +339,7 @@ def test_estimate_cpd_dirichlet_torch(torch_models):
     assert cpd_A == cpd_A_exp
 
     cpd_A = get_cpd(
-        BayesianEstimator(prior_type="dirichlet", pseudo_counts={"A": np.array([[0], [1]])}).fit(
+        DiscreteBayesianEstimator(prior_type="dirichlet", pseudo_counts={"A": np.array([[0], [1]])}).fit(
             torch_models["m1"], torch_models["d1"]
         ),
         "A",
@@ -341,7 +347,7 @@ def test_estimate_cpd_dirichlet_torch(torch_models):
     assert cpd_A == cpd_A_exp
 
     cpd_B = get_cpd(
-        BayesianEstimator(prior_type="dirichlet", pseudo_counts={"B": [[9], [3]]}).fit(
+        DiscreteBayesianEstimator(prior_type="dirichlet", pseudo_counts={"B": [[9], [3]]}).fit(
             torch_models["m1"], torch_models["d1"]
         ),
         "B",
@@ -350,7 +356,7 @@ def test_estimate_cpd_dirichlet_torch(torch_models):
     assert cpd_B == cpd_B_exp
 
     cpd_C = get_cpd(
-        BayesianEstimator(
+        DiscreteBayesianEstimator(
             prior_type="dirichlet",
             pseudo_counts={"C": [[0.4, 0.4, 0.4, 0.4], [0.6, 0.6, 0.6, 0.6]]},
         ).fit(torch_models["m1"], torch_models["d1"]),
@@ -370,7 +376,7 @@ def test_estimate_cpd_dirichlet_torch(torch_models):
 @requires_torch
 def test_estimate_cpd_improper_prior_torch(torch_models):
     cpd_C = get_cpd(
-        BayesianEstimator(
+        DiscreteBayesianEstimator(
             prior_type="dirichlet",
             pseudo_counts={"C": [[0, 0, 0, 0], [0, 0, 0, 0]]},
         ).fit(torch_models["m1"], torch_models["d1"]),
@@ -394,12 +400,12 @@ def test_estimate_cpd_improper_prior_torch(torch_models):
 @requires_daft
 @requires_torch
 def test_estimate_cpd_shortcuts_torch(torch_models):
-    est2 = BayesianEstimator(
+    est2 = DiscreteBayesianEstimator(
         state_names={"A": [0, 1, 2], "B": [0, 1], "C": [0, 1, 23]},
         prior_type="BDeu",
         equivalent_sample_size=9,
     ).fit(torch_models["m1"], torch_models["d1"])
-    est3 = BayesianEstimator(prior_type="K2").fit(torch_models["m1"], torch_models["d2"])
+    est3 = DiscreteBayesianEstimator(prior_type="K2").fit(torch_models["m1"], torch_models["d2"])
     cpd_C1 = get_cpd(est2, "C")
     cpd_C1_correct = TabularCPD(
         "C",
@@ -447,7 +453,7 @@ def test_get_parameters2_torch(torch_models):
         "B": [[4], [5]],
         "C": [[6, 6, 6, 6, 6, 6], [7, 7, 7, 7, 7, 7]],
     }
-    est3 = BayesianEstimator(prior_type="dirichlet", pseudo_counts=pseudo_counts).fit(
+    est3 = DiscreteBayesianEstimator(prior_type="dirichlet", pseudo_counts=pseudo_counts).fit(
         torch_models["m1"], torch_models["d2"]
     )
     cpds = {get_cpd(est3, "A"), get_cpd(est3, "B"), get_cpd(est3, "C")}
@@ -458,7 +464,9 @@ def test_get_parameters2_torch(torch_models):
 @requires_daft
 @requires_torch
 def test_get_parameters3_torch(torch_models):
-    est3 = BayesianEstimator(prior_type="dirichlet", pseudo_counts=0.1).fit(torch_models["m1"], torch_models["d2"])
+    est3 = DiscreteBayesianEstimator(prior_type="dirichlet", pseudo_counts=0.1).fit(
+        torch_models["m1"], torch_models["d2"]
+    )
     cpds = {get_cpd(est3, "A"), get_cpd(est3, "B"), get_cpd(est3, "C")}
     all_cpds = est3.parameters_
 

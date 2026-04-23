@@ -11,12 +11,13 @@ from tqdm.auto import tqdm
 
 from pgmpy import config, logger
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.utils import preprocess_data
 
 from .base import _BaseDiscreteParameterEstimator
-from .mle import MaximumLikelihoodEstimator
+from .mle import DiscreteMLE
 
 
-class ExpectationMaximization(_BaseDiscreteParameterEstimator):
+class DiscreteEM(_BaseDiscreteParameterEstimator):
     """
     Class used to compute parameters for a model using Expectation Maximization (EM).
 
@@ -39,7 +40,7 @@ class ExpectationMaximization(_BaseDiscreteParameterEstimator):
     m_step_estimator: discrete parameter estimator instance, optional
         Estimator instance to use in the M-step. The estimator must support
         weighted data. If not specified, uses
-        `MaximumLikelihoodEstimator(weighted=True)`.
+        `DiscreteMLE(weighted=True)`.
 
     max_iter: int, default=100
         The maximum number of iterations the algorithm is allowed to run for.
@@ -73,7 +74,7 @@ class ExpectationMaximization(_BaseDiscreteParameterEstimator):
     >>> import numpy as np
     >>> import pandas as pd
     >>> from pgmpy.models import DiscreteBayesianNetwork
-    >>> from pgmpy.parameter_estimator import ExpectationMaximization
+    >>> from pgmpy.parameter_estimator import DiscreteEM
     >>> rng = np.random.default_rng(42)
     >>> data = pd.DataFrame(
     ...     rng.integers(low=0, high=2, size=(1000, 3)),
@@ -82,7 +83,7 @@ class ExpectationMaximization(_BaseDiscreteParameterEstimator):
     >>> model = DiscreteBayesianNetwork(
     ...     [("A", "B"), ("C", "B"), ("C", "D")], latents={"B"}
     ... )
-    >>> estimator = ExpectationMaximization(show_progress=False)
+    >>> estimator = DiscreteEM(show_progress=False)
     >>> estimator.fit(model, data).parameters_  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
     [<TabularCPD representing P(A:2) at 0x...>,
     <TabularCPD representing P(B:2 | A:2, C:2) at 0x...>,
@@ -219,14 +220,12 @@ class ExpectationMaximization(_BaseDiscreteParameterEstimator):
         return True
 
     def _clone_m_step_estimator(self, weighted: bool) -> _BaseDiscreteParameterEstimator:
-        estimator = (
-            self.m_step_estimator if self.m_step_estimator is not None else MaximumLikelihoodEstimator(weighted=True)
-        )
+        estimator = self.m_step_estimator if self.m_step_estimator is not None else DiscreteMLE(weighted=True)
 
         if isinstance(estimator, type) or not isinstance(estimator, _BaseDiscreteParameterEstimator):
             raise TypeError(
                 "m_step_estimator should be an instance of a discrete parameter estimator. "
-                "Pass an initialized estimator, for example `MaximumLikelihoodEstimator(weighted=True)`."
+                "Pass an initialized estimator, for example `DiscreteMLE(weighted=True)`."
             )
 
         if not bool(estimator.get_tag("supports_weighted_data")):
@@ -259,7 +258,7 @@ class ExpectationMaximization(_BaseDiscreteParameterEstimator):
 
         Returns
         -------
-        self: ExpectationMaximization
+        self: DiscreteEM
             Fitted estimator with learned CPDs stored in `parameters_`.
 
         Examples
@@ -267,7 +266,7 @@ class ExpectationMaximization(_BaseDiscreteParameterEstimator):
         >>> import numpy as np
         >>> import pandas as pd
         >>> from pgmpy.models import DiscreteBayesianNetwork
-        >>> from pgmpy.parameter_estimator import ExpectationMaximization as EM
+        >>> from pgmpy.parameter_estimator import DiscreteEM as EM
         >>> rng = np.random.default_rng(42)
         >>> data = pd.DataFrame(
         ...     rng.integers(low=0, high=2, size=(1000, 3)),
@@ -284,7 +283,12 @@ class ExpectationMaximization(_BaseDiscreteParameterEstimator):
         <TabularCPD representing P(D:2 | C:2) at 0x...>]
         """
         model, data = self._prepare_fit_data(model, data)
-        self._initialize_fit(model, data)
+        model = self._coerce_model(model)
+        data, _ = preprocess_data(data)
+        self._validate_model_data(model, data)
+        self._model = model
+        self._data = data
+        self.state_names_ = self._build_fitted_state_names(model, data)
         latent_card = self._initialize_latent_state_names()
         self._model_copy = self._model.copy()
         complete_model = self._model.copy()

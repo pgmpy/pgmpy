@@ -602,7 +602,7 @@ class DiscreteBayesianNetwork(DAG):
 
         estimator: discrete parameter estimator instance
             Discrete parameter estimator instance to use for fitting. If not specified,
-            uses `pgmpy.parameter_estimator.MaximumLikelihoodEstimator()`.
+            uses `pgmpy.parameter_estimator.DiscreteMLE()`.
 
         Returns
         -------
@@ -615,10 +615,10 @@ class DiscreteBayesianNetwork(DAG):
         --------
         >>> import pandas as pd
         >>> from pgmpy.models import DiscreteBayesianNetwork
-        >>> from pgmpy.parameter_estimator import MaximumLikelihoodEstimator
+        >>> from pgmpy.parameter_estimator import DiscreteMLE
         >>> data = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
         >>> model = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
-        >>> fitted_model = model.fit(data, estimator=MaximumLikelihoodEstimator())
+        >>> fitted_model = model.fit(data, estimator=DiscreteMLE())
         >>> len(fitted_model.get_cpds())
         3
         >>> fitted_model.get_cpds()  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
@@ -626,15 +626,15 @@ class DiscreteBayesianNetwork(DAG):
         <TabularCPD representing P(C:2 | A:2, B:2) at 0x...>,
         <TabularCPD representing P(B:2) at 0x...>]
         """
-        from pgmpy.parameter_estimator import MaximumLikelihoodEstimator
+        from pgmpy.parameter_estimator import DiscreteMLE
         from pgmpy.parameter_estimator.base import _BaseDiscreteParameterEstimator
 
         if estimator is None:
-            estimator = MaximumLikelihoodEstimator()
+            estimator = DiscreteMLE()
         elif isinstance(estimator, type) or not isinstance(estimator, _BaseDiscreteParameterEstimator):
             raise TypeError(
                 "Estimator should be an instance of a discrete parameter estimator. "
-                "Pass an initialized estimator, for example `MaximumLikelihoodEstimator()`."
+                "Pass an initialized estimator, for example `DiscreteMLE()`."
             )
 
         estimator.fit(self, data)
@@ -644,7 +644,7 @@ class DiscreteBayesianNetwork(DAG):
     def fit_update(self, data: pd.DataFrame, n_prev_samples: int | None = None, n_jobs: int = 1) -> None:
         """
         Method to update the parameters of the DiscreteBayesianNetwork with more data.
-        Internally, uses BayesianEstimator with dirichlet prior, and uses
+        Internally, uses DiscreteBayesianEstimator with dirichlet prior, and uses
         the current CPDs (along with `n_prev_samples`) to compute the pseudo_counts.
 
         Parameters
@@ -675,7 +675,7 @@ class DiscreteBayesianNetwork(DAG):
         >>> data = BayesianModelSampling(model).forward_sample(int(1e3))
         >>> model.fit_update(data)
         """
-        from pgmpy.parameter_estimator import BayesianEstimator
+        from pgmpy.parameter_estimator import DiscreteBayesianEstimator
 
         if n_prev_samples is None:
             n_prev_samples = data.shape[0]
@@ -691,7 +691,7 @@ class DiscreteBayesianNetwork(DAG):
             state_names.update(self.get_cpds(var).state_names)
 
         # Step 3: Estimate the new CPDs.
-        _est = BayesianEstimator(
+        _est = DiscreteBayesianEstimator(
             state_names=state_names,
             prior_type="dirichlet",
             pseudo_counts=pseudo_counts,

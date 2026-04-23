@@ -18,11 +18,7 @@ from pgmpy.factors.discrete import (
 from pgmpy.independencies import Independencies
 from pgmpy.inference import ApproxInference, BeliefPropagation
 from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork
-from pgmpy.parameter_estimator import (
-    BayesianEstimator,
-    ExpectationMaximization,
-    MaximumLikelihoodEstimator,
-)
+from pgmpy.parameter_estimator import DiscreteBayesianEstimator, DiscreteEM, DiscreteMLE
 from pgmpy.sampling import BayesianModelSampling
 
 
@@ -949,7 +945,7 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
     def test_bayesian_fit(self):
         self.model2.fit(
             self.data1,
-            estimator=BayesianEstimator(
+            estimator=DiscreteBayesianEstimator(
                 prior_type="dirichlet",
                 pseudo_counts={
                     "A": [[9], [3]],
@@ -971,21 +967,21 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
 
         fitted_model_bayesian = model.fit(
             data,
-            estimator=BayesianEstimator(prior_type="dirichlet", pseudo_counts=pseudo_counts),
+            estimator=DiscreteBayesianEstimator(prior_type="dirichlet", pseudo_counts=pseudo_counts),
         )
         self.assertEqual(
             fitted_model_bayesian.get_cpds("B"),
             TabularCPD("B", 2, [[11.0 / 15], [4.0 / 15]]),
         )
 
-        fitted_model_mle = model.fit(data, estimator=MaximumLikelihoodEstimator())
+        fitted_model_mle = model.fit(data, estimator=DiscreteMLE())
 
         self.assertEqual(
             fitted_model_mle.get_cpds("B"),
             TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]]),
         )
 
-        fitted_model_em = model.fit(data, estimator=ExpectationMaximization(show_progress=False))
+        fitted_model_em = model.fit(data, estimator=DiscreteEM(show_progress=False))
 
         self.assertEqual(
             fitted_model_em.get_cpds("B"),
@@ -1019,13 +1015,13 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
 
         fitted_model_bayesian = model.fit(
             data,
-            estimator=BayesianEstimator(prior_type="dirichlet", pseudo_counts=pseudo_counts),
+            estimator=DiscreteBayesianEstimator(prior_type="dirichlet", pseudo_counts=pseudo_counts),
         )
         self.assertTrue(fitted_model_bayesian.check_model())
         self.assertEqual(sorted(fitted_model_bayesian.nodes()), ["A", "B", "C", "D"])
 
     def test_fit_missing_data(self):
-        self.model2.fit(self.data2, estimator=MaximumLikelihoodEstimator(state_names={"C": [0, 1]}))
+        self.model2.fit(self.data2, estimator=DiscreteMLE(state_names={"C": [0, 1]}))
         cpds = {
             TabularCPD("A", 2, [[0.5], [0.5]]),
             TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]]),
