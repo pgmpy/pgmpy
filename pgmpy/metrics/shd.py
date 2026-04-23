@@ -1,7 +1,7 @@
 import networkx as nx
 import numpy as np
 
-from pgmpy.base import DAG
+from pgmpy.base import DAG, PDAG
 from pgmpy.metrics import _BaseSupervisedMetric
 
 
@@ -15,6 +15,11 @@ class SHD(_BaseSupervisedMetric):
     The code first accounts for edges that need to be deleted (from true_model), added (to true_model) and finally edges
     that need to be reversed. All operations count as 1. Alternatively, setting `edge_reverse_penalty=2` counts
     reversals as a distance of 2 (one deletion and one addition).
+
+    Both fully-directed :class:`~pgmpy.base.DAG` and partially-directed :class:`~pgmpy.base.PDAG` inputs are supported.
+    For PDAGs, an undirected edge is represented internally as edges in both directions; orientation mismatches of any
+    kind (directed vs. reversed directed, directed vs. undirected) on a shared skeleton edge each count as one
+    operation — the same convention ``pcalg::shd`` uses in R.
 
     Parameters
     ----------
@@ -35,6 +40,15 @@ class SHD(_BaseSupervisedMetric):
     >>> shd_double = SHD(edge_reverse_penalty=2)
     >>> shd_double(true_causal_graph=dag1, est_causal_graph=dag2)
     2
+
+    PDAGs are also supported — an undirected edge in one graph compared against a directed edge in the other
+    counts as one orientation mismatch:
+
+    >>> from pgmpy.base import PDAG
+    >>> pdag1 = PDAG(directed_ebunch=[(1, 2)], undirected_ebunch=[(2, 3)])
+    >>> pdag2 = PDAG(directed_ebunch=[(1, 2), (2, 3)])
+    >>> shd(true_causal_graph=pdag1, est_causal_graph=pdag2)
+    1
     """
 
     _tags = {
@@ -43,7 +57,7 @@ class SHD(_BaseSupervisedMetric):
         "requires_data": False,
         "lower_is_better": True,
         "is_symmetric": True,
-        "supported_graph_types": (DAG,),
+        "supported_graph_types": (DAG, PDAG),
         "is_default": True,
     }
 
@@ -67,8 +81,12 @@ class SHD(_BaseSupervisedMetric):
 
         shd = 0
 
-        s1 = m1 + m1.T
-        s2 = m2 + m2.T
+        # Skeletons: 1 wherever there is any edge (directed or undirected) between a pair.
+        # For PDAGs, undirected edges have both m[i, j] and m[j, i] set to 1, so m + m.T
+        # produces a 2 at those positions; clipping to {0, 1} keeps the skeleton comparison
+        # honest and avoids double-counting an undirected-vs-nothing difference.
+        s1 = np.clip(m1 + m1.T, 0, 1)
+        s2 = np.clip(m2 + m2.T, 0, 1)
 
         # Edges that are in m1 but not in m2 (deletions from m1)
         ds = s1 - s2
