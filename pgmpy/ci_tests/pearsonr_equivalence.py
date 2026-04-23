@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
+from ._base import _CITestResult
 from .pearsonr import Pearsonr
 
 
@@ -80,9 +81,9 @@ class PearsonrEquivalence(Pearsonr):
         "requires_data": True,
     }
 
-    def __init__(self, data: pd.DataFrame, delta_threshold: float = 0.1):
+    def __init__(self, data: pd.DataFrame, delta_threshold: float = 0.1, use_cache: bool = True):
         self.delta_threshold = delta_threshold
-        super().__init__(data=data)
+        super().__init__(data=data, use_cache=use_cache)
 
     def is_independent(
         self,
@@ -102,13 +103,11 @@ class PearsonrEquivalence(Pearsonr):
         bool
             True if X ⊥⊥ Y | Z (p_value_ < significance_level), else False.
         """
-        self._validate_inputs(X, Y, Z)
-
         self.run_test(X=X, Y=Y, Z=list(Z))
 
         return self.p_value_ < significance_level
 
-    def run_test(
+    def _compute_result(
         self,
         X: str,
         Y: str,
@@ -117,11 +116,11 @@ class PearsonrEquivalence(Pearsonr):
         """
         Compute Pearson equivalence statistic and p-value.
 
-        Sets ``self.statistic_`` (Fisher z-transformed partial correlation) and ``self.p_value_``.
+        Returns the Fisher z-transformed partial correlation statistic and p-value.
         """
         # Step 2: Compute Partial Pearson Correlation via parent and clip to avoid infinities
-        super().run_test(X, Y, Z)
-        rho = np.clip(self.statistic_, -0.999999, 0.999999)
+        pearsonr_result = super()._compute_result(X, Y, Z)
+        rho = np.clip(pearsonr_result.statistic, -0.999999, 0.999999)
 
         # Step 3: Fisher Z-Transformation
         coeff = np.arctanh(rho)
@@ -141,7 +140,8 @@ class PearsonrEquivalence(Pearsonr):
         z_score_upper = std_error_factor * (coeff - z_delta)
         p_value_upper = stats.norm.cdf(z_score_upper)
 
-        self.statistic_ = coeff
-        self.p_value_ = max(p_value_lower, p_value_upper)
-
-        return self.statistic_, self.p_value_
+        return _CITestResult(
+            statistic=coeff,
+            p_value=max(p_value_lower, p_value_upper),
+            attributes=dict(pearsonr_result.attributes),
+        )

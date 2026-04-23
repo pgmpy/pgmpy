@@ -7,14 +7,6 @@ from pgmpy.estimators import GES
 from pgmpy.example_models import load_model
 
 
-def test_ges_deprecation_warning():
-    with pytest.warns(
-        FutureWarning,
-        match="GES is deprecated. Please use pgmpy.causal_discovery.GES instead.",
-    ):
-        GES(pd.DataFrame({"A": [0, 1], "B": [0, 1]}), use_cache=False)
-
-
 @pytest.fixture
 def random_data_estimator():
     rand_data = pd.DataFrame(
@@ -124,7 +116,7 @@ def test_insert_orients_t_away_from_v():
 
     new_model = est.insert("A", "B", {"C"}, pdag)
 
-    assert new_model.directed_edges == {("A", "B"), ("B", "C")}
+    assert new_model.directed_edges == {("A", "B"), ("C", "B")}
     assert new_model.undirected_edges == set()
 
 

@@ -1146,6 +1146,14 @@ class TestTabularCPDInit:
                 [5, 6],
             )
 
+    def test_cpd_init_negative_values(self):
+        with pytest.raises(ValueError, match="CPD values must be non-negative"):
+            TabularCPD(
+                "event",
+                2,
+                [[-0.5], [1.5]],
+            )
+
     def test_too_wide_cpd_table(self):
         terminal_width, terminal_height = get_terminal_size()
 

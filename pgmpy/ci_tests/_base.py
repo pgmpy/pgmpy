@@ -1,10 +1,135 @@
+from dataclasses import dataclass, field
+
+import numpy as np
+import pandas as pd
 from skbase.base import BaseObject
 from skbase.lookup import all_objects
+from sklearn.base import clone
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+
+
+class _ResidualMixin:
+    """
+    Mixin that provides a predict-then-residualize strategy for CI tests.
+
+    Requires the using class to expose the following attributes before calling
+    any method of this mixin:
+
+    Attributes
+    ----------
+    data : pd.DataFrame
+        The (preprocessed) dataset.
+    dtypes : dict
+        Mapping from column name to dtype code: ``"N"`` (numerical),
+        ``"C"`` (categorical unordered), or ``"O"`` (categorical ordered),
+        as returned by :func:`pgmpy.utils.preprocess_data`.
+    estimator : sklearn-compatible estimator or None
+        Estimator used to predict each variable from the conditioning set.
+        Must support ``fit`` / ``predict``, and ``predict_proba`` for
+        categorical targets. When ``None``, defaults to
+        :class:`~sklearn.ensemble.RandomForestClassifier` for categorical /
+        ordinal variables and :class:`~sklearn.ensemble.RandomForestRegressor`
+        for numerical variables.
+    """
+
+    def _fit_predict(self, target_col: str, Z_data: pd.DataFrame):
+        """
+        Fit an estimator on ``Z_data`` to predict ``target_col``.
+
+        Parameters
+        ----------
+        target_col : str
+            Name of the column in ``self.data`` to predict.
+        Z_data : pd.DataFrame
+            Feature matrix (already one-hot encoded) used for fitting.
+
+        Returns
+        -------
+        pred : np.ndarray
+            Predicted values (1-D for numerical, 2-D probability matrix for
+            categorical / ordinal targets).
+        cat_index : pd.CategoricalIndex or None
+            Category index returned by :func:`pandas.factorize`; ``None`` for
+            numerical targets.
+        """
+        is_cat = self.dtypes[target_col] in ("C", "O")
+        target_data = self.data.loc[:, target_col]
+        cat_index = None
+
+        if self.estimator is not None:
+            model = clone(self.estimator)
+            if is_cat and not hasattr(model, "predict_proba"):
+                raise ValueError(
+                    f"The provided estimator ({type(model).__name__}) must have a "
+                    f"`predict_proba` method for discrete variable '{target_col}'."
+                )
+        else:
+            model_cls = RandomForestClassifier if is_cat else RandomForestRegressor
+            model = model_cls(random_state=0)
+
+        if is_cat:
+            y_encoded, cat_index = pd.factorize(target_data)
+            model.fit(Z_data, y_encoded)
+            pred = model.predict_proba(Z_data)
+        else:
+            model.fit(Z_data, target_data)
+            pred = model.predict(Z_data)
+
+        return pred, cat_index
+
+    def get_residuals(self, X: str, Z: list) -> pd.DataFrame | pd.Series:
+        """
+        Compute residuals of ``X`` after regressing out ``Z``.
+
+        For categorical / ordinal ``X``: returns a :class:`~pandas.DataFrame`
+        of shape ``(n, K-1)`` — one-hot encoded dummy matrix minus predicted
+        class probabilities with the last column dropped to avoid
+        multicollinearity.
+
+        For numerical ``X``: returns a :class:`~pandas.Series` of length ``n``
+        — observed values minus predicted values.
+
+        An intercept column of ones is always appended to ``Z`` so the
+        estimator always has at least one feature and learns the baseline
+        of the target variable.
+
+        Parameters
+        ----------
+        X : str
+            Name of the variable to residualize.
+        Z : list of str
+            Conditioning variables. May be empty.
+
+        Returns
+        -------
+        pd.DataFrame or pd.Series
+            Residuals of ``X`` given ``Z``.
+        """
+        z_cols = list(Z) + ["_intercept_Z"]
+        z_data_source = self.data.assign(_intercept_Z=np.ones(self.data.shape[0]))
+
+        Z_data = pd.get_dummies(z_data_source.loc[:, z_cols])
+        pred, cat_index = self._fit_predict(X, Z_data)
+
+        if self.dtypes[X] in ("C", "O"):
+            dummies = pd.get_dummies(self.data.loc[:, X]).loc[:, cat_index.categories[cat_index.codes]]
+            return (dummies - pred).iloc[:, :-1]
+        else:
+            return self.data.loc[:, X] - pred
+
+
+@dataclass(frozen=True)
+class _CITestResult:
+    statistic: float | None
+    p_value: float
+    attributes: dict[str, object] = field(default_factory=dict)
 
 
 class _BaseCITest(BaseObject):
     """
-    Base class for all Conditional Independence (CI) tests. Subclasses must implement `run_test`.
+    Base class for all Conditional Independence (CI) tests.
+
+    Subclasses must implement ``_compute_result``.
     """
 
     _tags = {
@@ -12,7 +137,13 @@ class _BaseCITest(BaseObject):
         "data_types": (),
         "default_for": None,
         "requires_data": True,
+        "is_symmetric": True,
     }
+
+    def __init__(self, use_cache: bool = True):
+        self.use_cache = use_cache
+        self._result_cache = {}
+        super().__init__()
 
     def __call__(
         self,
@@ -62,7 +193,6 @@ class _BaseCITest(BaseObject):
         CI test instances are not thread-safe; use a separate instance per thread
         for parallel computation.
         """
-        self._validate_inputs(X, Y, Z)
         self.run_test(X=X, Y=Y, Z=list(Z))
 
         return self.p_value_ >= significance_level
@@ -71,9 +201,8 @@ class _BaseCITest(BaseObject):
         """
         Run the statistical test and return the test statistic and p-value.
 
-        Subclasses must implement this method. It should set ``self.statistic_``
-        and ``self.p_value_`` as attributes, and may set additional attributes
-        (e.g. ``self.dof_``).
+        Uses the subclass-provided ``_compute_result`` hook and updates the
+        instance result attributes from the returned payload.
 
         Parameters
         ----------
@@ -91,7 +220,37 @@ class _BaseCITest(BaseObject):
         p_value : float
             The p-value for the test.
         """
-        raise NotImplementedError(f"{self.__class__.__name__} must implement run_test.")
+        self._validate_inputs(X, Y, Z)
+        Z = list(Z)
+
+        if self.use_cache:
+            if self.get_tag("is_symmetric", tag_value_default=True):
+                x_key, y_key = sorted((X, Y), key=repr)
+            else:
+                x_key, y_key = X, Y
+            cache_key = (x_key, y_key, tuple(sorted(Z, key=repr)))
+
+            result = self._result_cache.get(cache_key)
+            if result is None:
+                result = self._compute_result(X=X, Y=Y, Z=Z)
+                self._result_cache[cache_key] = result
+        else:
+            result = self._compute_result(X=X, Y=Y, Z=Z)
+
+        self.statistic_ = result.statistic
+        self.p_value_ = result.p_value
+        for attr_name, attr_value in result.attributes.items():
+            setattr(self, attr_name, attr_value)
+
+        return self.statistic_, self.p_value_
+
+    def _compute_result(self, X, Y, Z):
+        """
+        Compute the CI test result for a single query.
+
+        Subclasses must implement this method and return a ``_CITestResult``.
+        """
+        raise NotImplementedError(f"{self.__class__.__name__} must implement _compute_result.")
 
     def _validate_inputs(self, X, Y, Z):
         if X == Y:

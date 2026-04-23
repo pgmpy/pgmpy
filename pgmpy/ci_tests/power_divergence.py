@@ -4,7 +4,7 @@ from scipy import stats
 
 from pgmpy import logger
 
-from ._base import _BaseCITest
+from ._base import _BaseCITest, _CITestResult
 
 
 class PowerDivergence(_BaseCITest):
@@ -107,12 +107,12 @@ class PowerDivergence(_BaseCITest):
         "requires_data": True,
     }
 
-    def __init__(self, data: pd.DataFrame, lambda_: str | float = "cressie-read"):
+    def __init__(self, data: pd.DataFrame, lambda_: str | float = "cressie-read", use_cache: bool = True):
         self.data = data
         self.lambda_ = lambda_
-        super().__init__()
+        super().__init__(use_cache=use_cache)
 
-    def run_test(
+    def _compute_result(
         self,
         X: str,
         Y: str,
@@ -121,7 +121,7 @@ class PowerDivergence(_BaseCITest):
         """
         Compute power divergence statistic, p-value, and degrees of freedom.
 
-        Sets ``self.statistic_`` (chi-squared), ``self.p_value_``, and ``self.dof_``.
+        Returns the chi-squared statistic, p-value, and degrees of freedom.
         """
         data = self.data
 
@@ -158,8 +158,4 @@ class PowerDivergence(_BaseCITest):
                     dof += d
             p_value = 1 - stats.chi2.cdf(chi, df=dof)
 
-        self.statistic_ = chi
-        self.p_value_ = p_value
-        self.dof_ = dof
-
-        return self.statistic_, self.p_value_
+        return _CITestResult(statistic=chi, p_value=p_value, attributes={"dof_": dof})
