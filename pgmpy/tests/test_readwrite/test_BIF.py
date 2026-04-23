@@ -63,15 +63,13 @@ class TestBIFReader(unittest.TestCase):
             include_properties=True,
         )
 
-        self.water_model = BIFReader(
-            "pgmpy/tests/test_readwrite/testdata/water.bif", include_properties=True
-        )
+        self.water_model = BIFReader("pgmpy/tests/test_readwrite/testdata/water.bif", include_properties=True)
 
     def test_network_name(self):
         name_expected = "Dog-Problem"
         self.assertEqual(self.reader.network_name, name_expected)
 
-    def test_get_variables(self):
+    def test_variable_names(self):
         var_expected = [
             "light-on",
             "bowel-problem",
@@ -79,9 +77,9 @@ class TestBIFReader(unittest.TestCase):
             "hear-bark",
             "family-out",
         ]
-        self.assertListEqual(self.reader.get_variables(), var_expected)
+        self.assertListEqual(self.reader.variable_names, var_expected)
 
-    def test_states(self):
+    def test_variable_states(self):
         states_expected = {
             "bowel-problem": ["true", "false"],
             "dog-out": ["true", "false"],
@@ -89,11 +87,11 @@ class TestBIFReader(unittest.TestCase):
             "hear-bark": ["true", "false"],
             "light-on": ["true", "false"],
         }
-        states = self.reader.get_states()
+        states = self.reader.variable_states
         for variable in states_expected:
             self.assertListEqual(states_expected[variable], states[variable])
 
-    def test_get_property(self):
+    def test_variable_properties(self):
         property_expected = {
             "bowel-problem": ["position = (335, 99)"],
             "dog-out": ["position = (300, 195)"],
@@ -101,11 +99,11 @@ class TestBIFReader(unittest.TestCase):
             "hear-bark": ["position = (296, 268)"],
             "light-on": ["position = (218, 195)"],
         }
-        prop = self.reader.get_property()
+        prop = self.reader.variable_properties
         for variable in property_expected:
             self.assertListEqual(property_expected[variable], prop[variable])
 
-    def test_get_values(self):
+    def test_variable_cpds(self):
         cpd_expected = {
             "bowel-problem": np.array([[0.01], [0.99]]),
             "dog-out": np.array([[0.99, 0.97, 0.9, 0.3], [0.01, 0.03, 0.1, 0.7]]),
@@ -117,7 +115,7 @@ class TestBIFReader(unittest.TestCase):
         for variable in cpd_expected:
             np_test.assert_array_equal(cpd_expected[variable], cpd[variable])
 
-    def test_get_values_reordered(self):
+    def test_variable_cpds_reordered(self):
         cancer_values1 = BIFReader(
             string="""
                 network unknown {
@@ -137,7 +135,7 @@ class TestBIFReader(unittest.TestCase):
                   (high, True) 0.05, 0.95;
                   (high, False) 0.02, 0.98;
                 }"""
-        ).get_values()
+        ).variable_cpds
 
         cancer_values2 = BIFReader(
             string="""
@@ -158,12 +156,12 @@ class TestBIFReader(unittest.TestCase):
                   (low, False) 0.001, 0.999;
                   (high, False) 0.02, 0.98;
                 }"""
-        ).get_values()
+        ).variable_cpds
 
         for var in cancer_values1:
             np_test.assert_array_equal(cancer_values1[var], cancer_values2[var])
 
-    def test_get_parents(self):
+    def test_variable_parents(self):
         parents_expected = {
             "bowel-problem": [],
             "dog-out": ["bowel-problem", "family-out"],
@@ -171,11 +169,11 @@ class TestBIFReader(unittest.TestCase):
             "hear-bark": ["dog-out"],
             "light-on": ["family-out"],
         }
-        parents = self.reader.get_parents()
+        parents = self.reader.variable_parents
         for variable in parents_expected:
             self.assertListEqual(parents_expected[variable], parents[variable])
 
-    def test_get_edges(self):
+    def test_variable_edges(self):
         edges_expected = [
             ["family-out", "dog-out"],
             ["bowel-problem", "dog-out"],
@@ -331,6 +329,34 @@ class TestBIFReader(unittest.TestCase):
         for var in table_model.nodes():
             self.assertEqual(table_model.get_cpds(var), default_model.get_cpds(var))
 
+    def test_cpp_style_comments(self):
+        reader = BIFReader(
+            string=r"""
+            // BIF file example: Causal graph for lung cancer diagnosis
+            // Author: Senior Engineer
+            // Date: 2024-05-20
+
+            network "Cancer_Research" {
+                // 1. This contains a URL that may cause parsing errors.
+                property "version" = "1.0";
+                property "author" = "Medical AI Team";
+                property "source" = "http://health-data.org/lung-cancer";
+                /* If // is simply treated as the start of a comment,
+                the http:// part above will be truncated, resulting in an error.
+                */
+            }
+
+            variable "Smoking" {
+                type discrete [ 2 ] { "True", "False" };
+                property "position = (100, 100)";
+                property "description = "Patient's smoking status"";
+            }
+                """,
+            include_properties=True,
+        )
+        assert reader.network_name == "Cancer_Research"
+        assert "http://health-data.org/lung-cancer" in reader.network
+
 
 class TestBIFWriter(unittest.TestCase):
     def setUp(self):
@@ -398,9 +424,7 @@ class TestBIFWriter(unittest.TestCase):
                 len(states[var]),
                 values,
                 evidence=parents[var],
-                evidence_card=[
-                    len(states[evidence_var]) for evidence_var in parents[var]
-                ],
+                evidence_card=[len(states[evidence_var]) for evidence_var in parents[var]],
             )
             tabular_cpds.append(cpd)
         self.model.add_cpds(*tabular_cpds)
@@ -579,15 +603,13 @@ class TestBIFReaderTorch(unittest.TestCase):
             include_properties=True,
         )
 
-        self.water_model = BIFReader(
-            "pgmpy/tests/test_readwrite/testdata/water.bif", include_properties=True
-        )
+        self.water_model = BIFReader("pgmpy/tests/test_readwrite/testdata/water.bif", include_properties=True)
 
     def test_network_name(self):
         name_expected = "Dog-Problem"
         self.assertEqual(self.reader.network_name, name_expected)
 
-    def test_get_variables(self):
+    def test_variable_names(self):
         var_expected = [
             "light-on",
             "bowel-problem",
@@ -595,9 +617,9 @@ class TestBIFReaderTorch(unittest.TestCase):
             "hear-bark",
             "family-out",
         ]
-        self.assertListEqual(self.reader.get_variables(), var_expected)
+        self.assertListEqual(self.reader.variable_names, var_expected)
 
-    def test_states(self):
+    def test_variable_states(self):
         states_expected = {
             "bowel-problem": ["true", "false"],
             "dog-out": ["true", "false"],
@@ -605,11 +627,11 @@ class TestBIFReaderTorch(unittest.TestCase):
             "hear-bark": ["true", "false"],
             "light-on": ["true", "false"],
         }
-        states = self.reader.get_states()
+        states = self.reader.variable_states
         for variable in states_expected:
             self.assertListEqual(states_expected[variable], states[variable])
 
-    def test_get_property(self):
+    def test_variable_properties(self):
         property_expected = {
             "bowel-problem": ["position = (335, 99)"],
             "dog-out": ["position = (300, 195)"],
@@ -617,11 +639,11 @@ class TestBIFReaderTorch(unittest.TestCase):
             "hear-bark": ["position = (296, 268)"],
             "light-on": ["position = (218, 195)"],
         }
-        prop = self.reader.get_property()
+        prop = self.reader.variable_properties
         for variable in property_expected:
             self.assertListEqual(property_expected[variable], prop[variable])
 
-    def test_get_values(self):
+    def test_variable_cpds(self):
         cpd_expected = {
             "bowel-problem": np.array([[0.01], [0.99]]),
             "dog-out": np.array([[0.99, 0.97, 0.9, 0.3], [0.01, 0.03, 0.1, 0.7]]),
@@ -633,7 +655,7 @@ class TestBIFReaderTorch(unittest.TestCase):
         for variable in cpd_expected:
             np_test.assert_array_equal(cpd_expected[variable], cpd[variable])
 
-    def test_get_values_reordered(self):
+    def test_variable_cpds_reordered(self):
         cancer_values1 = BIFReader(
             string="""
                 network unknown {
@@ -653,7 +675,7 @@ class TestBIFReaderTorch(unittest.TestCase):
                   (high, True) 0.05, 0.95;
                   (high, False) 0.02, 0.98;
                 }"""
-        ).get_values()
+        ).variable_cpds
 
         cancer_values2 = BIFReader(
             string="""
@@ -674,12 +696,12 @@ class TestBIFReaderTorch(unittest.TestCase):
                   (low, False) 0.001, 0.999;
                   (high, False) 0.02, 0.98;
                 }"""
-        ).get_values()
+        ).variable_cpds
 
         for var in cancer_values1:
             np_test.assert_array_equal(cancer_values1[var], cancer_values2[var])
 
-    def test_get_parents(self):
+    def test_variable_parents(self):
         parents_expected = {
             "bowel-problem": [],
             "dog-out": ["bowel-problem", "family-out"],
@@ -687,11 +709,11 @@ class TestBIFReaderTorch(unittest.TestCase):
             "hear-bark": ["dog-out"],
             "light-on": ["family-out"],
         }
-        parents = self.reader.get_parents()
+        parents = self.reader.variable_parents
         for variable in parents_expected:
             self.assertListEqual(parents_expected[variable], parents[variable])
 
-    def test_get_edges(self):
+    def test_variable_edges(self):
         edges_expected = [
             ["family-out", "dog-out"],
             ["bowel-problem", "dog-out"],
@@ -848,6 +870,34 @@ class TestBIFReaderTorch(unittest.TestCase):
         del self.reader
         config.set_backend("numpy")
 
+    def test_cpp_style_comments(self):
+        reader = BIFReader(
+            string=r"""
+            // BIF file example: Causal graph for lung cancer diagnosis
+            // Author: Senior Engineer
+            // Date: 2024-05-20
+
+            network "Cancer_Research" {
+                // 1. This contains a URL that may cause parsing errors.
+                property "version" = "1.0";
+                property "author" = "Medical AI Team";
+                property "source" = "http://health-data.org/lung-cancer";
+                /* If // is simply treated as the start of a comment,
+                the http:// part above will be truncated, resulting in an error.
+                */
+            }
+
+            variable "Smoking" {
+                type discrete [ 2 ] { "True", "False" };
+                property "position = (100, 100)";
+                property "description = "Patient's smoking status"";
+            }
+                """,
+            include_properties=True,
+        )
+        assert reader.network_name == "Cancer_Research"
+        assert "http://health-data.org/lung-cancer" in reader.network
+
 
 @unittest.skipUnless(
     _check_soft_dependencies("torch", severity="none"),
@@ -921,9 +971,7 @@ class TestBIFWriterTorch(unittest.TestCase):
                 len(states[var]),
                 values,
                 evidence=parents[var],
-                evidence_card=[
-                    len(states[evidence_var]) for evidence_var in parents[var]
-                ],
+                evidence_card=[len(states[evidence_var]) for evidence_var in parents[var]],
             )
             tabular_cpds.append(cpd)
         self.model.add_cpds(*tabular_cpds)

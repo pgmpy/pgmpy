@@ -1,31 +1,28 @@
 from __future__ import annotations
 
-import hashlib
 import io
-import os
 import re
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, Type
+from typing import Any
 
 import numpy as np
 import pandas as pd
+from skbase.base import BaseObject
+from skbase.lookup import all_objects
 
 from pgmpy.base import DAG
-from pgmpy.estimators import ExpertKnowledge
-from pgmpy.global_vars import PGMPY_DATA_HOME
-from pgmpy.utils._safe_import import _safe_import
-
-requests = _safe_import("requests")
+from pgmpy.causal_discovery import ExpertKnowledge
+from pgmpy.utils.hf_hub import read_hf_file
 
 
 @dataclass
 class Dataset:
     name: str
     data: pd.DataFrame
-    expert_knowledge: Optional[ExpertKnowledge] = None
-    ground_truth: Optional[DAG] = None
-    tags: Dict[str, Any] = None
+    expert_knowledge: ExpertKnowledge | None = None
+    ground_truth: DAG | None = None
+
+    tags: dict[str, Any] = None
 
     def __str__(self) -> str:
         return (
@@ -37,7 +34,34 @@ class Dataset:
         return self.__str__()
 
 
-class _BaseDataset:
+class _BaseDataset(BaseObject):
+    """
+    Base class for all datasets in pgmpy.
+    Inherits from skbase.base.BaseObject to utilize its tag and lookup functionality.
+    """
+
+    # define tags
+    _tags = {
+        "name": None,
+        "n_variables": None,
+        "n_samples": None,
+        "has_ground_truth": False,
+        "has_expert_knowledge": False,
+        "has_missing_data": False,
+        "has_index_col": False,
+        "is_simulated": False,
+        "is_interventional": False,
+        "is_discrete": False,
+        "is_continuous": False,
+        "is_mixed": False,
+        "is_ordinal": False,
+    }
+
+    base_url = ""
+    repo_id = "pgmpy/example_datasets"
+    repo_type = "dataset"
+    revision = "main"
+
     @staticmethod
     def _parse_expert_knowledge(raw_expert_knowledge: bytes) -> ExpertKnowledge:
         """
@@ -45,9 +69,9 @@ class _BaseDataset:
         """
         text = raw_expert_knowledge.decode("utf-8-sig", errors="ignore")
 
-        temporal: List[List[str]] = []
-        forbids: List[Tuple[str, str]] = []
-        requires: List[Tuple[str, str]] = []
+        temporal: list[list[str]] = []
+        forbids: list[tuple[str, str]] = []
+        requires: list[tuple[str, str]] = []
 
         section = None
 
@@ -91,71 +115,58 @@ class _BaseDataset:
                 tokens = stripped.split()
                 requires.append((tokens[0], tokens[1]))
 
-        return ExpertKnowledge(
-            forbidden_edges=forbids, required_edges=requires, temporal_order=temporal
-        )
+        return ExpertKnowledge(forbidden_edges=forbids, required_edges=requires, temporal_order=temporal)
 
     @classmethod
-    def _get_raw_data(cls, data_type, url) -> bytes:
+    def _get_raw_data(cls, filename) -> bytes:
         """
-        Checks if the data is cached locally; if not, fetches it from the URL and caches it.
+        Fetches a dataset file from the Hugging Face Hub cache.
         """
-        cache_dir_path = os.path.join(
-            PGMPY_DATA_HOME,
-            hashlib.sha256(f"{cls.name}_{cls.base_url}".encode()).hexdigest(),
+        return read_hf_file(
+            repo_id=cls.repo_id,
+            filename=f"{cls.base_url}/{filename}",
+            repo_type=cls.repo_type,
+            revision=cls.revision,
         )
-
-        path = os.path.join(cache_dir_path, data_type)
-
-        if os.path.exists(path):
-            with open(path, "rb") as f:
-                raw_data = f.read()
-        else:
-            os.makedirs(cache_dir_path, exist_ok=True)
-            resp = requests.get(url, timeout=60)
-            resp.raise_for_status()
-            raw_data = resp.content
-            with open(path, "wb") as f:
-                f.write(raw_data)
-        return raw_data
 
     @classmethod
     def load_dataframe(cls) -> pd.DataFrame:
-        """Fetches/reads from cache the data associated with the dataset."""
-        raw_data = cls._get_raw_data("data", cls.data_url)
-        df = pd.read_csv(io.BytesIO(raw_data), sep="\t")
-        if cls.tags.get("has_missing_data"):
+        """
+        Fetches/reads from cache the data associated with the dataset.
+        """
+        raw_data = cls._get_raw_data(cls.data_url)
+        df = pd.read_csv(io.BytesIO(raw_data), sep=getattr(cls, "sep", "\t"))
+        if cls.get_class_tag("has_missing_data"):
             df.replace(cls.missing_values_marker, pd.NA, inplace=True)
+        if cls.get_class_tag("has_index_col"):
+            df.drop(df.columns[0], axis=1, inplace=True)
+        if len(cls.categorical_variables) > 0:
+            for col in cls.categorical_variables:
+                df[col] = df[col].astype("category")
+        if len(cls.ordinal_variables) > 0:
+            for col, order in cls.ordinal_variables.items():
+                cat_type = pd.CategoricalDtype(categories=order, ordered=True)
+                df[col] = df[col].astype(cat_type)
         return df
 
     @classmethod
     def load_expert_knowledge(cls) -> ExpertKnowledge:
         """Fetches/reads from cache the expert knowledge associated with the dataset."""
-        if not cls.tags.get("has_expert_knowledge"):
+        if not cls.get_class_tag("has_expert_knowledge"):
             return None
 
-        raw_data = cls._get_raw_data("expert_knowledge", cls.expert_knowledge_url)
+        raw_data = cls._get_raw_data(cls.expert_knowledge_url)
         expert_knowledge = cls._parse_expert_knowledge(raw_data)
         return expert_knowledge
 
     @classmethod
     def load_ground_truth(cls) -> DAG:
         """Fetches/reads from cache the ground truth DAG associated with the dataset."""
-        if not cls.tags.get("has_ground_truth"):
+        if not cls.get_class_tag("has_ground_truth"):
             return None
 
-        raw_data = cls._get_raw_data("ground_truth", cls.ground_truth_url).decode(
-            "utf-8-sig", errors="ignore"
-        )
+        raw_data = cls._get_raw_data(cls.ground_truth_url).decode("utf-8-sig", errors="ignore")
         return DAG.from_dagitty(raw_data)
-
-    @staticmethod
-    def clear_cache() -> None:
-        """
-        Clears the cached data for all datasets.
-        """
-        if os.path.exists(PGMPY_DATA_HOME):
-            Path.rmdir(PGMPY_DATA_HOME)
 
 
 class _CovarianceMixin:
@@ -170,9 +181,7 @@ class _CovarianceMixin:
         """
         Fetches the data and creates a covariance matrix DataFrame.
         """
-        raw_data = cls._get_raw_data("covariance_matrix", cls.data_url).decode(
-            "utf-8-sig", errors="ignore"
-        )
+        raw_data = cls._get_raw_data(cls.data_url).decode("utf-8-sig", errors="ignore")
 
         lines = raw_data.strip().splitlines()
         # First replace multiple spaces with a single space and then split the line on either \t or space. Datasets are
@@ -196,165 +205,30 @@ class _CovarianceMixin:
         ** Hence, when using this mixin, _CovarDatasetMixin should be the first parent class. **
         """
         cov_matrix = cls._load_covariance_matrix()
-        mean = [0] * cls.tags["n_variables"]
+        mean = [0] * cls.get_class_tag("n_variables")
         data = pd.DataFrame(
-            np.random.multivariate_normal(
-                mean, cov_matrix.values, size=cls.tags["n_samples"]
-            ),
+            np.random.multivariate_normal(mean, cov_matrix.values, size=cls.get_class_tag("n_samples")),
             columns=cov_matrix.columns,
         )
         return data
 
 
-class _DatasetRegistry:
+class _TubingenBenchmarkMixin:
     """
-    Registry for dataset classes.
-
-    Example
-    -------
-    >>> from pgmpy.datasets import DATASET_REGISTRY
-    >>> all_datasets = DATASET_REGISTRY.list_datasets()
-    >>> filtered_datasets = DATASET_REGISTRY.list_datasets(
-    ...     has_ground_truth=True, is_mixed=True
-    ... )
-
+    Mixin for Tubingen datasets that consist of multiple independent pairs/files.
+    URL: https://webdav.tuebingen.mpg.de/cause-effect/
     """
 
-    _REQUIRED_TAGS = {
-        "n_variables",
-        "n_samples",
-        "has_ground_truth",
-        "has_expert_knowledge",
-        "has_missing_data",
-        "is_simulated",
-        "is_interventional",
-        "is_discrete",
-        "is_continuous",
-        "is_mixed",
-        "is_ordinal",
-    }
+    @classmethod
+    def load_dataframe(cls, pair_id: int) -> pd.DataFrame:
+        raw_data = cls._get_raw_data(f"pair{pair_id:04}.txt")
+        return pd.read_csv(io.BytesIO(raw_data), sep=r"\s+", header=None, names=["x", "y"])
 
-    def __init__(self) -> None:
-        self._by_name: Dict[str, Type["_BaseDataset"]] = {}
-        self._by_tag: Dict[Tuple[str, Any], Set[str]] = {}
-
-    def register(self, cls: Type["_BaseDataset"]) -> None:
-        # Step 1: Check if the name is defined.
-        if not hasattr(cls, "name"):
-            raise TypeError("Dataset classes must define a string 'name' attribute.")
-
-        # Step 2: Check if all required tags are defined.
-        if not hasattr(cls, "tags"):
-            raise TypeError("Dataset classes must define a 'tags' attribute as a dict.")
-        else:
-            missing_tags = self._REQUIRED_TAGS - cls.tags.keys()
-            if missing_tags:
-                raise ValueError(
-                    f"Dataset '{cls.__name__}' is missing required tags: {missing_tags}"
-                )
-        # Step 3: Check if all required attributes/URLs are defined.
-        if not hasattr(cls, "data_url"):
-            raise TypeError("Dataset classes must define a 'data_url' attribute.")
-        if cls.tags.get("has_ground_truth") and not hasattr(cls, "ground_truth_url"):
-            raise TypeError(
-                "Dataset classes with 'has_ground_truth' tag True must define a 'ground_truth_url' attribute."
-            )
-        if cls.tags.get("has_expert_knowledge") and not hasattr(
-            cls, "expert_knowledge_url"
-        ):
-            raise TypeError(
-                "Dataset classes with 'has_expert_knowledge' tag True must define an 'expert_knowledge_url' attribute."
-            )
-
-        # Step 4: Register the dataset by name and tags.
-        name = getattr(cls, "name")
-        self._by_name[name] = cls
-
-        raw_tags = getattr(cls, "tags")
-        for key, value in raw_tags.items():
-            self._by_tag.setdefault((key, value), set()).add(name)
-
-    def list_datasets(self, **tag_filters: Any) -> List[str]:
-        """
-        List dataset names, optionally filtered by tag key-value pairs.
-
-        Parameters
-        ----------
-        **tag_filters :
-            Tag constraints as keyword arguments. The following tags are supported:
-            - has_ground_truth
-            - has_expert_knowledge
-            - has_missing_data
-            - is_simulated
-            - is_interventional
-            - is_discrete
-            - is_continuous
-            - is_mixed
-            - is_ordinal
-
-        Returns
-        -------
-        List[str]
-            Sorted list of dataset names that satisfy the filters.
-
-        Examples
-        --------
-        >>> from pgmpy.datasets import DATASET_REGISTRY
-        >>> all_datasets = DATASET_REGISTRY.list_datasets()
-        >>> discrete_datasets = DATASET_REGISTRY.list_datasets(is_discrete=True)
-        ['sachs_discrete']
-        >>> mixed_datasets_with_gt = DATASET_REGISTRY.list_datasets(
-        ...     is_mixed=True, has_ground_truth=True
-        ... )
-        ['sachs_mixed']
-        """
-        # Step 1: If no filters return all.
-        if not tag_filters:
-            return sorted(self._by_name.keys())
-
-        # Step 2: Gather candidate sets for each tag filter.
-        candidate_sets = []
-
-        for key, value in tag_filters.items():
-            names_for_tag = self._by_tag.get((key, value), set())
-            candidate_sets.append(names_for_tag)
-
-        # Step 3: Intersect candidate sets and return.
-        names = candidate_sets[0].copy()
-        for s in candidate_sets[1:]:
-            names.intersection_update(s)
-
-        return sorted(names)
-
-    def get_dataset(self, name: str) -> Optional[Type["_BaseDataset"]]:
-        """
-        Get the dataset class by name.
-
-        Parameters
-        ----------
-        name : str
-            Name of the dataset.
-
-        Returns
-        -------
-        Instance of the Dataset class.
-        """
-        if name not in self._by_name:
-            raise ValueError(f"Dataset '{name}' not found in registry.")
-        return self._by_name[name]
-
-
-DATASET_REGISTRY = _DatasetRegistry()
-
-
-def register_dataset_class(cls):
-    """
-    Class decorator to register a dataset class in the DATASET_REGISTRY.
-
-    For example usage see one of the dataset files such as `abalone.py`.
-    """
-    DATASET_REGISTRY.register(cls)
-    return cls
+    @classmethod
+    def load_ground_truth(cls, pair_id: int) -> DAG:
+        raw_data = cls._get_raw_data(f"pair{pair_id:04}_graph.txt")
+        content = raw_data.decode("utf-8-sig", errors="ignore")
+        return DAG.from_dagitty(content)
 
 
 def load_dataset(name: str) -> Dataset:
@@ -369,14 +243,105 @@ def load_dataset(name: str) -> Dataset:
     Examples
     --------
     >>> from pgmpy.datasets import load_dataset
-    >>> data, ground_truth = load_dataset("sachs", load_ground_truth=True)
-
+    >>> dataset = load_dataset("sachs_mixed")
+    >>> df = dataset.data
+    >>> ground_truth = dataset.ground_truth
     """
-    dataset_cls = DATASET_REGISTRY.get_dataset(name)
+    all_datasets = all_objects(object_types=_BaseDataset, package_name="pgmpy.datasets", return_names=False)
+    if name.startswith("tubingen"):
+        name_parts = name.split("/")
+        if len(name_parts) == 2 and name_parts[1].isdigit():
+            pair_id = int(name_parts[1])
+
+            if not (1 <= pair_id <= 108):
+                raise ValueError(f"Tubingen pair ID must be between 1 and 108. Got {pair_id}.")
+            target_cls = next(
+                (cls for cls in all_datasets if cls.get_class_tag("name") == "tubingen"),
+                None,
+            )
+            df = target_cls.load_dataframe(pair_id)
+            gt = target_cls.load_ground_truth(pair_id)
+
+            tags = target_cls.get_class_tags()
+            tags["n_samples"] = df.shape[0]
+            tags["has_missing_data"] = bool(df.isnull().any().any())
+
+            return Dataset(
+                name=name,
+                data=df,
+                expert_knowledge=None,
+                ground_truth=gt,
+                tags=tags,
+            )
+        else:
+            raise ValueError(f"Invalid dataset name format: '{name}'. For Tubingen datasets, use 'tubingen/<pair_id>'.")
+
+    target_cls = None
+    for cls in all_datasets:
+        if cls.get_class_tag("name") == name:
+            target_cls = cls
+            break
+    if target_cls is None:
+        raise ValueError(f"Dataset with name '{name}' not found. Please use list_datasets() to see available datasets.")
+
     return Dataset(
         name=name,
-        data=dataset_cls.load_dataframe(),
-        expert_knowledge=dataset_cls.load_expert_knowledge(),
-        ground_truth=dataset_cls.load_ground_truth(),
-        tags=dataset_cls.tags,
+        data=target_cls.load_dataframe(),
+        expert_knowledge=target_cls.load_expert_knowledge(),
+        ground_truth=target_cls.load_ground_truth(),
+        tags=target_cls.get_class_tags(),
     )
+
+
+def list_datasets(**filter_tags) -> list[str]:
+    """
+    Returns a list of all available datasets, optionally filtered by a query string.
+
+    Parameters
+    ----------
+    **filter_tags : optional arguments
+        If specified, returns only datasets matching the provided tag filters. Any dataset tag can be used as a filter.
+        Available tags:
+            - n_variables
+            - n_samples
+            - has_ground_truth
+            - has_expert_knowledge
+            - has_missing_data
+            - is_simulated
+            - is_interventional
+            - is_discrete
+            - is_continuous
+            - is_mixed
+            - is_ordinal
+
+    Returns
+    -------
+    list of str
+        A sorted list of available dataset names.
+
+    Examples
+    --------
+    >>> from pgmpy.datasets import list_datasets
+    >>> list_datasets()
+    ['abalone_continuous', 'abalone_mixed', ..., 'sachs_continuous', ...]
+
+    >>> list_datasets(is_discrete=True, has_ground_truth=True)
+    ['sachs_discrete']
+    """
+    valid_tags = set(_BaseDataset._tags.keys())
+
+    if invalid_tags := set(filter_tags.keys()) - valid_tags:
+        raise ValueError(
+            f"Unrecognized filter argument(s): {sorted(invalid_tags)}. Valid filter tags are: {sorted(valid_tags)}."
+        )
+
+    all_datasets = all_objects(
+        object_types=_BaseDataset,
+        package_name="pgmpy.datasets",
+        return_names=False,
+        filter_tags=filter_tags,
+    )
+
+    dataset_names = [cls.get_class_tag("name") for cls in all_datasets if cls.get_class_tag("name") is not None]
+
+    return sorted(dataset_names)

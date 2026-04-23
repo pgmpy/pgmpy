@@ -1,7 +1,7 @@
 import pytest
 
 from pgmpy.base import DAG, PDAG
-from pgmpy.identification import BaseIdentification
+from pgmpy.identification import _BaseIdentification
 
 
 @pytest.fixture
@@ -11,7 +11,7 @@ def cg():
     return DAG(ebunch=edges, roles=roles)
 
 
-class DummyIdentification(BaseIdentification):
+class DummyIdentification(_BaseIdentification):
     """Sorts non-exposure and non-outcome nodes in the graph and assigns the
     first or the last one as adjustment node depending on the `variant`.
     """
@@ -23,20 +23,12 @@ class DummyIdentification(BaseIdentification):
     def _identify(self, causal_graph):
         if self.variant == "first":
             adjustment_node = sorted(
-                set(causal_graph.nodes())
-                - set(
-                    causal_graph.get_role("exposures")
-                    + causal_graph.get_role("outcomes")
-                )
+                set(causal_graph.nodes()) - set(causal_graph.get_role("exposures") + causal_graph.get_role("outcomes"))
             )[0]
             return causal_graph.with_role("adjustment", [adjustment_node]), True
         elif self.variant == "last":
             adjustment_node = sorted(
-                set(causal_graph.nodes())
-                - set(
-                    causal_graph.get_role("exposures")
-                    + causal_graph.get_role("outcomes")
-                )
+                set(causal_graph.nodes()) - set(causal_graph.get_role("exposures") + causal_graph.get_role("outcomes"))
             )[-1]
             return causal_graph.with_role("adjustment", [adjustment_node]), True
         else:

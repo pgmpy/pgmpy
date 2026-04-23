@@ -71,7 +71,7 @@ class _GraphRolesMixin:
         Parameters
         ----------
         role : str
-            The name of the role to assign, e.g., "exposure", "outcome".
+            The name of the role to assign, e.g., "exposures", "outcomes".
         variables : str, set, list, or any iterable
             The variables to assign to the role.
         inplace=False : bool, optional
@@ -109,7 +109,8 @@ class _GraphRolesMixin:
 
                     existing_role.add(role)
                     new_graph.add_node(var, roles=existing_role)
-        return new_graph
+        if not inplace:
+            return new_graph
 
     def without_role(self, role: str, variables=None, inplace=False):
         """Return a new graph with the specified role removed.
@@ -117,7 +118,7 @@ class _GraphRolesMixin:
         Parameters
         ----------
         role : str
-            The name of the role to remove, e.g., "exposure", "outcome".
+            The name of the role to remove, e.g., "exposures", "outcomes".
         variables : str, set, list, or iterable, default = all variables with the role
             The variables to remove the role from. If not provided,
             all variables with the specified role will have it removed.
@@ -146,7 +147,9 @@ class _GraphRolesMixin:
                         attr.pop("roles")
                     else:
                         attr["roles"] = roles
-        return new_graph
+
+        if not inplace:
+            return new_graph
 
     def is_valid_causal_structure(self) -> bool:
         """Validate that the causal structure makes sense."""
@@ -163,8 +166,7 @@ class _GraphRolesMixin:
 
         if not valid:
             raise ValueError(
-                f"{type(self)} must have at least one 'exposures' and one 'outcomes' "
-                f"role defined, but {problem_str}."
+                f"{type(self)} must have at least one 'exposures' and one 'outcomes' role defined, but {problem_str}."
             )
         return True
 
@@ -207,9 +209,7 @@ class _GraphRolesMixin:
             other latent structures.
         """
         if self.has_role("latents"):
-            self.without_role(
-                role="latents", variables=self.get_role("latents"), inplace=True
-            )
+            self.without_role(role="latents", variables=self.get_role("latents"), inplace=True)
         self.with_role(role="latents", variables=variables, inplace=True)
 
     @property
@@ -276,9 +276,7 @@ class _GraphRolesMixin:
             intervention being studied in a causal analysis.
         """
         if self.has_role("exposures"):
-            self.without_role(
-                role="exposures", variables=self.get_role("exposures"), inplace=True
-            )
+            self.without_role(role="exposures", variables=self.get_role("exposures"), inplace=True)
         self.with_role(role="exposures", variables=variables, inplace=True)
 
     @property
@@ -320,7 +318,5 @@ class _GraphRolesMixin:
             in a causal analysis.
         """
         if self.has_role("outcomes"):
-            self.without_role(
-                role="outcomes", variables=self.get_role("outcomes"), inplace=True
-            )
+            self.without_role(role="outcomes", variables=self.get_role("outcomes"), inplace=True)
         self.with_role(role="outcomes", variables=variables, inplace=True)

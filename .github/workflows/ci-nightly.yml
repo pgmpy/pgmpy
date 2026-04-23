@@ -1,0 +1,234 @@
+name: Test Suite Full
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  test-nosoftdeps:
+    if: github.repository == 'pgmpy/pgmpy'
+    name: Core deps | ${{ matrix.os }} | Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+      fail-fast: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Print Python info
+        run: |
+          which python
+          python --version
+
+      - name: Install graphviz (Windows)
+        if: matrix.os == 'windows-latest'
+        run: choco install graphviz -y
+
+      - name: Install graphviz (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install graphviz libgraphviz-dev -y
+
+      - name: Install graphviz (macOS)
+        if: matrix.os == 'macOS-latest'
+        run: brew install graphviz libomp
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install .[tests]
+
+      - name: Print installed packages
+        run: pip freeze
+
+      - name: Run tests
+        run: pytest --verbose
+
+  test-fulldep:
+    if: github.repository == 'pgmpy/pgmpy'
+    name: Optional deps | ${{ matrix.os }} | Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+      fail-fast: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Print Python info
+        run: |
+          which python
+          python --version
+
+      - name: Install graphviz (Windows)
+        if: matrix.os == 'windows-latest'
+        run: choco install graphviz -y
+
+      - name: Install graphviz (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install graphviz libgraphviz-dev -y
+
+      - name: Install graphviz (macOS)
+        if: matrix.os == 'macOS-latest'
+        run: brew install graphviz libomp
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+
+      - name: Install pygraphviz (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $graphviz_root = "C:\Program Files\Graphviz"
+          $env:INCLUDE = "$graphviz_root\include;$env:INCLUDE"
+          $env:LIB = "$graphviz_root\lib;$env:LIB"
+          python -m pip install pygraphviz
+
+      - name: Install pygraphviz (macOS)
+        if: matrix.os == 'macOS-latest'
+        run: |
+          GRAPHVIZ_PREFIX="$(brew --prefix graphviz)"
+          python -m pip install \
+            --config-settings=--global-option=build_ext \
+            --config-settings="--global-option=-I${GRAPHVIZ_PREFIX}/include" \
+            --config-settings="--global-option=-L${GRAPHVIZ_PREFIX}/lib" \
+            pygraphviz
+
+      - name: Install dependencies
+        run: python -m pip install .[all,tests]
+
+      - name: Print installed packages
+        run: pip freeze
+
+      - name: Run tests
+        run: pytest --store-durations --verbose
+
+      - name: Upload test durations
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.14'
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-durations
+          path: .test_durations
+          include-hidden-files: true
+          if-no-files-found: error
+
+  update-test-durations:
+    if: github.repository == 'pgmpy/pgmpy'
+    name: Update .test_durations
+    needs: test-fulldep
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: dev
+
+      - name: Download test durations
+        uses: actions/download-artifact@v8
+        with:
+          name: test-durations
+          path: new_durations
+
+      - name: Create PR if test cases changed
+        run: |
+          # Check if the set of test names changed (ignore duration values)
+          python -c "
+          import json, sys
+          old = set(json.load(open('.test_durations')).keys()) if open('.test_durations').read().strip() else set()
+          new = set(json.load(open('new_durations/.test_durations')).keys())
+          added = new - old
+          removed = old - new
+          if not added and not removed:
+              print('No test cases added or removed, skipping update')
+              sys.exit(1)
+          if added:
+              print(f'Added {len(added)} test(s)')
+          if removed:
+              print(f'Removed {len(removed)} test(s)')
+          " || exit 0
+
+          # Tests changed — update the file with new durations
+          cp new_durations/.test_durations .test_durations
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .test_durations
+          git diff --staged --quiet && echo "No changes to commit" && exit 0
+
+          BRANCH="update-test-durations"
+          git checkout -B "$BRANCH"
+          git commit -m "Update .test_durations from nightly CI"
+          git push -f origin "$BRANCH"
+
+          # Only create a PR if one doesn't already exist
+          EXISTING=$(gh pr list --head "$BRANCH" --state open --json number --jq 'length')
+          if [ "$EXISTING" -eq 0 ]; then
+            gh pr create \
+              --base dev \
+              --head "$BRANCH" \
+              --title "Update .test_durations from nightly CI" \
+              --body "Auto-generated by the nightly CI workflow. Merging this will improve test split balancing."
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  notify:
+    needs: [test-nosoftdeps, test-fulldep, update-test-durations]
+    if: failure() && github.repository == 'pgmpy/pgmpy'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const date = new Date().toISOString().split('T')[0];
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            // Check if an open issue already exists to avoid duplicates
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'nightly-ci-failure',
+              state: 'open',
+            });
+
+            if (existing.data.length > 0) {
+              // Add a comment to the existing issue
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.data[0].number,
+                body: `Nightly CI failed again on ${date}.\n\n[View run](${runUrl})`,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `Nightly CI failure - ${date}`,
+                labels: ['nightly-ci-failure'],
+                body: `The nightly CI run failed on ${date}.\n\n[View run](${runUrl})`,
+              });
+            }

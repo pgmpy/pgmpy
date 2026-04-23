@@ -1,4 +1,4 @@
-class BaseIdentification:
+class _BaseIdentification:
     """Base class for all identification methods.
 
     All identification methods in pgmpy must inherit `BaseIdentification`.
@@ -26,11 +26,9 @@ class BaseIdentification:
     def _validate_causal_graph(self, causal_graph):
         # Check if the passed causal_graph is supported by the method.
         if not isinstance(causal_graph, self.supported_graph_types):
-            raise ValueError(
-                f"The `causal_graph` must be an instance of {self.supported_graph_types} for this method."
-            )
+            raise ValueError(f"The `causal_graph` must be an instance of {self.supported_graph_types} for this method.")
 
-        # Check if causal_graph has `exposure` and `outcome` roles assigned.
+        # Check if causal_graph has `exposures` and `outcomes` roles assigned.
         causal_graph.is_valid_causal_structure()
 
     def identify(self, causal_graph):
@@ -45,7 +43,7 @@ class BaseIdentification:
         ----------
         causal_graph : DAG, PDAG, ADMG, MAG, or PAG object
             The input causal graph on which to perform identification. The
-            causal graph must have variables with exposure and outcome roles
+            causal graph must have variables with exposures and outcomes roles
             defined.
 
         Returns
@@ -55,7 +53,7 @@ class BaseIdentification:
             to the identification method.
 
         success : bool
-            True if the exposure and outcome are successfully identified; False
+            True if the exposures and outcomes are successfully identified; False
             otherwise.
         """
         self._validate_causal_graph(causal_graph)
@@ -67,8 +65,8 @@ class BaseIdentification:
 
         This method checks if the variable roles assigned in the `causal_graph`
         are appropriate for identification. For example, given a causal graph
-        with exposure, outcome, and adjustment roles, it verifies that the
-        adjustment set is valid for the given exposure and outcome.
+        with exposures, outcomes, and adjustment roles, it verifies that the
+        adjustment set is valid for the given exposures and outcomes.
 
         Parameters
         ----------

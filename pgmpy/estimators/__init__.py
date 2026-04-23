@@ -1,32 +1,31 @@
-from pgmpy.estimators.base import BaseEstimator, ParameterEstimator, StructureEstimator
-from pgmpy.estimators.MLE import MaximumLikelihoodEstimator
-from pgmpy.estimators.BayesianEstimator import BayesianEstimator
-from pgmpy.estimators.StructureScore import (
-    StructureScore,
+from .base import BaseEstimator, MarginalEstimator, ParameterEstimator, StructureEstimator
+from .MLE import MaximumLikelihoodEstimator
+from .BayesianEstimator import BayesianEstimator
+from .StructureScore import (
+    AIC,
+    BIC,
     K2,
+    AICCondGauss,
+    AICGauss,
     BDeu,
     BDs,
-    BIC,
-    BICGauss,
     BICCondGauss,
-    AIC,
-    AICGauss,
-    AICCondGauss,
-    LogLikelihoodGauss,
+    BICGauss,
     LogLikelihoodCondGauss,
+    LogLikelihoodGauss,
+    StructureScore,
 )
-from pgmpy.estimators.ExhaustiveSearch import ExhaustiveSearch
-from pgmpy.estimators.ExpertKnowledge import ExpertKnowledge
-from pgmpy.estimators.HillClimbSearch import HillClimbSearch
-from pgmpy.estimators.TreeSearch import TreeSearch
-from pgmpy.estimators.SEMEstimator import SEMEstimator, IVEstimator
-from pgmpy.estimators.MmhcEstimator import MmhcEstimator
-from pgmpy.estimators.EM import ExpectationMaximization
-from pgmpy.estimators.PC import PC
-from pgmpy.estimators.base import MarginalEstimator
-from pgmpy.estimators.MirrorDescentEstimator import MirrorDescentEstimator
-from pgmpy.estimators.expert import ExpertInLoop
-from pgmpy.estimators.GES import GES
+from .ExhaustiveSearch import ExhaustiveSearch
+from ..causal_discovery import ExpertKnowledge
+from .HillClimbSearch import HillClimbSearch
+from .TreeSearch import TreeSearch
+from .SEMEstimator import IVEstimator, SEMEstimator
+from .MmhcEstimator import MmhcEstimator
+from .EM import ExpectationMaximization
+from .PC import PC
+from .MirrorDescentEstimator import MirrorDescentEstimator
+from .expert import ExpertInLoop
+from .GES import GES
 
 __all__ = [
     "BaseEstimator",

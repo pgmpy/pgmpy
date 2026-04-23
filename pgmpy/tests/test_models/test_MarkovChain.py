@@ -3,6 +3,7 @@ import sys
 import unittest
 
 import numpy as np
+import pytest
 from mock import call, patch
 from pandas import DataFrame
 
@@ -20,9 +21,7 @@ class TestMarkovChain(unittest.TestCase):
             1: {0: 0.5, 1: 0.3, 2: 0.2},
             2: {0: 0.3, 1: 0.3, 2: 0.4},
         }
-        self.intel_tm_matrix = np.array(
-            [[0.1, 0.25, 0.65], [0.5, 0.3, 0.2], [0.3, 0.3, 0.4]]
-        )
+        self.intel_tm_matrix = np.array([[0.1, 0.25, 0.65], [0.5, 0.3, 0.2], [0.3, 0.3, 0.4]])
         self.diff_tm = {0: {0: 0.3, 1: 0.7}, 1: {0: 0.75, 1: 0.25}}
         self.diff_tm_matrix = np.array([[0.3, 0.7], [0.75, 0.25]])
         self.grade_tm = {
@@ -54,9 +53,7 @@ class TestMarkovChain(unittest.TestCase):
         model = MC(self.variables, self.card, self.start_state)
         self.assertListEqual(model.variables, self.variables)
         self.assertDictEqual(model.cardinalities, self.cardinalities)
-        self.assertDictEqual(
-            model.transition_models, {var: {} for var in self.variables}
-        )
+        self.assertDictEqual(model.transition_models, {var: {} for var in self.variables})
         check_state.assert_called_once_with(model, self.start_state)
         self.assertListEqual(model.state, self.start_state)
 
@@ -146,12 +143,8 @@ class TestMarkovChain(unittest.TestCase):
         self.assertEqual([State("a", 0), State("b", 1)], copy.state)
         self.assertNotEqual(model.transition_models, copy.transition_models)
         self.assertEqual(len(copy.transition_models), 2)
-        self.assertEqual(
-            copy.transition_models["a"], {0: {0: 0.1, 1: 0.9}, 1: {0: 0.2, 1: 0.8}}
-        )
-        self.assertEqual(
-            copy.transition_models["b"], {0: {0: 0.3, 1: 0.7}, 1: {0: 0.4, 1: 0.6}}
-        )
+        self.assertEqual(copy.transition_models["a"], {0: {0: 0.1, 1: 0.9}, 1: {0: 0.2, 1: 0.8}})
+        self.assertEqual(copy.transition_models["b"], {0: {0: 0.3, 1: 0.7}, 1: {0: 0.4, 1: 0.6}})
 
     @patch("pgmpy.models.MarkovChain.add_variable", autospec=True)
     def test_add_variables_from(self, add_var):
@@ -165,40 +158,30 @@ class TestMarkovChain(unittest.TestCase):
         grade_tm_matrix_bad = [[0.1, 0.5, 0.4], [0.2, 0.2, 0.6], "abc"]
         # if transition_model is not a dict or np.array
         self.assertRaises(ValueError, model.add_transition_model, "var", 123)
-        self.assertRaises(
-            ValueError, model.add_transition_model, "var", grade_tm_matrix_bad
-        )
+        self.assertRaises(ValueError, model.add_transition_model, "var", grade_tm_matrix_bad)
 
     def test_add_transition_model_bad_states(self):
         model = MC(["var"], [2])
         # transition for state=1 not defined
         transition_model = {0: {0: 0.1, 1: 0.9}}
-        self.assertRaises(
-            ValueError, model.add_transition_model, "var", transition_model
-        )
+        self.assertRaises(ValueError, model.add_transition_model, "var", transition_model)
 
     def test_add_transition_model_bad_transition(self):
         model = MC(["var"], [2])
         # transition for state=1 is not a dict
         transition_model = {0: {0: 0.1, 1: 0.9}, 1: "abc"}
-        self.assertRaises(
-            ValueError, model.add_transition_model, "var", transition_model
-        )
+        self.assertRaises(ValueError, model.add_transition_model, "var", transition_model)
 
     def test_add_transition_model_bad_probability(self):
         model = MC(["var"], [2])
         transition_model = {0: {0: -0.1, 1: 1.1}, 1: {0: 0.5, 1: 0.5}}
-        self.assertRaises(
-            ValueError, model.add_transition_model, "var", transition_model
-        )
+        self.assertRaises(ValueError, model.add_transition_model, "var", transition_model)
 
     def test_add_transition_model_bad_probability_sum(self):
         model = MC(["var"], [2])
         # transition probabilities from state=0 do not sum to 1.0
         transition_model = {0: {0: 0.1, 1: 0.2}, 1: {0: 0.5, 1: 0.5}}
-        self.assertRaises(
-            ValueError, model.add_transition_model, "var", transition_model
-        )
+        self.assertRaises(ValueError, model.add_transition_model, "var", transition_model)
 
     def test_add_transition_model_success(self):
         model = MC(["var"], [2])
@@ -210,13 +193,9 @@ class TestMarkovChain(unittest.TestCase):
         model = MC(["var"], [2])
         transition_model = np.array([0.3, 0.7])
         # check for square dimension of the matrix
-        self.assertRaises(
-            ValueError, model.add_transition_model, "var", transition_model
-        )
+        self.assertRaises(ValueError, model.add_transition_model, "var", transition_model)
         transition_model = np.array([[0.3, 0.6, 0.1], [0.3, 0.3, 0.4]])
-        self.assertRaises(
-            ValueError, model.add_transition_model, "var", transition_model
-        )
+        self.assertRaises(ValueError, model.add_transition_model, "var", transition_model)
 
     def test_transition_model_dict_to_matrix(self):
         model = MC(["var"], [2])
@@ -312,3 +291,18 @@ class TestMarkovChain(unittest.TestCase):
         self.assertGreaterEqual(state[1].state, 0)
         self.assertLessEqual(state[0].state, 1)
         self.assertLessEqual(state[1].state, 2)
+
+    def test_add_transition_model_invalid_variable(self):
+        model = MC()
+        model.add_variable("grade", 3)
+
+        tm = np.array(
+            [
+                [0.7, 0.2, 0.1],
+                [0.3, 0.4, 0.3],
+                [0.2, 0.3, 0.5],
+            ]
+        )
+
+        with pytest.raises(ValueError):
+            model.add_transition_model("invalid_variable", tm)

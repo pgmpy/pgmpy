@@ -154,7 +154,7 @@ class TestAncestralBase:
         graph = graph.with_role("instrument", "A")
         assert "instrument" in graph.nodes["A"]["roles"]
 
-        graph = graph.with_role("adjustment", {"A", "B"}, inplace=True)
+        graph.with_role("adjustment", {"A", "B"}, inplace=True)
         assert "adjustment" in graph.nodes["A"]["roles"]
         assert "adjustment" in graph.nodes["B"]["roles"]
         assert "instrument" in graph.nodes["A"]["roles"]
@@ -239,10 +239,7 @@ class TestAncestralBase:
         graph.exposures = {"B", "C"}
 
         assert graph.exposures == {"B", "C"}
-        assert (
-            "role" not in graph.nodes.get("A", {})
-            or graph.nodes["A"].get("role") != "exposures"
-        )
+        assert "role" not in graph.nodes.get("A", {}) or graph.nodes["A"].get("role") != "exposures"
         assert "exposures" in graph.nodes["B"]["roles"]
         assert "exposures" in graph.nodes["C"]["roles"]
 
@@ -252,9 +249,48 @@ class TestAncestralBase:
         graph.outcomes = {"B", "C"}
 
         assert graph.outcomes == {"B", "C"}
-        assert (
-            "roles" not in graph.nodes.get("A", {})
-            or graph.nodes["A"].get("roles") != "outcomes"
-        )
+        assert "roles" not in graph.nodes.get("A", {}) or graph.nodes["A"].get("roles") != "outcomes"
         assert "outcomes" in graph.nodes["B"]["roles"]
         assert "outcomes" in graph.nodes["C"]["roles"]
+
+    def test_to_dagitty_simple(self):
+        graph = AncestralBase([("A", "B", "-", ">"), ("B", "C", "-", ">")])
+        graph.exposures = {"A"}
+        graph.outcomes = {"B", "C"}
+        dag_str = graph.to_dagitty()
+
+        assert "ancestralbase {" in dag_str
+        assert "A -> B" in dag_str
+        assert "B -> C" in dag_str
+        assert "A [exposure]" in dag_str
+        assert "B [outcome]" in dag_str
+        assert "C [outcome]" in dag_str
+        assert dag_str[-1] == "}"
+
+    def test_to_dagitty_complex(self):
+        graph = AncestralBase(
+            [
+                ("A", "B", "o", ">"),
+                ("B", "C", "-", ">"),
+                ("C", "D", ">", ">"),
+                ("C", "E", "o", "o"),
+            ]
+        )
+        graph.outcomes = {"D", "E"}
+        graph.latents = {"A"}
+        dag_str = graph.to_dagitty()
+
+        assert "ancestralbase {" in dag_str
+        assert "A @-> B" in dag_str
+        assert "B -> C" in dag_str
+        assert "C @-@ E" in dag_str
+        assert "D [outcome]" in dag_str
+        assert "E [outcome]" in dag_str
+        assert "A [latents]" in dag_str
+        assert dag_str[-1] == "}"
+
+    def test_to_dagitty_empty(self):
+        graph = AncestralBase()
+        dag_str = graph.to_dagitty()
+
+        assert dag_str == "ancestralbase {\n}"

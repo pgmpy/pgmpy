@@ -1,148 +1,139 @@
-.. pgmpy documentation master file, created by
-   sphinx-quickstart on Tue Aug 30 18:17:42 2016.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+.. pgmpy documentation master file
 
-.. |br| raw:: html
+.. title:: Documentation — pgmpy
 
-   <br />
+:hide-toc:
+:hide-navigation:
 
-.. image:: https://github.com/pgmpy/pgmpy/actions/workflows/ci.yml/badge.svg?branch=dev
-   :target: https://github.com/pgmpy/pgmpy/actions?query=branch%3Adev
+.. meta::
+   :description: pgmpy documentation for causal discovery, model testing, causal effect estimation, parameter estimation, probabilistic and causal inference, and simulations in Python.
 
-.. image:: https://img.shields.io/pypi/dm/pgmpy.svg
-   :target: https://pypistats.org/packages/pgmpy
+.. grid:: 1 1 2 2
+   :gutter: 3
+   :class-container: hero-grid
 
-.. image:: https://img.shields.io/pypi/v/pgmpy?color=blue
-   :target: https://pypi.org/project/pgmpy/
+   .. grid-item::
+      :class: hero-logo-panel
 
-.. image:: https://img.shields.io/pypi/pyversions/pgmpy.svg?color=blue
-   :target: https://pypi.org/project/pgmpy/
+      .. image:: _static/images/logo.png
+         :alt: pgmpy logo
+         :width: 220px
+         :align: center
 
-.. image:: https://img.shields.io/github/license/pgmpy/pgmpy
-   :target: https://github.com/pgmpy/pgmpy/blob/dev/LICENSE
+   .. grid-item::
+      :class: hero-copy-panel
 
-.. image:: http://img.shields.io/badge/benchmarked%20by-asv-blue.svg?style=flat
-   :target: http://pgmpy.org/pgmpy-benchmarks/
+      .. container:: hero-subtitle
 
-.. |br| raw:: html
+         Python toolkit for causal and probabilistic reasoning
 
-   <br />
-   <br />
+      pgmpy is a Python library for causal and probabilistic reasoning with graphical models. It covers the full workflow from learning causal graphs from data to estimating causal effects, running probabilistic inference, and simulating data from fitted models. All algorithms follow a unified, composable API and are scikit-learn compatible where possible, so they work standalone, in sklearn pipelines, or as building blocks for higher-level tools.
 
 
-.. image:: https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white
-   :align: center
-   :target: https://discord.gg/DRkdKaumBs
+      .. container:: hero-actions
+
+         .. button-ref:: started/index
+            :ref-type: doc
+            :color: primary
+            :outline:
+            :class: hero-action-button
+
+            Getting Started
+
+         .. button-ref:: documentation
+            :ref-type: doc
+            :color: primary
+            :outline:
+            :class: hero-action-button
+
+            User Guide
+
+         .. button-ref:: examples
+            :ref-type: doc
+            :color: primary
+            :outline:
+            :class: hero-action-button
+
+            Example Notebooks
+
+         .. button-ref:: reference
+            :ref-type: doc
+            :color: primary
+            :outline:
+            :class: hero-action-button
+
+            API Reference
+
+Key Features
+------------
+
+.. grid:: 1 1 2 4
+   :gutter: 3
+   :class-container: pgmpy-card-grid
+
+   .. grid-item-card:: Causal Discovery / Structure Learning
+      :link: quickstart-causal-discovery
+      :link-type: ref
+      :class-card: sd-card-hover
+
+      Learn causal graphs from data using scikit-learn compatible implementations.
+
+   .. grid-item-card:: Parameter Estimation
+      :link: quickstart-parameter-estimation
+      :link-type: ref
+      :class-card: sd-card-hover
+
+      Estimate conditional distributions for nodes in the model.
+
+   .. grid-item-card:: Probabilistic Inference
+      :link: quickstart-probabilistic-inference
+      :link-type: ref
+      :class-card: sd-card-hover
+
+      Compute posterior distributions from the learned model using exact or approximate inference.
+
+   .. grid-item-card:: Causal Identification
+      :link: quickstart-causal-identification
+      :link-type: ref
+      :class-card: sd-card-hover
+
+      Given a causal graph determine how to estimate the a causal query.
+
+   .. grid-item-card:: Causal Inference
+      :link: quickstart-causal-inference
+      :link-type: ref
+      :class-card: sd-card-hover
+
+      Compute interventional and counterfactual distributions from models.
+
+   .. grid-item-card:: Example Datasets and Models
+      :link: quickstart-example-data-models
+      :link-type: ref
+      :class-card: sd-card-hover
+
+      Built-in collection of example Bayesian Networks and datasets from different sources.
+
+   .. grid-item-card:: Simulations
+      :link: quickstart-simulations
+      :link-type: ref
+      :class-card: sd-card-hover
+
+      Simulate data from models under various scenarios.
+
+   .. grid-item-card:: Extend pgmpy
+      :link: quickstart-extensibility
+      :link-type: ref
+      :class-card: sd-card-hover
+
+      Write your own custom pgmpy plugable methods using our extension templates.
+
 
 .. toctree::
-   :maxdepth: 2
    :hidden:
 
-   started/base.rst
-   examples.rst
-   models/base.rst
-   factors/base.rst
-   infer/base.rst
-   causal_infer/base.rst
-   param_estimator/base.rst
-   structure_estimator/base.rst
-   metrics/metrics.rst
-   readwrite/base.rst
-   plotting.rst
-   tutorial.rst
-
-pgmpy is a Python package for causal inference and probabilistic inference
-using Directed Acyclic Graphs (DAGs) and Bayesian Networks with a focus on
-modularity and extensibility. Implementations of various algorithms for Causal
-Discovery (a.k.a, Structure Learning), Parameter Estimation, Approximate
-(Sampling Based) and Exact inference, and Causal Inference are available.
-
-|
-
-.. figure:: pgmpy_workflow.png
-   :alt: Possible Workflows in pgmpy for Directed Acyclic Graphs (DAGs) and Bayesian Networks (BNs).
-
-   Possible Workflows in pgmpy for Directed Acyclic Graphs (DAGs) and Bayesian Networks (BNs).
-
-|
-
-Supported Data Types
-====================
-
-.. list-table::
-   :header-rows: 1
-
-   * -
-     - Causal Discovery
-     - Parameter Estimation
-     - Causal Inference
-     - Probabilistic Inference
-     - Simulations
-   * - **Categorical**
-     - Yes
-     - Yes
-     - Yes
-     - Yes
-     - Yes
-   * - **Continuous**
-     - Yes
-     - Yes
-     - Yes (partial)
-     - Yes
-     - Yes
-   * - **Mixed**
-     - Yes
-     - No
-     - No
-     - No
-     - Yes
-   * - **Time Series**
-     - No
-     - Yes
-     - Yes (ApproximateInference)
-     - Yes
-     - Yes
-
-|
-
-Algorithms
-==========
-
-.. csv-table::
-   :file: algorithms.csv
-   :header-rows: 1
-
-|
-
-Examples
-========
-
-**Example notebooks:** :doc:`examples`
-
-**Tutorial notebooks:** :doc:`tutorial`
-
-|
-
-Citation
-========
-If you use pgmpy in your scientific work, please consider citing us:
-
-.. code-block:: text
-
-   Ankur Ankan, & Johannes Textor (2024). pgmpy: A Python Toolkit for Bayesian Networks. Journal of Machine Learning Research, 25(265), 1–8.
-
-Bibtex:
-
-.. code-block:: text
-
-   @article{Ankan2024,
-     author  = {Ankur Ankan and Johannes Textor},
-     title   = {pgmpy: A Python Toolkit for Bayesian Networks},
-     journal = {Journal of Machine Learning Research},
-     year    = {2024},
-     volume  = {25},
-     number  = {265},
-     pages   = {1--8},
-     url     = {http://jmlr.org/papers/v25/23-0487.html}
-   }
+   Getting Started <started/index>
+   User Guide <documentation>
+   Examples <examples>
+   API Reference <reference>
+   Citation <citation>
+   Getting Involved <development>

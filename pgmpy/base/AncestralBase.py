@@ -1,16 +1,17 @@
 from collections import deque
-from typing import Hashable, Iterable, Optional
+from collections.abc import Hashable, Iterable
 
 import networkx as nx
 import numpy as np
 
 from pgmpy.base._mixin_roles import _GraphRolesMixin
+from pgmpy.utils.parser import parse_dagitty
 
 
 class AncestralBase(nx.Graph, _GraphRolesMixin):
     def __init__(
         self,
-        ebunch: Optional[Iterable[tuple[Hashable, Hashable]]] = None,
+        ebunch: Iterable[tuple[Hashable, Hashable]] | None = None,
         latents: set[Hashable] = set(),
         exposures: set[Hashable] = set(),
         outcomes: set[Hashable] = set(),
@@ -90,7 +91,7 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
 
         Vertices of a specific role can be retrieved using ``get_role`` method.
 
-        >>> g.get_role("exposure")
+        >>> g.get_role("exposures")
         ["A"]
         >>> g.get_role("adjustment")
         ["L", "C"]
@@ -312,15 +313,12 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
             return set()
         neighbors = set()
         for neighbor in nx.all_neighbors(self, node):
-
             node_mark, neighbor_mark = (
                 self.edges[node, neighbor]["marks"][node],
                 self.edges[node, neighbor]["marks"][neighbor],
             )
 
-            if (u_type is None or node_mark == u_type) and (
-                v_type is None or neighbor_mark == v_type
-            ):
+            if (u_type is None or node_mark == u_type) and (v_type is None or neighbor_mark == v_type):
                 neighbors.add(neighbor)
 
         return neighbors
@@ -543,6 +541,128 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
                 queue.extend(self.get_neighbors(current, u_type=u_type, v_type=v_type))
         return reachable
 
+    def to_dagitty(self) -> str:
+        """
+        Convert the MAG to a Dagitty string representation.
+
+        Returns
+        -------
+        str
+            A string in Dagitty format representing the MAG.
+
+        Examples
+        --------
+        >>> from pgmpy.base import MAG
+        >>> mag = MAG()
+        >>> mag.add_edge("X", "Y", "-", ">")
+        >>> mag.add_edge("Z", "Y", "-", ">")
+        >>> print(mag.to_dagitty())
+        mag {
+        X -> Y
+        Z -> Y
+        }
+
+        >>> mag2 = MAG()
+        >>> mag2.add_edge("A", "B", ">", ">")
+        >>> mag2.add_edge("C", "D", "-", "-")
+        >>> print(mag2.to_dagitty())
+        mag {
+        A <-> B
+        C -- D
+        }
+
+        >>> # MAG with latent variables and roles
+        >>> mag3 = MAG()
+        >>> mag3.add_edge("L", "X", "-", ">")
+        >>> mag3.add_edge("X", "Y", "-", ">")
+        >>> mag3.latents = {"L"}
+        >>> mag3 = mag3.with_role("exposures", "X")
+        >>> mag3 = mag3.with_role("outcomes", "Y")
+        >>> print(mag3.to_dagitty())
+        mag {
+        L -> X
+        X -> Y
+        L [latents]
+        Y [outcome]
+        X [exposure]
+        }
+
+        References
+        ----------
+        dagitty syntax: https://cran.r-project.org/web/packages/dagitty/dagitty.pdf
+        """
+        target_type = self.__class__.__name__
+        lines = [f"{target_type.lower()} {{"]
+
+        edge_map = {
+            ("-", ">"): "->",
+            (">", "-"): "<-",
+            (">", ">"): "<->",
+            ("o", ">"): "@->",
+            (">", "o"): "<-@",
+            ("o", "o"): "@-@",
+            ("o", "-"): "@--",
+            ("-", "o"): "--@",
+            ("-", "-"): "--",
+        }
+        for u, v in self.edges:
+            marks = self.edges[u, v]["marks"]
+            u_mark, v_mark = marks[u], marks[v]
+            if (u_mark, v_mark) in edge_map:
+                symbol = edge_map[(u_mark, v_mark)]
+                if symbol in ["<-", "<-@", "--@"]:
+                    lines.append(f"{v} {symbol[::-1]} {u}")
+                else:
+                    lines.append(f"{u} {symbol} {v}")
+
+        dagitty_role_map = {"exposures": "exposure", "outcomes": "outcome"}
+        for role in self.get_roles():
+            for var in self.get_role(role):
+                lines.append(f"{var} [{dagitty_role_map.get(role, role)}]")
+
+        lines.append("}")
+        return "\n".join(lines)
+
+    @classmethod
+    def from_dagitty(cls, string: str = None, filename: str = None):
+        """
+        Populate the MAG from a Dagitty string representation.
+
+        Parameters
+        ----------
+        string : str
+            A string in dagitty format representing the MAG.
+        filename : str, optional
+            Path to file containing Dagitty format string.
+
+        Returns
+        -------
+        MAG
+            A new MAG instance created from the Dagitty representation.
+
+        Examples
+        --------
+        >>> from pgmpy.base import MAG
+        >>> dag_str = '''dag {
+        ... L -> A
+        ... B -> C
+        ... L [latents]
+        ... B [outcome]
+        ... A [exposure]
+        ... }'''
+        >>> mag = MAG.from_dagitty(dag_str)
+        """
+        if filename:
+            with open(filename) as f:
+                dagitty_lines = [line.strip() for line in f.readlines()]
+        elif string:
+            dagitty_lines = [line.strip() for line in string.split("\n")]
+        else:
+            raise ValueError("Either `filename` or `string` need to be specified")
+
+        ebunch, roles, _, nodes = parse_dagitty(dagitty_lines)
+        return cls(ebunch=ebunch, roles=roles)
+
     def __eq__(self, other):
         """
         Checks if two MAGs are equal. Two MAGs are equal if they have the same
@@ -564,18 +684,18 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         >>> mag1 = MAG(
         ...     ebunch=[("X", "Y", "-", ">"), ("Y", "Z", "-", ">")],
         ...     latents={"L"},
-        ...     roles={"exposure": "X"},
+        ...     roles={"exposures": "X"},
         ... )
         >>> mag2 = MAG(
         ...     ebunch=[("X", "Y", "-", ">"), ("Y", "Z", "-", ">")],
         ...     latents={"L"},
-        ...     roles={"exposure": "X"},
+        ...     roles={"exposures": "X"},
         ... )
         >>> mag1 == mag2
         True
 
         >>> mag3 = MAG(
-        ...     ebunch=[("X", "Y", "-", ">")], latents={"L"}, roles={"exposure": "X"}
+        ...     ebunch=[("X", "Y", "-", ">")], latents={"L"}, roles={"exposures": "X"}
         ... )
         >>> mag1 == mag3
         False
@@ -583,14 +703,8 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         if not isinstance(other, AncestralBase):
             return False
 
-        self_edges = {
-            (u, v, frozenset(data["marks"].items()))
-            for u, v, data in self.edges(data=True)
-        }
-        other_edges = {
-            (u, v, frozenset(data["marks"].items()))
-            for u, v, data in other.edges(data=True)
-        }
+        self_edges = {(u, v, frozenset(data["marks"].items())) for u, v, data in self.edges(data=True)}
+        other_edges = {(u, v, frozenset(data["marks"].items())) for u, v, data in other.edges(data=True)}
 
         return (
             set(self.nodes()) == set(other.nodes())
@@ -608,10 +722,7 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         AncestralBase
             A new instance of the same class as self with all properties copied.
         """
-        ebunch = [
-            (u, v, data["marks"][u], data["marks"][v])
-            for u, v, data in self.edges(data=True)
-        ]
+        ebunch = [(u, v, data["marks"][u], data["marks"][v]) for u, v, data in self.edges(data=True)]
         ancestral_base = self.__class__(
             ebunch=ebunch,
             latents=self.latents.copy(),

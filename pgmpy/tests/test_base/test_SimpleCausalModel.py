@@ -5,9 +5,7 @@ from pgmpy.base import SimpleCausalModel
 
 
 def test_simple_string_variables():
-    model = SimpleCausalModel(
-        exposures="X", outcomes="Y", confounders="Z", mediators="M", instruments="I"
-    )
+    model = SimpleCausalModel(exposures="X", outcomes="Y", confounders="Z", mediators="M", instruments="I")
     assert set(model.nodes()) == {"X", "Y", "Z", "M", "I"}
     expected_edges = {("Z", "X"), ("Z", "Y"), ("I", "X"), ("X", "M"), ("M", "Y")}
     assert set(model.edges()) == expected_edges
@@ -100,9 +98,7 @@ def test_missing_optional_args():
 
 
 def test_empty_confounders_mediators_instruments():
-    model = SimpleCausalModel(
-        exposures="X", outcomes="Y", confounders=None, mediators=None, instruments=[]
-    )
+    model = SimpleCausalModel(exposures="X", outcomes="Y", confounders=None, mediators=None, instruments=[])
     assert set(model.edges()) == {("X", "Y")}
     assert set(model.get_role("exposures")) == {"X"}
     assert set(model.get_role("outcomes")) == {"Y"}
@@ -123,15 +119,40 @@ def test_latents():
     with pytest.raises(ValueError):
         SimpleCausalModel(exposures="X", outcomes="Y", latents=["L"])
 
-    model = SimpleCausalModel(
-        exposures="X", outcomes="Y", confounders="Z", latents=["Z"]
-    )
+    model = SimpleCausalModel(exposures="X", outcomes="Y", confounders="Z", latents=["Z"])
     assert set(model.nodes()) == {"X", "Y", "Z"}
     assert set(model.latents) == {"Z"}
 
 
 def test_is_dag():
-    model = SimpleCausalModel(
-        exposures="X", outcomes="Y", confounders="Z", mediators="M", instruments="I"
-    )
+    model = SimpleCausalModel(exposures="X", outcomes="Y", confounders="Z", mediators="M", instruments="I")
     assert nx.is_directed_acyclic_graph(model)
+
+
+def test_zero_variables():
+    model = SimpleCausalModel(exposures=0, outcomes=0, confounders=0, mediators=0, instruments=0)
+    assert len(model.nodes()) == 0
+    assert len(model.edges()) == 0
+    assert set(model.get_role("exposures")) == set()
+    assert set(model.get_role("outcomes")) == set()
+
+
+def test_iterable_empty():
+    model = SimpleCausalModel(exposures=[], outcomes=[], confounders=[], mediators=[], instruments=[])
+    assert len(model.nodes()) == 0
+    assert len(model.edges()) == 0
+    assert set(model.get_role("exposures")) == set()
+    assert set(model.get_role("outcomes")) == set()
+
+
+def test_iterable_types():
+    model = SimpleCausalModel(
+        exposures={"X"},
+        outcomes=("Y",),
+        confounders=["Z"],
+        mediators=iter(["M"]),
+        instruments=iter({"I"}),
+    )
+    assert set(model.nodes()) == {"X", "Y", "Z", "M", "I"}
+    expected_edges = {("Z", "X"), ("Z", "Y"), ("I", "X"), ("X", "M"), ("M", "Y")}
+    assert set(model.edges()) == expected_edges
