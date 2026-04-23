@@ -71,24 +71,22 @@ class DiscreteEM(_BaseDiscreteParameterEstimator):
 
     Examples
     --------
-    >>> import numpy as np
-    >>> import pandas as pd
+    >>> from pgmpy.datasets import load_dataset
     >>> from pgmpy.models import DiscreteBayesianNetwork
     >>> from pgmpy.parameter_estimator import DiscreteEM
-    >>> rng = np.random.default_rng(42)
-    >>> data = pd.DataFrame(
-    ...     rng.integers(low=0, high=2, size=(1000, 3)),
-    ...     columns=["A", "C", "D"],
-    ... )
+    >>> # Drop the "pe" column so it will be treated as a latent variable.
+    >>> data = load_dataset("college_plans").data.drop(columns=["pe"])
     >>> model = DiscreteBayesianNetwork(
-    ...     [("A", "B"), ("C", "B"), ("C", "D")], latents={"B"}
+    ...     [("ses", "iq"), ("sex", "pe"), ("ses", "pe"), ("iq", "cp"), ("pe", "cp")],
+    ...     latents={"pe"},
     ... )
     >>> estimator = DiscreteEM(show_progress=False)
     >>> estimator.fit(model, data).parameters_  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-    [<TabularCPD representing P(A:2) at 0x...>,
-    <TabularCPD representing P(B:2 | A:2, C:2) at 0x...>,
-    <TabularCPD representing P(C:2) at 0x...>,
-    <TabularCPD representing P(D:2 | C:2) at 0x...>]
+    [<TabularCPD representing P(ses:4) at 0x...>,
+     <TabularCPD representing P(iq:4 | ses:4) at 0x...>,
+     <TabularCPD representing P(sex:2) at 0x...>,
+     <TabularCPD representing P(pe:2 | ses:4, sex:2) at 0x...>,
+     <TabularCPD representing P(cp:2 | iq:4, pe:2) at 0x...>]
     """
 
     _tags = {
@@ -263,24 +261,22 @@ class DiscreteEM(_BaseDiscreteParameterEstimator):
 
         Examples
         --------
-        >>> import numpy as np
-        >>> import pandas as pd
+        >>> from pgmpy.datasets import load_dataset
         >>> from pgmpy.models import DiscreteBayesianNetwork
-        >>> from pgmpy.parameter_estimator import DiscreteEM as EM
-        >>> rng = np.random.default_rng(42)
-        >>> data = pd.DataFrame(
-        ...     rng.integers(low=0, high=2, size=(1000, 3)),
-        ...     columns=["A", "C", "D"],
-        ... )
+        >>> from pgmpy.parameter_estimator import DiscreteEM
+        >>> # Drop the "pe" column so it will be treated as a latent variable.
+        >>> data = load_dataset("college_plans").data.drop(columns=["pe"])
         >>> model = DiscreteBayesianNetwork(
-        ...     [("A", "B"), ("C", "B"), ("C", "D")], latents={"B"}
+        ...     [("ses", "iq"), ("sex", "pe"), ("ses", "pe"), ("iq", "cp"), ("pe", "cp")],
+        ...     latents={"pe"},
         ... )
-        >>> estimator = EM(show_progress=False)
+        >>> estimator = DiscreteEM(show_progress=False)
         >>> estimator.fit(model, data).parameters_  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-        [<TabularCPD representing P(A:2) at 0x...>,
-        <TabularCPD representing P(B:2 | A:2, C:2) at 0x...>,
-        <TabularCPD representing P(C:2) at 0x...>,
-        <TabularCPD representing P(D:2 | C:2) at 0x...>]
+        [<TabularCPD representing P(ses:4) at 0x...>,
+         <TabularCPD representing P(iq:4 | ses:4) at 0x...>,
+         <TabularCPD representing P(sex:2) at 0x...>,
+         <TabularCPD representing P(pe:2 | ses:4, sex:2) at 0x...>,
+         <TabularCPD representing P(cp:2 | iq:4, pe:2) at 0x...>]
         """
         model, data = self._prepare_fit_data(model, data)
         model = self._coerce_model(model)

@@ -52,22 +52,20 @@ class DiscreteBayesianEstimator(_BaseDiscreteParameterEstimator):
 
     Examples
     --------
-    >>> import numpy as np
-    >>> import pandas as pd
+    >>> from pgmpy.datasets import load_dataset
     >>> from pgmpy.models import DiscreteBayesianNetwork
-    >>> from pgmpy.parameter_estimator import BayesianEstimator
-    >>> np.random.seed(42)
-    >>> values = pd.DataFrame(
-    ...     np.random.randint(low=0, high=2, size=(1000, 4)),
-    ...     columns=["A", "B", "C", "D"],
+    >>> from pgmpy.parameter_estimator import DiscreteBayesianEstimator
+    >>> data = load_dataset("college_plans").data
+    >>> model = DiscreteBayesianNetwork(
+    ...     [("ses", "iq"), ("sex", "pe"), ("ses", "pe"), ("iq", "cp"), ("pe", "cp")]
     ... )
-    >>> model = DiscreteBayesianNetwork([("A", "B"), ("C", "B"), ("C", "D")])
-    >>> estimator = BayesianEstimator(prior_type="BDeu", equivalent_sample_size=5)
-    >>> estimator.fit(model, values).parameters_  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-    [<TabularCPD representing P(A:2) at 0x...>,
-     <TabularCPD representing P(B:2 | A:2, C:2) at 0x...>,
-     <TabularCPD representing P(C:2) at 0x...>,
-     <TabularCPD representing P(D:2 | C:2) at 0x...>]
+    >>> estimator = DiscreteBayesianEstimator(prior_type="BDeu", equivalent_sample_size=5)
+    >>> estimator.fit(model, data).parameters_  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+    [<TabularCPD representing P(ses:4) at 0x...>,
+     <TabularCPD representing P(iq:4 | ses:4) at 0x...>,
+     <TabularCPD representing P(sex:2) at 0x...>,
+     <TabularCPD representing P(pe:2 | ses:4, sex:2) at 0x...>,
+     <TabularCPD representing P(cp:2 | iq:4, pe:2) at 0x...>]
     """
 
     _tags = {
@@ -200,27 +198,25 @@ class DiscreteBayesianEstimator(_BaseDiscreteParameterEstimator):
 
         Returns
         -------
-        self: BayesianEstimator
+        self: DiscreteBayesianEstimator
             Fitted estimator with learned CPDs stored in `parameters_`.
 
         Examples
         --------
-        >>> import numpy as np
-        >>> import pandas as pd
+        >>> from pgmpy.datasets import load_dataset
         >>> from pgmpy.models import DiscreteBayesianNetwork
-        >>> from pgmpy.parameter_estimator import BayesianEstimator
-        >>> np.random.seed(42)
-        >>> values = pd.DataFrame(
-        ...     np.random.randint(low=0, high=2, size=(1000, 4)),
-        ...     columns=["A", "B", "C", "D"],
+        >>> from pgmpy.parameter_estimator import DiscreteBayesianEstimator
+        >>> data = load_dataset("college_plans").data
+        >>> model = DiscreteBayesianNetwork(
+        ...     [("ses", "iq"), ("sex", "pe"), ("ses", "pe"), ("iq", "cp"), ("pe", "cp")]
         ... )
-        >>> model = DiscreteBayesianNetwork([("A", "B"), ("C", "B"), ("C", "D")])
-        >>> estimator = BayesianEstimator(prior_type="BDeu", equivalent_sample_size=5)
-        >>> estimator.fit(model, values).parameters_  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-        [<TabularCPD representing P(A:2) at 0x...>,
-         <TabularCPD representing P(B:2 | A:2, C:2) at 0x...>,
-         <TabularCPD representing P(C:2) at 0x...>,
-         <TabularCPD representing P(D:2 | C:2) at 0x...>]
+        >>> estimator = DiscreteBayesianEstimator(prior_type="BDeu", equivalent_sample_size=5)
+        >>> estimator.fit(model, data).parameters_  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        [<TabularCPD representing P(ses:4) at 0x...>,
+         <TabularCPD representing P(iq:4 | ses:4) at 0x...>,
+         <TabularCPD representing P(sex:2) at 0x...>,
+         <TabularCPD representing P(pe:2 | ses:4, sex:2) at 0x...>,
+         <TabularCPD representing P(cp:2 | iq:4, pe:2) at 0x...>]
         """
         model = self._coerce_model(model)
         data, _ = preprocess_data(data)
