@@ -124,52 +124,6 @@ class DiscreteEM(_BaseDiscreteParameterEstimator):
         self.show_progress = show_progress
         super().__init__(state_names=state_names)
 
-    def _prepare_fit_data(self, model, data):
-        model = model.copy()
-
-        original_cols = set(data.columns)
-        data = data.dropna(axis=1, how="all")
-        dropped_cols = original_cols - set(data.columns)
-        new_latents = [col for col in dropped_cols if col not in model.latents]
-
-        if new_latents:
-            logger.warning(
-                f"Columns {new_latents} have all missing values and are not marked as latent. "
-                "Treating them as latent variables."
-            )
-            model.latents.update(new_latents)
-
-        original_rows_count = data.shape[0]
-        data = data.dropna()
-        dropped_rows_count = original_rows_count - data.shape[0]
-        if dropped_rows_count:
-            logger.warning(
-                f"{dropped_rows_count} rows with missing values in partially "
-                "missing columns were dropped from the dataset."
-            )
-
-        return model, data
-
-    def _initialize_latent_state_names(self) -> dict[str, int]:
-        latent_card = (
-            dict.fromkeys(self._model.latents, 2)
-            if self.latent_card is None
-            else {var: self.latent_card.get(var, 2) for var in self._model.latents}
-        )
-
-        for var in self._model.latents:
-            if var in self.state_names_:
-                if len(self.state_names_[var]) != latent_card[var]:
-                    raise ValueError(
-                        f"Conflicting cardinality for latent variable {var}: "
-                        f"state_names specifies {len(self.state_names_[var])}, "
-                        f"latent_card specifies {latent_card[var]}."
-                    )
-            else:
-                self.state_names_[var] = list(range(latent_card[var]))
-
-        return {var: len(self.state_names_[var]) for var in self._model.latents}
-
     def _get_log_likelihood(self, datapoint: dict[str, Any]) -> float:
         likelihood = 0.0
         for cpd in self._model_copy.cpds:
@@ -206,43 +160,23 @@ class DiscreteEM(_BaseDiscreteParameterEstimator):
 
         return pd.concat(cache)
 
-    def _compute_weights(self, latent_card: dict[str, int]):
-        data_unique = self._data.drop_duplicates()
-        n_counts = self._data.groupby(list(self._data.columns), observed=True).size().to_dict()
+    def _fit_parameters(self, model, data, weighted: bool) -> list[TabularCPD]:
+        base = self.m_step_estimator if self.m_step_estimator is not None else DiscreteMLE(weighted=True)
 
-        cache = Parallel(n_jobs=self.n_jobs)(
-            delayed(self._parallel_compute_weights)(data_unique, latent_card, n_counts, i, self.batch_size)
-            for i in range(0, data_unique.shape[0], self.batch_size)
-        )
-
-        return pd.concat(cache)
-
-    def _is_converged(self, new_cpds: list[TabularCPD]) -> bool:
-        for cpd in new_cpds:
-            if not cpd.__eq__(self._model_copy.get_cpds(node=cpd.scope()[0]), atol=self.atol):
-                return False
-        return True
-
-    def _clone_m_step_estimator(self, weighted: bool) -> _BaseDiscreteParameterEstimator:
-        estimator = self.m_step_estimator if self.m_step_estimator is not None else DiscreteMLE(weighted=True)
-
-        if not isinstance(estimator, _BaseDiscreteParameterEstimator):
+        if not isinstance(base, _BaseDiscreteParameterEstimator):
             raise TypeError(
                 "m_step_estimator should be an instance of a discrete parameter estimator. "
                 "Pass an initialized estimator, for example `DiscreteMLE(weighted=True)`."
             )
 
-        if not bool(estimator.get_tag("supports_weighted_data")):
-            raise ValueError(f"{type(estimator).__name__} doesn't support weighted data and can't be used in EM.")
+        if not bool(base.get_tag("supports_weighted_data")):
+            raise ValueError(f"{type(base).__name__} doesn't support weighted data and can't be used in EM.")
 
-        params = estimator.get_params(deep=False)
+        params = base.get_params(deep=False)
         params["state_names"] = self.state_names_
         if "weighted" in params:
             params["weighted"] = weighted
-        return type(estimator)(**params)
-
-    def _fit_parameters(self, model, data, weighted: bool) -> list[TabularCPD]:
-        estimator = self._clone_m_step_estimator(weighted=weighted)
+        estimator = type(base)(**params)
         estimator.fit(model, data)
         return estimator.parameters_
 
@@ -283,14 +217,57 @@ class DiscreteEM(_BaseDiscreteParameterEstimator):
          <TabularCPD representing P(pe:2 | ses:4, sex:2) at 0x...>,
          <TabularCPD representing P(cp:2 | iq:4, pe:2) at 0x...>]
         """
-        model, data = self._prepare_fit_data(model, data)
+        # Step 1: Preprocess model and data.
+        #         Copy the model so user-supplied latents aren't mutated; drop fully-missing columns (treating them
+        #         as latent if not already), then drop rows with partial missingness.
+        model = model.copy()
+
+        original_cols = set(data.columns)
+        data = data.dropna(axis=1, how="all")
+        dropped_cols = original_cols - set(data.columns)
+        new_latents = [col for col in dropped_cols if col not in model.latents]
+        if new_latents:
+            logger.warning(
+                f"Columns {new_latents} have all missing values and are not marked as latent. "
+                "Treating them as latent variables."
+            )
+            model.latents.update(new_latents)
+
+        original_rows_count = data.shape[0]
+        data = data.dropna()
+        dropped_rows_count = original_rows_count - data.shape[0]
+        if dropped_rows_count:
+            logger.warning(
+                f"{dropped_rows_count} rows with missing values in partially "
+                "missing columns were dropped from the dataset."
+            )
+
         model = self._coerce_model(model)
         data, _ = preprocess_data(data)
         self._validate_model_data(model, data)
         self._model = model
         self._data = data
         self.state_names_ = self._build_fitted_state_names(model, data)
-        latent_card = self._initialize_latent_state_names()
+
+        # Step 2: Resolve latent cardinalities and build helper model copies.
+        #         `_model_copy` holds the running CPDs across EM iterations; `complete_model` treats latents as
+        #         observed for the weighted M-step; `observed_model` drops latents entirely for the initial MLE.
+        if self.latent_card is None:
+            latent_card = dict.fromkeys(self._model.latents, 2)
+        else:
+            latent_card = {var: self.latent_card.get(var, 2) for var in self._model.latents}
+
+        for var in self._model.latents:
+            if var in self.state_names_:
+                if len(self.state_names_[var]) != latent_card[var]:
+                    raise ValueError(
+                        f"Conflicting cardinality for latent variable {var}: "
+                        f"state_names specifies {len(self.state_names_[var])}, "
+                        f"latent_card specifies {latent_card[var]}."
+                    )
+            else:
+                self.state_names_[var] = list(range(latent_card[var]))
+
         self._model_copy = self._model.copy()
         complete_model = self._model.copy()
         complete_model.latents = set()
@@ -300,6 +277,8 @@ class DiscreteEM(_BaseDiscreteParameterEstimator):
         n_states_dict = {key: len(value) for key, value in self.state_names_.items()}
         init_cpds = {} if self.init_cpds is None else self.init_cpds
 
+        # Step 3: Initialize CPDs.
+        # Step 3.0: If `init_cpds` is a string, expand it into a dict of random or uniform CPDs for every node.
         if isinstance(init_cpds, str):
             parents_dict = {var: self._model.get_parents(var) for var in self._model.nodes()}
             if init_cpds == "random":
@@ -329,6 +308,9 @@ class DiscreteEM(_BaseDiscreteParameterEstimator):
                     f"If `init_cpds` is a string, it must be either 'random' or 'uniform'. Got: {init_cpds}"
                 )
 
+        # Step 3.1: Partition nodes.
+        #           `fixed_cpd_vars` = nodes with no latent involvement; their CPDs are the EM fixed point and
+        #           can be estimated once from observed data. `updatable_vars` are refit every EM iteration.
         children_of_latents = set(chain.from_iterable(self._model.get_children(var) for var in self._model.latents))
         fixed_cpd_vars = [
             var
@@ -343,6 +325,7 @@ class DiscreteEM(_BaseDiscreteParameterEstimator):
             if cpd.variable in fixed_cpd_vars
         ]
 
+        # Step 3.2: Randomly initialize CPDs for updatable variables that don't have a user-supplied init.
         latent_cpds = []
         for node in updatable_vars:
             if node in init_cpds:
@@ -361,31 +344,37 @@ class DiscreteEM(_BaseDiscreteParameterEstimator):
 
         self._model_copy.add_cpds(*list(chain(fixed_cpds, latent_cpds, list(init_cpds.values()))))
 
-        pbar = None
-        if self.show_progress and config.SHOW_PROGRESS:
-            pbar = tqdm(total=self.max_iter)
+        # Step 4: Run the EM algorithm.
+        #         `data_unique` and `n_counts` are iteration-invariant so we precompute them once.
+        data_unique = self._data.drop_duplicates()
+        n_counts = self._data.groupby(list(self._data.columns), observed=True).size().to_dict()
 
-        try:
-            for _ in range(self.max_iter):
-                weighted_data = self._compute_weights(latent_card)
-                new_cpds = fixed_cpds.copy()
-                new_cpds.extend(
-                    cpd
-                    for cpd in self._fit_parameters(complete_model, weighted_data, weighted=True)
-                    if cpd.variable in updatable_vars
-                )
+        disable_pbar = not (self.show_progress and config.SHOW_PROGRESS)
+        for _ in tqdm(range(self.max_iter), disable=disable_pbar):
+            # Step 4.1: E-step — expand each observation over all latent combinations and weight each augmented
+            #           row by the current posterior P(h | x_obs).
+            cache = Parallel(n_jobs=self.n_jobs)(
+                delayed(self._parallel_compute_weights)(data_unique, latent_card, n_counts, i, self.batch_size)
+                for i in range(0, data_unique.shape[0], self.batch_size)
+            )
+            weighted_data = pd.concat(cache)
 
-                new_cpds = self._sort_parameters(new_cpds)
-                if self._is_converged(new_cpds):
-                    self.parameters_ = new_cpds
-                    return self
+            # Step 4.2: M-step — weighted MLE on the completed data, keeping the fixed CPDs and overwriting only
+            #           the updatable ones.
+            new_cpds = fixed_cpds.copy()
+            new_cpds.extend(
+                cpd
+                for cpd in self._fit_parameters(complete_model, weighted_data, weighted=True)
+                if cpd.variable in updatable_vars
+            )
 
-                self._model_copy.cpds = new_cpds
-                if pbar is not None:
-                    pbar.update(1)
+            # Step 4.3: Check convergence (parameter-change tolerance). Early-return once all CPDs are within atol.
+            new_cpds = self._sort_parameters(new_cpds)
+            if all(cpd.__eq__(self._model_copy.get_cpds(node=cpd.scope()[0]), atol=self.atol) for cpd in new_cpds):
+                self.parameters_ = new_cpds
+                return self
 
-            self.parameters_ = new_cpds
-            return self
-        finally:
-            if pbar is not None:
-                pbar.close()
+            self._model_copy.cpds = new_cpds
+
+        self.parameters_ = new_cpds
+        return self
