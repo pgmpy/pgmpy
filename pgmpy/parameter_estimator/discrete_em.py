@@ -14,7 +14,7 @@ from pgmpy.factors.discrete import TabularCPD
 from pgmpy.utils import preprocess_data
 
 from .base import _BaseDiscreteParameterEstimator
-from .mle import DiscreteMLE
+from .discrete_mle import DiscreteMLE
 
 
 class DiscreteEM(_BaseDiscreteParameterEstimator):

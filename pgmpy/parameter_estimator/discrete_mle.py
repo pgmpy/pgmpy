@@ -13,7 +13,7 @@ from .base import _BaseDiscreteParameterEstimator
 
 class DiscreteMLE(_BaseDiscreteParameterEstimator):
     """
-    Computes parameters for a given model using Maximum Likelihood Estimation.
+    Computes parameters for a given discrete model using Maximum Likelihood Estimation.
 
     Parameters
     ----------
