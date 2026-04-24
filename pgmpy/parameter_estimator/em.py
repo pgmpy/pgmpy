@@ -20,38 +20,33 @@ class ExpectationMaximization(_BaseDiscreteParameterEstimator):
     """
     Class used to compute parameters for a model using Expectation Maximization (EM).
 
-    EM is an iterative algorithm commonly used for estimation when there are
-    latent variables in the model. The algorithm iteratively improves the
-    parameter estimates, maximizing the likelihood of the given data.
+    EM is an iterative algorithm commonly used for estimation when there are latent variables in the model. The
+    algorithm iteratively improves the parameter estimates, maximizing the likelihood of the given data.
 
     Parameters
     ----------
     state_names: dict, optional
-        A dict indicating, for each variable, the discrete set of states
-        that the variable can take. If unspecified, the observed values in
-        the data set are taken to be the only possible states.
+        A dict indicating, for each variable, the discrete set of states that the variable can take. If unspecified, the
+        observed values in the data set are taken to be the only possible states.
 
     latent_card: dict, optional
-        A dictionary of the form `{latent_var: cardinality}` specifying the
-        cardinality (number of states) of each latent variable. If None,
-        assumes `2` states for each latent variable.
+        A dictionary of the form `{latent_var: cardinality}` specifying the cardinality (number of states) of each
+        latent variable. If None, assumes `2` states for each latent variable.
 
     m_step_estimator: discrete parameter estimator instance, optional
-        Estimator instance to use in the M-step. The estimator must support
-        weighted data. If not specified, uses
+        Estimator instance to use in the M-step. The estimator must support weighted data. If not specified, uses
         `MaximumLikelihoodEstimator(weighted=True)`.
 
     max_iter: int, default=100
-        The maximum number of iterations the algorithm is allowed to run for.
-        If `max_iter` is reached, returns the last value of parameters.
+        The maximum number of iterations the algorithm is allowed to run for. If `max_iter` is reached, returns the last
+        value of parameters.
 
     atol: float, default=1e-08
-        Absolute tolerance used for checking convergence. If the parameter
-        change is less than `atol` in an iteration, the algorithm exits.
+        Absolute tolerance used for checking convergence. If the parameter change is less than `atol` in an iteration,
+        the algorithm exits.
 
     n_jobs: int, default=1
-        Number of jobs to run in parallel. Using `n_jobs > 1` for small models
-        or datasets might be slower.
+        Number of jobs to run in parallel. Using `n_jobs > 1` for small models or datasets might be slower.
 
     batch_size: int, default=1000
         Number of data points used to compute weights in a batch.
@@ -60,10 +55,8 @@ class ExpectationMaximization(_BaseDiscreteParameterEstimator):
         Random seed to use for generating initial CPDs.
 
     init_cpds: dict or {"uniform", "random"}, optional
-        Initial CPDs for the optimizer. If not specified, CPDs involving
-        latent variables are initialized randomly and CPDs involving only
-        observed variables are initialized using the unweighted M-step
-        estimator.
+        Initial CPDs for the optimizer. If not specified, CPDs involving latent variables are initialized randomly and
+        CPDs involving only observed variables are initialized using the unweighted M-step estimator.
 
     show_progress: bool, default=True
         Whether to show a progress bar for iterations.
@@ -260,9 +253,8 @@ class ExpectationMaximization(_BaseDiscreteParameterEstimator):
             The model structure for which to estimate CPDs.
 
         data: pandas.DataFrame
-            DataFrame object with column names identical to the observed
-            variable names of the network. Fully missing columns are treated
-            as latent variables if they are not already marked as latent.
+            DataFrame object with column names identical to the observed variable names of the network. Fully missing
+            columns are treated as latent variables if they are not already marked as latent.
 
         Returns
         -------

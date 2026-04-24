@@ -18,18 +18,15 @@ class MaximumLikelihoodEstimator(_BaseDiscreteParameterEstimator):
     Parameters
     ----------
     state_names: dict, optional
-        A dict indicating, for each variable, the discrete set of states
-        that the variable can take. If unspecified, the observed values
-        in the data set are taken to be the only possible states.
+        A dict indicating, for each variable, the discrete set of states that the variable can take. If unspecified, the
+        observed values in the data set are taken to be the only possible states.
 
     n_jobs: int, default=1
-        Number of jobs to run in parallel. Using `n_jobs > 1` for small models
-        might be slower.
+        Number of jobs to run in parallel. Using `n_jobs > 1` for small models might be slower.
 
     weighted: bool, default=False
-        If `weighted=True`, the data passed to `fit` must contain a `_weight`
-        column specifying the weight of each datapoint (row). If False,
-        assigns an equal weight to each datapoint.
+        If `weighted=True`, the data passed to `fit` must contain a `_weight` column specifying the weight of each
+        datapoint (row). If False, assigns an equal weight to each datapoint.
 
     Examples
     --------
@@ -101,8 +98,7 @@ class MaximumLikelihoodEstimator(_BaseDiscreteParameterEstimator):
             The model structure for which to estimate CPDs.
 
         data: pandas.DataFrame
-            DataFrame object with column names identical to the variable names
-            of the network.
+            DataFrame object with column names identical to the variable names of the network.
 
         Returns
         -------

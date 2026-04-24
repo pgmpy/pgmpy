@@ -14,9 +14,8 @@ class _BaseDiscreteParameterEstimator(BaseEstimator):
     Parameters
     ----------
     state_names: dict, optional
-        A dict indicating, for each variable, the discrete set of states
-        that the variable can take. If unspecified, the observed values
-        in the data set are taken to be the only possible states.
+        A dict indicating, for each variable, the discrete set of states that the variable can take. If unspecified, the
+        observed values in the data set are taken to be the only possible states.
     """
 
     _tags = {
@@ -39,15 +38,14 @@ class _BaseDiscreteParameterEstimator(BaseEstimator):
             The model structure for which to estimate parameters.
 
         data: pandas.DataFrame
-            DataFrame object with column names identical to the variable names
-            of the network. If some values are missing, the corresponding
-            cells should be set to `numpy.nan`.
+            DataFrame object with column names identical to the variable names of the network. If some values are
+            missing, the corresponding cells should be set to `numpy.nan`.
 
         Returns
         -------
         self
-            Fitted estimator with learned parameters stored in `parameters_`
-            and inferred state names stored in `state_names_`.
+            Fitted estimator with learned parameters stored in `parameters_` and inferred state names stored in
+            `state_names_`.
         """
         raise NotImplementedError
 

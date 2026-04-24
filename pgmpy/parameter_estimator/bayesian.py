@@ -21,34 +21,29 @@ class BayesianEstimator(_BaseDiscreteParameterEstimator):
     Parameters
     ----------
     state_names: dict, optional
-        A dict indicating, for each variable, the discrete set of states
-        that the variable can take. If unspecified, the observed values
-        in the data set are taken to be the only possible states.
+        A dict indicating, for each variable, the discrete set of states that the variable can take. If unspecified, the
+        observed values in the data set are taken to be the only possible states.
 
     prior_type: {"dirichlet", "BDeu", "K2"}, default="BDeu"
-        String indicating which type of prior to use for the model parameters.
-        If `prior_type` is `"dirichlet"`, `pseudo_counts` specifies the
-        Dirichlet hyperparameters. If `prior_type` is `"BDeu"`, then
-        `equivalent_sample_size` is used to construct uniform pseudo counts.
-        `"K2"` is a shorthand for a Dirichlet prior with all pseudo counts set
-        to 1.
+        String indicating which type of prior to use for the model parameters. If `prior_type` is `"dirichlet"`,
+        `pseudo_counts` specifies the Dirichlet hyperparameters. If `prior_type` is `"BDeu"`, then
+        `equivalent_sample_size` is used to construct uniform pseudo counts. `"K2"` is a shorthand for a Dirichlet prior
+        with all pseudo counts set to 1.
 
     equivalent_sample_size: int, float, or dict, default=5
-        Equivalent sample size used for the BDeu prior. Can be a single value
-        or a dict specifying the size for each variable separately.
+        Equivalent sample size used for the BDeu prior. Can be a single value or a dict specifying the size for each
+        variable separately.
 
     pseudo_counts: int, float, dict, or None, default=None
-        Pseudo counts used with the Dirichlet prior. Can be a single value or a
-        dict containing, for each variable, a 2-D array of shape
-        `(node_cardinality, product(parents_cardinalities))`.
+        Pseudo counts used with the Dirichlet prior. Can be a single value or a dict containing, for each variable, a
+        2-D array of shape `(node_cardinality, product(parents_cardinalities))`.
 
     n_jobs: int, default=1
-        Number of jobs to run in parallel. Using `n_jobs > 1` for small models
-        might be slower.
+        Number of jobs to run in parallel. Using `n_jobs > 1` for small models might be slower.
 
     weighted: bool, default=False
-        If `weighted=True`, the data passed to `fit` must contain a `_weight`
-        column specifying the weight of each datapoint (row).
+        If `weighted=True`, the data passed to `fit` must contain a `_weight` column specifying the weight of each
+        datapoint (row).
 
     Examples
     --------
@@ -195,8 +190,7 @@ class BayesianEstimator(_BaseDiscreteParameterEstimator):
             The model structure for which to estimate CPDs.
 
         data: pandas.DataFrame
-            DataFrame object with column names identical to the variable names
-            of the network.
+            DataFrame object with column names identical to the variable names of the network.
 
         Returns
         -------
