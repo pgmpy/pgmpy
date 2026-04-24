@@ -7,7 +7,7 @@ from pgmpy.models import DiscreteBayesianNetwork, LinearGaussianBayesianNetwork
 from pgmpy.utils import build_state_names, preprocess_data
 
 
-class _BaseParameterEstimator(BaseEstimator):
+class BaseParameterEstimator(BaseEstimator):
     """
     Thin base class for all parameter estimators.
 
@@ -50,7 +50,7 @@ class _BaseParameterEstimator(BaseEstimator):
         return sorted(parameters, key=lambda cpd: order[cpd.variable])
 
 
-class _BaseDiscreteParameterEstimator(_BaseParameterEstimator):
+class DiscreteParameterEstimator(BaseParameterEstimator):
     """
     Base class for discrete parameter estimators.
 
@@ -169,7 +169,7 @@ class _BaseDiscreteParameterEstimator(_BaseParameterEstimator):
         self.state_names_ = self._build_fitted_state_names(model, data)
 
 
-class _BaseGaussianParameterEstimator(_BaseParameterEstimator):
+class GaussianParameterEstimator(BaseParameterEstimator):
     """
     Base class for LinearGaussian parameter estimators.
 

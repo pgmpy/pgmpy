@@ -54,8 +54,8 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         **kwargs,
     ) -> None:
         warnings.warn(
-            "`pgmpy.estimators.MaximumLikelihoodEstimator` is deprecated and will be removed in v1.3.0."
-            "Please use `pgmpy.parameter_estimator.MaximumLikelihoodEstimator` instead.",
+            "`pgmpy.estimators.MaximumLikelihoodEstimator` is deprecated and will be removed in v1.3.0. "
+            "Please use `pgmpy.parameter_estimator.DiscreteMLE` instead.",
             FutureWarning,
             stacklevel=2,
         )

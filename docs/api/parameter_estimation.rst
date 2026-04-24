@@ -11,10 +11,9 @@ Estimator Base Classes
    :toctree: generated/parameter_estimation
    :template: autosummary/class.rst
 
-   ~pgmpy.estimators.BaseEstimator
-   ~pgmpy.estimators.ParameterEstimator
-   ~pgmpy.estimators.StructureEstimator
-   ~pgmpy.estimators.MarginalEstimator
+   ~pgmpy.parameter_estimator.BaseParameterEstimator
+   ~pgmpy.parameter_estimator.DiscreteParameterEstimator
+   ~pgmpy.parameter_estimator.GaussianParameterEstimator
 
 Discrete Bayesian Network Estimators
 ------------------------------------

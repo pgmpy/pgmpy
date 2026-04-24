@@ -8,10 +8,10 @@ from joblib import Parallel, delayed
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.utils import get_state_counts
 
-from .base import _BaseDiscreteParameterEstimator
+from .base import DiscreteParameterEstimator
 
 
-class DiscreteMLE(_BaseDiscreteParameterEstimator):
+class DiscreteMLE(DiscreteParameterEstimator):
     """
     Computes parameters for a given discrete model using Maximum Likelihood Estimation.
 

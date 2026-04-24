@@ -11,10 +11,10 @@ from pgmpy import logger
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.utils import get_state_counts
 
-from .base import _BaseDiscreteParameterEstimator
+from .base import DiscreteParameterEstimator
 
 
-class DiscreteBayesianEstimator(_BaseDiscreteParameterEstimator):
+class DiscreteBayesianEstimator(DiscreteParameterEstimator):
     """
     Class used to compute parameters for a model using Bayesian Parameter Estimation.
 

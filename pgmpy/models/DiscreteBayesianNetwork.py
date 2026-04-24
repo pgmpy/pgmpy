@@ -632,11 +632,11 @@ class DiscreteBayesianNetwork(DAG):
          <TabularCPD representing P(cp:2 | iq:4, pe:2) at 0x...>]
         """
         from pgmpy.parameter_estimator import DiscreteMLE
-        from pgmpy.parameter_estimator.base import _BaseDiscreteParameterEstimator
+        from pgmpy.parameter_estimator.base import DiscreteParameterEstimator
 
         if estimator is None:
             estimator = DiscreteMLE()
-        elif not isinstance(estimator, _BaseDiscreteParameterEstimator):
+        elif not isinstance(estimator, DiscreteParameterEstimator):
             raise TypeError(
                 "Estimator should be an instance of a discrete parameter estimator. "
                 "Pass an initialized estimator, for example `DiscreteMLE()`."

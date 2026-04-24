@@ -28,8 +28,8 @@ class BayesianEstimator(ParameterEstimator):
         **kwargs,
     ):
         warnings.warn(
-            "`pgmpy.estimators.BayesianEstimator` is deprecated and will be removed in v1.3.0"
-            "Please use `pgmpy.parameter_estimator.BayesianEstimator` instead.",
+            "`pgmpy.estimators.BayesianEstimator` is deprecated and will be removed in v1.3.0. "
+            "Please use `pgmpy.parameter_estimator.DiscreteBayesianEstimator` instead.",
             FutureWarning,
             stacklevel=2,
         )

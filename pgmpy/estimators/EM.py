@@ -68,7 +68,7 @@ class ExpectationMaximization(ParameterEstimator):
     ):
         warnings.warn(
             "`pgmpy.estimators.ExpectationMaximization` is deprecated and will be removed in v1.3.0. "
-            "Please use `pgmpy.parameter_estimator.ExpectationMaximization` instead.",
+            "Please use `pgmpy.parameter_estimator.DiscreteEM` instead.",
             FutureWarning,
             stacklevel=2,
         )

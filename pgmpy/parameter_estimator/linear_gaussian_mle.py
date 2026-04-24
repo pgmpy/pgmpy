@@ -6,10 +6,10 @@ from sklearn.linear_model import LinearRegression
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.models import LinearGaussianBayesianNetwork
 
-from .base import _BaseGaussianParameterEstimator
+from .base import GaussianParameterEstimator
 
 
-class LinearGaussianMLE(_BaseGaussianParameterEstimator):
+class LinearGaussianMLE(GaussianParameterEstimator):
     """
     Computes parameters for a LinearGaussianBayesianNetwork using Maximum Likelihood Estimation.
 

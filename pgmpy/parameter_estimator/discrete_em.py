@@ -12,11 +12,11 @@ from tqdm.auto import tqdm
 from pgmpy import config, logger
 from pgmpy.factors.discrete import TabularCPD
 
-from .base import _BaseDiscreteParameterEstimator
+from .base import DiscreteParameterEstimator
 from .discrete_mle import DiscreteMLE
 
 
-class DiscreteEM(_BaseDiscreteParameterEstimator):
+class DiscreteEM(DiscreteParameterEstimator):
     """
     Class used to compute parameters for a model using Expectation Maximization (EM).
 
@@ -103,7 +103,7 @@ class DiscreteEM(_BaseDiscreteParameterEstimator):
         self,
         state_names: dict | None = None,
         latent_card: dict[str, int] | None = None,
-        m_step_estimator: _BaseDiscreteParameterEstimator | None = None,
+        m_step_estimator: DiscreteParameterEstimator | None = None,
         max_iter: int = 100,
         atol: float = 1e-08,
         n_jobs: int = 1,
@@ -162,7 +162,7 @@ class DiscreteEM(_BaseDiscreteParameterEstimator):
     def _fit_parameters(self, model, data, weighted: bool) -> list[TabularCPD]:
         base = self.m_step_estimator if self.m_step_estimator is not None else DiscreteMLE(weighted=True)
 
-        if not isinstance(base, _BaseDiscreteParameterEstimator):
+        if not isinstance(base, DiscreteParameterEstimator):
             raise TypeError(
                 "m_step_estimator should be an instance of a discrete parameter estimator. "
                 "Pass an initialized estimator, for example `DiscreteMLE(weighted=True)`."

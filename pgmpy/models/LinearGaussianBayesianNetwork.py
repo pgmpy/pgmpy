@@ -920,11 +920,11 @@ class LinearGaussianBayesianNetwork(DAG):
         <LinearGaussianCPD: P(x3 | x2) = N(0.172*x2 + -0.078; 0.908) at 0x...]
         """
         from pgmpy.parameter_estimator import LinearGaussianMLE
-        from pgmpy.parameter_estimator.base import _BaseGaussianParameterEstimator
+        from pgmpy.parameter_estimator.base import GaussianParameterEstimator
 
         if estimator is None:
             estimator = LinearGaussianMLE()
-        elif not isinstance(estimator, _BaseGaussianParameterEstimator):
+        elif not isinstance(estimator, GaussianParameterEstimator):
             raise TypeError(
                 "estimator must be an instance of a Gaussian parameter estimator. "
                 "Pass an initialized estimator, for example `LinearGaussianMLE()`."
