@@ -9,7 +9,7 @@ from joblib import Parallel, delayed
 
 from pgmpy import logger
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.utils import get_state_counts, preprocess_data
+from pgmpy.utils import get_state_counts
 
 from .base import _BaseDiscreteParameterEstimator
 
@@ -223,12 +223,7 @@ class DiscreteBayesianEstimator(_BaseDiscreteParameterEstimator):
          <TabularCPD representing P(pe:2 | ses:4, sex:2) at 0x...>,
          <TabularCPD representing P(cp:2 | iq:4, pe:2) at 0x...>]
         """
-        model = self._coerce_model(model)
-        data, _ = preprocess_data(data)
-        self._validate_model_data(model, data)
-        self._model = model
-        self._data = data
-        self.state_names_ = self._build_fitted_state_names(model, data)
+        self._initialize_fit(model, data)
 
         parameters = Parallel(n_jobs=self.n_jobs)(
             delayed(DiscreteBayesianEstimator._estimate_cpd)(

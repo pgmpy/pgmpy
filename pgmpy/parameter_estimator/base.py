@@ -4,7 +4,7 @@ from skbase.base import BaseEstimator
 
 from pgmpy.base import DAG
 from pgmpy.models import DiscreteBayesianNetwork, LinearGaussianBayesianNetwork
-from pgmpy.utils import build_state_names
+from pgmpy.utils import build_state_names, preprocess_data
 
 
 class _BaseParameterEstimator(BaseEstimator):
@@ -36,7 +36,7 @@ class _BaseParameterEstimator(BaseEstimator):
         """
         raise NotImplementedError
 
-    def _coerce_model(self, model):
+    def _validate_inputs(self, model, data):
         supported_model_types = self.get_tag("supported_model_types")
         if not isinstance(model, supported_model_types):
             raise NotImplementedError(
@@ -103,34 +103,19 @@ class _BaseDiscreteParameterEstimator(_BaseParameterEstimator):
         """
         raise NotImplementedError
 
-    def _coerce_model(self, model: DAG | DiscreteBayesianNetwork) -> DiscreteBayesianNetwork:
-        model = super()._coerce_model(model)
+    def _validate_inputs(
+        self,
+        model: DAG | DiscreteBayesianNetwork,
+        data,
+    ) -> DiscreteBayesianNetwork:
+        model = super()._validate_inputs(model, data)
 
         if isinstance(model, DAG) and not isinstance(model, DiscreteBayesianNetwork):
             model_bn = DiscreteBayesianNetwork(model.edges())
             model_bn.add_nodes_from(model.nodes())
             model_bn.latents = set(model.latents)
-            return model_bn
+            model = model_bn
 
-        return model
-
-    def _build_fitted_state_names(
-        self,
-        model: DiscreteBayesianNetwork,
-        data,
-    ) -> dict:
-        supplied_state_names = self.state_names if isinstance(self.state_names, dict) else None
-        model_columns = [var for var in data.columns if var in model.nodes()]
-        state_names = build_state_names(data.loc[:, model_columns], state_names=supplied_state_names)
-
-        if supplied_state_names is not None:
-            for var in model.nodes():
-                if (var not in state_names) and (var in supplied_state_names):
-                    state_names[var] = supplied_state_names[var]
-
-        return {var: list(states) for var, states in state_names.items()}
-
-    def _validate_model_data(self, model: DiscreteBayesianNetwork, data) -> None:
         supports_latent_variables = self.get_tag("supports_latent_variables")
         if (not supports_latent_variables) and model.latents:
             raise ValueError(
@@ -157,6 +142,31 @@ class _BaseDiscreteParameterEstimator(_BaseParameterEstimator):
             raise ValueError(
                 "weighted=True but no '_weight' column found in data. Add a '_weight' column or set weighted=False."
             )
+
+        return model
+
+    def _build_fitted_state_names(
+        self,
+        model: DiscreteBayesianNetwork,
+        data,
+    ) -> dict:
+        supplied_state_names = self.state_names if isinstance(self.state_names, dict) else None
+        model_columns = [var for var in data.columns if var in model.nodes()]
+        state_names = build_state_names(data.loc[:, model_columns], state_names=supplied_state_names)
+
+        if supplied_state_names is not None:
+            for var in model.nodes():
+                if (var not in state_names) and (var in supplied_state_names):
+                    state_names[var] = supplied_state_names[var]
+
+        return {var: list(states) for var, states in state_names.items()}
+
+    def _initialize_fit(self, model: DAG | DiscreteBayesianNetwork, data) -> None:
+        data, _ = preprocess_data(data)
+        model = self._validate_inputs(model, data)
+        self._model = model
+        self._data = data
+        self.state_names_ = self._build_fitted_state_names(model, data)
 
 
 class _BaseGaussianParameterEstimator(_BaseParameterEstimator):
@@ -197,10 +207,21 @@ class _BaseGaussianParameterEstimator(_BaseParameterEstimator):
         """
         raise NotImplementedError
 
-    def _validate_model_data(self, model: LinearGaussianBayesianNetwork, data) -> None:
+    def _validate_inputs(
+        self,
+        model: LinearGaussianBayesianNetwork,
+        data,
+    ) -> LinearGaussianBayesianNetwork:
+        model = super()._validate_inputs(model, data)
         missing_nodes = set(model.nodes()) - set(data.columns)
         if missing_nodes:
             raise ValueError(
                 "Nodes detected in the model that are not present in the dataset: "
                 f"{missing_nodes}. Refine the model so that all parameters can be estimated from the data."
             )
+        return model
+
+    def _initialize_fit(self, model: LinearGaussianBayesianNetwork, data) -> None:
+        model = self._validate_inputs(model, data)
+        self._model = model
+        self._data = data

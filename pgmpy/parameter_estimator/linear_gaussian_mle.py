@@ -92,10 +92,7 @@ class LinearGaussianMLE(_BaseGaussianParameterEstimator):
         if self.std_estimator not in {"mle", "unbiased"}:
             raise ValueError(f"std_estimator must be one of {{'mle', 'unbiased'}}. Got: {self.std_estimator!r}")
 
-        model = self._coerce_model(model)
-        self._validate_model_data(model, data)
-        self._model = model
-        self._data = data
+        self._initialize_fit(model, data)
 
         cpds = []
         for node in self._model.nodes():

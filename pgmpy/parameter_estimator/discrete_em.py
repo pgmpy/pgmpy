@@ -11,7 +11,6 @@ from tqdm.auto import tqdm
 
 from pgmpy import config, logger
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.utils import preprocess_data
 
 from .base import _BaseDiscreteParameterEstimator
 from .discrete_mle import DiscreteMLE
@@ -218,8 +217,9 @@ class DiscreteEM(_BaseDiscreteParameterEstimator):
          <TabularCPD representing P(cp:2 | iq:4, pe:2) at 0x...>]
         """
         # Step 1: Preprocess model and data.
-        #         Copy the model so user-supplied latents aren't mutated; drop fully-missing columns (treating them
-        #         as latent if not already), then drop rows with partial missingness.
+        #         EM-specific handling first: copy the model so user-supplied latents aren't mutated; promote
+        #         fully-missing columns to latent variables; drop rows with partial missingness. Then run the
+        #         shared input validation + state-name setup.
         model = model.copy()
 
         original_cols = set(data.columns)
@@ -242,12 +242,7 @@ class DiscreteEM(_BaseDiscreteParameterEstimator):
                 "missing columns were dropped from the dataset."
             )
 
-        model = self._coerce_model(model)
-        data, _ = preprocess_data(data)
-        self._validate_model_data(model, data)
-        self._model = model
-        self._data = data
-        self.state_names_ = self._build_fitted_state_names(model, data)
+        self._initialize_fit(model, data)
 
         # Step 2: Resolve latent cardinalities and build helper model copies.
         #         `_model_copy` holds the running CPDs across EM iterations; `complete_model` treats latents as
