@@ -134,6 +134,7 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
         "assumed_relationship": (),
         "supports_expert_knowledge": ("forbidden_edges", "required_edges", "search_space", "temporal_order"),
         "noise_term": "",
+        "requires_target": False,
     }
 
     def __init__(

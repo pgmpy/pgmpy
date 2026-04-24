@@ -100,6 +100,7 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         "assumed_relationship": (),
         "supports_expert_knowledge": (),
         "noise_term": "",
+        "requires_target": False,
     }
 
     def __init__(

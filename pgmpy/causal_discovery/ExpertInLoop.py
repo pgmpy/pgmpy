@@ -158,6 +158,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
             "temporal_order",
         ),
         "noise_term": "",
+        "requires_target": False,
     }
 
     def __init__(

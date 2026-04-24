@@ -31,6 +31,7 @@ class _BaseCausalDiscovery(BaseEstimator, BaseObject):
         "assumed_relationship": (),
         "supports_expert_knowledge": (),
         "noise_term": "",
+        "requires_target": False,
     }
 
     def __sklearn_tags__(self):
