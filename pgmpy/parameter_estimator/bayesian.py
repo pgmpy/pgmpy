@@ -9,12 +9,12 @@ from joblib import Parallel, delayed
 
 from pgmpy import logger
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.utils import get_state_counts
+from pgmpy.utils import get_state_counts, preprocess_data
 
 from .base import _BaseDiscreteParameterEstimator
 
 
-class BayesianEstimator(_BaseDiscreteParameterEstimator):
+class DiscreteBayesianEstimator(_BaseDiscreteParameterEstimator):
     """
     Class used to compute parameters for a model using Bayesian Parameter Estimation.
 
@@ -45,28 +45,36 @@ class BayesianEstimator(_BaseDiscreteParameterEstimator):
         If `weighted=True`, the data passed to `fit` must contain a `_weight` column specifying the weight of each
         datapoint (row).
 
+    Attributes
+    ----------
+    parameters_ : list of TabularCPD
+        Learned conditional probability distributions, one per variable in the
+        model, ordered by `self._model.nodes()`. Populated by `fit`.
+
+    state_names_ : dict
+        Mapping from variable name to the list of states for that variable,
+        inferred from the data (or taken from the `state_names` constructor
+        argument when supplied). Populated by `fit`.
+
     Examples
     --------
-    >>> import numpy as np
-    >>> import pandas as pd
+    >>> from pgmpy.datasets import load_dataset
     >>> from pgmpy.models import DiscreteBayesianNetwork
-    >>> from pgmpy.parameter_estimator import BayesianEstimator
-    >>> np.random.seed(42)
-    >>> values = pd.DataFrame(
-    ...     np.random.randint(low=0, high=2, size=(1000, 4)),
-    ...     columns=["A", "B", "C", "D"],
+    >>> from pgmpy.parameter_estimator import DiscreteBayesianEstimator
+    >>> data = load_dataset("college_plans").data
+    >>> model = DiscreteBayesianNetwork(
+    ...     [("ses", "iq"), ("sex", "pe"), ("ses", "pe"), ("iq", "cp"), ("pe", "cp")]
     ... )
-    >>> model = DiscreteBayesianNetwork([("A", "B"), ("C", "B"), ("C", "D")])
-    >>> estimator = BayesianEstimator(prior_type="BDeu", equivalent_sample_size=5)
-    >>> estimator.fit(model, values).parameters_  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-    [<TabularCPD representing P(A:2) at 0x...>,
-     <TabularCPD representing P(B:2 | A:2, C:2) at 0x...>,
-     <TabularCPD representing P(C:2) at 0x...>,
-     <TabularCPD representing P(D:2 | C:2) at 0x...>]
+    >>> estimator = DiscreteBayesianEstimator(prior_type="BDeu", equivalent_sample_size=5)
+    >>> estimator.fit(model, data).parameters_  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+    [<TabularCPD representing P(ses:4) at 0x...>,
+     <TabularCPD representing P(iq:4 | ses:4) at 0x...>,
+     <TabularCPD representing P(sex:2) at 0x...>,
+     <TabularCPD representing P(pe:2 | ses:4, sex:2) at 0x...>,
+     <TabularCPD representing P(cp:2 | iq:4, pe:2) at 0x...>]
     """
 
     _tags = {
-        "supported_model_types": _BaseDiscreteParameterEstimator._tags["supported_model_types"],
         "supports_latent_variables": False,
         "supports_weighted_data": True,
     }
@@ -140,9 +148,8 @@ class BayesianEstimator(_BaseDiscreteParameterEstimator):
 
         return resolved_pseudo_counts, parents, parents_cardinalities, node_cardinality
 
-    @classmethod
+    @staticmethod
     def _estimate_cpd(
-        cls,
         model,
         data,
         state_names: dict,
@@ -152,13 +159,15 @@ class BayesianEstimator(_BaseDiscreteParameterEstimator):
         pseudo_counts: int | float | dict[Any, np.ndarray | list[list[float]]] | None = None,
         weighted: bool = False,
     ) -> TabularCPD:
-        resolved_pseudo_counts, parents, parents_cardinalities, node_cardinality = cls._resolve_pseudo_counts(
-            model=model,
-            state_names=state_names,
-            node=node,
-            prior_type=prior_type,
-            equivalent_sample_size=equivalent_sample_size,
-            pseudo_counts=pseudo_counts,
+        resolved_pseudo_counts, parents, parents_cardinalities, node_cardinality = (
+            DiscreteBayesianEstimator._resolve_pseudo_counts(
+                model=model,
+                state_names=state_names,
+                node=node,
+                prior_type=prior_type,
+                equivalent_sample_size=equivalent_sample_size,
+                pseudo_counts=pseudo_counts,
+            )
         )
         state_counts = get_state_counts(
             data=data,
@@ -194,32 +203,35 @@ class BayesianEstimator(_BaseDiscreteParameterEstimator):
 
         Returns
         -------
-        self: BayesianEstimator
+        self: DiscreteBayesianEstimator
             Fitted estimator with learned CPDs stored in `parameters_`.
 
         Examples
         --------
-        >>> import numpy as np
-        >>> import pandas as pd
+        >>> from pgmpy.datasets import load_dataset
         >>> from pgmpy.models import DiscreteBayesianNetwork
-        >>> from pgmpy.parameter_estimator import BayesianEstimator
-        >>> np.random.seed(42)
-        >>> values = pd.DataFrame(
-        ...     np.random.randint(low=0, high=2, size=(1000, 4)),
-        ...     columns=["A", "B", "C", "D"],
+        >>> from pgmpy.parameter_estimator import DiscreteBayesianEstimator
+        >>> data = load_dataset("college_plans").data
+        >>> model = DiscreteBayesianNetwork(
+        ...     [("ses", "iq"), ("sex", "pe"), ("ses", "pe"), ("iq", "cp"), ("pe", "cp")]
         ... )
-        >>> model = DiscreteBayesianNetwork([("A", "B"), ("C", "B"), ("C", "D")])
-        >>> estimator = BayesianEstimator(prior_type="BDeu", equivalent_sample_size=5)
-        >>> estimator.fit(model, values).parameters_  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-        [<TabularCPD representing P(A:2) at 0x...>,
-         <TabularCPD representing P(B:2 | A:2, C:2) at 0x...>,
-         <TabularCPD representing P(C:2) at 0x...>,
-         <TabularCPD representing P(D:2 | C:2) at 0x...>]
+        >>> estimator = DiscreteBayesianEstimator(prior_type="BDeu", equivalent_sample_size=5)
+        >>> estimator.fit(model, data).parameters_  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        [<TabularCPD representing P(ses:4) at 0x...>,
+         <TabularCPD representing P(iq:4 | ses:4) at 0x...>,
+         <TabularCPD representing P(sex:2) at 0x...>,
+         <TabularCPD representing P(pe:2 | ses:4, sex:2) at 0x...>,
+         <TabularCPD representing P(cp:2 | iq:4, pe:2) at 0x...>]
         """
-        self._initialize_fit(model, data)
+        model = self._coerce_model(model)
+        data, _ = preprocess_data(data)
+        self._validate_model_data(model, data)
+        self._model = model
+        self._data = data
+        self.state_names_ = self._build_fitted_state_names(model, data)
 
         parameters = Parallel(n_jobs=self.n_jobs)(
-            delayed(type(self)._estimate_cpd)(
+            delayed(DiscreteBayesianEstimator._estimate_cpd)(
                 model=self._model,
                 data=self._data,
                 state_names=self.state_names_,
@@ -231,5 +243,5 @@ class BayesianEstimator(_BaseDiscreteParameterEstimator):
             )
             for node in self._model.nodes()
         )
-        self.parameters_ = parameters
+        self.parameters_ = self._sort_parameters(parameters)
         return self

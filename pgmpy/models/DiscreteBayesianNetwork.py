@@ -600,9 +600,10 @@ class DiscreteBayesianNetwork(DAG):
             (If some values in the data are missing the data cells should be set to `numpy.nan`.
             Note that pandas converts each column containing `numpy.nan`s to dtype `float`.)
 
-        estimator: discrete parameter estimator instance
-            Discrete parameter estimator instance to use for fitting. If not specified,
-            uses `pgmpy.parameter_estimator.MaximumLikelihoodEstimator()`.
+        estimator: DiscreteMLE, DiscreteBayesianEstimator, or DiscreteEM, optional
+            An initialized discrete parameter estimator from
+            `pgmpy.parameter_estimator`. If not specified, defaults to
+            `DiscreteMLE()`.
 
         Returns
         -------
@@ -613,28 +614,32 @@ class DiscreteBayesianNetwork(DAG):
 
         Examples
         --------
-        >>> import pandas as pd
+        >>> from pgmpy.datasets import load_dataset
         >>> from pgmpy.models import DiscreteBayesianNetwork
-        >>> from pgmpy.parameter_estimator import MaximumLikelihoodEstimator
-        >>> data = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
-        >>> model = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
-        >>> fitted_model = model.fit(data, estimator=MaximumLikelihoodEstimator())
+        >>> from pgmpy.parameter_estimator import DiscreteMLE
+        >>> data = load_dataset("college_plans").data
+        >>> model = DiscreteBayesianNetwork(
+        ...     [("ses", "iq"), ("sex", "pe"), ("ses", "pe"), ("iq", "cp"), ("pe", "cp")]
+        ... )
+        >>> fitted_model = model.fit(data, estimator=DiscreteMLE())
         >>> len(fitted_model.get_cpds())
-        3
+        5
         >>> fitted_model.get_cpds()  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-        [<TabularCPD representing P(A:2) at 0x...>,
-        <TabularCPD representing P(C:2 | A:2, B:2) at 0x...>,
-        <TabularCPD representing P(B:2) at 0x...>]
+        [<TabularCPD representing P(ses:4) at 0x...>,
+         <TabularCPD representing P(iq:4 | ses:4) at 0x...>,
+         <TabularCPD representing P(sex:2) at 0x...>,
+         <TabularCPD representing P(pe:2 | ses:4, sex:2) at 0x...>,
+         <TabularCPD representing P(cp:2 | iq:4, pe:2) at 0x...>]
         """
-        from pgmpy.parameter_estimator import MaximumLikelihoodEstimator
+        from pgmpy.parameter_estimator import DiscreteMLE
         from pgmpy.parameter_estimator.base import _BaseDiscreteParameterEstimator
 
         if estimator is None:
-            estimator = MaximumLikelihoodEstimator()
-        elif isinstance(estimator, type) or not isinstance(estimator, _BaseDiscreteParameterEstimator):
+            estimator = DiscreteMLE()
+        elif not isinstance(estimator, _BaseDiscreteParameterEstimator):
             raise TypeError(
                 "Estimator should be an instance of a discrete parameter estimator. "
-                "Pass an initialized estimator, for example `MaximumLikelihoodEstimator()`."
+                "Pass an initialized estimator, for example `DiscreteMLE()`."
             )
 
         estimator.fit(self, data)
@@ -644,7 +649,7 @@ class DiscreteBayesianNetwork(DAG):
     def fit_update(self, data: pd.DataFrame, n_prev_samples: int | None = None, n_jobs: int = 1) -> None:
         """
         Method to update the parameters of the DiscreteBayesianNetwork with more data.
-        Internally, uses BayesianEstimator with dirichlet prior, and uses
+        Internally, uses DiscreteBayesianEstimator with dirichlet prior, and uses
         the current CPDs (along with `n_prev_samples`) to compute the pseudo_counts.
 
         Parameters
@@ -675,7 +680,7 @@ class DiscreteBayesianNetwork(DAG):
         >>> data = BayesianModelSampling(model).forward_sample(int(1e3))
         >>> model.fit_update(data)
         """
-        from pgmpy.parameter_estimator import BayesianEstimator
+        from pgmpy.parameter_estimator import DiscreteBayesianEstimator
 
         if n_prev_samples is None:
             n_prev_samples = data.shape[0]
@@ -691,7 +696,7 @@ class DiscreteBayesianNetwork(DAG):
             state_names.update(self.get_cpds(var).state_names)
 
         # Step 3: Estimate the new CPDs.
-        _est = BayesianEstimator(
+        _est = DiscreteBayesianEstimator(
             state_names=state_names,
             prior_type="dirichlet",
             pseudo_counts=pseudo_counts,
@@ -1137,7 +1142,8 @@ class DiscreteBayesianNetwork(DAG):
     @staticmethod
     def get_random(
         n_nodes: int = 5,
-        edge_prob: float = 0.5,
+        n_edges: int | None = None,
+        edge_prob: float | None = None,
         node_names: list[Hashable] | None = None,
         n_states: int | dict[Hashable, int] | None = None,
         latents: bool = False,
@@ -1152,13 +1158,16 @@ class DiscreteBayesianNetwork(DAG):
         n_nodes: int
             The number of nodes in the randomly generated DAG.
 
-        edge_prob: float
+        n_edges: int or None (default: None)
+            The number of edges in the randomly generated DAG.
+
+        edge_prob: float or None
             The probability of edge between any two nodes in the topologically
             sorted DAG.
 
         node_names: list (default: None)
             A list of variables names to use in the random graph.
-            If None, the node names are integer values starting from 0.
+            If None, the node names are "X_0", "X_1", ..., "X_{n-1}".
 
         n_states: int or dict (default: None)
             The number of states of each variable in the form
@@ -1206,6 +1215,7 @@ class DiscreteBayesianNetwork(DAG):
 
         dag = DAG.get_random(
             n_nodes=n_nodes,
+            n_edges=n_edges,
             edge_prob=edge_prob,
             node_names=node_names,
             latents=latents,

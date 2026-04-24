@@ -1,9 +1,11 @@
-from .bayesian import BayesianEstimator
-from .em import ExpectationMaximization
-from .mle import MaximumLikelihoodEstimator
+from .bayesian import DiscreteBayesianEstimator
+from .em import DiscreteEM
+from .gaussian import LinearGaussianMLE
+from .mle import DiscreteMLE
 
 __all__ = [
-    "MaximumLikelihoodEstimator",
-    "BayesianEstimator",
-    "ExpectationMaximization",
+    "DiscreteMLE",
+    "DiscreteBayesianEstimator",
+    "DiscreteEM",
+    "LinearGaussianMLE",
 ]

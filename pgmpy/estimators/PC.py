@@ -82,7 +82,7 @@ class PC(BaseConstraintEstimator):
         **kwargs,
     ) -> None:
         warnings.warn(
-            "PC is deprecated. Please use pgmpy.causal_discovery.PC instead.",
+            "PC is deprecated and will be removed in v1.3.0. Please use pgmpy.causal_discovery.PC instead.",
             FutureWarning,
             stacklevel=2,
         )

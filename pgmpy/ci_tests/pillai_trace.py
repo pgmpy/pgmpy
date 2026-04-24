@@ -3,15 +3,18 @@ import pandas as pd
 from scipy import stats
 from sklearn.cross_decomposition import CCA
 
-from ._base import _BaseCITest
+from pgmpy.utils import preprocess_data
+
+from ._base import _BaseCITest, _CITestResult, _ResidualMixin
 
 
-class PillaiTrace(_BaseCITest):
+class PillaiTrace(_ResidualMixin, _BaseCITest):
     r"""
     Pillai's trace test for conditional independence with mixed data [1].
 
-    This test first residualizes :math:`X` and :math:`Y` with respect to :math:`[1, Z]` using an estimator (XGBoost by
-    default). For a continuous target :math:`T`, the residual is
+    This test first residualizes :math:`X` and :math:`Y` with respect to :math:`[1, Z]` using an estimator (a
+    RandomForest estimator by default, but any sklearn-compatible estimator can be provided). For a continuous target
+    :math:`T`, the residual is
 
     .. math::
         r_T = T - \hat{T}(Z).
@@ -45,8 +48,11 @@ class PillaiTrace(_BaseCITest):
     data : pandas.DataFrame
         The dataset in which to test the independence condition.
 
-    seed : int, optional
-        Random seed used for the underlying XGBoost models.
+    estimator : estimator instance, optional
+        Any sklearn-compatible estimator with ``fit``, ``predict``, and ``predict_proba``
+        (if testing discrete variables) methods. If ``None`` (default), uses
+        ``RandomForestClassifier`` for categorical targets and ``RandomForestRegressor``
+        for continuous targets. Conditioning variables are one-hot encoded before fitting.
 
     Attributes
     ----------
@@ -73,53 +79,12 @@ class PillaiTrace(_BaseCITest):
         "requires_data": True,
     }
 
-    def __init__(self, data: pd.DataFrame, seed=None):
-        self.seed = seed
-        self.data = data
-        super().__init__()
+    def __init__(self, data: pd.DataFrame, estimator=None, use_cache: bool = True):
+        self.data, self.dtypes = preprocess_data(data)
+        self.estimator = estimator
+        super().__init__(use_cache=use_cache)
 
-    def _get_predictions(self, X, Y, Z, data):
-        """
-        Get XGBoost predictions for X and Y given Z.
-        Uses ``self.seed`` for reproducibility.
-        """
-        try:
-            from xgboost import XGBClassifier, XGBRegressor
-        except ImportError as e:
-            raise ImportError(
-                f"{e}. xgboost is required for using pillai_trace test. Please install using: pip install xgboost"
-            ) from None
-
-        enable_categorical = any(data.loc[:, Z].dtypes == "category")
-
-        def fit_predict(target_col):
-            is_cat = data.loc[:, target_col].dtype == "category"
-            model_cls = XGBClassifier if is_cat else XGBRegressor
-            model = model_cls(
-                enable_categorical=enable_categorical,
-                seed=self.seed,
-                random_state=self.seed,
-            )
-
-            target_data = data.loc[:, target_col]
-            cat_index = None
-
-            if is_cat:
-                y_encoded, cat_index = pd.factorize(target_data)
-                model.fit(data.loc[:, Z], y_encoded)
-                pred = model.predict_proba(data.loc[:, Z])
-            else:
-                model.fit(data.loc[:, Z], target_data)
-                pred = model.predict(data.loc[:, Z])
-
-            return pred, cat_index
-
-        pred_x, x_cat_index = fit_predict(X)
-        pred_y, y_cat_index = fit_predict(Y)
-
-        return pred_x, pred_y, x_cat_index, y_cat_index
-
-    def run_test(
+    def _compute_result(
         self,
         X: str,
         Y: str,
@@ -128,51 +93,49 @@ class PillaiTrace(_BaseCITest):
         """
         Compute Pillai's trace statistic and p-value.
 
-        Sets ``self.statistic_`` (Pillai's trace) and ``self.p_value_``.
+        Returns Pillai's trace statistic and p-value.
+
+        Parameters
+        ----------
+        X : str
+            The first variable for testing X _|_ Y | Z.
+        Y : str
+            The second variable for testing X _|_ Y | Z.
+        Z : list
+            Conditioning variables.
+
+        Returns
+        -------
+        statistic : float
+            The Pillai's trace statistic.
+        p_value : float
+            The p-value.
         """
-        data = self.data
-        # Step 1: Add an intercept term for conditional variables.
-        Z = Z + ["_intercept_Z"]
-        data = data.assign(_intercept_Z=np.ones(data.shape[0]))
+        # Steps 1: Compute residuals of X and Y given Z.
+        res_x = self.get_residuals(X, Z)
+        res_y = self.get_residuals(Y, Z)
 
-        # Step 2: Get the predictions
-        pred_x, pred_y, x_cat_index, y_cat_index = self._get_predictions(X, Y, Z, data)
-
-        # Step 3: Compute the residuals
-        def get_residuals(col_name, pred, cat_index):
-            if data.loc[:, col_name].dtype == "category":
-                dummies = pd.get_dummies(data.loc[:, col_name]).loc[:, cat_index.categories[cat_index.codes]]
-                # Drop last column to avoid multicollinearity
-                return (dummies - pred).iloc[:, :-1]
-            else:
-                return data.loc[:, col_name] - pred
-
-        res_x = get_residuals(X, pred_x, x_cat_index)
-        res_y = get_residuals(Y, pred_y, y_cat_index)
-
-        # Step 4: Compute Pillai's trace.
         if isinstance(res_x, pd.Series):
             res_x = res_x.to_frame()
         if isinstance(res_y, pd.Series):
             res_y = res_y.to_frame()
 
-        cca = CCA(scale=False, n_components=min(res_x.shape[1], res_y.shape[1]))
+        # Step 2: Compute Pillai's trace test statistic via CCA.
+        n_components = min(res_x.shape[1], res_y.shape[1])
+        cca = CCA(scale=False, n_components=n_components)
         res_x_c, res_y_c = cca.fit_transform(res_x, res_y)
 
         cancor = []
-        for i in range(min(res_x.shape[1], res_y.shape[1])):
+        for i in range(n_components):
             cancor.append(np.corrcoef(res_x_c[:, [i]].T, res_y_c[:, [i]].T)[0, 1])
 
         coef = (np.array(cancor) ** 2).sum()
 
-        # Step 5: Compute p-value using f-approximation.
+        # Step 3: Compute p-value using F-approximation.
         s = min(res_x.shape[1], res_y.shape[1])
         df1 = res_x.shape[1] * res_y.shape[1]
-        df2 = s * (data.shape[0] - 1 + s - res_x.shape[1] - res_y.shape[1])
+        df2 = s * (self.data.shape[0] - 1 + s - res_x.shape[1] - res_y.shape[1])
         f_stat = (coef / df1) * (df2 / (s - coef))
         p_value = 1 - stats.f.cdf(f_stat, df1, df2)
 
-        self.statistic_ = coef
-        self.p_value_ = p_value
-
-        return self.statistic_, self.p_value_
+        return _CITestResult(statistic=coef, p_value=p_value)

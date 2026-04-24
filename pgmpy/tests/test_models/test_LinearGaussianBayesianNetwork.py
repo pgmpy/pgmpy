@@ -308,7 +308,7 @@ class TestLGBNMethods(unittest.TestCase):
     def test_fit_invalid_estimator(self):
         new_model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
         df = pd.DataFrame(np.random.randn(100, 3), columns=["x1", "x2", "x3"])
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             new_model.fit(df, estimator="unbiased")
 
     def test_predict_simple(self):
@@ -427,6 +427,10 @@ class TestLGBNMethods(unittest.TestCase):
         self.assertNotEqual(model1.edges(), model2.edges())
         self.assertIsInstance(model1, LinearGaussianBayesianNetwork, "Incorrect instance")
         self.assertIsInstance(model2, LinearGaussianBayesianNetwork, "Incorrect instance")
+
+        model_fixed = LinearGaussianBayesianNetwork.get_random(n_nodes=7, n_edges=6)
+        self.assertEqual(len(model_fixed.edges()), 6)
+        self.assertIsInstance(model_fixed, LinearGaussianBayesianNetwork, "Incorrect instance")
 
         node_names = ["a", "aa", "aaa", "aaaa", "aaaaa"]
         model3 = LinearGaussianBayesianNetwork.get_random(n_nodes=5, edge_prob=0.5, node_names=node_names)

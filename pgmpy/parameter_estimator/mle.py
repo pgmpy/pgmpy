@@ -6,14 +6,14 @@ import numpy as np
 from joblib import Parallel, delayed
 
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.utils import get_state_counts
+from pgmpy.utils import get_state_counts, preprocess_data
 
 from .base import _BaseDiscreteParameterEstimator
 
 
-class MaximumLikelihoodEstimator(_BaseDiscreteParameterEstimator):
+class DiscreteMLE(_BaseDiscreteParameterEstimator):
     """
-    Class used to compute parameters for a model using Maximum Likelihood Estimation.
+    Computes parameters for a given model using Maximum Likelihood Estimation.
 
     Parameters
     ----------
@@ -28,26 +28,32 @@ class MaximumLikelihoodEstimator(_BaseDiscreteParameterEstimator):
         If `weighted=True`, the data passed to `fit` must contain a `_weight` column specifying the weight of each
         datapoint (row). If False, assigns an equal weight to each datapoint.
 
+    Attributes
+    ----------
+    parameters_ : list of TabularCPD
+        Learned conditional probability distributions, one per variable in the
+        model, ordered by `self._model.nodes()`. Populated by `fit`.
+
+    state_names_ : dict
+        Mapping from variable name to the list of states for that variable,
+        inferred from the data (or taken from the `state_names` constructor
+        argument when supplied). Populated by `fit`.
+
     Examples
     --------
-    >>> import numpy as np
-    >>> import pandas as pd
+    >>> from pgmpy.datasets import load_dataset
     >>> from pgmpy.models import DiscreteBayesianNetwork
-    >>> from pgmpy.parameter_estimator import MaximumLikelihoodEstimator
-    >>> data = pd.DataFrame(
-    ...     np.random.randint(low=0, high=2, size=(1000, 5)),
-    ...     columns=["A", "B", "C", "D", "E"],
-    ... )
+    >>> from pgmpy.parameter_estimator import DiscreteMLE
+    >>> data = load_dataset("college_plans").data
     >>> model = DiscreteBayesianNetwork(
-    ...     [("A", "B"), ("C", "B"), ("C", "D"), ("B", "E")]
+    ...     [("ses", "iq"), ("sex", "pe"), ("ses", "pe"), ("iq", "cp"), ("pe", "cp")]
     ... )
-    >>> estimator = MaximumLikelihoodEstimator()
+    >>> estimator = DiscreteMLE()
     >>> estimator.fit(model, data)
-    MaximumLikelihoodEstimator(...)
+    DiscreteMLE()
     """
 
     _tags = {
-        "supported_model_types": _BaseDiscreteParameterEstimator._tags["supported_model_types"],
         "supports_latent_variables": False,
         "supports_weighted_data": True,
     }
@@ -102,29 +108,32 @@ class MaximumLikelihoodEstimator(_BaseDiscreteParameterEstimator):
 
         Returns
         -------
-        self: MaximumLikelihoodEstimator
+        self: DiscreteMLE
             Fitted estimator with learned CPDs stored in `parameters_`.
 
         Examples
         --------
-        >>> import numpy as np
-        >>> import pandas as pd
+        >>> from pgmpy.datasets import load_dataset
         >>> from pgmpy.models import DiscreteBayesianNetwork
-        >>> from pgmpy.parameter_estimator import MaximumLikelihoodEstimator
-        >>> np.random.seed(42)
-        >>> values = pd.DataFrame(
-        ...     np.random.randint(low=0, high=2, size=(1000, 4)),
-        ...     columns=["A", "B", "C", "D"],
+        >>> from pgmpy.parameter_estimator import DiscreteMLE
+        >>> data = load_dataset("college_plans").data
+        >>> model = DiscreteBayesianNetwork(
+        ...     [("ses", "iq"), ("sex", "pe"), ("ses", "pe"), ("iq", "cp"), ("pe", "cp")]
         ... )
-        >>> model = DiscreteBayesianNetwork([("A", "B"), ("C", "B"), ("C", "D")])
-        >>> estimator = MaximumLikelihoodEstimator()
-        >>> estimator.fit(model, values).parameters_  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-        [<TabularCPD representing P(A:2) at 0x...>,
-        <TabularCPD representing P(B:2 | A:2, C:2) at 0x...>,
-        <TabularCPD representing P(C:2) at 0x...>,
-        <TabularCPD representing P(D:2 | C:2) at 0x...>]
+        >>> estimator = DiscreteMLE()
+        >>> estimator.fit(model, data).parameters_  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        [<TabularCPD representing P(ses:4) at 0x...>,
+         <TabularCPD representing P(iq:4 | ses:4) at 0x...>,
+         <TabularCPD representing P(sex:2) at 0x...>,
+         <TabularCPD representing P(pe:2 | ses:4, sex:2) at 0x...>,
+         <TabularCPD representing P(cp:2 | iq:4, pe:2) at 0x...>]
         """
-        self._initialize_fit(model, data)
+        model = self._coerce_model(model)
+        data, _ = preprocess_data(data)
+        self._validate_model_data(model, data)
+        self._model = model
+        self._data = data
+        self.state_names_ = self._build_fitted_state_names(model, data)
 
         parameters = Parallel(n_jobs=self.n_jobs)(
             delayed(type(self)._estimate_cpd)(
@@ -136,5 +145,5 @@ class MaximumLikelihoodEstimator(_BaseDiscreteParameterEstimator):
             )
             for node in self._model.nodes()
         )
-        self.parameters_ = parameters
+        self.parameters_ = self._sort_parameters(parameters)
         return self
