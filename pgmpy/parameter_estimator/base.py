@@ -177,11 +177,9 @@ class DiscreteParameterEstimator(BaseParameterEstimator):
     ) -> None:
         data, _ = preprocess_data(data)
         model, sample_weight = self._validate_inputs(model, data, sample_weight=sample_weight)
-        if sample_weight is not None:
-            data = data.assign(_weight=sample_weight)
         self._model = model
         self._data = data
-        self._weighted = sample_weight is not None
+        self._sample_weight = sample_weight
         self.state_names_ = self._build_fitted_state_names(model, data)
 
 
@@ -251,3 +249,8 @@ class GaussianParameterEstimator(BaseParameterEstimator):
         model, _ = self._validate_inputs(model, data, sample_weight=sample_weight)
         self._model = model
         self._data = data
+
+
+_BaseParameterEstimator = BaseParameterEstimator
+_BaseDiscreteParameterEstimator = DiscreteParameterEstimator
+_BaseGaussianParameterEstimator = GaussianParameterEstimator

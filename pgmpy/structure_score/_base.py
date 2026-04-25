@@ -75,13 +75,27 @@ class BaseStructureScore(BaseObject):
         weighted: bool = False,
         reindex: bool = True,
     ) -> pd.DataFrame:
-        """Return state counts for `variable`, optionally conditioned on `parents`."""
+        """Return state counts for `variable`, optionally conditioned on `parents`.
+
+        When `weighted=True`, a ``_weight`` column on ``self.data`` provides per-row
+        weights and is forwarded as ``sample_weight`` to :func:`get_state_counts`.
+        """
+        # if weighted:
+        #     if "_weight" not in self.data.columns:
+        #         raise ValueError("data must contain a `_weight` column if weighted=True")
+        #     return get_state_counts(
+        #         data=self.data.drop(columns="_weight"),
+        #         state_names=self.state_names,
+        #         variable=variable,
+        #         parents=parents,
+        #         sample_weight=self.data["_weight"].to_numpy(),
+        #         reindex=reindex,
+        #     )
         return get_state_counts(
             data=self.data,
             state_names=self.state_names,
             variable=variable,
             parents=parents,
-            weighted=weighted,
             reindex=reindex,
         )
 

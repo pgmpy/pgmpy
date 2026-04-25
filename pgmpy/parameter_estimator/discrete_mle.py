@@ -63,14 +63,14 @@ class DiscreteMLE(DiscreteParameterEstimator):
         super().__init__(state_names=state_names)
 
     @staticmethod
-    def _estimate_cpd(model, data, state_names: dict, node, weighted: bool = False) -> TabularCPD:
+    def _estimate_cpd(model, data, state_names: dict, node, sample_weight=None) -> TabularCPD:
         parents = sorted(model.get_parents(node))
         state_counts = get_state_counts(
             data=data,
             state_names=state_names,
             variable=node,
             parents=parents,
-            weighted=weighted,
+            sample_weight=sample_weight,
         )
         state_counts.iloc[:, (state_counts.values == 0).all(axis=0)] = 1.0
 
@@ -133,7 +133,7 @@ class DiscreteMLE(DiscreteParameterEstimator):
                 data=self._data,
                 state_names=self.state_names_,
                 node=node,
-                weighted=self._weighted,
+                sample_weight=self._sample_weight,
             )
             for node in self._model.nodes()
         )

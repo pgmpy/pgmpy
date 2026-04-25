@@ -151,7 +151,7 @@ class DiscreteBayesianEstimator(DiscreteParameterEstimator):
         prior_type: str = "BDeu",
         equivalent_sample_size: int | float | dict[Any, int | float] = 5,
         pseudo_counts: int | float | dict[Any, np.ndarray | list[list[float]]] | None = None,
-        weighted: bool = False,
+        sample_weight=None,
     ) -> TabularCPD:
         resolved_pseudo_counts, parents, parents_cardinalities, node_cardinality = (
             DiscreteBayesianEstimator._resolve_pseudo_counts(
@@ -168,7 +168,7 @@ class DiscreteBayesianEstimator(DiscreteParameterEstimator):
             state_names=state_names,
             variable=node,
             parents=parents,
-            weighted=weighted,
+            sample_weight=sample_weight,
         )
         bayesian_counts = state_counts + resolved_pseudo_counts
 
@@ -231,7 +231,7 @@ class DiscreteBayesianEstimator(DiscreteParameterEstimator):
                 prior_type=self.prior_type,
                 equivalent_sample_size=self.equivalent_sample_size,
                 pseudo_counts=self.pseudo_counts,
-                weighted=self._weighted,
+                sample_weight=self._sample_weight,
             )
             for node in self._model.nodes()
         )
