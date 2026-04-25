@@ -49,7 +49,7 @@ class TestEM(unittest.TestCase):
         est = EM(
             seed=42,
             n_jobs=1,
-            m_step_estimator=DiscreteBayesianEstimator(weighted=True, prior_type="k2"),
+            m_step_estimator=DiscreteBayesianEstimator(prior_type="k2"),
             show_progress=False,
         )
         cpds = est.fit(self.model1, self.data1).parameters_
@@ -62,7 +62,7 @@ class TestEM(unittest.TestCase):
         est = EM(
             seed=42,
             n_jobs=1,
-            m_step_estimator=DiscreteBayesianEstimator(weighted=True, prior_type="k2"),
+            m_step_estimator=DiscreteBayesianEstimator(prior_type="k2"),
             show_progress=False,
         )
         cpds = est.fit(self.model2, self.data2).parameters_
@@ -79,7 +79,7 @@ class TestEM(unittest.TestCase):
         est = EM(
             seed=42,
             n_jobs=1,
-            m_step_estimator=DiscreteBayesianEstimator(weighted=True, prior_type="bdeu", equivalent_sample_size=1),
+            m_step_estimator=DiscreteBayesianEstimator(prior_type="bdeu", equivalent_sample_size=1),
             show_progress=False,
         )
         cpds = est.fit(self.model1, self.data1).parameters_
@@ -92,7 +92,7 @@ class TestEM(unittest.TestCase):
         est = EM(
             seed=42,
             n_jobs=1,
-            m_step_estimator=DiscreteBayesianEstimator(weighted=True, prior_type="bdeu", equivalent_sample_size=1),
+            m_step_estimator=DiscreteBayesianEstimator(prior_type="bdeu", equivalent_sample_size=1),
             show_progress=False,
         )
         cpds = est.fit(self.model2, self.data2).parameters_
@@ -204,9 +204,7 @@ class TestEM(unittest.TestCase):
         est = EM(
             seed=42,
             n_jobs=1,
-            m_step_estimator=DiscreteBayesianEstimator(
-                weighted=True, prior_type="bdeu", equivalent_sample_size=ess_dict
-            ),
+            m_step_estimator=DiscreteBayesianEstimator(prior_type="bdeu", equivalent_sample_size=ess_dict),
             show_progress=False,
         )
         cpds = est.fit(self.model1, self.data1).parameters_
@@ -219,9 +217,7 @@ class TestEM(unittest.TestCase):
         est = EM(
             seed=42,
             n_jobs=1,
-            m_step_estimator=DiscreteBayesianEstimator(
-                weighted=True, prior_type="bdeu", equivalent_sample_size=ess_dict
-            ),
+            m_step_estimator=DiscreteBayesianEstimator(prior_type="bdeu", equivalent_sample_size=ess_dict),
             show_progress=False,
         )
         cpds = est.fit(self.model2, self.data2).parameters_
@@ -241,9 +237,7 @@ class TestEM(unittest.TestCase):
         est_scalar = EM(
             seed=42,
             n_jobs=1,
-            m_step_estimator=DiscreteBayesianEstimator(
-                weighted=True, prior_type="bdeu", equivalent_sample_size=ess_value
-            ),
+            m_step_estimator=DiscreteBayesianEstimator(prior_type="bdeu", equivalent_sample_size=ess_value),
             show_progress=False,
         )
         cpds_scalar = est_scalar.fit(self.model1, self.data1).parameters_
@@ -251,9 +245,7 @@ class TestEM(unittest.TestCase):
         est_dict = EM(
             seed=42,
             n_jobs=1,
-            m_step_estimator=DiscreteBayesianEstimator(
-                weighted=True, prior_type="bdeu", equivalent_sample_size=ess_dict
-            ),
+            m_step_estimator=DiscreteBayesianEstimator(prior_type="bdeu", equivalent_sample_size=ess_dict),
             show_progress=False,
         )
         cpds_dict = est_dict.fit(self.model1, self.data1).parameters_

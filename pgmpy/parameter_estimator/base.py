@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import numpy as np
 from skbase.base import BaseEstimator
 
 from pgmpy.base import DAG
@@ -23,11 +24,18 @@ class BaseParameterEstimator(BaseEstimator):
 
     _tags = {
         "supported_model_types": (),
+        "supports_weighted_data": False,
     }
 
-    def fit(self, model, data):
+    def fit(self, model, data, sample_weight=None):
         """
         Fit the estimator on a model and dataset.
+
+        Parameters
+        ----------
+        sample_weight: array-like of shape (n_samples,), optional
+            Per-row weights for the data. Only accepted by estimators whose
+            `supports_weighted_data` tag is True.
 
         Returns
         -------
@@ -36,14 +44,22 @@ class BaseParameterEstimator(BaseEstimator):
         """
         raise NotImplementedError
 
-    def _validate_inputs(self, model, data):
+    def _validate_inputs(self, model, data, sample_weight=None):
         supported_model_types = self.get_tag("supported_model_types")
         if not isinstance(model, supported_model_types):
             raise NotImplementedError(
                 f"{type(self).__name__} is only implemented for "
                 f"{', '.join(cls.__name__ for cls in supported_model_types)}"
             )
-        return model
+        if sample_weight is not None:
+            if not bool(self.get_tag("supports_weighted_data")):
+                raise ValueError(f"{type(self).__name__} does not support `sample_weight`.")
+            sample_weight = np.asarray(sample_weight, dtype=float).ravel()
+            if sample_weight.shape[0] != data.shape[0]:
+                raise ValueError(
+                    f"sample_weight has length {sample_weight.shape[0]} but data has {data.shape[0]} rows."
+                )
+        return model, sample_weight
 
     def _sort_parameters(self, parameters: list) -> list:
         order = {var: index for index, var in enumerate(self._model.nodes())}
@@ -82,7 +98,7 @@ class DiscreteParameterEstimator(BaseParameterEstimator):
         self.state_names = state_names
         super().__init__()
 
-    def fit(self, model: DAG | DiscreteBayesianNetwork, data):
+    def fit(self, model: DAG | DiscreteBayesianNetwork, data, sample_weight=None):
         """
         Fit the estimator on a model and dataset.
 
@@ -94,6 +110,10 @@ class DiscreteParameterEstimator(BaseParameterEstimator):
         data: pandas.DataFrame
             DataFrame object with column names identical to the variable names of the network. If some values are
             missing, the corresponding cells should be set to `numpy.nan`.
+
+        sample_weight: array-like of shape (n_samples,), optional
+            Per-row weights for `data`. Only accepted by estimators whose
+            `supports_weighted_data` tag is True.
 
         Returns
         -------
@@ -107,8 +127,9 @@ class DiscreteParameterEstimator(BaseParameterEstimator):
         self,
         model: DAG | DiscreteBayesianNetwork,
         data,
-    ) -> DiscreteBayesianNetwork:
-        model = super()._validate_inputs(model, data)
+        sample_weight=None,
+    ) -> tuple[DiscreteBayesianNetwork, np.ndarray | None]:
+        model, sample_weight = super()._validate_inputs(model, data, sample_weight=sample_weight)
 
         if isinstance(model, DAG) and not isinstance(model, DiscreteBayesianNetwork):
             model_bn = DiscreteBayesianNetwork(model.edges())
@@ -130,20 +151,7 @@ class DiscreteParameterEstimator(BaseParameterEstimator):
                 f"{missing_nodes}. Refine the model so that all parameters can be estimated from the data."
             )
 
-        supports_weighted_data = self.get_tag("supports_weighted_data")
-        if not supports_weighted_data and "_weight" in data.columns:
-            from pgmpy import logger
-
-            logger.warning(
-                f"{type(self).__name__} doesn't support weighted data. "
-                "The '_weight' column in the data will be ignored."
-            )
-        if supports_weighted_data and getattr(self, "weighted", False) and "_weight" not in data.columns:
-            raise ValueError(
-                "weighted=True but no '_weight' column found in data. Add a '_weight' column or set weighted=False."
-            )
-
-        return model
+        return model, sample_weight
 
     def _build_fitted_state_names(
         self,
@@ -161,11 +169,19 @@ class DiscreteParameterEstimator(BaseParameterEstimator):
 
         return {var: list(states) for var, states in state_names.items()}
 
-    def _initialize_fit(self, model: DAG | DiscreteBayesianNetwork, data) -> None:
+    def _initialize_fit(
+        self,
+        model: DAG | DiscreteBayesianNetwork,
+        data,
+        sample_weight=None,
+    ) -> None:
         data, _ = preprocess_data(data)
-        model = self._validate_inputs(model, data)
+        model, sample_weight = self._validate_inputs(model, data, sample_weight=sample_weight)
+        if sample_weight is not None:
+            data = data.assign(_weight=sample_weight)
         self._model = model
         self._data = data
+        self._weighted = sample_weight is not None
         self.state_names_ = self._build_fitted_state_names(model, data)
 
 
@@ -187,7 +203,7 @@ class GaussianParameterEstimator(BaseParameterEstimator):
         "supports_weighted_data": False,
     }
 
-    def fit(self, model: LinearGaussianBayesianNetwork, data):
+    def fit(self, model: LinearGaussianBayesianNetwork, data, sample_weight=None):
         """
         Fit the estimator on a model and dataset.
 
@@ -200,6 +216,10 @@ class GaussianParameterEstimator(BaseParameterEstimator):
             DataFrame object with column names identical to the variable names
             of the network.
 
+        sample_weight: array-like of shape (n_samples,), optional
+            Per-row weights for `data`. Only accepted by estimators whose
+            `supports_weighted_data` tag is True.
+
         Returns
         -------
         self
@@ -211,17 +231,23 @@ class GaussianParameterEstimator(BaseParameterEstimator):
         self,
         model: LinearGaussianBayesianNetwork,
         data,
-    ) -> LinearGaussianBayesianNetwork:
-        model = super()._validate_inputs(model, data)
+        sample_weight=None,
+    ) -> tuple[LinearGaussianBayesianNetwork, np.ndarray | None]:
+        model, sample_weight = super()._validate_inputs(model, data, sample_weight=sample_weight)
         missing_nodes = set(model.nodes()) - set(data.columns)
         if missing_nodes:
             raise ValueError(
                 "Nodes detected in the model that are not present in the dataset: "
                 f"{missing_nodes}. Refine the model so that all parameters can be estimated from the data."
             )
-        return model
+        return model, sample_weight
 
-    def _initialize_fit(self, model: LinearGaussianBayesianNetwork, data) -> None:
-        model = self._validate_inputs(model, data)
+    def _initialize_fit(
+        self,
+        model: LinearGaussianBayesianNetwork,
+        data,
+        sample_weight=None,
+    ) -> None:
+        model, _ = self._validate_inputs(model, data, sample_weight=sample_weight)
         self._model = model
         self._data = data

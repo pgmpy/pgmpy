@@ -35,7 +35,7 @@ class DiscreteEM(DiscreteParameterEstimator):
 
     m_step_estimator: discrete parameter estimator instance, optional
         Estimator instance to use in the M-step. The estimator must support weighted data. If not specified, uses
-        `DiscreteMLE(weighted=True)`.
+        `DiscreteMLE()`.
 
     max_iter: int, default=100
         The maximum number of iterations the algorithm is allowed to run for. If `max_iter` is reached, returns the last
@@ -159,13 +159,13 @@ class DiscreteEM(DiscreteParameterEstimator):
 
         return pd.concat(cache)
 
-    def _fit_parameters(self, model, data, weighted: bool) -> list[TabularCPD]:
-        base = self.m_step_estimator if self.m_step_estimator is not None else DiscreteMLE(weighted=True)
+    def _fit_parameters(self, model, data, sample_weight=None) -> list[TabularCPD]:
+        base = self.m_step_estimator if self.m_step_estimator is not None else DiscreteMLE()
 
         if not isinstance(base, DiscreteParameterEstimator):
             raise TypeError(
                 "m_step_estimator should be an instance of a discrete parameter estimator. "
-                "Pass an initialized estimator, for example `DiscreteMLE(weighted=True)`."
+                "Pass an initialized estimator, for example `DiscreteMLE()`."
             )
 
         if not bool(base.get_tag("supports_weighted_data")):
@@ -173,13 +173,11 @@ class DiscreteEM(DiscreteParameterEstimator):
 
         params = base.get_params(deep=False)
         params["state_names"] = self.state_names_
-        if "weighted" in params:
-            params["weighted"] = weighted
         estimator = type(base)(**params)
-        estimator.fit(model, data)
+        estimator.fit(model, data, sample_weight=sample_weight)
         return estimator.parameters_
 
-    def fit(self, model, data):
+    def fit(self, model, data, sample_weight=None):
         """
         Estimate model parameters using Expectation Maximization.
 
@@ -242,7 +240,7 @@ class DiscreteEM(DiscreteParameterEstimator):
                 "missing columns were dropped from the dataset."
             )
 
-        self._initialize_fit(model, data)
+        self._initialize_fit(model, data, sample_weight=sample_weight)
 
         # Step 2: Resolve latent cardinalities and build helper model copies.
         #         `_model_copy` holds the running CPDs across EM iterations; `complete_model` treats latents as
@@ -316,7 +314,7 @@ class DiscreteEM(DiscreteParameterEstimator):
 
         fixed_cpds = [
             cpd
-            for cpd in self._fit_parameters(observed_model, self._data, weighted=False)
+            for cpd in self._fit_parameters(observed_model, self._data, sample_weight=None)
             if cpd.variable in fixed_cpd_vars
         ]
 
@@ -353,13 +351,14 @@ class DiscreteEM(DiscreteParameterEstimator):
                 for i in range(0, data_unique.shape[0], self.batch_size)
             )
             weighted_data = pd.concat(cache)
+            iter_sample_weight = weighted_data.pop("_weight").to_numpy()
 
             # Step 4.2: M-step — weighted MLE on the completed data, keeping the fixed CPDs and overwriting only
             #           the updatable ones.
             new_cpds = fixed_cpds.copy()
             new_cpds.extend(
                 cpd
-                for cpd in self._fit_parameters(complete_model, weighted_data, weighted=True)
+                for cpd in self._fit_parameters(complete_model, weighted_data, sample_weight=iter_sample_weight)
                 if cpd.variable in updatable_vars
             )
 

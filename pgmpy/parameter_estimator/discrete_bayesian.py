@@ -41,10 +41,6 @@ class DiscreteBayesianEstimator(DiscreteParameterEstimator):
     n_jobs: int, default=1
         Number of jobs to run in parallel. Using `n_jobs > 1` for small models might be slower.
 
-    weighted: bool, default=False
-        If `weighted=True`, the data passed to `fit` must contain a `_weight` column specifying the weight of each
-        datapoint (row).
-
     Attributes
     ----------
     parameters_ : list of TabularCPD
@@ -86,13 +82,11 @@ class DiscreteBayesianEstimator(DiscreteParameterEstimator):
         equivalent_sample_size: int | float | dict[Any, int | float] = 5,
         pseudo_counts: int | float | dict[Any, np.ndarray | list[list[float]]] | None = None,
         n_jobs: int = 1,
-        weighted: bool = False,
     ) -> None:
         self.prior_type = prior_type
         self.equivalent_sample_size = equivalent_sample_size
         self.pseudo_counts = pseudo_counts
         self.n_jobs = n_jobs
-        self.weighted = weighted
         super().__init__(state_names=state_names)
 
     @staticmethod
@@ -189,7 +183,7 @@ class DiscreteBayesianEstimator(DiscreteParameterEstimator):
         cpd.normalize()
         return cpd
 
-    def fit(self, model, data):
+    def fit(self, model, data, sample_weight=None):
         """
         Estimate model parameters using Bayesian Parameter Estimation.
 
@@ -200,6 +194,9 @@ class DiscreteBayesianEstimator(DiscreteParameterEstimator):
 
         data: pandas.DataFrame
             DataFrame object with column names identical to the variable names of the network.
+
+        sample_weight: array-like of shape (n_samples,), optional
+            Per-row weights for `data`. If None, each row is weighted equally.
 
         Returns
         -------
@@ -223,7 +220,7 @@ class DiscreteBayesianEstimator(DiscreteParameterEstimator):
          <TabularCPD representing P(pe:2 | ses:4, sex:2) at 0x...>,
          <TabularCPD representing P(cp:2 | iq:4, pe:2) at 0x...>]
         """
-        self._initialize_fit(model, data)
+        self._initialize_fit(model, data, sample_weight=sample_weight)
 
         parameters = Parallel(n_jobs=self.n_jobs)(
             delayed(DiscreteBayesianEstimator._estimate_cpd)(
@@ -234,7 +231,7 @@ class DiscreteBayesianEstimator(DiscreteParameterEstimator):
                 prior_type=self.prior_type,
                 equivalent_sample_size=self.equivalent_sample_size,
                 pseudo_counts=self.pseudo_counts,
-                weighted=self.weighted,
+                weighted=self._weighted,
             )
             for node in self._model.nodes()
         )

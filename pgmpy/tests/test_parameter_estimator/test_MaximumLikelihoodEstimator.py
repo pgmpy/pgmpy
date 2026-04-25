@@ -208,6 +208,24 @@ def test_missing_data(setup_data, backend):
     assert len(e1.parameters_) == 3
 
 
+def test_sample_weight_matches_row_duplication(setup_data):
+    data = setup_data
+    m1, d1 = data["m1"], data["d1"]
+
+    sample_weight = np.array([2.0, 1.0, 3.0])
+    weighted = DiscreteMLE().fit(m1, d1, sample_weight=sample_weight)
+    duplicated = DiscreteMLE().fit(m1, d1.loc[d1.index.repeat(sample_weight.astype(int))].reset_index(drop=True))
+
+    for var in ["A", "B", "C"]:
+        assert get_cpd(weighted, var) == get_cpd(duplicated, var)
+
+
+def test_sample_weight_length_mismatch(setup_data):
+    data = setup_data
+    with pytest.raises(ValueError, match="sample_weight has length"):
+        DiscreteMLE().fit(data["m1"], data["d1"], sample_weight=np.array([1.0, 2.0]))
+
+
 @pytest.mark.skip(reason="JunctionTree support is intentionally out of scope for pgmpy.parameter_estimator.")
 def test_estimate_potentials_smoke_test(setup_data, backend):
     pass

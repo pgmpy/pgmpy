@@ -57,7 +57,7 @@ class LinearGaussianMLE(GaussianParameterEstimator):
         self.std_estimator = std_estimator
         super().__init__()
 
-    def fit(self, model: LinearGaussianBayesianNetwork, data) -> LinearGaussianMLE:
+    def fit(self, model: LinearGaussianBayesianNetwork, data, sample_weight=None) -> LinearGaussianMLE:
         """
         Estimate model parameters using Maximum Likelihood Estimation.
 
@@ -92,7 +92,7 @@ class LinearGaussianMLE(GaussianParameterEstimator):
         if self.std_estimator not in {"mle", "unbiased"}:
             raise ValueError(f"std_estimator must be one of {{'mle', 'unbiased'}}. Got: {self.std_estimator!r}")
 
-        self._initialize_fit(model, data)
+        self._initialize_fit(model, data, sample_weight=sample_weight)
 
         cpds = []
         for node in self._model.nodes():
