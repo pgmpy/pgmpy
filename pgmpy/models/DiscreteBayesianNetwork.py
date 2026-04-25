@@ -589,7 +589,7 @@ class DiscreteBayesianNetwork(DAG):
         mm = self.to_markov_model()
         return mm.to_junction_tree()
 
-    def fit(self, data, estimator=None) -> DAG:
+    def fit(self, data, estimator=None, sample_weight=None) -> DAG:
         """
         Estimates the CPD for each variable based on a given data set.
 
@@ -604,6 +604,10 @@ class DiscreteBayesianNetwork(DAG):
             An initialized discrete parameter estimator from
             `pgmpy.parameter_estimator`. If not specified, defaults to
             `DiscreteMLE()`.
+
+        sample_weight: array-like of shape (n_samples,), optional
+            Per-row weights for `data`. Forwarded to the estimator's `fit`. Only
+            accepted by estimators whose `supports_weighted_data` tag is True.
 
         Returns
         -------
@@ -642,7 +646,7 @@ class DiscreteBayesianNetwork(DAG):
                 "Pass an initialized estimator, for example `DiscreteMLE()`."
             )
 
-        estimator.fit(self, data)
+        estimator.fit(self, data, sample_weight=sample_weight)
         self.add_cpds(*estimator.parameters_)
         return self
 
