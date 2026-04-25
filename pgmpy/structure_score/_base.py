@@ -6,7 +6,7 @@ import pandas as pd
 from skbase.base import BaseObject
 from skbase.lookup import all_objects
 
-from pgmpy.utils import build_state_names, get_dataset_type, get_state_counts, preprocess_data
+from pgmpy.utils import build_state_names, get_dataset_type, preprocess_data
 
 
 class BaseStructureScore(BaseObject):
@@ -67,37 +67,6 @@ class BaseStructureScore(BaseObject):
     def structure_prior_ratio(self, operation) -> float:
         """Return the log prior ratio for a structure operation."""
         return 0
-
-    def state_counts(
-        self,
-        variable: str,
-        parents: tuple[str, ...] = (),
-        weighted: bool = False,
-        reindex: bool = True,
-    ) -> pd.DataFrame:
-        """Return state counts for `variable`, optionally conditioned on `parents`.
-
-        When `weighted=True`, a ``_weight`` column on ``self.data`` provides per-row
-        weights and is forwarded as ``sample_weight`` to :func:`get_state_counts`.
-        """
-        # if weighted:
-        #     if "_weight" not in self.data.columns:
-        #         raise ValueError("data must contain a `_weight` column if weighted=True")
-        #     return get_state_counts(
-        #         data=self.data.drop(columns="_weight"),
-        #         state_names=self.state_names,
-        #         variable=variable,
-        #         parents=parents,
-        #         sample_weight=self.data["_weight"].to_numpy(),
-        #         reindex=reindex,
-        #     )
-        return get_state_counts(
-            data=self.data,
-            state_names=self.state_names,
-            variable=variable,
-            parents=parents,
-            reindex=reindex,
-        )
 
 
 def get_scoring_method(
