@@ -4,6 +4,7 @@ import numpy as np
 from scipy.special import gammaln
 
 from pgmpy.structure_score._base import BaseStructureScore
+from pgmpy.utils import get_state_counts
 
 
 class K2(BaseStructureScore):
@@ -68,7 +69,7 @@ class K2(BaseStructureScore):
 
     def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
         var_cardinality = len(self.state_names[variable])
-        state_counts = self.state_counts(variable, parents, reindex=False)
+        state_counts = get_state_counts(self.data, self.state_names, variable, parents, reindex=False)
         num_parents_states = np.prod([len(self.state_names[var]) for var in parents])
 
         counts = np.asarray(state_counts)

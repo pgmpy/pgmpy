@@ -23,26 +23,26 @@ conditional probability distribution (CPD) for every node given its parents.
 
 ## API
 
-The recommended entry point is `model.fit(...)`. Provide the graph, the data, and the
-estimator class:
+The recommended entry point is `model.fit(...)`. Provide the graph, the data, and an
+initialized estimator instance:
 
 ```python
 from pgmpy.example_models import load_model
-from pgmpy.estimators import MaximumLikelihoodEstimator
 from pgmpy.models import DiscreteBayesianNetwork
+from pgmpy.parameter_estimator import DiscreteMLE
 
 reference = load_model("bnlearn/alarm")
 data = reference.simulate(n_samples=1000, seed=42, show_progress=False)
 
 model = DiscreteBayesianNetwork(reference.edges())
-model.fit(data, estimator=MaximumLikelihoodEstimator)
+model.fit(data, estimator=DiscreteMLE())
 
 print(model.get_cpds("HISTORY"))
 ```
 
-Switching the estimation method only requires changing the `estimator` argument.
-For finer control, you can instantiate estimator classes directly and call their
-parameter-generation methods before adding the CPDs to the model.
+Switching the estimation method only requires changing the estimator instance.
+For finer control, you can instantiate estimators directly and call their `fit(...)`
+methods before adding the CPDs to the model.
 
 ## Prior-Based Smoothing
 
@@ -58,9 +58,10 @@ iterative estimation, alternating between imputing missing values and updating p
 
 ## Parallel Estimation
 
-The `n_jobs` parameter in `model.fit(...)` parallelizes parameter estimation across nodes,
-which can speed up fitting for larger models. The `state_names` parameter lets you
-specify the supported states explicitly when some states may not appear in small datasets.
+The `n_jobs` parameter on estimators such as `DiscreteMLE(n_jobs=...)` parallelizes
+parameter estimation across nodes, which can speed up fitting for larger models. The
+`state_names` parameter lets you specify the supported states explicitly when some states
+may not appear in small datasets.
 
 ## See Also
 
