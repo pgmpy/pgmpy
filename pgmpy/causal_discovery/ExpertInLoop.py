@@ -127,18 +127,41 @@ class ExpertInLoop(_BaseCausalDiscovery):
     >>> eil = ExpertInLoop(expert_knowledge=expert, effect_size_threshold=0.0001)
     >>> eil.fit(df)
 
-    Using LLM-based orientation (requires API key):
+    Using LLM-based orientation (requires an API key and `pip install litellm`):
 
     >>> from functools import partial
     >>> from pgmpy.utils import llm_pairwise_orient
-    >>> variable_descriptions = {
+    >>> descriptions = {
     ...     "Smoker": "Whether a person smokes",
     ...     "Cancer": "Whether a person has cancer",
     ... }
     >>> orientation_fn = partial(
     ...     llm_pairwise_orient,
-    ...     variable_descriptions=variable_descriptions,
+    ...     descriptions=descriptions,
     ...     llm_model="gemini/gemini-1.5-flash",
+    ... )
+    >>> eil = ExpertInLoop(orientation_fn=orientation_fn)
+    >>> eil.fit(df)
+
+    Using a local LLM via Ollama instead of a hosted provider:
+
+    >>> orientation_fn = partial(
+    ...     llm_pairwise_orient,
+    ...     descriptions=descriptions,
+    ...     llm_model="llama3",
+    ...     backend="ollama",
+    ...     backend_kwargs={"host": "http://localhost:11434"},
+    ... )
+    >>> eil = ExpertInLoop(orientation_fn=orientation_fn)
+    >>> eil.fit(df)
+
+    Using a local HuggingFace transformers model:
+
+    >>> orientation_fn = partial(
+    ...     llm_pairwise_orient,
+    ...     descriptions=descriptions,
+    ...     llm_model="meta-llama/Llama-3.2-1B-Instruct",
+    ...     backend="transformers",
     ... )
     >>> eil = ExpertInLoop(orientation_fn=orientation_fn)
     >>> eil.fit(df)

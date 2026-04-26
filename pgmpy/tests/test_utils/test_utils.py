@@ -1,10 +1,14 @@
 import os
 import random
+import sys
+import types
 import unittest
+from unittest import mock
 
 import numpy as np
 import pandas as pd
 import pytest
+from skbase.utils.dependencies import _check_soft_dependencies
 from tqdm.auto import tqdm
 
 from pgmpy.models import LinearGaussianBayesianNetwork
@@ -13,6 +17,11 @@ from pgmpy.utils import (
     get_example_model,
     llm_pairwise_orient,
     preprocess_data,
+)
+from pgmpy.utils.utils import (
+    _build_pairwise_orient_prompt,
+    _parse_pairwise_orient_response,
+    _transformers_pipeline_cache,
 )
 
 
@@ -38,6 +47,13 @@ class TestDiscretization(unittest.TestCase):
 
 
 class TestPairwiseOrientation(unittest.TestCase):
+    """Tests for `llm_pairwise_orient` and its pluggable backends.
+
+    The test matrix exercises: prompt construction, response parsing (strict
+    and tolerant), callable backend, each built-in backend via mocking, and
+    backward-compatibility with the pre-backend call signature.
+    """
+
     @pytest.mark.skipif("GEMINI_API_KEY" not in os.environ, reason="Gemini API key is not set")
     def test_llm(self):
         descriptions = {
@@ -62,6 +78,461 @@ class TestPairwiseOrientation(unittest.TestCase):
             llm_pairwise_orient(x="Income", y="Age", descriptions=descriptions, domain="Social Sciences"),
             ("Age", "Income"),
         )
+
+    # --- Prompt construction ---
+
+    def setUp(self):
+        self.descriptions = {"Age": "age of a person", "Income": "income of a person"}
+
+    def test_build_prompt_contains_descriptions(self):
+        prompt = _build_pairwise_orient_prompt("Age", "Income", self.descriptions, None)
+        self.assertIn("age of a person", prompt)
+        self.assertIn("income of a person", prompt)
+        self.assertIn("<A>", prompt)
+        self.assertIn("<B>", prompt)
+        # Default system prompt should appear
+        self.assertIn("expert in Causal Inference", prompt)
+
+    def test_build_prompt_custom_system_prompt(self):
+        prompt = _build_pairwise_orient_prompt(
+            "Age", "Income", self.descriptions, system_prompt="You are a clinician"
+        )
+        self.assertIn("You are a clinician", prompt)
+
+    # --- Response parsing ---
+
+    def test_parse_strict_1(self):
+        self.assertEqual(_parse_pairwise_orient_response("1", "X", "Y"), ("X", "Y"))
+
+    def test_parse_strict_2(self):
+        self.assertEqual(_parse_pairwise_orient_response("2", "X", "Y"), ("Y", "X"))
+
+    def test_parse_strict_a(self):
+        self.assertEqual(_parse_pairwise_orient_response("A", "X", "Y"), ("X", "Y"))
+
+    def test_parse_strict_b(self):
+        self.assertEqual(_parse_pairwise_orient_response("b", "X", "Y"), ("Y", "X"))
+
+    def test_parse_strict_asterisks(self):
+        # Legacy behavior: '**1**' becomes '1' after replace('*','')
+        self.assertEqual(_parse_pairwise_orient_response("**1**", "X", "Y"), ("X", "Y"))
+        self.assertEqual(_parse_pairwise_orient_response("**2**", "X", "Y"), ("Y", "X"))
+
+    def test_parse_tolerant_leading_punctuation(self):
+        # "1." or " 2 " — local models often wrap the answer with punctuation.
+        self.assertEqual(_parse_pairwise_orient_response("1.", "X", "Y"), ("X", "Y"))
+        self.assertEqual(_parse_pairwise_orient_response(" 2 ", "X", "Y"), ("Y", "X"))
+        self.assertEqual(_parse_pairwise_orient_response("- 1", "X", "Y"), ("X", "Y"))
+
+    def test_parse_tolerant_followed_by_text(self):
+        self.assertEqual(
+            _parse_pairwise_orient_response("1. X causes Y because ...", "X", "Y"),
+            ("X", "Y"),
+        )
+        self.assertEqual(
+            _parse_pairwise_orient_response("2) Y -> X", "X", "Y"),
+            ("Y", "X"),
+        )
+
+    def test_parse_unclear_raises(self):
+        with self.assertRaises(ValueError) as cm:
+            _parse_pairwise_orient_response("I am not sure about this", "X", "Y")
+        self.assertIn("unclear", str(cm.exception).lower())
+        # Error message must include the raw response for debuggability
+        self.assertIn("I am not sure", str(cm.exception))
+
+    def test_parse_empty_raises(self):
+        with self.assertRaises(ValueError) as cm:
+            _parse_pairwise_orient_response("", "X", "Y")
+        self.assertIn("empty", str(cm.exception).lower())
+
+    def test_parse_none_raises(self):
+        with self.assertRaises(ValueError):
+            _parse_pairwise_orient_response(None, "X", "Y")
+
+    def test_parse_rejects_ambiguous_leading_text(self):
+        # If the first non-punctuation token isn't 1/2/a/b, we should NOT guess.
+        with self.assertRaises(ValueError):
+            _parse_pairwise_orient_response("The answer is 1", "X", "Y")
+
+    # --- Callable backend ---
+
+    def test_callable_backend_returns_xy(self):
+        def fake(prompt, **_):
+            # Prompt must contain both descriptions.
+            self.assertIn("age of a person", prompt)
+            self.assertIn("income of a person", prompt)
+            return "1"
+
+        self.assertEqual(
+            llm_pairwise_orient("Age", "Income", self.descriptions, backend=fake),
+            ("Age", "Income"),
+        )
+
+    def test_callable_backend_returns_yx(self):
+        self.assertEqual(
+            llm_pairwise_orient("Age", "Income", self.descriptions, backend=lambda p, **_: "2"),
+            ("Income", "Age"),
+        )
+
+    def test_callable_backend_receives_backend_kwargs(self):
+        received = {}
+
+        def fake(prompt, **kwargs):
+            received.update(kwargs)
+            return "1"
+
+        llm_pairwise_orient(
+            "Age", "Income", self.descriptions,
+            backend=fake,
+            backend_kwargs={"foo": "bar", "count": 3},
+        )
+        self.assertEqual(received, {"foo": "bar", "count": 3})
+
+    def test_callable_backend_top_level_kwargs_override_backend_kwargs(self):
+        received = {}
+
+        def fake(prompt, **kwargs):
+            received.update(kwargs)
+            return "1"
+
+        llm_pairwise_orient(
+            "Age", "Income", self.descriptions,
+            backend=fake,
+            backend_kwargs={"shared": "from_backend_kwargs", "b_only": 1},
+            shared="from_kwargs",
+            k_only=2,
+        )
+        self.assertEqual(
+            received,
+            {"shared": "from_kwargs", "b_only": 1, "k_only": 2},
+        )
+
+    def test_callable_backend_unclear_response_raises(self):
+        with self.assertRaises(ValueError):
+            llm_pairwise_orient(
+                "Age", "Income", self.descriptions,
+                backend=lambda p, **_: "I don't know",
+            )
+
+    # --- Unknown backend ---
+
+    def test_unknown_backend_string_raises(self):
+        with self.assertRaises(ValueError) as cm:
+            llm_pairwise_orient("Age", "Income", self.descriptions, backend="bogus")
+        self.assertIn("bogus", str(cm.exception))
+        self.assertIn("litellm", str(cm.exception))
+
+    def test_non_string_non_callable_backend_raises(self):
+        with self.assertRaises(ValueError):
+            llm_pairwise_orient("Age", "Income", self.descriptions, backend=42)
+
+    # --- Litellm backend (mocked) ---
+
+    @staticmethod
+    def _make_fake_litellm(response_content="1"):
+        fake_resp = mock.MagicMock()
+        fake_resp.choices = [mock.MagicMock()]
+        fake_resp.choices[0].message.content = response_content
+        fake_completion = mock.MagicMock(return_value=fake_resp)
+        fake_module = mock.MagicMock(completion=fake_completion)
+        return fake_module, fake_completion
+
+    def test_litellm_backend_mocked_returns_xy(self):
+        fake_module, fake_completion = self._make_fake_litellm("1")
+        with mock.patch.dict(sys.modules, {"litellm": fake_module}):
+            result = llm_pairwise_orient(
+                "Age", "Income", self.descriptions,
+                backend="litellm", llm_model="gemini/test",
+            )
+        self.assertEqual(result, ("Age", "Income"))
+        fake_completion.assert_called_once()
+        call_kwargs = fake_completion.call_args.kwargs
+        self.assertEqual(call_kwargs["model"], "gemini/test")
+        self.assertEqual(call_kwargs["messages"][0]["role"], "user")
+        self.assertIn("age of a person", call_kwargs["messages"][0]["content"])
+
+    def test_litellm_is_default_backend(self):
+        fake_module, fake_completion = self._make_fake_litellm("2")
+        with mock.patch.dict(sys.modules, {"litellm": fake_module}):
+            result = llm_pairwise_orient(
+                "Age", "Income", self.descriptions,
+                llm_model="gemini/test",
+            )
+        self.assertEqual(result, ("Income", "Age"))
+
+    def test_litellm_forwards_extra_kwargs(self):
+        """Backward-compat: historically kwargs at top level went to completion()."""
+        fake_module, fake_completion = self._make_fake_litellm("1")
+        with mock.patch.dict(sys.modules, {"litellm": fake_module}):
+            llm_pairwise_orient(
+                "Age", "Income", self.descriptions,
+                llm_model="gemini/test",
+                temperature=0.2,
+                custom_param="x",
+            )
+        call_kwargs = fake_completion.call_args.kwargs
+        self.assertEqual(call_kwargs.get("temperature"), 0.2)
+        self.assertEqual(call_kwargs.get("custom_param"), "x")
+
+    def test_litellm_backend_kwargs_also_forwarded(self):
+        fake_module, fake_completion = self._make_fake_litellm("1")
+        with mock.patch.dict(sys.modules, {"litellm": fake_module}):
+            llm_pairwise_orient(
+                "Age", "Income", self.descriptions,
+                backend="litellm", llm_model="gemini/test",
+                backend_kwargs={"temperature": 0.5, "top_p": 0.9},
+            )
+        call_kwargs = fake_completion.call_args.kwargs
+        self.assertEqual(call_kwargs.get("temperature"), 0.5)
+        self.assertEqual(call_kwargs.get("top_p"), 0.9)
+
+    @pytest.mark.skipif(
+        _check_soft_dependencies("litellm", severity="none"),
+        reason="litellm is installed; this test verifies behavior when it is absent",
+    )
+    def test_litellm_not_installed_raises_importerror(self):
+        # sys.modules['litellm'] = None blocks the import without needing
+        # to actually uninstall the package.
+        with mock.patch.dict(sys.modules, {"litellm": None}):
+            with self.assertRaises(ImportError) as cm:
+                llm_pairwise_orient("Age", "Income", self.descriptions, backend="litellm")
+            self.assertIn("litellm", str(cm.exception).lower())
+
+    # --- Ollama backend (mocked) ---
+
+    @staticmethod
+    def _make_fake_http_response(json_body):
+        fake = mock.MagicMock()
+        fake.json.return_value = json_body
+        fake.raise_for_status = mock.MagicMock()
+        return fake
+
+    def test_ollama_backend_mocked(self):
+        import requests
+        fake_resp = self._make_fake_http_response({"response": "2"})
+        with mock.patch.object(requests, "post", return_value=fake_resp) as mp:
+            result = llm_pairwise_orient(
+                "Age", "Income", self.descriptions,
+                backend="ollama", llm_model="llama3",
+                backend_kwargs={
+                    "host": "http://myhost:11434",
+                    "options": {"temperature": 0.0},
+                },
+            )
+        self.assertEqual(result, ("Income", "Age"))
+        args, kwargs = mp.call_args
+        self.assertEqual(args[0], "http://myhost:11434/api/generate")
+        payload = kwargs["json"]
+        self.assertEqual(payload["model"], "llama3")
+        self.assertEqual(payload["stream"], False)
+        self.assertEqual(payload["options"], {"temperature": 0.0})
+        self.assertIn("age of a person", payload["prompt"])
+        # Reasonable timeout was passed
+        self.assertIn("timeout", kwargs)
+
+    def test_ollama_default_host(self):
+        import requests
+        fake_resp = self._make_fake_http_response({"response": "1"})
+        with mock.patch.object(requests, "post", return_value=fake_resp) as mp:
+            llm_pairwise_orient(
+                "Age", "Income", self.descriptions,
+                backend="ollama", llm_model="llama3",
+            )
+        self.assertIn("localhost:11434", mp.call_args.args[0])
+
+    def test_ollama_raises_on_http_error(self):
+        import requests
+        fake_resp = mock.MagicMock()
+        fake_resp.raise_for_status.side_effect = requests.HTTPError("500")
+        with mock.patch.object(requests, "post", return_value=fake_resp):
+            with self.assertRaises(requests.HTTPError):
+                llm_pairwise_orient(
+                    "Age", "Income", self.descriptions,
+                    backend="ollama", llm_model="llama3",
+                )
+
+    # --- OpenAI-compatible backend (mocked) ---
+
+    def test_openai_compatible_mocked(self):
+        import requests
+        fake_resp = self._make_fake_http_response(
+            {"choices": [{"message": {"content": "1"}}]}
+        )
+        with mock.patch.object(requests, "post", return_value=fake_resp) as mp:
+            result = llm_pairwise_orient(
+                "Age", "Income", self.descriptions,
+                backend="openai_compatible", llm_model="llama-3-8b",
+                backend_kwargs={
+                    "base_url": "http://localhost:8000/v1",
+                    "api_key": "sk-fake",
+                    "temperature": 0.1,
+                },
+            )
+        self.assertEqual(result, ("Age", "Income"))
+        args, kwargs = mp.call_args
+        self.assertEqual(args[0], "http://localhost:8000/v1/chat/completions")
+        self.assertEqual(kwargs["headers"].get("Authorization"), "Bearer sk-fake")
+        self.assertEqual(kwargs["headers"].get("Content-Type"), "application/json")
+        payload = kwargs["json"]
+        self.assertEqual(payload["model"], "llama-3-8b")
+        self.assertEqual(payload["temperature"], 0.1)
+        self.assertEqual(payload["messages"][0]["role"], "user")
+
+    def test_openai_compatible_no_api_key_omits_auth_header(self):
+        import requests
+        fake_resp = self._make_fake_http_response(
+            {"choices": [{"message": {"content": "1"}}]}
+        )
+        with mock.patch.object(requests, "post", return_value=fake_resp) as mp:
+            llm_pairwise_orient(
+                "Age", "Income", self.descriptions,
+                backend="openai_compatible", llm_model="m",
+                backend_kwargs={"base_url": "http://localhost:8000/v1"},
+            )
+        self.assertNotIn("Authorization", mp.call_args.kwargs["headers"])
+
+    def test_openai_compatible_missing_base_url_raises(self):
+        with self.assertRaises(TypeError):
+            llm_pairwise_orient(
+                "Age", "Income", self.descriptions,
+                backend="openai_compatible",
+            )
+
+    # --- Transformers backend (mocked; real integration is optional) ---
+
+    @staticmethod
+    def _make_fake_transformers(generator_output):
+        captured = {"pipeline_calls": 0, "gen_calls": 0, "pipeline_kwargs": {}, "gen_kwargs": {}}
+
+        def fake_generator(prompt, **gen_kwargs):
+            captured["gen_calls"] += 1
+            captured["gen_kwargs"] = gen_kwargs
+            return generator_output
+
+        def fake_pipeline(task, model=None, **kwargs):
+            assert task == "text-generation", task
+            captured["pipeline_calls"] += 1
+            captured["pipeline_kwargs"] = {"model": model, **kwargs}
+            return fake_generator
+
+        fake_module = types.ModuleType("transformers")
+        fake_module.pipeline = fake_pipeline
+        return fake_module, captured
+
+    def test_transformers_backend_mocked(self):
+        _transformers_pipeline_cache.clear()
+        fake_mod, captured = self._make_fake_transformers([{"generated_text": "1"}])
+        with mock.patch.dict(sys.modules, {"transformers": fake_mod}):
+            result = llm_pairwise_orient(
+                "Age", "Income", self.descriptions,
+                backend="transformers", llm_model="fake-model",
+            )
+        self.assertEqual(result, ("Age", "Income"))
+        self.assertEqual(captured["pipeline_calls"], 1)
+        self.assertEqual(captured["pipeline_kwargs"]["model"], "fake-model")
+        self.assertEqual(captured["gen_kwargs"].get("max_new_tokens"), 16)
+        self.assertEqual(captured["gen_kwargs"].get("return_full_text"), False)
+        self.assertEqual(captured["gen_kwargs"].get("do_sample"), False)
+
+    def test_transformers_pipeline_is_cached(self):
+        _transformers_pipeline_cache.clear()
+        fake_mod, captured = self._make_fake_transformers([{"generated_text": "1"}])
+        with mock.patch.dict(sys.modules, {"transformers": fake_mod}):
+            llm_pairwise_orient(
+                "Age", "Income", self.descriptions,
+                backend="transformers", llm_model="same-model",
+            )
+            llm_pairwise_orient(
+                "Age", "Income", self.descriptions,
+                backend="transformers", llm_model="same-model",
+            )
+        self.assertEqual(captured["pipeline_calls"], 1)
+        self.assertEqual(captured["gen_calls"], 2)
+
+    def test_transformers_pipeline_kwargs_forwarded_and_cache_skipped(self):
+        _transformers_pipeline_cache.clear()
+        fake_mod, captured = self._make_fake_transformers([{"generated_text": "2"}])
+        with mock.patch.dict(sys.modules, {"transformers": fake_mod}):
+            result = llm_pairwise_orient(
+                "Age", "Income", self.descriptions,
+                backend="transformers", llm_model="custom-model",
+                backend_kwargs={
+                    "pipeline_kwargs": {"device": "cpu"},
+                    "max_new_tokens": 32,
+                },
+            )
+        self.assertEqual(result, ("Income", "Age"))
+        self.assertEqual(captured["pipeline_kwargs"].get("device"), "cpu")
+        self.assertEqual(captured["gen_kwargs"].get("max_new_tokens"), 32)
+        # Cache must be skipped when pipeline_kwargs are customized.
+        self.assertNotIn("custom-model", _transformers_pipeline_cache)
+
+    def test_transformers_not_installed_raises_importerror(self):
+        _transformers_pipeline_cache.clear()
+        # Blocking import via sys.modules['transformers'] = None only works
+        # if the module hasn't already been imported. Since the test env may
+        # have imported transformers, we use a monkey-patched sys.modules that
+        # pops the real one first.
+        saved = sys.modules.pop("transformers", None)
+        try:
+            with mock.patch.dict(sys.modules, {"transformers": None}):
+                with self.assertRaises(ImportError) as cm:
+                    llm_pairwise_orient(
+                        "Age", "Income", self.descriptions,
+                        backend="transformers", llm_model="m",
+                    )
+                self.assertIn("transformers", str(cm.exception).lower())
+        finally:
+            if saved is not None:
+                sys.modules["transformers"] = saved
+
+    # --- Backward-compatibility smoke test ---
+
+    def test_old_style_signature_still_works(self):
+        """Callers that don't know about `backend` must continue to work."""
+        fake_module, fake_completion = self._make_fake_litellm("1")
+        with mock.patch.dict(sys.modules, {"litellm": fake_module}):
+            # This is the exact call shape used by the existing ExpertInLoop
+            # docstring example and user code before this PR.
+            result = llm_pairwise_orient(
+                x="Age",
+                y="Income",
+                descriptions=self.descriptions,
+                llm_model="gemini/gemini-1.5-flash",
+            )
+        self.assertEqual(result, ("Age", "Income"))
+
+    def test_backend_kwarg_is_keyword_only(self):
+        """`backend` must not accept a positional 6th argument, for safety."""
+        with self.assertRaises(TypeError):
+            llm_pairwise_orient("Age", "Income", self.descriptions, None,
+                                "gemini/test", "litellm")
+
+    # --- Optional integration test for transformers ---
+
+    @pytest.mark.skipif(
+        not _check_soft_dependencies("transformers", severity="none")
+        or os.environ.get("PGMPY_RUN_TRANSFORMERS_INTEGRATION") != "1",
+        reason="Opt-in: set PGMPY_RUN_TRANSFORMERS_INTEGRATION=1 to run the "
+        "transformers integration test (downloads a small model).",
+    )
+    def test_transformers_backend_integration_tiny_model(self):
+        _transformers_pipeline_cache.clear()
+        # Use a tiny random model so the test is fast and doesn't need network
+        # once cached. We can't assert a direction (the model is untrained),
+        # so we only assert that the function either returns a valid tuple or
+        # raises the expected ValueError on unclear output.
+        try:
+            result = llm_pairwise_orient(
+                "Age", "Income", self.descriptions,
+                backend="transformers",
+                llm_model="sshleifer/tiny-gpt2",
+            )
+        except ValueError as e:
+            self.assertIn("unclear", str(e).lower())
+            return
+        self.assertIn(result, [("Age", "Income"), ("Income", "Age")])
 
 
 class TestPreprocessData(unittest.TestCase):

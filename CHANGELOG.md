@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+### Added
+1. `pgmpy.utils.llm_pairwise_orient` now supports local-model backends in addition to the existing `litellm` one: a HuggingFace `transformers` pipeline, an Ollama server, any OpenAI-compatible HTTP endpoint (vLLM, llama.cpp-server, LM Studio, ...), and arbitrary user-supplied callables. Selected via the new `backend` / `backend_kwargs` parameters (#3350).
+
 ## [1.1.0] - 2026-04-01
 ### Added
 1. New role-aware causal graph infrastructure, including `PDAG`, `ADMG`, `MAG`, `AncestralBase`, and `SimpleCausalModel`.
