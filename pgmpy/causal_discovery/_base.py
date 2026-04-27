@@ -322,6 +322,9 @@ class _ConstraintMixin:
             pbar = tqdm(total=max_cond_vars)
             pbar.set_description("Working for n conditional variables: 0")
 
+        if variant == "parallel":
+            parallel_pool = Parallel(n_jobs=n_jobs, prefer="threads")
+
         variables = list(data.columns.values)
 
         # Step 1: Initialize a fully connected undirected graph
@@ -387,7 +390,7 @@ class _ConstraintMixin:
                         ):
                             return (u, v), separating_set
 
-                results = Parallel(n_jobs=n_jobs)(
+                results = parallel_pool(
                     delayed(_parallel_fun)(u, v)
                     for (u, v) in graph.edges()
                     if (enforce_expert_knowledge is False) or ((u, v) not in expert_knowledge.required_edges)
