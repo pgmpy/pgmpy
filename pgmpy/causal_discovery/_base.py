@@ -1,6 +1,6 @@
 from collections import deque
-from collections.abc import Callable, Collection, Generator, Hashable
-from itertools import chain, combinations, permutations
+from collections.abc import Callable, Generator, Hashable
+from itertools import combinations, permutations
 
 import networkx as nx
 import numpy as np
@@ -426,13 +426,14 @@ class _ConstraintMixin:
         graph: UndirectedGraph,
         lim_neighbors: int,
         neighbors: dict[Hashable, set[Hashable]] = None,
-    ) -> Collection[tuple]:
+    ) -> set[tuple]:
         """
-        Return the temporally consistent superset of separating set of `u`, `v`.
+        Return the temporally consistent candidate separating sets of `u`, `v`.
 
-        The temporal order (if specified) of the superset can only be smaller
-        ("earlier") than a particular node. The neighbors of `u` satisfying
-        this condition are returned.
+        Each candidate is a sorted tuple of size ``lim_neighbors`` drawn from
+        the (temporally filtered) neighbors of ``u`` or ``v``. Sorting both
+        input sets makes ``combinations`` yield lex-sorted tuples, so the
+        union of the two halves deduplicates directly via set semantics.
 
         Parameters
         ----------
@@ -452,9 +453,9 @@ class _ConstraintMixin:
             The maximum number of neighbours (conditioning variables) for u, v.
 
         Returns
-        --------
-        separating_set: set
-            Set containing the superset of separating set of u, v.
+        -------
+        sepsets: set[tuple]
+            Unique candidate separating sets of size ``lim_neighbors``.
         """
 
         if neighbors is not None:
@@ -476,10 +477,9 @@ class _ConstraintMixin:
                 if temporal_ordering[neigh] > max_order:
                     separating_set_v.discard(neigh)
 
-        return chain(
-            combinations(separating_set_u, lim_neighbors),
-            combinations(separating_set_v, lim_neighbors),
-        )
+        sorted_u = sorted(separating_set_u, key=repr)
+        sorted_v = sorted(separating_set_v, key=repr)
+        return set(combinations(sorted_u, lim_neighbors)) | set(combinations(sorted_v, lim_neighbors))
 
 
 class _ScoreMixin:

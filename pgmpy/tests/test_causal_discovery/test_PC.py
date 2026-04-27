@@ -643,7 +643,7 @@ def test_temporal_ordering_sepsets_and_skeleton(estimator_class):
             lim_neighbors=1,
         )
     )
-    assert result_ab == [("D",), ("D",)]
+    assert result_ab == [("D",)]
 
     # Symmetry: swapping u and v gives the same separating sets.
     result_ba = sorted(
@@ -657,7 +657,7 @@ def test_temporal_ordering_sepsets_and_skeleton(estimator_class):
     )
     assert result_ab == result_ba
 
-    # Without temporal ordering, all neighbors are candidates: C and D from both sides.
+    # Without temporal ordering, all neighbors are candidates: C and D, deduplicated across u/v sides.
     result_no_temporal = sorted(
         estimator_class._get_potential_sepsets(
             u="A",
@@ -667,7 +667,7 @@ def test_temporal_ordering_sepsets_and_skeleton(estimator_class):
             lim_neighbors=1,
         )
     )
-    assert result_no_temporal == [("C",), ("C",), ("D",), ("D",)]
+    assert result_no_temporal == [("C",), ("D",)]
 
     np.random.seed(42)
     data = pd.DataFrame(np.random.randint(0, 2, size=(100, 4)), columns=["A", "B", "C", "D"])
