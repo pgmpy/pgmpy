@@ -183,7 +183,7 @@ class PowerDivergence(_BaseCITest):
         # Step 6: Power-divergence statistic and p-value. dof=0 (every stratum
         # degenerate) yields p_value=NaN, treated as "not independent" downstream.
         terms = self._power_divergence_terms(observed, expected, safe)
-        chi = float(terms.sum())
+        chi = terms.sum()
         p_value = stats.chi2.sf(chi, df=dof)
 
         return _CITestResult(statistic=chi, p_value=p_value, attributes={"dof_": dof})
