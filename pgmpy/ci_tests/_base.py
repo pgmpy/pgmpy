@@ -122,6 +122,7 @@ class _ResidualMixin:
 class _CITestResult:
     statistic: float | None
     p_value: float
+    effect_size: float | None = None
     attributes: dict[str, object] = field(default_factory=dict)
 
 
@@ -239,6 +240,8 @@ class _BaseCITest(BaseObject):
 
         self.statistic_ = result.statistic
         self.p_value_ = result.p_value
+        if result.effect_size is not None:
+            self.effect_size_ = result.effect_size
         for attr_name, attr_value in result.attributes.items():
             setattr(self, attr_name, attr_value)
 

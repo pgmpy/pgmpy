@@ -106,6 +106,11 @@ class PowerDivergence(_BaseCITest):
         The p-value for the test. Set after calling the test.
     dof_ : int
         Degrees of freedom :math:`\nu` for the test. Set after calling the test.
+    effect_size_ : float
+        Pooled Cramér's V, :math:`V = \sqrt{T / (n \,(k_{\min} - 1))}`, with
+        :math:`n` the total sample size and :math:`k_{\min} = \min(|\mathcal{X}|,
+        |\mathcal{Y}|)`. A sample-size-invariant association-strength measure
+        in :math:`[0, 1]`; reported as ``0.0`` when :math:`k_{\min} = 1`.
 
     References
     ----------
@@ -143,9 +148,16 @@ class PowerDivergence(_BaseCITest):
         "requires_data": True,
     }
 
-    def __init__(self, data: pd.DataFrame, lambda_: str | float = "cressie-read", use_cache: bool = True):
+    def __init__(
+        self,
+        data: pd.DataFrame,
+        lambda_: str | float = "cressie-read",
+        use_cache: bool = True,
+        apply_yates: bool = True,
+    ):
         self.data = data
         self.lambda_ = lambda_
+        self.apply_yates = apply_yates
         self._codes = {}
         self._cardinalities = {}
         for col in data.columns:
@@ -203,11 +215,14 @@ class PowerDivergence(_BaseCITest):
         dof = int(dof_per.sum())
 
         # Step 5: Yates' continuity correction on 2x2 strata, matching scipy.stats.chi2_contingency.
-        correction_mask = (dof_per == 1)[:, None, None]
-        if correction_mask.any():
-            diff = expected - observed
-            adjustment = np.minimum(0.5, np.abs(diff)) * np.sign(diff)
-            observed = np.where(correction_mask, observed + adjustment, observed)
+        # Skipped when apply_yates=False (matches the convention used by causal-learn,
+        # bnlearn, and dagitty, which do not apply this correction).
+        if self.apply_yates:
+            correction_mask = (dof_per == 1)[:, None, None]
+            if correction_mask.any():
+                diff = expected - observed
+                adjustment = np.minimum(0.5, np.abs(diff)) * np.sign(diff)
+                observed = np.where(correction_mask, observed + adjustment, observed)
 
         # Step 6: Power-divergence statistic and p-value. dof=0 (every stratum
         # degenerate) yields p_value=NaN, treated as "not independent" downstream.
@@ -215,7 +230,22 @@ class PowerDivergence(_BaseCITest):
         chi = terms.sum()
         p_value = stats.chi2.sf(chi, df=dof)
 
-        return _CITestResult(statistic=chi, p_value=p_value, attributes={"dof_": dof})
+        # Step 7: Cramér's V (pooled across strata) — a sample-size-invariant
+        # association strength in [0, 1]. Used by ranking-based PC variants
+        # (resolve_conflict="effect") to score sepsets and v-structures.
+        # Computed from the structural cardinalities (kx, ky) and total n;
+        # for k_min == 1 the measure is undefined and we report 0.
+        n_total = float(observed.sum())
+        k_min = min(kx, ky)
+        denom = n_total * max(k_min - 1, 1)
+        effect_size = float(np.sqrt(max(float(chi), 0.0) / denom)) if denom > 0 else 0.0
+
+        return _CITestResult(
+            statistic=chi,
+            p_value=p_value,
+            effect_size=effect_size,
+            attributes={"dof_": dof},
+        )
 
     def _power_divergence_terms(self, observed, expected, safe):
         """Per-cell power-divergence contribution for the (n_strata, kx, ky) table."""

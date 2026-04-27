@@ -190,6 +190,7 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
         max_cond_vars: int = 5,
         expert_knowledge: ExpertKnowledge | None = None,
         enforce_expert_knowledge: bool = False,
+        resolve_conflict: str = "effect",
         n_jobs: int = -1,
         show_progress: bool = True,
     ):
@@ -200,6 +201,7 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
         self.max_cond_vars = max_cond_vars
         self.expert_knowledge = expert_knowledge
         self.enforce_expert_knowledge = enforce_expert_knowledge
+        self.resolve_conflict = resolve_conflict
         self.n_jobs = n_jobs
         self.show_progress = show_progress
 
@@ -219,8 +221,19 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
             Returns the instance with the fitted attributes.
         """
 
-        # CI test
-        ci_test = get_ci_test(test=self.ci_test, data=X)
+        if self.resolve_conflict not in ("pvalue", "effect"):
+            raise ValueError(f"resolve_conflict must be 'pvalue' or 'effect', got {self.resolve_conflict!r}.")
+
+        # CI test. When `independencies` is provided we substitute an
+        # IndependenceMatch test (mirrors what _build_skeleton does
+        # internally) so that the same configured test instance is also
+        # used by _orient_colliders for v-structure scoring.
+        if independencies is not None:
+            from pgmpy.ci_tests import IndependenceMatch
+
+            ci_test = IndependenceMatch(independencies=independencies)
+        else:
+            ci_test = get_ci_test(test=self.ci_test, data=X)
 
         if self.expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
@@ -240,12 +253,20 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
             max_cond_vars=self.max_cond_vars,
             expert_knowledge=expert_knowledge,
             enforce_expert_knowledge=self.enforce_expert_knowledge,
+            resolve_conflict=self.resolve_conflict,
             n_jobs=self.n_jobs,
             show_progress=self.show_progress,
         )
 
         # Step 2: Use separating sets to orient colliders
-        pdag = self._orient_colliders(self.skeleton_, self.separating_sets_, expert_knowledge.temporal_ordering)
+        pdag = self._orient_colliders(
+            self.skeleton_,
+            self.separating_sets_,
+            expert_knowledge.temporal_ordering,
+            ci_test=ci_test,
+            resolve_conflict=self.resolve_conflict,
+            max_cond_vars=self.max_cond_vars,
+        )
 
         # Step 3: apply orientation rules and expert knowledge
         if expert_knowledge.temporal_order != [[]]:
@@ -276,12 +297,30 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
         skeleton: UndirectedGraph,
         separating_sets: dict[frozenset, set],
         temporal_ordering: dict[Hashable, int] = dict(),
+        ci_test=None,
+        resolve_conflict: str | None = None,
+        max_cond_vars: int | None = None,
     ) -> PDAG:
         """
         Orients the edges that form v-structures in a graph skeleton based on
         the `separating_sets` to form a PDAG. For each pair of non adjacent
         nodes `u`, `v` , if a common neighbor `z` is not in the separating set of `u` and `v`;
         then the v-structure is oriented as `u`->`z` , `v`->`z`.
+
+        When two detected v-structures want incompatible orientations on the
+        same edge, the result depends on ``resolve_conflict``:
+
+        - ``None`` (default for direct callers): first-come-first-served. The
+          first v-structure to fire on an edge wins; later conflicting ones
+          are skipped. Matches bnlearn / gcastle / causal-learn ``uc_priority=2``.
+        - ``"pvalue"`` or ``"effect"``: PC-Max-style ranked application
+          (Ramsey 2016). For each candidate ``(X, Y, Z)`` we compute
+          ``max p(X ⟂ Y | S)`` over conditioning sets ``S`` that *contain* Z,
+          drawn from ``(N(X) ∪ N(Y)) \\ {X, Y}`` and capped at
+          ``max_cond_vars``. (For ``"effect"`` the score is the corresponding
+          minimum Cramér's V.) Stronger evidence first; the FCFS guard still
+          applies on top so no skeleton edge can be lost to conflicting
+          v-structures.
 
         Parameters
         ----------
@@ -293,6 +332,28 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
             A dict containing for each pair of not directly connected nodes a
             separating set ("witnessing set") of variables that makes them
             conditionally independent.
+
+        temporal_ordering: dict, optional
+            Variable -> integer time-step mapping; v-structures are only
+            applied when the candidate collider's step is at least as late
+            as both endpoints'.
+
+        ci_test: callable, optional
+            CI test instance used to score candidate v-structures when
+            ``resolve_conflict`` is set. Required for ranking, ignored
+            otherwise.
+
+        resolve_conflict: {None, "pvalue", "effect"}, optional
+            Conflict-resolution rule (see above). ``None`` keeps the legacy
+            FCFS order based on ``combinations(sorted(nodes), 2)``.
+
+        max_cond_vars: int, optional
+            Cap on conditioning-set size when scoring candidate v-structures
+            in ranking mode. Should match the value used during the
+            skeleton phase so that the per-collider scorer hits the CI test
+            cache. ``None`` lets the scorer use the full neighbour-union
+            size (matches causal-learn's uncapped enumeration but can be
+            expensive on dense graphs).
 
         Returns
         -------
@@ -323,17 +384,79 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
 
         pdag = skeleton.to_directed()
 
-        # 1) for each X-Z-Y, if Z not in the separating set of X,Y, then orient edges
-        # as X->Z<-Y (Algorithm 3.4 in Koller & Friedman PGM, page 86)
+        if resolve_conflict is not None and resolve_conflict not in ("pvalue", "effect"):
+            raise ValueError(f"resolve_conflict must be 'pvalue', 'effect' or None; got {resolve_conflict!r}.")
+        if resolve_conflict is not None and ci_test is None:
+            raise ValueError("resolve_conflict requires a ci_test instance to score candidate v-structures.")
+
+        def _maxp_score(X, Y, Z):
+            """PC-Max score for the candidate v-structure X -> Z <- Y.
+
+            Conditions on every set ``S ⊇ {Z}`` drawn from
+            ``(N(X) ∪ N(Y)) \\ {X, Y, Z}`` plus Z itself, capped at
+            ``max_cond_vars``. Strong v-structure evidence means *no*
+            Z-containing set makes X and Y look independent, i.e. the
+            **maximum** p-value over those sets is **small** (Ramsey 2016)
+            and the **minimum** effect-size is **large**. We return a
+            normalised score where higher = stronger evidence so the
+            outer sort can use the same descending convention as the
+            sepset-selection rule (negative max p / raw min effect).
+            """
+            pool = (set(skeleton.neighbors(X)) | set(skeleton.neighbors(Y))) - {X, Y, Z}
+            pool_sorted = sorted(pool, key=repr)
+            cap = max_cond_vars if max_cond_vars is not None else len(pool_sorted) + 1
+            upper = min(cap, len(pool_sorted) + 1)
+            max_p = None
+            min_V = None
+            for size in range(1, upper + 1):
+                for extras in combinations(pool_sorted, size - 1):
+                    S = list(extras) + [Z]
+                    ci_test(X, Y, S)
+                    p = float(ci_test.p_value_)
+                    v = float(getattr(ci_test, "effect_size_", 0.0))
+                    if max_p is None or p > max_p:
+                        max_p = p
+                    if min_V is None or v < min_V:
+                        min_V = v
+            if resolve_conflict == "pvalue":
+                # smallest max_p ⇒ strongest collider; flip sign so that
+                # higher score == stronger when sorted descending.
+                return -(max_p if max_p is not None else 1.0)
+            # "effect": largest min_V ⇒ strongest collider already.
+            return min_V if min_V is not None else 0.0
+
+        # Collect candidate v-structures (X, Y, Z). The FCFS guard at apply
+        # time is unconditional: only remove (Z, X) and (Z, Y) if both X->Z
+        # and Y->Z arcs are still present in pdag, otherwise a previous
+        # conflicting v-structure has already claimed the edge.
+        candidates = []  # list of (score, X, Y, Z)
         for X, Y in combinations(sorted(pdag.nodes()), 2):
-            if not skeleton.has_edge(X, Y):
-                for Z in set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y)):
-                    if Z not in separating_sets[frozenset((X, Y))]:
-                        if (temporal_ordering == dict()) or (
-                            (temporal_ordering[Z] >= temporal_ordering[X])
-                            and (temporal_ordering[Z] >= temporal_ordering[Y])
-                        ):
-                            pdag.remove_edges_from([(Z, X), (Z, Y)])
+            if skeleton.has_edge(X, Y):
+                continue
+            # No stored sepset means the pair was never tested (e.g. forbidden
+            # by an expert-knowledge search-space restriction); skip it.
+            if frozenset((X, Y)) not in separating_sets:
+                continue
+            sepset = separating_sets[frozenset((X, Y))]
+            for Z in set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y)):
+                if Z in sepset:
+                    continue
+                if temporal_ordering and not (
+                    temporal_ordering[Z] >= temporal_ordering[X] and temporal_ordering[Z] >= temporal_ordering[Y]
+                ):
+                    continue
+                score = _maxp_score(X, Y, Z) if resolve_conflict is not None else 0.0
+                candidates.append((score, X, Y, Z))
+
+        # Stable sort: when ranking is active, strongest evidence first
+        # (higher score). When not, candidates retain their pair-iteration
+        # order, reproducing the legacy FCFS behaviour.
+        if resolve_conflict is not None:
+            candidates.sort(key=lambda t: t[0], reverse=True)
+
+        for _, X, Y, Z in candidates:
+            if pdag.has_edge(X, Z) and pdag.has_edge(Y, Z):
+                pdag.remove_edges_from([(Z, X), (Z, Y)])
 
         edges = set(pdag.edges())
         undirected_edges = set()

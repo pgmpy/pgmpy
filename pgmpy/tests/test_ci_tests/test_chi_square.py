@@ -13,6 +13,36 @@ def test_chi_square():
     return test
 
 
+def test_chi_square_effect_size_strong_association():
+    """Cramér's V should be large for a strong association and ~0 under independence."""
+    rng = np.random.RandomState(42)
+    n = 5000
+    a = rng.randint(0, 3, size=n)
+    df = pd.DataFrame({"A": a, "B": a, "C": rng.randint(0, 3, size=n)}, dtype=str)
+    test = ChiSquare(data=df)
+
+    test("A", "B", Z=[], significance_level=0.05)
+    # A == B is a perfect 3x3 association: V should be 1.0
+    assert test.effect_size_ == pytest.approx(1.0, abs=0.01)
+    # Hand-check formula: V = sqrt(chi / (n * (k_min - 1))).
+    expected_v = float(np.sqrt(test.statistic_ / (n * 2)))
+    assert test.effect_size_ == pytest.approx(expected_v, abs=1e-6)
+
+    test("A", "C", Z=[], significance_level=0.05)
+    # A and C are independent — Cramér's V should be tiny.
+    assert test.effect_size_ < 0.05
+
+
+def test_chi_square_effect_size_within_unit_interval():
+    """Cramér's V is always in [0, 1] regardless of conditioning structure."""
+    rng = np.random.RandomState(0)
+    df = pd.DataFrame(rng.randint(0, 4, size=(2000, 5)), columns=list("ABCDE"), dtype=str)
+    test = ChiSquare(data=df)
+    for X, Y, Z in [("A", "B", []), ("A", "B", ["C"]), ("A", "B", ["C", "D"])]:
+        test(X, Y, Z=Z, significance_level=0.05)
+        assert 0.0 <= test.effect_size_ <= 1.0
+
+
 def test_chisquare_adult_dataset(test_chi_square):
     # Comparison values taken from dagitty (DAGitty)
     test_chi_square("Age", "Immigrant", [])

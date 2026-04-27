@@ -193,6 +193,7 @@ class _ConstraintMixin:
         max_cond_vars: int = 5,
         expert_knowledge=None,
         enforce_expert_knowledge: bool = False,
+        resolve_conflict: str | None = None,
         n_jobs: int = -1,
         show_progress: bool = True,
         **kwargs,
@@ -325,13 +326,47 @@ class _ConstraintMixin:
         if variant == "parallel":
             parallel_pool = Parallel(n_jobs=n_jobs, prefer="threads")
 
-        variables = list(data.columns.values)
+        # Sort variables so the initial complete graph and all subsequent
+        # iteration are deterministic across runs. Without this, downstream
+        # behaviour can depend on the order pandas/the BN simulator returns
+        # columns in, which is not seed-stable across Python sessions.
+        variables = sorted(data.columns.values, key=str)
 
         # Step 1: Initialize a fully connected undirected graph
         graph = nx.complete_graph(n=variables, create_using=nx.Graph)
         temporal_ordering = expert_knowledge.temporal_ordering
         if enforce_expert_knowledge:
             graph.remove_edges_from(expert_knowledge.forbidden_edges)
+
+        def _select_sepset(u, v, sepset_iter):
+            """Find the sepset that triggers independence for (u, v).
+
+            Default behaviour: return the first sepset to pass the CI test
+            (legacy break-on-first). When ``resolve_conflict`` is set we
+            instead test every candidate sepset and return the one with the
+            strongest evidence of independence (highest p-value or lowest
+            Cramér's V), matching PC-Max-style sepset selection.
+            """
+            if resolve_conflict is None:
+                for sepset in sepset_iter:
+                    if ci_test(u, v, sepset, significance_level=significance_level):
+                        return sepset
+                return None
+            best_sepset = None
+            best_score = None
+            for sepset in sepset_iter:
+                if not ci_test(u, v, sepset, significance_level=significance_level):
+                    continue
+                if resolve_conflict == "pvalue":
+                    score = float(ci_test.p_value_)
+                elif resolve_conflict == "effect":
+                    score = -float(getattr(ci_test, "effect_size_", 0.0))
+                else:
+                    raise ValueError(f"resolve_conflict must be 'pvalue', 'effect' or None; got {resolve_conflict!r}.")
+                if best_score is None or score > best_score:
+                    best_score = score
+                    best_sepset = sepset
+            return best_sepset
 
         # Exit condition: 1. If all the nodes in graph has less than `lim_neighbors` neighbors.
         #             or  2. `lim_neighbors` is greater than `max_conditional_variables`.
@@ -341,20 +376,14 @@ class _ConstraintMixin:
             if variant == "orig":
                 for u, v in graph.edges():
                     if (enforce_expert_knowledge is False) or ((u, v) not in expert_knowledge.required_edges):
-                        for separating_set in self._get_potential_sepsets(
-                            u, v, temporal_ordering, graph, lim_neighbors
-                        ):
-                            # If a conditioning set exists remove the edge, store the separating set
-                            # and move on to finding conditioning set for next edge.
-                            if ci_test(
-                                u,
-                                v,
-                                separating_set,
-                                significance_level=significance_level,
-                            ):
-                                separating_sets[frozenset((u, v))] = separating_set
-                                graph.remove_edge(u, v)
-                                break
+                        sepset = _select_sepset(
+                            u,
+                            v,
+                            self._get_potential_sepsets(u, v, temporal_ordering, graph, lim_neighbors),
+                        )
+                        if sepset is not None:
+                            separating_sets[frozenset((u, v))] = sepset
+                            graph.remove_edge(u, v)
 
             elif variant == "stable":
                 neighbors = {node: set(graph.neighbors(node)) for node in variables}
@@ -362,33 +391,29 @@ class _ConstraintMixin:
                 # In case of stable, precompute neighbors as this is the stable algorithm.
                 for u, v in graph.edges():
                     if (enforce_expert_knowledge is False) or ((u, v) not in expert_knowledge.required_edges):
-                        for separating_set in self._get_potential_sepsets(
-                            u, v, temporal_ordering, graph, lim_neighbors, neighbors=neighbors
-                        ):
-                            # If a conditioning set exists remove the edge, store the
-                            # separating set and move on to finding conditioning set for next edge.
-                            if ci_test(
-                                u,
-                                v,
-                                separating_set,
-                                significance_level=significance_level,
-                            ):
-                                separating_sets[frozenset((u, v))] = separating_set
-                                edges_to_remove.append((u, v))
-                                break
+                        sepset = _select_sepset(
+                            u,
+                            v,
+                            self._get_potential_sepsets(
+                                u, v, temporal_ordering, graph, lim_neighbors, neighbors=neighbors
+                            ),
+                        )
+                        if sepset is not None:
+                            separating_sets[frozenset((u, v))] = sepset
+                            edges_to_remove.append((u, v))
                 graph.remove_edges_from(edges_to_remove)
 
             elif variant == "parallel":
 
                 def _parallel_fun(u, v):
-                    for separating_set in self._get_potential_sepsets(u, v, temporal_ordering, graph, lim_neighbors):
-                        if ci_test(
-                            u,
-                            v,
-                            separating_set,
-                            significance_level=significance_level,
-                        ):
-                            return (u, v), separating_set
+                    sepset = _select_sepset(
+                        u,
+                        v,
+                        self._get_potential_sepsets(u, v, temporal_ordering, graph, lim_neighbors),
+                    )
+                    if sepset is None:
+                        return None
+                    return (u, v), sepset
 
                 results = parallel_pool(
                     delayed(_parallel_fun)(u, v)
