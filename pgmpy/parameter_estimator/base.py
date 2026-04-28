@@ -44,6 +44,73 @@ class BaseParameterEstimator(BaseEstimator):
         """
         raise NotImplementedError
 
+    def summary(self, compact: bool = False) -> str:
+        """
+        Return a text summary of the fitted parameters.
+
+        Parameters
+        ----------
+        compact : bool, default=False
+            If True, prints a one-line representation per CPD instead of
+            the full table.
+
+        Returns
+        -------
+        str
+            A formatted string summarizing the estimator configuration,
+            the model structure, and the learned parameters.
+
+        Raises
+        ------
+        ValueError
+            If the estimator has not been fitted yet.
+
+        Examples
+        --------
+        >>> from pgmpy.models import DiscreteBayesianNetwork
+        >>> from pgmpy.parameter_estimator import DiscreteMLE
+        >>> import pandas as pd
+        >>> data = pd.DataFrame({"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
+        >>> model = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
+        >>> estimator = DiscreteMLE().fit(model, data)
+        >>> print(estimator.summary())  # doctest: +SKIP
+        Parameter Estimation Summary
+        ...
+        """
+        if not hasattr(self, "parameters_"):
+            raise ValueError(
+                f"{type(self).__name__} has not been fitted yet. "
+                "Call .fit(model, data) before calling .summary()."
+            )
+
+        lines = []
+        lines.append("Parameter Estimation Summary")
+        lines.append("=" * 40)
+        lines.append(f"Estimator:       {type(self).__name__}")
+        lines.append(f"Model Type:      {type(self._model).__name__}")
+        lines.append(f"Nodes:           {self._model.number_of_nodes()}")
+        lines.append(f"Edges:           {self._model.number_of_edges()}")
+        lines.append(f"Samples:         {self._data.shape[0]}")
+
+        self._append_estimator_details(lines)
+
+        lines.append("")
+        lines.append("Parameters")
+        lines.append("-" * 40)
+
+        for cpd in self.parameters_:
+            lines.append("")
+            if compact:
+                lines.append(repr(cpd))
+            else:
+                lines.append(str(cpd))
+
+        return "\n".join(lines)
+
+    def _append_estimator_details(self, lines: list[str]) -> None:
+        """Hook for subclasses to append estimator-specific details to the summary."""
+        pass
+
     def _validate_inputs(self, model, data, sample_weight=None):
         supported_model_types = self.get_tag("supported_model_types")
         if not isinstance(model, supported_model_types):
@@ -97,6 +164,15 @@ class DiscreteParameterEstimator(BaseParameterEstimator):
     def __init__(self, state_names: dict | None = None) -> None:
         self.state_names = state_names
         super().__init__()
+
+    def _append_estimator_details(self, lines: list[str]) -> None:
+        """Append discrete-specific details such as state counts."""
+        n_states = {
+            var: len(states) for var, states in self.state_names_.items()
+            if var in self._model.nodes()
+        }
+        lines.append(f"Variables:       {list(n_states.keys())}")
+        lines.append(f"State Counts:    {n_states}")
 
     def fit(self, model: DAG | DiscreteBayesianNetwork, data, sample_weight=None):
         """
@@ -249,6 +325,10 @@ class GaussianParameterEstimator(BaseParameterEstimator):
         model, _ = self._validate_inputs(model, data, sample_weight=sample_weight)
         self._model = model
         self._data = data
+
+    def _append_estimator_details(self, lines: list[str]) -> None:
+        """Append Gaussian-specific details."""
+        lines.append(f"Variables:       {list(self._model.nodes())}")
 
 
 _BaseParameterEstimator = BaseParameterEstimator

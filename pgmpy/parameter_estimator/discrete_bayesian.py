@@ -89,6 +89,18 @@ class DiscreteBayesianEstimator(DiscreteParameterEstimator):
         self.n_jobs = n_jobs
         super().__init__(state_names=state_names)
 
+    def _append_estimator_details(self, lines: list[str]) -> None:
+        """Append Bayesian prior details to the summary."""
+        super()._append_estimator_details(lines)
+        lines.append("")
+        lines.append("Prior")
+        lines.append("-" * 40)
+        lines.append(f"Prior Type:              {self.prior_type}")
+        if self.prior_type.lower() == "bdeu":
+            lines.append(f"Equivalent Sample Size:  {self.equivalent_sample_size}")
+        elif self.prior_type.lower() == "dirichlet" and self.pseudo_counts is not None:
+            lines.append(f"Pseudo Counts:           {self.pseudo_counts}")
+
     @staticmethod
     def _resolve_pseudo_counts(
         model,

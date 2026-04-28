@@ -123,6 +123,32 @@ class DiscreteEM(DiscreteParameterEstimator):
         self.show_progress = show_progress
         super().__init__(state_names=state_names)
 
+    def _append_estimator_details(self, lines: list[str]) -> None:
+        """Append EM-specific details: latent variables and convergence info."""
+        super()._append_estimator_details(lines)
+
+        # Latent variables section
+        latent_vars = self._model.latents
+        if latent_vars:
+            lines.append("")
+            lines.append("Latent Variables")
+            lines.append("-" * 40)
+            for var in sorted(latent_vars):
+                n_states = len(self.state_names_.get(var, []))
+                lines.append(f"{var}:  {n_states} states")
+
+        # Convergence section
+        lines.append("")
+        lines.append("Convergence")
+        lines.append("-" * 40)
+        lines.append(f"Max Iterations:     {self.max_iter}")
+        lines.append(f"Iterations Run:     {self._n_iter}")
+        lines.append(f"Converged:          {self._converged}")
+        lines.append(f"Tolerance (atol):   {self.atol}")
+
+        m_step_name = type(self.m_step_estimator).__name__ if self.m_step_estimator is not None else "DiscreteMLE"
+        lines.append(f"M-step Estimator:   {m_step_name}")
+
     def _get_log_likelihood(self, datapoint: dict[str, Any]) -> float:
         likelihood = 0.0
         for cpd in self._model_copy.cpds:
@@ -343,7 +369,10 @@ class DiscreteEM(DiscreteParameterEstimator):
         n_counts = self._data.groupby(list(self._data.columns), observed=True).size().to_dict()
 
         disable_pbar = not (self.show_progress and config.SHOW_PROGRESS)
+        self._n_iter = 0
+        self._converged = False
         for _ in tqdm(range(self.max_iter), disable=disable_pbar):
+            self._n_iter += 1
             # Step 4.1: E-step — expand each observation over all latent combinations and weight each augmented
             #           row by the current posterior P(h | x_obs).
             cache = Parallel(n_jobs=self.n_jobs)(
@@ -365,6 +394,7 @@ class DiscreteEM(DiscreteParameterEstimator):
             # Step 4.3: Check convergence (parameter-change tolerance). Early-return once all CPDs are within atol.
             new_cpds = self._sort_parameters(new_cpds)
             if all(cpd.__eq__(self._model_copy.get_cpds(node=cpd.scope()[0]), atol=self.atol) for cpd in new_cpds):
+                self._converged = True
                 self.parameters_ = new_cpds
                 return self
 
