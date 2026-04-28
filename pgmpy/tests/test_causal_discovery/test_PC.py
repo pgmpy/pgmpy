@@ -4,7 +4,6 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import pytest
-from skbase.utils.dependencies import _check_soft_dependencies
 from sklearn.exceptions import NotFittedError
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
@@ -389,10 +388,6 @@ def test_search_space():
         assert edge in search_space
 
 
-@pytest.mark.skipif(
-    not _check_soft_dependencies("xgboost", severity="none"),
-    reason="execute only if required dependency present",
-)
 @pytest.mark.parametrize("ci_test", ["pearsonr", "pillai", "gcm"])
 @pytest.mark.parametrize("variant", ["orig", "stable", "parallel"])
 def test_build_skeleton_continuous(ci_test, variant):
@@ -460,10 +455,6 @@ def test_build_skeleton_continuous(ci_test, variant):
     assert est.separating_sets_ == expected_sepsets
 
 
-@pytest.mark.skipif(
-    not _check_soft_dependencies("xgboost", severity="none"),
-    reason="execute only if required dependency present",
-)
 @pytest.mark.parametrize("ci_test", ["pearsonr", "pillai", "gcm"])
 @pytest.mark.parametrize("variant", ["orig", "stable", "parallel"])
 def test_build_dag_continuous(ci_test, variant):
