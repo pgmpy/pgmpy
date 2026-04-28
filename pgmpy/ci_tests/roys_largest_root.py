@@ -134,4 +134,4 @@ class RoysLargestRoot(_ResidualMixin, _BaseCITest):
         F_stat = (RLR_clipped / a) / ((1.0 - RLR_clipped) / n)
         p_value = 1.0 - stats.f.cdf(F_stat, df1, df2)
 
-        return _CITestResult(statistic=RLR, p_value=p_value, effect_size=float(RLR))
+        return _CITestResult(statistic=RLR, p_value=p_value, effect_size=RLR)
