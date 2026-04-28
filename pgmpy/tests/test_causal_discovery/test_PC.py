@@ -9,9 +9,7 @@ from sklearn.exceptions import NotFittedError
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.base import UndirectedGraph
-from pgmpy.causal_discovery import PC
-from pgmpy.estimators import ExpertKnowledge
-from pgmpy.estimators.BaseConstraintEstimator import BaseConstraintEstimator
+from pgmpy.causal_discovery import PC, ExpertKnowledge
 from pgmpy.example_models import load_model
 from pgmpy.independencies import Independencies
 from pgmpy.metrics import SHD, CorrelationScore
@@ -629,13 +627,12 @@ def _fake_ci_temporal(X, Y, Z=[], **kwargs):
     return False
 
 
-@pytest.mark.parametrize("estimator_class", [PC, BaseConstraintEstimator])
-def test_temporal_ordering_sepsets_and_skeleton(estimator_class):
+def test_temporal_ordering_sepsets_and_skeleton():
     graph = UndirectedGraph([("A", "B"), ("A", "C"), ("A", "D"), ("B", "C"), ("B", "D")])
     temporal_ordering = {"A": 3, "B": 1, "C": 2, "D": 0}
 
     result_ab = sorted(
-        estimator_class._get_potential_sepsets(
+        PC._get_potential_sepsets(
             u="A",
             v="B",
             temporal_ordering=temporal_ordering,
@@ -643,11 +640,11 @@ def test_temporal_ordering_sepsets_and_skeleton(estimator_class):
             lim_neighbors=1,
         )
     )
-    assert result_ab == [("D",), ("D",)]
+    assert result_ab == [("D",)]
 
     # Symmetry: swapping u and v gives the same separating sets.
     result_ba = sorted(
-        estimator_class._get_potential_sepsets(
+        PC._get_potential_sepsets(
             u="B",
             v="A",
             temporal_ordering=temporal_ordering,
@@ -657,9 +654,9 @@ def test_temporal_ordering_sepsets_and_skeleton(estimator_class):
     )
     assert result_ab == result_ba
 
-    # Without temporal ordering, all neighbors are candidates: C and D from both sides.
+    # Without temporal ordering, all neighbors are candidates: C and D, deduplicated across u/v sides.
     result_no_temporal = sorted(
-        estimator_class._get_potential_sepsets(
+        PC._get_potential_sepsets(
             u="A",
             v="B",
             temporal_ordering={},
@@ -667,37 +664,28 @@ def test_temporal_ordering_sepsets_and_skeleton(estimator_class):
             lim_neighbors=1,
         )
     )
-    assert result_no_temporal == [("C",), ("C",), ("D",), ("D",)]
+    assert result_no_temporal == [("C",), ("D",)]
 
     np.random.seed(42)
     data = pd.DataFrame(np.random.randint(0, 2, size=(100, 4)), columns=["A", "B", "C", "D"])
     expert = ExpertKnowledge(temporal_order=[["D"], ["B"], ["C"], ["A"]])
 
-    if estimator_class is PC:
-        skel, _ = PC(
-            variant="stable",
-            ci_test=_fake_ci_temporal,
-            expert_knowledge=expert,
-            show_progress=False,
-        )._build_skeleton(
-            data,
-            ci_test=_fake_ci_temporal,
-            expert_knowledge=expert,
-            variant="stable",
-            show_progress=False,
-        )
-    else:
-        skel, _ = BaseConstraintEstimator(data=data).build_skeleton(
-            ci_test=_fake_ci_temporal,
-            expert_knowledge=expert,
-            variant="stable",
-            show_progress=False,
-        )
+    skel, _ = PC(
+        variant="stable",
+        ci_test=_fake_ci_temporal,
+        expert_knowledge=expert,
+        show_progress=False,
+    )._build_skeleton(
+        data,
+        ci_test=_fake_ci_temporal,
+        expert_knowledge=expert,
+        variant="stable",
+        show_progress=False,
+    )
 
     assert skel.has_edge("A", "B"), (
-        f"{estimator_class.__name__}: Edge A-B was incorrectly removed: "
-        "temporal ordering should have filtered C from candidate separators "
-        "(bug: min(u,u) instead of min(u,v))"
+        "Edge A-B was incorrectly removed: temporal ordering should have "
+        "filtered C from candidate separators (bug: min(u,u) instead of min(u,v))"
     )
 
 
