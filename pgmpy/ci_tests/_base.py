@@ -266,7 +266,7 @@ class _BaseCITest(BaseObject):
             raise ValueError(f"X and Y cannot appear in Z. Found {X if X in Z else Y} in Z.")
 
 
-def get_ci_test(test=None, data=None):
+def get_ci_test(test=None, data=None, use_cache=True):
     """
     Return an instantiated CI test object given a test name, instance, or data.
 
@@ -375,6 +375,7 @@ def get_ci_test(test=None, data=None):
         if cls.get_class_tag("requires_data", tag_value_default=True):
             if data is None:
                 raise ValueError(f"CI test '{cls.__name__}' requires data, but data is None.")
-            return cls(data=data)
-        return cls()
+            return cls(data=data, use_cache=use_cache)
+        else:
+            return cls(use_cache=use_cache)
     raise ValueError(f"Unknown CI test: {test!r}")
