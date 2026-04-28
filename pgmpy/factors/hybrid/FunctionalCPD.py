@@ -81,6 +81,7 @@ class FunctionalCPD(BaseFactor):
         --------
         >>> import torch
         >>> from pgmpy.factors.hybrid import FunctionalCPD
+        >>> config.set_backend("torch")
         >>> import pyro.distributions as dist
         >>> seed_generator = torch.manual_seed(42)
         >>> cpd = FunctionalCPD(
@@ -92,9 +93,11 @@ class FunctionalCPD(BaseFactor):
         ... )
 
         >>> parent_samples = pd.DataFrame({"x1": [5, 10], "x2": [1, -1]})
-        >>> cpd.sample(2, parent_samples)
-        array([2.63669038, 2.8288095 ])
+        >>> cpd.sample(2, parent_samples) # xdoctest: +ELLIPSIS
+        array([2.63669..., 2.82880...])
+        >>> config.set_backend("numpy")
         """
+
         sampled_values = []
 
         if parent_sample is not None:
@@ -114,6 +117,7 @@ class FunctionalCPD(BaseFactor):
             else:
                 for i in range(n_samples):
                     row = parent_sample.iloc[i]
+
                     parents_t = {
                         p: torch.as_tensor(row[p], dtype=config.get_dtype(), device=config.get_device())
                         for p in self.parents

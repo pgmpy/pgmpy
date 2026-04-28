@@ -138,12 +138,15 @@ class Config:
                 self.DTYPE = dtype
 
         elif self.BACKEND == "torch":
-            if dtype is None:
-                import torch
+            import torch
 
+            if dtype is None:
                 self.DTYPE = torch.float64
             else:
-                self.DTYPE = dtype
+                if isinstance(dtype, str):
+                    self.DTYPE = getattr(torch, dtype)
+                else:
+                    self.DTYPE = dtype
 
     def get_dtype(self):
         """
