@@ -51,6 +51,7 @@ class PearsonrEquivalence(Pearsonr):
     .. math::
         p = \max(p_{\mathrm{lower}}, p_{\mathrm{upper}}).
 
+    The effect size is the absolute partial correlation :math:`|\hat{\rho}_{XY \mid Z}|`.
 
     Parameters
     ----------
@@ -67,6 +68,8 @@ class PearsonrEquivalence(Pearsonr):
     p_value_ : float
         The p-value from the TOST procedure. Independence is concluded when
         ``p_value_ < significance_level`` (opposite of standard CI tests). Set after calling the test.
+    effect_size_ : float
+        Absolute partial correlation. Set after calling the test.
 
     References
     ----------
@@ -143,5 +146,6 @@ class PearsonrEquivalence(Pearsonr):
         return _CITestResult(
             statistic=coeff,
             p_value=max(p_value_lower, p_value_upper),
+            effect_size=abs(pearsonr_result.statistic),
             attributes=dict(pearsonr_result.attributes),
         )

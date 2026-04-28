@@ -19,6 +19,8 @@ class FisherZ(Pearsonr):
     where :math:`n` is the sample size and :math:`|Z|` is the number of conditioning variables. Under the null
     hypothesis :math:`X \perp Y \mid Z`, :math:`Z` is approximately standard normal.
 
+    The effect size is the absolute partial correlation :math:`|\rho_{XY \mid Z}|`.
+
     Parameters
     ----------
     data : pandas.DataFrame
@@ -30,6 +32,8 @@ class FisherZ(Pearsonr):
         The Fisher Z test statistic. Set after calling the test.
     p_value_ : float
         The two-sided p-value for the test. Set after calling the test.
+    effect_size_ : float
+        Absolute partial correlation. Set after calling the test.
 
     Examples
     --------
@@ -75,4 +79,4 @@ class FisherZ(Pearsonr):
         statistic = np.sqrt(self.data.shape[0] - len(Z) - 3) * np.arctanh(rho)
         p_value = 2 * stats.norm.sf(np.abs(statistic))
 
-        return _CITestResult(statistic=statistic, p_value=p_value)
+        return _CITestResult(statistic=statistic, p_value=p_value, effect_size=abs(partial_corr))

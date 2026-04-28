@@ -32,6 +32,8 @@ class HotellingLawley(_ResidualMixin, _BaseCITest):
     Numerator degrees of freedom are :math:`df_1 = pq` and denominator degrees of freedom
     are :math:`df_2 = s(n - q - 1) + 2 = s(N - p - q - 2) + 2`.
 
+    The effect size is partial eta-squared: :math:`\eta^2 = \text{HLT} / (\text{HLT} + s)`.
+
     Parameters
     ----------
     data : pandas.DataFrame
@@ -50,6 +52,8 @@ class HotellingLawley(_ResidualMixin, _BaseCITest):
     p_value_ : float
         The p-value for the test, computed via Pillai's F-approximation. Set after calling
         the test.
+    effect_size_ : float
+        Partial eta-squared. Set after calling the test.
 
     References
     ----------
@@ -125,4 +129,4 @@ class HotellingLawley(_ResidualMixin, _BaseCITest):
         F_stat = (A_HLT / df1) / ((1.0 - A_HLT) / df2)
         p_value = 1.0 - stats.f.cdf(F_stat, df1, df2)
 
-        return _CITestResult(statistic=HLT, p_value=p_value)
+        return _CITestResult(statistic=HLT, p_value=p_value, effect_size=HLT / (HLT + s))

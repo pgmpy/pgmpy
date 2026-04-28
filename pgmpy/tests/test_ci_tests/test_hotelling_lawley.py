@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from pgmpy.ci_tests import HotellingLawley
 from pgmpy.tests.test_ci_tests import _multivariate_fixtures
@@ -53,6 +54,21 @@ def test_hotelling_dependent(pillai_data):
 
     assert np.allclose(computed_stats, expected_stats, atol=1e-2)
     assert np.allclose(computed_pvalues, expected_pvalues, atol=1e-2)
+
+
+def test_effect_size(pillai_data):
+    expected_indep = [0.0026, 0.0004, 0.0003, 0.0013, 0.0003]
+    expected_dep = [0.1698, 0.2181, 0.1328, 0.0802, 0.1328]
+
+    for df, expected in zip(pillai_data["indep"], expected_indep):
+        test = HotellingLawley(data=df)
+        test("X", "Y", ["Z1", "Z2", "Z3"])
+        assert test.effect_size_ == pytest.approx(expected, abs=1e-2)
+
+    for df, expected in zip(pillai_data["dep"], expected_dep):
+        test = HotellingLawley(data=df)
+        test("X", "Y", ["Z1", "Z2", "Z3"])
+        assert test.effect_size_ == pytest.approx(expected, abs=1e-2)
 
 
 def test_hotelling_approx(pillai_data):

@@ -46,6 +46,13 @@ class PowerDivergence(_BaseCITest):
 
     where :math:`F_{\chi^2_\nu}` is the CDF of the chi-square distribution with :math:`\nu` degrees of freedom.
 
+    The effect size is Cramér's V:
+
+    .. math::
+        V = \sqrt{\frac{T}{n \cdot (k - 1)}},
+
+    where :math:`k = \min(|X|, |Y|)` is the smaller number of categories and :math:`n` is the sample size.
+
     Parameters
     ----------
     data : pandas.DataFrame
@@ -70,6 +77,8 @@ class PowerDivergence(_BaseCITest):
         The p-value for the test. Set after calling the test.
     dof_ : int
         Degrees of freedom :math:`\nu` for the test. Set after calling the test.
+    effect_size_ : float
+        Cramér's V. Set after calling the test.
 
     References
     ----------
@@ -158,4 +167,8 @@ class PowerDivergence(_BaseCITest):
                     dof += d
             p_value = 1 - stats.chi2.cdf(chi, df=dof)
 
-        return _CITestResult(statistic=chi, p_value=p_value, attributes={"dof_": dof})
+        n = len(self.data)
+        k = min(data[X].nunique(), data[Y].nunique())
+        effect_size = np.sqrt(chi / (n * max(k - 1, 1)))
+
+        return _CITestResult(statistic=chi, p_value=p_value, effect_size=effect_size, attributes={"dof_": dof})

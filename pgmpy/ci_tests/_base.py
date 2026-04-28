@@ -122,6 +122,7 @@ class _ResidualMixin:
 class _CITestResult:
     statistic: float | None
     p_value: float
+    effect_size: float | None = None
     attributes: dict[str, object] = field(default_factory=dict)
 
 
@@ -188,8 +189,9 @@ class _BaseCITest(BaseObject):
 
         Notes
         -----
-        Always sets ``self.statistic_`` and ``self.p_value_`` as side effects,
-        regardless of the return value. Access these attributes to inspect raw results.
+        Always sets ``self.statistic_``, ``self.p_value_``, and ``self.effect_size_``
+        as side effects, regardless of the return value. Access these attributes to
+        inspect raw results.
         CI test instances are not thread-safe; use a separate instance per thread
         for parallel computation.
         """
@@ -239,6 +241,7 @@ class _BaseCITest(BaseObject):
 
         self.statistic_ = result.statistic
         self.p_value_ = result.p_value
+        self.effect_size_ = result.effect_size
         for attr_name, attr_value in result.attributes.items():
             setattr(self, attr_name, attr_value)
 

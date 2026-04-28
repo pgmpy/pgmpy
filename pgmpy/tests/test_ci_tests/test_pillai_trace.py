@@ -97,6 +97,21 @@ def test_pillai_tests_approx(pillai_data):
     assert np.all(np.array(computed_pvalues) <= 0.05)
 
 
+def test_effect_size(pillai_data):
+    expected_indep = [0.0026, 0.0004, 0.0003, 0.0013, 0.0003]
+    expected_dep = [0.1698, 0.2181, 0.1328, 0.0798, 0.1328]
+
+    for df, expected in zip(pillai_data["indep"], expected_indep):
+        test = PillaiTrace(data=df)
+        test("X", "Y", ["Z1", "Z2", "Z3"])
+        assert test.effect_size_ == pytest.approx(expected, abs=1e-2)
+
+    for df, expected in zip(pillai_data["dep"], expected_dep):
+        test = PillaiTrace(data=df)
+        test("X", "Y", ["Z1", "Z2", "Z3"])
+        assert test.effect_size_ == pytest.approx(expected, abs=1e-2)
+
+
 def test_pillai_approx_discrete():
     # Tests approximate behavior with actual categorical variables (string labels) so that
     # the categorical residual path in get_residuals is exercised on GitHub CI.

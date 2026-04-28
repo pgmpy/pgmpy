@@ -48,6 +48,12 @@ def test_pearsonr_equivalence(pearson_equivalence_data):
     assert round(test.p_value_, 2) == pytest.approx(1.0)
 
 
+def test_effect_size(pearson_equivalence_data):
+    test = PearsonrEquivalence(data=pearson_equivalence_data, delta_threshold=0.1)
+    test("X", "Y", ["Z1", "Z2", "Z3"])
+    assert test.effect_size_ == pytest.approx(0.4056, abs=1e-2)
+
+
 def test_pearsonr_equivalence_approx(pearson_equivalence_data):
     test = PearsonrEquivalence(data=pearson_equivalence_data, delta_threshold=0.1)
 

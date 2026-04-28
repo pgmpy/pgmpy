@@ -135,6 +135,22 @@ def test_fisher_z_residual(residual_data):
     assert round(test.p_value_, 3) == pytest.approx(0.0)
 
 
+def test_effect_size(fisher_data):
+    df_ind, df_cind, df_cind_mul, df_vstruct = fisher_data
+
+    test = FisherZ(data=df_ind)
+    test("X", "Y", [])
+    assert test.effect_size_ == pytest.approx(0.0075, abs=1e-3)
+
+    test = FisherZ(data=df_vstruct)
+    test("X", "Y", ["Z"])
+    assert test.effect_size_ == pytest.approx(0.8010, abs=1e-3)
+
+    pearson_test = Pearsonr(data=df_vstruct)
+    pearson_test("X", "Y", ["Z"])
+    assert test.effect_size_ == pytest.approx(abs(pearson_test.statistic_))
+
+
 def test_fisher_z_residual_approx(residual_data):
     df_indep, df_dep = residual_data
     test = FisherZ(data=df_indep)

@@ -36,6 +36,8 @@ class RoysLargestRoot(_ResidualMixin, _BaseCITest):
         the upper bound uses :math:`a = p`, this approximation is not symmetric in
         :math:`X` and :math:`Y` when :math:`p \neq q`.
 
+    The effect size is the largest squared canonical correlation :math:`\hat{\rho}_1^2`.
+
     Parameters
     ----------
     data : pandas.DataFrame
@@ -54,6 +56,8 @@ class RoysLargestRoot(_ResidualMixin, _BaseCITest):
     p_value_ : float
         Upper-bound p-value for the test, computed via the F approximation. Set after
         calling the test.
+    effect_size_ : float
+        Largest squared canonical correlation. Set after calling the test.
 
     References
     ----------
@@ -130,4 +134,4 @@ class RoysLargestRoot(_ResidualMixin, _BaseCITest):
         F_stat = (RLR_clipped / a) / ((1.0 - RLR_clipped) / n)
         p_value = 1.0 - stats.f.cdf(F_stat, df1, df2)
 
-        return _CITestResult(statistic=RLR, p_value=p_value)
+        return _CITestResult(statistic=RLR, p_value=p_value, effect_size=float(RLR))

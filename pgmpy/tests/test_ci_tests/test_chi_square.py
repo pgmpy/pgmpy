@@ -84,6 +84,17 @@ def test_discrete_tests(test_chi_square):
     assert not test_chi_square("Education", "MaritalStatus", ["Age", "Sex"], significance_level=0.05)
 
 
+def test_effect_size(test_chi_square):
+    test_chi_square("Age", "Immigrant", [])
+    assert test_chi_square.effect_size_ == pytest.approx(0.0421, abs=1e-2)
+
+    test_chi_square("Immigrant", "Sex", [])
+    assert test_chi_square.effect_size_ == pytest.approx(0.0029, abs=1e-2)
+
+    test_chi_square("Education", "MaritalStatus", ["Age", "Sex"])
+    assert test_chi_square.effect_size_ == pytest.approx(0.0894, abs=1e-2)
+
+
 def test_exactly_same_vars():
     x = np.random.choice([0, 1], size=1000)
     y = x.copy()

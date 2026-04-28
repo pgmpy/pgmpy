@@ -84,6 +84,16 @@ def test_gcm_exact(df_dep, df_indep):
     assert test.p_value_ <= 1.0
 
 
+def test_effect_size(df_dep, df_indep):
+    test = GCM(data=df_indep)
+    test("X", "Y", ["Z1", "Z2", "Z3"])
+    assert test.effect_size_ == pytest.approx(0.0031, abs=1e-2)
+
+    test = GCM(data=df_dep)
+    test("X", "Y", ["Z1", "Z2", "Z3"])
+    assert test.effect_size_ == pytest.approx(0.3980, abs=1e-2)
+
+
 def test_gcm_approx(df_dep, df_indep):
     test = GCM(data=df_indep)
 

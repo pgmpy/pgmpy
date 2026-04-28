@@ -44,6 +44,13 @@ def test_generalized_cov_statistic_matches_rectangular_generalization(pillai_dat
     assert test.statistic_ == expected
 
 
+def test_effect_size(pillai_data):
+    df = pillai_data["indep"][0]
+    test = GeneralizedCov(data=df, n_permutations=10, random_state=0)
+    test("X", "Y", ["Z1", "Z2", "Z3"])
+    assert test.effect_size_ is None
+
+
 def test_generalized_cov_approx(pillai_data):
     for df in pillai_data["indep"]:
         test = GeneralizedCov(data=df, n_permutations=500, random_state=0)

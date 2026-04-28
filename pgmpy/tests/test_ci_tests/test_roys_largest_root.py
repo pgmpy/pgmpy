@@ -59,6 +59,23 @@ def test_roys_dependent(pillai_data):
     assert np.allclose(computed_pvalues, expected_pvalues, atol=1e-4)
 
 
+def test_effect_size(pillai_data):
+    expected_indep = [0.0026, 0.0004, 0.0003, 0.0023, 0.0003]
+    expected_dep = [0.1698, 0.2181, 0.1328, 0.1008, 0.1328]
+
+    for df, expected in zip(pillai_data["indep"], expected_indep):
+        test = RoysLargestRoot(data=df)
+        test("X", "Y", ["Z1", "Z2", "Z3"])
+        assert test.effect_size_ == pytest.approx(test.statistic_)
+        assert test.effect_size_ == pytest.approx(expected, abs=1e-2)
+
+    for df, expected in zip(pillai_data["dep"], expected_dep):
+        test = RoysLargestRoot(data=df)
+        test("X", "Y", ["Z1", "Z2", "Z3"])
+        assert test.effect_size_ == pytest.approx(test.statistic_)
+        assert test.effect_size_ == pytest.approx(expected, abs=1e-2)
+
+
 def test_roys_approx(pillai_data):
     for df in pillai_data["indep"]:
         test = RoysLargestRoot(data=df)

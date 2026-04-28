@@ -43,6 +43,8 @@ class PillaiTrace(_ResidualMixin, _BaseCITest):
     with numerator degrees of freedom :math:`df_1 = pq` and denominator degrees of freedom
     :math:`df_2 = s (n - 1 + s - p - q)`, where :math:`n` is the sample size.
 
+    The effect size is partial eta-squared: :math:`\eta^2 = V / s`.
+
     Parameters
     ----------
     data : pandas.DataFrame
@@ -60,6 +62,8 @@ class PillaiTrace(_ResidualMixin, _BaseCITest):
         Pillai's trace statistic :math:`V`. Set after calling the test.
     p_value_ : float
         The p-value for the test, computed via F-approximation. Set after calling the test.
+    effect_size_ : float
+        Partial eta-squared. Set after calling the test.
 
     References
     ----------
@@ -138,4 +142,4 @@ class PillaiTrace(_ResidualMixin, _BaseCITest):
         f_stat = (coef / df1) * (df2 / (s - coef))
         p_value = 1 - stats.f.cdf(f_stat, df1, df2)
 
-        return _CITestResult(statistic=coef, p_value=p_value)
+        return _CITestResult(statistic=coef, p_value=p_value, effect_size=coef / s)

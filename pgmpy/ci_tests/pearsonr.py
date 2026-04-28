@@ -22,6 +22,8 @@ class Pearsonr(_BaseCITest):
     hypothesis :math:`X \perp Y \mid Z`, this statistic is Student's t distribution with :math:`n - |Z| - 2` degrees of
     freedom.
 
+    The effect size is the absolute partial correlation :math:`|\rho_{XY \mid Z}|`.
+
     Parameters
     ----------
     data : pandas.DataFrame
@@ -51,6 +53,8 @@ class Pearsonr(_BaseCITest):
         ranging from -1 to 1. Set after calling the test.
     p_value_ : float
         The p-value for the test. Set after calling the test.
+    effect_size_ : float
+        Absolute partial correlation. Set after calling the test.
 
     References
     ----------
@@ -103,4 +107,4 @@ class Pearsonr(_BaseCITest):
             p_value = 2 * stats.t.sf(np.abs(t_statistic), df=dof)
             attributes["dof_"] = dof
 
-        return _CITestResult(statistic=coef, p_value=p_value, attributes=attributes)
+        return _CITestResult(statistic=coef, p_value=p_value, effect_size=abs(coef), attributes=attributes)
