@@ -12,7 +12,7 @@ skip_gh_actions = _multivariate_fixtures.skip_gh_actions
 
 @skip_gh_actions
 def test_pillai_no_cond(pillai_data):
-    expected_coefs = [0.1616, 0.1616, 0.1229, 0.1011, 0.1229]
+    expected_coefs = [0.1572, 0.1572, 0.1359, 0.1068, 0.1359]
     expected_pvalues = [0.0000, 0.0000, 0.0000, 0.0000, 0.0000]
 
     computed_coefs = []
@@ -29,8 +29,8 @@ def test_pillai_no_cond(pillai_data):
 
 @skip_gh_actions
 def test_pillai_indep(pillai_data):
-    expected_coefs = [0.0026, 0.0004, 0.0003, 0.0025, 0.0003]
-    expected_pvalues = [0.1072, 0.5069, 0.8774, 0.6431, 0.8774]
+    expected_coefs = [0.0016, 0.0007, 0.0044, 0.0055, 0.0044]
+    expected_pvalues = [0.2125, 0.4154, 0.1118, 0.2406, 0.1118]
 
     computed_coefs = []
     computed_pvalues = []

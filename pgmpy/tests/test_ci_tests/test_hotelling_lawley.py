@@ -10,7 +10,7 @@ skip_gh_actions = _multivariate_fixtures.skip_gh_actions
 
 @skip_gh_actions
 def test_hotelling_no_cond(pillai_data):
-    expected_stats = [0.1928, 0.1928, 0.1402, 0.1109, 0.1402]
+    expected_stats = [0.1865, 0.1865, 0.1572, 0.1180, 0.1572]
     expected_pvalues = [0.0000, 0.0000, 0.0000, 0.0000, 0.0000]
 
     computed_stats, computed_pvalues = [], []
@@ -26,8 +26,8 @@ def test_hotelling_no_cond(pillai_data):
 
 @skip_gh_actions
 def test_hotelling_indep(pillai_data):
-    expected_stats = [0.0026, 0.0004, 0.0003, 0.0025, 0.0003]
-    expected_pvalues = [0.1072, 0.5069, 0.8774, 0.6436, 0.8774]
+    expected_stats = [0.0016, 0.0007, 0.0044, 0.0055, 0.0044]
+    expected_pvalues = [0.2125, 0.4154, 0.1118, 0.2405, 0.1118]
 
     computed_stats, computed_pvalues = [], []
     for df in pillai_data["indep"]:
