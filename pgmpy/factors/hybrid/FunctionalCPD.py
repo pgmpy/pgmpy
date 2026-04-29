@@ -116,7 +116,7 @@ class FunctionalCPD(BaseFactor):
                 for i in range(n_samples):
                     row = parent_sample.iloc[i]
                     parents_t = {
-                        p: torch.as_tensor(row[p], dtype=getattr(torch, config.get_dtype()), device=config.get_device())
+                        p: torch.as_tensor(row[p], dtype=config.get_dtype(), device=config.get_device())
                         for p in self.parents
                     }
                     sampled_values.append(pyro.sample(f"{self.variable}", self.fn(parents_t)).item())
