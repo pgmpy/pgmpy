@@ -752,3 +752,21 @@ def test_stable_variant_order_independence():
         skeletons.append(edges)
 
     assert all(s == skeletons[0] for s in skeletons)
+
+
+@pytest.mark.parametrize("orient_rule", ["pvalue", "effect"])
+def test_orient_rule(orient_rule):
+    cancer_model = load_model("bnlearn/cancer")
+    data = cancer_model.simulate(n_samples=int(5e4), seed=42)
+
+    est = PC(
+        variant="stable",
+        ci_test="chi_square",
+        orient_rule=orient_rule,
+        show_progress=False,
+    )
+    est.fit(X=data)
+
+    pdag = est.causal_graph_
+    assert ("Pollution", "Cancer") in pdag.edges() or ("Cancer", "Pollution") in pdag.edges()
+    assert ("Smoker", "Cancer") in pdag.edges() or ("Cancer", "Smoker") in pdag.edges()
