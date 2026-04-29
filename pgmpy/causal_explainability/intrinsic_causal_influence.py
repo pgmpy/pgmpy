@@ -15,6 +15,11 @@ class IntrinsicCausalInfluence(_BaseAttribution):
     ----------
     functional : callable(np.ndarray) -> float, optional
         Default: np.var.
+
+    References
+    ----------
+    [1] Janzing, D., Minorics, L., & Blöbaum, P. (2020). Feature relevance
+        quantification in explainable AI: A causal problem. AISTATS 2020.
     """
 
     def __init__(self, functional=None):

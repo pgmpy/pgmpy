@@ -19,6 +19,16 @@ class ShapleyEngine:
         values that only average over causally consistent permutations.
     method : str
         "exact", "sampling", or "auto" (exact if n_players <= 15).
+
+    References
+    ----------
+    [1] Shapley, L. S. (1953). A value for n-person games. In Contributions
+        to the Theory of Games II, Annals of Mathematics Studies, 28,
+        307-317. Princeton University Press.
+    [2] Heskes, T., Bucur, E., Goethals, B., & Sijben, E. (2020). Causal
+        Shapley Values: Exploiting Causal Knowledge to Explain Individual
+        Predictions of Complex Models. NeurIPS 2020. (asymmetric/causal
+        ordering)
     """
 
     _AUTO_THRESHOLD = 15

@@ -14,6 +14,17 @@ class CausalShapleyValues(_BaseAttribution):
         "observational" — condition on coalition (standard SHAP).
         "interventional" — use do-operator for coalitions (Janzing 2020).
         "causal" — interventional for ancestors, observational for descendants (Heskes 2020).
+
+    References
+    ----------
+    [1] Lundberg, S. M. & Lee, S. I. (2017). A Unified Approach to
+        Interpreting Model Predictions. NeurIPS 2017. (observational)
+    [2] Janzing, D., Minorics, L., & Blöbaum, P. (2020). Feature relevance
+        quantification in explainable AI: A causal problem. AISTATS 2020.
+        (interventional)
+    [3] Heskes, T., Bucur, E., Goethals, B., & Sijben, E. (2020). Causal
+        Shapley Values: Exploiting Causal Knowledge to Explain Individual
+        Predictions of Complex Models. NeurIPS 2020. (causal)
     """
 
     def __init__(self, method="interventional"):

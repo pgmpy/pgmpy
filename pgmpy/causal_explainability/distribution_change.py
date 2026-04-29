@@ -27,6 +27,11 @@ class DistributionChangeAttribution(_BaseAttribution):
     ----------
     divergence : callable(P_samples, Q_samples) -> float, optional
         Default: KL divergence (closed-form for LinearGaussian, KDE otherwise).
+
+    References
+    ----------
+    [1] Budhathoki, K., Janzing, D., Blöbaum, P., & Ng, H. (2021). Why did
+        the distribution change? AISTATS 2021.
     """
 
     def __init__(self, divergence=None):

@@ -16,6 +16,11 @@ class CausalFeatureRelevance(_BaseAttribution):
         Statistical functional to decompose. Default: np.var.
     level : str
         "node" for single target, "graph" for all nodes.
+
+    References
+    ----------
+    [1] Janzing, D., Minorics, L., & Blöbaum, P. (2020). Feature relevance
+        quantification in explainable AI: A causal problem. AISTATS 2020.
     """
 
     def __init__(self, functional=None, level="node"):

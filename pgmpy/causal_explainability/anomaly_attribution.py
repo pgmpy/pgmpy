@@ -12,6 +12,11 @@ class AnomalyAttribution(_BaseAttribution):
     ----------
     anomaly_scorer : callable(observed, expected_samples) -> float, optional
         Default: squared normalized residual.
+
+    References
+    ----------
+    [1] Budhathoki, K., Janzing, D., Blöbaum, P., & Ng, H. (2022). Causal
+        structure-based root cause analysis of outliers. ICML 2022.
     """
 
     def __init__(self, anomaly_scorer=None):

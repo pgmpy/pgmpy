@@ -7,6 +7,12 @@ class UnitChangeAttribution(_BaseAttribution):
 
     For LinearGaussianBayesianNetwork: analytical decomposition beta_i * (Pa_i_new - Pa_i_old).
     For DiscreteBayesianNetwork: Shapley values over parent set.
+
+    References
+    ----------
+    [1] Shapley, L. S. (1953). A value for n-person games. In Contributions
+        to the Theory of Games II, Annals of Mathematics Studies, 28,
+        307-317. Princeton University Press.
     """
 
     def _validate(self, model, data, target):
