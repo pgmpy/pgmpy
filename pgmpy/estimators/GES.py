@@ -49,7 +49,7 @@ class GES(StructureEstimator):
 
     def __init__(self, data: pd.DataFrame, use_cache: bool = False, **kwargs):
         warnings.warn(
-            "GES is deprecated. Please use pgmpy.causal_discovery.GES instead.",
+            "GES is deprecated and will be removed in v1.3.0. Please use pgmpy.causal_discovery.GES instead.",
             FutureWarning,
             stacklevel=2,
         )

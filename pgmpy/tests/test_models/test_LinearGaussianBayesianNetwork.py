@@ -308,7 +308,7 @@ class TestLGBNMethods(unittest.TestCase):
     def test_fit_invalid_estimator(self):
         new_model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
         df = pd.DataFrame(np.random.randn(100, 3), columns=["x1", "x2", "x3"])
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             new_model.fit(df, estimator="unbiased")
 
     def test_predict_simple(self):

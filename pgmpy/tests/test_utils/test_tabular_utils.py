@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -47,8 +48,17 @@ def test_get_state_counts(dataset):
     ]
 
 
-def test_get_state_counts_missing_weight_column_error(dataset):
+def test_get_state_counts_with_sample_weight(dataset):
     state_names = build_state_names(dataset)
+    sample_weight = np.array([2.0, 1.0, 3.0])
 
-    with pytest.raises(ValueError, match="data must contain a `_weight` column if weighted=True"):
-        get_state_counts(dataset, state_names, variable="A", weighted=True)
+    assert get_state_counts(dataset, state_names, variable="A", sample_weight=sample_weight).values.tolist() == [
+        [3.0],
+        [3.0],
+    ]
+    assert get_state_counts(
+        dataset, state_names, variable="C", parents=("A", "B"), sample_weight=sample_weight
+    ).values.tolist() == [
+        [0.0, 0.0, 3.0, 0.0],
+        [2.0, 1.0, 0.0, 0.0],
+    ]

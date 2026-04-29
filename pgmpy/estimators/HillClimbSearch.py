@@ -50,7 +50,8 @@ class HillClimbSearch(StructureEstimator):
 
     def __init__(self, data: pd.DataFrame, use_cache: bool = True, **kwargs):
         warnings.warn(
-            "HillClimbSearch is deprecated. Please use pgmpy.causal_discovery.HillClimbSearch instead.",
+            """HillClimbSearch is deprecated and will be removed in v1.3.0. Please use
+            pgmpy.causal_discovery.HillClimbSearch instead.""",
             FutureWarning,
             stacklevel=2,
         )

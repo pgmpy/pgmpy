@@ -10,6 +10,7 @@ import pandas as pd
 
 from pgmpy import logger
 from pgmpy.base._mixin_roles import _GraphRolesMixin
+from pgmpy.ci_tests import get_ci_test
 from pgmpy.independencies import Independencies
 from pgmpy.utils.parser import parse_dagitty, parse_lavaan
 
@@ -1634,7 +1635,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             and self.get_role_dict() == other.get_role_dict()
         )
 
-    def edge_strength(self, data, edges=None):
+    def edge_strength(self, data, edges=None, ci_test=None):
         """
         Computes the strength of each edge in `edges`. The strength is bounded
         between 0 and 1, with 1 signifying strong effect.
@@ -1662,6 +1663,9 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             - None: Compute for all DAG edges.
             - Tuple (X, Y): Compute for edge X → Y.
             - List of tuples: Compute for selected edges.
+
+        ci_test : str or instance of _BaseCITest
+            The conditional independence test whose effect size to use as edge strength
 
         Returns
         -------
@@ -1703,8 +1707,6 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         on Artificial Intelligence.
         """
 
-        from pgmpy.estimators.CITests import pillai_trace
-
         # If edges is None, compute for all edges in the DAG
         if edges is None:
             edges_to_compute = list(self.edges())
@@ -1718,6 +1720,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             raise ValueError(
                 "edges parameter must be either None, a 2-tuple (X, Y), or a list of 2-tuples [(X1, Y1), (X2, Y2), ...]"
             )
+
+        ci_test = get_ci_test(test=ci_test, data=data)
 
         strengths = {}
         skipped_edges = []
@@ -1737,13 +1741,13 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             conditioning_set = set(pa_Y) - {x, y}
 
             # Run CI test and get effect size
-            effect_size, _ = pillai_trace(X=x, Y=y, Z=list(conditioning_set), data=data, boolean=False)
+            ci_test.run_test(X=x, Y=y, Z=tuple(conditioning_set))
 
             # Store the edge strength
-            strengths[edge] = effect_size
+            strengths[edge] = ci_test.effect_size_
 
             # store the values in the graph as well
-            self.edges[edge]["strength"] = effect_size
+            self.edges[edge]["strength"] = ci_test.effect_size_
 
         if skipped_edges:
             logger.warning(

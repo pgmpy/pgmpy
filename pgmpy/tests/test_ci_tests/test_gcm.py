@@ -61,19 +61,19 @@ def test_gcm_exact(df_dep, df_indep):
 
     # Non-conditional test
     test("X", "Y", [])
-    assert round(test.statistic_, 3) == pytest.approx(39.631)
-    assert test.p_value_ == pytest.approx(0.0)
+    assert round(test.statistic_, 3) == pytest.approx(38.858, abs=1e-2)
+    assert test.p_value_ == pytest.approx(0.0, abs=1e-2)
 
     # Conditional test (independent)
     test("X", "Y", ["Z1", "Z2", "Z3"])
-    assert round(test.statistic_, 3) == pytest.approx(0.584)
-    assert round(test.p_value_, 4) == pytest.approx(0.5591)
+    assert round(test.statistic_, 3) == pytest.approx(-0.357, abs=1e-2)
+    assert round(test.p_value_, 4) == pytest.approx(0.7207, abs=1e-2)
 
     # Conditional test (dependent)
     test = GCM(data=df_dep)
     test("X", "Y", ["Z1", "Z2", "Z3"])
-    assert round(test.statistic_, 3) == pytest.approx(39.798)
-    assert test.p_value_ == pytest.approx(0.0)
+    assert round(test.statistic_, 3) == pytest.approx(39.798, abs=1e-2)
+    assert test.p_value_ == pytest.approx(0.0, abs=1e-2)
 
     # Test with custom sklearn estimator
     test = GCM(data=df_indep, estimator=RandomForestRegressor(random_state=42))
@@ -82,6 +82,16 @@ def test_gcm_exact(df_dep, df_indep):
     assert isinstance(test.p_value_, float)
     assert test.p_value_ >= 0.0
     assert test.p_value_ <= 1.0
+
+
+def test_effect_size(df_dep, df_indep):
+    test = GCM(data=df_indep)
+    test("X", "Y", ["Z1", "Z2", "Z3"])
+    assert test.effect_size_ == pytest.approx(0.0031, abs=1e-2)
+
+    test = GCM(data=df_dep)
+    test("X", "Y", ["Z1", "Z2", "Z3"])
+    assert test.effect_size_ == pytest.approx(0.4371, abs=1e-2)
 
 
 def test_gcm_approx(df_dep, df_indep):

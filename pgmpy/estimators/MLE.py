@@ -1,3 +1,4 @@
+import warnings
 from collections.abc import Hashable
 from itertools import chain
 
@@ -52,6 +53,13 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         data: pd.DataFrame,
         **kwargs,
     ) -> None:
+        warnings.warn(
+            "`pgmpy.estimators.MaximumLikelihoodEstimator` is deprecated and will be removed in v1.3.0. "
+            "Please use `pgmpy.parameter_estimator.DiscreteMLE` instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
+
         if not isinstance(model, (DiscreteBayesianNetwork, JunctionTree, DAG)):
             raise NotImplementedError(
                 "Maximum Likelihood Estimate is only implemented for DiscreteBayesianNetwork, JunctionTree, and DAG"
