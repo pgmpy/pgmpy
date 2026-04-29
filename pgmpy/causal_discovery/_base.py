@@ -362,25 +362,29 @@ class _ConstraintMixin:
                 # In case of stable, precompute neighbors as this is the stable algorithm.
                 for u, v in graph.edges():
                     if (enforce_expert_knowledge is False) or ((u, v) not in expert_knowledge.required_edges):
+                        sep_vars = set()
+                        found_independence = False
                         for separating_set in self._get_potential_sepsets(
                             u, v, temporal_ordering, graph, lim_neighbors, neighbors=neighbors
                         ):
-                            # If a conditioning set exists remove the edge, store the
-                            # separating set and move on to finding conditioning set for next edge.
                             if ci_test(
                                 u,
                                 v,
                                 separating_set,
                                 significance_level=significance_level,
                             ):
-                                separating_sets[frozenset((u, v))] = separating_set
-                                edges_to_remove.append((u, v))
-                                break
+                                found_independence = True
+                                sep_vars.update(separating_set)
+                        if found_independence:
+                            separating_sets[frozenset((u, v))] = tuple(sorted(sep_vars, key=repr))
+                            edges_to_remove.append((u, v))
                 graph.remove_edges_from(edges_to_remove)
 
             elif variant == "parallel":
 
                 def _parallel_fun(u, v):
+                    sep_vars = set()
+                    found_independence = False
                     for separating_set in self._get_potential_sepsets(u, v, temporal_ordering, graph, lim_neighbors):
                         if ci_test(
                             u,
@@ -388,7 +392,10 @@ class _ConstraintMixin:
                             separating_set,
                             significance_level=significance_level,
                         ):
-                            return (u, v), separating_set
+                            found_independence = True
+                            sep_vars.update(separating_set)
+                    if found_independence:
+                        return (u, v), tuple(sorted(sep_vars, key=repr))
 
                 results = parallel_pool(
                     delayed(_parallel_fun)(u, v)
