@@ -333,7 +333,8 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
                             (temporal_ordering[Z] >= temporal_ordering[X])
                             and (temporal_ordering[Z] >= temporal_ordering[Y])
                         ):
-                            pdag.remove_edges_from([(Z, X), (Z, Y)])
+                            if pdag.has_edge(X, Z) and pdag.has_edge(Y, Z):
+                                pdag.remove_edges_from([(Z, X), (Z, Y)])
 
         edges = set(pdag.edges())
         undirected_edges = set()

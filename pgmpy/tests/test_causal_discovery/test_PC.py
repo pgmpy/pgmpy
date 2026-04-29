@@ -218,6 +218,18 @@ def test_skeleton_to_pdag():
         ("C", "D"),
     }
 
+    # A - B - C - D: two conflicting colliders at B and C.
+    # A->B<-C and B->C<-D conflict on the B-C edge. The second
+    # collider should be skipped so the edge is not deleted.
+    skel = nx.Graph([("A", "B"), ("B", "C"), ("C", "D")])
+    sep_sets = {
+        frozenset({"A", "C"}): tuple(),
+        frozenset({"A", "D"}): ("B",),
+        frozenset({"B", "D"}): tuple(),
+    }
+    pdag = PC()._orient_colliders(skeleton=skel, separating_sets=sep_sets)
+    assert set(pdag.edges()) == {("A", "B"), ("C", "B"), ("C", "D"), ("D", "C")}
+
 
 @pytest.mark.parametrize("variant", ["orig", "stable", "parallel"])
 def test_estimate_dag(variant):
