@@ -39,6 +39,10 @@ class GCM(_ResidualMixin, _BaseCITest):
         The p-value for the test. Set after calling the test.
     effect_size_ : float
         Cohen's d. Set after calling the test.
+    estimator_x_ : sklearn-compatible estimator
+        The fitted estimator used for predicting X.
+    estimator_y_ : sklearn-compatible estimator
+        The fitted estimator used for predicting Y.
 
     References
     ----------
@@ -71,8 +75,10 @@ class GCM(_ResidualMixin, _BaseCITest):
         Returns the t-statistic and p-value.
         """
         # Step 1: Compute residuals of X and Y given Z.
-        res_x = np.asarray(self.get_residuals(X, Z))
-        res_y = np.asarray(self.get_residuals(Y, Z))
+        res_x, self.estimator_x_ = self.get_residuals(X, Z)
+        res_y, self.estimator_y_ = self.get_residuals(Y, Z)
+        res_x = np.asarray(res_x)
+        res_y = np.asarray(res_y)
 
         # Step 2: Compute the Generalised Covariance Measure.
         n = res_x.shape[0]

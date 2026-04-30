@@ -26,7 +26,9 @@ def test_generalized_cov_statistic_matches_cross_covariance_determinant_for_squa
     test = GeneralizedCov(data=df_square, n_permutations=10, random_state=0)
     test.run_test("X", "Y", [])
 
-    expected = _manual_generalized_cov_statistic(test.get_residuals("X", []), test.get_residuals("Y", []))
+    res_x, _ = test.get_residuals("X", [])
+    res_y, _ = test.get_residuals("Y", [])
+    expected = _manual_generalized_cov_statistic(res_x, res_y)
 
     assert test.statistic_ == expected
 
@@ -36,10 +38,9 @@ def test_generalized_cov_statistic_matches_rectangular_generalization(pillai_dat
     test = GeneralizedCov(data=df_rectangular, n_permutations=10, random_state=0)
     test.run_test("X", "Y", ["Z1", "Z2", "Z3"])
 
-    expected = _manual_generalized_cov_statistic(
-        test.get_residuals("X", ["Z1", "Z2", "Z3"]),
-        test.get_residuals("Y", ["Z1", "Z2", "Z3"]),
-    )
+    res_x, _ = test.get_residuals("X", ["Z1", "Z2", "Z3"])
+    res_y, _ = test.get_residuals("Y", ["Z1", "Z2", "Z3"])
+    expected = _manual_generalized_cov_statistic(res_x, res_y)
 
     assert test.statistic_ == expected
 
