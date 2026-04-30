@@ -75,7 +75,7 @@ class _ResidualMixin:
             model.fit(Z_data, target_data)
             pred = model.predict(Z_data)
 
-        return pred, cat_index
+        return pred, cat_index, model
 
     def get_residuals(self, X: str, Z: list) -> pd.DataFrame | pd.Series:
         """
@@ -109,13 +109,15 @@ class _ResidualMixin:
         z_data_source = self.data.assign(_intercept_Z=np.ones(self.data.shape[0]))
 
         Z_data = pd.get_dummies(z_data_source.loc[:, z_cols])
-        pred, cat_index = self._fit_predict(X, Z_data)
+        pred, cat_index, estimator = self._fit_predict(X, Z_data)
 
         if self.dtypes[X] in ("C", "O"):
             dummies = pd.get_dummies(self.data.loc[:, X]).loc[:, cat_index.categories[cat_index.codes]]
-            return (dummies - pred).iloc[:, :-1]
+            residual = (dummies - pred).iloc[:, :-1]
         else:
-            return self.data.loc[:, X] - pred
+            residual = self.data.loc[:, X] - pred
+
+        return residual, estimator
 
 
 @dataclass(frozen=True)

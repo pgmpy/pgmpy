@@ -5,8 +5,7 @@ Tests for the sklearn-compatible GES class in pgmpy.causal_discovery.
 import numpy as np
 import pandas as pd
 import pytest
-import sempler
-import sempler.generators
+from skbase.utils.dependencies import _check_soft_dependencies
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.base import PDAG
@@ -193,6 +192,10 @@ class TestGESCore:
         assert hasattr(est, "feature_names_in_")
 
 
+@pytest.mark.skipif(
+    not _check_soft_dependencies("sempler", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestParityGES:
     """Tests for checking if results match the ges package (ref PR #3304 for details).
     Code to reproduce:
@@ -230,39 +233,42 @@ class TestParityGES:
         print(output_juan[0]-output_pgmpy_adj)
     """
 
-    # np.random.seed(0)
-    rng = np.random.default_rng(42)
-    A = sempler.generators.dag_avg_deg(9, 3, 1, 1, random_state=10)
-    W = A * rng.uniform(1, 2, A.shape)
-    obs_sample = sempler.LGANM(W, (1, 10), (0.5, 1), random_state=10).sample(n=1000, random_state=10)
+    def test_parity(self):
+        import sempler
+        import sempler.generators
 
-    data = pd.DataFrame(obs_sample, columns=[f"X{i}" for i in range(9)])
-    est = GES(scoring_method="bic-g").fit(data)
-    assert sorted(est.causal_graph_.nodes()) == ["X0", "X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8"]
-    assert sorted(est.causal_graph_.undirected_edges) == [("X3", "X1"), ("X6", "X0"), ("X6", "X3"), ("X7", "X2")]
-    assert sorted(est.causal_graph_.directed_edges) == [
-        ("X1", "X2"),
-        ("X1", "X4"),
-        ("X1", "X5"),
-        ("X1", "X7"),
-        ("X1", "X8"),
-        ("X2", "X8"),
-        ("X3", "X2"),
-        ("X3", "X4"),
-        ("X3", "X7"),
-        ("X3", "X8"),
-        ("X4", "X2"),
-        ("X4", "X5"),
-        ("X4", "X7"),
-        ("X4", "X8"),
-        ("X5", "X2"),
-        ("X5", "X7"),
-        ("X5", "X8"),
-        ("X6", "X2"),
-        ("X6", "X4"),
-        ("X6", "X7"),
-        ("X7", "X8"),
-    ]
+        rng = np.random.default_rng(42)
+        A = sempler.generators.dag_avg_deg(9, 3, 1, 1, random_state=10)
+        W = A * rng.uniform(1, 2, A.shape)
+        obs_sample = sempler.LGANM(W, (1, 10), (0.5, 1), random_state=10).sample(n=1000, random_state=10)
+
+        data = pd.DataFrame(obs_sample, columns=[f"X{i}" for i in range(9)])
+        est = GES(scoring_method="bic-g").fit(data)
+        assert sorted(est.causal_graph_.nodes()) == ["X0", "X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8"]
+        assert sorted(est.causal_graph_.undirected_edges) == [("X3", "X1"), ("X6", "X0"), ("X6", "X3"), ("X7", "X2")]
+        assert sorted(est.causal_graph_.directed_edges) == [
+            ("X1", "X2"),
+            ("X1", "X4"),
+            ("X1", "X5"),
+            ("X1", "X7"),
+            ("X1", "X8"),
+            ("X2", "X8"),
+            ("X3", "X2"),
+            ("X3", "X4"),
+            ("X3", "X7"),
+            ("X3", "X8"),
+            ("X4", "X2"),
+            ("X4", "X5"),
+            ("X4", "X7"),
+            ("X4", "X8"),
+            ("X5", "X2"),
+            ("X5", "X7"),
+            ("X5", "X8"),
+            ("X6", "X2"),
+            ("X6", "X4"),
+            ("X6", "X7"),
+            ("X7", "X8"),
+        ]
 
 
 def test_expert_knowledge_not_supported():

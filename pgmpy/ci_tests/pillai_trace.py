@@ -64,6 +64,10 @@ class PillaiTrace(_ResidualMixin, _BaseCITest):
         The p-value for the test, computed via F-approximation. Set after calling the test.
     effect_size_ : float
         Partial eta-squared. Set after calling the test.
+    estimator_x_ : sklearn-compatible estimator
+        The fitted estimator used for predicting X.
+    estimator_y_ : sklearn-compatible estimator
+        The fitted estimator used for predicting Y.
 
     References
     ----------
@@ -116,8 +120,8 @@ class PillaiTrace(_ResidualMixin, _BaseCITest):
             The p-value.
         """
         # Steps 1: Compute residuals of X and Y given Z.
-        res_x = self.get_residuals(X, Z)
-        res_y = self.get_residuals(Y, Z)
+        res_x, self.estimator_x_ = self.get_residuals(X, Z)
+        res_y, self.estimator_y_ = self.get_residuals(Y, Z)
 
         if isinstance(res_x, pd.Series):
             res_x = res_x.to_frame()

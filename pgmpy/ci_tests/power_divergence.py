@@ -159,16 +159,18 @@ class PowerDivergence(_BaseCITest):
         kx = self._cardinalities[X]
         ky = self._cardinalities[Y]
 
-        # Step 1: Densify the observed Z strata. For |Z|=0, all rows go into a single stratum.
+        # Step 1: Build flat index into an (n_strata, kx, ky) contingency table.
+        # For |Z|=0 all rows go into a single stratum. Otherwise use the full
+        # product space of Z cardinalities directly (avoids costly np.unique).
         if len(Z) == 0:
             z_idx = np.zeros(len(x_codes), dtype=np.int64)
             n_strata = 1
         else:
-            z_combined = np.zeros(len(x_codes), dtype=np.int64)
+            z_idx = np.zeros(len(x_codes), dtype=np.int64)
+            n_strata = 1
             for col in Z:
-                z_combined = z_combined * self._cardinalities[col] + self._codes[col]
-            unique_z, z_idx = np.unique(z_combined, return_inverse=True)
-            n_strata = unique_z.size
+                z_idx = z_idx * self._cardinalities[col] + self._codes[col]
+                n_strata *= self._cardinalities[col]
 
         # Step 2: Build the (n_strata, kx, ky) contingency table in one bincount.
         flat = (z_idx * kx + x_codes) * ky + y_codes
@@ -178,7 +180,8 @@ class PowerDivergence(_BaseCITest):
         row_sums = observed.sum(axis=2, keepdims=True)
         col_sums = observed.sum(axis=1, keepdims=True)
         n_per = observed.sum(axis=(1, 2), keepdims=True)
-        expected = row_sums * col_sums / n_per
+        with np.errstate(invalid="ignore"):
+            expected = row_sums * col_sums / n_per
         safe = expected > 0
 
         # Step 4: Per-stratum dof = (active_rows - 1) * (active_cols - 1).
@@ -201,7 +204,7 @@ class PowerDivergence(_BaseCITest):
         p_value = stats.chi2.sf(chi, df=dof)
 
         n = len(self.data)
-        k = min(self.data[X].nunique(), self.data[Y].nunique())
+        k = min(self._cardinalities[X], self._cardinalities[Y])
         effect_size = np.sqrt(chi / (n * max(k - 1, 1)))
 
         return _CITestResult(statistic=chi, p_value=p_value, effect_size=effect_size, attributes={"dof_": dof})

@@ -161,52 +161,54 @@ def test_build_skeleton_from_ind(variant):
 
 
 def test_skeleton_to_pdag():
+    pc = PC()
+
     # D - A - C - B  ==> D - A -> C <- B
-    skel = nx.Graph([("A", "D"), ("A", "C"), ("B", "C")])
-    sep_sets = {
+    pc.skeleton_ = nx.Graph([("A", "D"), ("A", "C"), ("B", "C")])
+    pc.separating_sets_ = {
         frozenset({"D", "C"}): ("A",),
         frozenset({"A", "B"}): tuple(),
         frozenset({"D", "B"}): ("A",),
     }
-    pdag = PC()._orient_colliders(skel, sep_sets)
+    pdag = pc._orient_colliders()
     pdag = pdag.apply_meeks_rules(apply_r4=False)
     assert set(pdag.edges()) == {("B", "C"), ("A", "D"), ("A", "C"), ("D", "A")}
 
     # C - A - B  ==> C -> A <- B
-    skel = nx.Graph([("A", "B"), ("A", "C")])
-    sep_sets = {frozenset({"B", "C"}): ()}
-    pdag = PC()._orient_colliders(skeleton=skel, separating_sets=sep_sets)
+    pc.skeleton_ = nx.Graph([("A", "B"), ("A", "C")])
+    pc.separating_sets_ = {frozenset({"B", "C"}): ()}
+    pdag = pc._orient_colliders()
     pdag = pdag.apply_meeks_rules(apply_r4=False)
     assert set(pdag.edges()) == {("B", "A"), ("C", "A")}
 
     # C - A - B ==> C - A - B
-    skel = nx.Graph([("A", "B"), ("A", "C")])
-    sep_sets = {frozenset({"B", "C"}): ("A",)}
-    pdag = PC()._orient_colliders(skeleton=skel, separating_sets=sep_sets)
+    pc.skeleton_ = nx.Graph([("A", "B"), ("A", "C")])
+    pc.separating_sets_ = {frozenset({"B", "C"}): ("A",)}
+    pdag = pc._orient_colliders()
     pdag = pdag.apply_meeks_rules(apply_r4=False)
     assert set(pdag.edges()) == {("A", "B"), ("B", "A"), ("A", "C"), ("C", "A")}
 
     # {A, B} - C - D ==> {A, B} -> C -> D
-    skel = nx.Graph([("A", "C"), ("B", "C"), ("C", "D")])
-    sep_sets = {
+    pc.skeleton_ = nx.Graph([("A", "C"), ("B", "C"), ("C", "D")])
+    pc.separating_sets_ = {
         frozenset({"A", "B"}): tuple(),
         frozenset({"A", "D"}): ("C",),
         frozenset({"B", "D"}): ("C",),
     }
-    pdag = PC()._orient_colliders(skeleton=skel, separating_sets=sep_sets)
+    pdag = pc._orient_colliders()
     pdag = pdag.apply_meeks_rules(apply_r4=False)
     assert set(pdag.edges()) == {("A", "C"), ("B", "C"), ("C", "D")}
 
     # C - A - B - {C, D} ==> C <- A -> B <- D; B -> C
-    skel = nx.Graph([("A", "B"), ("A", "C"), ("B", "C"), ("B", "D")])
-    sep_sets = {frozenset({"A", "D"}): tuple(), frozenset({"C", "D"}): ("A", "B")}
-    pdag = PC()._orient_colliders(skeleton=skel, separating_sets=sep_sets)
+    pc.skeleton_ = nx.Graph([("A", "B"), ("A", "C"), ("B", "C"), ("B", "D")])
+    pc.separating_sets_ = {frozenset({"A", "D"}): tuple(), frozenset({"C", "D"}): ("A", "B")}
+    pdag = pc._orient_colliders()
     pdag = pdag.apply_meeks_rules(apply_r4=False)
     assert set(pdag.edges()) == {("A", "B"), ("B", "C"), ("A", "C"), ("D", "B")}
 
-    skel = nx.Graph([("A", "B"), ("B", "C"), ("A", "D"), ("B", "D"), ("C", "D")])
-    sep_sets = {frozenset({"A", "C"}): ("B",)}
-    pdag = PC()._orient_colliders(skeleton=skel, separating_sets=sep_sets)
+    pc.skeleton_ = nx.Graph([("A", "B"), ("B", "C"), ("A", "D"), ("B", "D"), ("C", "D")])
+    pc.separating_sets_ = {frozenset({"A", "C"}): ("B",)}
+    pdag = pc._orient_colliders()
     pdag = pdag.apply_meeks_rules(apply_r4=False)
     assert set(pdag.edges()) == {
         ("A", "B"),
@@ -217,6 +219,18 @@ def test_skeleton_to_pdag():
         ("B", "D"),
         ("C", "D"),
     }
+
+    # A - B - C - D: two conflicting colliders at B and C.
+    # A->B<-C and B->C<-D conflict on the B-C edge. The second
+    # collider should be skipped so the edge is not deleted.
+    pc.skeleton_ = nx.Graph([("A", "B"), ("B", "C"), ("C", "D")])
+    pc.separating_sets_ = {
+        frozenset({"A", "C"}): tuple(),
+        frozenset({"A", "D"}): ("B",),
+        frozenset({"B", "D"}): tuple(),
+    }
+    pdag = pc._orient_colliders()
+    assert set(pdag.edges()) == {("A", "B"), ("C", "B"), ("C", "D"), ("D", "C")}
 
 
 @pytest.mark.parametrize("variant", ["orig", "stable", "parallel"])
@@ -740,3 +754,21 @@ def test_stable_variant_order_independence():
         skeletons.append(edges)
 
     assert all(s == skeletons[0] for s in skeletons)
+
+
+@pytest.mark.parametrize("orient_rule", ["pvalue", "effect"])
+def test_orient_rule(orient_rule):
+    cancer_model = load_model("bnlearn/cancer")
+    data = cancer_model.simulate(n_samples=int(5e4), seed=42)
+
+    est = PC(
+        variant="stable",
+        ci_test="chi_square",
+        orient_rule=orient_rule,
+        show_progress=False,
+    )
+    est.fit(X=data)
+
+    pdag = est.causal_graph_
+    assert ("Pollution", "Cancer") in pdag.edges() or ("Cancer", "Pollution") in pdag.edges()
+    assert ("Smoker", "Cancer") in pdag.edges() or ("Cancer", "Smoker") in pdag.edges()

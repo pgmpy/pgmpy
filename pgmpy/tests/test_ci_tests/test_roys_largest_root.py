@@ -110,8 +110,8 @@ def test_roys_matches_muller_peterson_eq_28_for_p_not_equal_q():
     test = RoysLargestRoot(data=data)
     test.run_test("X", "Y", ["Z"])
 
-    res_x = test.get_residuals("X", ["Z"])
-    res_y = test.get_residuals("Y", ["Z"])
+    res_x, _ = test.get_residuals("X", ["Z"])
+    res_y, _ = test.get_residuals("Y", ["Z"])
 
     if isinstance(res_x, pd.Series):
         res_x = res_x.to_frame()
