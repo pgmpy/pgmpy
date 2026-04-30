@@ -58,6 +58,14 @@ class TestRefactoredBayesianNetwork:
 
         assert model.get_node("B").roles == {"instrument"}
 
+    def test_local_model_is_stored_in_networkx_node_data(self):
+        model = BayesianNetwork()
+        local_model = object()
+        model.add_node("B", local_model=local_model)
+
+        assert model.nodes["B"]["local_model"] is local_model
+        assert model.get_node("B").local_model is local_model
+
 
     def test_get_node_string_representation_is_readable(self):
         model = BayesianNetwork([("B", "F")], roles={"instrument": ["B"]})
