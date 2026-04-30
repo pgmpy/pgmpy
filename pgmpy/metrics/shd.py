@@ -6,27 +6,28 @@ from pgmpy.metrics import _BaseSupervisedMetric
 
 
 class SHD(_BaseSupervisedMetric):
-    """
-    Computes the Structural Hamming Distance between `true_causal_graph` and `est_causal_graph`.
+    r"""
+    Computes the Structural Hamming Distance (SHD) between two graphs.
 
-    SHD is defined as total number of basic operations: adding edges, removing edges, and reversing edges required to
-    transform one graph to the other. It is a symmetrical measure.
+    Given two graphs (DAGs or PDAGs) :math:`G_1` and :math:`G_2` over the same vertex set, let :math:`S(G)` denote the
+    skeleton (underlying undirected graph) of :math:`G`. The SHD is:
 
-    The code first accounts for edges that need to be deleted (from true_model), added (to true_model) and finally edges
-    that need to be reversed. All operations count as 1. Alternatively, setting `edge_reverse_penalty=2` counts
-    reversals as a distance of 2 (one deletion and one addition).
+    .. math::
 
-    Both fully-directed :class:`~pgmpy.base.DAG` and partially-directed :class:`~pgmpy.base.PDAG` inputs are supported.
-    For PDAGs, an undirected edge is represented internally as edges in both directions; orientation mismatches of any
-    kind (directed vs. reversed directed, directed vs. undirected) on a shared skeleton edge each count as one
-    operation — the same convention ``pcalg::shd`` uses in R.
+        \text{SHD}(G_1, G_2) = |S(G_1) \triangle S(G_2)|
+            + p \cdot |\{e \in S(G_1) \cap S(G_2) :
+            \text{orient}(e, G_1) \neq \text{orient}(e, G_2)\}|
+
+    where :math:`\triangle` js the symmetric difference and :math:`p` is the ``edge_reverse_penalty`` (default 1; set to
+    2 to count a reversal as one deletion plus one addition).
+
+    For PDAGs, an undirected edge is represented as a pair of directed edges, so any orientation mismatch on a shared
+    skeleton edge counts as one operation.
 
     Parameters
     ----------
     edge_reverse_penalty: int (default: 1)
-        The penalty for edge reversals. When set to 1, all basic operations (add,
-        delete, reverse) count as 1. When set to 2, additions and deletions count
-        as 1, while reversals count as 2.
+        Penalty :math:`p` for orientation mismatches on shared skeleton edges.
 
     Examples
     --------
@@ -41,8 +42,7 @@ class SHD(_BaseSupervisedMetric):
     >>> shd_double(true_causal_graph=dag1, est_causal_graph=dag2)
     2
 
-    PDAGs are also supported — an undirected edge in one graph compared against a directed edge in the other
-    counts as one orientation mismatch:
+    PDAGs are also supported:
 
     >>> from pgmpy.base import PDAG
     >>> pdag1 = PDAG(directed_ebunch=[(1, 2)], undirected_ebunch=[(2, 3)])
