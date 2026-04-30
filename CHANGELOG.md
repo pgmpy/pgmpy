@@ -4,6 +4,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-04-30
+### Added
+1. Prioritization option for PC orientation to control rule application order (#3363).
+2. Effect sizes for CI tests (#3358).
+3. Caching support to CI tests for faster repeated queries (#3349).
+4. New CI tests (#3344).
+5. Estimator argument to Pillai Trace CI test (#3072).
+6. `DAG.get_random` can now generate graphs with a fixed number of edges (#3086).
+7. Causal stats in `DAG.get_stats()` method (#3143).
+8. Exposes estimators as attributes in residual based CI tests (#3367).
+
+### Changed
+1. Optimizes `power_divergence` test and PC algorithm for better performance (#3356).
+2. Refactors parameter estimation methods into a dedicated `pgmpy.parameter_estimator` package (#3325).
+3. Refactors `SHD` to accept covariant arguments in `__init__` for composability (#3310).
+4. Improves deprecation warning messages (#3343).
+5. Uses combinations instead of permutations in `_orient_colliders` for better performance (#3195).
+6. Revamps documentation website (#2615).
+7. Reject negative probability values in `is_valid_cpd` (#3052).
+
+### Fixed
+1. Fixes bug in collider orientation for PC (#3362).
+2. Fixes edge orientation in GES (#3304).
+3. Fixes GES forward/backward/turning phases to be deterministic across hash seeds (#3303).
+4. Fixes `__eq__` to check structure equality in `LinearGaussianBayesianNetwork` (#3276).
+5. Fixes incorrect `has_missing_data` tag for tubingen dataset (#3231).
+6. Fixes minor typo in ValueError messages in `state_name.py` (#3309).
+7. Fixes failing doctests in `BIF`, `NET`, `XMLBIF`, and `UAI` readwrite modules (#3226, #3230, #3262, #3263).
+
 ## [1.1.0] - 2026-04-01
 ### Added
 1. New role-aware causal graph infrastructure, including `PDAG`, `ADMG`, `MAG`, `AncestralBase`, and `SimpleCausalModel`.

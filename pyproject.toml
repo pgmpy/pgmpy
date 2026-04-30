@@ -1,6 +1,6 @@
 [project]
 name = "pgmpy"
-version = "1.1.0"
+version = "1.1.1"
 description = "Python Toolkit for Causal and Probabilistic Reasoning"
 readme = "README.md"
 license = { file = "LICENSE" }
