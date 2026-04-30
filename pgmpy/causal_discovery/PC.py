@@ -4,7 +4,7 @@ from itertools import combinations
 import networkx as nx
 import pandas as pd
 
-from pgmpy.base import PDAG, UndirectedGraph
+from pgmpy.base import PDAG
 from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery, _ConstraintMixin
 from pgmpy.ci_tests import get_ci_test
@@ -235,7 +235,7 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
         """
 
         # CI test
-        ci_test = get_ci_test(test=self.ci_test, data=X)
+        self.ci_test_ = get_ci_test(test=self.ci_test, data=X)
 
         if self.expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
@@ -250,7 +250,7 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
             data=X,
             independencies=independencies,
             variant=self.variant,
-            ci_test=ci_test,
+            ci_test=self.ci_test_,
             significance_level=self.significance_level,
             max_cond_vars=self.max_cond_vars,
             expert_knowledge=expert_knowledge,
@@ -261,13 +261,7 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
 
         # Step 2: Use separating sets to orient colliders
         pdag = self._orient_colliders(
-            skeleton=self.skeleton_,
-            separating_sets=self.separating_sets_,
             temporal_ordering=expert_knowledge.temporal_ordering,
-            orient_rule=self.orient_rule,
-            ci_test=ci_test,
-            significance_level=self.significance_level,
-            max_cond_vars=self.max_cond_vars,
         )
 
         # Step 3: apply orientation rules and expert knowledge
@@ -294,15 +288,9 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
 
         return self
 
-    @staticmethod
     def _orient_colliders(
-        skeleton: UndirectedGraph,
-        separating_sets: dict[frozenset, set],
+        self,
         temporal_ordering: dict[Hashable, int] = dict(),
-        orient_rule: str | None = None,
-        ci_test: Callable | None = None,
-        significance_level: float = 0.01,
-        max_cond_vars: int = 5,
     ) -> PDAG:
         """
         Orients the edges that form v-structures in a graph skeleton to form a PDAG.
@@ -315,31 +303,13 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
         ``"effect"``, CI tests are run over all subsets of neighbors (MaxP) and
         candidates are sorted by strength before orienting.
 
+        Uses ``self.skeleton_``, ``self.separating_sets_``, ``self.orient_rule``,
+        ``self.ci_test_``, ``self.significance_level``, and ``self.max_cond_vars``.
+
         Parameters
         ----------
-        skeleton : UndirectedGraph
-            An undirected graph skeleton.
-
-        separating_sets : dict
-            A dict containing for each pair of not directly connected nodes a
-            separating set of variables that makes them conditionally independent.
-
         temporal_ordering : dict, optional
             Temporal ordering of variables for filtering collider candidates.
-
-        orient_rule : str or None, optional
-            ``None`` for separating-set based, ``"pvalue"`` for MaxP with p-values,
-            ``"effect"`` for MaxP with effect sizes.
-
-        ci_test : callable or None, optional
-            CI test instance. Required when ``orient_rule`` is not ``None``.
-
-        significance_level : float, optional
-            Significance level for CI tests.
-
-        max_cond_vars : int, optional
-            Maximum conditioning set size for the powerset CI tests used by
-            ``orient_rule="pvalue"`` and ``orient_rule="effect"``.
 
         Returns
         -------
@@ -361,10 +331,14 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
         >>> from pgmpy.example_models import load_model
         >>> df = load_model("bnlearn/cancer").simulate(int(1e3), seed=42)
         >>> est = PC(ci_test='chi_square').fit(df)
-        >>> pdag = est._orient_colliders(est.skeleton_, est.separating_sets_)
+        >>> pdag = est._orient_colliders()
         >>> sorted(pdag.edges())
         [('Pollution', 'Cancer'), ('Xray', 'Cancer')]
         """
+
+        skeleton = self.skeleton_
+        separating_sets = self.separating_sets_
+        orient_rule = self.orient_rule
 
         pdag = skeleton.to_directed()
 
@@ -380,6 +354,10 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
                                 if pdag.has_edge(X, Z) and pdag.has_edge(Y, Z):
                                     pdag.remove_edges_from([(Z, X), (Z, Y)])
         else:
+            ci_test = self.ci_test_
+            significance_level = self.significance_level
+            max_cond_vars = self.max_cond_vars
+
             candidates = []
             for X, Y in combinations(sorted(pdag.nodes()), 2):
                 if not skeleton.has_edge(X, Y):
