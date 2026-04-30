@@ -94,19 +94,15 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
         The maximum number conditional variables to consider while performing conditional independence tests.
 
     orient_rule : str or None, default=None
-        The rule for orienting colliders (v-structures). When ``None``, the standard separating-set based
-        approach is used. When set to ``"pvalue"`` or ``"effect"``, the MaxP approach [7]_ is used with a
-        prioritize-stronger ordering to resolve conflicts:
+        The rule for orienting colliders (v-structures) when there is a conflict.
 
-        - ``None``: A common neighbor ``Z`` of non-adjacent ``X``, ``Y`` is oriented as a collider
-          (``X`` -> ``Z`` <- ``Y``) if ``Z`` is not in the separating set found during skeleton discovery.
-        - ``"pvalue"``: For each candidate collider ``Z``, CI tests are run over all subsets ``S`` of the
-          neighbors. ``Z`` is a collider if the maximum p-value over subsets not containing ``Z`` exceeds
-          the maximum over subsets containing ``Z``. Candidates are sorted by strength (strongest evidence
-          first) to resolve conflicts.
-        - ``"effect"``: Same as ``"pvalue"`` but uses effect sizes instead of p-values. ``Z`` is a collider
-          if the minimum effect size over subsets not containing ``Z`` is less than the minimum over subsets
-          containing ``Z``.
+        - ``None``: The first orientation is kept, later conflicting orientations are ignored.
+        - ``"pvalue"``: For each candidate collider at ``Z``, CI tests are run over all subsets ``S`` of the neighbors.
+          ``Z`` is considered a collider if the maximum p-value over subsets not containing ``Z`` exceeds the maximum
+          over subsets containing ``Z``. Candidate colliders are then sorted by strength (highest p-value first) to
+          resolve conflicts.
+        - ``"effect"``: Same as ``"pvalue"`` but uses effect sizes instead of p-values for testing colliders and
+          resolving conflicts.
 
     expert_knowledge : :class:`pgmpy.estimators.ExpertKnowledge`, optional
         Expert knowledge to be used in the causal graph construction. This needs to be an instance of
@@ -194,7 +190,7 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
            PCs." IEEE/ACM transactions on computational biology and bioinformatics (2016).
     .. [6] Expert Knowledge: Meek, Christopher. "Causal inference and causal explanation with background knowledge."
            arXiv preprint arXiv:1302.4972 (2013).
-    .. [7] MaxP: Ramsey, J. (2016). "Improving accuracy and scalability of the pc algorithm by maximizing p-value."
+    .. [7] Ramsey, J. (2016). "Improving accuracy and scalability of the pc algorithm by maximizing p-value."
            arXiv preprint arXiv:1610.00378.
     """
 
@@ -265,9 +261,9 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
 
         # Step 2: Use separating sets to orient colliders
         pdag = self._orient_colliders(
-            self.skeleton_,
-            self.separating_sets_,
-            expert_knowledge.temporal_ordering,
+            skeleton=self.skeleton_,
+            separating_sets=self.separating_sets_,
+            temporal_ordering=expert_knowledge.temporal_ordering,
             orient_rule=self.orient_rule,
             ci_test=ci_test,
             significance_level=self.significance_level,
