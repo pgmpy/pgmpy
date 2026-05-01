@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from mock import MagicMock, patch
+from mock import ANY, MagicMock, patch
 
 from pgmpy.factors.discrete import DiscreteFactor, State, TabularCPD
 from pgmpy.inference import VariableElimination
@@ -158,7 +158,7 @@ def test_sample_less_arg(random_state, gibbs):
         State("grade", 0),
     ]
     sample = gibbs.sample(size=2)
-    random_state.assert_called_once_with(gibbs)
+    random_state.assert_called_once_with(gibbs, seed=ANY)
     assert len(sample) == 2
 
 
@@ -184,5 +184,5 @@ def test_generate_sample_less_arg(random_state, gibbs):
     gibbs.state = None
     gen = gibbs.generate_sample(size=2)
     samples = [sample for sample in gen]
-    random_state.assert_called_once_with(gibbs)
+    random_state.assert_called_once_with(gibbs, seed=ANY)
     assert len(samples) == 2

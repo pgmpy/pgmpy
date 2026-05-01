@@ -4,7 +4,7 @@ import unittest
 
 import numpy as np
 import pytest
-from mock import call, patch
+from mock import ANY, call, patch
 from pandas import DataFrame
 
 from pgmpy.factors.discrete import State
@@ -219,7 +219,7 @@ class TestMarkovChain(unittest.TestCase):
         model = MC(["a", "b"], [2, 2])
         random_state.return_value = [State("a", 0), State("b", 1)]
         sample = model.sample(size=1)
-        random_state.assert_called_once_with(model)
+        random_state.assert_called_once_with(model, seed=ANY)
         self.assertEqual(model.state, random_state.return_value)
         self.assertEqual(len(sample), 1)
         self.assertEqual(list(sample.columns), ["a", "b"])
@@ -282,6 +282,42 @@ class TestMarkovChain(unittest.TestCase):
         expected_samples = [[State("a", 1), State("b", 0)]] * 2
         self.assertEqual(samples, expected_samples)
 
+    def test_sample_seed_reproducibility(self):
+        model = MC(["a", "b"], [2, 2])
+        model.transition_models["a"] = {0: {0: 0.1, 1: 0.9}, 1: {0: 0.2, 1: 0.8}}
+        model.transition_models["b"] = {0: {0: 0.3, 1: 0.7}, 1: {0: 0.4, 1: 0.6}}
+        model.set_start_state([State("a", 0), State("b", 0)])
+
+        df1 = model.sample(size=10, seed=42)
+        model.set_start_state([State("a", 0), State("b", 0)])
+        df2 = model.sample(size=10, seed=42)
+        model.set_start_state([State("a", 0), State("b", 0)])
+        df3 = model.sample(size=10, seed=99)
+
+        # Same seed -> identical results
+        self.assertTrue(df1.equals(df2))
+        # Different seeds -> different results
+        self.assertFalse(df1.equals(df3))
+
+    def test_generate_sample_seed_reproducibility(self):
+        model = MC(["a"], [2])
+        model.transition_models["a"] = {0: {0: 0.5, 1: 0.5}, 1: {0: 0.5, 1: 0.5}}
+        model.set_start_state([State("a", 0)])
+
+        gen1 = model.generate_sample(size=10, seed=42)
+        samples1 = [s[0].state for s in gen1]
+        model.set_start_state([State("a", 0)])
+        gen2 = model.generate_sample(size=10, seed=42)
+        samples2 = [s[0].state for s in gen2]
+        model.set_start_state([State("a", 0)])
+        gen3 = model.generate_sample(size=10, seed=99)
+        samples3 = [s[0].state for s in gen3]
+
+        # Same seed -> identical results
+        self.assertEqual(samples1, samples2)
+        # Different seeds -> different results (very likely with 10 samples)
+        self.assertNotEqual(samples1, samples3)
+
     def test_random_state(self):
         model = MC(["a", "b"], [2, 3])
         state = model.random_state()
@@ -291,6 +327,31 @@ class TestMarkovChain(unittest.TestCase):
         self.assertGreaterEqual(state[1].state, 0)
         self.assertLessEqual(state[0].state, 1)
         self.assertLessEqual(state[1].state, 2)
+
+    def test_random_state_seed_reproducibility(self):
+        model = MC(["a", "b"], [2, 3])
+        state1 = model.random_state(seed=42)
+        state2 = model.random_state(seed=42)
+        state3 = model.random_state(seed=99)
+        self.assertEqual(state1, state2)
+
+    def test_sample_seed_no_start_state(self):
+        model = MC(["a", "b"], [2, 2])
+        model.transition_models["a"] = {0: {0: 0.1, 1: 0.9}, 1: {0: 0.2, 1: 0.8}}
+        model.transition_models["b"] = {0: {0: 0.3, 1: 0.7}, 1: {0: 0.4, 1: 0.6}}
+
+        # Test sample without setting start_state beforehand
+        df1 = model.sample(size=10, seed=42)
+        model.state = None  # Reset state
+        df2 = model.sample(size=10, seed=42)
+        self.assertTrue(df1.equals(df2))
+
+        # Test generate_sample without setting start_state beforehand
+        model.state = None
+        gen1 = list(model.generate_sample(size=5, seed=42))
+        model.state = None
+        gen2 = list(model.generate_sample(size=5, seed=42))
+        self.assertEqual(gen1, gen2)
 
     def test_add_transition_model_invalid_variable(self):
         model = MC()

@@ -284,9 +284,11 @@ class MarkovChain:
         >>> list(df.columns)
         ['intel', 'diff']
         """
+        rng = np.random.default_rng(seed)
+
         if start_state is None:
             if self.state is None:
-                self.state = self.random_state()
+                self.state = self.random_state(seed=int(rng.integers(0, 2**31)))
             # else use previously-set state
         else:
             self.set_start_state(start_state)
@@ -301,7 +303,12 @@ class MarkovChain:
             for st in self.transition_models[var]:
                 var_states[var][st] = list(self.transition_models[var][st].keys())
                 var_values[var][st] = list(self.transition_models[var][st].values())
-                samples[var][st] = sample_discrete(var_states[var][st], var_values[var][st], size=size, seed=seed)
+                samples[var][st] = sample_discrete(
+                    var_states[var][st],
+                    var_values[var][st],
+                    size=size,
+                    seed=int(rng.integers(0, 2**31)),
+                )
 
         for i in range(size - 1):
             for j, (var, st) in enumerate(self.state):
@@ -380,9 +387,11 @@ class MarkovChain:
         [[State(var='intel', state=2), State(var='diff', state=1)],
          [State(var='intel', state=2), State(var='diff', state=0)]]
         """
+        rng = np.random.default_rng(seed)
+
         if start_state is None:
             if self.state is None:
-                self.state = self.random_state()
+                self.state = self.random_state(seed=int(rng.integers(0, 2**31)))
             # else use previously-set state
         else:
             self.set_start_state(start_state)
@@ -393,7 +402,7 @@ class MarkovChain:
                 next_st = sample_discrete(
                     list(self.transition_models[var][st].keys()),
                     list(self.transition_models[var][st].values()),
-                    seed=seed,
+                    seed=int(rng.integers(0, 2**31)),
                 )[0]
                 self.state[j] = State(var, next_st)
             yield self.state[:]
@@ -456,9 +465,14 @@ class MarkovChain:
 
         return return_val
 
-    def random_state(self):
+    def random_state(self, seed=None):
         """
         Generates a random state of the Markov Chain.
+
+        Parameters
+        ----------
+        seed: int (default: None)
+            If a value is provided, sets the seed for the random number generator.
 
         Returns
         -------
@@ -471,7 +485,8 @@ class MarkovChain:
         >>> model.random_state() # doctest: +SKIP
         [State(var='diff', state=2), State(var='intel', state=1)]
         """
-        return [State(var, np.random.randint(self.cardinalities[var])) for var in self.variables]
+        rng = np.random.default_rng(seed)
+        return [State(var, rng.integers(self.cardinalities[var])) for var in self.variables]
 
     def copy(self):
         """

@@ -137,13 +137,20 @@ class TestApproxInferenceDBN(unittest.TestCase):
 
     def test_inference(self):
         res1 = self.infer.query([("Y", 1)], seed=42)
-        expected1 = DiscreteFactor([("Y", 1)], [2], [0.2259, 0.7741])
+        expected1 = DiscreteFactor([("Y", 1)], [2], [0.765, 0.235], state_names={("Y", 1): [1, 0]})
         self.assertTrue(res1.__eq__(expected1, atol=0.01))
         res2 = self.infer.query([("Y", 0), ("Y", 1)], seed=42)
-        expected2 = DiscreteFactor([("Y", 0), ("Y", 1)], [2, 2], [0.0510, 0.1763, 0.1698, 0.6029])
+        expected2 = DiscreteFactor(
+            [("Y", 0), ("Y", 1)], [2, 2], [0.596, 0.181, 0.169, 0.054], state_names={("Y", 0): [1, 0], ("Y", 1): [1, 0]}
+        )
         self.assertTrue(res2.__eq__(expected2, atol=0.01))
         res3 = self.infer.query([("Y", 1), ("Y", 5)], seed=42)
-        expected3 = DiscreteFactor([("Y", 1), ("Y", 5)], [2, 2], [0.0476, 0.1732, 0.1762, 0.6030])
+        expected3 = DiscreteFactor(
+            [("Y", 1), ("Y", 5)],
+            [2, 2],
+            [0.5885, 0.1765, 0.1831, 0.0519],
+            state_names={("Y", 1): [1, 0], ("Y", 5): [1, 0]},
+        )
         self.assertTrue(res3.__eq__(expected3, atol=0.01))
 
     def test_evidence(self):
@@ -308,13 +315,20 @@ class TestApproxInferenceDBNTorch(unittest.TestCase):
 
     def test_inference(self):
         res1 = self.infer.query([("Y", 1)], seed=42)
-        expected1 = DiscreteFactor([("Y", 1)], [2], [0.2259, 0.7741])
+        expected1 = DiscreteFactor([("Y", 1)], [2], [0.765, 0.235], state_names={("Y", 1): [1, 0]})
         self.assertTrue(res1.__eq__(expected1, atol=0.01))
         res2 = self.infer.query([("Y", 0), ("Y", 1)], seed=42)
-        expected2 = DiscreteFactor([("Y", 0), ("Y", 1)], [2, 2], [0.0510, 0.1763, 0.1698, 0.6029])
+        expected2 = DiscreteFactor(
+            [("Y", 0), ("Y", 1)], [2, 2], [0.596, 0.181, 0.169, 0.054], state_names={("Y", 0): [1, 0], ("Y", 1): [1, 0]}
+        )
         self.assertTrue(res2.__eq__(expected2, atol=0.01))
         res3 = self.infer.query([("Y", 1), ("Y", 5)], seed=42)
-        expected3 = DiscreteFactor([("Y", 1), ("Y", 5)], [2, 2], [0.0476, 0.1732, 0.1762, 0.6030])
+        expected3 = DiscreteFactor(
+            [("Y", 1), ("Y", 5)],
+            [2, 2],
+            [0.5885, 0.1765, 0.1831, 0.0519],
+            state_names={("Y", 1): [1, 0], ("Y", 5): [1, 0]},
+        )
         self.assertTrue(res3.__eq__(expected3, atol=0.01))
 
     def test_evidence(self):
