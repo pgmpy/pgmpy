@@ -244,7 +244,7 @@ class BaseConstraintEstimator(StructureEstimator):
                         ):
                             return (u, v), separating_set
 
-                results = Parallel(n_jobs=n_jobs, prefer="threads")(
+                results = Parallel(n_jobs=n_jobs)(
                     delayed(_parallel_fun)(u, v)
                     for (u, v) in graph.edges()
                     if (enforce_expert_knowledge is False) or ((u, v) not in expert_knowledge.required_edges)

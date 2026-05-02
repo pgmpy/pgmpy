@@ -1,4 +1,5 @@
 import logging
+import sys
 
 import networkx as nx
 import numpy as np
@@ -348,6 +349,7 @@ requires_xgboost = pytest.mark.skipif(
 
 
 @requires_xgboost
+@pytest.mark.skipif(sys.platform == "darwin", reason="Parallel BLAS deadlocks on macOS")
 @pytest.mark.parametrize("variant", ["orig", "stable", "parallel"])
 @pytest.mark.parametrize("ci_test", ["pearsonr", "pillai", "gcm"])
 def test_build_skeleton_continuous(ci_test, variant):
