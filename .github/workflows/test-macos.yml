@@ -30,4 +30,4 @@ jobs:
         run: pip install .[all,tests]
 
       - name: Run PC tests
-        run: pytest -x -v pgmpy/tests/test_estimators/test_PC.py pgmpy/tests/test_causal_discovery/test_PC.py --timeout=120
+        run: pytest -x -v pgmpy
