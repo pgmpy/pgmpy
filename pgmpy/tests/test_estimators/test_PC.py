@@ -4,7 +4,6 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import pytest
-from joblib.externals.loky import get_reusable_executor
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.estimators import PC, ExpertKnowledge
@@ -12,12 +11,6 @@ from pgmpy.example_models import load_model
 from pgmpy.independencies import Independencies
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.sampling import BayesianModelSampling
-
-
-@pytest.fixture(autouse=True)
-def shutdown_executor():
-    yield
-    get_reusable_executor().shutdown(wait=True)
 
 
 @pytest.fixture
