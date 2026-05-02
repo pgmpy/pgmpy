@@ -101,7 +101,7 @@ def test_build_skeleton_from_ind(variant):
         variant=variant,
         ci_test="independence_match",
         return_type="pdag",
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
     estimator.fit(
@@ -125,7 +125,7 @@ def test_build_skeleton_from_ind(variant):
         variant=variant,
         ci_test="independence_match",
         return_type="pdag",
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
 
@@ -246,7 +246,7 @@ def test_estimate_dag(variant):
         variant="orig",
         ci_test="independence_match",
         return_type="dag",
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     ).fit(data, independencies=ind)
 
@@ -262,7 +262,7 @@ def test_estimate_dag(variant):
         variant="orig",
         ci_test="independence_match",
         return_type="dag",
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     ).fit(data, independencies=model.get_independencies())
 
@@ -352,7 +352,7 @@ def test_build_skeleton_discrete(variant):
             ci_test=test,
             return_type="pdag",
             significance_level=0.005,
-            n_jobs=2,
+            n_jobs=1,
             show_progress=False,
         )
         est.fit(X=data)
@@ -369,7 +369,7 @@ def test_build_dag_discrete(variant):
         ci_test="chi_square",
         return_type="dag",
         significance_level=0.001,
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
     est.fit(X=data)
@@ -414,7 +414,7 @@ def test_build_skeleton_continuous(ci_test, variant):
         variant=variant,
         ci_test=ci_test,
         return_type="pdag",
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
     est.fit(X=data)
@@ -457,7 +457,7 @@ def test_build_skeleton_continuous(ci_test, variant):
         variant=variant,
         ci_test=fake_ci,
         return_type="pdag",
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
     est.fit(X=data)
@@ -479,7 +479,7 @@ def test_build_dag_continuous(ci_test, variant):
         variant=variant,
         ci_test=ci_test,
         return_type="dag",
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
     est.fit(X=data)
@@ -491,7 +491,7 @@ def test_build_dag_continuous(ci_test, variant):
 def test_pc_alarm():
     alarm_model = load_model("bnlearn/alarm")
     data = BayesianModelSampling(alarm_model).forward_sample(size=int(1e4), seed=42)
-    est = PC(variant="stable", max_cond_vars=5, n_jobs=2, show_progress=False)
+    est = PC(variant="stable", max_cond_vars=5, n_jobs=1, show_progress=False)
     est.fit(X=data)
 
 
@@ -504,7 +504,7 @@ def test_pc_asia(caplog):
         variant="stable",
         max_cond_vars=4,
         expert_knowledge=background,
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
 
@@ -535,7 +535,7 @@ def test_pc_asia_expert():
                 ("bronc", "dysp"),
             ]
         ),
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
     est.fit(X=data)
@@ -559,7 +559,7 @@ def test_temporal_pc_cancer():
     est = PC(
         variant="stable",
         expert_knowledge=background,
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
     est.fit(X=data)

@@ -1,0 +1,33 @@
+name: Test macOS
+
+on: [push]
+
+jobs:
+  test-macos:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install graphviz
+        run: brew install graphviz libomp
+
+      - name: Install pygraphviz
+        run: |
+          GRAPHVIZ_PREFIX="$(brew --prefix graphviz)"
+          python -m pip install \
+            --config-settings=--global-option=build_ext \
+            --config-settings="--global-option=-I${GRAPHVIZ_PREFIX}/include" \
+            --config-settings="--global-option=-L${GRAPHVIZ_PREFIX}/lib" \
+            pygraphviz
+
+      - name: Install dependencies
+        run: pip install .[all,tests]
+
+      - name: Run PC tests
+        run: pytest -x -v pgmpy/tests/test_estimators/test_PC.py pgmpy/tests/test_causal_discovery/test_PC.py --timeout=120
