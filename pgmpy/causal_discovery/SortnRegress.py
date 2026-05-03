@@ -1,6 +1,6 @@
 import networkx as nx
-import numpy as np
 from sklearn.linear_model import LinearRegression
+from torch import clone
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery
@@ -13,6 +13,42 @@ class SortnRegress(_BaseCausalDiscovery):
     SortnRegress is based on the phenomenon of "varsortability," where in many
     linear additive noise models, the causal order of variables is correlated
     with the order of their marginal variances.
+
+    Algorithm
+    ---------
+    Given an :math:`n \times d` dataset :math:`\\mathbf{X}` with columns
+    :math:`X_1, \\dots, X_d`, the algorithm proceeds as follows:
+
+    1. **Variance Ordering**: Compute the marginal variance of each variable
+        and sort them in ascending order:
+
+        .. math::
+
+            \\widehat{\text{Var}}(X_{\\pi(1)}) \\le
+            \\widehat{\text{Var}}(X_{\\pi(2)}) \\le \\dots \\le
+            \\widehat{\text{Var}}(X_{\\pi(d)})
+
+        where :math:`\\pi` is the permutation of nodes based on their marginal
+        variances.
+
+    2. **Iterative Regression**: For each target node :math:`X_{\\pi(i)}`
+        (for :math:`i = 2, \\dots, d`), fit a linear regression on all preceding
+        variables (potential parents :math:`X_{\\pi(1)}, \\dots, X_{\\pi(i-1)}`):
+
+        .. math::
+
+            X_{\\pi(i)} = \\sum_{j=1}^{i-1} \beta_{j,\\pi(i)}\\, X_{\\pi(j)}
+                            + \varepsilon_{\\pi(i)}
+
+        where :math:`\varepsilon_{\\pi(i)}` is the noise term.
+
+    3. **Edge Selection**: Add a directed edge from :math:`X_{\\pi(j)}` to
+        :math:`X_{\\pi(i)}` if the absolute coefficient meets the threshold:
+
+        .. math::
+
+            |\beta_{j,\\pi(i)}| \\ge \texttt{threshold}
+
 
     Parameters
     ----------
@@ -78,11 +114,9 @@ class SortnRegress(_BaseCausalDiscovery):
         self : pgmpy.causal_discovery.SortnRegress
             Returns the instance with the fitted attributes.
         """
-        self.n_features_in_ = X.shape[1]
-        self.feature_names_in_ = np.array(X.columns)
-        self.variables_ = list(X.columns)
-
-        model_reg = self.estimator if self.estimator else LinearRegression()
+        feature_name_list = list(X.columns)
+        # clone the estimator or use default LinearRegression
+        model_reg = clone(self.estimator) if self.estimator else LinearRegression()
 
         variances = X.var().sort_values()
         sorted_nodes = variances.index.tolist()
@@ -94,8 +128,8 @@ class SortnRegress(_BaseCausalDiscovery):
             target = sorted_nodes[i]
             potential_parents = sorted_nodes[:i]
 
-            y = X[target].values
-            predictors = X[potential_parents].values
+            y = X[target].values.astype(float)
+            predictors = X[potential_parents].values.astype(float)
 
             model_reg.fit(predictors, y)
             coefs = model_reg.coef_
@@ -106,7 +140,7 @@ class SortnRegress(_BaseCausalDiscovery):
 
         self.causal_graph_ = model
         self.adjacency_matrix_ = nx.to_pandas_adjacency(
-            self.causal_graph_, nodelist=self.variables_, weight=1, dtype="int"
+            self.causal_graph_, nodelist=feature_name_list, weight=1, dtype="int"
         )
 
         return self
