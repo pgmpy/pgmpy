@@ -1,5 +1,4 @@
 import logging
-import sys
 
 import networkx as nx
 import numpy as np
@@ -78,7 +77,7 @@ def test_build_skeleton_from_ind(variant):
         variant=variant,
         ci_test="independence_match",
         return_type="skeleton",
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
 
@@ -102,7 +101,7 @@ def test_build_skeleton_from_model_ind(variant):
         variant=variant,
         ci_test="independence_match",
         return_type="skeleton",
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
 
@@ -194,7 +193,7 @@ def test_estimate_dag(variant):
         variant=variant,
         ci_test="independence_match",
         return_type="dag",
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
     assert model.edges() == {("B", "D"), ("A", "D"), ("C", "D")}
@@ -208,7 +207,7 @@ def test_estimate_dag_from_model(variant):
         variant=variant,
         ci_test="independence_match",
         return_type="dag",
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
     expected_edges_1 = set(model.edges())
@@ -294,7 +293,7 @@ def test_build_skeleton_ci_tests(discrete_data, variant, ci_test):
         ci_test=ci_test,
         return_type="skeleton",
         significance_level=0.005,
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
 
@@ -310,7 +309,7 @@ def test_build_dag_discrete(variant):
         ci_test="chi_square",
         return_type="dag",
         significance_level=0.001,
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
 
@@ -349,7 +348,6 @@ requires_xgboost = pytest.mark.skipif(
 
 
 @requires_xgboost
-@pytest.mark.skipif(sys.platform == "darwin", reason="Parallel BLAS deadlocks on macOS")
 @pytest.mark.parametrize("variant", ["orig", "stable", "parallel"])
 @pytest.mark.parametrize("ci_test", ["pearsonr", "pillai", "gcm"])
 def test_build_skeleton_continuous(ci_test, variant):
@@ -361,7 +359,7 @@ def test_build_skeleton_continuous(ci_test, variant):
         variant=variant,
         ci_test=ci_test,
         return_type="skeleton",
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
     expected_edges_stable = {("A", "F"), ("B", "C"), ("B", "F"), ("C", "F")}
@@ -406,7 +404,7 @@ def test_build_skeleton_continuous_fake_ci(ci_test, variant):
         variant=variant,
         ci_test=fake_ci,
         return_type="skeleton",
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
     expected_edges = {("X", "Z"), ("Y", "Z")}
@@ -429,7 +427,7 @@ def test_build_dag_continuous(ci_test, variant):
         variant=variant,
         ci_test=ci_test,
         return_type="dag",
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
 
@@ -440,7 +438,7 @@ def test_pc_alarm():
     alarm_model = load_model("bnlearn/alarm")
     data = BayesianModelSampling(alarm_model).forward_sample(size=int(1e4), seed=42)
     est = PC(data)
-    est.estimate(variant="stable", max_cond_vars=5, n_jobs=2, show_progress=False)
+    est.estimate(variant="stable", max_cond_vars=5, n_jobs=1, show_progress=False)
 
 
 def test_pc_asia(caplog):
@@ -455,7 +453,7 @@ def test_pc_asia(caplog):
                 variant="stable",
                 max_cond_vars=4,
                 expert_knowledge=ExpertKnowledge(required_edges=[("xray", "either")]),
-                n_jobs=2,
+                n_jobs=1,
                 show_progress=False,
             )
     finally:
@@ -479,7 +477,7 @@ def test_pc_asia_expert():
                 ("bronc", "dysp"),
             ]
         ),
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
     edges = set(pdag.edges())
@@ -503,7 +501,7 @@ def test_temporal_pc_cancer():
     pdag = est.estimate(
         variant="stable",
         expert_knowledge=background,
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
 
