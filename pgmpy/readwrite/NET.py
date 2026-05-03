@@ -309,7 +309,9 @@ class NETWriter:
 
     def write_net(self, filename):
         warnings.warn(
-            "`NETWriter.write_net` is deprecated. Please use `NETWriter.write` instead.", FutureWarning, stacklevel=2
+            "`NETWriter.write_net` is deprecated and will be removed in v1.3.0. Please use `NETWriter.write` instead.",
+            FutureWarning,
+            stacklevel=2,
         )
         self.write(filename)
 

@@ -1,10 +1,10 @@
 import logging
+import sys
 
 import networkx as nx
 import numpy as np
 import pandas as pd
 import pytest
-from joblib.externals.loky import get_reusable_executor
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.estimators import PC, ExpertKnowledge
@@ -12,12 +12,6 @@ from pgmpy.example_models import load_model
 from pgmpy.independencies import Independencies
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.sampling import BayesianModelSampling
-
-
-@pytest.fixture(autouse=True)
-def shutdown_executor():
-    yield
-    get_reusable_executor().shutdown(wait=True)
 
 
 @pytest.fixture
@@ -355,6 +349,7 @@ requires_xgboost = pytest.mark.skipif(
 
 
 @requires_xgboost
+@pytest.mark.skipif(sys.platform == "darwin", reason="Parallel BLAS deadlocks on macOS")
 @pytest.mark.parametrize("variant", ["orig", "stable", "parallel"])
 @pytest.mark.parametrize("ci_test", ["pearsonr", "pillai", "gcm"])
 def test_build_skeleton_continuous(ci_test, variant):

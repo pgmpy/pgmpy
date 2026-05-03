@@ -515,6 +515,8 @@ class UAIWriter:
 
     def write_uai(self, filename):
         warnings.warn(
-            "`UAIWriter.write_uai` is deprecated. Please use `UAIWriter.write` instead.", FutureWarning, stacklevel=2
+            "`UAIWriter.write_uai` is deprecated and will be removed in v1.3.0. Please use `UAIWriter.write` instead.",
+            FutureWarning,
+            stacklevel=2,
         )
         self.write(filename)

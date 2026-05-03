@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 
@@ -31,35 +32,36 @@ def get_state_counts(
     state_names: dict,
     variable: str,
     parents=(),
-    weighted: bool = False,
+    sample_weight: np.ndarray | None = None,
     reindex: bool = True,
 ) -> pd.DataFrame:
-    """Return counts for `variable`, optionally conditioned on `parents`."""
+    """Return counts for `variable`, optionally conditioned on `parents`.
+
+    If `sample_weight` is provided, it must be an array-like of length `len(data)`
+    aligned to `data`'s row order; counts become weighted sums. Length and dtype
+    validation is the caller's responsibility.
+    """
     parents = list(parents)
 
-    if weighted and ("_weight" not in data.columns):
-        raise ValueError("data must contain a `_weight` column if weighted=True")
-
-    if not parents:
-        if weighted:
-            state_count_data = data.groupby([variable], observed=True)["_weight"].sum()
-        else:
+    if sample_weight is None:
+        if not parents:
             state_count_data = data.loc[:, variable].value_counts()
-
-        return state_count_data.reindex(state_names[variable]).fillna(0).to_frame()
-
-    parents_states = [state_names[parent] for parent in parents]
-    if weighted:
-        state_count_data = data.groupby([variable] + parents, observed=True)["_weight"].sum().unstack(parents)
-    else:
+            return state_count_data.reindex(state_names[variable]).fillna(0).to_frame()
         state_count_data = data.groupby([variable] + parents, observed=True).size().unstack(parents)
+    else:
+        weights = pd.Series(np.asarray(sample_weight), index=data.index)
+        groupers = [data[variable]] + [data[p] for p in parents]
+        if not parents:
+            state_count_data = weights.groupby(groupers, observed=True).sum()
+            return state_count_data.reindex(state_names[variable]).fillna(0).to_frame()
+        state_count_data = weights.groupby(groupers, observed=True).sum().unstack(parents)
 
     if not isinstance(state_count_data.columns, pd.MultiIndex):
         state_count_data.columns = pd.MultiIndex.from_arrays([state_count_data.columns])
 
     if reindex:
         row_index = state_names[variable]
-        column_index = pd.MultiIndex.from_product(parents_states, names=parents)
+        column_index = pd.MultiIndex.from_product([state_names[p] for p in parents], names=parents)
         return state_count_data.reindex(index=row_index, columns=column_index).fillna(0)
 
     return state_count_data.fillna(0)
