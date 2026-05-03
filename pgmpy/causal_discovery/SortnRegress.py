@@ -7,32 +7,43 @@ from pgmpy.causal_discovery._base import _BaseCausalDiscovery
 
 
 class SortnRegress(_BaseCausalDiscovery):
-    """
+    r"""
     Implementation of the SortnRegress algorithm for causal discovery.
 
     SortnRegress is based on the phenomenon of "varsortability," where in many
     linear additive noise models, the causal order of variables is correlated
     with the order of their marginal variances.
 
-    Given an n x d dataset X with columns X_1, ..., X_d, the algorithm
-    proceeds as follows:
+    Given an :math:`n \times d` dataset :math:`\mathbf{X}` with columns
+    :math:`X_1, \dots, X_d`, the algorithm proceeds as follows:
 
     1. Variance Ordering: Compute the marginal variance of each variable and
-       sort them in ascending order to obtain a permutation π such that:
+       sort them in ascending order to obtain a permutation :math:`\pi` such that:
 
-           Var(X_π(1)) ≤ Var(X_π(2)) ≤ ... ≤ Var(X_π(d))
+       .. math::
 
-    2. Iterative Regression: For each target node X_π(i) (i = 2, ..., d),
-       fit a linear regression on all preceding variables (potential parents
-       X_π(1), ..., X_π(i-1)):
+           \widehat{\text{Var}}(X_{\pi(1)}) \leq
+           \widehat{\text{Var}}(X_{\pi(2)}) \leq \dots \leq
+           \widehat{\text{Var}}(X_{\pi(d)})
 
-           X_π(i) = β_1·X_π(1) + β_2·X_π(2) + ... + β_{i-1}·X_π(i-1) + ε_π(i)
+    2. Iterative Regression: For each target node :math:`X_{\pi(i)}`
+       (for :math:`i = 2, \dots, d`), fit a linear regression on all preceding
+       variables (potential parents :math:`X_{\pi(1)}, \dots, X_{\pi(i-1)}`):
 
-       where ε_π(i) is the noise term and β_j are the regression coefficients.
+       .. math::
 
-    3. Edge Selection: Add a directed edge X_π(j) → X_π(i) if:
+           X_{\pi(i)} = \sum_{j=1}^{i-1} \beta_{j,\pi(i)} X_{\pi(j)}
+                        + \varepsilon_{\pi(i)}
 
-           |β_j| ≥ threshold
+       where :math:`\varepsilon_{\pi(i)}` is the noise term and
+       :math:`\beta_{j,\pi(i)}` are the regression coefficients.
+
+    3. Edge Selection: Add a directed edge :math:`X_{\pi(j)} \to X_{\pi(i)}`
+       if:
+
+       .. math::
+
+           |\beta_{j,\pi(i)}| \geq \texttt{threshold}
 
     Parameters
     ----------
