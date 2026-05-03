@@ -30,4 +30,6 @@ jobs:
         run: pip install .[all,tests]
 
       - name: Run PC tests
+        env:
+          OMP_NUM_THREADS: 1
         run: pytest -x -v pgmpy
