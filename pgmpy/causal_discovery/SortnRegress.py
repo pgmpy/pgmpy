@@ -14,41 +14,25 @@ class SortnRegress(_BaseCausalDiscovery):
     linear additive noise models, the causal order of variables is correlated
     with the order of their marginal variances.
 
-    Algorithm
-    ---------
-    Given an :math:`n \times d` dataset :math:`\\mathbf{X}` with columns
-    :math:`X_1, \\dots, X_d`, the algorithm proceeds as follows:
+    Given an n x d dataset X with columns X_1, ..., X_d, the algorithm
+    proceeds as follows:
 
-    1. **Variance Ordering**: Compute the marginal variance of each variable
-        and sort them in ascending order:
+    1. Variance Ordering: Compute the marginal variance of each variable and
+       sort them in ascending order to obtain a permutation π such that:
 
-        .. math::
+           Var(X_π(1)) ≤ Var(X_π(2)) ≤ ... ≤ Var(X_π(d))
 
-            \\widehat{\text{Var}}(X_{\\pi(1)}) \\le
-            \\widehat{\text{Var}}(X_{\\pi(2)}) \\le \\dots \\le
-            \\widehat{\text{Var}}(X_{\\pi(d)})
+    2. Iterative Regression: For each target node X_π(i) (i = 2, ..., d),
+       fit a linear regression on all preceding variables (potential parents
+       X_π(1), ..., X_π(i-1)):
 
-        where :math:`\\pi` is the permutation of nodes based on their marginal
-        variances.
+           X_π(i) = β_1·X_π(1) + β_2·X_π(2) + ... + β_{i-1}·X_π(i-1) + ε_π(i)
 
-    2. **Iterative Regression**: For each target node :math:`X_{\\pi(i)}`
-        (for :math:`i = 2, \\dots, d`), fit a linear regression on all preceding
-        variables (potential parents :math:`X_{\\pi(1)}, \\dots, X_{\\pi(i-1)}`):
+       where ε_π(i) is the noise term and β_j are the regression coefficients.
 
-        .. math::
+    3. Edge Selection: Add a directed edge X_π(j) → X_π(i) if:
 
-            X_{\\pi(i)} = \\sum_{j=1}^{i-1} \beta_{j,\\pi(i)}\\, X_{\\pi(j)}
-                            + \varepsilon_{\\pi(i)}
-
-        where :math:`\varepsilon_{\\pi(i)}` is the noise term.
-
-    3. **Edge Selection**: Add a directed edge from :math:`X_{\\pi(j)}` to
-        :math:`X_{\\pi(i)}` if the absolute coefficient meets the threshold:
-
-        .. math::
-
-            |\beta_{j,\\pi(i)}| \\ge \texttt{threshold}
-
+           |β_j| ≥ threshold
 
     Parameters
     ----------
