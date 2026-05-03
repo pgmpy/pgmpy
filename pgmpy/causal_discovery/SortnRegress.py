@@ -1,6 +1,6 @@
 import networkx as nx
+from sklearn.base import clone
 from sklearn.linear_model import LinearRegression
-from torch import clone
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery
