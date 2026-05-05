@@ -11,6 +11,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from scipy.stats import multivariate_normal
+from sklearn.linear_model import LinearRegression
 
 from pgmpy import logger
 from pgmpy.base import DAG
@@ -880,7 +881,8 @@ class LinearGaussianBayesianNetwork(DAG):
     def fit(
         self,
         data: pd.DataFrame,
-        estimator=None,
+        estimator: str = "mle",
+        std_estimator: str = "unbiased",
     ) -> LinearGaussianBayesianNetwork:
         """
         Estimates (fits) the Linear Gaussian CPDs from data.
@@ -919,16 +921,16 @@ class LinearGaussianBayesianNetwork(DAG):
         <LinearGaussianCPD: P(x2 | x1) = N(0.046*x1 + -0.012; 0.981) at 0x...,
         <LinearGaussianCPD: P(x3 | x2) = N(0.172*x2 + -0.078; 0.908) at 0x...]
         """
-        from pgmpy.parameter_estimator import LinearGaussianMLE
-        from pgmpy.parameter_estimator.base import GaussianParameterEstimator
+        # Step 1: Check the input
+        if len(missing_vars := (set(self.nodes()) - set(data.columns))) > 0:
+            raise ValueError(f"Following variables are missing in the data: {missing_vars}")
 
-        if estimator is None:
-            estimator = LinearGaussianMLE()
-        elif not isinstance(estimator, GaussianParameterEstimator):
-            raise TypeError(
-                "estimator must be an instance of a Gaussian parameter estimator. "
-                "Pass an initialized estimator, for example `LinearGaussianMLE()`."
-            )
+        if estimator not in {
+            "mle",
+        }:
+            raise ValueError("estimator must be {'mle'}")
+        if std_estimator not in {"mle", "unbiased"}:
+            raise ValueError("std_estimator must be one of {'mle', 'unbiased'}")
 
         # Step 2: Estimate the LinearGaussianCPDs
         cpds = []
@@ -972,53 +974,47 @@ class LinearGaussianBayesianNetwork(DAG):
         self,
         data: pd.DataFrame,
         n_prev_samples: int | None = None,
-<<<<<<< HEAD
-    ) -> "LinearGaussianBayesianNetwork":
-        """
-=======
     ) -> LinearGaussianBayesianNetwork:
-        r"""
->>>>>>> fb4e4883 (FIX: move math formulas to main docstring with LaTeX and fix raw string)
+        """
         Updates the parameters of the LinearGaussianBayesianNetwork with new
         data without refitting from scratch.
 
-        The previous joint Gaussian :math:`(\mu_1, \Sigma_1)` is recovered from
-        the current CPD parameters via ``to_joint_gaussian()``. The new batch
-        statistics :math:`(\mu_2, \Sigma_2)` are computed from the new data with
-        ``ddof=0``. Given :math:`n_1` = ``n_prev_samples``, :math:`n_2` = ``len(data)``,
-        and :math:`n_{total} = n_1 + n_2`, the joint is updated using the exact
-        pooled formulas:
+        The method computes the joint Gaussian :math:`(\\mu_1, \\Sigma_1)`
+        implied by the current CPD parameters, and :math:`(\\mu_2, \\Sigma_2)`
+        from the new data (with ``ddof=0``). Given :math:`n_1` = ``n_prev_samples``,
+        :math:`n_2` = ``len(data)``, and :math:`n_{total} = n_1 + n_2`,
+        the joint is updated using the exact pooled formulas:
 
         .. math::
 
-            \mu = \frac{n_1 \mu_1 + n_2 \mu_2}{n_{total}}
+            \\mu = \frac{n_1 \\mu_1 + n_2 \\mu_2}{n_{total}}
 
         .. math::
 
-            \Sigma = \frac{n_1 \Sigma_1 + n_2 \Sigma_2
-                     + n_1 (\mu_1 - \mu)(\mu_1 - \mu)^T
-                     + n_2 (\mu_2 - \mu)(\mu_2 - \mu)^T}{n_{total}}
+            \\Sigma = \frac{n_1 \\Sigma_1 + n_2 \\Sigma_2
+                     + n_1 (\\mu_1 - \\mu)(\\mu_1 - \\mu)^T
+                     + n_2 (\\mu_2 - \\mu)(\\mu_2 - \\mu)^T}{n_{total}}
 
-        CPD parameters are then re-extracted from :math:`(\mu, \Sigma)` using
+        CPD parameters are then re-extracted from :math:`(\\mu, \\Sigma)` using
         conditional Gaussian relationships. For a root node :math:`i` (no parents):
 
         .. math::
 
-            \beta_0 = \mu_i, \quad
-            \sigma = \sqrt{\Sigma_{ii} \cdot \frac{n_{total}}{n_{total} - 1}}
+            \beta_0 = \\mu_i, \\quad
+            \\sigma = \\sqrt{\\Sigma_{ii} \\cdot \frac{n_{total}}{n_{total} - 1}}
 
         For a non-root node :math:`i` with parent index set :math:`pa`,
         letting :math:`k = 1 + |pa|`:
 
         .. math::
 
-            \beta = \Sigma_{pa,pa}^{-1} \Sigma_{pa,i}, \quad
-            \beta_0 = \mu_i - \beta^T \mu_{pa}
+            \beta = \\Sigma_{pa,pa}^{-1} \\Sigma_{pa,i}, \\quad
+            \beta_0 = \\mu_i - \beta^T \\mu_{pa}
 
         .. math::
 
-            \sigma = \sqrt{\max(\Sigma_{ii} - \Sigma_{i,pa} \beta,\ 0)
-                     \cdot \frac{n_{total}}{n_{total} - k}}
+            \\sigma = \\sqrt{\\max(\\Sigma_{ii} - \\Sigma_{i,pa} \beta,\\ 0)
+                     \\cdot \frac{n_{total}}{n_{total} - k}}
 
         The :math:`n_{total} / (n_{total} - k)` factor matches pgmpy's unbiased
         std estimator used in ``fit()``.
@@ -1034,7 +1030,11 @@ class LinearGaussianBayesianNetwork(DAG):
 
         n_prev_samples : int (optional)
             The number of samples the model was previously trained on.
-            If None, defaults to the number of rows in the new data.
+            This also controls the weight given to old vs new data. When
+            ``n_prev_samples == len(data)``, old and new data are weighted
+            equally. Increasing it reduces the influence of new data on
+            the updated parameters. If None, defaults to the number of
+            rows in the new data.
 
         Returns
         -------
@@ -1066,8 +1066,7 @@ class LinearGaussianBayesianNetwork(DAG):
         # Step 2: Check that fit() was called before fit_update()
         if len(self.get_cpds()) == 0:
             raise ValueError(
-                "fit_update() requires the model to be first fitted using fit(). "
-                "Please call fit() before fit_update()."
+                "fit_update() requires the model to be first fitted using fit(). Please call fit() before fit_update()."
             )
 
         if n_prev_samples is None:
@@ -1091,9 +1090,7 @@ class LinearGaussianBayesianNetwork(DAG):
 
         d1 = mu1 - mu_updated
         d2 = mu2 - mu_updated
-        cov_updated = (
-            n1 * cov1 + n2 * cov2 + n1 * np.outer(d1, d1) + n2 * np.outer(d2, d2)
-        ) / n_total
+        cov_updated = (n1 * cov1 + n2 * cov2 + n1 * np.outer(d1, d1) + n2 * np.outer(d2, d2)) / n_total
 
         # Step 6: Re-extract CPD parameters from updated joint Gaussian
         new_cpds = []
@@ -1119,9 +1116,7 @@ class LinearGaussianBayesianNetwork(DAG):
                 beta = np.append([beta_intercept], beta_coeffs)
                 std = float(np.sqrt(max(sigma2_mle, 0) * n_total / (n_total - k)))
 
-            new_cpds.append(
-                LinearGaussianCPD(variable=node, beta=beta, std=std, evidence=parents)
-            )
+            new_cpds.append(LinearGaussianCPD(variable=node, beta=beta, std=std, evidence=parents))
 
         self.add_cpds(*new_cpds)
         return self
