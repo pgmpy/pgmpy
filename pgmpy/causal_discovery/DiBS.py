@@ -35,6 +35,19 @@ class DiBS(_BaseCausalDiscovery):
     Examples
     --------
     Simulate some data to use for causal discovery:
+    >>> import numpy as np
+    >>> from pgmpy.causal_discovery.DiBS import DiBS
+    >>> import pandas as pd
+    >>> rng = np.random.default_rng(0)
+    >>> n = 200
+    >>>
+    >>> A = rng.normal(size=n)
+    >>> B = 2.0 * A + rng.normal(scale=0.1, size=n)
+    >>> C = -1.5 * B + rng.normal(scale=0.1, size=n)
+    >>>
+    >>> X = pd.DataFrame({"A": A, "B": B, "C": C})
+    >>> dibs = DiBS(n_particles=20, n_steps=50)
+    >>> dibs.fit(X)
 
     TODO: put some example code here and the outputs
 
@@ -52,7 +65,7 @@ class DiBS(_BaseCausalDiscovery):
         n_steps: int = 2000,
         log_likelihood: Callable | None = None,
         learning_rate: float = 5e-3,
-        edge_prob_threshold: float = 0.1,
+        edge_prob_threshold: float = 0.0,
         kernel: str = "frobenius",
         kernel_bandwidth: float | str = "median",
         grad_estimator_z: str = "score",
@@ -67,16 +80,18 @@ class DiBS(_BaseCausalDiscovery):
     ):
         self.n_particles = n_particles
         self.n_steps = n_steps
-        if log_likelihood is None:
-            self.log_likelihood = self._lgbn_log_likelihood
-        else:
-            self.log_likelihood = log_likelihood
+        self.log_likelihood = log_likelihood
+        self._log_likelihood_fn = (
+            self._lgbn_log_likelihood if log_likelihood is None else log_likelihood
+        )
         self.learning_rate = learning_rate
         self.edge_prob_threshold = edge_prob_threshold # Used for summarization of the graphs later.
         self.kernel = kernel
         self.kernel_bandwidth = kernel_bandwidth
         self.grad_estimator_z = grad_estimator_z
         self.baseline = baseline
+        self.alpha_linear = alpha_linear
+        self.beta_linear = beta_linear
         self.alpha = lambda t: alpha_linear * (t + 1)
         self.beta = lambda t: beta_linear * (t + 1)
         self.latent_dim = latent_dim # dimension of each U_i and V_i.
@@ -86,8 +101,6 @@ class DiBS(_BaseCausalDiscovery):
         self.tau = tau
         if torch.cuda.is_available():
             self.device = torch.device("cuda")
-        elif torch.backends.mps.is_available():
-            self.device = torch.device("mps")
         else:
             self.device = torch.device("cpu")
 
@@ -227,7 +240,7 @@ class DiBS(_BaseCausalDiscovery):
         hard_graph_samples = hard_graph_samples * (1.0 - torch.eye(soft_graphs.shape[-1], device=soft_graphs.device, dtype=soft_graphs.dtype))
 
         # compute the log likelihood:
-        log_likelihood_fn = self.log_likelihood
+        log_likelihood_fn = self._log_likelihood_fn
         ll = log_likelihood_fn(X_t, hard_graph_samples) # 2d tensor now.
 
         # function that computes log_p(G|Z), see eq. 6
@@ -309,7 +322,7 @@ class DiBS(_BaseCausalDiscovery):
             graph_taus = graph_taus * (1 - torch.eye(n_nodes, device=graph_taus.device, dtype=graph_taus.dtype))
             return graph_taus
 
-        marginal_log_likelihood = lambda g: self.log_likelihood(X_t, g)
+        marginal_log_likelihood = lambda g: self._log_likelihood_fn(X_t, g)
         composition = lambda l, z: marginal_log_likelihood(graph_tau(l, z))
 
         # using grad_z f = f * grad_z log f:
@@ -428,7 +441,7 @@ class DiBS(_BaseCausalDiscovery):
 
         # Batched prior score:
         #   - beta * grad E[h(G)] - Z / sigma^2
-        grad_expected_h = torch.vmap(grad_constraint_gumbel, in_dims=0)(particles)
+        grad_expected_h = torch.vmap(grad_constraint_gumbel, in_dims=0, randomness='different')(particles)
         log_prior_score = -beta * grad_expected_h - particles / (self.latent_prior_std ** 2)
 
         # Likelihood-ratio / reparam estimator for the likelihood term
@@ -551,53 +564,155 @@ class DiBS(_BaseCausalDiscovery):
 
         return graphs_infty
 
-
     def _sample_graphs(
         self,
         nodes,
     ):
         """
-        Turn latent graphs into actual graphs.
+        Convert the particle-wise adjacency matrices stored during inference
+        into NetworkX DiGraph objects.
 
         Parameters
         ----------
-        nodes
+        nodes : list-like
+            Node labels in adjacency-matrix order.
 
         Returns
         -------
-
+        list[nx.DiGraph]
+            One directed graph per particle.
         """
-        pass
+        if not hasattr(self, "_graph_particle_samples"):
+            raise ValueError(
+                "No graph particle samples found. Run `_run_inference` first."
+            )
+
+        graph_samples = self._graph_particle_samples
+
+        if isinstance(graph_samples, torch.Tensor):
+            graph_samples = graph_samples.detach().cpu().numpy()
+
+        nodes = list(nodes)
+        n_nodes = len(nodes)
+
+        if graph_samples.ndim != 3 or graph_samples.shape[1:] != (n_nodes, n_nodes):
+            raise ValueError(
+                f"Expected graph samples of shape (n_particles, {n_nodes}, {n_nodes}), "
+                f"got {graph_samples.shape}."
+            )
+
+        sampled_graphs = []
+
+        for adj in graph_samples:
+            G = nx.DiGraph()
+            G.add_nodes_from(nodes)
+
+            src_idx, dst_idx = np.where(adj.astype(bool))
+            for i, j in zip(src_idx, dst_idx):
+                if i != j:
+                    G.add_edge(nodes[i], nodes[j])
+
+            sampled_graphs.append(G)
+
+        return sampled_graphs
+
 
     def _summarize_graphs(
         self,
         graph_samples,
     ):
         """
-        Aggregate sampled graphs. Then use threshold for final summary graph.
+        Aggregate sampled graphs into edge marginal probabilities and build
+        a final summary DAG using thresholding plus greedy acyclicity enforcement.
 
         Parameters
         ----------
-        graph_samples
+        graph_samples : list[nx.DiGraph] or array-like of shape (n_graphs, d, d)
+            Posterior graph samples.
 
         Returns
         -------
-
+        summary_graph : nx.DiGraph
+            Final summarized DAG.
+        edge_probs : pd.DataFrame
+            Edge marginal probabilities.
+        adjacency_matrix : pd.DataFrame
+            Binary adjacency matrix of the summarized DAG.
         """
-        pass
+        if len(graph_samples) == 0:
+            raise ValueError("`graph_samples` must contain at least one graph.")
+
+        # Case 1: graph_samples is a list of nx.DiGraph
+        if isinstance(graph_samples[0], nx.DiGraph):
+            nodes = list(graph_samples[0].nodes())
+            n_nodes = len(nodes)
+
+            adjs = []
+            for G in graph_samples:
+                if list(G.nodes()) != nodes:
+                    raise ValueError("All sampled graphs must have the same node ordering.")
+                adjs.append(nx.to_numpy_array(G, nodelist=nodes, dtype=float))
+
+            adjs = np.stack(adjs, axis=0)
+
+        # Case 2: graph_samples is an array/tensor
+        else:
+            if isinstance(graph_samples, torch.Tensor):
+                adjs = graph_samples.detach().cpu().numpy()
+            else:
+                adjs = np.asarray(graph_samples)
+
+            if adjs.ndim != 3 or adjs.shape[1] != adjs.shape[2]:
+                raise ValueError(
+                    "`graph_samples` must have shape (n_graphs, n_nodes, n_nodes)."
+                )
+
+            n_nodes = adjs.shape[1]
+            nodes = list(range(n_nodes))
+
+        # empirical edge probabilities
+        edge_probs_np = adjs.mean(axis=0)
+        np.fill_diagonal(edge_probs_np, 0.0)
+
+        # Build final DAG greedily from high-probability edges.
+        summary_graph = nx.DiGraph()
+        summary_graph.add_nodes_from(nodes)
+
+        candidate_edges = [
+            (nodes[i], nodes[j], edge_probs_np[i, j])
+            for i in range(n_nodes)
+            for j in range(n_nodes)
+            if i != j and edge_probs_np[i, j] >= self.edge_prob_threshold
+        ]
+        candidate_edges.sort(key=lambda x: x[2], reverse=True)
+
+        for u, v, prob in candidate_edges:
+            # Only add if it does not create a cycle
+            if not nx.has_path(summary_graph, v, u):
+                summary_graph.add_edge(u, v, weight=float(prob))
+
+        adjacency_np = nx.to_numpy_array(summary_graph, nodelist=nodes, dtype=int, weight=None,)
+
+        edge_probs = pd.DataFrame(edge_probs_np, index=nodes, columns=nodes)
+        adjacency_matrix = pd.DataFrame(adjacency_np, index=nodes, columns=nodes)
+
+        return summary_graph, edge_probs, adjacency_matrix
 
     def _fit(self, X: pd.DataFrame):
-        # TODO: Add logic to learn the causal graph from the data X. Methods from mixin classes can be used here if
-        #       applicable.
-
-        # TODO: After learning the causal graph, assign the learned graph to self.causal_graph_ attribute. Can be an
-        #       instance of pgmpy.base.DAG, PDAG, MAG, PAG, or ADMG, depending on the algorithm or the hyperparameters.
-        self.causal_graph_ = None
-
-        # TODO: Additionally, assign the adjacency matrix of the learned graph to self.adjacency_matrix_ attribute.
-        self.adjacency_matrix_ = None
-
         self.n_features_in_ = X.shape[1]
         self.feature_names_in_ = X.columns.tolist()
+
+        # Run inference and store particle graph samples
+        self._run_inference(X)
+
+        # Convert particle samples to graphs
+        graph_samples = self._sample_graphs(X.columns.tolist())
+
+        # Summarize posterior samples into one final DAG
+        summary_graph, edge_probs, adjacency_matrix = self._summarize_graphs(graph_samples)
+
+        self.causal_graph_ = summary_graph
+        self.edge_probs_ = edge_probs
+        self.adjacency_matrix_ = adjacency_matrix
 
         return self
