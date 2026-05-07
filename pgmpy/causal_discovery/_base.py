@@ -527,8 +527,8 @@ class _ScoreMixin:
         edge_set = set(edges)
         reverse_edge_set = {(Y, X) for (X, Y) in edges}
 
-        # Step 1: Get all legal operations for adding edges.
-        potential_new_edges = set(permutations(self.variables_, 2)) - edge_set - reverse_edge_set
+        # Step 1: Get all legal operations for adding edges. Sort the iteration order for reproducible runs.
+        potential_new_edges = sorted(set(permutations(self.variables_, 2)) - edge_set - reverse_edge_set)
 
         for X, Y in potential_new_edges:
             # Adding X->Y creates a cycle iff Y already reaches X.
