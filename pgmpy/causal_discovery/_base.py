@@ -1,5 +1,6 @@
 from collections import deque
 from collections.abc import Callable, Generator, Hashable
+from dataclasses import dataclass
 from itertools import combinations, permutations
 
 import networkx as nx
@@ -574,3 +575,52 @@ class _ScoreMixin:
                         )
                         score_delta += scoring_method.structure_prior_ratio("flip")
                         yield (operation, score_delta)
+
+
+@dataclass
+class CausalDiscoverySummary:
+    # Data info
+    algorithm: str = None
+    n_samples: int = None
+    n_variables: int = None
+    # variable_types: dict = field(default_factory=dict)
+
+    # Graph info
+    graph_type: str = None
+    n_edges: int = None
+    n_directed: int = None
+    n_undirected: int = None
+
+    # Miscellaneous info
+    final_score_method: str = None
+    final_score: float = None
+
+    def __str__(self):
+        return self._summary()
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+    def _summary(self):
+        lines = []
+        lines.append("Causal Discovery Summary")
+        lines.append("=" * 30)
+
+        # Overview
+        lines.append(f"Algorithm: {self.algorithm}")
+        lines.append(f"Samples: {self.n_samples}")
+        lines.append(f"Variables: {self.n_variables}")
+        lines.append(f"Graph Type: {self.graph_type}")
+
+        # Structure
+        lines.append("\nStructure:")
+        lines.append(f"Edges: {self.n_edges}")
+        if self.n_directed is not None:
+            lines.append(f"Directed: {self.n_directed}")
+            lines.append(f"Undirected: {self.n_undirected}")
+
+        # Score
+        if self.final_score is not None:
+            lines.append(f"\n{self.final_score_method} Score:   {self.final_score:.3f}")
+
+        return "\n".join(lines)

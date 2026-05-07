@@ -8,7 +8,7 @@ from tqdm.auto import trange
 from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.causal_discovery import ExpertKnowledge
-from pgmpy.causal_discovery._base import _BaseCausalDiscovery, _ScoreMixin
+from pgmpy.causal_discovery._base import CausalDiscoverySummary, _BaseCausalDiscovery, _ScoreMixin
 from pgmpy.structure_score import BaseStructureScore, get_scoring_method
 
 
@@ -171,6 +171,11 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
         # Step 1: Initial checks and setup for arguments
         # Step 1.1: Check score
         score = get_scoring_method(self.scoring_method, X)
+        self.fit_info_ = CausalDiscoverySummary()
+        self.fit_info_.algorithm = self.__class__.__name__
+        self.fit_info_.n_samples = X.shape[0]
+        self.fit_info_.n_variables = X.shape[1]
+        self.fit_info_.final_score_method = score.__class__.__name__
 
         # Step 1.2: Check the start_dag
         if self.start_dag is None:
@@ -247,11 +252,27 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
         # Step 3: Store results
         if self.return_type.lower() == "dag":
             self.causal_graph_ = current_model
+            self.fit_info_.graph_type = "DAG"
+            self.fit_info_.n_directed = len(self.causal_graph_.edges)
+            self.fit_info_.n_undirected = 0
+            self.fit_info_.n_edges = self.fit_info_.n_directed
+            self.fit_info_.final_score = score.score(self.causal_graph_)
+
         elif self.return_type.lower() == "pdag":
             self.causal_graph_ = current_model.to_pdag()
+            self.fit_info_.graph_type = "PDAG"
+            self.fit_info_.n_directed = len(self.causal_graph_.directed_edges)
+            self.fit_info_.n_undirected = len(self.causal_graph_.undirected_edges)
+            self.fit_info_.n_edges = self.fit_info_.n_directed + self.fit_info_.n_undirected
+            self.fit_info_.final_score = score.score(self.causal_graph_)
         else:
             raise ValueError(f"return_type must be one of: dag, pdag, or cpdag. Got: {self.return_type}")
 
         self.adjacency_matrix_ = nx.to_pandas_adjacency(self.causal_graph_, weight=1, dtype="int")
 
         return self
+
+    def summary(self):
+        if not hasattr(self, "fit_info_"):
+            raise ValueError("Model must be fit before calling summary().")
+        return self.fit_info_
