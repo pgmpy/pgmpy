@@ -755,13 +755,9 @@ class DiBS(_BaseCausalDiscovery):
 
         return graphs_infty
 
-    def _sample_graphs(
-        self,
-        nodes,
-    ):
+    def _sample_graphs(self, nodes):
         """
-        Convert the particle-wise adjacency matrices stored during inference
-        into NetworkX DiGraph objects.
+        Convert stored particle adjacency matrices into NetworkX directed graphs.
 
         Parameters
         ----------
@@ -773,119 +769,67 @@ class DiBS(_BaseCausalDiscovery):
         list[nx.DiGraph]
             One directed graph per particle.
         """
-        if not hasattr(self, "_graph_particle_samples"):
-            raise ValueError(
-                "No graph particle samples found. Run `_run_inference` first."
-            )
-
-        graph_samples = self._graph_particle_samples
-
-        if isinstance(graph_samples, torch.Tensor):
-            graph_samples = graph_samples.detach().cpu().numpy()
-
         nodes = list(nodes)
-        n_nodes = len(nodes)
-
-        if graph_samples.ndim != 3 or graph_samples.shape[1:] != (n_nodes, n_nodes):
-            raise ValueError(
-                f"Expected graph samples of shape (n_particles, {n_nodes}, {n_nodes}), "
-                f"got {graph_samples.shape}."
-            )
+        graph_samples = self._graph_particle_samples.detach().cpu().numpy()
 
         sampled_graphs = []
-
         for adj in graph_samples:
-            G = nx.DiGraph()
-            G.add_nodes_from(nodes)
-
-            src_idx, dst_idx = np.where(adj.astype(bool))
-            for i, j in zip(src_idx, dst_idx):
-                if i != j:
-                    G.add_edge(nodes[i], nodes[j])
-
-            sampled_graphs.append(G)
+            graph = nx.DiGraph()
+            graph.add_nodes_from(nodes)
+            src_idx, dst_idx = np.where(adj)
+            graph.add_edges_from((nodes[i], nodes[j]) for i, j in zip(src_idx, dst_idx) if i != j)
+            sampled_graphs.append(graph)
 
         return sampled_graphs
 
-
-    def _summarize_graphs(
-        self,
-        graph_samples,
-    ):
+    def _summarize_graphs(self, graph_samples):
         """
-        Aggregate sampled graphs into edge marginal probabilities and build
-        a final summary DAG using thresholding plus greedy acyclicity enforcement.
+        Aggregate sampled graphs into edge marginal probabilities and summarize them
+        into a final DAG.
 
         Parameters
         ----------
-        graph_samples : list[nx.DiGraph] or array-like of shape (n_graphs, d, d)
+        graph_samples : list[nx.DiGraph]
             Posterior graph samples.
 
         Returns
         -------
-        summary_graph : nx.DiGraph
-            Final summarized DAG.
-        edge_probs : pd.DataFrame
-            Edge marginal probabilities.
-        adjacency_matrix : pd.DataFrame
-            Binary adjacency matrix of the summarized DAG.
+        tuple
+            ``(summary_graph, edge_probs, adjacency_matrix)``.
         """
-        if len(graph_samples) == 0:
-            raise ValueError("`graph_samples` must contain at least one graph.")
+        nodes = list(graph_samples[0].nodes())
+        adjs = np.stack(
+            [nx.to_numpy_array(graph, nodelist=nodes, dtype=float) for graph in graph_samples],
+            axis=0,
+        )
 
-        # Case 1: graph_samples is a list of nx.DiGraph
-        if isinstance(graph_samples[0], nx.DiGraph):
-            nodes = list(graph_samples[0].nodes())
-            n_nodes = len(nodes)
-
-            adjs = []
-            for G in graph_samples:
-                if list(G.nodes()) != nodes:
-                    raise ValueError("All sampled graphs must have the same node ordering.")
-                adjs.append(nx.to_numpy_array(G, nodelist=nodes, dtype=float))
-
-            adjs = np.stack(adjs, axis=0)
-
-        # Case 2: graph_samples is an array/tensor
-        else:
-            if isinstance(graph_samples, torch.Tensor):
-                adjs = graph_samples.detach().cpu().numpy()
-            else:
-                adjs = np.asarray(graph_samples)
-
-            if adjs.ndim != 3 or adjs.shape[1] != adjs.shape[2]:
-                raise ValueError(
-                    "`graph_samples` must have shape (n_graphs, n_nodes, n_nodes)."
-                )
-
-            n_nodes = adjs.shape[1]
-            nodes = list(range(n_nodes))
-
-        # empirical edge probabilities
         edge_probs_np = adjs.mean(axis=0)
         np.fill_diagonal(edge_probs_np, 0.0)
 
-        # Build final DAG greedily from high-probability edges.
         summary_graph = nx.DiGraph()
         summary_graph.add_nodes_from(nodes)
 
-        candidate_edges = [
-            (nodes[i], nodes[j], edge_probs_np[i, j])
-            for i in range(n_nodes)
-            for j in range(n_nodes)
-            if i != j and edge_probs_np[i, j] >= self.edge_prob_threshold
-        ]
-        candidate_edges.sort(key=lambda x: x[2], reverse=True)
+        candidate_edges = sorted(
+            [
+                (nodes[i], nodes[j], edge_probs_np[i, j])
+                for i in range(len(nodes))
+                for j in range(len(nodes))
+                if i != j and edge_probs_np[i, j] >= self.edge_prob_threshold
+            ],
+            key=lambda x: x[2],
+            reverse=True,
+        )
 
         for u, v, prob in candidate_edges:
-            # Only add if it does not create a cycle
             if not nx.has_path(summary_graph, v, u):
                 summary_graph.add_edge(u, v, weight=float(prob))
 
-        adjacency_np = nx.to_numpy_array(summary_graph, nodelist=nodes, dtype=int, weight=None,)
-
         edge_probs = pd.DataFrame(edge_probs_np, index=nodes, columns=nodes)
-        adjacency_matrix = pd.DataFrame(adjacency_np, index=nodes, columns=nodes)
+        adjacency_matrix = pd.DataFrame(
+            nx.to_numpy_array(summary_graph, nodelist=nodes, dtype=int, weight=None),
+            index=nodes,
+            columns=nodes,
+        )
 
         return summary_graph, edge_probs, adjacency_matrix
 
@@ -915,10 +859,10 @@ class DiBS(_BaseCausalDiscovery):
         self._run_inference(X)
 
         # Convert particle samples to graphs
-        graph_samples = self._sample_graphs(X.columns.tolist())
+        self.graph_samples = self._sample_graphs(X.columns.tolist())
 
         # Summarize posterior samples into one final DAG
-        summary_graph, edge_probs, adjacency_matrix = self._summarize_graphs(graph_samples)
+        summary_graph, edge_probs, adjacency_matrix = self._summarize_graphs(self.graph_samples)
 
         self.causal_graph_ = summary_graph
         self.edge_probs_ = edge_probs

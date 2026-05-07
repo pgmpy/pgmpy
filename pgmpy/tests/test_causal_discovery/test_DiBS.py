@@ -92,10 +92,6 @@ class TestDiBSCore:
         est.fit(linear_chain_data)
         assert nx.is_directed_acyclic_graph(est.causal_graph_)
 
-    def test_sample_graphs_raises_before_inference(self):
-        est = DiBS(n_particles=3, n_steps=1)
-        with pytest.raises(ValueError, match="No graph particle samples found"):
-            est._sample_graphs(["A", "B"])
 
     def test_custom_log_likelihood_callable(self, tiny_data):
         calls = {"count": 0}
@@ -117,50 +113,6 @@ class TestDiBSCore:
         )
         est.fit(tiny_data)
         assert calls["count"] > 0
-
-
-class TestDiBSSummarizeGraphs:
-    def test_summarize_graphs_empty_raises(self):
-        est = DiBS()
-        with pytest.raises(ValueError, match="must contain at least one graph"):
-            est._summarize_graphs([])
-
-    def test_summarize_graphs_tensor_input(self):
-        est = DiBS(edge_prob_threshold=0.5)
-
-        # 2 posterior samples over 3 nodes
-        samples = torch.tensor(
-            [
-                [[0, 1, 0], [0, 0, 0], [0, 0, 0]],
-                [[0, 1, 0], [0, 0, 0], [0, 0, 0]],
-            ],
-            dtype=torch.float32,
-        )
-
-        summary_graph, edge_probs, adjacency_matrix = est._summarize_graphs(samples)
-
-        assert isinstance(summary_graph, nx.DiGraph)
-        assert isinstance(edge_probs, pd.DataFrame)
-        assert isinstance(adjacency_matrix, pd.DataFrame)
-
-        assert edge_probs.shape == (3, 3)
-        assert adjacency_matrix.shape == (3, 3)
-
-        # Edge 0->1 appears in both samples
-        assert edge_probs.iloc[0, 1] == pytest.approx(1.0)
-        assert adjacency_matrix.iloc[0, 1] == 1
-
-    def test_summarize_graphs_inconsistent_node_order_raises(self):
-        est = DiBS()
-
-        g1 = nx.DiGraph()
-        g1.add_nodes_from(["A", "B", "C"])
-
-        g2 = nx.DiGraph()
-        g2.add_nodes_from(["B", "A", "C"])  # different insertion order
-
-        with pytest.raises(ValueError, match="same node ordering"):
-            est._summarize_graphs([g1, g2])
 
 
 class TestDiBSLikelihoodValidation:
