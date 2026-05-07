@@ -13,43 +13,120 @@ from pgmpy.causal_discovery._base import _BaseCausalDiscovery
 
 class DiBS(_BaseCausalDiscovery):
     """
-    TODO: description and documentation here:
     Causal discovery using Differentiable Bayesian Structure Learning (DiBS).
 
-    Detailed description here of how it works.
+    DiBS represents directed graphs through continuous latent variables. For each
+    particle, every node has two latent vectors, commonly denoted U_i and V_i.
+    The probability of an edge i -> j is parameterized by the sigmoid of the
+    inner product U_i^T V_j, scaled by an annealing coefficient alpha(t). This
+    allows Bayesian structure learning over directed graphs to be approximated
+    with gradient-based inference in a continuous latent space.
+
+    This implementation maintains multiple particles over latent graph
+    representations and updates them using Stein Variational Gradient Descent
+    (SVGD). The posterior score combines a graph likelihood term, an acyclicity
+    prior term, and a Gaussian latent prior. After inference, each latent
+    particle is converted into a hard graph using the limiting edge rule
+    U_i^T V_j > 0. The resulting graph samples are summarized into marginal edge
+    probabilities and a final acyclic summary graph.
+
+    By default, the class uses a local linear-Gaussian Bayesian-network score:
+    each variable is regressed on its selected parents, and the Gaussian
+    log-likelihood is evaluated with maximum-likelihood estimates of the local
+    regression coefficients and noise variances. A custom log-likelihood
+    callable can be supplied for other data types or structural assumptions.
 
     Parameters
     ----------
-    TODO: parameters here:
-    example_param : type, default=None
-        Small description of parameter. Supported instances:
-
-        - Category 1: '...', '...'
-        - Category 2: '...', '...'
+    n_particles : int, default=30
+        Number of SVGD particles used to approximate the posterior over latent
+        graph representations. Larger values provide a richer posterior
+        approximation but increase memory use and computation time.
+    n_steps : int, default=2000
+        Number of SVGD optimization steps.
+    log_likelihood : Callable or None, default=None
+        Custom graph log-likelihood function. The callable should accept
+        ``(data, graph)`` and return a scalar or batched tensor of
+        log-likelihood values. If None, a local linear-Gaussian likelihood is
+        used.
+    learning_rate : float, default=5e-3
+        Learning rate used by the RMSprop optimizer for the SVGD particle
+        updates.
+    edge_prob_threshold : float, default=0.0
+        Minimum posterior edge probability required for an edge to be considered
+        during summary-graph construction.
+    kernel : str, default="frobenius"
+        Kernel used in the SVGD update. Currently supports ``"frobenius"``.
+    kernel_bandwidth : float or str, default="median"
+        Bandwidth for the SVGD kernel. If ``"median"``, the median pairwise
+        squared particle distance is used.
+    grad_estimator_z : {"score", "reparam"}, default="score"
+        Gradient estimator used for the likelihood contribution. ``"score"``
+        uses a score-function estimator; ``"reparam"`` uses a Gumbel-softmax /
+        Concrete relaxation.
+    baseline : float, default=0.0
+        Optional baseline used in the score-function likelihood-gradient
+        estimator.
+    alpha_linear : float, default=0.05
+        Linear coefficient for the edge-probability sharpness schedule
+        ``alpha(t) = alpha_linear * (t + 1)``.
+    beta_linear : float, default=1.0
+        Linear coefficient for the acyclicity-penalty schedule
+        ``beta(t) = beta_linear * (t + 1)``.
+    latent_dim : int, default=32
+        Dimension of each node-level latent vector U_i and V_i.
+    n_grad_mc_samples : int, default=128
+        Number of Monte Carlo graph samples used to estimate the likelihood
+        gradient for each particle.
+    n_acyclicity_mc_samples : int, default=32
+        Number of Monte Carlo samples used to estimate the gradient of the
+        expected acyclicity penalty.
+    latent_prior_std : float, default=1.0
+        Standard deviation of the isotropic Gaussian prior over latent
+        variables.
+    tau : float, default=1.0
+        Temperature-like scale used in the Gumbel-softmax / Concrete graph
+        relaxation.
 
     Attributes
     ----------
-    TODO: attributes here similar to parameters:
-    example_attribute : type, default=None
+    causal_graph_ : nx.DiGraph
+        Final summarized causal graph learned after calling ``fit``.
+    edge_probs_ : pd.DataFrame
+        Empirical posterior edge probabilities estimated from the final graph
+        particles.
+    adjacency_matrix_ : pd.DataFrame
+        Binary adjacency matrix of ``causal_graph_``.
+    n_features_in_ : int
+        Number of variables in the fitted data.
+    feature_names_in_ : list
+        Column names of the fitted pandas DataFrame.
+    device : torch.device
+        Device used for tensor computations.
+    _graph_particle_samples : torch.Tensor
+        Hard adjacency matrices obtained from the final latent particles.
 
     Examples
     --------
-    Simulate some data to use for causal discovery:
+    Simulate a three-variable linear causal chain and fit DiBS:
+
     >>> import numpy as np
-    >>> from pgmpy.causal_discovery.DiBS import DiBS
     >>> import pandas as pd
+    >>> from pgmpy.causal_discovery.DiBS import DiBS
     >>> rng = np.random.default_rng(0)
     >>> n = 200
-    >>>
     >>> A = rng.normal(size=n)
     >>> B = 2.0 * A + rng.normal(scale=0.1, size=n)
     >>> C = -1.5 * B + rng.normal(scale=0.1, size=n)
-    >>>
     >>> X = pd.DataFrame({"A": A, "B": B, "C": C})
-    >>> dibs = DiBS(n_particles=20, n_steps=50)
+    >>> dibs = DiBS(n_particles=20, n_steps=50, edge_prob_threshold=0.5)
     >>> dibs.fit(X)
+    >>> dibs.adjacency_matrix_
+    >>> dibs.edge_probs_
 
-    TODO: put some example code here and the outputs
+    The learned graph is available as a NetworkX directed graph:
+
+    >>> dibs.causal_graph_.edges()
 
     References
     ----------
@@ -198,6 +275,25 @@ class DiBS(_BaseCausalDiscovery):
         self,
         n_nodes: int,
     ) -> torch.Tensor:
+        """
+        Initialize latent SVGD particles.
+
+        Each particle contains one latent representation for every node. The last
+        dimension has size ``2 * latent_dim`` because each node stores both a source
+        embedding U_i and a target embedding V_i. Edge probabilities are later
+        computed from inner products between source and target embeddings.
+
+        Parameters
+        ----------
+        n_nodes : int
+            Number of variables/nodes in the graph.
+
+        Returns
+        -------
+        torch.Tensor
+            Tensor of shape ``(n_particles, n_nodes, 2 * latent_dim)`` containing
+            randomly initialized latent particles.
+        """
         n = self.n_particles
 
         # TODO: maybe divide by sqrt of latent_dim so that every row in U and V have unit variance.
@@ -213,16 +309,30 @@ class DiBS(_BaseCausalDiscovery):
         t: int,
     ):
         """
-        Use eq. 14 to compute the ratio that is the second term in RHS of eq. 9:
+        Estimate the likelihood contribution to the latent posterior score.
+
+        This method uses a score-function estimator for the gradient of the
+        marginal graph likelihood with respect to the latent variables. For each
+        particle, hard graphs are sampled from the Bernoulli edge distribution
+        induced by the latent variables. The sampled graphs are scored by the graph
+        log-likelihood, and the resulting normalized likelihood weights are used to
+        average gradients of ``log p(G | Z)``.
+
         Parameters
         ----------
-        X_t
-        particles
-        t
+        X_t : torch.Tensor
+            Data tensor of shape ``(n_samples, n_nodes)``.
+        particles : torch.Tensor
+            Current latent particles of shape
+            ``(n_particles, n_nodes, 2 * latent_dim)``.
+        t : int
+            Current inference step, used by the alpha schedule.
 
         Returns
         -------
-
+        torch.Tensor
+            Estimated likelihood-gradient contribution with the same shape as
+            ``particles``.
         """
         n_samples = self.n_grad_mc_samples
         p, n_nodes, _ = particles.shape
@@ -285,16 +395,28 @@ class DiBS(_BaseCausalDiscovery):
         t: int,
     ):
         """
-        # todo: implementation of eq. 12.
+        Estimate the likelihood contribution using a Gumbel-softmax relaxation.
+
+        This method samples Logistic noise and constructs differentiable relaxed
+        adjacency matrices using the Concrete/Gumbel-sigmoid transformation. The
+        graph likelihood is evaluated on these relaxed graphs and differentiated
+        with respect to the latent variables using automatic differentiation.
+
         Parameters
         ----------
-        X_t
-        particles
-        t
+        X_t : torch.Tensor
+            Data tensor of shape ``(n_samples, n_nodes)``.
+        particles : torch.Tensor
+            Current latent particles of shape
+            ``(n_particles, n_nodes, 2 * latent_dim)``.
+        t : int
+            Current inference step, used by the alpha schedule.
 
         Returns
         -------
-
+        torch.Tensor
+            Estimated likelihood-gradient contribution with the same shape as
+            ``particles``.
         """
 
         # Use inverse transform sampling to get samples from logistic distribution with
@@ -348,6 +470,24 @@ class DiBS(_BaseCausalDiscovery):
 
 
     def _make_likelihood_grad_estimator(self, name: str):
+        """
+        Return the likelihood-gradient estimator specified by name.
+
+        Parameters
+        ----------
+        name : {"score", "reparam"}
+            Name of the gradient estimator.
+
+        Returns
+        -------
+        Callable
+            Method implementing the requested estimator.
+
+        Raises
+        ------
+        ValueError
+            If ``name`` is not a supported estimator.
+        """
         if name == "score":
             return self._grad_z_likelihood_score_function
         elif name == "reparam":
@@ -456,6 +596,28 @@ class DiBS(_BaseCausalDiscovery):
             self,
             particles: torch.Tensor,
     ) -> tuple[torch.Tensor, Callable[[torch.Tensor, torch.Tensor], torch.Tensor]]:
+        """
+        Compute the SVGD kernel matrix and corresponding pairwise kernel function.
+
+        Parameters
+        ----------
+        particles : torch.Tensor
+            Current latent particles of shape
+            ``(n_particles, n_nodes, 2 * latent_dim)``.
+
+        Returns
+        -------
+        kernel_mat : torch.Tensor
+            Pairwise kernel matrix of shape ``(n_particles, n_particles)``.
+        kernel_fn : Callable
+            Function computing the kernel value between two individual particles.
+
+        Raises
+        ------
+        ValueError
+            If the requested kernel is not supported.
+        """
+
         kernel_name = self.kernel
         bandwidth = self.kernel_bandwidth
 
@@ -496,6 +658,26 @@ class DiBS(_BaseCausalDiscovery):
         scores: torch.Tensor,
         particles: torch.Tensor,
     ) -> torch.Tensor:
+        """
+        Compute the SVGD update direction for all particles.
+
+        The update consists of a driving term, which moves particles toward regions
+        of high posterior density, and a repulsive term, which encourages diversity
+        among particles.
+
+        Parameters
+        ----------
+        scores : torch.Tensor
+            Estimated posterior score ``grad_Z log p(Z | D)`` for each particle.
+        particles : torch.Tensor
+            Current latent particles.
+
+        Returns
+        -------
+        torch.Tensor
+            SVGD update direction with the same shape as ``particles``.
+        """
+
         M = particles.shape[0]
         kernel_mat, kernel_fn = self._get_kernel(particles)
 
@@ -532,16 +714,25 @@ class DiBS(_BaseCausalDiscovery):
         X: pd.DataFrame,
     ):
         """
-        Implements algorithm 1.
+        Run SVGD inference over latent graph particles.
+
+        The input data are converted to a torch tensor, latent particles are
+        initialized, and the particles are updated for ``n_steps`` iterations. After
+        optimization, each particle is converted into a hard adjacency matrix using
+        the limiting edge rule ``U_i^T V_j > 0`` with the diagonal set to zero.
 
         Parameters
         ----------
-        X
+        X : pd.DataFrame
+            Observational data with shape ``(n_samples, n_nodes)``.
 
         Returns
         -------
-
+        torch.Tensor
+            Boolean adjacency matrices of shape
+            ``(n_particles, n_nodes, n_nodes)``.
         """
+
         X_t = torch.tensor(X.to_numpy(), device=self.device, dtype=torch.float32)
         n_nodes = X.shape[1]
         particles = torch.nn.Parameter(self._initialize_particles(n_nodes).to(self.device))
@@ -699,6 +890,24 @@ class DiBS(_BaseCausalDiscovery):
         return summary_graph, edge_probs, adjacency_matrix
 
     def _fit(self, X: pd.DataFrame):
+        """
+        Fit the DiBS causal discovery model to observational data.
+
+        This method runs latent-particle inference, converts the final particles
+        into graph samples, summarizes those samples into posterior edge
+        probabilities, and stores the final causal graph and adjacency matrix.
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Observational data where columns are variables and rows are samples.
+
+        Returns
+        -------
+        self : DiBS
+            Fitted estimator.
+        """
+
         self.n_features_in_ = X.shape[1]
         self.feature_names_in_ = X.columns.tolist()
 
