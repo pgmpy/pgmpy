@@ -1,85 +1,227 @@
 import pandas as pd
 import plotly.graph_objects as go
 
-# Feature matrix for comparison
-features = [
-    {'Category': 'Parameter Learning', 'Feature': 'Maximum Likelihood Estimation (MLE)',       'pgmpy': True,  'bnlearn (R)': True, 'pyagrum': True,  'pomegranate': True},
-    {'Category': 'Parameter Learning', 'Feature': 'Bayesian Estimation',                        'pgmpy': True,  'bnlearn (R)': True, 'pyagrum': True,  'pomegranate': False},
-    {'Category': 'Parameter Learning', 'Feature': 'Expectation Maximization (EM)',             'pgmpy': True,  'bnlearn (R)': True, 'pyagrum': True,  'pomegranate': False},
-    {'Category': 'Parameter Learning', 'Feature': 'Dirichlet Prior',                            'pgmpy': True,  'bnlearn (R)': True, 'pyagrum': True,  'pomegranate': False},
-    {'Category': 'Structure Learning', 'Feature': 'Score-based (BIC, AIC, K2)',               'pgmpy': True,  'bnlearn (R)': True, 'pyagrum': True,  'pomegranate': False},
-    {'Category': 'Structure Learning', 'Feature': 'Constraint-based (PC, IC)',                  'pgmpy': True,  'bnlearn (R)': True, 'pyagrum': True,  'pomegranate': False},
-    {'Category': 'Structure Learning', 'Feature': 'Hybrid (MMHC, H2PC)',                       'pgmpy': True,  'bnlearn (R)': True, 'pyagrum': True,  'pomegranate': False},
-    {'Category': 'Structure Learning', 'Feature': 'Exhaustive Search',                          'pgmpy': True,  'bnlearn (R)': False, 'pyagrum': False, 'pomegranate': False},
-    {'Category': 'Structure Learning', 'Feature': 'Tabu Search',                                'pgmpy': True,  'bnlearn (R)': True, 'pyagrum': True,  'pomegranate': False},
-    {'Category': 'Data Types', 'Feature': 'Discrete / Categorical Data',                       'pgmpy': True,  'bnlearn (R)': True, 'pyagrum': True,  'pomegranate': True},
-    {'Category': 'Data Types', 'Feature': 'Continuous Data (Gaussian)',                        'pgmpy': True,  'bnlearn (R)': True, 'pyagrum': True,  'pomegranate': True},
-    {'Category': 'Data Types', 'Feature': 'Mixed Data (Continuous + Discrete)',                'pgmpy': True,  'bnlearn (R)': True, 'pyagrum': True,  'pomegranate': False},
-    {'Category': 'Data Types', 'Feature': 'Time Series / Dynamic BN',                          'pgmpy': True,  'bnlearn (R)': True, 'pyagrum': True,  'pomegranate': False},
-    {'Category': 'Backend & API', 'Feature': 'Pandas DataFrame Support',                       'pgmpy': True,  'bnlearn (R)': False, 'pyagrum': True,  'pomegranate': False},
-    {'Category': 'Backend & API', 'Feature': 'NumPy Backend',                                  'pgmpy': True,  'bnlearn (R)': False, 'pyagrum': False, 'pomegranate': False},
-    {'Category': 'Backend & API', 'Feature': 'PyTorch / GPU Support',                          'pgmpy': True,  'bnlearn (R)': False, 'pyagrum': False, 'pomegranate': True},
-    {'Category': 'Backend & API', 'Feature': 'C/C++ Backend',                                  'pgmpy': False, 'bnlearn (R)': True,  'pyagrum': True,  'pomegranate': False},
-    {'Category': 'Backend & API', 'Feature': 'Incremental / Online Learning',                  'pgmpy': True,  'bnlearn (R)': False, 'pyagrum': True,  'pomegranate': False},
-    {'Category': 'Inference', 'Feature': 'Variable Elimination',                              'pgmpy': True,  'bnlearn (R)': False, 'pyagrum': True,  'pomegranate': False},
-    {'Category': 'Inference', 'Feature': 'Belief Propagation',                                 'pgmpy': True,  'bnlearn (R)': False, 'pyagrum': True,  'pomegranate': False},
-    {'Category': 'Inference', 'Feature': 'Sampling (MCMC, Gibbs, Likelihood Weighting)',       'pgmpy': True,  'bnlearn (R)': True, 'pyagrum': True,  'pomegranate': False},
+# features we comparing, kept short so linter dont yell
+cats = [
+    "Parameter Learning",
+    "Parameter Learning",
+    "Parameter Learning",
+    "Parameter Learning",
+    "Structure Learning",
+    "Structure Learning",
+    "Structure Learning",
+    "Structure Learning",
+    "Structure Learning",
+    "Data Types",
+    "Data Types",
+    "Data Types",
+    "Data Types",
+    "Backend & API",
+    "Backend & API",
+    "Backend & API",
+    "Backend & API",
+    "Backend & API",
+    "Inference",
+    "Inference",
+    "Inference",
 ]
 
-df = pd.DataFrame(features)
-packages = ['pgmpy', 'bnlearn (R)', 'pyagrum', 'pomegranate']
-
-# prepare column data
-col_data = [
-    df['Category'].tolist(),
-    df['Feature'].tolist(),
-    df['pgmpy'].map({True: '✓', False: '✗'}).tolist(),
-    df['bnlearn (R)'].map({True: '✓', False: '✗'}).tolist(),
-    df['pyagrum'].map({True: '✓', False: '✗'}).tolist(),
-    df['pomegranate'].map({True: '✓', False: '✗'}).tolist(),
+fts = [
+    "Maximum Likelihood Estimation (MLE)",
+    "Bayesian Estimation",
+    "Expectation Maximization (EM)",
+    "Dirichlet Prior",
+    "Score-based (BIC, AIC, K2)",
+    "Constraint-based (PC, IC)",
+    "Hybrid (MMHC, H2PC)",
+    "Exhaustive Search",
+    "Tabu Search",
+    "Discrete / Categorical Data",
+    "Continuous Data (Gaussian)",
+    "Mixed Data (Continuous + Discrete)",
+    "Time Series / Dynamic BN",
+    "Pandas DataFrame Support",
+    "NumPy Backend",
+    "PyTorch / GPU Support",
+    "C/C++ Backend",
+    "Incremental / Online Learning",
+    "Variable Elimination",
+    "Belief Propagation",
+    "Sampling (MCMC, Gibbs, Likelihood Weighting)",
 ]
 
-# cell coloring
-cell_colors = []
-for i in range(len(df)):
-    row_colors = []
-    bg = '#f8fafc' if i % 2 == 0 else '#f1f5f9'
-    row_colors.append(bg)
-    row_colors.append(bg)
-    for j in range(4):
-        val = df.iloc[i][packages[j]]
-        row_colors.append('rgba(34, 197, 94, 0.15)' if val else 'rgba(239, 68, 68, 0.10)')
-    cell_colors.append(row_colors)
+pgmpy_ok = [
+    True,
+    True,
+    True,
+    True,
+    True,
+    True,
+    True,
+    True,
+    True,
+    True,
+    True,
+    True,
+    True,
+    True,
+    True,
+    True,
+    False,
+    True,
+    True,
+    True,
+    True,
+]
 
-# create table
-fig = go.Figure(data=[go.Table(
-    header=dict(
-        values=['Category', 'Feature', 'pgmpy', 'bnlearn (R)', 'pyagrum', 'pomegranate'],
-        fill=dict(color='#1e293b'),
-        font=dict(color='white', size=12, family='Arial'),
-        align='center',
-        height=30,
-    ),
-    cells=dict(
-        values=col_data,
-        fill=dict(color=list(zip(*cell_colors))),
-        font=dict(size=11, family='Arial', color='#334155'),
-        align='center',
-        height=28,
-    ),
-    columnwidth=[130, 260, 70, 90, 70, 90],
-)])
+bnlearn_ok = [
+    True,
+    True,
+    True,
+    True,
+    True,
+    True,
+    True,
+    False,
+    True,
+    True,
+    True,
+    True,
+    True,
+    False,
+    False,
+    False,
+    True,
+    False,
+    False,
+    False,
+    True,
+]
+
+pyagrum_ok = [
+    True,
+    True,
+    True,
+    True,
+    True,
+    True,
+    True,
+    False,
+    True,
+    True,
+    True,
+    True,
+    True,
+    True,
+    False,
+    False,
+    True,
+    True,
+    True,
+    True,
+    True,
+]
+
+pom_ok = [
+    True,
+    False,
+    False,
+    False,
+    False,
+    False,
+    False,
+    False,
+    False,
+    True,
+    True,
+    False,
+    False,
+    False,
+    False,
+    True,
+    False,
+    False,
+    False,
+    False,
+    False,
+]
+
+data = pd.DataFrame(
+    {
+        "Category": cats,
+        "Feature": fts,
+        "pgmpy": pgmpy_ok,
+        "bnlearn (R)": bnlearn_ok,
+        "pyagrum": pyagrum_ok,
+        "pomegranate": pom_ok,
+    }
+)
+
+libs = ["pgmpy", "bnlearn (R)", "pyagrum", "pomegranate"]
+hdr_cols = ["#1e293b", "#334155", "#2563eb", "#f97316", "#ef4444", "#22c55e"]
+
+# symbol mapping stuff
+sym = {True: "\u2713", False: "\u2717"}
+
+tbl_cols = [
+    data["Category"].tolist(),
+    data["Feature"].tolist(),
+    data["pgmpy"].map(sym).tolist(),
+    data["bnlearn (R)"].map(sym).tolist(),
+    data["pyagrum"].map(sym).tolist(),
+    data["pomegranate"].map(sym).tolist(),
+]
+
+# figuring out cell colors for each row
+cell_cols = []
+for r in range(len(data)):
+    row_data = []
+    bg = "#f8fafc" if r % 2 == 0 else "#f1f5f9"
+    row_data.append(bg)
+    row_data.append(bg)
+
+    for c in range(4):
+        val = data.iloc[r][libs[c]]
+        if val:
+            row_data.append("rgba(34, 197, 94, 0.15)")
+        else:
+            row_data.append("rgba(239, 68, 68, 0.10)")
+
+    cell_cols.append(row_data)
+
+fig = go.Figure(
+    data=[
+        go.Table(
+            header=dict(
+                values=["Category", "Feature", "pgmpy", "bnlearn (R)", "pyagrum", "pomegranate"],
+                fill=dict(color=hdr_cols),
+                font=dict(color="white", size=13, family="Segoe UI, system-ui, sans-serif", weight=600),
+                align="center",
+                height=35,
+            ),
+            cells=dict(
+                values=tbl_cols,
+                # zipping colors to fix plotly column color thing
+                fill=dict(color=list(zip(*cell_cols))),
+                font=dict(size=12, family="Segoe UI, system-ui, sans-serif", color="#334155"),
+                align="center",
+                height=30,
+            ),
+            columnwidth=[140, 280, 80, 100, 80, 100],
+        )
+    ]
+)
 
 fig.update_layout(
     title=dict(
-        text='Feature Comparison: pgmpy vs Other Packages',
+        text="Feature Comparison: pgmpy vs Other Packages",
         x=0.5,
-        font=dict(size=16, color='#1e293b', family='Arial'),
+        font=dict(size=18, color="#1e293b", family="Segoe UI, system-ui, sans-serif", weight=600),
     ),
-    height=700,
-    width=900,
-    margin=dict(t=50, b=20, l=20, r=20),
+    height=750,
+    width=1200,
+    margin=dict(t=60, b=20, l=150, r=150),
 )
 
-fig.write_html('feature_comparison.html')
-print('done. feature comparison saved to feature_comparison.html')
+fig.write_html("feature_comparison.html")
+print("done exporting feature table!")
