@@ -520,12 +520,19 @@ class _ScoreMixin:
         edges or to force them to be present in the model, respectively.
         """
 
-        # Step 0: Pre-compute a few data structures.
+        # Step 0: Pre-compute structures that are constant
         tabu_list = set(tabu_list)
         descendants = {v: nx.descendants(model, v) for v in model.nodes()}
         edges = list(model.edges())
         edge_set = set(edges)
         reverse_edge_set = {(Y, X) for (X, Y) in edges}
+
+        parents_cache = {v: tuple(model.get_parents(v)) for v in model.nodes()}
+        current_score = {v: scoring_method.local_score(v, parents_cache[v]) for v in model.nodes()}
+
+        prior_add = scoring_method.structure_prior_ratio("+")
+        prior_remove = scoring_method.structure_prior_ratio("-")
+        prior_flip = scoring_method.structure_prior_ratio("flip")
 
         # Step 1: Get all legal operations for adding edges. Sort the iteration order for reproducible runs.
         potential_new_edges = sorted(set(permutations(self.variables_, 2)) - edge_set - reverse_edge_set)
@@ -536,23 +543,19 @@ class _ScoreMixin:
                 continue
             operation = ("+", (X, Y))
             if (operation not in tabu_list) and ((X, Y) not in forbidden_edges):
-                old_parents = tuple(model.get_parents(Y))
+                old_parents = parents_cache[Y]
                 new_parents = old_parents + (X,)
                 if len(new_parents) <= max_indegree:
-                    score_delta = scoring_method.local_score(Y, new_parents) - scoring_method.local_score(
-                        Y, old_parents
-                    )
-                    score_delta += scoring_method.structure_prior_ratio("+")
+                    score_delta = scoring_method.local_score(Y, new_parents) - current_score[Y] + prior_add
                     yield (operation, score_delta)
 
         # Step 2: Get all legal operations for removing edges
         for X, Y in edges:
             operation = ("-", (X, Y))
             if (operation not in tabu_list) and ((X, Y) not in required_edges):
-                old_parents = tuple(model.get_parents(Y))
+                old_parents = parents_cache[Y]
                 new_parents = tuple(var for var in old_parents if var != X)
-                score_delta = scoring_method.local_score(Y, new_parents) - scoring_method.local_score(Y, old_parents)
-                score_delta += scoring_method.structure_prior_ratio("-")
+                score_delta = scoring_method.local_score(Y, new_parents) - current_score[Y] + prior_remove
                 yield (operation, score_delta)
 
         # Step 3: Get all legal operations for flipping edges
@@ -567,16 +570,14 @@ class _ScoreMixin:
                 and ((X, Y) not in required_edges)
                 and ((Y, X) not in forbidden_edges)
             ):
-                old_X_parents = tuple(model.get_parents(X))
-                old_Y_parents = tuple(model.get_parents(Y))
-                new_X_parents = old_X_parents + (Y,)
-                new_Y_parents = tuple(var for var in old_Y_parents if var != X)
+                new_X_parents = parents_cache[X] + (Y,)
+                new_Y_parents = tuple(var for var in parents_cache[Y] if var != X)
                 if len(new_X_parents) <= max_indegree:
                     score_delta = (
                         scoring_method.local_score(X, new_X_parents)
                         + scoring_method.local_score(Y, new_Y_parents)
-                        - scoring_method.local_score(X, old_X_parents)
-                        - scoring_method.local_score(Y, old_Y_parents)
+                        - current_score[X]
+                        - current_score[Y]
+                        + prior_flip
                     )
-                    score_delta += scoring_method.structure_prior_ratio("flip")
                     yield (operation, score_delta)
