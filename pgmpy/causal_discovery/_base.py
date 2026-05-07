@@ -520,29 +520,33 @@ class _ScoreMixin:
         edges or to force them to be present in the model, respectively.
         """
 
+        # Step 0: Pre-compute a few data structures.
         tabu_list = set(tabu_list)
+        descendants = {v: nx.descendants(model, v) for v in model.nodes()}
+        edges = list(model.edges())
+        edge_set = set(edges)
+        reverse_edge_set = {(Y, X) for (X, Y) in edges}
 
         # Step 1: Get all legal operations for adding edges.
-        potential_new_edges = (
-            set(permutations(self.variables_, 2)) - set(model.edges()) - {(Y, X) for (X, Y) in model.edges()}
-        )
+        potential_new_edges = set(permutations(self.variables_, 2)) - edge_set - reverse_edge_set
 
         for X, Y in potential_new_edges:
-            # Check if adding (X, Y) will create a cycle.
-            if not nx.has_path(model, Y, X):
-                operation = ("+", (X, Y))
-                if (operation not in tabu_list) and ((X, Y) not in forbidden_edges):
-                    old_parents = tuple(model.get_parents(Y))
-                    new_parents = old_parents + (X,)
-                    if len(new_parents) <= max_indegree:
-                        score_delta = scoring_method.local_score(Y, new_parents) - scoring_method.local_score(
-                            Y, old_parents
-                        )
-                        score_delta += scoring_method.structure_prior_ratio("+")
-                        yield (operation, score_delta)
+            # Adding X->Y creates a cycle iff Y already reaches X.
+            if X in descendants[Y]:
+                continue
+            operation = ("+", (X, Y))
+            if (operation not in tabu_list) and ((X, Y) not in forbidden_edges):
+                old_parents = tuple(model.get_parents(Y))
+                new_parents = old_parents + (X,)
+                if len(new_parents) <= max_indegree:
+                    score_delta = scoring_method.local_score(Y, new_parents) - scoring_method.local_score(
+                        Y, old_parents
+                    )
+                    score_delta += scoring_method.structure_prior_ratio("+")
+                    yield (operation, score_delta)
 
         # Step 2: Get all legal operations for removing edges
-        for X, Y in model.edges():
+        for X, Y in edges:
             operation = ("-", (X, Y))
             if (operation not in tabu_list) and ((X, Y) not in required_edges):
                 old_parents = tuple(model.get_parents(Y))
@@ -552,25 +556,27 @@ class _ScoreMixin:
                 yield (operation, score_delta)
 
         # Step 3: Get all legal operations for flipping edges
-        for X, Y in model.edges():
-            # Check if flipping creates any cycles
-            if not any(map(lambda path: len(path) > 2, nx.all_simple_paths(model, X, Y))):
-                operation = ("flip", (X, Y))
-                if (
-                    ((operation not in tabu_list) and ("flip", (Y, X)) not in tabu_list)
-                    and ((X, Y) not in required_edges)
-                    and ((Y, X) not in forbidden_edges)
-                ):
-                    old_X_parents = tuple(model.get_parents(X))
-                    old_Y_parents = tuple(model.get_parents(Y))
-                    new_X_parents = old_X_parents + (Y,)
-                    new_Y_parents = tuple(var for var in old_Y_parents if var != X)
-                    if len(new_X_parents) <= max_indegree:
-                        score_delta = (
-                            scoring_method.local_score(X, new_X_parents)
-                            + scoring_method.local_score(Y, new_Y_parents)
-                            - scoring_method.local_score(X, old_X_parents)
-                            - scoring_method.local_score(Y, old_Y_parents)
-                        )
-                        score_delta += scoring_method.structure_prior_ratio("flip")
-                        yield (operation, score_delta)
+        for X, Y in edges:
+            # Flipping X->Y to Y->X creates a cycle iff some other child of X
+            # already reaches Y (a path X -> C -> ... -> Y with C != Y).
+            if any(Y in descendants[c] for c in model.successors(X) if c != Y):
+                continue
+            operation = ("flip", (X, Y))
+            if (
+                ((operation not in tabu_list) and ("flip", (Y, X)) not in tabu_list)
+                and ((X, Y) not in required_edges)
+                and ((Y, X) not in forbidden_edges)
+            ):
+                old_X_parents = tuple(model.get_parents(X))
+                old_Y_parents = tuple(model.get_parents(Y))
+                new_X_parents = old_X_parents + (Y,)
+                new_Y_parents = tuple(var for var in old_Y_parents if var != X)
+                if len(new_X_parents) <= max_indegree:
+                    score_delta = (
+                        scoring_method.local_score(X, new_X_parents)
+                        + scoring_method.local_score(Y, new_Y_parents)
+                        - scoring_method.local_score(X, old_X_parents)
+                        - scoring_method.local_score(Y, old_Y_parents)
+                    )
+                    score_delta += scoring_method.structure_prior_ratio("flip")
+                    yield (operation, score_delta)
