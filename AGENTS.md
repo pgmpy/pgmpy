@@ -35,13 +35,17 @@ pytest -v pgmpy/tests/test_models/test_DiscreteBayesianNetwork.py::TestBayesianM
 pre-commit run --all-files
 ```
 
+Prefer the smallest relevant `pytest` target first, then broaden to larger suites only if needed.
+
 ## Instructions for Tasks
 1. Always make a plan before coding.
-2. For any change write tests first (Test-Driven Development). Avoid adding too many tests and try to combine tests when
-   possible.
+2. For behavior changes and bug fixes, prefer writing tests first (Test-Driven Development) when practical. For pure
+   documentation or non-behavioral refactors, add tests only if behavior is affected. Avoid adding too many tests and
+   try to combine tests when possible.
 3. Follow existing patterns in the codebase. Always check for similar implementations before creating new ones.
-4. Use type hints and docstrings for all public methods.
-5. Run `pre-commit` hooks and `pytest` after changes to ensure code quality and correctness.
+4. Use type hints and docstrings for new or modified public methods.
+5. Run the smallest relevant `pytest` target after changes to ensure correctness. Broaden to larger suites as needed.
+   Run `pre-commit` when it is available in the environment.
 6. Avoid redundant checks in the code. For example, if a variable is always expected to be a list, do not add checks to
    verify that it is a list. Try to avoid adding try except blocks unless absolutely necessary. If you need to add error
    handling, make sure to be explicit about the expected exceptions and handle them appropriately.
@@ -51,6 +55,12 @@ pre-commit run --all-files
 9. When adding new functionality, consider how it can be integrated with existing components and whether it can be
    implemented in a way that allows for future extensions or modifications without requiring significant changes to the
    existing codebase.
+10. Preserve backwards compatibility unless the user explicitly requests or approves a breaking change. For migrations
+    and refactors, prefer adding new APIs alongside compatibility shims before removing old paths.
+11. If a required command or dependency is unavailable in the environment, state that explicitly and use the best
+    available validation instead of silently skipping verification.
+12. For code that supports multiple backends or optional dependencies, preserve existing `numpy` and `torch` behavior
+    where applicable, and guard optional-dependency tests appropriately.
 
 ## Code Style
 
@@ -62,7 +72,8 @@ pre-commit run --all-files
 
 ## Standard Workflow
 ```bash
-# 1. Create feature or a bugfix branch
+# 1. Create feature or a bugfix branch (human workflow; optional for agents
+# already working in an assigned branch/worktree)
 git checkout -b feature/your-feature dev
 
 # 2. Make changes with tests
@@ -98,9 +109,18 @@ Probability representations attached to models:
 
 ### Estimators (`pgmpy/estimators/`)
 Estimators for learning model parameters from data:
-- **Parameter learning**: `MaximumLikelihoodEstimator`, `BayesianEstimator`, `ExpectationMaximization`
+- **Parameter learning**: legacy compatibility layer for `MaximumLikelihoodEstimator`, `BayesianEstimator`,
+  `ExpectationMaximization`
 - **Structure learning**: `PC`, `HillClimbSearch`, `ExhaustiveSearch`, `GES`, `MmhcEstimator`, `TreeSearch`
 - **Scoring**: K2, BDeu, BDs, BIC, AIC (and Gaussian, and conditional gaussian variants)
+
+### Parameter Estimation (`pgmpy/parameter_estimator/`)
+Canonical implementation location for parameter learning from data:
+- **Discrete parameter learning**: `MaximumLikelihoodEstimator`, `BayesianEstimator`, `ExpectationMaximization`
+
+### Structure Scores (`pgmpy/structure_score/`)
+Canonical implementation location for structure scoring utilities. Prefer this over importing structure scores from
+`pgmpy.estimators`.
 
 ### Inference (`pgmpy/inference/`)
 Computing posterior distributions given model and evidence:

@@ -14,19 +14,21 @@ Algorithms for each task follow a unified composable API, making them modular an
 | **Community** | [![Discord Online](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdiscord.com%2Fapi%2Fguilds%2F1248540985894633492%2Fwidget.json&query=%24.presence_count&label=online&logo=discord&style=flat-square&labelColor=E0E3FF&color=5865F2&logoColor=white)](https://discord.gg/DRkdKaumBs) [![!slack](https://img.shields.io/static/v1?logo=linkedin&label=LinkedIn&message=news&color=lightblue)](https://www.linkedin.com/company/pgmpy/)  |
 | **CI/CD** | [![github-actions](https://img.shields.io/github/actions/workflow/status/pgmpy/pgmpy/ci.yml?logo=github)](https://github.com/pgmpy/pgmpy/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/pgmpy/pgmpy/graph/badge.svg?token=UaJMCdHaEF)](https://codecov.io/gh/pgmpy/pgmpy) [![asv](http://img.shields.io/badge/benchmarked%20by-asv-blue.svg?style=flat)](http://pgmpy.org/pgmpy-benchmarks/) [![platform](https://img.shields.io/conda/pn/conda-forge/pgmpy)](https://github.com/pgmpy/pgmpy) |
 | **Code** |  [![!pypi](https://img.shields.io/pypi/v/pgmpy?color=orange)](https://pypi.org/project/pgmpy/) [![!conda](https://img.shields.io/conda/vn/conda-forge/pgmpy)](https://anaconda.org/conda-forge/pgmpy) [![!python-versions](https://img.shields.io/pypi/pyversions/pgmpy)](https://www.python.org/) [![!black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)  |
-| **Downloads** | ![PyPI - Downloads](https://img.shields.io/pypi/dw/pgmpy) ![PyPI - Downloads](https://img.shields.io/pypi/dm/pgmpy) [![Downloads](https://static.pepy.tech/personalized-badge/pgmpy?period=total&units=international_system&left_color=grey&right_color=blue&left_text=cumulative%20(pypi))](https://pepy.tech/project/pgmpy) |
+| **Downloads** | ![PyPI - Downloads](https://img.shields.io/pypi/dm/pgmpy) [![Downloads](https://static.pepy.tech/personalized-badge/pgmpy?period=total&units=international_system&left_color=grey&right_color=blue&left_text=cumulative%20(pypi))](https://pepy.tech/project/pgmpy) |
 | **Supported By** | [![GC.OS Sponsored](https://img.shields.io/badge/GC.OS-Sponsored%20Project-orange.svg?style=flat&colorA=0eac92&colorB=2077b4)](https://gc-os-ai.github.io/) [![FLOSS/FUND](https://floss.fund//static/badge.svg)](https://floss.fund/) [![Affiliated with NumFOCUS](https://img.shields.io/badge/NumFOCUS-affiliated%20project-orange.svg?style=flat&colorA=E1523D&colorB=007D8A)](https://numfocus.org/sponsored-projects/affiliated-projects) |
 
 ## Key Features
 
 | Feature | Description |
 |--------|-------------|
-| [**Causal Discovery / Structure Learning**](https://pgmpy.org/examples/Structure%20Learning%20in%20Bayesian%20Networks.html) | Learn the model structure from data, with optional integration of **expert knowledge**. |
-| [**Causal Validation**](https://pgmpy.org/metrics/metrics.html) | Assess how compatible the causal structure is with the data. |
-| [**Parameter Learning**](https://pgmpy.org/examples/Learning%20Parameters%20in%20Discrete%20Bayesian%20Networks.html) | Estimate model parameters (e.g., conditional probability distributions) from observed data. |
-| [**Probabilistic Inference**](https://pgmpy.org/examples/Inference%20in%20Discrete%20Bayesian%20Networks.html) | Compute posterior distributions conditioned on observed evidence. |
-| [**Causal Inference**](https://pgmpy.org/examples/Causal%20Inference.html) | Compute interventional and counterfactual distributions using do-calculus. |
-| [**Simulations**](https://github.com/pgmpy/pgmpy/blob/dev/examples/Simulating_Data.ipynb) | Generate synthetic data under specified evidence or interventions. |
+| [**Causal Discovery / Structure Learning**](https://pgmpy.org/guides/causal_discovery.html) | Learn the model structure from data, with optional integration of **expert knowledge**. |
+| [**Causal Validation**](https://pgmpy.org/guides/metrics.html) | Assess how compatible the causal structure is with the data. |
+| [**Parameter Learning**](https://pgmpy.org/guides/parameter_estimation.html) | Estimate model parameters (e.g., conditional probability distributions) from observed data. |
+| [**Probabilistic Inference**](https://pgmpy.org/guides/probabilistic_inference.html) | Compute posterior distributions conditioned on observed evidence. |
+| [**Causal Inference**](https://pgmpy.org/api/causal_inference.html) | Compute interventional and counterfactual distributions using do-calculus. |
+| [**Simulations**](https://pgmpy.org/guides/simulations.html) | Generate synthetic data under specified evidence or interventions. |
+| **Example** [**Datasets**](https://pgmpy.org/guides/datasets.html) **and** [**Models**](https://pgmpy.org/guides/example_models.html) | Collection of datasets and models from various sources. |
+| [**Plotting**](https://pgmpy.org/guides/plotting.html) | Flexible plotting functionality. |
 
 ### Resources and Links
 - **Example Notebooks:** [Examples](https://github.com/pgmpy/pgmpy/tree/dev/examples)

@@ -11,21 +11,41 @@ Estimator Base Classes
    :toctree: generated/parameter_estimation
    :template: autosummary/class.rst
 
-   ~pgmpy.estimators.BaseEstimator
-   ~pgmpy.estimators.ParameterEstimator
-   ~pgmpy.estimators.StructureEstimator
-   ~pgmpy.estimators.MarginalEstimator
+   ~pgmpy.parameter_estimator.BaseParameterEstimator
+   ~pgmpy.parameter_estimator.DiscreteParameterEstimator
+   ~pgmpy.parameter_estimator.GaussianParameterEstimator
 
-Bayesian Network and SEM Estimators
------------------------------------
+Discrete Bayesian Network Estimators
+------------------------------------
+
+Estimators for :class:`~pgmpy.models.DiscreteBayesianNetwork` models.
 
 .. autosummary::
    :toctree: generated/parameter_estimation
    :template: autosummary/class.rst
 
-   ~pgmpy.estimators.MaximumLikelihoodEstimator
-   ~pgmpy.estimators.BayesianEstimator
-   ~pgmpy.estimators.ExpectationMaximization
+   ~pgmpy.parameter_estimator.DiscreteMLE
+   ~pgmpy.parameter_estimator.DiscreteBayesianEstimator
+   ~pgmpy.parameter_estimator.DiscreteEM
+
+Linear Gaussian Bayesian Network Estimators
+-------------------------------------------
+
+Estimators for :class:`~pgmpy.models.LinearGaussianBayesianNetwork` models.
+
+.. autosummary::
+   :toctree: generated/parameter_estimation
+   :template: autosummary/class.rst
+
+   ~pgmpy.parameter_estimator.LinearGaussianMLE
+
+Structural Equation Model Estimators
+------------------------------------
+
+.. autosummary::
+   :toctree: generated/parameter_estimation
+   :template: autosummary/class.rst
+
    ~pgmpy.estimators.SEMEstimator
    ~pgmpy.estimators.IVEstimator
 
