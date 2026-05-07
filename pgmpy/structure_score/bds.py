@@ -82,8 +82,8 @@ class BDs(BDeu):
         "is_parameteric": True,
     }
 
-    def __init__(self, data, equivalent_sample_size=10, state_names=None):
-        super().__init__(data, equivalent_sample_size, state_names=state_names)
+    def __init__(self, data, equivalent_sample_size=10, state_names=None, cache_size=10000):
+        super().__init__(data, equivalent_sample_size, state_names=state_names, cache_size=cache_size)
 
     def structure_prior_ratio(self, operation) -> float:
         """Compute the prior ratio for a graph edit."""

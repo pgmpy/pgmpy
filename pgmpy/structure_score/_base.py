@@ -26,6 +26,9 @@ class BaseStructureScore(BaseObject):
     state_names : dict, optional
         Dictionary mapping each variable name to its allowed states. If not specified, the
         observed values in the data are used.
+    cache_size : int, optional
+        Maximum number of entries in the local-score LRU cache. Defaults to ``10000``.
+        Set to a smaller value to reduce memory usage on constrained machines.
     """
 
     _tags = {
@@ -35,14 +38,14 @@ class BaseStructureScore(BaseObject):
         "is_parameteric": False,
     }
 
-    def __init__(self, data, state_names=None):
+    def __init__(self, data, state_names=None, cache_size=10000):
         self.data, self.dtypes = preprocess_data(data)
 
         if self.data is not None:
             self.variables = list(self.data.columns.values)
             self.state_names = build_state_names(self.data, state_names=state_names)
 
-        self._cached_local_score = lru_cache(maxsize=10000)(self._local_score)
+        self._cached_local_score = lru_cache(maxsize=int(cache_size))(self._local_score)
 
     def local_score(self, variable: str, parents: tuple[str, ...]) -> float:
         """Compute the cached local score for `variable` given `parents`."""

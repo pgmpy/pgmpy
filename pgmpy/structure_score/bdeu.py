@@ -79,9 +79,9 @@ class BDeu(BaseStructureScore):
         "is_parameteric": True,
     }
 
-    def __init__(self, data, equivalent_sample_size=10, state_names=None):
+    def __init__(self, data, equivalent_sample_size=10, state_names=None, cache_size=10000):
         self.equivalent_sample_size = equivalent_sample_size
-        super().__init__(data, state_names=state_names)
+        super().__init__(data, state_names=state_names, cache_size=cache_size)
 
     def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
         state_counts = get_state_counts(self.data, self.state_names, variable, parents, reindex=False)
