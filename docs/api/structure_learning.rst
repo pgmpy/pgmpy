@@ -26,6 +26,7 @@ Score-Based and Tree Search
    ~pgmpy.estimators.TreeSearch
    ~pgmpy.estimators.ExhaustiveSearch
    ~pgmpy.causal_discovery.TOPIC
+   ~pgmpy.causal_discovery.SortnRegress
 
 Expert-Guided Discovery
 -----------------------
