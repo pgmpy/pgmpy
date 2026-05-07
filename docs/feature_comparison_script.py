@@ -226,5 +226,7 @@ def main():
     
     fig.write_html("feature_comparison.html")
     print("done exporting feature table!")
+
+
 if __name__ == "__main__":
     main()
