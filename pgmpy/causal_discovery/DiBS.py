@@ -1,12 +1,11 @@
+from collections.abc import Callable
+
 import networkx as nx
 import numpy as np
 import pandas as pd
 import torch
-from torch.nn.functional import logsigmoid
 from torch.func import grad
-from math import log
-
-from typing import Callable, Tuple, List
+from torch.nn.functional import logsigmoid
 
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery
 
@@ -158,11 +157,9 @@ class DiBS(_BaseCausalDiscovery):
         self.n_particles = n_particles
         self.n_steps = n_steps
         self.log_likelihood = log_likelihood
-        self._log_likelihood_fn = (
-            self._lgbn_log_likelihood if log_likelihood is None else log_likelihood
-        )
+        self._log_likelihood_fn = self._lgbn_log_likelihood if log_likelihood is None else log_likelihood
         self.learning_rate = learning_rate
-        self.edge_prob_threshold = edge_prob_threshold # Used for summarization of the graphs later.
+        self.edge_prob_threshold = edge_prob_threshold  # Used for summarization of the graphs later.
         self.kernel = kernel
         self.kernel_bandwidth = kernel_bandwidth
         self.grad_estimator_z = grad_estimator_z
@@ -171,7 +168,7 @@ class DiBS(_BaseCausalDiscovery):
         self.beta_linear = beta_linear
         self.alpha = lambda t: alpha_linear * (t + 1)
         self.beta = lambda t: beta_linear * (t + 1)
-        self.latent_dim = latent_dim # dimension of each U_i and V_i.
+        self.latent_dim = latent_dim  # dimension of each U_i and V_i.
         self.n_grad_mc_samples = n_grad_mc_samples
         self.n_acyclicity_mc_samples = n_acyclicity_mc_samples
         self.latent_prior_std = latent_prior_std
@@ -182,9 +179,9 @@ class DiBS(_BaseCausalDiscovery):
             self.device = torch.device("cpu")
 
     def _lgbn_log_likelihood(
-            self,
-            data: torch.Tensor,
-            graph: torch.Tensor,
+        self,
+        data: torch.Tensor,
+        graph: torch.Tensor,
     ):
         """
         Compute local linear-Gaussian log-likelihood for one graph or a batch.
@@ -251,7 +248,6 @@ class DiBS(_BaseCausalDiscovery):
         scores = torch.stack(scores).reshape(batch_shape)
         return scores[0] if single_graph else scores
 
-
     def _initialize_particles(
         self,
         n_nodes: int,
@@ -281,7 +277,6 @@ class DiBS(_BaseCausalDiscovery):
         # last dim is self.latent_dim * 2 since Z = [U, V] and each U_i and V_i are of dim self.latent_dim.
         # Ignore acyclicity part in prior as no (efficient) sampler exists.
         return self.latent_prior_std * torch.randn((n, n_nodes, self.latent_dim * 2))
-
 
     def _grad_z_likelihood_score_function(
         self,
@@ -323,16 +318,17 @@ class DiBS(_BaseCausalDiscovery):
         U, V = particles.chunk(2, dim=-1)
         soft_graphs = torch.sigmoid(self.alpha(t) * U @ V.transpose(-1, -2))
         hard_graph_samples = (
-                torch.rand((p, n_samples, n_nodes, n_nodes), device=soft_graphs.device)
-                < soft_graphs.unsqueeze(1)
+            torch.rand((p, n_samples, n_nodes, n_nodes), device=soft_graphs.device) < soft_graphs.unsqueeze(1)
         ).to(soft_graphs.dtype)
 
         # get rid of self-loops:
-        hard_graph_samples = hard_graph_samples * (1.0 - torch.eye(soft_graphs.shape[-1], device=soft_graphs.device, dtype=soft_graphs.dtype))
+        hard_graph_samples = hard_graph_samples * (
+            1.0 - torch.eye(soft_graphs.shape[-1], device=soft_graphs.device, dtype=soft_graphs.dtype)
+        )
 
         # compute the log likelihood:
         log_likelihood_fn = self._log_likelihood_fn
-        ll = log_likelihood_fn(X_t, hard_graph_samples) # 2d tensor now.
+        ll = log_likelihood_fn(X_t, hard_graph_samples)  # 2d tensor now.
 
         # function that computes log_p(G|Z), see eq. 6
         def log_p(G, Z):
@@ -348,12 +344,13 @@ class DiBS(_BaseCausalDiscovery):
         vectorized_grad_log_p = torch.vmap(
             torch.vmap(
                 grad(log_p, argnums=1),
-                in_dims=(0, None), # vectorize over the samples
+                in_dims=(0, None),  # vectorize over the samples
             ),
-            in_dims=(0, 0), # vectorize over the particles
+            in_dims=(0, 0),  # vectorize over the particles
         )
 
-        # grad_z log p(G|z) for each particle and each of the earlier samples: [particles.shape[0], S, *particles.shape[1:]]
+        # grad_z log p(G|z) for each particle and each of the earlier samples:
+        # # [particles.shape[0], S, *particles.shape[1:]]
         grads = vectorized_grad_log_p(hard_graph_samples, particles)
 
         # using a stable rewrite of the ratio in eq. 9 using eq. 14:
@@ -365,9 +362,13 @@ class DiBS(_BaseCausalDiscovery):
             return first_term
 
         b = torch.tensor(b, device=grads.device, dtype=grads.dtype)
-        second_term = torch.sign(b) * torch.exp(torch.log(torch.abs(b)) - torch.logsumexp(ll, dim=1))[..., None, None] * grads.sum(dim=1)
-        return first_term - second_term
+        second_term = (
+            torch.sign(b)
+            * torch.exp(torch.log(torch.abs(b)) - torch.logsumexp(ll, dim=1))[..., None, None]
+            * grads.sum(dim=1)
+        )
 
+        return first_term - second_term
 
     def _grad_z_likelihood_gumbel(
         self,
@@ -413,7 +414,6 @@ class DiBS(_BaseCausalDiscovery):
         ).clamp(eps, 1 - eps)
         logistic_samples = torch.log(uniform_samples / (1 - uniform_samples))
 
-
         # todo: discuss correctness of eq. 12 with ankur; is the chain rule applied correctly?
         # todo: for the time being, use a custom stable rewrite and use autodiff.
 
@@ -448,7 +448,6 @@ class DiBS(_BaseCausalDiscovery):
         ratio = (weights[..., None, None] * gradz_marg_ll).sum(dim=1)
 
         return ratio
-
 
     def _make_likelihood_grad_estimator(self, name: str):
         """
@@ -562,8 +561,8 @@ class DiBS(_BaseCausalDiscovery):
 
         # Batched prior score:
         #   - beta * grad E[h(G)] - Z / sigma^2
-        grad_expected_h = torch.vmap(grad_constraint_gumbel, in_dims=0, randomness='different')(particles)
-        log_prior_score = -beta * grad_expected_h - particles / (self.latent_prior_std ** 2)
+        grad_expected_h = torch.vmap(grad_constraint_gumbel, in_dims=0, randomness="different")(particles)
+        log_prior_score = -beta * grad_expected_h - particles / (self.latent_prior_std**2)
 
         # Likelihood-ratio / reparam estimator for the likelihood term
         strategy = self._make_likelihood_grad_estimator(self.grad_estimator_z)
@@ -572,10 +571,9 @@ class DiBS(_BaseCausalDiscovery):
         score = log_prior_score + ratio
         return score
 
-
     def _get_kernel(
-            self,
-            particles: torch.Tensor,
+        self,
+        particles: torch.Tensor,
     ) -> tuple[torch.Tensor, Callable[[torch.Tensor, torch.Tensor], torch.Tensor]]:
         """
         Compute the SVGD kernel matrix and corresponding pairwise kernel function.
@@ -619,20 +617,15 @@ class DiBS(_BaseCausalDiscovery):
             self_interactions = interactions.diagonal()
 
             # using ||A-B||_F^2 = ||A||_F^2 + ||B||_F^2 - 2<A,B>_F
-            norm_diff = (
-                    self_interactions.unsqueeze(1)
-                    + self_interactions.unsqueeze(0)
-                    - 2 * interactions
-            )
+            norm_diff = self_interactions.unsqueeze(1) + self_interactions.unsqueeze(0) - 2 * interactions
 
             def k(x, y):
                 # flatten particles:
                 x, y = x.flatten(), y.flatten()
-                return torch.exp(- ((x - y) ** 2).sum() / bandwidth)
+                return torch.exp(-((x - y) ** 2).sum() / bandwidth)
 
             return torch.exp(-norm_diff / bandwidth), k
         raise ValueError(f"Unknown kernel name: {kernel_name}")
-
 
     def _svgd_increment(
         self,
@@ -667,7 +660,7 @@ class DiBS(_BaseCausalDiscovery):
 
         # k(z_k, *) grad_{z_k} log p(z_k | D)
         # but also vectorized over m
-        driving_term = torch.einsum('ij,i...->j...', kernel_mat, scores)
+        driving_term = torch.einsum("ij,i...->j...", kernel_mat, scores)
 
         # grad_{z_k} k(z_k, *)
         # also vectorized over m
@@ -687,8 +680,6 @@ class DiBS(_BaseCausalDiscovery):
         repulsive_term = grad_over_m(particles, particles).sum(dim=1)
 
         return (driving_term + repulsive_term) / M
-
-
 
     def _run_inference(
         self,
@@ -730,7 +721,7 @@ class DiBS(_BaseCausalDiscovery):
 
         # compute G_infty(Z):
         U, V = torch.chunk(particles.detach(), 2, dim=2)
-        graphs_infty = ((U @ V.transpose(-1, -2)) > 0) * ~ torch.eye(n_nodes, dtype=torch.bool, device=self.device)
+        graphs_infty = ((U @ V.transpose(-1, -2)) > 0) * ~torch.eye(n_nodes, dtype=torch.bool, device=self.device)
 
         self._graph_particle_samples = graphs_infty.detach().cpu()
 

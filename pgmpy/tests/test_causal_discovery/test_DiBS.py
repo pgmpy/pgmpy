@@ -1,4 +1,3 @@
-
 """
 Tests for DiBS in pgmpy.causal_discovery.
 """
@@ -92,7 +91,6 @@ class TestDiBSCore:
         est.fit(linear_chain_data)
         assert nx.is_directed_acyclic_graph(est.causal_graph_)
 
-
     def test_custom_log_likelihood_callable(self, tiny_data):
         calls = {"count": 0}
 
@@ -116,7 +114,6 @@ class TestDiBSCore:
 
 
 class TestDiBSLikelihoodValidation:
-
     def test_unknown_grad_estimator_raises(self):
         est = DiBS()
         with pytest.raises(ValueError, match="Unknown grad estimator"):
