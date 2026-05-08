@@ -264,6 +264,7 @@ def load_dataset(name: str) -> Dataset:
 
             tags = target_cls.get_class_tags()
             tags["n_samples"] = df.shape[0]
+            tags["has_missing_data"] = bool(df.isnull().any().any())
 
             return Dataset(
                 name=name,
