@@ -1,6 +1,7 @@
 import pandas as pd
 import plotly.graph_objects as go
 
+
 # features comparing, kept short so linter don't give errors
 def main():
     cats = [
