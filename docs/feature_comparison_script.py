@@ -1,7 +1,7 @@
 import pandas as pd
 import plotly.graph_objects as go
 
-# features we comparing, kept short so linter dont yell
+# features comparing, kept short so linter don't give errors
 def main():
     cats = [
         "Parameter Learning",
@@ -26,7 +26,6 @@ def main():
         "Inference",
         "Inference",
     ]
-    
     fts = [
         "Maximum Likelihood Estimation (MLE)",
         "Bayesian Estimation",
@@ -50,7 +49,6 @@ def main():
         "Belief Propagation",
         "Sampling (MCMC, Gibbs, Likelihood Weighting)",
     ]
-    
     pgmpy_ok = [
         True,
         True,
@@ -74,7 +72,6 @@ def main():
         True,
         True,
     ]
-    
     bnlearn_ok = [
         True,
         True,
@@ -98,7 +95,6 @@ def main():
         False,
         True,
     ]
-    
     pyagrum_ok = [
         True,
         True,
@@ -122,7 +118,6 @@ def main():
         True,
         True,
     ]
-    
     pom_ok = [
         True,
         False,
@@ -146,7 +141,6 @@ def main():
         False,
         False,
     ]
-    
     data = pd.DataFrame(
         {
             "Category": cats,
@@ -157,13 +151,9 @@ def main():
             "pomegranate": pom_ok,
         }
     )
-    
     libs = ["pgmpy", "bnlearn (R)", "pyagrum", "pomegranate"]
     hdr_cols = ["#1e293b", "#334155", "#2563eb", "#f97316", "#ef4444", "#22c55e"]
-    
-    # symbol mapping stuff
     sym = {True: "\u2713", False: "\u2717"}
-    
     tbl_cols = [
         data["Category"].tolist(),
         data["Feature"].tolist(),
@@ -172,24 +162,19 @@ def main():
         data["pyagrum"].map(sym).tolist(),
         data["pomegranate"].map(sym).tolist(),
     ]
-    
-    # figuring out cell colors for each row
     cell_cols = []
     for r in range(len(data)):
         row_data = []
         bg = "#f8fafc" if r % 2 == 0 else "#f1f5f9"
         row_data.append(bg)
         row_data.append(bg)
-    
         for c in range(4):
             val = data.iloc[r][libs[c]]
             if val:
                 row_data.append("rgba(34, 197, 94, 0.15)")
             else:
                 row_data.append("rgba(239, 68, 68, 0.10)")
-    
         cell_cols.append(row_data)
-    
     fig = go.Figure(
         data=[
             go.Table(
@@ -212,7 +197,6 @@ def main():
             )
         ]
     )
-    
     fig.update_layout(
         title=dict(
             text="Feature Comparison: pgmpy vs Other Packages",
@@ -223,7 +207,6 @@ def main():
         width=1200,
         margin=dict(t=60, b=20, l=150, r=150),
     )
-    
     fig.write_html("feature_comparison.html")
     print("done exporting feature table!")
 
