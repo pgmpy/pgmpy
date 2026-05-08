@@ -116,18 +116,6 @@ class TestDiBSCore:
 
 
 class TestDiBSLikelihoodValidation:
-    def test_lgbn_log_likelihood_shape_checks(self):
-        est = DiBS()
-        data = torch.randn(20, 3)
-
-        with pytest.raises(ValueError, match="`data` must have shape"):
-            est._lgbn_log_likelihood(torch.randn(20, 3, 1), torch.zeros(3, 3))
-
-        with pytest.raises(ValueError, match="`graph` must have shape"):
-            est._lgbn_log_likelihood(data, torch.zeros(3))
-
-        with pytest.raises(ValueError, match="Mismatch: data has 3 variables"):
-            est._lgbn_log_likelihood(data, torch.zeros(4, 4))
 
     def test_unknown_grad_estimator_raises(self):
         est = DiBS()

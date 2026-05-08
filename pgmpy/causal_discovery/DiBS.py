@@ -181,40 +181,28 @@ class DiBS(_BaseCausalDiscovery):
         else:
             self.device = torch.device("cpu")
 
-
     def _lgbn_log_likelihood(
-        self,
-        data: torch.Tensor,
-        graph: torch.Tensor,
+            self,
+            data: torch.Tensor,
+            graph: torch.Tensor,
     ):
         """
-        Compute a local linear-Gaussian log-likelihood score for one graph or a batch
-        of graphs.
+        Compute local linear-Gaussian log-likelihood for one graph or a batch.
 
         Parameters
         ----------
         data : torch.Tensor
-            Shape (n_samples, n_nodes). Each column is a variable and each row is an
-            observation.
+            Shape ``(n_samples, n_nodes)``.
         graph : torch.Tensor
-            Shape (n_nodes, n_nodes) or (batch..., n_nodes, n_nodes).
-            Binary adjacency matrix with convention graph[parent, child] = 1.
+            Shape ``(n_nodes, n_nodes)`` or ``(..., n_nodes, n_nodes)`` with
+            convention ``graph[parent, child] = 1``.
 
         Returns
         -------
         torch.Tensor
-            Scalar if a single graph is passed, else shape graph.shape[:-2].
+            Scalar for a single graph; otherwise shape ``graph.shape[:-2]``.
         """
-        if data.ndim != 2:
-            raise ValueError(f"`data` must have shape (n_samples, n_nodes). Got {data.shape}")
-        if graph.ndim < 2 or graph.shape[-1] != graph.shape[-2]:
-            raise ValueError(f"`graph` must have shape (..., n_nodes, n_nodes). Got {graph.shape}")
-
         n_samples, n_nodes = data.shape
-        if graph.shape[-1] != n_nodes:
-            raise ValueError(
-                f"Mismatch: data has {n_nodes} variables but graph has {graph.shape[-1]} nodes."
-            )
 
         single_graph = graph.ndim == 2
         if single_graph:
@@ -227,41 +215,34 @@ class DiBS(_BaseCausalDiscovery):
         dtype = data.dtype
         device = data.device
 
-        # Prevent self loops from participating in the regressions.
+        # Ignore self-loops in local regressions.
         eye = torch.eye(n_nodes, device=device, dtype=graphs.dtype)
         graphs = graphs * (1 - eye)
 
         scores = []
-
         for g in graphs:
             total_ll = torch.zeros((), device=device, dtype=dtype)
 
             for child in range(n_nodes):
-                # parents = {i : i -> child}
                 parent_mask = g[:, child].bool()
                 parent_mask[child] = False
 
-                y = data[:, child]  # (n_samples,)
+                y = data[:, child]
 
                 if parent_mask.any():
-                    X_par = data[:, parent_mask]  # (n_samples, n_parents)
+                    X_par = data[:, parent_mask]
                     design = torch.cat(
                         [torch.ones((n_samples, 1), device=device, dtype=dtype), X_par],
                         dim=1,
                     )
                 else:
-                    # Intercept-only model when there are no parents.
                     design = torch.ones((n_samples, 1), device=device, dtype=dtype)
 
-                # Least-squares fit for the local linear Gaussian model.
-                beta = torch.linalg.lstsq(design, y.unsqueeze(1)).solution  # (p+1, 1)
-                resid = y.unsqueeze(1) - design @ beta  # (n_samples, 1)
+                beta = torch.linalg.lstsq(design, y.unsqueeze(1)).solution
+                resid = y.unsqueeze(1) - design @ beta
                 rss = (resid.squeeze(1) ** 2).sum()
 
-                # MLE of Gaussian noise variance.
                 sigma2 = (rss / n_samples).clamp_min(1e-8)
-
-                # Local Gaussian log-likelihood with MLE plug-in.
                 local_ll = -0.5 * n_samples * (torch.log(2 * torch.pi * sigma2) + 1.0)
                 total_ll = total_ll + local_ll
 
