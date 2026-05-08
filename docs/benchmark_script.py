@@ -1,24 +1,28 @@
 import os
 import time
 import warnings
+
 import numpy as np
 import pandas as pd
-from scipy.stats import sem
-
-# add R path
-if os.name == 'nt':
-    r_path = os.environ.get("R_BIN_PATH") or r'C:\Program Files\R\R-4.6.0\bin\x64'
-    if os.path.exists(r_path):
-        os.environ['PATH'] += os.pathsep + r_path
-
+import plotly.graph_objects as go
 import pyagrum as gum
 import rpy2.robjects as ro
+from plotly.subplots import make_subplots
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.conversion import localconverter
+from scipy.stats import sem
+
 from pgmpy import config
 from pgmpy.estimators import MaximumLikelihoodEstimator
 from pgmpy.models import DiscreteBayesianNetwork
+
 warnings.filterwarnings("ignore")
+
+# add R path
+if os.name == "nt":
+    r_path = os.environ.get("R_BIN_PATH") or r"C:\Program Files\R\R-4.6.0\bin\x64"
+    if os.path.exists(r_path):
+        os.environ["PATH"] += os.pathsep + r_path
 
 
 def make_fake_data(sz):
@@ -26,6 +30,7 @@ def make_fake_data(sz):
     return pd.DataFrame(
         {"A": np.random.randint(0, 2, sz), "B": np.random.randint(0, 2, sz), "C": np.random.randint(0, 2, sz)}
     )
+
 
 def main():
     # just setting up a basic network for fun
@@ -95,13 +100,8 @@ def main():
         res.append({"Size": sz, "Library": "pyagrum (C++)", "MeanTime": np.mean(t_agrum), "StdErr": sem(t_agrum)})
         res.append({"Size": sz, "Library": "bnlearn (R)", "MeanTime": np.mean(t_r), "StdErr": sem(t_r)})
 
-
     # plotting
-    import plotly.graph_objects as go
-    from plotly.subplots import make_subplots
-
     df_results = pd.DataFrame(res)
-    df_results["lbl"] = df_results["Size"].apply(lambda x: f"{x:,} Samples")
     df_results["txt"] = df_results["MeanTime"].apply(lambda val: f"{val:.3f}s")
 
     color_map = {
