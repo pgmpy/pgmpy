@@ -91,6 +91,8 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
     .. [1] Chickering, David Maxwell. "Optimal structure identification with
            greedy search." Journal of machine learning research 3.Nov (2002):
            507-554.
+
+    .. [2] https://github.com/juangamella/ges
     """
 
     def __init__(
@@ -131,7 +133,7 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         """
         Return all edges that can be considered for deletion.
         """
-        return list(current_model.edges())
+        return sorted(current_model.edges())
 
     def insert(
         self,
@@ -158,7 +160,8 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         new_model = current_model.copy()
         new_model.add_edge(u, v)
 
-        remove_edges = [(t, v) for t in T]
+        # Orient v - t as t -> v for all t in T
+        remove_edges = [(v, t) for t in T]
         new_model.remove_edges_from(remove_edges)
 
         new_model.calibrate_directed_undirected_edges()
@@ -256,7 +259,7 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         # Step 2: Forward phase. Iteratively add edges till score stops improving.
         while True:
             potential_edges = []
-            for u, v in combinations(current_model.nodes(), 2):
+            for u, v in combinations(sorted(current_model.nodes()), 2):
                 if not current_model.has_edge(u, v) and not current_model.has_edge(v, u):
                     potential_edges.append((u, v))
                     potential_edges.append((v, u))
@@ -371,7 +374,7 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         # Step 4: Turning phase. Iteratively reorient edges till score stops improving.
         while True:
             potential_turns = []
-            for u, v in current_model.edges():
+            for u, v in sorted(current_model.edges()):
                 potential_turns.append((v, u))
 
             score_deltas = np.zeros(len(potential_turns))

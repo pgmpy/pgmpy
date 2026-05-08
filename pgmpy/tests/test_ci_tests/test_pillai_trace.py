@@ -1,185 +1,179 @@
-import os
-import unittest
-
 import numpy as np
 import pandas as pd
-from skbase.utils.dependencies import _check_soft_dependencies
+import pytest
+from sklearn.linear_model import LinearRegression
 
 from pgmpy.ci_tests import PillaiTrace
-from pgmpy.factors.continuous import LinearGaussianCPD
-from pgmpy.models import LinearGaussianBayesianNetwork
+from pgmpy.tests.test_ci_tests import _multivariate_fixtures
+
+pillai_data = _multivariate_fixtures.pillai_data
+skip_gh_actions = _multivariate_fixtures.skip_gh_actions
 
 
-@unittest.skipIf(os.getenv("GITHUB_ACTIONS") == "true", "Skipping residual tests on GitHub Actions.")
-class TestPillaiTrace(unittest.TestCase):
-    def setUp(self):
-        self.model_indep = LinearGaussianBayesianNetwork(
-            [
-                ("Z1", "X"),
-                ("Z2", "X"),
-                ("Z3", "X"),
-                ("Z1", "Y"),
-                ("Z2", "Y"),
-                ("Z3", "Y"),
-            ]
-        )
-        self.cpd_z1 = LinearGaussianCPD("Z1", [0], 1)
-        self.cpd_z2 = LinearGaussianCPD("Z2", [0], 1)
-        self.cpd_z3 = LinearGaussianCPD("Z3", [0], 1)
-        self.cpd_x = LinearGaussianCPD("X", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
-        self.cpd_y_indep = LinearGaussianCPD("Y", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
-        self.model_indep.add_cpds(self.cpd_z1, self.cpd_z2, self.cpd_z3, self.cpd_x, self.cpd_y_indep)
-        self.df_indep = self.model_indep.simulate(n_samples=1000, seed=42)
+@skip_gh_actions
+def test_pillai_no_cond(pillai_data):
+    expected_coefs = [0.1572, 0.1572, 0.1359, 0.1068, 0.1359]
+    expected_pvalues = [0.0000, 0.0000, 0.0000, 0.0000, 0.0000]
 
-        self.df_indep_cont_cont = self.df_indep.copy()
-        self.df_indep_cont_cont.Z2 = pd.cut(
-            self.df_indep_cont_cont.Z2,
-            bins=4,
-            ordered=False,
-            labels=["z21", "z22", "z23", "z24"],
-        )
+    computed_coefs = []
+    computed_pvalues = []
+    for df in pillai_data["indep"]:
+        test = PillaiTrace(data=df)
+        test("X", "Y", [])
+        computed_coefs.append(test.statistic_)
+        computed_pvalues.append(test.p_value_)
 
-        self.df_indep_cat_cont = self.df_indep_cont_cont.copy()
-        self.df_indep_cat_cont.X = pd.cut(
-            self.df_indep_cat_cont.X,
-            bins=4,
-            ordered=False,
-            labels=["x1", "x2", "x3", "x4"],
-        )
+    assert np.allclose(computed_coefs, expected_coefs, atol=1e-2)
+    assert np.allclose(computed_pvalues, expected_pvalues, atol=1e-2)
 
-        self.df_indep_cat_cat = self.df_indep_cont_cont.copy()
-        self.df_indep_cat_cat.X = pd.cut(
-            self.df_indep_cat_cat.X,
-            bins=4,
-            ordered=False,
-            labels=["x1", "x2", "x3", "x4"],
-        )
-        self.df_indep_cat_cat.Y = pd.cut(
-            self.df_indep_cat_cat.Y,
-            bins=4,
-            ordered=False,
-            labels=["y1", "y2", "y3", "y4"],
-        )
 
-        self.df_indep_ord_cont = self.df_indep_cont_cont.copy()
-        self.df_indep_ord_cont.X = pd.cut(self.df_indep_ord_cont.X, bins=4)
+@skip_gh_actions
+def test_pillai_indep(pillai_data):
+    expected_coefs = [0.0016, 0.0007, 0.0044, 0.0055, 0.0044]
+    expected_pvalues = [0.2125, 0.4154, 0.1118, 0.2406, 0.1118]
 
-        self.model_dep = LinearGaussianBayesianNetwork(
-            [
-                ("Z1", "X"),
-                ("Z2", "X"),
-                ("Z3", "X"),
-                ("Z1", "Y"),
-                ("Z2", "Y"),
-                ("Z3", "Y"),
-                ("X", "Y"),
-            ]
-        )
-        self.cpd_y_dep = LinearGaussianCPD("Y", [0, 0.5, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3", "X"])
-        self.model_dep.add_cpds(self.cpd_z1, self.cpd_z2, self.cpd_z3, self.cpd_x, self.cpd_y_dep)
-        self.df_dep = self.model_dep.simulate(n_samples=1000, seed=42)
+    computed_coefs = []
+    computed_pvalues = []
+    for df in pillai_data["indep"]:
+        test = PillaiTrace(data=df)
+        test("X", "Y", ["Z1", "Z2", "Z3"])
+        computed_coefs.append(test.statistic_)
+        computed_pvalues.append(test.p_value_)
 
-        self.df_dep_cont_cont = self.df_dep.copy()
-        self.df_dep_cont_cont.Z2 = pd.cut(
-            self.df_dep_cont_cont.Z2,
-            bins=4,
-            ordered=False,
-            labels=["z21", "z22", "z23", "z24"],
-        )
+    assert np.allclose(computed_coefs, expected_coefs, atol=1e-2)
+    assert np.allclose(computed_pvalues, expected_pvalues, atol=1e-2)
 
-        self.df_dep_cat_cont = self.df_dep_cont_cont.copy()
-        self.df_dep_cat_cont.X = pd.cut(
-            self.df_dep_cat_cont.X,
-            bins=4,
-            ordered=False,
-            labels=["x1", "x2", "x3", "x4"],
-        )
 
-        self.df_dep_cat_cat = self.df_dep_cont_cont.copy()
-        self.df_dep_cat_cat.X = pd.cut(
-            self.df_dep_cat_cat.X,
-            bins=4,
-            ordered=False,
-            labels=["x1", "x2", "x3", "x4"],
-        )
-        self.df_dep_cat_cat.Y = pd.cut(
-            self.df_dep_cat_cat.Y,
-            bins=4,
-            ordered=False,
-            labels=["y1", "y2", "y3", "y4"],
-        )
+@skip_gh_actions
+def test_pillai_dependent(pillai_data):
+    expected_coefs = [0.1698, 0.2181, 0.1328, 0.1595, 0.1328]
+    expected_pvalues = [0.0000, 0.0000, 0.0000, 0.0000, 0.0000]
 
-        self.df_dep_ord_cont = self.df_dep_cont_cont.copy()
-        self.df_dep_ord_cont.X = pd.cut(self.df_dep_ord_cont.X, bins=4)
+    computed_coefs = []
+    computed_pvalues = []
+    for df in pillai_data["dep"]:
+        test = PillaiTrace(data=df)
+        test("X", "Y", ["Z1", "Z2", "Z3"])
+        computed_coefs.append(test.statistic_)
+        computed_pvalues.append(test.p_value_)
 
-    @unittest.skipUnless(
-        _check_soft_dependencies("xgboost", severity="none"),
-        reason="execute only if required dependency present",
-    )
-    def test_pillai_no_cond(self):
-        computed_coefs = []
-        computed_pvalues = []
-        for i, df in enumerate(
-            [
-                self.df_indep,
-                self.df_indep_cont_cont,
-                self.df_indep_cat_cont,
-                self.df_indep_cat_cat,
-                self.df_indep_ord_cont,
-            ]
-        ):
-            test = PillaiTrace(data=df, seed=42)
-            test("X", "Y", [])
-            computed_coefs.append(test.statistic_)
-            computed_pvalues.append(test.p_value_)
+    assert np.allclose(computed_coefs, expected_coefs, atol=1e-2)
+    assert np.allclose(computed_pvalues, expected_pvalues, atol=1e-2)
 
-        self.assertTrue(np.all(np.array(computed_coefs) >= 0.1))
-        self.assertTrue(np.all(np.array(computed_pvalues) <= 0.05))
 
-    @unittest.skipUnless(
-        _check_soft_dependencies("xgboost", severity="none"),
-        reason="execute only if required dependency present",
-    )
-    def test_pillai_indep(self):
-        computed_coefs = []
-        computed_pvalues = []
-        for i, df in enumerate(
-            [
-                self.df_indep,
-                self.df_indep_cont_cont,
-                self.df_indep_cat_cont,
-                self.df_indep_cat_cat,
-                self.df_indep_ord_cont,
-            ]
-        ):
-            test = PillaiTrace(data=df, seed=42)
-            test("X", "Y", ["Z1", "Z2", "Z3"])
-            computed_coefs.append(test.statistic_)
-            computed_pvalues.append(test.p_value_)
+def test_pillai_tests_approx(pillai_data):
+    computed_coefs = []
+    computed_pvalues = []
+    for df in pillai_data["indep"]:
+        test = PillaiTrace(data=df)
+        test("X", "Y", [])
+        computed_coefs.append(test.statistic_)
+        computed_pvalues.append(test.p_value_)
 
-        self.assertTrue(np.all(np.array(computed_coefs) <= 0.1))
-        self.assertTrue(np.all(np.array(computed_pvalues) >= 0.05))
+    assert np.all(np.array(computed_coefs) >= 0.1)
+    assert np.all(np.array(computed_pvalues) <= 0.05)
 
-    @unittest.skipUnless(
-        _check_soft_dependencies("xgboost", severity="none"),
-        reason="execute only if required dependency present",
-    )
-    def test_pillai_dependent(self):
-        computed_coefs = []
-        computed_pvalues = []
-        for i, df in enumerate(
-            [
-                self.df_dep,
-                self.df_dep_cont_cont,
-                self.df_dep_cat_cont,
-                self.df_dep_cat_cat,
-                self.df_dep_ord_cont,
-            ]
-        ):
-            test = PillaiTrace(data=df, seed=42)
-            test("X", "Y", ["Z1", "Z2", "Z3"])
-            computed_coefs.append(test.statistic_)
-            computed_pvalues.append(test.p_value_)
+    computed_coefs = []
+    computed_pvalues = []
+    for df in pillai_data["indep"]:
+        test = PillaiTrace(data=df)
+        test("X", "Y", ["Z1", "Z2", "Z3"])
+        computed_coefs.append(test.statistic_)
+        computed_pvalues.append(test.p_value_)
 
-        self.assertTrue(np.all(np.array(computed_coefs) >= 0.1))
-        self.assertTrue(np.all(np.array(computed_pvalues) <= 0.05))
+    assert np.all(np.array(computed_coefs) <= 0.1)
+    assert np.all(np.array(computed_pvalues)[:3] >= 0.05)
+    assert np.all(np.array(computed_pvalues)[4:] >= 0.05)
+
+    computed_coefs = []
+    computed_pvalues = []
+    for df in pillai_data["dep"]:
+        test = PillaiTrace(data=df)
+        test("X", "Y", ["Z1", "Z2", "Z3"])
+        computed_coefs.append(test.statistic_)
+        computed_pvalues.append(test.p_value_)
+
+    assert np.all(np.array(computed_coefs) >= 0.05)
+    assert np.all(np.array(computed_pvalues) <= 0.05)
+
+
+def test_effect_size(pillai_data):
+    expected_indep = [0.0026, 0.0004, 0.0003, 0.0013, 0.0003]
+    expected_dep = [0.1698, 0.2181, 0.1328, 0.0798, 0.1328]
+
+    for df, expected in zip(pillai_data["indep"], expected_indep):
+        test = PillaiTrace(data=df)
+        test("X", "Y", ["Z1", "Z2", "Z3"])
+        assert test.effect_size_ == pytest.approx(expected, abs=1e-2)
+
+    for df, expected in zip(pillai_data["dep"], expected_dep):
+        test = PillaiTrace(data=df)
+        test("X", "Y", ["Z1", "Z2", "Z3"])
+        assert test.effect_size_ == pytest.approx(expected, abs=1e-2)
+
+
+def test_pillai_approx_discrete():
+    # Tests approximate behavior with actual categorical variables (string labels) so that
+    # the categorical residual path in get_residuals is exercised on GitHub CI.
+    rng = np.random.default_rng(0)
+    n = 1000
+    Z = rng.normal(size=n)
+    X_cont = Z * 0.5 + rng.normal(size=n)
+    Y_cont_indep = Z * 0.5 + rng.normal(size=n)
+    Y_cont_dep = Z * 0.5 + X_cont * 1.0 + rng.normal(size=n)
+
+    X_cat = pd.cut(X_cont, bins=4, labels=["a", "b", "c", "d"])
+    Y_cat_indep = pd.cut(Y_cont_indep, bins=4, labels=["p", "q", "r", "s"])
+    Y_cat_dep = pd.cut(Y_cont_dep, bins=4, labels=["p", "q", "r", "s"])
+
+    # cat-cont: categorical X, continuous Y
+    test = PillaiTrace(data=pd.DataFrame({"X": X_cat, "Y": Y_cont_indep, "Z": Z}))
+    test("X", "Y", ["Z"])
+    assert test.p_value_ > 0.05
+
+    test = PillaiTrace(data=pd.DataFrame({"X": X_cat, "Y": Y_cont_dep, "Z": Z}))
+    test("X", "Y", ["Z"])
+    assert test.p_value_ < 0.05
+
+    # cat-cat: both X and Y categorical
+    test = PillaiTrace(data=pd.DataFrame({"X": X_cat, "Y": Y_cat_indep, "Z": Z}))
+    test("X", "Y", ["Z"])
+    assert test.p_value_ > 0.05
+
+    test = PillaiTrace(data=pd.DataFrame({"X": X_cat, "Y": Y_cat_dep, "Z": Z}))
+    test("X", "Y", ["Z"])
+    assert test.p_value_ < 0.05
+
+
+def test_pillai_linear_regression_estimator():
+    rng = np.random.default_rng(0)
+    n = 2000
+    Z = rng.normal(size=(n, 2))
+    X = Z @ [0.5, 0.5] + rng.normal(size=n)
+    Y_indep = Z @ [0.5, 0.5] + rng.normal(size=n)
+    Y_dep = Z @ [0.5, 0.5] + 0.8 * X + rng.normal(size=n)
+    df_indep = pd.DataFrame({"X": X, "Y": Y_indep, "Z1": Z[:, 0], "Z2": Z[:, 1]})
+    df_dep = pd.DataFrame({"X": X, "Y": Y_dep, "Z1": Z[:, 0], "Z2": Z[:, 1]})
+
+    test_indep = PillaiTrace(data=df_indep, estimator=LinearRegression())
+    result_indep = test_indep("X", "Y", ["Z1", "Z2"])
+    assert isinstance(result_indep, (bool, np.bool_))
+    assert test_indep.p_value_ > 0.05
+
+    test_dep = PillaiTrace(data=df_dep, estimator=LinearRegression())
+    result_dep = test_dep("X", "Y", ["Z1", "Z2"])
+    assert isinstance(result_dep, (bool, np.bool_))
+    assert test_dep.p_value_ < 0.05
+
+
+def test_pillai_linear_regression_no_predict_proba():
+    rng = np.random.default_rng(0)
+    n = 200
+    Z = rng.normal(size=n)
+    X = pd.Categorical(rng.choice(["a", "b", "c"], size=n))
+    Y = rng.normal(size=n)
+    df = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
+
+    test = PillaiTrace(data=df, estimator=LinearRegression())
+    with pytest.raises(ValueError, match="predict_proba"):
+        test("X", "Y", ["Z"])

@@ -1,13 +1,14 @@
 import numpy as np
 import pandas as pd
 from scipy import stats
-from sklearn.base import clone
 from sklearn.linear_model import LinearRegression
 
-from ._base import _BaseCITest
+from pgmpy.utils import preprocess_data
+
+from ._base import _BaseCITest, _CITestResult, _ResidualMixin
 
 
-class GCM(_BaseCITest):
+class GCM(_ResidualMixin, _BaseCITest):
     r"""
     Generalized Covariance Measure (GCM) [1] test for conditional independence.
 
@@ -19,6 +20,8 @@ class GCM(_BaseCITest):
 
     where :math:`n` is the sample size. Under the null hypothesis :math:`X \perp Y \mid Z`, this statistic is
     asymptotically standard normal.
+
+    The effect size is correlation coefficient between the residuals: :math:`\textit{cor}(r_X, r_Y)`.
 
     Parameters
     ----------
@@ -34,6 +37,12 @@ class GCM(_BaseCITest):
         The GCM test statistic. Set after calling the test.
     p_value_ : float
         The p-value for the test. Set after calling the test.
+    effect_size_ : float
+        Cohen's d. Set after calling the test.
+    estimator_x_ : sklearn-compatible estimator
+        The fitted estimator used for predicting X.
+    estimator_y_ : sklearn-compatible estimator
+        The fitted estimator used for predicting Y.
 
     References
     ----------
@@ -48,24 +57,13 @@ class GCM(_BaseCITest):
         "requires_data": True,
     }
 
-    def __init__(self, data: pd.DataFrame, estimator=None):
-        self.data = data
+    def __init__(self, data: pd.DataFrame, estimator=None, use_cache: bool = True):
+        self.data, self.dtypes = preprocess_data(data)
+        self.estimator = LinearRegression() if estimator is None else estimator
 
-        if estimator is None:
-            self.estimator = LinearRegression()
-        else:
-            # Check if estimator is sklearn compatible.
-            required_methods = ["fit", "predict", "get_params", "set_params"]
-            if not all(hasattr(estimator, method) for method in required_methods):
-                raise ValueError(
-                    "`estimator` must be a scikit-learn compatible.",
-                    "It must have fit, predict methods and be clonable.",
-                )
-            self.estimator = estimator
+        super().__init__(use_cache=use_cache)
 
-        super().__init__()
-
-    def run_test(
+    def _compute_result(
         self,
         X: str,
         Y: str,
@@ -74,27 +72,22 @@ class GCM(_BaseCITest):
         """
         Compute GCM statistic and p-value.
 
-        Sets ``self.statistic_`` (t-statistic) and ``self.p_value_``.
+        Returns the t-statistic and p-value.
         """
-        # Step 1: Append intercept column to ensure Z is never empty
-        Z_data = np.column_stack([self.data.loc[:, list(Z)].values, np.ones(self.data.shape[0])])
+        # Step 1: Compute residuals of X and Y given Z.
+        res_x, self.estimator_x_ = self.get_residuals(X, Z)
+        res_y, self.estimator_y_ = self.get_residuals(Y, Z)
+        res_x = np.asarray(res_x)
+        res_y = np.asarray(res_y)
 
-        # Step 2: Compute residuals using the provided estimator
-        est_x = clone(self.estimator)
-        est_y = clone(self.estimator)
-        est_x.fit(Z_data, self.data.loc[:, X])
-        est_y.fit(Z_data, self.data.loc[:, Y])
-        res_x = self.data.loc[:, X] - est_x.predict(Z_data)
-        res_y = self.data.loc[:, Y] - est_y.predict(Z_data)
-
-        # Step 3: Compute the Generalised Covariance Measure.
+        # Step 2: Compute the Generalised Covariance Measure.
         n = res_x.shape[0]
         t_stat = (1 / np.sqrt(n)) * np.dot(res_x, res_y) / np.std(res_x * res_y)
 
-        # Step 4: Compute p-value using standard normal distribution.
+        # Step 3: Compute p-value using standard normal distribution.
         p_value = 2 * stats.norm.sf(np.abs(t_stat))
 
-        self.statistic_ = t_stat
-        self.p_value_ = p_value
+        # Step 4: Compute effect size as correlation coefficient between residuals.
+        effect_size = np.absolute(np.corrcoef(res_x, res_y, rowvar=False)[0, 1])
 
-        return self.statistic_, self.p_value_
+        return _CITestResult(statistic=t_stat, p_value=p_value, effect_size=effect_size)

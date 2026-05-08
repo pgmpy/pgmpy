@@ -40,13 +40,16 @@ class GES(StructureEstimator):
 
     References
     ----------
-    Chickering, David Maxwell. "Optimal structure identification with greedy search."
+    [1] Chickering, David Maxwell. "Optimal structure identification with greedy search."
       Journal of machine learning research 3.Nov (2002): 507-554.
+
+    [2] https://github.com/juangamella/ges
+
     """
 
     def __init__(self, data: pd.DataFrame, use_cache: bool = False, **kwargs):
         warnings.warn(
-            "GES is deprecated. Please use pgmpy.causal_discovery.GES instead.",
+            "GES is deprecated and will be removed in v1.3.0. Please use pgmpy.causal_discovery.GES instead.",
             FutureWarning,
             stacklevel=2,
         )
@@ -84,7 +87,7 @@ class GES(StructureEstimator):
         """
         legal_edges: list[tuple[Hashable, Hashable]] = []
 
-        for u, v in combinations(current_model.nodes(), 2):
+        for u, v in combinations(sorted(current_model.nodes()), 2):
             # Nodes must not be adjacent in any direction
             if not current_model.has_edge(u, v) and not current_model.has_edge(v, u):
                 legal_edges.append((u, v))
@@ -99,7 +102,7 @@ class GES(StructureEstimator):
         """
         Return all edges that can be considered for deletion.
         """
-        return list(current_model.edges())
+        return sorted(current_model.edges())
 
     def _legal_edge_turns(
         self,
@@ -110,7 +113,7 @@ class GES(StructureEstimator):
         """
         legal_turns: list[tuple[Hashable, Hashable]] = []
 
-        for u, v in current_model.edges():
+        for u, v in sorted(current_model.edges()):
             legal_turns.append((v, u))
 
         return legal_turns
@@ -143,8 +146,8 @@ class GES(StructureEstimator):
         # Add directed edge u -> v
         new_model.add_edge(u, v)
 
-        # Orient v - t as v -> t for all t in T
-        remove_edges = [(t, v) for t in T]
+        # Orient v - t as t -> v for all t in T
+        remove_edges = [(v, t) for t in T]
         new_model.remove_edges_from(remove_edges)
 
         new_model.calibrate_directed_undirected_edges()
