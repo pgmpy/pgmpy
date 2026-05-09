@@ -2,145 +2,42 @@ import pandas as pd
 import plotly.graph_objects as go
 
 
-# features comparing, kept short so linter don't give errors
 def main():
     cats = [
         "Parameter Learning",
         "Parameter Learning",
         "Parameter Learning",
-        "Parameter Learning",
-        "Structure Learning",
-        "Structure Learning",
-        "Structure Learning",
-        "Structure Learning",
-        "Structure Learning",
-        "Data Types",
-        "Data Types",
-        "Data Types",
-        "Data Types",
-        "Backend & API",
-        "Backend & API",
-        "Backend & API",
-        "Backend & API",
-        "Backend & API",
-        "Inference",
-        "Inference",
-        "Inference",
+        "Parameter Learning"
     ]
     fts = [
         "Maximum Likelihood Estimation (MLE)",
         "Bayesian Estimation",
         "Expectation Maximization (EM)",
-        "Dirichlet Prior",
-        "Score-based (BIC, AIC, K2)",
-        "Constraint-based (PC, IC)",
-        "Hybrid (MMHC, H2PC)",
-        "Exhaustive Search",
-        "Tabu Search",
-        "Discrete / Categorical Data",
-        "Continuous Data (Gaussian)",
-        "Mixed Data (Continuous + Discrete)",
-        "Time Series / Dynamic BN",
-        "Pandas DataFrame Support",
-        "NumPy Backend",
-        "PyTorch / GPU Support",
-        "C/C++ Backend",
-        "Incremental / Online Learning",
-        "Variable Elimination",
-        "Belief Propagation",
-        "Sampling (MCMC, Gibbs, Likelihood Weighting)",
+        "Dirichlet Prior"
     ]
     pgmpy_ok = [
         True,
         True,
         True,
-        True,
-        True,
-        True,
-        True,
-        True,
-        True,
-        True,
-        True,
-        True,
-        True,
-        True,
-        True,
-        True,
-        False,
-        True,
-        True,
-        True,
-        True,
+        True
     ]
     bnlearn_ok = [
         True,
         True,
         True,
-        True,
-        True,
-        True,
-        True,
-        False,
-        True,
-        True,
-        True,
-        True,
-        True,
-        False,
-        False,
-        False,
-        True,
-        False,
-        False,
-        False,
-        True,
+        True
     ]
     pyagrum_ok = [
         True,
         True,
         True,
-        True,
-        True,
-        True,
-        True,
-        False,
-        True,
-        True,
-        True,
-        True,
-        True,
-        True,
-        False,
-        False,
-        True,
-        True,
-        True,
-        True,
-        True,
+        True
     ]
     pom_ok = [
         True,
         False,
         False,
-        False,
-        False,
-        False,
-        False,
-        False,
-        False,
-        True,
-        True,
-        False,
-        False,
-        False,
-        False,
-        True,
-        False,
-        False,
-        False,
-        False,
-        False,
+        False
     ]
     data = pd.DataFrame(
         {
@@ -214,3 +111,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
