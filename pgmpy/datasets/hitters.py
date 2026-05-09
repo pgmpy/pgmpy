@@ -5,7 +5,7 @@ class Hitters(_BaseDataset):
     """
     References
     ----------
-    - :cite:p:`https_noyear_109`
+    - :cite:p:`islr_hitters`
     """
 
     _tags = {

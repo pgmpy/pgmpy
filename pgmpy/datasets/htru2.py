@@ -5,7 +5,7 @@ class HTRU2(_BaseDataset):
     """
     References
     ----------
-    - :cite:p:`https_noyear_94`
+    - :cite:p:`uci_htru2`
     """
 
     _tags = {

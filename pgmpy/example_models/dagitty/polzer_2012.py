@@ -5,7 +5,7 @@ class Polzer2012(DAGMixin, _BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`polzer_2012_69`
+    - :cite:p:`polzer_2012`
     """
 
     _tags = {

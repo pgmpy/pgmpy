@@ -5,7 +5,7 @@ class PittsburghBridges(_BaseDataset):
     """
     References
     ----------
-    - :cite:p:`https_noyear_97`
+    - :cite:p:`uci_pittsburgh_bridges`
     """
 
     _tags = {

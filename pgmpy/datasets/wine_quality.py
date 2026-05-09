@@ -8,7 +8,7 @@ class WineQualityRed(_BaseDataset):
     """
     References
     ----------
-    - :cite:p:`https_noyear_105`
+    - :cite:p:`peerj_blue_driver`
     """
 
     _tags = {
@@ -40,7 +40,7 @@ class WineQualityWhite(_BaseDataset):
     """
     References
     ----------
-    - :cite:p:`https_noyear_105`
+    - :cite:p:`peerj_blue_driver`
     """
 
     _tags = {
@@ -72,7 +72,7 @@ class WineQualityRedWhiteMixed(_BaseDataset):
     """
     References
     ----------
-    - :cite:p:`https_noyear_105`
+    - :cite:p:`peerj_blue_driver`
     """
 
     _tags = {

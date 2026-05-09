@@ -5,7 +5,7 @@ class PimaDiabetes(_BaseDataset):
     """
     References
     ----------
-    - :cite:p:`https_noyear_112`
+    - :cite:p:`lella_2022`
     """
 
     _tags = {

@@ -5,7 +5,7 @@ class MagicIRRI(ContinuousMixin, _BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`model_2016_67`
+    - :cite:p:`scutari_2016b`
     """
 
     _tags = {

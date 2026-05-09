@@ -48,7 +48,7 @@ class CausalInference:
 
     References
     ----------
-    'Causality: Models, Reasoning, and Inference' - Judea Pearl (2000)
+    - :cite:p:`pearl_2009`
     """
 
     def __init__(self, model):
@@ -480,7 +480,7 @@ class CausalInference:
 
         References
         ----------
-        - :cite:p:`zander_2015_39`
+        - :cite:p:`vanderzander_2015`
 
         Examples
         --------
@@ -800,10 +800,7 @@ class CausalInference:
 
         References
         ----------
-        [1] Perkovic, Emilija, et al.
-         "Complete graphical characterization and construction of
-         adjustment sets in Markov equivalence classes of ancestral graphs."
-           The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
+        - :cite:p:`perkovic_2018`
         """
         if isinstance(X, str):
             X = [X]
@@ -861,10 +858,7 @@ class CausalInference:
 
         References
         ----------
-        [1] Perkovic, Emilija, et al.
-          "Complete graphical characterization and construction of
-            adjustment sets in Markov equivalence classes of ancestral graphs."
-              The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
+        - :cite:p:`perkovic_2018`
         """
         if isinstance(X, str):
             X = [X]
@@ -907,10 +901,7 @@ class CausalInference:
 
         References
         ----------
-        [1] Perkovic, Emilija, et al.
-          "Complete graphical characterization and construction of
-            adjustment sets in Markov equivalence classes of ancestral graphs."
-              The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
+        - :cite:p:`perkovic_2018`
         """
         backdoor_graph = self.get_proper_backdoor_graph([X], [Y], inplace=False)
         return backdoor_graph.minimal_dseparator(X, Y)

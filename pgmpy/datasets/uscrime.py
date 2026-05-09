@@ -5,8 +5,8 @@ class USCrime(_BaseDataset):
     """
     References
     ----------
-    - :cite:p:`everitt_2002_82`
-    - :cite:p:`https_noyear_110`
+    - :cite:p:`der_everitt_2002`
+    - :cite:p:`acswr_usc_dataset`
     """
 
     _tags = {

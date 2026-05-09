@@ -5,7 +5,7 @@ class Didelez2010(DAGMixin, _BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`didelez_2010_60`
+    - :cite:p:`didelez_2010`
     """
 
     _tags = {

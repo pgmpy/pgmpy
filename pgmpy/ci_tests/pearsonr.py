@@ -58,8 +58,8 @@ class Pearsonr(_BaseCITest):
 
     References
     ----------
-    - :cite:p:`https_noyear_51`
-    - :cite:p:`https_noyear_50`
+    - :cite:p:`peerj_blue_driver`
+    - :cite:p:`wikipedia_partial_correlation`
     """
 
     _tags = {

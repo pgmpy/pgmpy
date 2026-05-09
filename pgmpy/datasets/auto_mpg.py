@@ -5,8 +5,8 @@ class AutoMpg(_BaseDataset):
     """
     References
     ----------
-    - :cite:p:`lopez_2015_83`
-    - :cite:p:`https_noyear_102`
+    - :cite:p:`lopezpaz_2015`
+    - :cite:p:`uci_auto_mpg`
     """
 
     _tags = {

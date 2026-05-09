@@ -5,7 +5,7 @@ class IQBrainSize(_BaseDataset):
     """
     References
     ----------
-    - :cite:p:`http_noyear_88`
+    - :cite:p:`cmu_iqbrain`
     """
 
     _tags = {

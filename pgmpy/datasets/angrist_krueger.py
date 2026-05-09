@@ -5,8 +5,8 @@ class AngristKrueger(_BaseDataset):
     """
     References
     ----------
-    - :cite:p:`angrist_1991_81`
-    - :cite:p:`https_noyear_108`
+    - :cite:p:`angrist_krueger_1991`
+    - :cite:p:`angrist_krueger_qob_dataset`
     """
 
     _tags = {

@@ -63,7 +63,7 @@ class OrientationConfusionMatrix(_BaseSupervisedMetric):
 
     References
     ----------
-    - :cite:p:`bryan_2019_41`
+    - :cite:p:`andrews_ramsey_cooper_2019`
     """
 
     _tags = {

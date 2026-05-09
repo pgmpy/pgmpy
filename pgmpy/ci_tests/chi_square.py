@@ -29,7 +29,7 @@ class ChiSquare(PowerDivergence):
 
     References
     ----------
-    - :cite:p:`https_noyear_48`
+    - :cite:p:`sage_research_methods`
 
     Examples
     --------

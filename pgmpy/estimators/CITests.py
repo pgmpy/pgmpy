@@ -191,8 +191,8 @@ def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
 
     References
     ----------
-    - :cite:p:`https_noyear_51`
-    - :cite:p:`https_noyear_50`
+    - :cite:p:`peerj_blue_driver`
+    - :cite:p:`wikipedia_partial_correlation`
     """
     warnings.warn(
         "`pearsonr` is deprecated and will be removed in v1.3.0. Please use `pgmpy.ci_tests.Pearsonr` instead.",
@@ -280,7 +280,7 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
 
     References
     ----------
-    - :cite:p:`cressie_1984_42`
+    - :cite:p:`cressie_read_1984`
 
     Examples
     --------
@@ -394,7 +394,7 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
 
     References
     ----------
-    - :cite:p:`https_noyear_48`
+    - :cite:p:`sage_research_methods`
 
     Examples
     --------
@@ -461,7 +461,7 @@ def g_sq(X, Y, Z, data, boolean=True, **kwargs):
 
     References
     ----------
-    - :cite:p:`https_noyear_49`
+    - :cite:p:`wikipedia_gtest`
 
     Examples
     --------
@@ -530,7 +530,7 @@ def log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
 
     References
     ----------
-    [1] https://en.wikipedia.org/wiki/G-test
+    - :cite:p:`wikipedia_gtest`
 
     Examples
     --------
@@ -721,9 +721,9 @@ def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
 
     References
     ----------
-    - :cite:p:`ankan_noyear_40`
-    - :cite:p:`shepherd_2010_43`
-    - :cite:p:`muller_1984_45`
+    - :cite:p:`ankan_textor_2023`
+    - :cite:p:`li_shepherd_2010`
+    - :cite:p:`muller_peterson_1984`
     """
     warnings.warn(
         "`pillai_trace` is deprecated and will be removed in v1.3.0. Please use `pgmpy.ci_tests.PillaiTrace` instead.",
@@ -827,7 +827,7 @@ def gcm(X, Y, Z, data, boolean=True, **kwargs):
 
     References
     ----------
-    - :cite:p:`rajen_noyear_47`
+    - :cite:p:`shah_peters_2020`
     """
     warnings.warn(
         "`gcm` is deprecated and will be removed in v1.3.0. Please use `pgmpy.ci_tests.GCM` instead.",
@@ -903,7 +903,7 @@ def pearsonr_equivalence(X, Y, Z, data, boolean=True, delta_threshold=0.1, **kwa
 
     References
     ----------
-    - :cite:p:`malinsky_2024_44`
+    - :cite:p:`malinsky_2024`
     """
     warnings.warn(
         """`pearsonr_equivalence` is deprecated and will be removed in v1.3.0. Please use

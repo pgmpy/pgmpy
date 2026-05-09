@@ -5,7 +5,7 @@ class Alarm(DiscreteMixin, _BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`beinlich_noyear_62`
+    - :cite:p:`beinlich_alarm_1989`
     """
 
     _tags = {

@@ -5,7 +5,7 @@ class Spartina(_CovarianceMixin, _BaseDataset):
     """
     References
     ----------
-    - :cite:p:`spirtes_2000_86`
+    - :cite:p:`spirtes_glymour_scheines_2001`
     """
 
     _tags = {

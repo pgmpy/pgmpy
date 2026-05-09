@@ -5,7 +5,7 @@ class Barley(DiscreteMixin, _BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`preliminary_noyear_70`
+    - :cite:p:`barley_preliminary`
     """
 
     _tags = {

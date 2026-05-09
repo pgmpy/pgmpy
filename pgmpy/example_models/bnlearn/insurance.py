@@ -5,7 +5,7 @@ class Insurance(DiscreteMixin, _BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`binder_noyear_63`
+    - :cite:p:`binder_1997`
     """
 
     _tags = {

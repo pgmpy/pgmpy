@@ -125,7 +125,7 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
 
     References
     ----------
-    - :cite:p:`koller_2009_14`
+    - :cite:p:`koller_friedman_2009`
     """
 
     def __init__(

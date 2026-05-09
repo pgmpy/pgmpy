@@ -245,7 +245,7 @@ class ExpertKnowledge:
 
         References
         ----------
-        [1] https://doi.org/10.48550/arXiv.2306.01638
+        - :cite:p:`ankan_textor_2023`
         """
         self._validate_temporal_order(pdag.nodes())
         self._orient_temporal_forbidden_edges(pdag)

@@ -5,7 +5,7 @@ class GaltonStature(_BaseDataset):
     """
     References
     ----------
-    - :cite:p:`http_noyear_89`
+    - :cite:p:`mcgill_galton`
     """
 
     _tags = {

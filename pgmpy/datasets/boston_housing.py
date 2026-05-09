@@ -5,8 +5,8 @@ class BostonHousing(_BaseDataset):
     """
     References
     ----------
-    - :cite:p:`zhao_2021_87`
-    - :cite:p:`https_noyear_107`
+    - :cite:p:`zhao_hastie_2019`
+    - :cite:p:`peerj_wine_quality`
     """
 
     _tags = {

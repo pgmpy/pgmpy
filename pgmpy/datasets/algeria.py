@@ -5,8 +5,8 @@ class Algeria(_BaseDataset):
     """
     References
     ----------
-    - :cite:p:`https_noyear_90`
-    - :cite:p:`https_noyear_113`
+    - :cite:p:`uci_algerian_forest_fires`
+    - :cite:p:`peerj_pima`
     """
 
     _tags = {

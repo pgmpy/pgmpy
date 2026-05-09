@@ -5,7 +5,7 @@ class Kampen2014(DAGMixin, _BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`kampen_2014_80`
+    - :cite:p:`vankampen_2014`
     """
 
     _tags = {

@@ -5,7 +5,7 @@ class Sebastiani2005(DAGMixin, _BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`sebastiani_2005_76`
+    - :cite:p:`sebastiani_2005`
     """
 
     _tags = {

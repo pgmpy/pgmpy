@@ -5,7 +5,7 @@ class Cancer(DiscreteMixin, _BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`korb_2010_64`
+    - :cite:p:`korb_nicholson_2010`
     """
 
     _tags = {

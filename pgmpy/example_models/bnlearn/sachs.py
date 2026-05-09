@@ -5,7 +5,7 @@ class Sachs(DiscreteMixin, _BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`sachs_noyear_65`
+    - :cite:p:`sachs_2005`
     """
 
     _tags = {

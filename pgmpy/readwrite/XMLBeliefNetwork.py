@@ -29,10 +29,9 @@ class XBNReader:
     >>> writer.write("asia.xbn")
     >>> reader = XBNReader("asia.xbn")
 
-    Reference
-    ---------
-    [1] Microsoft Research. XML belief network file format.
-        http://xml.coverpages.org/xbn-MSdefault19990414.html, 1999.
+    References
+    ----------
+    - :cite:p:`msr_xmlbn`
     """
 
     def __init__(self, path=None, string=None):
@@ -258,9 +257,9 @@ class XBNWriter:
     prettyprint: Bool(optional)
         Indentation in output XML if true
 
-    Reference
-    ---------
-    http://xml.coverpages.org/xbn-MSdefault19990414.html
+    References
+    ----------
+    - :cite:p:`msr_xmlbn`
 
     Examples
     --------

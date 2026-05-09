@@ -5,7 +5,7 @@ class Schipf2010(DAGMixin, _BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`schipf_2010_75`
+    - :cite:p:`schipf_2010`
     """
 
     _tags = {

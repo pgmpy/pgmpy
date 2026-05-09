@@ -5,7 +5,7 @@ class Hailfinder(DiscreteMixin, _BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`abramson_noyear_55`
+    - :cite:p:`abramson_1996`
     """
 
     _tags = {

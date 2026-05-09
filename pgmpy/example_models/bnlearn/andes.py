@@ -5,7 +5,7 @@ class Andes(DiscreteMixin, _BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`conati_noyear_56`
+    - :cite:p:`conati_1997`
     """
 
     _tags = {

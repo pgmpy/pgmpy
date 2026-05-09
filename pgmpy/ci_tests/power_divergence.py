@@ -94,7 +94,7 @@ class PowerDivergence(_BaseCITest):
 
     References
     ----------
-    - :cite:p:`cressie_1984_42`
+    - :cite:p:`cressie_read_1984`
 
     Examples
     --------

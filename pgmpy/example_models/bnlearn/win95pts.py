@@ -5,7 +5,7 @@ class Win95pts(DiscreteMixin, _BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`windows_noyear_79`
+    - :cite:p:`bnlearn_win95pts`
     """
 
     _tags = {

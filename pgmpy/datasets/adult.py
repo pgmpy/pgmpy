@@ -5,7 +5,7 @@ class Adult(_BaseDataset):
     """
     References
     ----------
-    - :cite:p:`https_noyear_101`
+    - :cite:p:`uci_adult`
     """
 
     _tags = {

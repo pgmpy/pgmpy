@@ -56,7 +56,7 @@ class LogLikelihoodCondGauss(BaseStructureScore):
 
     References
     ----------
-    - :cite:p:`andrews_2018_10`
+    - :cite:p:`andrews_ramsey_cooper_2018`
     """
 
     _tags = {

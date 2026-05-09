@@ -46,7 +46,7 @@ class GCM(_ResidualMixin, _BaseCITest):
 
     References
     ----------
-    - :cite:p:`rajen_noyear_47`
+    - :cite:p:`shah_peters_2020`
     """
 
     _tags = {

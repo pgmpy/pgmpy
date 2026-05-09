@@ -5,7 +5,7 @@ class MyocardialInfarction(_BaseDataset):
     """
     References
     ----------
-    - :cite:p:`https_noyear_96`
+    - :cite:p:`springer_myocardial`
     """
 
     _tags = {

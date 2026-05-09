@@ -5,7 +5,7 @@ class Acid1996(DAGMixin, _BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`acid_1996_54`
+    - :cite:p:`acid_decampos_1996`
     """
 
     _tags = {

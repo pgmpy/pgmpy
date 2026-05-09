@@ -31,7 +31,7 @@ class LogLikelihood(PowerDivergence):
 
     References
     ----------
-    - :cite:p:`https_noyear_49`
+    - :cite:p:`wikipedia_gtest`
 
     Examples
     --------

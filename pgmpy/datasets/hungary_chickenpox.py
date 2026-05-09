@@ -5,8 +5,8 @@ class HungaryChickenpox(_BaseDataset):
     """
     References
     ----------
-    - :cite:p:`rozemberczki_2021_84`
-    - :cite:p:`https_noyear_95`
+    - :cite:p:`rozemberczki_2021`
+    - :cite:p:`uci_hungarian_chickenpox`
     """
 
     _tags = {

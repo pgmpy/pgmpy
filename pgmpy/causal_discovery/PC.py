@@ -178,12 +178,11 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
 
     References
     ----------
-    - :cite:p:`spirtes_2001_25`
-    - :cite:p:`neapolitan_noyear_19`
-    - :cite:p:`original_2000_22`
-    - :cite:p:`stable_2012_26`
-    - :cite:p:`parallel_2016_23`
-    - :cite:p:`expert_2013_13`
+    - :cite:p:`spirtes_glymour_scheines_2001`
+    - :cite:p:`neapolitan_2009`
+    - :cite:p:`schmidt_2018`
+    - :cite:p:`le_2019`
+    - :cite:p:`meek_1995`
     - :cite:p:`ramsey_2016`
     """
 
@@ -311,10 +310,8 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
 
         References
         ----------
-        [1] Neapolitan, Learning Bayesian Networks, Section 10.1.2, Algorithm
-                10.2 (page 550)
-        [2] Ramsey, J. (2016). Improving accuracy and scalability of the pc
-                algorithm by maximizing p-value. arXiv:1610.00378.
+        - :cite:p:`neapolitan_2009` (Section 10.1.2, Algorithm 10.2, page 550).
+        - :cite:p:`ramsey_2016`
 
         Examples
         --------

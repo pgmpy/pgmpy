@@ -5,7 +5,7 @@ class Link(DiscreteMixin, _BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`jensen_noyear_57`
+    - :cite:p:`jensen_kong`
     """
 
     _tags = {

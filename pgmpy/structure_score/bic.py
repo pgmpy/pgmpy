@@ -48,8 +48,8 @@ class BIC(LogLikelihood):
 
     References
     ----------
-    - :cite:p:`koller_2009_15`
-    - :cite:p:`carvalho_noyear_9`
+    - :cite:p:`koller_friedman_2009`
+    - :cite:p:`liao_2022`
     """
 
     _tags = {

@@ -5,7 +5,7 @@ class ResidentialBuilding(_BaseDataset):
     """
     References
     ----------
-    - :cite:p:`https_noyear_98`
+    - :cite:p:`uci_residential_building`
     """
 
     _tags = {

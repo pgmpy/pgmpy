@@ -5,8 +5,8 @@ class AbaloneContinuous(_BaseDataset):
     """
     References
     ----------
-    - :cite:p:`lopez_2015_83`
-    - :cite:p:`https_noyear_100`
+    - :cite:p:`lopezpaz_2015`
+    - :cite:p:`uci_abalone`
     """
 
     _tags = {
@@ -39,8 +39,8 @@ class AbaloneMixed(_BaseDataset):
     """
     References
     ----------
-    - :cite:p:`lopez_2015_83`
-    - :cite:p:`https_noyear_100`
+    - :cite:p:`lopezpaz_2015`
+    - :cite:p:`uci_abalone`
     """
 
     _tags = {

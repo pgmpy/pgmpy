@@ -5,7 +5,7 @@ class Survey(DiscreteMixin, _BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`scutari_2021_66`
+    - :cite:p:`scutari_denis_2021`
     """
 
     _tags = {

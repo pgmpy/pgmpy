@@ -74,7 +74,7 @@ class MAG(AncestralBase):
 
     References
     ----------
-    - :cite:p:`zhang_2008_5`
+    - :cite:p:`zhang_2008`
     """
 
     def __init__(

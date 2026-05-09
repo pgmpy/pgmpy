@@ -5,7 +5,7 @@ class Pigs(DiscreteMixin, _BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`pigs_noyear_68`
+    - :cite:p:`bnlearn_pigs`
     """
 
     _tags = {
