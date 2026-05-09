@@ -3,12 +3,7 @@ import plotly.graph_objects as go
 
 
 def main():
-    cats = [
-        "Parameter Learning",
-        "Parameter Learning",
-        "Parameter Learning",
-        "Parameter Learning"
-    ]
+    cats = ["Parameter Learning", "Parameter Learning", "Parameter Learning", "Parameter Learning"]
     fts = [
         "Maximum Likelihood Estimation (MLE)",
         "Bayesian Estimation",
