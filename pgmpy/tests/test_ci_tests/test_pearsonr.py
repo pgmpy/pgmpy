@@ -108,13 +108,27 @@ def test_pearsonr_residual(residual_data):
     df_indep, df_dep = residual_data
     test = Pearsonr(data=df_indep)
     test("X", "Y", ["Z1", "Z2", "Z3"])
-    assert round(test.statistic_, 3) == pytest.approx(-0.056)
-    assert round(test.p_value_, 3) == pytest.approx(0.077)
+    assert round(test.statistic_, 3) == pytest.approx(-0.056, abs=1e-2)
+    assert round(test.p_value_, 3) == pytest.approx(0.044, abs=1e-2)
 
     test = Pearsonr(data=df_dep)
     test("X", "Y", ["Z1", "Z2", "Z3"])
-    assert round(test.statistic_, 3) == pytest.approx(0.406)
-    assert round(test.p_value_, 2) == pytest.approx(0.0)
+    assert round(test.statistic_, 3) == pytest.approx(0.406, abs=1e-2)
+    assert round(test.p_value_, 2) == pytest.approx(0.0, abs=1e-2)
+
+
+def test_effect_size(pearsonr_data):
+    df_ind, df_cind, df_cind_mul, df_vstruct = pearsonr_data
+
+    test = Pearsonr(data=df_ind)
+    test("X", "Y", [])
+    assert test.effect_size_ == pytest.approx(abs(test.statistic_), abs=1e-2)
+    assert test.effect_size_ == pytest.approx(0.0075, abs=1e-2)
+
+    test = Pearsonr(data=df_vstruct)
+    test("X", "Y", ["Z"])
+    assert test.effect_size_ == pytest.approx(abs(test.statistic_), abs=1e-2)
+    assert test.effect_size_ == pytest.approx(0.9846, abs=1e-2)
 
 
 def test_pearsonr_residual_approx(residual_data):

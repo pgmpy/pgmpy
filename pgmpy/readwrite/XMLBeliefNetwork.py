@@ -22,7 +22,12 @@ class XBNReader:
 
     Examples
     --------
-    >>> reader = XBNReader("test_XBN.xml")
+    >>> from pgmpy.example_models import load_model
+    >>> from pgmpy.readwrite import XBNReader, XBNWriter
+    >>> model = load_model("bnlearn/asia")
+    >>> writer = XBNWriter(model)
+    >>> writer.write("asia.xbn")
+    >>> reader = XBNReader("asia.xbn")
 
     Reference
     ---------
@@ -52,10 +57,14 @@ class XBNReader:
 
         Examples
         --------
-        >>> reader = XBNReader("xbn_test.xml")
+        >>> from pgmpy.example_models import load_model
+        >>> from pgmpy.readwrite import XBNReader, XBNWriter
+        >>> model = load_model("bnlearn/asia")
+        >>> writer = XBNWriter(model)
+        >>> writer.write("asia.xbn")
+        >>> reader = XBNReader("asia.xbn")
         >>> reader.get_analysisnotebook_values()
-        {'NAME': "Notebook.Cancer Example From Neapolitan",
-         'ROOT': "Cancer"}
+        {}
         """
         return {key: value for key, value in self.network.items()}
 
@@ -65,9 +74,13 @@ class XBNReader:
 
         Examples
         --------
-        >>> reader = XBNReader("xbn_test.xml")
+        >>> from pgmpy.example_models import load_model
+        >>> from pgmpy.readwrite import XBNReader, XBNWriter
+        >>> model = load_model("bnlearn/asia")
+        >>> writer = XBNWriter(model)
+        >>> writer.write("asia.xbn")
+        >>> reader = XBNReader("asia.xbn")
         >>> reader.get_bnmodel_name()
-        'Cancer'
         """
         return self.network.find("BNMODEL").get("NAME")
 
@@ -77,9 +90,14 @@ class XBNReader:
 
         Examples
         --------
-        >>> reader = XBNReader("xbn_test.xml")
+        >>> from pgmpy.example_models import load_model
+        >>> from pgmpy.readwrite import XBNReader, XBNWriter
+        >>> model = load_model("bnlearn/asia")
+        >>> writer = XBNWriter(model)
+        >>> writer.write("asia.xbn")
+        >>> reader = XBNReader("asia.xbn")
         >>> reader.get_static_properties()
-        {'FORMAT': 'MSR DTAS XML', 'VERSION': '0.2', 'CREATOR': 'Microsoft Research DTAS'}
+        {}
         """
         if self.bnmodel.find("STATICPROPERTIES") is not None:
             return {tags.tag: tags.get("VALUE") for tags in self.bnmodel.find("STATICPROPERTIES")}
@@ -92,18 +110,21 @@ class XBNReader:
 
         Examples
         --------
-        >>> reader = XBNReader("xbn_test.xml")
-        >>> reader.get_variables()
-        {'a': {'TYPE': 'discrete', 'XPOS': '13495',
-               'YPOS': '10465', 'DESCRIPTION': '(a) Metastatic Cancer',
-               'STATES': ['Present', 'Absent']}
-        'b': {'TYPE': 'discrete', 'XPOS': '11290',
-               'YPOS': '11965', 'DESCRIPTION': '(b) Serum Calcium Increase',
-               'STATES': ['Present', 'Absent']},
-        'c': {....},
-        'd': {....},
-        'e': {....}
-        }
+        >>> from pgmpy.example_models import load_model
+        >>> from pgmpy.readwrite import XBNReader, XBNWriter
+        >>> model = load_model("bnlearn/asia")
+        >>> writer = XBNWriter(model)
+        >>> writer.write("asia.xbn")
+        >>> reader = XBNReader("asia.xbn")
+        >>> reader.get_variables() # doctest: +NORMALIZE_WHITESPACE
+        {'asia': {'TYPE': '', 'XPOS': '', 'YPOS': '', 'DESCRIPTION': None, 'STATES': ['yes', 'no']},
+        'bronc': {'TYPE': '', 'XPOS': '', 'YPOS': '', 'DESCRIPTION': None, 'STATES': ['yes', 'no']},
+        'dysp': {'TYPE': '', 'XPOS': '', 'YPOS': '', 'DESCRIPTION': None, 'STATES': ['yes', 'no']},
+        'either': {'TYPE': '', 'XPOS': '', 'YPOS': '', 'DESCRIPTION': None, 'STATES': ['yes', 'no']},
+        'lung': {'TYPE': '', 'XPOS': '', 'YPOS': '', 'DESCRIPTION': None, 'STATES': ['yes', 'no']},
+        'smoke': {'TYPE': '', 'XPOS': '', 'YPOS': '', 'DESCRIPTION': None, 'STATES': ['yes', 'no']},
+        'tub': {'TYPE': '', 'XPOS': '', 'YPOS': '', 'DESCRIPTION': None, 'STATES': ['yes', 'no']},
+        'xray': {'TYPE': '', 'XPOS': '', 'YPOS': '', 'DESCRIPTION': None, 'STATES': ['yes', 'no']}}
         """
         variables = {}
         for variable in self.bnmodel.find("VARIABLES"):
@@ -122,9 +143,15 @@ class XBNReader:
 
         Examples
         --------
-        >>> reader = XBNReader("xbn_test.xml")
-        >>> reader.get_edges()
-        [('a', 'b'), ('a', 'c'), ('b', 'd'), ('c', 'd'), ('c', 'e')]
+        >>> from pgmpy.example_models import load_model
+        >>> from pgmpy.readwrite import XBNReader, XBNWriter
+        >>> model = load_model("bnlearn/asia")
+        >>> writer = XBNWriter(model)
+        >>> writer.write("asia.xbn")
+        >>> reader = XBNReader("asia.xbn")
+        >>> reader.get_edges() # doctest: +NORMALIZE_WHITESPACE
+        [('asia', 'tub'), ('bronc', 'dysp'), ('either', 'dysp'), ('either', 'xray'),
+        ('lung', 'either'), ('smoke', 'bronc'), ('smoke', 'lung'), ('tub', 'either')]
         """
         return [(arc.get("PARENT"), arc.get("CHILD")) for arc in self.bnmodel.find("STRUCTURE")]
 
@@ -148,19 +175,24 @@ class XBNReader:
 
         Examples
         --------
-        >>> reader = XBNReader("xbn_test.xml")
-        >>> reader.get_distributions()
-        {'a': {'TYPE': 'discrete', 'DPIS': array([[ 0.2,  0.8]])},
-         'e': {'TYPE': 'discrete', 'DPIS': array([[ 0.8,  0.2],
-                 [ 0.6,  0.4]]), 'CONDSET': ['c'], 'CARDINALITY': [2]},
-         'b': {'TYPE': 'discrete', 'DPIS': array([[ 0.8,  0.2],
-                 [ 0.2,  0.8]]), 'CONDSET': ['a'], 'CARDINALITY': [2]},
-         'c': {'TYPE': 'discrete', 'DPIS': array([[ 0.2 ,  0.8 ],
-                 [ 0.05,  0.95]]), 'CONDSET': ['a'], 'CARDINALITY': [2]},
-         'd': {'TYPE': 'discrete', 'DPIS': array([[ 0.8 ,  0.2 ],
-                 [ 0.9 ,  0.1 ],
-                 [ 0.7 ,  0.3 ],
-                 [ 0.05,  0.95]]), 'CONDSET': ['b', 'c']}, 'CARDINALITY': [2, 2]}
+        >>> from pgmpy.example_models import load_model
+        >>> from pgmpy.readwrite import XBNReader, XBNWriter
+        >>> model = load_model("bnlearn/asia")
+        >>> writer = XBNWriter(model)
+        >>> writer.write("asia.xbn")
+        >>> reader = XBNReader("asia.xbn")
+        >>> reader.get_distributions() # doctest: +NORMALIZE_WHITESPACE
+        {'asia': {'TYPE': '', 'DPIS': array([[0.01],
+           [0.99]])}, 'bronc': {'TYPE': '', 'CONDSET': ['smoke'], 'CARDINALITY': array([2]), 'DPIS': array([[0.6, 0.3],
+           [0.4, 0.7]])}, 'dysp': {'TYPE': '', 'CONDSET': ['bronc', 'either'], 'CARDINALITY': array([2, 2]),
+           'DPIS': array([[0.9, 0.8, 0.7, 0.1], [0.1, 0.2, 0.3, 0.9]])},
+           'either': {'TYPE': '', 'CONDSET': ['lung', 'tub'], 'CARDINALITY': array([2, 2]),
+           'DPIS': array([[1., 1., 1., 0.], [0., 0., 0., 1.]])},
+           'lung': {'TYPE': '', 'CONDSET': ['smoke'], 'CARDINALITY': array([2]), 'DPIS': array([[0.1 , 0.01],
+           [0.9 , 0.99]])}, 'smoke': {'TYPE': '', 'DPIS': array([[0.5],
+           [0.5]])}, 'tub': {'TYPE': '', 'CONDSET': ['asia'], 'CARDINALITY': array([2]), 'DPIS': array([[0.05, 0.01],
+           [0.95, 0.99]])}, 'xray': {'TYPE': '', 'CONDSET': ['either'], 'CARDINALITY': array([2]),
+           'DPIS': array([[0.98, 0.05], [0.02, 0.95]])}}
         """
         distribution = {}
         for dist in self.bnmodel.find("DISTRIBUTIONS"):
@@ -232,7 +264,10 @@ class XBNWriter:
 
     Examples
     --------
-    >>> writer = XBNWriter(model)
+    >>> from pgmpy.example_models import load_model
+    >>> from pgmpy.readwrite import XBNReader, XBNWriter
+    >>> asia = load_model("bnlearn/asia")
+    >>> writer = XBNWriter(asia)
     """
 
     def __init__(self, model, encoding="utf-8", prettyprint=True):
@@ -289,8 +324,10 @@ class XBNWriter:
 
         Examples
         --------
-        >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
-        >>> writer = XBNWriter()
+        >>> from pgmpy.example_models import load_model
+        >>> from pgmpy.readwrite import XBNReader, XBNWriter
+        >>> asia = load_model("bnlearn/asia")
+        >>> writer = XBNWriter(asia)
         >>> writer.set_analysisnotebook(
         ...     NAME="Notebook.Cancer Example From Neapolitan", ROOT="Cancer"
         ... )
@@ -309,8 +346,10 @@ class XBNWriter:
 
         Examples
         --------
-        >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
-        >>> writer = XBNWriter()
+        >>> from pgmpy.example_models import load_model
+        >>> from pgmpy.readwrite import XBNReader, XBNWriter
+        >>> asia = load_model("bnlearn/asia")
+        >>> writer = XBNWriter(asia)
         >>> writer.set_bnmodel_name("Cancer")
         """
         self.bnmodel.set("NAME", str(name))
@@ -326,8 +365,10 @@ class XBNWriter:
 
         Examples
         --------
-        >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
-        >>> writer = XBNWriter()
+        >>> from pgmpy.example_models import load_model
+        >>> from pgmpy.readwrite import XBNWriter
+        >>> asia = load_model("bnlearn/asia")
+        >>> writer = XBNWriter(asia)
         >>> writer.set_static_properties(
         ...     FORMAT="MSR DTAS XML", VERSION="0.2", CREATOR="Microsoft Research DTAS"
         ... )
@@ -347,23 +388,23 @@ class XBNWriter:
 
         Examples
         --------
-        >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
-        >>> writer = XBNWriter()
+        >>> from pgmpy.example_models import load_model
+        >>> from pgmpy.readwrite import XBNWriter
+        >>> asia = load_model("bnlearn/asia")
+        >>> writer = XBNWriter(asia)
         >>> writer.set_variables(
         ...     {
-        ...         "a": {
+        ...         "asia": {
         ...             "TYPE": "discrete",
-        ...             "XPOS": "13495",
-        ...             "YPOS": "10465",
-        ...             "DESCRIPTION": "(a) Metastatic Cancer",
-        ...             "STATES": ["Present", "Absent"],
+        ...             "XPOS": "100",
+        ...             "YPOS": "200",
+        ...             "DESCRIPTION": "Visit to Asia",
         ...         },
-        ...         "b": {
+        ...         "tub": {
         ...             "TYPE": "discrete",
-        ...             "XPOS": "11290",
-        ...             "YPOS": "11965",
-        ...             "DESCRIPTION": "(b) Serum Calcium Increase",
-        ...             "STATES": ["Present", "Absent"],
+        ...             "XPOS": "150",
+        ...             "YPOS": "250",
+        ...             "DESCRIPTION": "Tuberculosis",
         ...         },
         ...     }
         ... )
@@ -399,8 +440,10 @@ class XBNWriter:
 
         Examples
         --------
-        >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
-        >>> writer = XBNWriter()
+        >>> from pgmpy.example_models import load_model
+        >>> from pgmpy.readwrite import XBNWriter
+        >>> asia = load_model("bnlearn/asia")
+        >>> writer = XBNWriter(asia)
         >>> writer.set_edges(
         ...     [("a", "b"), ("a", "c"), ("b", "d"), ("c", "d"), ("c", "e")]
         ... )
@@ -415,8 +458,10 @@ class XBNWriter:
 
         Examples
         --------
-        >>> from pgmpy.readwrite.XMLBeliefNetwork import XBNWriter
-        >>> writer = XBNWriter()
+        >>> from pgmpy.example_models import load_model
+        >>> from pgmpy.readwrite import XBNWriter
+        >>> asia = load_model("bnlearn/asia")
+        >>> writer = XBNWriter(asia)
         >>> writer.set_distributions()
         """
         distributions = etree.SubElement(self.bnmodel, "DISTRIBUTIONS")
@@ -459,7 +504,7 @@ class XBNWriter:
         Example
         -------
         >>> from pgmpy.example_models import load_model
-        >>> from pgmpy.readwrite import XBNReader, XBNWriter
+        >>> from pgmpy.readwrite import XBNWriter
         >>> asia = load_model("bnlearn/asia")
         >>> writer = XBNWriter(asia)
         >>> writer.write(filename="asia.xbn")

@@ -589,7 +589,7 @@ class DiscreteBayesianNetwork(DAG):
         mm = self.to_markov_model()
         return mm.to_junction_tree()
 
-    def fit(self, data, estimator=None, state_names=[], n_jobs=1, **kwargs) -> DAG:
+    def fit(self, data, estimator=None, sample_weight=None) -> DAG:
         """
         Estimates the CPD for each variable based on a given data set.
 
@@ -600,22 +600,14 @@ class DiscreteBayesianNetwork(DAG):
             (If some values in the data are missing the data cells should be set to `numpy.nan`.
             Note that pandas converts each column containing `numpy.nan`s to dtype `float`.)
 
-        estimator: Estimator class
-            One of:
-            - MaximumLikelihoodEstimator (default)
-            - BayesianEstimator: In this case, pass 'prior_type' and either 'pseudo_counts'
-            or 'equivalent_sample_size' as additional keyword arguments.
-            See `BayesianEstimator.get_parameters()` for usage.
-            - ExpectationMaximization
+        estimator: DiscreteMLE, DiscreteBayesianEstimator, or DiscreteEM, optional
+            An initialized discrete parameter estimator from
+            `pgmpy.parameter_estimator`. If not specified, defaults to
+            `DiscreteMLE()`.
 
-        state_names: dict (optional)
-            A dict indicating, for each variable, the discrete set of states
-            that the variable can take. If unspecified, the observed values
-            in the data set are taken to be the only possible states.
-
-        n_jobs: int (default: 1)
-            Number of threads/processes to use for estimation. Using n_jobs > 1
-            for small models or datasets might be slower.
+        sample_weight: array-like of shape (n_samples,), optional
+            Per-row weights for `data`. Forwarded to the estimator's `fit`. Only
+            accepted by estimators whose `supports_weighted_data` tag is True.
 
         Returns
         -------
@@ -626,47 +618,42 @@ class DiscreteBayesianNetwork(DAG):
 
         Examples
         --------
-        >>> import pandas as pd
+        >>> from pgmpy.datasets import load_dataset
         >>> from pgmpy.models import DiscreteBayesianNetwork
-        >>> from pgmpy.base import DAG
-        >>> data = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
-        >>> model = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
-        >>> fitted_model = model.fit(data)
+        >>> from pgmpy.parameter_estimator import DiscreteMLE
+        >>> data = load_dataset("college_plans").data
+        >>> model = DiscreteBayesianNetwork(
+        ...     [("ses", "iq"), ("sex", "pe"), ("ses", "pe"), ("iq", "cp"), ("pe", "cp")]
+        ... )
+        >>> fitted_model = model.fit(data, estimator=DiscreteMLE())
         >>> len(fitted_model.get_cpds())
-        3
+        5
         >>> fitted_model.get_cpds()  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-        [<TabularCPD representing P(A:2) at 0x...>,
-        <TabularCPD representing P(C:2 | A:2, B:2) at 0x...>,
-        <TabularCPD representing P(B:2) at 0x...>]
+        [<TabularCPD representing P(ses:4) at 0x...>,
+         <TabularCPD representing P(iq:4 | ses:4) at 0x...>,
+         <TabularCPD representing P(sex:2) at 0x...>,
+         <TabularCPD representing P(pe:2 | ses:4, sex:2) at 0x...>,
+         <TabularCPD representing P(cp:2 | iq:4, pe:2) at 0x...>]
         """
-        from pgmpy.estimators import BaseEstimator, MaximumLikelihoodEstimator
-        from pgmpy.models import DiscreteBayesianNetwork
-
-        if isinstance(self, DiscreteBayesianNetwork):
-            bn = self
-        else:
-            bn = DiscreteBayesianNetwork(self.edges())
-            bn.add_nodes_from(self.nodes())
+        from pgmpy.parameter_estimator import DiscreteMLE
+        from pgmpy.parameter_estimator.base import DiscreteParameterEstimator
 
         if estimator is None:
-            estimator = MaximumLikelihoodEstimator
-        else:
-            if not issubclass(estimator, BaseEstimator):
-                raise TypeError("Estimator object should be a valid pgmpy estimator.")
+            estimator = DiscreteMLE()
+        elif not isinstance(estimator, DiscreteParameterEstimator):
+            raise TypeError(
+                "Estimator should be an instance of a discrete parameter estimator. "
+                "Pass an initialized estimator, for example `DiscreteMLE()`."
+            )
 
-        _estimator = estimator(
-            bn,
-            data,
-            state_names=state_names,
-        )
-        cpds_list = _estimator.get_parameters(n_jobs=n_jobs, **kwargs)
-        bn.add_cpds(*cpds_list)
-        return bn
+        estimator.fit(self, data, sample_weight=sample_weight)
+        self.add_cpds(*estimator.parameters_)
+        return self
 
     def fit_update(self, data: pd.DataFrame, n_prev_samples: int | None = None, n_jobs: int = 1) -> None:
         """
         Method to update the parameters of the DiscreteBayesianNetwork with more data.
-        Internally, uses BayesianEstimator with dirichlet prior, and uses
+        Internally, uses DiscreteBayesianEstimator with dirichlet prior, and uses
         the current CPDs (along with `n_prev_samples`) to compute the pseudo_counts.
 
         Parameters
@@ -697,7 +684,7 @@ class DiscreteBayesianNetwork(DAG):
         >>> data = BayesianModelSampling(model).forward_sample(int(1e3))
         >>> model.fit_update(data)
         """
-        from pgmpy.estimators import BayesianEstimator
+        from pgmpy.parameter_estimator import DiscreteBayesianEstimator
 
         if n_prev_samples is None:
             n_prev_samples = data.shape[0]
@@ -713,8 +700,14 @@ class DiscreteBayesianNetwork(DAG):
             state_names.update(self.get_cpds(var).state_names)
 
         # Step 3: Estimate the new CPDs.
-        _est = BayesianEstimator(self, data, state_names=state_names)
-        cpds = _est.get_parameters(prior_type="dirichlet", pseudo_counts=pseudo_counts, n_jobs=n_jobs)
+        _est = DiscreteBayesianEstimator(
+            state_names=state_names,
+            prior_type="dirichlet",
+            pseudo_counts=pseudo_counts,
+            n_jobs=n_jobs,
+        )
+        _est.fit(self, data)
+        cpds = _est.parameters_
 
         # Temporarily suppress logger to stop giving warning about replacing CPDs.
         _prev_level = logger.level

@@ -10,7 +10,8 @@ class LogLikelihood(PowerDivergence):
     This class is a thin specialization of :class:`PowerDivergence` with
     ``lambda_="log-likelihood"``. In this implementation it is equivalent to
     :class:`GSq`. For the contingency-table construction, conditional-case aggregation,
-    and p-value computation, see :class:`PowerDivergence`.
+    and p-value computation, see :class:`PowerDivergence`. The effect size is Cramér's V
+    (see :class:`PowerDivergence`).
 
     Parameters
     ----------
@@ -25,6 +26,8 @@ class LogLikelihood(PowerDivergence):
         The p-value for the test. Set after calling the test.
     dof_ : int
         Degrees of freedom for the test. Set after calling the test.
+    effect_size_ : float
+        Cramér's V. See :class:`PowerDivergence` for details. Set after calling the test.
 
     References
     ----------
@@ -61,5 +64,5 @@ class LogLikelihood(PowerDivergence):
         "requires_data": True,
     }
 
-    def __init__(self, data: pd.DataFrame):
-        super().__init__(data=data, lambda_="log-likelihood")
+    def __init__(self, data: pd.DataFrame, use_cache: bool = True):
+        super().__init__(data=data, lambda_="log-likelihood", use_cache=use_cache)

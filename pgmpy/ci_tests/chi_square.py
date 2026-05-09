@@ -9,7 +9,7 @@ class ChiSquare(PowerDivergence):
 
     This class is a thin specialization of :class:`PowerDivergence` with ``lambda_="pearson"``.
     For the contingency-table construction, conditional-case aggregation, and p-value computation,
-    see :class:`PowerDivergence`.
+    see :class:`PowerDivergence`. The effect size is Cramér's V (see :class:`PowerDivergence`).
 
     Parameters
     ----------
@@ -24,6 +24,8 @@ class ChiSquare(PowerDivergence):
         The p-value for the test. Set after calling the test.
     dof_ : int
         Degrees of freedom for the test. Set after calling the test.
+    effect_size_ : float
+        Cramér's V. See :class:`PowerDivergence` for details. Set after calling the test.
 
     References
     ----------
@@ -60,5 +62,5 @@ class ChiSquare(PowerDivergence):
         "requires_data": True,
     }
 
-    def __init__(self, data: pd.DataFrame):
-        super().__init__(data=data, lambda_="pearson")
+    def __init__(self, data: pd.DataFrame, use_cache: bool = True):
+        super().__init__(data=data, lambda_="pearson", use_cache=use_cache)

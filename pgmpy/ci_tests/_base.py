@@ -1,3 +1,5 @@
+from dataclasses import dataclass, field
+
 import numpy as np
 import pandas as pd
 from skbase.base import BaseObject
@@ -73,7 +75,7 @@ class _ResidualMixin:
             model.fit(Z_data, target_data)
             pred = model.predict(Z_data)
 
-        return pred, cat_index
+        return pred, cat_index, model
 
     def get_residuals(self, X: str, Z: list) -> pd.DataFrame | pd.Series:
         """
@@ -107,18 +109,30 @@ class _ResidualMixin:
         z_data_source = self.data.assign(_intercept_Z=np.ones(self.data.shape[0]))
 
         Z_data = pd.get_dummies(z_data_source.loc[:, z_cols])
-        pred, cat_index = self._fit_predict(X, Z_data)
+        pred, cat_index, estimator = self._fit_predict(X, Z_data)
 
         if self.dtypes[X] in ("C", "O"):
             dummies = pd.get_dummies(self.data.loc[:, X]).loc[:, cat_index.categories[cat_index.codes]]
-            return (dummies - pred).iloc[:, :-1]
+            residual = (dummies - pred).iloc[:, :-1]
         else:
-            return self.data.loc[:, X] - pred
+            residual = self.data.loc[:, X] - pred
+
+        return residual, estimator
+
+
+@dataclass(frozen=True)
+class _CITestResult:
+    statistic: float | None
+    p_value: float
+    effect_size: float | None = None
+    attributes: dict[str, object] = field(default_factory=dict)
 
 
 class _BaseCITest(BaseObject):
     """
-    Base class for all Conditional Independence (CI) tests. Subclasses must implement `run_test`.
+    Base class for all Conditional Independence (CI) tests.
+
+    Subclasses must implement ``_compute_result``.
     """
 
     _tags = {
@@ -126,7 +140,13 @@ class _BaseCITest(BaseObject):
         "data_types": (),
         "default_for": None,
         "requires_data": True,
+        "is_symmetric": True,
     }
+
+    def __init__(self, use_cache: bool = True):
+        self.use_cache = use_cache
+        self._result_cache = {}
+        super().__init__()
 
     def __call__(
         self,
@@ -171,12 +191,12 @@ class _BaseCITest(BaseObject):
 
         Notes
         -----
-        Always sets ``self.statistic_`` and ``self.p_value_`` as side effects,
-        regardless of the return value. Access these attributes to inspect raw results.
+        Always sets ``self.statistic_``, ``self.p_value_``, and ``self.effect_size_``
+        as side effects, regardless of the return value. Access these attributes to
+        inspect raw results.
         CI test instances are not thread-safe; use a separate instance per thread
         for parallel computation.
         """
-        self._validate_inputs(X, Y, Z)
         self.run_test(X=X, Y=Y, Z=list(Z))
 
         return self.p_value_ >= significance_level
@@ -185,9 +205,8 @@ class _BaseCITest(BaseObject):
         """
         Run the statistical test and return the test statistic and p-value.
 
-        Subclasses must implement this method. It should set ``self.statistic_``
-        and ``self.p_value_`` as attributes, and may set additional attributes
-        (e.g. ``self.dof_``).
+        Uses the subclass-provided ``_compute_result`` hook and updates the
+        instance result attributes from the returned payload.
 
         Parameters
         ----------
@@ -205,7 +224,38 @@ class _BaseCITest(BaseObject):
         p_value : float
             The p-value for the test.
         """
-        raise NotImplementedError(f"{self.__class__.__name__} must implement run_test.")
+        self._validate_inputs(X, Y, Z)
+        Z = list(Z)
+
+        if self.use_cache:
+            if self.get_tag("is_symmetric", tag_value_default=True):
+                x_key, y_key = sorted((X, Y), key=repr)
+            else:
+                x_key, y_key = X, Y
+            cache_key = (x_key, y_key, tuple(sorted(Z, key=repr)))
+
+            result = self._result_cache.get(cache_key)
+            if result is None:
+                result = self._compute_result(X=X, Y=Y, Z=Z)
+                self._result_cache[cache_key] = result
+        else:
+            result = self._compute_result(X=X, Y=Y, Z=Z)
+
+        self.statistic_ = result.statistic
+        self.p_value_ = result.p_value
+        self.effect_size_ = result.effect_size
+        for attr_name, attr_value in result.attributes.items():
+            setattr(self, attr_name, attr_value)
+
+        return self.statistic_, self.p_value_
+
+    def _compute_result(self, X, Y, Z):
+        """
+        Compute the CI test result for a single query.
+
+        Subclasses must implement this method and return a ``_CITestResult``.
+        """
+        raise NotImplementedError(f"{self.__class__.__name__} must implement _compute_result.")
 
     def _validate_inputs(self, X, Y, Z):
         if X == Y:
@@ -218,7 +268,7 @@ class _BaseCITest(BaseObject):
             raise ValueError(f"X and Y cannot appear in Z. Found {X if X in Z else Y} in Z.")
 
 
-def get_ci_test(test=None, data=None):
+def get_ci_test(test=None, data=None, use_cache=True):
     """
     Return an instantiated CI test object given a test name, instance, or data.
 
@@ -327,6 +377,7 @@ def get_ci_test(test=None, data=None):
         if cls.get_class_tag("requires_data", tag_value_default=True):
             if data is None:
                 raise ValueError(f"CI test '{cls.__name__}' requires data, but data is None.")
-            return cls(data=data)
-        return cls()
+            return cls(data=data, use_cache=use_cache)
+        else:
+            return cls(use_cache=use_cache)
     raise ValueError(f"Unknown CI test: {test!r}")

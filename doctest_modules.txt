@@ -68,6 +68,7 @@ pgmpy/structure_score/log_likelihood_cond_gauss.py
 pgmpy/structure_score/log_likelihood_gauss.py
 pgmpy/utils/mathext.py
 pgmpy/utils/state_name.py
+pgmpy/readwrite/XMLBeliefNetwork.py
 pgmpy/readwrite/BIF.py
 pgmpy/readwrite/NET.py
 pgmpy/readwrite/UAI.py
