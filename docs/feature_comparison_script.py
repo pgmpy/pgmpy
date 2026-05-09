@@ -13,32 +13,12 @@ def main():
         "Maximum Likelihood Estimation (MLE)",
         "Bayesian Estimation",
         "Expectation Maximization (EM)",
-        "Dirichlet Prior"
+        "Dirichlet Prior",
     ]
-    pgmpy_ok = [
-        True,
-        True,
-        True,
-        True
-    ]
-    bnlearn_ok = [
-        True,
-        True,
-        True,
-        True
-    ]
-    pyagrum_ok = [
-        True,
-        True,
-        True,
-        True
-    ]
-    pom_ok = [
-        True,
-        False,
-        False,
-        False
-    ]
+    pgmpy_ok = [True, True, True, True]
+    bnlearn_ok = [True, True, True, True]
+    pyagrum_ok = [True, True, True, True]
+    pom_ok = [True, False, False, False]
     data = pd.DataFrame(
         {
             "Category": cats,
