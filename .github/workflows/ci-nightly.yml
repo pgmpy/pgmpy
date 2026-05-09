@@ -52,6 +52,8 @@ jobs:
         run: pip freeze
 
       - name: Run tests
+        env:
+          OMP_NUM_THREADS: 1
         run: pytest --verbose
 
   test-fulldep:
@@ -120,6 +122,8 @@ jobs:
         run: pip freeze
 
       - name: Run tests
+        env:
+          OMP_NUM_THREADS: 1
         run: pytest --store-durations --verbose
 
       - name: Upload test durations

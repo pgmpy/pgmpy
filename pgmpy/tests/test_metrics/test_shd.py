@@ -1,6 +1,6 @@
 import pytest
 
-from pgmpy.base import DAG
+from pgmpy.base import DAG, PDAG
 from pgmpy.metrics import SHD
 
 
@@ -69,3 +69,35 @@ def test_shd_unequal_graphs(shd_scorer):
 def test_shd_invalid_edge_reverse_penalty():
     with pytest.raises(ValueError, match="edge_reverse_penalty must be"):
         SHD(edge_reverse_penalty=3)
+
+
+def test_shd_pdag_directed_vs_undirected_edge(shd_scorer, shd_scorer_double):
+    pdag = PDAG(directed_ebunch=[(1, 2)], undirected_ebunch=[(2, 3)])
+    dag = DAG([(1, 2), (2, 3)])
+
+    assert shd_scorer(pdag, dag) == 1
+    assert shd_scorer(dag, pdag) == 1
+    assert shd_scorer_double(pdag, dag) == 2
+    assert shd_scorer_double(dag, pdag) == 2
+
+
+def test_shd_pdag_undirected_edge_vs_missing_edge(shd_scorer, shd_scorer_double):
+    pdag = PDAG(undirected_ebunch=[(1, 2)])
+    pdag.add_node(3)
+    dag = DAG()
+    dag.add_nodes_from([1, 2, 3])
+
+    assert shd_scorer(pdag, dag) == 1
+    assert shd_scorer(dag, pdag) == 1
+    assert shd_scorer_double(pdag, dag) == 1
+    assert shd_scorer_double(dag, pdag) == 1
+
+
+def test_shd_pdag_reversed_directed_edge(shd_scorer, shd_scorer_double):
+    pdag1 = PDAG(directed_ebunch=[(1, 2)])
+    pdag2 = PDAG(directed_ebunch=[(2, 1)])
+
+    assert shd_scorer(pdag1, pdag2) == 1
+    assert shd_scorer(pdag2, pdag1) == 1
+    assert shd_scorer_double(pdag1, pdag2) == 2
+    assert shd_scorer_double(pdag2, pdag1) == 2

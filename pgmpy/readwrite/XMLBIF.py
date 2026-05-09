@@ -580,7 +580,8 @@ class XMLBIFWriter:
 
     def write_xmlbif(self, filename):
         warnings.warn(
-            "`XMLBIFWriter.write_xmlbif` is deprecated. Please use `XMLBIFWriter.write` instead.",
+            """`XMLBIFWriter.write_xmlbif` is deprecated and will be removed in v1.3.0. Please use `XMLBIFWriter.write`
+            instead.""",
             FutureWarning,
             stacklevel=2,
         )

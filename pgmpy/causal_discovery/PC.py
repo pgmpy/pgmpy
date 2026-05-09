@@ -4,7 +4,7 @@ from itertools import combinations
 import networkx as nx
 import pandas as pd
 
-from pgmpy.base import PDAG, UndirectedGraph
+from pgmpy.base import PDAG
 from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery, _ConstraintMixin
 from pgmpy.ci_tests import get_ci_test
@@ -93,6 +93,17 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
     max_cond_vars : int, default=5
         The maximum number conditional variables to consider while performing conditional independence tests.
 
+    orient_rule : str or None, default=None
+        The rule for orienting colliders (v-structures) when there is a conflict.
+
+        - ``None``: The first orientation is kept, later conflicting orientations are ignored.
+        - ``"pvalue"``: For each candidate collider at ``Z``, CI tests are run over all subsets ``S`` of the neighbors.
+          ``Z`` is considered a collider if the maximum p-value over subsets not containing ``Z`` exceeds the maximum
+          over subsets containing ``Z``. Candidate colliders are then sorted by strength (highest p-value first) to
+          resolve conflicts.
+        - ``"effect"``: Same as ``"pvalue"`` but uses effect sizes instead of p-values for testing colliders and
+          resolving conflicts.
+
     expert_knowledge : :class:`pgmpy.estimators.ExpertKnowledge`, optional
         Expert knowledge to be used in the causal graph construction. This needs to be an instance of
         :class:`pgmpy.estimators.ExpertKnowledge`. Users can specify knowledge in the form of required/forbidden edges,
@@ -179,6 +190,8 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
            PCs." IEEE/ACM transactions on computational biology and bioinformatics (2016).
     .. [6] Expert Knowledge: Meek, Christopher. "Causal inference and causal explanation with background knowledge."
            arXiv preprint arXiv:1302.4972 (2013).
+    .. [7] Ramsey, J. (2016). "Improving accuracy and scalability of the pc algorithm by maximizing p-value."
+           arXiv preprint arXiv:1610.00378.
     """
 
     def __init__(
@@ -188,6 +201,7 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
         return_type: str = "pdag",
         significance_level: float = 0.01,
         max_cond_vars: int = 5,
+        orient_rule: str | None = None,
         expert_knowledge: ExpertKnowledge | None = None,
         enforce_expert_knowledge: bool = False,
         n_jobs: int = -1,
@@ -198,6 +212,7 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
         self.return_type = return_type
         self.significance_level = significance_level
         self.max_cond_vars = max_cond_vars
+        self.orient_rule = orient_rule
         self.expert_knowledge = expert_knowledge
         self.enforce_expert_knowledge = enforce_expert_knowledge
         self.n_jobs = n_jobs
@@ -220,7 +235,7 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
         """
 
         # CI test
-        ci_test = get_ci_test(test=self.ci_test, data=X)
+        self.ci_test_ = get_ci_test(test=self.ci_test, data=X)
 
         if self.expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
@@ -235,7 +250,7 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
             data=X,
             independencies=independencies,
             variant=self.variant,
-            ci_test=ci_test,
+            ci_test=self.ci_test_,
             significance_level=self.significance_level,
             max_cond_vars=self.max_cond_vars,
             expert_knowledge=expert_knowledge,
@@ -245,7 +260,9 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
         )
 
         # Step 2: Use separating sets to orient colliders
-        pdag = self._orient_colliders(self.skeleton_, self.separating_sets_, expert_knowledge.temporal_ordering)
+        pdag = self._orient_colliders(
+            temporal_ordering=expert_knowledge.temporal_ordering,
+        )
 
         # Step 3: apply orientation rules and expert knowledge
         if expert_knowledge.temporal_order != [[]]:
@@ -271,42 +288,40 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
 
         return self
 
-    @staticmethod
     def _orient_colliders(
-        skeleton: UndirectedGraph,
-        separating_sets: dict[frozenset, set],
+        self,
         temporal_ordering: dict[Hashable, int] = dict(),
     ) -> PDAG:
         """
-        Orients the edges that form v-structures in a graph skeleton based on
-        the `separating_sets` to form a PDAG. For each pair of non adjacent
-        nodes `u`, `v` , if a common neighbor `z` is not in the separating set of `u` and `v`;
-        then the v-structure is oriented as `u`->`z` , `v`->`z`.
+        Orients the edges that form v-structures in a graph skeleton to form a PDAG.
+
+        For each pair of non-adjacent nodes ``X``, ``Y``, if a common neighbor ``Z``
+        is identified as a collider, the edges are oriented as ``X`` -> ``Z`` <- ``Y``.
+
+        When ``orient_rule`` is ``None``, ``Z`` is a collider if it is not in the
+        separating set of ``X`` and ``Y``. When ``orient_rule`` is ``"pvalue"`` or
+        ``"effect"``, CI tests are run over all subsets of neighbors (MaxP) and
+        candidates are sorted by strength before orienting.
+
+        Uses ``self.skeleton_``, ``self.separating_sets_``, ``self.orient_rule``,
+        ``self.ci_test_``, ``self.significance_level``, and ``self.max_cond_vars``.
 
         Parameters
         ----------
-        skeleton: nx.Graph
-            An undirected graph skeleton as e.g. produced by the
-            estimate_skeleton method.
-
-        separating_sets: dict
-            A dict containing for each pair of not directly connected nodes a
-            separating set ("witnessing set") of variables that makes them
-            conditionally independent.
+        temporal_ordering : dict, optional
+            Temporal ordering of variables for filtering collider candidates.
 
         Returns
         -------
-        Model after edge orientation: pgmpy.base.PDAG
-            An estimate for the DAG pattern of the BN underlying the data. The
-            graph might contain some nodes with both-way edges (X->Y and Y->X).
-            Any completion by (removing one of the both-way edges for each such
-            pair) results in a I-equivalent Bayesian network DAG.
+        pgmpy.base.PDAG
+            An estimate for the DAG pattern of the BN underlying the data.
 
         References
         ----------
         [1] Neapolitan, Learning Bayesian Networks, Section 10.1.2, Algorithm
                 10.2 (page 550)
-        [2] http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
+        [2] Ramsey, J. (2016). Improving accuracy and scalability of the pc
+                algorithm by maximizing p-value. arXiv:1610.00378.
 
         Examples
         --------
@@ -316,24 +331,76 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
         >>> from pgmpy.example_models import load_model
         >>> df = load_model("bnlearn/cancer").simulate(int(1e3), seed=42)
         >>> est = PC(ci_test='chi_square').fit(df)
-        >>> pdag = est._orient_colliders(est.skeleton_, est.separating_sets_)
+        >>> pdag = est._orient_colliders()
         >>> sorted(pdag.edges())
         [('Pollution', 'Cancer'), ('Xray', 'Cancer')]
         """
 
+        skeleton = self.skeleton_
+        separating_sets = self.separating_sets_
+        orient_rule = self.orient_rule
+
         pdag = skeleton.to_directed()
 
-        # 1) for each X-Z-Y, if Z not in the separating set of X,Y, then orient edges
-        # as X->Z<-Y (Algorithm 3.4 in Koller & Friedman PGM, page 86)
-        for X, Y in combinations(sorted(pdag.nodes()), 2):
-            if not skeleton.has_edge(X, Y):
-                for Z in set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y)):
-                    if Z not in separating_sets[frozenset((X, Y))]:
-                        if (temporal_ordering == dict()) or (
-                            (temporal_ordering[Z] >= temporal_ordering[X])
-                            and (temporal_ordering[Z] >= temporal_ordering[Y])
+        if orient_rule is None:
+            for X, Y in combinations(sorted(pdag.nodes()), 2):
+                if not skeleton.has_edge(X, Y):
+                    for Z in set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y)):
+                        if Z not in separating_sets[frozenset((X, Y))]:
+                            if (temporal_ordering == dict()) or (
+                                (temporal_ordering[Z] >= temporal_ordering[X])
+                                and (temporal_ordering[Z] >= temporal_ordering[Y])
+                            ):
+                                if pdag.has_edge(X, Z) and pdag.has_edge(Y, Z):
+                                    pdag.remove_edges_from([(Z, X), (Z, Y)])
+        else:
+            ci_test = self.ci_test_
+            significance_level = self.significance_level
+            max_cond_vars = self.max_cond_vars
+
+            candidates = []
+            for X, Y in combinations(sorted(pdag.nodes()), 2):
+                if not skeleton.has_edge(X, Y):
+                    common_neighbors = set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y))
+                    if not common_neighbors:
+                        continue
+
+                    potential = sorted(
+                        (set(skeleton.neighbors(X)) - {Y}) | (set(skeleton.neighbors(Y)) - {X}),
+                        key=repr,
+                    )
+
+                    results = []
+                    for size in range(min(len(potential), max_cond_vars) + 1):
+                        for subset in combinations(potential, size):
+                            ci_test(X, Y, list(subset), significance_level=significance_level)
+                            results.append((subset, ci_test.p_value_, ci_test.effect_size_))
+
+                    for Z in common_neighbors:
+                        if (temporal_ordering != dict()) and not (
+                            temporal_ordering[Z] >= temporal_ordering[X]
+                            and temporal_ordering[Z] >= temporal_ordering[Y]
                         ):
-                            pdag.remove_edges_from([(Z, X), (Z, Y)])
+                            continue
+
+                        if orient_rule == "pvalue":
+                            max_p_with = max((p for s, p, _ in results if Z in s), default=-1.0)
+                            max_p_without = max((p for s, p, _ in results if Z not in s), default=-1.0)
+                            is_collider = max_p_without > max_p_with
+                            priority = max_p_with
+                        else:
+                            min_eff_with = min((e for s, _, e in results if Z in s), default=float("inf"))
+                            min_eff_without = min((e for s, _, e in results if Z not in s), default=float("inf"))
+                            is_collider = min_eff_without < min_eff_with
+                            priority = -min_eff_with
+
+                        if is_collider:
+                            candidates.append((priority, X, Y, Z))
+
+            candidates.sort(key=lambda c: c[0])
+            for _, X, Y, Z in candidates:
+                if pdag.has_edge(X, Z) and pdag.has_edge(Y, Z):
+                    pdag.remove_edges_from([(Z, X), (Z, Y)])
 
         edges = set(pdag.edges())
         undirected_edges = set()
