@@ -5,7 +5,7 @@ class Kampen2014(DAGMixin, _BaseExampleModel):
     """
     References
     ----------
-    ..[1] van Kampen, et al. (2014). Causal DAG for epidemiological analysis.
+    - :cite:p:`kampen_2014_80`
     """
 
     _tags = {

@@ -251,7 +251,7 @@ class SEMEstimator:
 
         References
         ----------
-        .. [1] Bollen, K. A. (2010). Structural equations with latent variables. New York: Wiley.
+        - :cite:p:`thoemmes_2013_78`
         """
         # Check if given arguments are valid
         if not isinstance(data, pd.DataFrame):

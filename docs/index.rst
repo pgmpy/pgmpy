@@ -135,5 +135,6 @@ Key Features
    User Guide <documentation>
    Examples <examples>
    API Reference <reference>
+   References <references>
    Citation <citation>
    Getting Involved <development>

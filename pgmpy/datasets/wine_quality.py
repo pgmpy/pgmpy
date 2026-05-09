@@ -8,7 +8,7 @@ class WineQualityRed(_BaseDataset):
     """
     References
     ----------
-    .. [1] https://archive.ics.uci.edu/ml/datasets/wine+quality
+    - :cite:p:`https_noyear_105`
     """
 
     _tags = {
@@ -40,7 +40,7 @@ class WineQualityWhite(_BaseDataset):
     """
     References
     ----------
-    .. [1] https://archive.ics.uci.edu/ml/datasets/wine+quality
+    - :cite:p:`https_noyear_105`
     """
 
     _tags = {
@@ -72,7 +72,7 @@ class WineQualityRedWhiteMixed(_BaseDataset):
     """
     References
     ----------
-    .. [1] https://archive.ics.uci.edu/ml/datasets/wine+quality
+    - :cite:p:`https_noyear_105`
     """
 
     _tags = {

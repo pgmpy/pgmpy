@@ -5,7 +5,7 @@ class GaltonStature(_BaseDataset):
     """
     References
     ----------
-    .. [1] http://www.medicine.mcgill.ca/epidemiology/hanley/galton/
+    - :cite:p:`http_noyear_89`
     """
 
     _tags = {

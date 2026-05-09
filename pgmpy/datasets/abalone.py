@@ -5,9 +5,8 @@ class AbaloneContinuous(_BaseDataset):
     """
     References
     ----------
-    .. [1] Lopez-Paz, D., Muandet, K., Schölkopf, B., & Tolstikhin, I. (2015, June). Towards a learning theory of
-           cause-effect inference. In International Conference on Machine Learning (pp. 1452-1461). PMLR.
-    .. [2] https://archive.ics.uci.edu/ml/datasets/abalone
+    - :cite:p:`lopez_2015_83`
+    - :cite:p:`https_noyear_100`
     """
 
     _tags = {
@@ -40,9 +39,8 @@ class AbaloneMixed(_BaseDataset):
     """
     References
     ----------
-    .. [1] Lopez-Paz, D., Muandet, K., Schölkopf, B., & Tolstikhin, I. (2015, June). Towards a learning theory of
-           cause-effect inference. In International Conference on Machine Learning (pp. 1452-1461). PMLR.
-    .. [2] https://archive.ics.uci.edu/ml/datasets/abalone
+    - :cite:p:`lopez_2015_83`
+    - :cite:p:`https_noyear_100`
     """
 
     _tags = {
