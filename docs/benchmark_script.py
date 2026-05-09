@@ -15,6 +15,7 @@ from scipy.stats import sem
 from pgmpy import config
 from pgmpy.estimators import MaximumLikelihoodEstimator
 from pgmpy.models import DiscreteBayesianNetwork
+from pgmpy.example_models import load_model
 
 warnings.filterwarnings("ignore")
 
@@ -25,31 +26,31 @@ if os.name == "nt":
         os.environ["PATH"] += os.pathsep + r_path
 
 
-def make_fake_data(sz):
-    np.random.seed(42)
-    return pd.DataFrame(
-        {"A": np.random.randint(0, 2, sz), "B": np.random.randint(0, 2, sz), "C": np.random.randint(0, 2, sz)}
-    )
+def make_data(sz):
+    model = load_model("bnlearn/alarm")
+    return model.simulate(n_samples=sz, show_progress=False)
 
 
 def main():
     # just setting up a basic network for fun
-    conn = [("A", "B"), ("A", "C")]
-    net = DiscreteBayesianNetwork(conn)
+    ref_model = load_model("bnlearn/alarm")
+    net = DiscreteBayesianNetwork(ref_model.edges())
 
     bn = gum.BayesNet()
-    A_n = bn.add(gum.LabelizedVariable("A", "A", 2))
-    B_n = bn.add(gum.LabelizedVariable("B", "B", 2))
-    C_n = bn.add(gum.LabelizedVariable("C", "C", 2))
-    bn.addArc(A_n, B_n)
-    bn.addArc(A_n, C_n)
+    node_ids = {}
+    for node in ref_model.nodes():
+        states = ref_model.get_cpds(node).state_names[node]
+        var = gum.LabelizedVariable(str(node), str(node), len(states))
+        node_ids[node] = bn.add(var)
+    for u, v in ref_model.edges():
+        bn.addArc(node_ids[u], node_ids[v])
 
     # wrapping some r stuff here
     ro.r("""
     library(bnlearn)
     fit_r <- function(df) {
         df[] <- lapply(df, factor)
-        net <- model2network("[A][B|A][C|A]")
+        net <- hc(df)
         fit <- bn.fit(net, df, method="mle")
         return(TRUE)
     }
@@ -65,7 +66,7 @@ def main():
 
     for sz in test_sz:
         print(f"handling {sz} samples.")
-        df = make_fake_data(sz)
+        df = make_data(sz)
 
         t_np, t_torch, t_agrum, t_r = [], [], [], []
 
