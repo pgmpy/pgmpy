@@ -5,7 +5,7 @@ class AppleWatchFitbit(_BaseDataset):
     """
     References
     ----------
-    .. [1] https://www.kaggle.com/aleespinosa/apple-watch-and-fitbit-data
+    - :cite:p:`khan_2025`
     """
 
     _tags = {

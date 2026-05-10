@@ -76,10 +76,8 @@ class SEMGraph:
 
     References
     ----------
-    [1] McDonald, A, J., & Clelland, D. A. (1984). Textile Workers and Union Sentiment.
-        Social Forces, 63(2), 502–521
-    [2] https://en.wikipedia.org/wiki/Structural_equation_modeling#/
-        media/File:Example_Structural_equation_model.svg
+    - :cite:p:`mcdonald_clelland_1984`
+    - :cite:p:`wikipedia_sem`
 
     Attributes
     ----------
@@ -989,10 +987,8 @@ class SEM(SEMGraph):
 
         References
         ----------
-        [1] McDonald, A, J., & Clelland, D. A. (1984). Textile Workers and Union Sentiment.
-            Social Forces, 63(2), 502–521
-        [2] https://en.wikipedia.org/wiki/Structural_equation_modeling#/
-            media/File:Example_Structural_equation_model.svg
+        - :cite:p:`mcdonald_clelland_1984`
+        - :cite:p:`wikipedia_sem`
         """
         return cls(
             syntax="graph",

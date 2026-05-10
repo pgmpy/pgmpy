@@ -5,7 +5,7 @@ class StudentPerformance(_BaseDataset):
     """
     References
     ----------
-    .. [1] https://archive.ics.uci.edu/ml/datasets/student+performance
+    - :cite:p:`uci_student_performance`
     """
 
     _tags = {

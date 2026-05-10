@@ -37,10 +37,10 @@ class UAIReader:
     >>> reader = UAIReader("asia.uai")
     >>> model = reader.get_model()
 
-    Reference
-    ---------
-    [1] https://uaicompetition.github.io/uci-2022/file-formats/model-format/
-    [2] https://forgemia.inra.fr/thomas.schiex/toulbar2/-/blob/master/doc/UAI08Format.txt
+    References
+    ----------
+    - :cite:p:`uai_2022_format`
+    - :cite:p:`uai_2008_format`
     """
 
     def __init__(self, path=None, string=None):

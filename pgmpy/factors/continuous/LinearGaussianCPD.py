@@ -30,7 +30,7 @@ class LinearGaussianCPD(BaseFactor):
 
     References
     ----------
-    .. [1] https://cedar.buffalo.edu/~srihari/CSE574/Chap8/Ch8-PGM-GaussianBNs/8.5%20GaussianBNs.pdf
+    - :cite:p:`srihari_gaussian_bn`
 
     Parameters
     ----------

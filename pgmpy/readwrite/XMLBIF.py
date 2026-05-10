@@ -45,9 +45,9 @@ class XMLBIFReader:
     >>> reader = XMLBIFReader("xmlbif_test.xml")
     >>> model = reader.get_model()
 
-    Reference
-    ---------
-    [1] https://www.cs.cmu.edu/afs/cs/user/fgcozman/www/Research/InterchangeFormat/
+    References
+    ----------
+    - :cite:p:`cozman_xmlbif`
     """
 
     def __init__(self, path=None, string=None):
@@ -302,9 +302,9 @@ class XMLBIFWriter:
     >>> writer = XMLBIFWriter(model)
     >>> writer.write("asia.xml")
 
-    Reference
-    ---------
-    [1] https://www.cs.cmu.edu/afs/cs/user/fgcozman/www/Research/InterchangeFormat/
+    References
+    ----------
+    - :cite:p:`cozman_xmlbif`
     """
 
     def __init__(self, model, encoding="utf-8", prettyprint=True):

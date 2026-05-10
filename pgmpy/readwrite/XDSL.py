@@ -35,10 +35,10 @@ class XDSLReader:
     >>> reader = XDSLReader("AsiaDiagnosis.xdsl")
     >>> model = reader.get_model()
 
-    Reference
-    ---------
-    [1] https://support.bayesfusion.com/docs/GeNIe/saving_xdslfileformat.html
-    [2] https://www.bayesfusion.com/genie/
+    References
+    ----------
+    - :cite:p:`bayesfusion_xdsl`
+    - :cite:p:`bayesfusion_genie`
     """
 
     def __init__(self, path=None, string=None):
@@ -254,10 +254,10 @@ class XDSLWriter:
     >>> writer = XDSLWriter(asia)
     >>> writer.write("asia.xdsl")
 
-    Reference
-    ---------
-    [1] https://support.bayesfusion.com/docs/GeNIe/saving_xdslfileformat.html
-    [2] https://www.bayesfusion.com/genie/
+    References
+    ----------
+    - :cite:p:`bayesfusion_xdsl`
+    - :cite:p:`bayesfusion_genie`
     """
 
     def __init__(
