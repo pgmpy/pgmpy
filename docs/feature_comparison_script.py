@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import plotly.graph_objects as go
 
@@ -60,7 +61,7 @@ def main():
                 ),
                 cells=dict(
                     values=tbl_cols,
-                    # zipping colors to fix plotly column color thing
+                    # alternate row colors and add light green/red backgrounds for True/False cells
                     fill=dict(color=list(zip(*cell_cols))),
                     font=dict(size=12, family="Segoe UI, system-ui, sans-serif", color="#334155"),
                     align="center",
@@ -80,7 +81,9 @@ def main():
         width=1200,
         margin=dict(t=60, b=20, l=150, r=150),
     )
-    fig.write_html("feature_comparison.html")
+    docs_dir = os.path.dirname(os.path.abspath(__file__))
+    out_file = os.path.join(docs_dir, "feature_comparison.html")
+    fig.write_html(out_file)
     print("done exporting feature table!")
 
 
