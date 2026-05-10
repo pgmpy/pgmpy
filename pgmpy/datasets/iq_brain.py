@@ -5,7 +5,7 @@ class IQBrainSize(_BaseDataset):
     """
     References
     ----------
-    .. [1] http://lib.stat.cmu.edu/datasets/IQ_Brain_Size
+    - :cite:p:`cmu_iqbrain`
     """
 
     _tags = {

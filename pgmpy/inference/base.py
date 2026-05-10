@@ -171,9 +171,7 @@ class Inference:
 
         References
         ----------
-        [1] Baker, M., & Boult, T. E. (2013).
-          Pruning Bayesian networks for efficient computation.
-            arXiv preprint arXiv:1304.1112.
+        - :cite:p:`baker_boult_2013`
         """
         evidence = {} if evidence is None else evidence
         variables = list(self.model.nodes()) if len(variables) == 0 else list(variables)
@@ -263,10 +261,7 @@ class Inference:
 
         References
         ----------
-        [1] Mrad, Ali Ben, et al. "Uncertain evidence in Bayesian networks:
-          Presentation and comparison on a simple example."
-            International Conference on Information Processing and Management
-              of Uncertainty in Knowledge-Based Systems. Springer, Berlin, Heidelberg, 2012.
+        - :cite:p:`benmrad_2012`
         """
         self._check_virtual_evidence(virtual_evidence)
 

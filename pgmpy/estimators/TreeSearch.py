@@ -43,12 +43,8 @@ class TreeSearch(StructureEstimator):
 
     References
     ----------
-    [1] Chow, C. K.; Liu, C.N. (1968), "Approximating discrete probability
-        distributions with dependence trees", IEEE Transactions on Information
-        Theory, IT-14 (3): 462–467
-
-    [2] Friedman N, Geiger D and Goldszmidt M (1997). Bayesian network classifiers.
-        Machine Learning 29: 131–163
+    - :cite:p:`chow_liu_1968`
+    - :cite:p:`friedman_geiger_goldszmidt_1997`
     """
 
     def __init__(self, data, root_node=None, n_jobs=-1, **kwargs):

@@ -191,8 +191,8 @@ def pearsonr(X, Y, Z, data, boolean=True, **kwargs):
 
     References
     ----------
-    .. [1] https://en.wikipedia.org/wiki/Pearson_correlation_coefficient
-    .. [2] https://en.wikipedia.org/wiki/Partial_correlation#Using_linear_regression
+    - :cite:p:`peerj_blue_driver`
+    - :cite:p:`wikipedia_partial_correlation`
     """
     warnings.warn(
         "`pearsonr` is deprecated and will be removed in v1.3.0. Please use `pgmpy.ci_tests.Pearsonr` instead.",
@@ -280,8 +280,7 @@ def power_divergence(X, Y, Z, data, boolean=True, lambda_="cressie-read", **kwar
 
     References
     ----------
-    .. [1] Cressie, Noel, and Timothy RC Read. "Multinomial goodness‐of‐fit tests."
-      Journal of the Royal Statistical Society: Series B (Methodological) 46.3 (1984): 440-464.
+    - :cite:p:`cressie_read_1984`
 
     Examples
     --------
@@ -395,7 +394,7 @@ def chi_square(X, Y, Z, data, boolean=True, **kwargs):
 
     References
     ----------
-    .. [1] https://en.wikipedia.org/wiki/Chi-squared_test
+    - :cite:p:`sage_research_methods`
 
     Examples
     --------
@@ -462,7 +461,7 @@ def g_sq(X, Y, Z, data, boolean=True, **kwargs):
 
     References
     ----------
-    .. [1] https://en.wikipedia.org/wiki/G-test
+    - :cite:p:`wikipedia_gtest`
 
     Examples
     --------
@@ -531,7 +530,7 @@ def log_likelihood(X, Y, Z, data, boolean=True, **kwargs):
 
     References
     ----------
-    [1] https://en.wikipedia.org/wiki/G-test
+    - :cite:p:`wikipedia_gtest`
 
     Examples
     --------
@@ -722,13 +721,9 @@ def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
 
     References
     ----------
-    .. [1] Ankan, Ankur, and Johannes Textor. "A simple unified approach to testing high-dimensional" "conditional
-           independences for categorical and ordinal data." Proceedings of the
-           AAAI Conference on Artificial Intelligence.
-    .. [2] Li, C.; and Shepherd, B. E. 2010. Test of Association Between Two Ordinal Variables While Adjusting for
-           Covariates. Journal of the American Statistical Association.
-    .. [3] Muller, K. E. and Peterson B. L. (1984) Practical Methods for computing power in testing the multivariate
-           general linear hypothesis. Computational Statistics & Data Analysis.
+    - :cite:p:`ankan_textor_2023`
+    - :cite:p:`li_shepherd_2010`
+    - :cite:p:`muller_peterson_1984`
     """
     warnings.warn(
         "`pillai_trace` is deprecated and will be removed in v1.3.0. Please use `pgmpy.ci_tests.PillaiTrace` instead.",
@@ -832,8 +827,7 @@ def gcm(X, Y, Z, data, boolean=True, **kwargs):
 
     References
     ----------
-    .. [1] Rajen D. Shah, and Jonas Peters. "The Hardness of Conditional Independence Testing and the Generalised
-        Covariance Measure".
+    - :cite:p:`shah_peters_2020`
     """
     warnings.warn(
         "`gcm` is deprecated and will be removed in v1.3.0. Please use `pgmpy.ci_tests.GCM` instead.",
@@ -909,8 +903,7 @@ def pearsonr_equivalence(X, Y, Z, data, boolean=True, delta_threshold=0.1, **kwa
 
     References
     ----------
-    .. [1] Malinsky, Daniel. "A cautious approach to constraint-based causal model selection." arXiv preprint
-            arXiv:2404.18232 (2024).
+    - :cite:p:`malinsky_2024`
     """
     warnings.warn(
         """`pearsonr_equivalence` is deprecated and will be removed in v1.3.0. Please use

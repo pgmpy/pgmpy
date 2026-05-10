@@ -5,7 +5,7 @@ class HTRU2(_BaseDataset):
     """
     References
     ----------
-    .. [1] https://archive.ics.uci.edu/ml/datasets/HTRU2
+    - :cite:p:`uci_htru2`
     """
 
     _tags = {

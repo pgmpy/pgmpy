@@ -5,7 +5,7 @@ class Pigs(DiscreteMixin, _BaseExampleModel):
     """
     References
     ----------
-    ..[1] Pigs (Genetic network). bnlearn Bayesian Network Repository.
+    - :cite:p:`bnlearn_pigs`
     """
 
     _tags = {
