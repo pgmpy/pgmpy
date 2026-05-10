@@ -100,9 +100,9 @@ def main():
             # agrum benchmark (pyAgrum's learning is single-threaded and can be very slow on large datasets)
             t0 = time.perf_counter()
             learner = gum.BNLearner(df)
-            if hasattr(learner, 'useSmoothingPrior'):
+            if hasattr(learner, "useSmoothingPrior"):
                 learner.useSmoothingPrior(1)
-            elif hasattr(learner, 'useAprioriSmoothing'):
+            elif hasattr(learner, "useAprioriSmoothing"):
                 learner.useAprioriSmoothing(1)
             learner.learnParameters(bn.dag())
             t_agrum.append(time.perf_counter() - t0)
@@ -116,7 +116,14 @@ def main():
 
         res.append({"Size": sz, "Library": "pgmpy (NumPy)", "MeanTime": np.mean(t_np), "StdErr": sem(t_np)})
         res.append({"Size": sz, "Library": "pgmpy (PyTorch)", "MeanTime": np.mean(t_torch), "StdErr": sem(t_torch)})
-        res.append({"Size": sz, "Library": "pyagrum (C++)", "MeanTime": np.nanmean(t_agrum) if not np.isnan(t_agrum).all() else np.nan, "StdErr": np.nan})
+        res.append(
+            {
+                "Size": sz,
+                "Library": "pyagrum (C++)",
+                "MeanTime": np.nanmean(t_agrum) if not np.isnan(t_agrum).all() else np.nan,
+                "StdErr": np.nan,
+            }
+        )
         res.append({"Size": sz, "Library": "bnlearn (R)", "MeanTime": np.mean(t_r), "StdErr": sem(t_r)})
 
     # plotting
@@ -153,14 +160,18 @@ def main():
                     go.Bar(
                         x=[libname],
                         y=row["MeanTime"].values,
-                        error_y=dict(type="data", array=row["StdErr"].values, visible=True) if pd.notna(row["StdErr"].values[0]) else None,
+                        error_y=dict(type="data", array=row["StdErr"].values, visible=True)
+                        if pd.notna(row["StdErr"].values[0])
+                        else None,
                         marker=dict(color=color_map[libname]),
                         text=row["txt"].values,
                         textposition="outside",
                         showlegend=(r == 1 and c == 1),
                         name=libname,
                         legendgroup=libname,
-                        hovertemplate="<b>%{x}</b><br>Time: %{y:.3f}s<extra></extra>" if pd.notna(row["MeanTime"].values[0]) else "<b>%{x}</b><br>Status: Failed<extra></extra>",
+                        hovertemplate="<b>%{x}</b><br>Time: %{y:.3f}s<extra></extra>"
+                        if pd.notna(row["MeanTime"].values[0])
+                        else "<b>%{x}</b><br>Status: Failed<extra></extra>",
                     ),
                     row=r,
                     col=c,
