@@ -41,7 +41,6 @@ def main():
     # load real model
     print("Loading 'alarm' model...")
     model = load_model("bnlearn/alarm")
-    net = DiscreteBayesianNetwork(model.edges())
 
     # setup pyAgrum network dynamically
     print("Setting up pyAgrum network...")
