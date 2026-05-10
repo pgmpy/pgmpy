@@ -125,8 +125,7 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
 
     References
     ----------
-    .. [1] Koller & Friedman, Probabilistic Graphical Models - Principles and
-           Techniques, 2009, Section 18.4.3 (page 811ff)
+    - :cite:p:`koller_friedman_2009`
     """
 
     def __init__(

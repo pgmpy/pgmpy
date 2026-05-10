@@ -64,9 +64,7 @@ class DBNInference(Inference):
 
     References
     ----------
-    [1] Dynamic Bayesian Networks: Representation, Inference and Learning
-        by Kevin Patrick Murphy
-        http://www.cs.ubc.ca/~murphyk/Thesis/thesis.pdf
+    - :cite:p:`murphy_2002`
     """
 
     def __init__(self, model):

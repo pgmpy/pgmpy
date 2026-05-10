@@ -29,7 +29,7 @@ class ChiSquare(PowerDivergence):
 
     References
     ----------
-    .. [1] https://en.wikipedia.org/wiki/Chi-squared_test
+    - :cite:p:`sage_research_methods`
 
     Examples
     --------

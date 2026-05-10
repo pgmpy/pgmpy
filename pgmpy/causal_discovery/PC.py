@@ -178,20 +178,12 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
 
     References
     ----------
-    .. [1] Spirtes, P., Glymour, C., & Scheines, R. (2001). Causation, prediction, and search.
-           doi:10.7551/mitpress/1754.001.0001
-    .. [2] Neapolitan, Learning Bayesian Networks, Section 10.1.2 for the PC algorithm (page 550),
-           http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
-    .. [3] Original PC: P. Spirtes, C. Glymour, and R. Scheines, Causation, Prediction, and Search, 2nd ed.
-           Cambridge, MA: MIT Press, 2000.
-    .. [4] Stable PC:  D. Colombo and M. H. Maathuis, “A modification of the PC algorithm yielding order-independent
-           skeletons,” ArXiv e-prints, Nov. 2012.
-    .. [5] Parallel PC: Le, Thuc, et al. "A fast PC algorithm for high dimensional causal discovery with multi-core
-           PCs." IEEE/ACM transactions on computational biology and bioinformatics (2016).
-    .. [6] Expert Knowledge: Meek, Christopher. "Causal inference and causal explanation with background knowledge."
-           arXiv preprint arXiv:1302.4972 (2013).
-    .. [7] Ramsey, J. (2016). "Improving accuracy and scalability of the pc algorithm by maximizing p-value."
-           arXiv preprint arXiv:1610.00378.
+    - :cite:p:`spirtes_glymour_scheines_2001`
+    - :cite:p:`neapolitan_2009`
+    - :cite:p:`schmidt_2018`
+    - :cite:p:`le_2019`
+    - :cite:p:`meek_1995`
+    - :cite:p:`ramsey_2016`
     """
 
     def __init__(
@@ -318,10 +310,8 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
 
         References
         ----------
-        [1] Neapolitan, Learning Bayesian Networks, Section 10.1.2, Algorithm
-                10.2 (page 550)
-        [2] Ramsey, J. (2016). Improving accuracy and scalability of the pc
-                algorithm by maximizing p-value. arXiv:1610.00378.
+        - :cite:p:`neapolitan_2009` (Section 10.1.2, Algorithm 10.2, page 550).
+        - :cite:p:`ramsey_2016`
 
         Examples
         --------

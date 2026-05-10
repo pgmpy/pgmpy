@@ -5,8 +5,7 @@ class Pathfinder(DiscreteMixin, _BaseExampleModel):
     """
     References
     ----------
-    ..[1] D. Heckerman, E. Horwitz, and B. Nathwani. Towards Normative Expert Systems: Part I. The Pathfinder
-    Project. Methods of Information in Medicine, 31:90-105, 1992.
+    - :cite:p:`heckerman_1992`
     """
 
     _tags = {

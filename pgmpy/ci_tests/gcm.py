@@ -46,8 +46,7 @@ class GCM(_ResidualMixin, _BaseCITest):
 
     References
     ----------
-    .. [1] Rajen D. Shah, and Jonas Peters. "The Hardness of Conditional Independence Testing and the Generalised
-        Covariance Measure".
+    - :cite:p:`shah_peters_2020`
     """
 
     _tags = {

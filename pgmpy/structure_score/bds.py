@@ -4,7 +4,7 @@ import numpy as np
 from scipy.special import gammaln
 
 from pgmpy.structure_score.bdeu import BDeu
-from pgmpy.utils import get_state_counts
+from pgmpy.utils import get_state_counts_array
 
 
 class BDs(BDeu):
@@ -32,11 +32,6 @@ class BDs(BDeu):
     :math:`q_i` is the total number of parent configurations, :math:`r_i` is the cardinality of :math:`X_i`,
     :math:`\alpha = \text{equivalent_sample_size} / \tilde{q}_i`, :math:`\beta = \text{equivalent_sample_size} / (r_i
     q_i)`, and :math:`N_{ij} = \sum_{k=1}^{r_i} N_{ijk}`.
-
-    In the implementation, `state_counts(..., reindex=False)` keeps only the observed parent configurations. The
-    `gamma_counts_adj` and `gamma_conds_adj` terms restore the missing contributions from the unobserved ones so the
-    returned score matches the full BDs formula. This class also uses the marginal uniform graph prior from Scutari
-    (2016).
 
     Parameters
     ----------
@@ -71,8 +66,7 @@ class BDs(BDeu):
 
     References
     ----------
-    .. [1] Scutari, Marco. An Empirical-Bayes Score for Discrete Bayesian Networks. Journal of Machine Learning
-        Research, 2016, pp. 438-48.
+    - :cite:p:`scutari_2016a`
     """
 
     _tags = {
@@ -102,26 +96,25 @@ class BDs(BDeu):
         return score
 
     def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
-        state_counts = get_state_counts(self.data, self.state_names, variable, parents, reindex=False)
-        num_parents_states = np.prod([len(self.state_names[var]) for var in parents])
+        counts = get_state_counts_array(self._codes, self._cardinalities, variable, parents)
+        num_parents_states = counts.shape[1]
+        var_cardinality = self._cardinalities[variable]
+        counts_size = num_parents_states * var_cardinality
 
-        counts = np.asarray(state_counts)
-        counts_size = num_parents_states * len(self.state_names[variable])
-        log_gamma_counts = np.zeros_like(counts, dtype=float)
-        alpha = self.equivalent_sample_size / state_counts.shape[1]
+        # BDs reallocates the equivalent sample size over only the observed parent configs.
+        col_sums = np.sum(counts, axis=0, dtype=float)
+        n_observed = int(np.count_nonzero(col_sums))
+
+        alpha = self.equivalent_sample_size / n_observed
         beta = self.equivalent_sample_size / counts_size
+
+        log_gamma_counts = np.zeros_like(counts)
         gammaln(counts + beta, out=log_gamma_counts)
 
-        log_gamma_conds = np.sum(counts, axis=0, dtype=float)
+        log_gamma_conds = col_sums
         gammaln(log_gamma_conds + alpha, out=log_gamma_conds)
 
-        gamma_counts_adj = (num_parents_states - counts.shape[1]) * len(self.state_names[variable]) * gammaln(beta)
-        gamma_conds_adj = (num_parents_states - counts.shape[1]) * gammaln(alpha)
-
         score = (
-            (np.sum(log_gamma_counts) + gamma_counts_adj)
-            - (np.sum(log_gamma_conds) + gamma_conds_adj)
-            + state_counts.shape[1] * lgamma(alpha)
-            - counts_size * lgamma(beta)
+            np.sum(log_gamma_counts) - np.sum(log_gamma_conds) + n_observed * lgamma(alpha) - counts_size * lgamma(beta)
         )
         return score

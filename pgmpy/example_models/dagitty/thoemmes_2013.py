@@ -5,7 +5,7 @@ class Thoemmes2013(DAGMixin, _BaseExampleModel):
     """
     References
     ----------
-    ..[1] Thoemmes, F. (2013). Mediation analysis with latent variables.
+    - :cite:p:`thoemmes_2013`
     """
 
     _tags = {
