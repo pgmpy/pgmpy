@@ -86,9 +86,10 @@ class SortnRegress(_BaseCausalDiscovery):
 
     References
     ----------
-    Reisach, A. G., Seiler, C., & Weichwald, S. (2021). Beware of the Simulated DAG!
-    Causal Discovery Benchmarks May Be Easy To Game. Advances in Neural Information
-    Processing Systems, 34. https://arxiv.org/abs/2102.13647
+    .. [1] Reisach, A. G., Seiler, C., & Weichwald, S. (2021). Beware of the
+       Simulated DAG! Causal Discovery Benchmarks May Be Easy To Game.
+       Advances in Neural Information Processing Systems, 34.
+       https://arxiv.org/abs/2102.13647
     """
 
     def __init__(self, threshold=0.3, estimator=None):
