@@ -579,6 +579,7 @@ class _ScoreMixin:
 
 @dataclass
 class CausalDiscoverySummary:
+    lines = []
     # Data info
     algorithm: str = None
     n_samples: int = None
@@ -602,25 +603,29 @@ class CausalDiscoverySummary:
         return self.__str__()
 
     def _summary(self):
-        lines = []
-        lines.append("Causal Discovery Summary")
-        lines.append("=" * 30)
+        self.lines = []
+        title = "\nCausal Discovery Summary"
+        self.lines.append(title)
+        self.lines.append("=" * len(title))
 
         # Overview
-        lines.append(f"Algorithm: {self.algorithm}")
-        lines.append(f"Samples: {self.n_samples}")
-        lines.append(f"Variables: {self.n_variables}")
-        lines.append(f"Graph Type: {self.graph_type}")
+        self.add_field("Algorithm", self.algorithm)
+        self.add_field("Samples", self.n_samples)
+        self.add_field("Variables", self.n_variables)
+        self.add_field("Graph Type", self.graph_type)
 
         # Structure
-        lines.append("\nStructure:")
-        lines.append(f"Edges: {self.n_edges}")
-        if self.n_directed is not None:
-            lines.append(f"Directed: {self.n_directed}")
-            lines.append(f"Undirected: {self.n_undirected}")
+        self.lines.append("\nStructure:")
+        self.add_field("Total Edges", self.n_edges)
+        if self.n_undirected is not None:
+            self.add_field("Directed Edges", self.n_directed)
+            self.add_field("Undirected Edges", self.n_undirected)
 
         # Score
         if self.final_score is not None:
-            lines.append(f"\n{self.final_score_method} Score:   {self.final_score:.3f}")
+            self.add_field(f"{self.final_score_method} Score", round(self.final_score, 3))
 
-        return "\n".join(lines)
+        return "\n".join(self.lines)
+
+    def add_field(self, description, value):
+        self.lines.append(f"{description:<25}:{value:>25}")
