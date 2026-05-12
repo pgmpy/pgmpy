@@ -10,9 +10,8 @@ from skbase.utils.dependencies import _check_soft_dependencies
 
 import pgmpy.tests.help_functions as hf
 from pgmpy.base import DAG
-from pgmpy.estimators.CITests import pearsonr
+from pgmpy.ci_tests import Pearsonr
 from pgmpy.example_models import load_model
-from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.models import LinearGaussianBayesianNetwork as LGBN
 
 
@@ -440,263 +439,103 @@ class TestDAGCreation(unittest.TestCase):
         self.assertTrue(nx.is_directed_acyclic_graph(dag))
         self.assertTrue(any("Using default edge_prob=0.5" in msg for msg in cm.output))
 
-    def tearDown(self):
-        del self.graph
-
-    @unittest.skipUnless(
-        _check_soft_dependencies("xgboost", severity="none"),
-        reason="execute only if required dependency present",
-    )
-    def test_edge_strength_basic(self):
-        """Test basic functionality and numerical values using simulated data from LinearGaussianBN"""
-        # Create a linear Gaussian Bayesian network
-        linear_model = LGBN([("X", "Y"), ("Z", "Y")])
-
-        # Create CPDs with specific beta values
-        x_cpd = LinearGaussianCPD(variable="X", beta=[0], std=1)
-        y_cpd = LinearGaussianCPD(variable="Y", beta=[0, 0.4, 0.6], std=1, evidence=["X", "Z"])
-        z_cpd = LinearGaussianCPD(variable="Z", beta=[0], std=1)
-
-        # Add CPDs to the model
-        linear_model.add_cpds(x_cpd, y_cpd, z_cpd)
-
-        # Simulate data from the model
+    def test_edge_strength(self):
+        linear_model = LGBN.from_dagitty("dag{X -> Y [beta=0.4]; Z -> Y [beta=0.6]}")
         data = linear_model.simulate(n_samples=int(1e4))
+        ci_test = Pearsonr(data=data)
+        ci_test.run_test("X", "Y", ["Z"])
+        expected_xy = ci_test.effect_size_
 
-        # Create DAG and compute edge strengths
+        ci_test.run_test("Z", "Y", ["X"])
+        expected_zy = ci_test.effect_size_
+
+        # Default call computes every edge, returns floats keyed by edge tuple,
+        # and persists each value as a "strength" attribute on the graph edge.
         dag = DAG([("X", "Y"), ("Z", "Y")])
         strengths = dag.edge_strength(data)
-
-        # Test return type and structure
-        self.assertTrue(isinstance(strengths, dict))
+        self.assertIsInstance(strengths, dict)
         self.assertEqual(set(strengths.keys()), {("X", "Y"), ("Z", "Y")})
         self.assertTrue(all(isinstance(v, float) for v in strengths.values()))
+        self.assertAlmostEqual(strengths[("X", "Y")], expected_xy, places=2)
+        self.assertAlmostEqual(strengths[("Z", "Y")], expected_zy, places=2)
+        self.assertAlmostEqual(dag.edges[("X", "Y")]["strength"], expected_xy, places=2)
+        self.assertAlmostEqual(dag.edges[("Z", "Y")]["strength"], expected_zy, places=2)
 
-        # Test that edge strengths match squared Pearson correlation
-        xy_corr = pearsonr("X", "Y", ["Z"], data, boolean=False)
-        zy_corr = pearsonr("Z", "Y", ["X"], data, boolean=False)
+        # Single-edge tuple input.
+        single = DAG([("X", "Y"), ("Z", "Y")]).edge_strength(data, edges=("X", "Y"))
+        self.assertEqual(set(single.keys()), {("X", "Y")})
+        self.assertAlmostEqual(single[("X", "Y")], expected_xy, places=2)
 
-        self.assertAlmostEqual(strengths[("X", "Y")], xy_corr[0] ** 2, places=2)
-        self.assertAlmostEqual(strengths[("Z", "Y")], zy_corr[0] ** 2, places=2)
+        # List-of-edges input.
+        subset = DAG([("X", "Y"), ("Z", "Y")]).edge_strength(data, edges=[("X", "Y"), ("Z", "Y")])
+        self.assertEqual(set(subset.keys()), {("X", "Y"), ("Z", "Y")})
+        self.assertAlmostEqual(subset[("X", "Y")], expected_xy, places=2)
+        self.assertAlmostEqual(subset[("Z", "Y")], expected_zy, places=2)
 
-    @unittest.skipUnless(
-        _check_soft_dependencies("xgboost", severity="none"),
-        reason="execute only if required dependency present",
-    )
-    def test_edge_strength_specific_edge(self):
-        """Test computing strength for specific edge using simulated data"""
-        # Create a linear Gaussian Bayesian network
-        linear_model = LGBN([("X", "Y"), ("Z", "Y")])
+        # Malformed `edges` parameter raises ValueError with a descriptive message.
+        err_msg = "edges parameter must be either None, a 2-tuple (X, Y), or a list of 2-tuples"
+        for bad_edges in [
+            ("X", "Y", "extra"),
+            [("X", "Y"), "invalid"],
+            [("X", "Y"), ("Z", "Y", "extra")],
+        ]:
+            with self.assertRaises(ValueError) as ctx:
+                dag.edge_strength(data, edges=bad_edges)
+            self.assertIn(err_msg, str(ctx.exception))
 
-        # Create CPDs with specific beta values
-        x_cpd = LinearGaussianCPD(variable="X", beta=[0], std=1)
-        y_cpd = LinearGaussianCPD(variable="Y", beta=[0, 0.4, 0.6], std=1, evidence=["X", "Z"])
-        z_cpd = LinearGaussianCPD(variable="Z", beta=[0], std=1)
-
-        # Add CPDs to the model
-        linear_model.add_cpds(x_cpd, y_cpd, z_cpd)
-
-        # Simulate data from the model
-        data = linear_model.simulate(n_samples=int(1e4))
-
-        # Create DAG and compute edge strength for specific edge
-        dag = DAG([("X", "Y"), ("Z", "Y")])
-        strength_xy = dag.edge_strength(data, edges=("X", "Y"))
-
-        # Test structure
-        self.assertEqual(set(strength_xy.keys()), {("X", "Y")})
-
-        # Test that edge strength matches squared Pearson correlation
-        xy_corr = pearsonr("X", "Y", ["Z"], data, boolean=False)[0]
-        self.assertAlmostEqual(strength_xy[("X", "Y")], xy_corr**2, places=2)
-
-    @unittest.skipUnless(
-        _check_soft_dependencies("xgboost", severity="none"),
-        reason="execute only if required dependency present",
-    )
-    def test_edge_strength_multiple_edges(self):
-        """Test computing strength for multiple specific edges using simulated data"""
-        # Create a linear Gaussian Bayesian network
-        linear_model = LGBN([("X", "Y"), ("Z", "Y")])
-
-        # Create CPDs with specific beta values
-        x_cpd = LinearGaussianCPD(variable="X", beta=[0], std=1)
-        y_cpd = LinearGaussianCPD(variable="Y", beta=[0, 0.4, 0.6], std=1, evidence=["X", "Z"])
-        z_cpd = LinearGaussianCPD(variable="Z", beta=[0], std=1)
-
-        # Add CPDs to the model
-        linear_model.add_cpds(x_cpd, y_cpd, z_cpd)
-
-        # Simulate data from the model
-        data = linear_model.simulate(n_samples=int(1e4))
-
-        # Create DAG and compute edge strengths for specific edges
-        dag = DAG([("X", "Y"), ("Z", "Y")])
-        strengths = dag.edge_strength(data, edges=[("X", "Y"), ("Z", "Y")])
-
-        # Test structure
-        self.assertEqual(set(strengths.keys()), {("X", "Y"), ("Z", "Y")})
-
-        # Test that edge strengths match squared Pearson correlation
-        xy_corr = pearsonr("X", "Y", ["Z"], data, boolean=False)[0]
-        zy_corr = pearsonr("Z", "Y", ["X"], data, boolean=False)[0]
-
-        self.assertAlmostEqual(strengths[("X", "Y")], xy_corr**2, places=2)
-        self.assertAlmostEqual(strengths[("Z", "Y")], zy_corr**2, places=2)
-
-    @unittest.skipUnless(
-        _check_soft_dependencies("xgboost", severity="none"),
-        reason="execute only if required dependency present",
-    )
-    def test_edge_strength_stored_in_graph(self):
-        """Test that edge strengths are stored in the graph after computation using simulated data"""
-        # Create a linear Gaussian Bayesian network
-        linear_model = LGBN([("X", "Y"), ("Z", "Y")])
-
-        # Create CPDs with specific beta values
-        x_cpd = LinearGaussianCPD(variable="X", beta=[0], std=1)
-        y_cpd = LinearGaussianCPD(variable="Y", beta=[0, 0.4, 0.6], std=1, evidence=["X", "Z"])
-        z_cpd = LinearGaussianCPD(variable="Z", beta=[0], std=1)
-
-        # Add CPDs to the model
-        linear_model.add_cpds(x_cpd, y_cpd, z_cpd)
-
-        # Simulate data from the model
-        data = linear_model.simulate(n_samples=int(1e4))
-
-        # Create DAG and compute edge strengths
-        dag = DAG([("X", "Y"), ("Z", "Y")])
-        strengths = dag.edge_strength(data)
-
-        # Verify strengths are stored in graph edges
-        self.assertIn("strength", dag.edges[("X", "Y")])
-        self.assertIn("strength", dag.edges[("Z", "Y")])
-
-        # Verify stored values match computed values
-        self.assertAlmostEqual(dag.edges[("X", "Y")]["strength"], strengths[("X", "Y")], places=2)
-        self.assertAlmostEqual(dag.edges[("Z", "Y")]["strength"], strengths[("Z", "Y")], places=2)
-
-        # Verify stored values match squared Pearson correlation
-        xy_corr = pearsonr("X", "Y", ["Z"], data, boolean=False)[0]
-        zy_corr = pearsonr("Z", "Y", ["X"], data, boolean=False)[0]
-
-        self.assertAlmostEqual(dag.edges[("X", "Y")]["strength"], xy_corr**2, places=2)
-        self.assertAlmostEqual(dag.edges[("Z", "Y")]["strength"], zy_corr**2, places=2)
-
-    def test_edge_strength_invalid_edges(self):
-        """Test error handling for invalid edges parameter formats"""
-        dag = DAG([("X", "Y"), ("Z", "Y")])
-        data = pd.DataFrame({"X": [0, 1, 0, 1], "Y": [1, 3, 0, 2], "Z": [1, 1, 0, 0]})
-
-        # Test invalid single edge format (3-tuple)
-        with self.assertRaises(ValueError) as context:
-            dag.edge_strength(data, edges=("X", "Y", "extra"))
-        self.assertIn(
-            "edges parameter must be either None, a 2-tuple (X, Y), or a list of 2-tuples",
-            str(context.exception),
-        )
-
-        # Test invalid list format (contains non-tuple)
-        with self.assertRaises(ValueError) as context:
-            dag.edge_strength(data, edges=[("X", "Y"), "invalid"])
-        self.assertIn(
-            "edges parameter must be either None, a 2-tuple (X, Y), or a list of 2-tuples",
-            str(context.exception),
-        )
-
-        # Test invalid list format (contains 3-tuple)
-        with self.assertRaises(ValueError) as context:
-            dag.edge_strength(data, edges=[("X", "Y"), ("Z", "Y", "extra")])
-        self.assertIn(
-            "edges parameter must be either None, a 2-tuple (X, Y), or a list of 2-tuples",
-            str(context.exception),
-        )
-
-    @unittest.skipUnless(
-        _check_soft_dependencies("xgboost", severity="none"),
-        reason="execute only if required dependency present",
-    )
-    def test_edge_strength_skip_latent_edges(self):
-        """Test that edge_strength skips edges with latent variables and continues with others"""
-        # Create DAG with some latent variables
-        dag = DAG([("X", "Y"), ("Z", "Y"), ("L", "X"), ("W", "Z")], latents={"L"})
-
-        # Generate more samples with controlled relationships
+        # Edges incident on latent variables are silently skipped, both when
+        # all edges are scored and when a subset is passed in explicitly.
+        latent_dag = DAG([("X", "Y"), ("Z", "Y"), ("L", "X"), ("W", "Z")], latents={"L"})
         np.random.seed(42)
-        n_samples = 100
-
-        # Generate data with some controlled relationships
-        data = pd.DataFrame(
+        n = 100
+        latent_data = pd.DataFrame(
             {
-                "W": np.random.normal(0, 1, n_samples),
-                "L": np.random.normal(0, 1, n_samples),
-                "X": np.random.normal(0, 1, n_samples) + 0.5 * np.random.normal(0, 1, n_samples),  # X depends on L
-                "Z": np.random.normal(0, 1, n_samples) + 0.3 * np.random.normal(0, 1, n_samples),  # Z depends on W
-                "Y": np.random.normal(0, 1, n_samples)
-                + 0.4 * np.random.normal(0, 1, n_samples)
-                + 0.3 * np.random.normal(0, 1, n_samples),  # Y depends on X and Z
+                "W": np.random.normal(0, 1, n),
+                "L": np.random.normal(0, 1, n),
+                "X": np.random.normal(0, 1, n) + 0.5 * np.random.normal(0, 1, n),
+                "Z": np.random.normal(0, 1, n) + 0.3 * np.random.normal(0, 1, n),
+                "Y": np.random.normal(0, 1, n) + 0.4 * np.random.normal(0, 1, n) + 0.3 * np.random.normal(0, 1, n),
             }
         )
+        latent_strengths = latent_dag.edge_strength(latent_data)
+        self.assertNotIn(("L", "X"), latent_strengths)
+        for edge in [("X", "Y"), ("Z", "Y"), ("W", "Z")]:
+            self.assertIn(edge, latent_strengths)
+        for v in latent_strengths.values():
+            self.assertTrue(0 <= v <= 1)
 
-        # Compute strengths for all edges
-        strengths = dag.edge_strength(data)
-
-        # Verify that edges involving latent variables are not in the results
-        self.assertNotIn(("L", "X"), strengths)
-
-        # Verify that other edges are computed
-        self.assertIn(("X", "Y"), strengths)
-        self.assertIn(("Z", "Y"), strengths)
-        self.assertIn(("W", "Z"), strengths)
-
-        # Verify that the computed strengths are valid
-        for edge in strengths:
-            self.assertTrue(0 <= strengths[edge] <= 1)
-
-        # Test with specific edges list
-        strengths = dag.edge_strength(data, edges=[("L", "X"), ("X", "Y"), ("W", "Z")])
-
-        # Verify that latent edge is skipped but others are computed
-        self.assertNotIn(("L", "X"), strengths)
-        self.assertIn(("X", "Y"), strengths)
-        self.assertIn(("W", "Z"), strengths)
+        latent_subset = latent_dag.edge_strength(latent_data, edges=[("L", "X"), ("X", "Y"), ("W", "Z")])
+        self.assertNotIn(("L", "X"), latent_subset)
+        self.assertIn(("X", "Y"), latent_subset)
+        self.assertIn(("W", "Z"), latent_subset)
 
     @unittest.skipUnless(
         _check_soft_dependencies("daft-pgm", severity="none"),
         reason="execute only if required dependency present",
     )
-    def test_edge_strength_plotting_to_daft(self):
-        """Test edge strength plotting in to_daft method"""
-        dag = DAG([("A", "B"), ("C", "B")])
-
-        with self.assertRaises(ValueError) as context:
-            dag.to_daft(plot_edge_strength=True)
+    def test_edge_strength_plotting(self):
+        """to_daft requires precomputed strengths, supports custom labels,
+        and still renders without strengths when not requested."""
+        plot_dag = DAG([("A", "B"), ("C", "B")])
+        with self.assertRaises(ValueError) as ctx:
+            plot_dag.to_daft(plot_edge_strength=True)
         self.assertIn(
             "Edge strength plotting requested but strengths not found",
-            str(context.exception),
+            str(ctx.exception),
         )
+        plot_dag.edges[("A", "B")]["strength"] = 0.123
+        plot_dag.edges[("C", "B")]["strength"] = 0.456
+        self.assertIsNotNone(plot_dag.to_daft(plot_edge_strength=True))
+        self.assertIsNotNone(DAG([("A", "B"), ("C", "B")]).to_daft())
 
-        dag.edges[("A", "B")]["strength"] = 0.123
-        dag.edges[("C", "B")]["strength"] = 0.456
-
-        daft_plot = dag.to_daft(plot_edge_strength=True)
-        self.assertIsNotNone(daft_plot)
-
-        dag_no_strength = DAG([("A", "B"), ("C", "B")])
-        daft_plot_default = dag_no_strength.to_daft()
-        self.assertIsNotNone(daft_plot_default)
-
-    @unittest.skipUnless(
-        _check_soft_dependencies("daft-pgm", severity="none"),
-        reason="execute only if required dependency present",
-    )
-    def test_edge_strength_plotting_with_existing_labels(self):
-        """Test edge strength plotting when user provides custom edge labels"""
-        dag = DAG([("A", "B")])
-        dag.edges[("A", "B")]["strength"] = 0.789
-
-        daft_plot = dag.to_daft(plot_edge_strength=True, edge_params={("A", "B"): {"label": "custom"}})
-        self.assertIsNotNone(daft_plot)
+        labeled = DAG([("A", "B")])
+        labeled.edges[("A", "B")]["strength"] = 0.789
+        self.assertIsNotNone(
+            labeled.to_daft(
+                plot_edge_strength=True,
+                edge_params={("A", "B"): {"label": "custom"}},
+            )
+        )
 
     def test_hash(self):
         dag1 = load_model("dagitty/m_bias")
@@ -817,6 +656,9 @@ class TestDAGCreation(unittest.TestCase):
         dag_test2 = DAG(ebunch=[("D", "G"), ("I", "G"), ("G", "L"), ("I", "S")], roles={"outcomes": "L"})
         stats = dag_test2.get_stats()
         self.assertNotIn("n_causal_paths", stats)
+
+    def tearDown(self):
+        del self.graph
 
 
 class TestDAGParser(unittest.TestCase):

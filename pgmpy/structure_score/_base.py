@@ -6,7 +6,7 @@ import pandas as pd
 from skbase.base import BaseObject
 from skbase.lookup import all_objects
 
-from pgmpy.utils import build_state_names, get_dataset_type, get_state_counts, preprocess_data
+from pgmpy.utils import build_state_names, get_dataset_type, preprocess_data
 
 
 class BaseStructureScore(BaseObject):
@@ -67,23 +67,6 @@ class BaseStructureScore(BaseObject):
     def structure_prior_ratio(self, operation) -> float:
         """Return the log prior ratio for a structure operation."""
         return 0
-
-    def state_counts(
-        self,
-        variable: str,
-        parents: tuple[str, ...] = (),
-        weighted: bool = False,
-        reindex: bool = True,
-    ) -> pd.DataFrame:
-        """Return state counts for `variable`, optionally conditioned on `parents`."""
-        return get_state_counts(
-            data=self.data,
-            state_names=self.state_names,
-            variable=variable,
-            parents=parents,
-            weighted=weighted,
-            reindex=reindex,
-        )
 
 
 def get_scoring_method(

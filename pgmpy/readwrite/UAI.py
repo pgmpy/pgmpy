@@ -37,10 +37,10 @@ class UAIReader:
     >>> reader = UAIReader("asia.uai")
     >>> model = reader.get_model()
 
-    Reference
-    ---------
-    [1] https://uaicompetition.github.io/uci-2022/file-formats/model-format/
-    [2] https://forgemia.inra.fr/thomas.schiex/toulbar2/-/blob/master/doc/UAI08Format.txt
+    References
+    ----------
+    - :cite:p:`uai_2022_format`
+    - :cite:p:`uai_2008_format`
     """
 
     def __init__(self, path=None, string=None):
@@ -515,6 +515,8 @@ class UAIWriter:
 
     def write_uai(self, filename):
         warnings.warn(
-            "`UAIWriter.write_uai` is deprecated. Please use `UAIWriter.write` instead.", FutureWarning, stacklevel=2
+            "`UAIWriter.write_uai` is deprecated and will be removed in v1.3.0. Please use `UAIWriter.write` instead.",
+            FutureWarning,
+            stacklevel=2,
         )
         self.write(filename)

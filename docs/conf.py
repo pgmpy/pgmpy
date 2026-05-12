@@ -54,7 +54,11 @@ extensions = [
     "sphinxext.opengraph",
     "sphinx_sitemap",
     "pgmpy_docs",
+    "sphinxcontrib.bibtex",
 ]
+
+bibtex_bibfiles = ['references.bib']
+bibtex_default_style = 'unsrt'
 
 templates_path = ["_templates"]
 source_suffix = {

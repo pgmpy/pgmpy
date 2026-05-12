@@ -10,6 +10,7 @@ import pandas as pd
 
 from pgmpy import logger
 from pgmpy.base._mixin_roles import _GraphRolesMixin
+from pgmpy.ci_tests import get_ci_test
 from pgmpy.independencies import Independencies
 from pgmpy.utils.parser import parse_dagitty, parse_lavaan
 
@@ -761,9 +762,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         References
         ----------
-        [1] Algorithm 4, Page 10: Tian, Jin, Azaria Paz, and
-          Judea Pearl. Finding minimal d-separators. Computer Science Department,
-            University of California, 1998.
+        - :cite:p:`tian_paz_pearl_1998` (Algorithm 4, page 10).
         """
         if (end in self.neighbors(start)) or (start in self.neighbors(end)):
             raise ValueError("No possible separators because start and end are adjacent")
@@ -878,9 +877,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         References
         ----------
-        Details of the algorithm can be found in 'Probabilistic Graphical Model
-        Principles and Techniques' - Koller and Friedman
-        Page 75 Algorithm 3.1
+        - :cite:p:`koller_friedman_2009` (page 75, Algorithm 3.1).
         """
         observed_list: list[Hashable] | tuple[Hashable, Hashable]
         if observed:
@@ -980,8 +977,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         References
         ----------
-        [1] Chickering, David Maxwell. "Learning equivalence classes of Bayesian-network structures."
-          Journal of machine learning research 2.Feb (2002): 445-498. Figure 4 and 5.
+        - :cite:p:`chickering_2002a` (Figures 4 and 5).
         """
         # Perform a topological sort on the nodes
         topo_order = list(nx.topological_sort(self))
@@ -1108,7 +1104,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         References
         ----------
-        Causality: Models, Reasoning, and Inference, Judea Pearl (2000). p.70.
+        - :cite:p:`pearl_2009` (page 70).
         """
         dag = self if inplace else self.copy()
 
@@ -1634,7 +1630,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             and self.get_role_dict() == other.get_role_dict()
         )
 
-    def edge_strength(self, data, edges=None):
+    def edge_strength(self, data, edges=None, ci_test=None):
         """
         Computes the strength of each edge in `edges`. The strength is bounded
         between 0 and 1, with 1 signifying strong effect.
@@ -1662,6 +1658,9 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             - None: Compute for all DAG edges.
             - Tuple (X, Y): Compute for edge X → Y.
             - List of tuples: Compute for selected edges.
+
+        ci_test : str or instance of _BaseCITest
+            The conditional independence test whose effect size to use as edge strength
 
         Returns
         -------
@@ -1698,12 +1697,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         References
         ----------
-        [1] Ankan, Ankur, and Johannes Textor. "A simple unified approach to testing high-dimensional
-        conditional independences for categorical and ordinal data." Proceedings of the AAAI Conference
-        on Artificial Intelligence.
+        - :cite:p:`ankan_textor_2023`
         """
-
-        from pgmpy.estimators.CITests import pillai_trace
 
         # If edges is None, compute for all edges in the DAG
         if edges is None:
@@ -1718,6 +1713,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             raise ValueError(
                 "edges parameter must be either None, a 2-tuple (X, Y), or a list of 2-tuples [(X1, Y1), (X2, Y2), ...]"
             )
+
+        ci_test = get_ci_test(test=ci_test, data=data)
 
         strengths = {}
         skipped_edges = []
@@ -1737,13 +1734,13 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             conditioning_set = set(pa_Y) - {x, y}
 
             # Run CI test and get effect size
-            effect_size, _ = pillai_trace(X=x, Y=y, Z=list(conditioning_set), data=data, boolean=False)
+            ci_test.run_test(X=x, Y=y, Z=tuple(conditioning_set))
 
             # Store the edge strength
-            strengths[edge] = effect_size
+            strengths[edge] = ci_test.effect_size_
 
             # store the values in the graph as well
-            self.edges[edge]["strength"] = effect_size
+            self.edges[edge]["strength"] = ci_test.effect_size_
 
         if skipped_edges:
             logger.warning(

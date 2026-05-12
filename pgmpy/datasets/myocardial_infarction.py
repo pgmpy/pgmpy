@@ -5,7 +5,7 @@ class MyocardialInfarction(_BaseDataset):
     """
     References
     ----------
-    .. [1] https://archive.ics.uci.edu/ml/datasets/Myocardial+infarction+complications
+    - :cite:p:`springer_myocardial`
     """
 
     _tags = {

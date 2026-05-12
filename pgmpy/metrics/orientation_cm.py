@@ -63,8 +63,7 @@ class OrientationConfusionMatrix(_BaseSupervisedMetric):
 
     References
     ----------
-    .. [1] Bryan Andrews, Joseph Ramsey, Gregory F. Cooper Proceedings of Machine Learning Research,
-           PMLR 104:4-21, 2019. https://proceedings.mlr.press/v104/andrews19a.html
+    - :cite:p:`andrews_ramsey_cooper_2019`
     """
 
     _tags = {

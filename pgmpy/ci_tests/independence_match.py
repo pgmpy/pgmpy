@@ -1,6 +1,6 @@
 from pgmpy.independencies import IndependenceAssertion
 
-from ._base import _BaseCITest
+from ._base import _BaseCITest, _CITestResult
 
 
 class IndependenceMatch(_BaseCITest):
@@ -23,11 +23,11 @@ class IndependenceMatch(_BaseCITest):
         "requires_data": False,
     }
 
-    def __init__(self, independencies=None):
+    def __init__(self, independencies=None, use_cache: bool = True):
         self.independencies = independencies
-        super().__init__()
+        super().__init__(use_cache=use_cache)
 
-    def run_test(self, X, Y, Z):
+    def _compute_result(self, X, Y, Z):
         """
         Check whether the independence assertion X ⊥⊥ Y | Z is present.
 
@@ -50,7 +50,5 @@ class IndependenceMatch(_BaseCITest):
         if self.independencies is None:
             raise ValueError("independencies must be provided in __init__.")
 
-        self.statistic_ = None
-        self.p_value_ = 1.0 if IndependenceAssertion(X, Y, list(Z)) in self.independencies else 0.0
-
-        return self.statistic_, self.p_value_
+        p_value = 1.0 if IndependenceAssertion(X, Y, list(Z)) in self.independencies else 0.0
+        return _CITestResult(statistic=None, p_value=p_value)

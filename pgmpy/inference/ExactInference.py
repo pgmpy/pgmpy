@@ -780,11 +780,9 @@ class BeliefPropagation(Inference):
         operation: str ('marginalize' | 'maximize')
             The operation to do for passing messages between nodes.
 
-        Reference
-        ---------
-        Algorithm 10.3 Calibration using belief propagation in clique tree
-        Probabilistic Graphical Models: Principles and Techniques
-        Daphne Koller and Nir Friedman.
+        References
+        ----------
+        - :cite:p:`koller_friedman_2009` (Algorithm 10.3, calibration via belief propagation in clique trees).
         """
         # Initialize clique beliefs as well as sepset beliefs
         self.clique_beliefs = {clique: self.junction_tree.get_factors(clique) for clique in self.junction_tree.nodes()}

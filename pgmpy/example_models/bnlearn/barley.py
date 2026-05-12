@@ -5,8 +5,7 @@ class Barley(DiscreteMixin, _BaseExampleModel):
     """
     References
     ----------
-    ..[1] Preliminary model for barley developed under the project: "Production of beer from Danish malting barley
-    grown without the use of pesticides" by Kristian Kristensen, Ilse A. Rasmussen and others.
+    - :cite:p:`barley_preliminary`
     """
 
     _tags = {

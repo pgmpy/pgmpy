@@ -508,9 +508,7 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
 
         References
         ----------
-        [1] Dor, Dorit, and Michael Tarsi.
-          "A simple algorithm to construct a consistent extension of a partially oriented graph."
-            Technicial Report R-185, Cognitive Systems Laboratory, UCLA (1992): 45.
+        - :cite:p:`dor_tarsi_1992`
         """
         # Add required edges if it doesn't form a new v-structure or an opposite edge
         # is already present in the network.

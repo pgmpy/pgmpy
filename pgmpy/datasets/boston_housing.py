@@ -5,9 +5,8 @@ class BostonHousing(_BaseDataset):
     """
     References
     ----------
-    .. [1] Zhao, Q., & Hastie, T. (2021). Causal Interpretations of Black-Box Models. Journal of Business &amp; Economic
-           Statistics, 39(1), 272–281. https://doi.org/10.1080/07350015.2019.1624293
-    .. [2] https://archive.ics.uci.edu/ml/machine-learning-databases/housing/
+    - :cite:p:`zhao_hastie_2019`
+    - :cite:p:`peerj_wine_quality`
     """
 
     _tags = {

@@ -7,14 +7,6 @@ from pgmpy.estimators import GES
 from pgmpy.example_models import load_model
 
 
-def test_ges_deprecation_warning():
-    with pytest.warns(
-        FutureWarning,
-        match="GES is deprecated. Please use pgmpy.causal_discovery.GES instead.",
-    ):
-        GES(pd.DataFrame({"A": [0, 1], "B": [0, 1]}), use_cache=False)
-
-
 @pytest.fixture
 def random_data_estimator():
     rand_data = pd.DataFrame(

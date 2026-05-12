@@ -44,9 +44,8 @@ class AIC(LogLikelihood):
 
     References
     ----------
-    .. [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009, Section 18.3.4-18.3.6.
-    .. [2] AM Carvalho, Scoring functions for learning Bayesian networks,
-        http://www.lx.it.pt/~asmc/pub/talks/09-TA/ta_pres.pdf
+    - :cite:p:`koller_friedman_2009`
+    - :cite:p:`liao_2022`
     """
 
     _tags = {

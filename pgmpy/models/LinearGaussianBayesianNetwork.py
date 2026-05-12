@@ -11,7 +11,6 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from scipy.stats import multivariate_normal
-from sklearn.linear_model import LinearRegression
 
 from pgmpy import logger
 from pgmpy.base import DAG
@@ -881,8 +880,7 @@ class LinearGaussianBayesianNetwork(DAG):
     def fit(
         self,
         data: pd.DataFrame,
-        estimator: str = "mle",
-        std_estimator: str = "unbiased",
+        estimator=None,
     ) -> LinearGaussianBayesianNetwork:
         """
         Estimates (fits) the Linear Gaussian CPDs from data.
@@ -890,90 +888,50 @@ class LinearGaussianBayesianNetwork(DAG):
         Parameters
         ----------
         data : pd.DataFrame
-                Continuous-valued data containing all model variables.
-                A pandas DataFrame with the data to which to fit the model
-                structure. All variables must be continuously valued.
+            Continuous-valued data containing all model variables.
 
-        estimator : str, optional (default 'mle')
-                The estimator to use for mean estimation.
-                 - 'mle': Maximum Likelihood Estimation via OLS.
-                Currently, MLE via OLS is the only supported method for mean estimation.
-
-        std_estimator : str, optional (default 'unbiased')
-                The estimator to use for standard deviation estimation.
-                Must be one of:
-                    - 'mle': Maximum Likelihood Estimation. Uses ddof=0.
-                    - 'unbiased': Unbiased estimation. For root nodes, uses
-                    ddof=1. For non-root nodes, uses ddof = 1 + number of parents.
+        estimator : LinearGaussianMLE, optional
+            An initialized Gaussian parameter estimator from
+            `pgmpy.parameter_estimator`. If not specified, defaults to
+            ``LinearGaussianMLE()``.
 
         Returns
         -------
-        self
-        None: The estimated LinearGaussianCPDs are added to the model. They can
-            be accessed using `model.cpds`.
+        self: LinearGaussianBayesianNetwork
+            Returns the model with fitted CPDs added. CPDs can be accessed via
+            ``model.cpds``.
+
         Examples
         --------
         >>> import numpy as np
         >>> import pandas as pd
         >>> from pgmpy.models import LinearGaussianBayesianNetwork
+        >>> from pgmpy.parameter_estimator import LinearGaussianMLE
         >>> rng = np.random.default_rng(42)
         >>> df = pd.DataFrame(
         ...     rng.normal(0, 1, (100, 3)), columns=["x1", "x2", "x3"]
         ... )
         >>> model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
-        >>> model.fit(df, estimator="mle", std_estimator="unbiased") # doctest: +ELLIPSIS
+        >>> model.fit(df) # doctest: +ELLIPSIS
         <pgmpy.models.LinearGaussianBayesianNetwork.LinearGaussianBayesianNetwork object at 0x...>
         >>> model.cpds # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
         [<LinearGaussianCPD: P(x1) = N(-0.029; 0.902) at 0x...,
         <LinearGaussianCPD: P(x2 | x1) = N(0.046*x1 + -0.012; 0.981) at 0x...,
         <LinearGaussianCPD: P(x3 | x2) = N(0.172*x2 + -0.078; 0.908) at 0x...]
         """
-        # Step 1: Check the input
-        if len(missing_vars := (set(self.nodes()) - set(data.columns))) > 0:
-            raise ValueError(f"Following variables are missing in the data: {missing_vars}")
+        from pgmpy.parameter_estimator import LinearGaussianMLE
+        from pgmpy.parameter_estimator.base import GaussianParameterEstimator
 
-        if estimator not in {
-            "mle",
-        }:
-            raise ValueError("estimator must be {'mle'}")
-        if std_estimator not in {"mle", "unbiased"}:
-            raise ValueError("std_estimator must be one of {'mle', 'unbiased'}")
+        if estimator is None:
+            estimator = LinearGaussianMLE()
+        elif not isinstance(estimator, GaussianParameterEstimator):
+            raise TypeError(
+                "estimator must be an instance of a Gaussian parameter estimator. "
+                "Pass an initialized estimator, for example `LinearGaussianMLE()`."
+            )
 
-        # Step 2: Estimate the LinearGaussianCPDs
-        cpds = []
-        for node in self.nodes():
-            parents = self.get_parents(node)
-            # Step 2.1: If node doesn't have any parents (i.e. root node),
-            #  simply take the mean and variance.
-
-            if len(parents) == 0:
-                ddof = 0 if std_estimator == "mle" else 1
-                cpds.append(
-                    LinearGaussianCPD(
-                        variable=node,
-                        beta=[data.loc[:, node].mean()],
-                        std=data.loc[:, node].std(ddof=ddof),
-                    )
-                )
-            # Step 2.2: Else, fit a linear regression model and take the coefficients and intercept.
-            # Compute error variance using predicted values.
-
-            else:
-                lm = LinearRegression().fit(data.loc[:, parents], data.loc[:, node])
-                residuals = data.loc[:, node] - lm.predict(data.loc[:, parents])
-                p = 1 + len(parents)  # intercept + coefficients
-                ddof = 0 if std_estimator == "mle" else p
-                cpds.append(
-                    LinearGaussianCPD(
-                        variable=node,
-                        beta=np.append([lm.intercept_], lm.coef_),
-                        std=residuals.std(ddof=ddof),
-                        evidence=parents,
-                    )
-                )
-
-        # Step 3: Add the estimated CPDs to the model
-        self.add_cpds(*cpds)
+        estimator.fit(self, data)
+        self.add_cpds(*estimator.parameters_)
         return self
 
     def predict_probability(self, data: pd.DataFrame) -> tuple[list[str], np.ndarray, np.ndarray]:
