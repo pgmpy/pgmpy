@@ -581,13 +581,15 @@ class _ScoreMixin:
                     )
                     yield (operation, score_delta)
 
+
 @dataclass
 class CausalDiscoverySummary:
-    lines = []
     # Data info
     algorithm: str = None
     n_samples: int = None
     n_variables: int = None
+    dataset_type: str = None
+    dataset: pd.DataFrame = None
     # variable_types: dict = field(default_factory=dict)
 
     # Graph info
@@ -596,40 +598,25 @@ class CausalDiscoverySummary:
     n_directed: int = None
     n_undirected: int = None
 
-    # Miscellaneous info
-    final_score_method: str = None
-    final_score: float = None
-
-    def __str__(self):
-        return self._summary()
-
-    def __repr__(self) -> str:
-        return self.__str__()
-
-    def _summary(self):
-        self.lines = []
+    def summary(self, lines):
         title = "\nCausal Discovery Summary"
-        self.lines.append(title)
-        self.lines.append("=" * len(title))
+        lines.append(title)
+        lines.append("=" * len(title))
+        lines.append("")
 
         # Overview
-        self.add_field("Algorithm", self.algorithm)
-        self.add_field("Samples", self.n_samples)
-        self.add_field("Variables", self.n_variables)
-        self.add_field("Graph Type", self.graph_type)
+        self.add_field("Algorithm", self.algorithm, lines)
+        self.add_field("Samples", self.n_samples, lines)
+        self.add_field("Variables", self.n_variables, lines)
+        self.add_field("Variable Types", self.dataset_type, lines)
+        self.add_field("Graph Type", self.graph_type, lines)
 
         # Structure
-        self.lines.append("\nStructure:")
-        self.add_field("Total Edges", self.n_edges)
+        lines.append("\nStructure:")
+        self.add_field("Total Edges", self.n_edges, lines)
         if self.n_undirected is not None:
-            self.add_field("Directed Edges", self.n_directed)
-            self.add_field("Undirected Edges", self.n_undirected)
+            self.add_field("Directed Edges", self.n_directed, lines)
+            self.add_field("Undirected Edges", self.n_undirected, lines)
 
-        # Score
-        if self.final_score is not None:
-            self.add_field(f"{self.final_score_method} Score", round(self.final_score, 3))
-
-        return "\n".join(self.lines)
-
-    def add_field(self, description, value):
-        self.lines.append(f"{description:<25}:{value:>25}")
+    def add_field(self, description, value, lines):
+        lines.append(f"{description:<25}:{value:>25}")

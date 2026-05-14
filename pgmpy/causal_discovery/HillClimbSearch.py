@@ -9,7 +9,21 @@ from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.causal_discovery._base import CausalDiscoverySummary, _BaseCausalDiscovery, _ScoreMixin
-from pgmpy.structure_score import BaseStructureScore, get_scoring_method
+from pgmpy.metrics import get_metrics
+from pgmpy.structure_score import (
+    AIC,
+    BIC,
+    AICCondGauss,
+    AICGauss,
+    BaseStructureScore,
+    BICCondGauss,
+    BICGauss,
+    LogLikelihood,
+    LogLikelihoodCondGauss,
+    LogLikelihoodGauss,
+    get_scoring_method,
+)
+from pgmpy.utils import get_dataset_type
 
 
 class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
@@ -174,7 +188,8 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
         self.fit_info_.algorithm = self.__class__.__name__
         self.fit_info_.n_samples = X.shape[0]
         self.fit_info_.n_variables = X.shape[1]
-        self.fit_info_.final_score_method = score.__class__.__name__
+        self.fit_info_.dataset_type = get_dataset_type(X)
+        self.fit_info_.dataset = X
 
         # Step 1.2: Check the start_dag
         if self.start_dag is None:
@@ -255,7 +270,6 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
             self.fit_info_.n_directed = len(self.causal_graph_.edges)
             self.fit_info_.n_undirected = 0
             self.fit_info_.n_edges = self.fit_info_.n_directed
-            self.fit_info_.final_score = score.score(self.causal_graph_)
 
         elif self.return_type.lower() == "pdag":
             self.causal_graph_ = current_model.to_pdag()
@@ -263,7 +277,7 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
             self.fit_info_.n_directed = len(self.causal_graph_.directed_edges)
             self.fit_info_.n_undirected = len(self.causal_graph_.undirected_edges)
             self.fit_info_.n_edges = self.fit_info_.n_directed + self.fit_info_.n_undirected
-            self.fit_info_.final_score = score.score(self.causal_graph_)
+
         else:
             raise ValueError(f"return_type must be one of: dag, pdag, or cpdag. Got: {self.return_type}")
 
@@ -274,4 +288,48 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
     def summary(self):
         if not hasattr(self, "fit_info_"):
             raise ValueError("Model must be fit before calling summary().")
-        return self.fit_info_
+
+        lines = []
+        self.fit_info_.summary(lines)
+
+        available_score_methods = {
+            "continuous": [
+                BICGauss,
+                AICGauss,
+                LogLikelihoodGauss,
+            ],
+            "discrete": [
+                BIC,
+                LogLikelihood,
+                AIC,
+            ],
+            "mixed": [
+                BICCondGauss,
+                LogLikelihoodCondGauss,
+                AICCondGauss,
+            ],
+        }
+
+        all_scores = available_score_methods[self.fit_info_.dataset_type]
+        all_metrics = get_metrics(
+            requires_true_graph=False,
+            requires_data=True,
+            supported_graph_types=(DAG,),
+        )
+
+        for score_cls in all_scores:
+            score_val = score_cls(self.fit_info_.dataset).score(self.causal_graph_)
+            self.fit_info_.add_field(f"{score_cls.__name__} Score", round(score_val, 3), lines)
+
+        if self.fit_info_.graph_type == "PDAG":
+            dag = self.causal_graph_.to_dag()
+        else:
+            dag = self.causal_graph_
+
+        for metric_cls in all_metrics:
+            if metric_cls.__name__ == "ImpliedCIs" or metric_cls.__name__ == "StructureScore":
+                continue
+            score_val = metric_cls().evaluate(self.fit_info_.dataset, dag)
+            self.fit_info_.add_field(f"{metric_cls.__name__}", round(score_val, 3), lines)
+
+        return "\n".join(lines)
