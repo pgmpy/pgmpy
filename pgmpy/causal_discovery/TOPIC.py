@@ -154,8 +154,8 @@ class TOPIC(_BaseCausalDiscovery):
                     dag_current.add_edge(source, node)
 
             # Step 1.3: Prune edges into the source. Repeatedly remove the parent whose removal least decreases the
-            # score (up to a small noise tolerance). The last remaining parent is never removed.
-            noise_epsilon = 1e-10
+            # score, using min_improvement as the tolerance (symmetric with the edge-addition threshold above).
+            # The last remaining parent is never removed.
             current_parents = list(dag_current.get_parents(source))
             while len(current_parents) > 1:
                 old_score = score.local_score(source, tuple(current_parents))
@@ -164,7 +164,7 @@ class TOPIC(_BaseCausalDiscovery):
                 for parent in current_parents:
                     new_parents = tuple(p for p in current_parents if p != parent)
                     harm = score.local_score(source, new_parents) - old_score
-                    if harm >= -noise_epsilon and harm > best_harm:
+                    if harm >= -self.min_improvement and harm > best_harm:
                         best_harm = harm
                         best_parent = parent
                 if best_parent is None:
