@@ -8,12 +8,13 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import pytest
-from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
+from skbase.utils.dependencies import _check_soft_dependencies
 
 HAS_TORCH = _check_soft_dependencies("torch", severity="none")
 
 if HAS_TORCH:
     import torch
+
     from pgmpy.causal_discovery.DiBS import DiBS
 
 
