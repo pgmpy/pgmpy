@@ -69,10 +69,8 @@ class PC(BaseConstraintEstimator):
 
     References
     ----------
-    [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques,
-        2009, Section 18.2
-    [2] Neapolitan, Learning Bayesian Networks, Section 10.1.2 for the PC algorithm (page 550),
-      http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
+    - :cite:p:`koller_friedman_2009` (Section 18.2).
+    - :cite:p:`neapolitan_2009` (Section 10.1.2, page 550).
     """
 
     def __init__(
@@ -201,16 +199,10 @@ class PC(BaseConstraintEstimator):
 
         References
         ----------
-        [1] Original PC: P. Spirtes, C. Glymour, and R. Scheines, Causation,
-                    Prediction, and Search, 2nd ed. Cambridge, MA: MIT Press, 2000.
-        [2] Stable PC:  D. Colombo and M. H. Maathuis, “A modification of the PC algorithm
-                    yielding order-independent skeletons,” ArXiv e-prints, Nov. 2012.
-        [3] Parallel PC: Le, Thuc, et al. "A fast PC algorithm for high dimensional causal
-                    discovery with multi-core PCs." IEEE/ACM transactions on computational
-                    biology and bioinformatics (2016).
-        [4] Expert Knowledge: Meek, Christopher. "Causal inference and causal
-                explanation with background knowledge." arXiv preprint arXiv:1302.4972
-                (2013).
+        - Original PC: :cite:p:`spirtes_glymour_scheines_2001`
+        - Stable PC: :cite:p:`colombo_maathuis_2014`
+        - Parallel PC: :cite:p:`le_2019`
+        - Expert knowledge: :cite:p:`meek_1995`
 
         Examples
         --------
@@ -315,9 +307,7 @@ class PC(BaseConstraintEstimator):
 
         References
         ----------
-        [1] Neapolitan, Learning Bayesian Networks, Section 10.1.2, Algorithm
-                10.2 (page 550)
-        [2] http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
+        - :cite:p:`neapolitan_2009` (Section 10.1.2, Algorithm 10.2, page 550).
 
         Examples
         --------

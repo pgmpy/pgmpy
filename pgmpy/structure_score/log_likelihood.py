@@ -1,7 +1,7 @@
 import numpy as np
 
 from pgmpy.structure_score._base import BaseStructureScore
-from pgmpy.utils import get_state_counts
+from pgmpy.utils import encode_columns, get_state_counts_array
 
 
 class LogLikelihood(BaseStructureScore):
@@ -56,15 +56,14 @@ class LogLikelihood(BaseStructureScore):
 
     def __init__(self, data, state_names=None):
         super().__init__(data, state_names=state_names)
+        self._codes, self._cardinalities = encode_columns(self.data, self.state_names)
 
     def _log_likelihood(self, variable: str, parents: tuple[str, ...]) -> tuple[float, int, int]:
-        var_cardinality = len(self.state_names[variable])
-        state_counts = get_state_counts(self.data, self.state_names, variable, parents, reindex=False)
-        num_parents_states = np.prod([len(self.state_names[var]) for var in parents])
+        var_cardinality = self._cardinalities[variable]
+        counts = get_state_counts_array(self._codes, self._cardinalities, variable, parents)
+        num_parents_states = counts.shape[1]
 
-        counts = np.asarray(state_counts)
-        log_likelihoods = np.zeros_like(counts, dtype=float)
-
+        log_likelihoods = np.zeros_like(counts)
         np.log(counts, out=log_likelihoods, where=counts > 0)
 
         log_conditionals = np.sum(counts, axis=0, dtype=float)

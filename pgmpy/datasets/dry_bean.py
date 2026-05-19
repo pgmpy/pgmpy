@@ -5,7 +5,7 @@ class DryBean(_BaseDataset):
     """
     References
     ----------
-    .. [1] https://archive.ics.uci.edu/ml/datasets/Dry+Bean+Dataset
+    - :cite:p:`uci_dry_bean`
     """
 
     _tags = {
