@@ -24,10 +24,9 @@ class ScoreCache(StructureScore):
     **kwargs
         Additional arguments that will be handed to the super constructor.
 
-    Reference
-    ---------
-    Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
-    Section 18.3
+    References
+    ----------
+    - :cite:p:`koller_friedman_2009` (Section 18.3).
     """
 
     def __init__(self, base_scorer, data, max_size=10000, **kwargs):

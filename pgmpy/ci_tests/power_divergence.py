@@ -94,8 +94,7 @@ class PowerDivergence(_BaseCITest):
 
     References
     ----------
-    .. [1] Cressie, Noel, and Timothy RC Read. "Multinomial goodness‐of‐fit tests." Journal of the Royal Statistical
-         Society: Series B (Methodological) 46.3 (1984): 440-464.
+    - :cite:p:`cressie_read_1984`
 
     Examples
     --------

@@ -72,6 +72,8 @@ docs = [
   "sphinx-design",
   "sphinxext-opengraph",
   "sphinx_sitemap",
+  "myst_parser",
+  "sphinxcontrib-bibtex",
 ]
 all = [
   "pgmpy[optional,tests,docs]",

@@ -5,7 +5,7 @@ class Survey(DiscreteMixin, _BaseExampleModel):
     """
     References
     ----------
-    ..[1] M. Scutari and J.-B. Denis. Bayesian Networks: with Examples in R. Chapman & Hall, 2nd edition, 2021.
+    - :cite:p:`scutari_denis_2021`
     """
 
     _tags = {

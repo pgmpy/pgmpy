@@ -58,8 +58,8 @@ class Pearsonr(_BaseCITest):
 
     References
     ----------
-    .. [1] https://en.wikipedia.org/wiki/Pearson_correlation_coefficient
-    .. [2] https://en.wikipedia.org/wiki/Partial_correlation#Using_linear_regression
+    - :cite:p:`peerj_blue_driver`
+    - :cite:p:`wikipedia_partial_correlation`
     """
 
     _tags = {

@@ -50,9 +50,9 @@ class NETWriter:
     <pgmpy.readwrite.NET.NETWriter object at 0x...>
     >>> writer.write("asia.net")
 
-    Reference
-    ---------
-    [1] HUGIN EXPERT A/S . The HUGIN file format. http://www.hugin.com, 2011.
+    References
+    ----------
+    - :cite:p:`hugin_format`
     """
 
     def __init__(self, model):

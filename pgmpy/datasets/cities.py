@@ -5,8 +5,7 @@ class Cities(_CovarianceMixin, _BaseDataset):
     """
     References
     ----------
-    .. [1] Spirtes, P., Glymour, C. N., Scheines, R., & Heckerman, D. (2000). Causation, prediction, and search. MIT
-            press, p. 13.
+    - :cite:p:`spirtes_glymour_scheines_2001`
     """
 
     _tags = {

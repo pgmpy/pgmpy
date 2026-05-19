@@ -5,7 +5,7 @@ class Earthquake(DiscreteMixin, _BaseExampleModel):
     """
     References
     ----------
-    ..[1] K. B. Korb, A. E. Nicholson. Bayesian Artificial Intelligence, 2nd edition, Section 2.2.2. CRC Press, 2010.
+    - :cite:p:`korb_nicholson_2010`
     """
 
     _tags = {

@@ -5,7 +5,7 @@ class SouthGermanCredit(_BaseDataset):
     """
     References
     ----------
-    .. [1] https://archive.ics.uci.edu/ml/datasets/South+German+Credit+%28UPDATE%29
+    - :cite:p:`mendhe_2024`
     """
 
     _tags = {
