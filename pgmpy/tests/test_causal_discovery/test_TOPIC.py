@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -5,6 +7,12 @@ from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery.TOPIC import TOPIC
+
+
+def _score_obj(score_fn):
+    """Wrap a callable ``score_fn(node, parents)`` in an object exposing ``local_score``."""
+    return SimpleNamespace(local_score=score_fn)
+
 
 """ Utils """
 
@@ -64,7 +72,7 @@ def test_unit_improvement_matrix():
     score_fn, base, w, combo = fake_score_fn_factory()
     # topic.scoring_method = score_fn
 
-    mat = topic._improvement_matrix(candidates=candidates, dag_current=dag, score_fn=score_fn)
+    mat = topic._improvement_matrix(candidates=candidates, dag_current=dag, score=_score_obj(score_fn))
 
     assert mat.shape == (3, 3)
     assert np.all(np.diag(mat) == 0.0)
@@ -124,7 +132,7 @@ def test_unit_next_node_in_topological_order(monkeypatch):
 
     topic.score_fn_ = lambda node, parents: 0.0  # _score_fn
     source, meta = topic._next_node_in_topological_order(
-        candidates=candidates, dag_current=dag, score_fn=topic.score_fn_
+        candidates=candidates, dag_current=dag, score=_score_obj(topic.score_fn_)
     )
 
     assert source == "A"
@@ -167,7 +175,7 @@ def test_next_node_in_topological_order_tie(monkeypatch):
     # topic.score_fn_ = _score_fn
     topic.score_fn_ = lambda node, parents: 0.0  # _score_fn
     source, meta = topic._next_node_in_topological_order(
-        candidates=candidates, dag_current=dag, score_fn=topic.score_fn_
+        candidates=candidates, dag_current=dag, score=_score_obj(topic.score_fn_)
     )
     assert source == "A"
     assert meta["source_idx"] == 0
@@ -177,7 +185,7 @@ def test_find_removable_edge_single_parent():
     topic = TOPIC()
 
     removed_found, best_parent, best_harm, candidate_stats = topic._find_removable_edge(
-        parents=["A"], child="X", score_fn=lambda node, parents: 0.0
+        parents=["A"], child="X", score=_score_obj(lambda node, parents: 0.0)
     )
 
     assert removed_found is False
@@ -203,7 +211,7 @@ def test_find_removable_edge_best_parent():
     removed_found, best_parent, best_harm, candidate_stats = topic._find_removable_edge(
         parents=["A", "B", "C"],
         child="X",
-        score_fn=score_fn,
+        score=_score_obj(score_fn),
     )
 
     # harms: A=-20, B=-5, C=+20
@@ -226,7 +234,7 @@ def test_find_removable_edge_no_removable_candidate():
     removed_found, best_parent, best_harm, candidate_stats = topic._find_removable_edge(
         parents=["A", "B", "C"],
         child="X",
-        score_fn=score_fn,
+        score=_score_obj(score_fn),
     )
 
     assert removed_found is False
@@ -249,7 +257,7 @@ def test_find_removable_edge_allows_small_negative_harm_due_to_float_noise():
             return 1.0 - 1e-12
 
     removed_found, best_parent, best_harm, _ = topic._find_removable_edge(
-        parents=["A", "B"], child="X", score_fn=score_fn2
+        parents=["A", "B"], child="X", score=_score_obj(score_fn2)
     )
 
     assert removed_found is True
