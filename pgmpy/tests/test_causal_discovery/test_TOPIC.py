@@ -1,21 +1,21 @@
-import numpy as np
-import pandas as pd
 import pytest
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.causal_discovery.TOPIC import TOPIC
+from pgmpy.factors.continuous import LinearGaussianCPD
+from pgmpy.models import LinearGaussianBayesianNetwork
 
 
 @pytest.fixture
-def fake_data():
-    np.random.seed(42)
-    return pd.DataFrame(
-        np.random.random((1000, 4)),
-        columns=["A", "B", "C", "D"],
+def linear_gaussian_data():
+    model = LinearGaussianBayesianNetwork([("A", "B"), ("A", "C"), ("B", "D"), ("C", "D")])
+    model.add_cpds(
+        LinearGaussianCPD("A", [0.0], 1.0),
+        LinearGaussianCPD("B", [0.0, 1.5], 0.5, ["A"]),
+        LinearGaussianCPD("C", [0.0, -1.2], 0.5, ["A"]),
+        LinearGaussianCPD("D", [0.0, 0.8, 0.7], 0.5, ["B", "C"]),
     )
-
-
-""" 1. Compatibility Tests """
+    return model.simulate(n_samples=2000, seed=0)
 
 
 def expected_failed_checks(estimator):
@@ -33,24 +33,24 @@ def test_topic_compatibility(estimator, check):
     check(estimator)
 
 
-""" 2. Smoke Test (fake data) """
-
-
-def test_fit_scoring_methods(fake_data):
-    est = TOPIC()
-    dag = est.fit(fake_data)
-    assert dag is not None
-    assert est.n_features_in_ == fake_data.shape[1]
-    assert len(est.feature_names_in_) == len(np.asarray(fake_data.columns, dtype=object))
-
-
 @pytest.mark.parametrize("scoring_method", ["aic-g", "bic-g"])
-@pytest.mark.parametrize("show_progress", [True, False])
-@pytest.mark.parametrize("return_type", ["dag", "pdag"])
-def test_arguments(fake_data, scoring_method, show_progress, return_type):
-    est = TOPIC(
-        scoring_method=scoring_method,
-        show_progress=show_progress,
-        return_type=return_type,
-    )
-    _ = est.fit(fake_data)
+def test_topic_recovers_known_structure(linear_gaussian_data, scoring_method):
+    est = TOPIC(scoring_method=scoring_method).fit(linear_gaussian_data)
+
+    assert est.n_features_in_ == linear_gaussian_data.shape[1]
+    assert list(est.feature_names_in_) == list(linear_gaussian_data.columns)
+    assert est.causal_graph_ is not None
+    assert est.adjacency_matrix_.shape == (4, 4)
+    assert sorted(est.topological_order_) == ["A", "B", "C", "D"]
+
+    # AIC can learn extra edges because of its less strict penalty term.
+    learned = set(est.causal_graph_.edges())
+    true_edges = {("A", "B"), ("A", "C"), ("B", "D"), ("C", "D")}
+    assert true_edges.issubset(learned)
+
+    # Topological order respects the true ancestor relations.
+    order = est.topological_order_
+    assert order.index("A") < order.index("B")
+    assert order.index("A") < order.index("C")
+    assert order.index("B") < order.index("D")
+    assert order.index("C") < order.index("D")
