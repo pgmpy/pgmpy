@@ -96,51 +96,6 @@ class TOPIC(_BaseCausalDiscovery):
         self.min_improvement = min_improvement
         self.show_progress = show_progress
 
-    def _find_removable_edge(
-        self,
-        parents: list[int | str],
-        child: int | str,
-        score: BaseStructureScore,
-    ) -> int | str | None:
-        """Find a parent whose removal does not decrease ``child``'s local score.
-
-        The parent with the largest non-negative score change (up to a small noise tolerance) is returned. The last
-        remaining parent is never removed.
-
-        Parameters
-        ----------
-        parents : list
-            Parent nodes being considered for removal.
-
-        child : int or str
-            Child node.
-
-        score : BaseStructureScore
-            Structure score instance providing a ``local_score(variable, parents)`` method.
-
-        Returns
-        -------
-        parent : int, str, or None
-            The parent to remove, or ``None`` if no such parent exists.
-        """
-        noise_epsilon = 1e-10
-        old_score = score.local_score(child, tuple(parents))
-
-        best_parent = None
-        best_harm = float("-inf")
-
-        for parent in parents:
-            new_parents = [p for p in parents if p != parent]
-            if len(new_parents) == 0:
-                continue
-
-            harm = score.local_score(child, tuple(new_parents)) - old_score
-            if harm >= -noise_epsilon and harm > best_harm:
-                best_harm = harm
-                best_parent = parent
-
-        return best_parent
-
     def _fit(self, X: pd.DataFrame):
         """The fitting procedure for the TOPIC algorithm.
 
@@ -171,20 +126,20 @@ class TOPIC(_BaseCausalDiscovery):
             # candidates[i] -> candidates[j] to dag_current.
 
             n = len(candidates)
-            improvement = np.zeros((n, n))
+            score_improvement = np.zeros((n, n))
             for j, effect in enumerate(candidates):
-                base_parents = list(dag_current.get_parents(effect))
-                old_score = score.local_score(effect, tuple(base_parents))
+                base_parents = tuple(dag_current.get_parents(effect))
+                old_score = score.local_score(effect, base_parents)
                 for i, cause in enumerate(candidates):
-                    if cause == effect:
+                    if i == j:
                         continue
-                    improvement[i, j] = score.local_score(effect, tuple(base_parents + [cause])) - old_score
+                    score_improvement[i, j] = score.local_score(effect, base_parents + (cause,)) - old_score
 
-            # Step 1.1.2: The next source is the candidate with the smallest maximum incoming improvement (i.e. the
-            # least preferred sink).
-            delta = improvement - improvement.T
+            # Step 1.1.2: Source is the candidate with the smallest maximum incoming improvement (i.e. the least
+            # preferred sink).
+            delta = score_improvement - score_improvement.T
             np.fill_diagonal(delta, -np.inf)
-            source = candidates[int(np.argmin(delta.max(axis=0)))]
+            source = candidates[np.argmin(delta.max(axis=0))]
             candidates.remove(source)
             topological_order_.append(source)
 
@@ -193,21 +148,29 @@ class TOPIC(_BaseCausalDiscovery):
 
             # Step 1.2: Add edges from the source to remaining candidates if they improve the score sufficiently.
             for node in candidates:
-                current_parents = list(dag_current.get_parents(node))
-                old_score = score.local_score(node, tuple(current_parents))
-                new_score = score.local_score(node, tuple(current_parents + [source]))
-
-                if new_score - old_score > self.min_improvement:
+                current_parents = tuple(dag_current.get_parents(node))
+                gain = score.local_score(node, current_parents + (source,)) - score.local_score(node, current_parents)
+                if gain > self.min_improvement:
                     dag_current.add_edge(source, node)
 
-            # Step 1.3: Prune edges into the source if their removal does not decrease the score.
+            # Step 1.3: Prune edges into the source. Repeatedly remove the parent whose removal least decreases the
+            # score (up to a small noise tolerance). The last remaining parent is never removed.
+            noise_epsilon = 1e-10
             current_parents = list(dag_current.get_parents(source))
-            while len(current_parents) > 0:
-                removed_parent = self._find_removable_edge(current_parents, source, score)
-                if removed_parent is None:
+            while len(current_parents) > 1:
+                old_score = score.local_score(source, tuple(current_parents))
+                best_parent = None
+                best_harm = float("-inf")
+                for parent in current_parents:
+                    new_parents = tuple(p for p in current_parents if p != parent)
+                    harm = score.local_score(source, new_parents) - old_score
+                    if harm >= -noise_epsilon and harm > best_harm:
+                        best_harm = harm
+                        best_parent = parent
+                if best_parent is None:
                     break
-                dag_current.remove_edge(removed_parent, source)
-                current_parents.remove(removed_parent)
+                dag_current.remove_edge(best_parent, source)
+                current_parents.remove(best_parent)
 
         # Step 2: Store the learned causal graph and related attributes.
         if self.return_type == "dag":
