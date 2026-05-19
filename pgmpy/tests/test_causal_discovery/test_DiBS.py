@@ -6,10 +6,11 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import pytest
-import torch
-
+import unittest
+from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 from pgmpy.causal_discovery.DiBS import DiBS
 
+torch = _safe_import("torch")
 
 @pytest.fixture
 def linear_chain_data():
@@ -28,6 +29,10 @@ def tiny_data():
     return pd.DataFrame(x, columns=["X1", "X2", "X3"])
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestDiBSCore:
     def test_fit_sets_attributes(self, linear_chain_data):
         est = DiBS(
@@ -113,6 +118,10 @@ class TestDiBSCore:
         assert calls["count"] > 0
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestDiBSLikelihoodValidation:
     def test_unknown_grad_estimator_raises(self):
         est = DiBS()
