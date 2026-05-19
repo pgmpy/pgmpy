@@ -96,128 +96,16 @@ class TOPIC(_BaseCausalDiscovery):
         self.min_improvement = min_improvement
         self.show_progress = show_progress
 
-    def _improvement_matrix(
-        self,
-        candidates: list,
-        dag_current: DAG,
-        score: BaseStructureScore,
-    ) -> np.ndarray:
-        """Pair-wise improvement matrix: score improvements for each pair-wise edge under the current model.
-
-        Parameters
-        ----------
-        candidates : list
-            Pair-wise edge candidates.
-
-        dag_current : DAG
-            Current DAG.
-
-        score : BaseStructureScore
-            Structure score instance providing a ``local_score(variable, parents)`` method.
-
-        Returns
-        -------
-        improvement_matrix : np.ndarray
-            Score improvement for each pair-wise edge.
-
-        """
-        improvement_matrix = np.zeros((len(candidates), len(candidates)))
-        idx = {node: i for i, node in enumerate(candidates)}
-        for cause in candidates:
-            for effect in candidates:
-                if cause == effect:
-                    continue
-
-                current_parents = list(dag_current.get_parents(effect)).copy()
-                old_score = score.local_score(effect, tuple(current_parents))
-                current_parents.append(cause)
-                new_score = score.local_score(effect, tuple(current_parents))
-
-                score_improv = new_score - old_score
-                improvement_matrix[idx[cause], idx[effect]] = score_improv
-        return improvement_matrix
-
-    def _next_node_in_topological_order(
-        self,
-        candidates: list[int | str],
-        dag_current: DAG,
-        score: BaseStructureScore,
-    ) -> tuple[int | str, dict]:
-        """Returns the next node in topological order.
-
-        Parameters
-        ----------
-        candidates: list
-            Remaining nodes that are candidates to be the next node in topological order.
-
-        dag_current: DAG
-            The causal graph constructed so far; by construction, all edges are outgoing from nodes not in candidates.
-
-        score : BaseStructureScore
-            Structure score instance providing a ``local_score(variable, parents)`` method.
-
-        Returns
-        -------
-        next_node: int
-            The next node in topological order.
-
-        Examples
-        --------
-        >>> import pandas as pd
-        >>> import numpy as np
-        >>> from pgmpy.causal_discovery.TOPIC import TOPIC
-        >>> from pgmpy.base import DAG
-        >>> data = pd.DataFrame(
-        ...     np.random.randint(0, 4, size=(5000, 3)), columns=list("ABD")
-        ... )
-        >>> data["C"] = data["A"] - data["B"]
-        >>> data["D"] += data["A"]
-        >>> model = TOPIC()
-        >>> model._init_score(data)
-        >>> dag = DAG()
-        >>> dag.add_nodes_from(list(data.columns))
-        >>> next_node = model._next_node_in_topological_order(list(data.columns), dag)
-        >>> next_node[0] in list(data.columns)
-        True
-
-        """
-        improvement = self._improvement_matrix(candidates, dag_current, score)
-        delta = improvement - improvement.T
-        np.fill_diagonal(delta, -np.inf)
-
-        incoming_pressure = np.max(delta, axis=0)
-        source_idx = int(np.argmin(incoming_pressure))
-        source = candidates[source_idx]
-        best_delta_per_node = np.max(delta, axis=1)
-
-        order_idx = np.argsort(incoming_pressure)
-        ranking = [
-            {
-                "node": candidates[i],
-                "incoming_pressure": float(incoming_pressure[i]),
-                "best_delta": float(best_delta_per_node[i]),
-            }
-            for i in order_idx
-        ]
-
-        meta = {
-            "candidates": [c for c in candidates],
-            "improvement_matrix": improvement.tolist(),
-            "delta_matrix": delta.tolist(),
-            "best_delta": [float(x) for x in best_delta_per_node],
-            "ranking": ranking,
-            "source_idx": int(source_idx),
-        }
-        return source, meta
-
     def _find_removable_edge(
         self,
         parents: list[int | str],
         child: int | str,
         score: BaseStructureScore,
-        noise_epsilon: float = 1e-10,
-    ):
-        """Helper function for finding removable edges from a parent set to a child node.
+    ) -> int | str | None:
+        """Find a parent whose removal does not decrease ``child``'s local score.
+
+        The parent with the largest non-negative score change (up to a small noise tolerance) is returned. The last
+        remaining parent is never removed.
 
         Parameters
         ----------
@@ -230,42 +118,28 @@ class TOPIC(_BaseCausalDiscovery):
         score : BaseStructureScore
             Structure score instance providing a ``local_score(variable, parents)`` method.
 
-        noise_epsilon : float
-            Noise threshold.
-
+        Returns
+        -------
+        parent : int, str, or None
+            The parent to remove, or ``None`` if no such parent exists.
         """
+        noise_epsilon = 1e-10
         old_score = score.local_score(child, tuple(parents))
 
         best_parent = None
         best_harm = float("-inf")
-        candidate_stats: list[tuple[int | str, float]] = []
 
         for parent in parents:
             new_parents = [p for p in parents if p != parent]
             if len(new_parents) == 0:
                 continue
 
-            new_score = score.local_score(child, tuple(new_parents))
-            if new_score is None:
-                continue
-
-            harm = float(new_score - old_score)
-            candidate_stats.append((parent, harm))
-
+            harm = score.local_score(child, tuple(new_parents)) - old_score
             if harm >= -noise_epsilon and harm > best_harm:
                 best_harm = harm
                 best_parent = parent
 
-        removed_found = best_parent is not None
-
-        if not removed_found:
-            return (
-                (False, None, float("inf"), candidate_stats)
-                if len(candidate_stats) == 0
-                else (False, None, 0.0, candidate_stats)
-            )
-
-        return True, best_parent, best_harm, candidate_stats
+        return best_parent
 
     def _fit(self, X: pd.DataFrame):
         """The fitting procedure for the TOPIC algorithm.
@@ -274,104 +148,68 @@ class TOPIC(_BaseCausalDiscovery):
         ----------
         X: pd.DataFrame
             The input dataset.
-
         """
-        # 0. Initialization
+        # Step 0: Initialize scoring method and data structures
         score = get_scoring_method(scoring_method=self.scoring_method, data=X)
-
-        self.n_features_in_ = X.shape[1]
-        self.feature_names_in_ = np.asarray(X.columns, dtype=object)
 
         dag_current = DAG()
         dag_current.add_nodes_from(list(X.columns))
         candidates = list(dag_current.nodes)
         topological_order_ = []
 
-        # 1. Discover a topological order, prune and add edges
-        n_nodes = len(dag_current.nodes)
-        pbar = (
-            tqdm(total=n_nodes, desc="Topological order", unit="node")
-            if self.show_progress and config.SHOW_PROGRESS
-            else None
+        # Step 1: Find the topological order for the variables.
+        pbar = tqdm(
+            range(self.n_features_in_),
+            desc="Topological order",
+            unit="node",
+            disable=not (self.show_progress and config.SHOW_PROGRESS),
         )
 
-        it = 0
-        while it < n_nodes:
-            source, source_hist = self._next_node_in_topological_order(candidates, dag_current, score)
+        for _ in pbar:
+            # Step 1.1: Find the next source node in topological order.
+            # Step 1.1.1: Builds a pair-wise improvement matrix where entry [i, j] is the score gain of adding
+            # candidates[i] -> candidates[j] to dag_current.
+
+            n = len(candidates)
+            improvement = np.zeros((n, n))
+            for j, effect in enumerate(candidates):
+                base_parents = list(dag_current.get_parents(effect))
+                old_score = score.local_score(effect, tuple(base_parents))
+                for i, cause in enumerate(candidates):
+                    if cause == effect:
+                        continue
+                    improvement[i, j] = score.local_score(effect, tuple(base_parents + [cause])) - old_score
+
+            # Step 1.1.2: The next source is the candidate with the smallest maximum incoming improvement (i.e. the
+            # least preferred sink).
+            delta = improvement - improvement.T
+            np.fill_diagonal(delta, -np.inf)
+            source = candidates[int(np.argmin(delta.max(axis=0)))]
             candidates.remove(source)
             topological_order_.append(source)
 
-            if pbar is not None:
-                pbar.set_description(f"Processing: {source}")
-                pbar.set_postfix_str(f"remaining={len(candidates)}")
+            pbar.set_description(f"Processing: {source}")
+            pbar.set_postfix_str(f"remaining={len(candidates)}")
 
-            added_edges = []
-            considered_edges_adding = []
-
+            # Step 1.2: Add edges from the source to remaining candidates if they improve the score sufficiently.
             for node in candidates:
-                if node == source:
-                    continue
-
-                current_parents = list(dag_current.get_parents(node)).copy()
+                current_parents = list(dag_current.get_parents(node))
                 old_score = score.local_score(node, tuple(current_parents))
-                current_parents.append(source)
-                new_score = score.local_score(node, tuple(current_parents))
+                new_score = score.local_score(node, tuple(current_parents + [source]))
 
-                gain = new_score - old_score
-                significant = gain > self.min_improvement
-
-                considered_edges_adding.append(
-                    {
-                        "from": str(source),
-                        "to": str(node),
-                        "gain": gain,
-                        "significant": significant,
-                    }
-                )
-                if significant:
+                if new_score - old_score > self.min_improvement:
                     dag_current.add_edge(source, node)
-                    added_edges.append({"from": str(source), "to": str(node), "gain": gain})
 
-            pruned_edges = []
-            considered_edges_pruning = []
-            current_parents = list(dag_current.get_parents(source)).copy()
-
+            # Step 1.3: Prune edges into the source if their removal does not decrease the score.
+            current_parents = list(dag_current.get_parents(source))
             while len(current_parents) > 0:
-                removed_found, removed_parent, best_diff, candidate_diffs = self._find_removable_edge(
-                    current_parents, source, score
-                )
-
-                for parent, diff in candidate_diffs:
-                    considered_edges_pruning.append(
-                        {
-                            "from": str(parent),
-                            "to": str(source),
-                            "diff": diff,
-                        }
-                    )
-
+                removed_parent = self._find_removable_edge(current_parents, source, score)
                 if removed_parent is None:
                     break
                 dag_current.remove_edge(removed_parent, source)
                 current_parents.remove(removed_parent)
 
-                pruned_edges.append(
-                    {
-                        "from": str(removed_parent),
-                        "to": str(source),
-                        "diff": best_diff,
-                    }
-                )
-
-            if pbar is not None:
-                pbar.update(1)
-            it += 1
-
-        if pbar is not None:
-            pbar.set_description("Topological order")
-            pbar.set_postfix_str("")
-            pbar.close()
-
+        # Step 2: Store the learned causal graph and related attributes.
         if self.return_type == "dag":
             self.causal_graph_ = dag_current
         elif self.return_type == "pdag":
