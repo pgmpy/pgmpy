@@ -14,45 +14,45 @@ from pgmpy.structure_score import BaseStructureScore, get_scoring_method
 class TOPIC(_BaseCausalDiscovery):
     """The TOPIC algorithm for causal discovery / structure learning.
 
-    This class implements the TOPIC algorithm [1] for causal discovery. Given a tabular dataset, TOPIC estimates the
-    causal structure among the variables in the data in a Directed Acyclic Graph (DAG). The algorithm works by
-    establishing a topological ordering among the variables using a local scoring criterion, and in the process adds and
-    respectively prunes directed edges among the variables that are consistent with the topological ordering.
+    Given a tabular dataset, TOPIC [1] estimates the causal structure among the variables and returns it as a Directed
+    Acyclic Graph (DAG). It iteratively builds a topological ordering one node at a time: at each step it picks the
+    candidate that looks least like an effect (smallest "incoming pressure" in the pair-wise improvement matrix), adds
+    it as the next source, greedily adds outgoing edges to remaining candidates whose local score improvement exceeds
+    ``min_improvement``, then prunes any incoming edges whose removal is within ``min_improvement`` of the current
+    score.
 
     Parameters
     ----------
+    scoring_method : str or BaseStructureScore instance, default=None
+        The local score used to evaluate edge additions and prunings. Supported structure scores: k2, bdeu, bds, bic-d,
+        aic-d, ll-g, aic-g, bic-g, ll-cg, aic-cg, bic-cg. Also accepts a custom score, but it should be an instance of
+        ``BaseStructureScore``. If ``None``, an appropriate default is selected automatically based on whether the
+        data is continuous or discrete.
 
-    scoring_method : str or BaseStructureScore instance
-        The score to be optimized during structure estimation.  Supported structure scores: k2, bdeu, bds, bic-d, aic-d,
-        ll-g, aic-g, bic-g, ll-cg, aic-cg, bic-cg. Also accepts a custom score, but it should be an instance of
-        `BaseStructureScore`.
-
-    return_type : str (default: "dag")
-        The type of structure to return. Can be one of: `dag`, `pdag`. TOPIC by default orients all edges and returns a
-        fully directed structure.
-
-        - If `return_type=dag`, a fully directed structure (i.e., DAG) is returned.
-        - If `return_type=pdag`: the (fully) directed structure is converted to a PDAG instance.
+    return_type : str, default="dag"
+        The type of structure to return. One of ``"dag"`` (a fully directed DAG) or ``"pdag"`` (the DAG converted to a
+        PDAG instance). TOPIC always orients every edge, so the PDAG is just a different wrapper around the same
+        directed structure.
 
     min_improvement : float, default=1e-6
-        The minimal score improvement used for edge addition and removal.
-        If the structure_score specified in `scoring_method` is not an MDL score but BIC, AIC, etc., this
-        `min_improvement` will be used to check whether score differences are large enough to be considered sufficient
-        for edge  addition and  removal.
+        Threshold used symmetrically for edge addition and pruning. An edge ``source -> node`` is added if its local
+        score improvement exceeds ``min_improvement``; an incoming edge to ``source`` is removed if doing so decreases
+        the local score by at most ``min_improvement``.
 
     show_progress : bool, default=False
         If True, shows a progress bar while learning the causal structure.
 
     Attributes
     ----------
-    causal_graph_ : :class:`~pgmpy.base.DAG` or :class: `~pgmpy.base.PDAG`
-        The learned causal graph.
-
-        - If `return_type="dag"`, this will be a DAG instance.
-        - If `return_type="pdag"`, this will be a PDAG instance.
+    causal_graph_ : :class:`~pgmpy.base.DAG` or :class:`~pgmpy.base.PDAG`
+        The learned causal graph (a DAG if ``return_type="dag"``, a PDAG if ``return_type="pdag"``).
 
     adjacency_matrix_ : pd.DataFrame
         Adjacency matrix representation of the learned causal graph.
+
+    topological_order_ : list
+        The discovered topological order of the variables. The first element is the inferred root; for each edge
+        ``u -> v`` in the learned graph, ``u`` appears before ``v`` in this list.
 
     n_features_in_ : int
         The number of features in the data used to learn the causal graph.
@@ -89,7 +89,7 @@ class TOPIC(_BaseCausalDiscovery):
         scoring_method: str | BaseStructureScore | None = None,
         return_type: str = "dag",
         min_improvement: float = 1e-6,
-        show_progress: bool = False,
+        show_progress: bool = True,
     ):
         self.return_type = return_type
         self.scoring_method = scoring_method
