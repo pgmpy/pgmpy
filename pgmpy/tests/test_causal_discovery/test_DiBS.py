@@ -2,15 +2,17 @@
 Tests for DiBS in pgmpy.causal_discovery.
 """
 
+import unittest
+
 import networkx as nx
 import numpy as np
 import pandas as pd
 import pytest
-import unittest
 from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
-from pgmpy.causal_discovery.DiBS import DiBS
 
 torch = _safe_import("torch")
+DiBS = _safe_import("pgmpy.causal_discovery.DiBS.DiBS", pkg_name="torch")
+
 
 @pytest.fixture
 def linear_chain_data():
