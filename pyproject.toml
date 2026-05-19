@@ -1,6 +1,6 @@
 [project]
 name = "pgmpy"
-version = "1.1.2"
+version = "1.1.0"
 description = "Python Toolkit for Causal and Probabilistic Reasoning"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -37,8 +37,6 @@ dependencies = [
   "joblib>=1.2",
   "opt_einsum>=3.3",
   "scikit-base>=0.12.4",
-  "torch>=2.11.0",
-  "pytest>=9.0.2",
 ]
 
 [project.optional-dependencies]
@@ -64,19 +62,16 @@ tests = [
   "black",
   "pre-commit",
   "jsonschema",
-  "sempler",
 ]
 docs = [
   "sphinx>=5.0",
-  "ipython",
   "nbsphinx",
   "numpydoc",
-  "pydata-sphinx-theme",
+  "sphinx_rtd_theme",
   "sphinx-copybutton",
   "sphinx-design",
   "sphinxext-opengraph",
   "sphinx_sitemap",
-  "myst_parser",
 ]
 all = [
   "pgmpy[optional,tests,docs]",
@@ -112,7 +107,7 @@ filterwarnings = ["default"]
 
 [tool.ruff]
 line-length = 120
-exclude = [".git", "examples/*", "docs/conf.py", "pgmpy/estimators/__init__.py",
+exclude = [".git", "examples/*", "docs/source/conf.py", "pgmpy/estimators/__init__.py",
 	   "pgmpy/factors/discrete/__init__.py", "pgmpy/identification/__init__.py", "pgmpy/inference/__init__.py",
            "pgmpy/extern/*", "pgmpy/.github/*"]
 target-version = "py314"
