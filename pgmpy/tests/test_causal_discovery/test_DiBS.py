@@ -10,8 +10,11 @@ import pandas as pd
 import pytest
 from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 
-torch = _safe_import("torch")
-DiBS = _safe_import("pgmpy.causal_discovery.DiBS.DiBS", pkg_name="torch")
+HAS_TORCH = _check_soft_dependencies("torch", severity="none")
+
+if HAS_TORCH:
+    import torch
+    from pgmpy.causal_discovery.DiBS import DiBS
 
 
 @pytest.fixture
