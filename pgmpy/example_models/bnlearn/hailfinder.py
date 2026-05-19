@@ -5,8 +5,7 @@ class Hailfinder(DiscreteMixin, _BaseExampleModel):
     """
     References
     ----------
-    ..[1] B. Abramson, J. Brown, W. Edwards, A. Murphy, and R. L. Winkler. Hailfinder: A Bayesian system for
-    forecasting severe weather. International Journal of Forecasting, 12(1):57-71, 1996.
+    - :cite:p:`abramson_1996`
     """
 
     _tags = {

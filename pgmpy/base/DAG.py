@@ -10,6 +10,7 @@ import pandas as pd
 
 from pgmpy import logger
 from pgmpy.base._mixin_roles import _GraphRolesMixin
+from pgmpy.ci_tests import get_ci_test
 from pgmpy.independencies import Independencies
 from pgmpy.utils.parser import parse_dagitty, parse_lavaan
 
@@ -761,9 +762,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         References
         ----------
-        [1] Algorithm 4, Page 10: Tian, Jin, Azaria Paz, and
-          Judea Pearl. Finding minimal d-separators. Computer Science Department,
-            University of California, 1998.
+        - :cite:p:`tian_paz_pearl_1998` (Algorithm 4, page 10).
         """
         if (end in self.neighbors(start)) or (start in self.neighbors(end)):
             raise ValueError("No possible separators because start and end are adjacent")
@@ -878,9 +877,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         References
         ----------
-        Details of the algorithm can be found in 'Probabilistic Graphical Model
-        Principles and Techniques' - Koller and Friedman
-        Page 75 Algorithm 3.1
+        - :cite:p:`koller_friedman_2009` (page 75, Algorithm 3.1).
         """
         observed_list: list[Hashable] | tuple[Hashable, Hashable]
         if observed:
@@ -980,8 +977,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         References
         ----------
-        [1] Chickering, David Maxwell. "Learning equivalence classes of Bayesian-network structures."
-          Journal of machine learning research 2.Feb (2002): 445-498. Figure 4 and 5.
+        - :cite:p:`chickering_2002a` (Figures 4 and 5).
         """
         # Perform a topological sort on the nodes
         topo_order = list(nx.topological_sort(self))
@@ -1108,7 +1104,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         References
         ----------
-        Causality: Models, Reasoning, and Inference, Judea Pearl (2000). p.70.
+        - :cite:p:`pearl_2009` (page 70).
         """
         dag = self if inplace else self.copy()
 
@@ -1310,27 +1306,34 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
     @staticmethod
     def get_random(
         n_nodes=5,
-        edge_prob=0.5,
+        n_edges: int | None = None,
+        edge_prob: float | None = None,
         node_names: list[Hashable] | None = None,
         latents=False,
         seed: int | None = None,
     ) -> DAG:
         """
-        Returns a randomly generated DAG with `n_nodes` number of nodes with
-        edge probability being `edge_prob`.
+        Returns a randomly generated DAG with `n_nodes` number of nodes.
+
+        If `n_edges` is specified, generates a DAG with exactly that many edges.
+        If `n_edges` is None, edges are added randomly with probability `edge_prob`.
+        If both `n_edges` and `edge_prob` are None, uses default `edge_prob=0.5`.
 
         Parameters
         ----------
         n_nodes: int
             The number of nodes in the randomly generated DAG.
 
-        edge_prob: float
+        n_edges: int or None (default: None)
+            The number of edges in the randomly generated DAG.
+
+        edge_prob: float or None
             The probability of edge between any two nodes in the topologically
             sorted DAG.
 
         node_names: list (default: None)
             A list of variables names to use in the random graph.
-            If None, the node names are integer values starting from 0.
+            If None, the node names are "X_0", "X_1", ..., "X_{n-1}".
 
         latents: bool (default: False)
             If True, includes latent variables in the generated DAG.
@@ -1343,6 +1346,13 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         Random DAG: pgmpy.base.DAG
             The randomly generated DAG.
 
+        Raises
+        ------
+        ValueError
+            If `len(node_names) != n_nodes`.
+            If `n_edges` is outside `[0, n_nodes * (n_nodes - 1) // 2]`.
+            If both `n_edges` and `edge_prob` are specified.
+
         Examples
         --------
         >>> from pgmpy.base import DAG
@@ -1350,22 +1360,55 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> sorted(random_dag.nodes())
         ['X_0', 'X_1', 'X_2', 'X_3', 'X_4', 'X_5', 'X_6', 'X_7', 'X_8', 'X_9']
         >>> sorted(random_dag.edges())  # doctest: +NORMALIZE_WHITESPACE
-        [('X_0', 'X_2'), ('X_0', 'X_5'), ('X_0', 'X_6'), ('X_0', 'X_7'),
-         ('X_1', 'X_3'), ('X_1', 'X_8'), ('X_2', 'X_3'), ('X_2', 'X_4'),
-         ('X_4', 'X_5'), ('X_7', 'X_9')]
-        """
-        # Step 1: Generate a matrix of 0 and 1. Prob of choosing 1 = edge_prob
-        gen = np.random.default_rng(seed=seed)
-        adj_mat = gen.choice([0, 1], size=(n_nodes, n_nodes), p=[1 - edge_prob, edge_prob])
+        [('X_0', 'X_2'), ('X_0', 'X_3'), ('X_2', 'X_9'), ('X_3', 'X_1'),
+         ('X_3', 'X_4'), ('X_3', 'X_8'), ('X_5', 'X_2'), ('X_5', 'X_6'),
+         ('X_5', 'X_9'), ('X_6', 'X_0'), ('X_6', 'X_1'), ('X_6', 'X_3'),
+         ('X_6', 'X_4'), ('X_6', 'X_9'), ('X_7', 'X_1'), ('X_7', 'X_2'),
+         ('X_7', 'X_4'), ('X_7', 'X_8')]
 
-        # Step 2: Use the upper triangular part of the matrix as adjacency.
+        >>> dag = DAG.get_random(n_nodes=5, n_edges=6, seed=42)
+        >>> dag.number_of_edges()
+        6
+        """
+        gen = np.random.default_rng(seed=seed)
+
         if node_names is None:
             node_names = [f"X_{i}" for i in range(n_nodes)]
 
-        adj_pd = pd.DataFrame(np.triu(adj_mat, k=1), columns=node_names, index=node_names)
-        nx_dag = nx.from_pandas_adjacency(adj_pd, create_using=nx.DiGraph)
+        if len(node_names) != n_nodes:
+            raise ValueError(f"Length of node_names ({len(node_names)}) must be equal to n_nodes ({n_nodes}).")
 
+        if n_edges is not None and edge_prob is not None:
+            raise ValueError("Only one of n_edges or edge_prob can be specified.")
+
+        if n_edges is None and edge_prob is None:
+            edge_prob = 0.5
+            logger.info("Using default edge_prob=0.5 since neither n_edges nor edge_prob were specified.")
+
+        shuffled_names = list(node_names)
+        gen.shuffle(shuffled_names)
+        if n_edges is not None:
+            max_edges = n_nodes * (n_nodes - 1) // 2
+            if n_edges < 0 or n_edges > max_edges:
+                raise ValueError(f"Invalid n_edges={n_edges}. For n_nodes={n_nodes}, valid range is [0, {max_edges}].")
+            # Apply a random node permutation to avoid label-order bias
+            perm = gen.permutation(n_nodes)
+            upper_i, upper_j = np.triu_indices(n_nodes, k=1)
+            chosen = gen.choice(len(upper_i), size=n_edges, replace=False)
+
+            adj_mat = np.zeros((n_nodes, n_nodes), dtype=int)
+            adj_mat[perm[upper_i[chosen]], perm[upper_j[chosen]]] = 1
+            adj_pd = pd.DataFrame(adj_mat, columns=shuffled_names, index=shuffled_names)
+
+        else:
+            # Step 1: Generate a matrix of 0 and 1. Prob of choosing 1 = edge_prob
+            adj_mat = gen.choice([0, 1], size=(n_nodes, n_nodes), p=[1 - edge_prob, edge_prob])
+            # Step 2: Use the upper triangular part of the matrix as adjacency.
+            adj_pd = pd.DataFrame(np.triu(adj_mat, k=1), columns=shuffled_names, index=shuffled_names)
+
+        nx_dag = nx.from_pandas_adjacency(adj_pd, create_using=nx.DiGraph)
         dag = DAG(nx_dag)
+
         dag.add_nodes_from(node_names)
 
         if latents:
@@ -1587,7 +1630,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             and self.get_role_dict() == other.get_role_dict()
         )
 
-    def edge_strength(self, data, edges=None):
+    def edge_strength(self, data, edges=None, ci_test=None):
         """
         Computes the strength of each edge in `edges`. The strength is bounded
         between 0 and 1, with 1 signifying strong effect.
@@ -1615,6 +1658,9 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             - None: Compute for all DAG edges.
             - Tuple (X, Y): Compute for edge X → Y.
             - List of tuples: Compute for selected edges.
+
+        ci_test : str or instance of _BaseCITest
+            The conditional independence test whose effect size to use as edge strength
 
         Returns
         -------
@@ -1651,12 +1697,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         References
         ----------
-        [1] Ankan, Ankur, and Johannes Textor. "A simple unified approach to testing high-dimensional
-        conditional independences for categorical and ordinal data." Proceedings of the AAAI Conference
-        on Artificial Intelligence.
+        - :cite:p:`ankan_textor_2023`
         """
-
-        from pgmpy.estimators.CITests import pillai_trace
 
         # If edges is None, compute for all edges in the DAG
         if edges is None:
@@ -1671,6 +1713,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             raise ValueError(
                 "edges parameter must be either None, a 2-tuple (X, Y), or a list of 2-tuples [(X1, Y1), (X2, Y2), ...]"
             )
+
+        ci_test = get_ci_test(test=ci_test, data=data)
 
         strengths = {}
         skipped_edges = []
@@ -1690,13 +1734,13 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             conditioning_set = set(pa_Y) - {x, y}
 
             # Run CI test and get effect size
-            effect_size, _ = pillai_trace(X=x, Y=y, Z=list(conditioning_set), data=data, boolean=False)
+            ci_test.run_test(X=x, Y=y, Z=tuple(conditioning_set))
 
             # Store the edge strength
-            strengths[edge] = effect_size
+            strengths[edge] = ci_test.effect_size_
 
             # store the values in the graph as well
-            self.edges[edge]["strength"] = effect_size
+            self.edges[edge]["strength"] = ci_test.effect_size_
 
         if skipped_edges:
             logger.warning(

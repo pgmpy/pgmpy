@@ -50,11 +50,8 @@ class Adjustment(_BaseIdentification):
 
     References
     ----------
-    [1] Perkovi, Emilija, et al. "Complete graphical characterization and
-        construction of adjustment sets in Markov equivalence classes of ancestral
-        graphs." Journal of Machine Learning Research.
-    [2] Witte, Janine, et al. "On efficient adjustment in causal graphs."
-        Journal of Machine Learning Research.
+    - :cite:p:`perkovic_2018`
+    - :cite:p:`witte_2022`
     """
 
     def __init__(self, variant="minimal"):
@@ -102,9 +99,7 @@ class Adjustment(_BaseIdentification):
 
         References
         ----------
-        [1] Perkovic, Emilija, et al. "Complete graphical characterization and
-            construction of adjustment sets in Markov equivalence classes of
-            ancestral graphs." The Journal of Machine Learning Research.
+        - :cite:p:`perkovic_2018`
         """
         # TODO: Make this work for all graph types.
         model = causal_graph if inplace else causal_graph.copy()

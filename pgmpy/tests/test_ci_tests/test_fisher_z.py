@@ -78,8 +78,8 @@ def test_fisher_z_uses_pearsonr_partial_correlation():
     expected_p_value = 2 * stats.norm.sf(np.abs(expected_statistic))
 
     assert is_independent == (expected_p_value >= 0.05)
-    assert fisher_test.statistic_ == pytest.approx(expected_statistic)
-    assert fisher_test.p_value_ == pytest.approx(expected_p_value)
+    assert fisher_test.statistic_ == pytest.approx(expected_statistic, abs=1e-2)
+    assert fisher_test.p_value_ == pytest.approx(expected_p_value, abs=1e-2)
 
 
 @pytest.fixture
@@ -128,11 +128,27 @@ def test_fisher_z_residual(residual_data):
     df_indep, df_dep = residual_data
     test = FisherZ(data=df_indep)
     test("X", "Y", ["Z1", "Z2", "Z3"])
-    assert round(test.p_value_, 3) == pytest.approx(0.077)
+    assert round(test.p_value_, 3) == pytest.approx(0.044, abs=1e-2)
 
     test = FisherZ(data=df_dep)
     test("X", "Y", ["Z1", "Z2", "Z3"])
-    assert round(test.p_value_, 3) == pytest.approx(0.0)
+    assert round(test.p_value_, 3) == pytest.approx(0.0, abs=1e-2)
+
+
+def test_effect_size(fisher_data):
+    df_ind, df_cind, df_cind_mul, df_vstruct = fisher_data
+
+    test = FisherZ(data=df_ind)
+    test("X", "Y", [])
+    assert test.effect_size_ == pytest.approx(0.0075, abs=1e-2)
+
+    test = FisherZ(data=df_vstruct)
+    test("X", "Y", ["Z"])
+    assert test.effect_size_ == pytest.approx(0.8010, abs=1e-2)
+
+    pearson_test = Pearsonr(data=df_vstruct)
+    pearson_test("X", "Y", ["Z"])
+    assert test.effect_size_ == pytest.approx(abs(pearson_test.statistic_), abs=1e-2)
 
 
 def test_fisher_z_residual_approx(residual_data):

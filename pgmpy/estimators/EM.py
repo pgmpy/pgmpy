@@ -1,3 +1,4 @@
+import warnings
 from itertools import chain, product
 from math import log
 from typing import Any
@@ -65,6 +66,13 @@ class ExpectationMaximization(ParameterEstimator):
         data: pd.DataFrame,
         **kwargs,
     ):
+        warnings.warn(
+            "`pgmpy.estimators.ExpectationMaximization` is deprecated and will be removed in v1.3.0. "
+            "Please use `pgmpy.parameter_estimator.DiscreteEM` instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
+
         if not isinstance(model, (DAG, DiscreteBayesianNetwork)):
             raise NotImplementedError("Expectation Maximization is only implemented for DAG or DiscreteBayesianNetwork")
 

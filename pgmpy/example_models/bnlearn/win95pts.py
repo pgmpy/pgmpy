@@ -5,7 +5,7 @@ class Win95pts(DiscreteMixin, _BaseExampleModel):
     """
     References
     ----------
-    ..[1] Windows 95 printer troubleshooting network. bnlearn Bayesian Network Repository.
+    - :cite:p:`bnlearn_win95pts`
     """
 
     _tags = {

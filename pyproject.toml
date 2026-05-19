@@ -1,6 +1,6 @@
 [project]
 name = "pgmpy"
-version = "1.1.0"
+version = "1.1.2"
 description = "Python Toolkit for Causal and Probabilistic Reasoning"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -62,6 +62,7 @@ tests = [
   "black",
   "pre-commit",
   "jsonschema",
+  "sempler",
 ]
 docs = [
   "sphinx>=5.0",
@@ -74,6 +75,7 @@ docs = [
   "sphinxext-opengraph",
   "sphinx_sitemap",
   "myst_parser",
+  "sphinxcontrib-bibtex",
 ]
 all = [
   "pgmpy[optional,tests,docs]",

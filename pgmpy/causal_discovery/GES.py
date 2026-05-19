@@ -88,9 +88,8 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
 
     References
     ----------
-    .. [1] Chickering, David Maxwell. "Optimal structure identification with
-           greedy search." Journal of machine learning research 3.Nov (2002):
-           507-554.
+    - :cite:p:`chickering_2002b`
+    - https://github.com/juangamella/ges
     """
 
     def __init__(
@@ -158,7 +157,8 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
         new_model = current_model.copy()
         new_model.add_edge(u, v)
 
-        remove_edges = [(t, v) for t in T]
+        # Orient v - t as t -> v for all t in T
+        remove_edges = [(v, t) for t in T]
         new_model.remove_edges_from(remove_edges)
 
         new_model.calibrate_directed_undirected_edges()

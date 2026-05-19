@@ -13,6 +13,10 @@ If you have used AI/LLMs for any assistance, please answer the following questio
 - [ ] Have you reviewed our [AI usage policy](https://github.com/pgmpy/pgmpy/blob/dev/Contributing.md#ai-usage-policy)?
 - [ ] Are you able to fully explain your changes? We expect you to fully understand the algorithm and take full responsibility for any changes in this PR.  
 
+- Please list the AI tool(s) used, along with the model and its version used.
+
+[Please replace this with your answer]
+
 - Please describe in **detail** how and what you used AI assistance for? Please outline your whole workflow with the AI tool.
 
 [Please replace this with your answer]

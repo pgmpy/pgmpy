@@ -5,9 +5,7 @@ class MBias(DAGMixin, _BaseExampleModel):
     """
     References
     ----------
-    ..[1] Acid, S., & De Campos, L. M. (1996). An algorithm for finding minimum d-separating sets in belief networks.
-    Proceedings of the Twelfth International Conference on Uncertainty in Artificial Intelligence, 3–10. Presented at
-    the Portland, OR. San Francisco, CA, USA: Morgan Kaufmann Publishers Inc.
+    - :cite:p:`acid_decampos_1996`
     """
 
     _tags = {

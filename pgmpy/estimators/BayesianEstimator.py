@@ -1,4 +1,5 @@
 import numbers
+import warnings
 from collections.abc import Hashable
 from itertools import chain
 from typing import Any
@@ -26,6 +27,13 @@ class BayesianEstimator(ParameterEstimator):
         data: pd.DataFrame,
         **kwargs,
     ):
+        warnings.warn(
+            "`pgmpy.estimators.BayesianEstimator` is deprecated and will be removed in v1.3.0. "
+            "Please use `pgmpy.parameter_estimator.DiscreteBayesianEstimator` instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
+
         if not isinstance(model, (DAG, DiscreteBayesianNetwork)):
             raise NotImplementedError(
                 "Bayesian Parameter Estimation is only implemented for DAG or DiscreteBayesianNetwork"

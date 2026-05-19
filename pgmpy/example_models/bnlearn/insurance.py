@@ -5,8 +5,7 @@ class Insurance(DiscreteMixin, _BaseExampleModel):
     """
     References
     ----------
-    ..[1] J. Binder, D. Koller, S. Russell, and K. Kanazawa. Adaptive Probabilistic Networks with Hidden
-    Variables. Machine Learning, 29(2-3):213-244, 1997.
+    - :cite:p:`binder_1997`
     """
 
     _tags = {

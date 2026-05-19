@@ -16,7 +16,8 @@ from pgmpy.utils import llm_pairwise_orient
 class ExpertInLoop(StructureEstimator):
     def __init__(self, data: pd.DataFrame | None = None, **kwargs):
         warnings.warn(
-            "ExpertInLoop is deprecated. Please use pgmpy.causal_discovery.ExpertInLoop instead.",
+            """ExpertInLoop is deprecated and will be removed in v1.3.0. Please use pgmpy.causal_discovery.ExpertInLoop
+            instead.""",
             FutureWarning,
             stacklevel=2,
         )
