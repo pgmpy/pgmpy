@@ -12,6 +12,7 @@ from .pearsonr import Pearsonr
 from .pearsonr_equivalence import PearsonrEquivalence
 from .pillai_trace import PillaiTrace
 from .power_divergence import PowerDivergence
+from .projected_distance_covariance import ProjectedDistanceCovariance
 from .roys_largest_root import RoysLargestRoot
 from .wilks_lambda import WilksLambda
 
@@ -31,6 +32,7 @@ __all__ = [
     "PearsonrEquivalence",
     "PillaiTrace",
     "PowerDivergence",
+    "ProjectedDistanceCovariance",
     "RoysLargestRoot",
     "WilksLambda",
 ]
