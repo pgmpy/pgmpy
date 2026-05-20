@@ -28,11 +28,17 @@ class XDSLReader:
 
     Examples
     --------
-    >>> # AsiaDiagnosis.xdsl is an example file downloadable from
-    >>> # https://repo.bayesfusion.com/bayesbox.html
-    >>> # The file has been modified slightly to adhere to XDSLReader requirements
     >>> from pgmpy.readwrite import XDSLReader
-    >>> reader = XDSLReader("AsiaDiagnosis.xdsl")
+    >>> xml = '''<smile version="1.0" id="TestApp">
+    ... <nodes>
+    ...   <cpt id="A">
+    ...     <state id="true"/>
+    ...     <state id="false"/>
+    ...     <probabilities>0.5 0.5</probabilities>
+    ...   </cpt>
+    ... </nodes>
+    ... </smile>'''
+    >>> reader = XDSLReader(string=xml)
     >>> model = reader.get_model()
 
     References
@@ -62,9 +68,19 @@ class XDSLReader:
 
         Examples
         --------
-        >>> reader = XDSLReader("AsiaDiagnosis.xdsl")
-        >>> reader.get_variables()
-        ['asia', 'tub', 'smoke', 'lung', 'either', 'xray', 'bronc', 'dysp']
+        >>> from pgmpy.readwrite import XDSLReader
+        >>> xml = '''<smile version="1.0" id="TestApp">
+        ... <nodes>
+        ...   <cpt id="A">
+        ...     <state id="t"/><state id="f"/>
+        ...     <probabilities>0.5 0.5</probabilities>
+        ...   </cpt>
+        ... </nodes>
+        ... </smile>'''
+        >>> reader = XDSLReader(string=xml)
+        >>> result = reader.get_variables()
+        >>> isinstance(result, list)
+        True
         """
         variables = [variable.attrib["id"] for variable in self.cpt_elements]
         for var in variables:
@@ -82,17 +98,23 @@ class XDSLReader:
 
         Examples
         --------
-        >>> reader = XDSLReader("AsiaDiagnosis.xdsl")
-        >>> reader.get_parents()
-        {'asia': [],
-        'tub': ['asia'],
-        'smoke': [],
-        'lung': ['smoke'],
-        'either': ['tub', 'lung'],
-        'xray': ['either'],
-        'bronc': ['smoke'],
-        'dysp': ['either', 'bronc']
-        }
+        >>> from pgmpy.readwrite import XDSLReader
+        >>> xml = '''<smile version="1.0" id="TestApp">
+        ... <nodes>
+        ...   <cpt id="A">
+        ...     <state id="t"/><state id="f"/>
+        ...     <probabilities>0.5 0.5</probabilities>
+        ...   </cpt>
+        ...   <cpt id="B">
+        ...     <state id="t"/><state id="f"/>
+        ...     <parents>A</parents>
+        ...     <probabilities>0.5 0.5 0.5 0.5</probabilities>
+        ...   </cpt>
+        ... </nodes>
+        ... </smile>'''
+        >>> reader = XDSLReader(string=xml)
+        >>> reader.get_parents()['B']
+        ['A']
         """
         variable_parents = {}
         for node in self.cpt_elements:
@@ -110,16 +132,24 @@ class XDSLReader:
 
         Examples
         --------
-        >>> reader = XDSLReader("AsiaDiagnosis.xdsl")
-        >>> reader.get_edges()
-        [['asia', 'tub'],
-        ['smoke', 'lung'],
-        ['tub', 'either'],
-        ['lung', 'either'],
-        ['either', 'xray'],
-        ['smoke', 'bronc'],
-        ['either', 'dysp'],
-        ['bronc', 'dysp']]
+        >>> from pgmpy.readwrite import XDSLReader
+        >>> xml = '''<smile version="1.0" id="TestApp">
+        ... <nodes>
+        ...   <cpt id="A">
+        ...     <state id="t"/><state id="f"/>
+        ...     <probabilities>0.5 0.5</probabilities>
+        ...   </cpt>
+        ...   <cpt id="B">
+        ...     <state id="t"/><state id="f"/>
+        ...     <parents>A</parents>
+        ...     <probabilities>0.5 0.5 0.5 0.5</probabilities>
+        ...   </cpt>
+        ... </nodes>
+        ... </smile>'''
+        >>> reader = XDSLReader(string=xml)
+        >>> edges = reader.get_edges()
+        >>> isinstance(edges, list)
+        True
         """
         edge_list = [[value, key] for key in self.variable_parents for value in self.variable_parents[key]]
         return edge_list
@@ -130,18 +160,18 @@ class XDSLReader:
 
         Examples
         --------
-        >>> reader = XDSLReader("AsiaDiagnosis.xdsl")
-        >>> reader.get_states()
-        {'asia': ['no', 'yes'],
-        'tub': ['no', 'yes'],
-        'smoke': ['no', 'yes'],
-        'lung': ['no', 'yes'],
-        'either': ['Nothing',
-        'CancerORTuberculosis'],
-        'xray': ['Normal', 'Abnormal'],
-        'bronc': ['Absent', 'Present'], '
-        dysp': ['Absent', 'Present']
-        }
+        >>> from pgmpy.readwrite import XDSLReader
+        >>> xml = '''<smile version="1.0" id="TestApp">
+        ... <nodes>
+        ...   <cpt id="A">
+        ...     <state id="t"/><state id="f"/>
+        ...     <probabilities>0.5 0.5</probabilities>
+        ...   </cpt>
+        ... </nodes>
+        ... </smile>'''
+        >>> reader = XDSLReader(string=xml)
+        >>> reader.get_states()['A']
+        ['t', 'f']
         """
         variable_states = {}
         for cpt in self.cpt_elements:
@@ -154,17 +184,19 @@ class XDSLReader:
 
         Examples
         --------
-        >>> reader = XDSLReader("AsiaDiagnosis.xdsl")
-        >>> reader.get_values()
-        {'asia': [[0.99], [0.01]],
-        'tub': [[0.99, 0.95], [0.01, 0.05]],
-        'smoke': [[0.5], [0.5]],
-        'lung': [[0.99, 0.9], [0.01, 0.1]],
-        'either': [[1.0, 1.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]],
-        'xray': [[0.95, 0.02], [0.05, 0.98]],
-        'bronc': [[0.7, 0.4], [0.3, 0.6]],
-        'dysp': [[0.9, 0.2, 0.3, 0.1], [0.1, 0.8, 0.7, 0.9]]
-        }
+        >>> from pgmpy.readwrite import XDSLReader
+        >>> xml = '''<smile version="1.0" id="TestApp">
+        ... <nodes>
+        ...   <cpt id="A">
+        ...     <state id="t"/><state id="f"/>
+        ...     <probabilities>0.5 0.5</probabilities>
+        ...   </cpt>
+        ... </nodes>
+        ... </smile>'''
+        >>> reader = XDSLReader(string=xml)
+        >>> vals = reader.get_values()
+        >>> isinstance(vals, dict)
+        True
         """
         variable_CPD = {}
         for cpt in self.cpt_elements:
@@ -196,7 +228,15 @@ class XDSLReader:
         Examples
         --------
         >>> from pgmpy.readwrite import XDSLReader
-        >>> reader = XDSLReader("AsiaDiagnosis.xdsl")
+        >>> xml = '''<smile version="1.0" id="TestApp">
+        ... <nodes>
+        ...   <cpt id="A">
+        ...     <state id="t"/><state id="f"/>
+        ...     <probabilities>0.5 0.5</probabilities>
+        ...   </cpt>
+        ... </nodes>
+        ... </smile>'''
+        >>> reader = XDSLReader(string=xml)
         >>> model = reader.get_model()
         """
         model = DiscreteBayesianNetwork()
@@ -248,11 +288,13 @@ class XDSLWriter:
 
     Examples
     ---------
+    >>> import tempfile
     >>> from pgmpy.readwrite import XDSLWriter
     >>> from pgmpy.example_models import load_model
     >>> asia = load_model("bnlearn/asia")
     >>> writer = XDSLWriter(asia)
-    >>> writer.write("asia.xdsl")
+    >>> with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".xdsl") as f:
+    ...     writer.write(f.name)
 
     References
     ----------
@@ -297,16 +339,13 @@ class XDSLWriter:
 
         Examples
         --------
+        >>> from pgmpy.readwrite import XDSLWriter
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/asia")
         >>> writer = XDSLWriter(model)
-        >>> writer.get_variables()
-        {'asia': <Element 'cpt' at 0x000001DC6BFA1350>,
-        'tub': <Element 'cpt' at 0x000001DC6BFA35B0>,
-        'smoke': <Element 'cpt' at 0x000001DC6BFA3560>,
-        'lung': <Element 'cpt' at 0x000001DC6BFA12B0>,
-        'bronc': <Element 'cpt' at 0x000001DC6BFA1260>,
-        'either': <Element 'cpt' at 0x000001DC6BFA3510>,
-        'xray': <Element 'cpt' at 0x000001DC6BFA34C0>,
-        'dysp': <Element 'cpt' at 0x000001DC6BFA1210>}
+        >>> vars_dict = writer.get_variables()
+        >>> isinstance(vars_dict, dict)
+        True
         """
         variable_tag = {}
         nodes_elem = etree.SubElement(self.root, "nodes")
@@ -328,16 +367,13 @@ class XDSLWriter:
 
         Examples
         -------
+        >>> from pgmpy.readwrite import XDSLWriter
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/asia")
         >>> writer = XDSLWriter(model)
-        >>> writer.get_values()
-        {'asia': <TabularCPD representing P(asia:2) at 0x1885817c830>,
-        'tub': <TabularCPD representing P(tub:2 | asia:2) at 0x1885a7e57c0>,
-        'smoke': <TabularCPD representing P(smoke:2) at 0x18858327950>,
-        'lung': <TabularCPD representing P(lung:2 | smoke:2) at 0x188583278f0>,
-        'bronc': <TabularCPD representing P(bronc:2 | smoke:2) at 0x18855e05610>,
-        'either': <TabularCPD representing P(either:2 | lung:2, tub:2) at 0x188582792e0>,
-        'xray': <TabularCPD representing P(xray:2 | either:2) at 0x1885a7e5910>,
-        'dysp': <TabularCPD representing P(dysp:2 | bronc:2, either:2) at 0x18858278b90>}
+        >>> cpds_dict = writer.get_cpds()
+        >>> isinstance(cpds_dict, dict)
+        True
         """
         outcome_tag = {}
         cpds = self.model.get_cpds()
@@ -430,11 +466,13 @@ class XDSLWriter:
 
         Examples
         --------
+        >>> import tempfile
         >>> from pgmpy.readwrite import XDSLWriter
         >>> from pgmpy.example_models import load_model
         >>> model = load_model("bnlearn/asia")
         >>> writer = XDSLWriter(model)
-        >>> writer.write("asia.xdsl")
+        >>> with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".xdsl") as f:
+        ...     writer.write(f.name)
         """
         xml_str = etree.tostring(self.root, encoding=self.encoding)
         parsed = md.parseString(xml_str)
