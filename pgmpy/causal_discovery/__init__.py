@@ -4,6 +4,7 @@ from .GES import GES
 from .HillClimbSearch import HillClimbSearch
 from .PC import PC
 from .SortnRegress import SortnRegress
+from .TOPIC import TOPIC
 
 __all__ = [
     "ExpertInLoop",
@@ -12,4 +13,5 @@ __all__ = [
     "HillClimbSearch",
     "PC",
     "SortnRegress",
+    "TOPIC",
 ]
