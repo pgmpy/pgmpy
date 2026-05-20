@@ -295,52 +295,73 @@ def load_dataset(name: str) -> Dataset:
 
 def list_datasets(**filter_tags) -> list[str]:
     """
-    Returns a list of all available datasets, optionally filtered by a query string.
+    Returns a list of all available datasets, optionally filtered.
+
+    Supports both exact matching and comparator-based suffixes for numeric
+    tags (``n_variables``, ``n_samples``).
+
+    Available tags
+    --------------
+    - n_variables          : int
+    - n_samples            : int
+    - has_ground_truth     : bool
+    - has_expert_knowledge : bool
+    - has_missing_data     : bool
+    - has_index_col        : bool
+    - is_simulated         : bool
+    - is_interventional    : bool
+    - is_discrete          : bool
+    - is_continuous        : bool
+    - is_mixed             : bool
+    - is_ordinal           : bool
+
+    Comparator suffixes (for numeric tags)
+    ---------------------------------------
+    ``__gt``   strictly greater than     ``n_samples__gt=1000``
+    ``__gte``  greater than or equal to  ``n_variables__gte=5``
+    ``__lt``   strictly less than        ``n_samples__lt=500``
+    ``__lte``  less than or equal to     ``n_variables__lte=20``
+    ``__ne``   not equal to              ``n_variables__ne=10``
+    ``__in``   value in collection       ``n_variables__in=[5, 10, 15]``
+
+    Filters are combined with logical AND.
 
     Parameters
     ----------
-    **filter_tags : optional arguments
-        If specified, returns only datasets matching the provided tag filters. Any dataset tag can be used as a filter.
-        Available tags:
-            - n_variables
-            - n_samples
-            - has_ground_truth
-            - has_expert_knowledge
-            - has_missing_data
-            - is_simulated
-            - is_interventional
-            - is_discrete
-            - is_continuous
-            - is_mixed
-            - is_ordinal
+    **filter_tags
+        Tag-based filter criteria (see above).
 
     Returns
     -------
     list of str
-        A sorted list of available dataset names.
+        Sorted list of dataset names matching all supplied criteria.
 
     Examples
     --------
     >>> from pgmpy.datasets import list_datasets
     >>> list_datasets()
-    ['abalone_continuous', 'abalone_mixed', ..., 'sachs_continuous', ...]
-
+    ['abalone_continuous', 'abalone_mixed', ...]
     >>> list_datasets(is_discrete=True, has_ground_truth=True)
     ['sachs_discrete']
+    >>> list_datasets(n_samples__gt=1000)
+    [...]
+    >>> list_datasets(n_variables__gte=5, n_variables__lte=20)
+    [...]
     """
+    from pgmpy.utils.filter_utils import apply_comparator_filters, split_filter_tags
+
     valid_tags = set(_BaseDataset._tags.keys())
 
-    if invalid_tags := set(filter_tags.keys()) - valid_tags:
-        raise ValueError(
-            f"Unrecognized filter argument(s): {sorted(invalid_tags)}. Valid filter tags are: {sorted(valid_tags)}."
-        )
+    exact_tags, comparator_filters = split_filter_tags(filter_tags, valid_tags)
 
     all_datasets = all_objects(
         object_types=_BaseDataset,
         package_name="pgmpy.datasets",
         return_names=False,
-        filter_tags=filter_tags,
+        filter_tags=exact_tags,
     )
+
+    all_datasets = apply_comparator_filters(all_datasets, comparator_filters)
 
     dataset_names = [cls.get_class_tag("name") for cls in all_datasets if cls.get_class_tag("name") is not None]
 
