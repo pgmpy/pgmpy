@@ -71,5 +71,6 @@ pgmpy/utils/state_name.py
 pgmpy/readwrite/XMLBeliefNetwork.py
 pgmpy/readwrite/BIF.py
 pgmpy/readwrite/NET.py
+pgmpy/readwrite/PomdpX.py
 pgmpy/readwrite/UAI.py
 pgmpy/readwrite/XMLBIF.py

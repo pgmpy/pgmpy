@@ -39,16 +39,17 @@ class PomdpXReader:
 
         Examples
         --------
-        >>> reader = PomdpXReader("Test_Pomdpx.xml")
-        >>> reader.get_description()
-        'RockSample problem for map size 1 x 3.
-        Rock is at 0, Rover’s initial position is at 1.
-        Exit is at 2.'
-        >>> reader = PomdpXReader("Test_PomdpX.xml")
-        >>> reader.get_description()
-        'RockSample problem for map size 1 x 3.
-         Rock is at 0, Rover’s initial position is at 1.
-         Exit is at 2.'
+        >>> xml = '''
+        ... <pomdpx>
+        ...   <Description>RockSample problem for map size 1 x 3.
+        ...     Rock is at 0, Rover’s initial position is at 1.
+        ...     Exit is at 2.
+        ...   </Description>
+        ... </pomdpx>
+        ... '''
+        >>> reader = PomdpXReader(string=xml)
+        >>> " ".join(reader.get_description().split())
+        'RockSample problem for map size 1 x 3. Rock is at 0, Rover’s initial position is at 1. Exit is at 2.'
         """
         return self.network.find("Description").text
 
@@ -58,7 +59,7 @@ class PomdpXReader:
 
         Example
         --------
-        >>> reader = PomdpXReader("Test_PomdpX.xml")
+        >>> reader = PomdpXReader(string="<pomdpx><Discount>0.95</Discount></pomdpx>")
         >>> reader.get_discount()
         0.95
         """
@@ -70,24 +71,26 @@ class PomdpXReader:
 
         Example
         -------
-        >>> reader = PomdpXReader("pomdpx.xml")
-        >>> reader.get_variables()
-        {'StateVar': [
-                        {'vnamePrev': 'rover_0',
-                         'vnameCurr': 'rover_1',
-                         'ValueEnum': ['s0', 's1', 's2'],
-                         'fullyObs': True},
-                        {'vnamePrev': 'rock_0',
-                         'vnameCurr': 'rock_1',
-                         'fullyObs': False,
-                         'ValueEnum': ['good', 'bad']}],
-                        'ObsVar': [{'vname': 'obs_sensor',
-                                    'ValueEnum': ['ogood', 'obad']}],
-                        'RewardVar': [{'vname': 'reward_rover'}],
-                        'ActionVar': [{'vname': 'action_rover',
-                                       'ValueEnum': ['amw', 'ame',
-                                                     'ac', 'as']}]
-                        }
+        >>> xml = '''
+        ... <pomdpx>
+        ...   <Variable>
+        ...     <StateVar vnamePrev="rover_0" vnameCurr="rover_1" fullyObs="true">
+        ...       <NumValues>3</NumValues>
+        ...     </StateVar>
+        ...     <StateVar vnamePrev="rock_0" vnameCurr="rock_1">
+        ...       <ValueEnum>good bad</ValueEnum>
+        ...     </StateVar>
+        ...     <ActionVar vname="action_rover">
+        ...       <ValueEnum>amw ame ac as</ValueEnum>
+        ...     </ActionVar>
+        ...   </Variable>
+        ... </pomdpx>
+        ... '''
+        >>> variables = PomdpXReader(string=xml).get_variables()
+        >>> [var["vnameCurr"] for var in variables["StateVar"]]
+        ['rover_1', 'rock_1']
+        >>> variables["ActionVar"][0]["ValueEnum"]
+        ['amw', 'ame', 'ac', 'as']
         """
         self.variables = defaultdict(list)
         for variable in self.network.findall("Variable"):
@@ -137,18 +140,35 @@ class PomdpXReader:
 
         Examples
         --------
-        >>> reader = PomdpXReader("Test_PomdpX.xml")
-        >>> reader.get_initial_beliefs()
-        [{'Var': 'rover_0',
-          'Parent': ['null'],
-          'Type': 'TBL',
-          'Parameter': [{'Instance': ['-'],
-          'ProbTable': ['0.0', '1.0', '0.0']}]
-         },
-         {'Var': '',
-          '...': ...,'
-          '...': '...',
-          }]
+        >>> xml = '''
+        ... <pomdpx>
+        ...   <InitialStateBelief>
+        ...     <CondProb>
+        ...       <Var>rover_0</Var>
+        ...       <Parent>null</Parent>
+        ...       <Parameter type="TBL">
+        ...         <Entry>
+        ...           <Instance>-</Instance>
+        ...           <ProbTable>0.0 1.0 0.0</ProbTable>
+        ...         </Entry>
+        ...       </Parameter>
+        ...     </CondProb>
+        ...     <CondProb>
+        ...       <Var>rock_0</Var>
+        ...       <Parent>null</Parent>
+        ...       <Parameter type="TBL">
+        ...         <Entry>
+        ...           <Instance>-</Instance>
+        ...           <ProbTable>uniform</ProbTable>
+        ...         </Entry>
+        ...       </Parameter>
+        ...     </CondProb>
+        ...   </InitialStateBelief>
+        ... </pomdpx>
+        ... '''
+        >>> beliefs = PomdpXReader(string=xml).get_initial_beliefs()
+        >>> [belief["Var"] for belief in beliefs]
+        ['rover_0', 'rock_0']
         """
         initial_state_belief = []
         for variable in self.network.findall("InitialStateBelief"):
@@ -173,18 +193,25 @@ class PomdpXReader:
 
         Example
         --------
-        >>> reader = PomdpXReader("Test_PomdpX.xml")
-        >>> reader.get_state_transition_function()
-        [{'Var': 'rover_1',
-          'Parent': ['action_rover', 'rover_0'],
-          'Type': 'TBL',
-          'Parameter': [{'Instance': ['amw', 's0', 's2'],
-                         'ProbTable': ['1.0']},
-                         {'Instance': ['amw', 's1', 's0'],
-                         'ProbTable': ['1.0']},
-                         ...
-                        ]
-        }]
+        >>> xml = '''
+        ... <pomdpx>
+        ...   <StateTransitionFunction>
+        ...     <CondProb>
+        ...       <Var>rover_1</Var>
+        ...       <Parent>action_rover rover_0</Parent>
+        ...       <Parameter type="TBL" />
+        ...     </CondProb>
+        ...     <CondProb>
+        ...       <Var>rock_1</Var>
+        ...       <Parent>action_rover rover_0 rock_0</Parent>
+        ...       <Parameter type="TBL" />
+        ...     </CondProb>
+        ...   </StateTransitionFunction>
+        ... </pomdpx>
+        ... '''
+        >>> transitions = PomdpXReader(string=xml).get_state_transition_function()
+        >>> [transition["Var"] for transition in transitions]
+        ['rover_1', 'rock_1']
         """
         state_transition_function = []
         for variable in self.network.findall("StateTransitionFunction"):
@@ -209,16 +236,19 @@ class PomdpXReader:
 
         Example
         --------
-        >>> reader = PomdpXReader("Test_PomdpX.xml")
-        >>> reader.get_obs_function()
-        [{'Var': 'obs_sensor',
-              'Parent': ['action_rover', 'rover_1', 'rock_1'],
-              'Type': 'TBL',
-              'Parameter': [{'Instance': ['amw', '*', '*', '-'],
-                             'ProbTable': ['1.0', '0.0']},
-                         ...
-                        ]
-        }]
+        >>> xml = '''
+        ... <pomdpx>
+        ...   <ObsFunction>
+        ...     <CondProb>
+        ...       <Var>obs_sensor</Var>
+        ...       <Parent>action_rover rover_1 rock_1</Parent>
+        ...       <Parameter type="TBL" />
+        ...     </CondProb>
+        ...   </ObsFunction>
+        ... </pomdpx>
+        ... '''
+        >>> PomdpXReader(string=xml).get_obs_function()[0]["Var"]
+        'obs_sensor'
         """
         obs_function = []
         for variable in self.network.findall("ObsFunction"):
@@ -243,16 +273,19 @@ class PomdpXReader:
 
         Example
         --------
-        >>> reader = PomdpXReader("Test_PomdpX.xml")
-        >>> reader.get_reward_function()
-        [{'Var': 'reward_rover',
-              'Parent': ['action_rover', 'rover_0', 'rock_0'],
-              'Type': 'TBL',
-              'Parameter': [{'Instance': ['ame', 's1', '*'],
-                             'ValueTable': ['10']},
-                         ...
-                        ]
-        }]
+        >>> xml = '''
+        ... <pomdpx>
+        ...   <RewardFunction>
+        ...     <Func>
+        ...       <Var>reward_rover</Var>
+        ...       <Parent>action_rover rover_0 rock_0</Parent>
+        ...       <Parameter type="TBL" />
+        ...     </Func>
+        ...   </RewardFunction>
+        ... </pomdpx>
+        ... '''
+        >>> PomdpXReader(string=xml).get_reward_function()[0]["Var"]
+        'reward_rover'
         """
         reward_function = []
         for variable in self.network.findall("RewardFunction"):
