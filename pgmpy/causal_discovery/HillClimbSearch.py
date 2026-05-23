@@ -285,13 +285,23 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
 
         return self
 
-    def summary(self):
+    def summary(self, summary_width: int = 30):
         if not hasattr(self, "fit_info_"):
             raise ValueError("Model must be fit before calling summary().")
 
         lines = []
-        self.fit_info_.summary(lines)
+        self.fit_info_.summary(lines, summary_width=summary_width)
 
+        # Structure
+        lines.append("\nStructure:")
+        self.fit_info_.add_field("Total Edges", self.fit_info_.n_edges, lines, line_width=summary_width)
+        if self.fit_info_.n_undirected is not None:
+            self.fit_info_.add_field("Directed Edges", self.fit_info_.n_directed, lines, line_width=summary_width)
+            self.fit_info_.add_field("Undirected Edges", self.fit_info_.n_undirected, lines, line_width=summary_width)
+
+        self.fit_info_.add_field(
+            "Average degree", (self.fit_info_.n_edges / self.fit_info_.n_variables), lines, line_width=summary_width
+        )
         available_score_methods = {
             "continuous": [
                 BICGauss,
@@ -319,7 +329,9 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
 
         for score_cls in all_scores:
             score_val = score_cls(self.fit_info_.dataset).score(self.causal_graph_)
-            self.fit_info_.add_field(f"{score_cls.__name__} Score", round(score_val, 3), lines)
+            self.fit_info_.add_field(
+                f"{score_cls.__name__} Score", round(score_val, 3), lines, line_width=summary_width
+            )
 
         if self.fit_info_.graph_type == "PDAG":
             dag = self.causal_graph_.to_dag()
@@ -330,6 +342,6 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
             if metric_cls.__name__ == "ImpliedCIs" or metric_cls.__name__ == "StructureScore":
                 continue
             score_val = metric_cls().evaluate(self.fit_info_.dataset, dag)
-            self.fit_info_.add_field(f"{metric_cls.__name__}", round(score_val, 3), lines)
+            self.fit_info_.add_field(f"{metric_cls.__name__}", round(score_val, 3), lines, line_width=summary_width)
 
         return "\n".join(lines)

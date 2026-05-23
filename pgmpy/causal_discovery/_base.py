@@ -1,3 +1,4 @@
+import textwrap
 from collections import deque
 from collections.abc import Callable, Generator, Hashable
 from dataclasses import dataclass
@@ -590,7 +591,6 @@ class CausalDiscoverySummary:
     n_variables: int = None
     dataset_type: str = None
     dataset: pd.DataFrame = None
-    # variable_types: dict = field(default_factory=dict)
 
     # Graph info
     graph_type: str = None
@@ -598,25 +598,35 @@ class CausalDiscoverySummary:
     n_directed: int = None
     n_undirected: int = None
 
-    def summary(self, lines):
+    # Constraints info
+    significance_level: float = None
+    enforce_expert_knowledge: str = None
+
+    def summary(self, lines, summary_width=30):
         title = "\nCausal Discovery Summary"
         lines.append(title)
         lines.append("=" * len(title))
         lines.append("")
 
         # Overview
-        self.add_field("Algorithm", self.algorithm, lines)
-        self.add_field("Samples", self.n_samples, lines)
-        self.add_field("Variables", self.n_variables, lines)
-        self.add_field("Variable Types", self.dataset_type, lines)
-        self.add_field("Graph Type", self.graph_type, lines)
+        self.add_field("Algorithm", self.algorithm, lines, line_width=summary_width)
+        self.add_field("Samples", self.n_samples, lines, line_width=summary_width)
+        self.add_field("Variables", self.n_variables, lines, line_width=summary_width)
+        self.add_field("Variable Types", self.dataset_type, lines, line_width=summary_width)
+        self.add_field("Graph Type", self.graph_type, lines, line_width=summary_width)
 
-        # Structure
-        lines.append("\nStructure:")
-        self.add_field("Total Edges", self.n_edges, lines)
-        if self.n_undirected is not None:
-            self.add_field("Directed Edges", self.n_directed, lines)
-            self.add_field("Undirected Edges", self.n_undirected, lines)
+    def add_field(self, description, value, lines, line_width=30):
+        if isinstance(value, (float, np.floating)):
+            value = round(value, 3)
+        value = str(value)
 
-    def add_field(self, description, value, lines):
-        lines.append(f"{description:<25}:{value:>25}")
+        desc_lines = textwrap.wrap(description, width=line_width) or [""]
+        value_lines = textwrap.wrap(value, width=line_width) or [""]
+
+        n_lines = max(len(desc_lines), len(value_lines))
+        desc_lines.extend([""] * (n_lines - len(desc_lines)))
+        value_lines.extend([""] * (n_lines - len(value_lines)))
+
+        lines.append(f"{desc_lines[0]:<{line_width}} : {value_lines[0]:>{line_width}}")
+        for d, v in zip(desc_lines[1:], value_lines[1:]):
+            lines.append(f"{d:<{line_width}}  {v:>{line_width}}")
