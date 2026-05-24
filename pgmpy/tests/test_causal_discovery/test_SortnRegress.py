@@ -5,7 +5,7 @@ from sklearn.linear_model import LassoLarsIC, LinearRegression
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.base import DAG
-from pgmpy.causal_discovery import SortnRegress
+from pgmpy.causal_discovery import SortnRegress, Varsortability
 
 
 # Reference implementation in scriddie/varsortability and CausalDisco,
@@ -139,3 +139,44 @@ class TestSortnRegressVsReference:
 
         assert true_edges <= ref_edges
         assert pgmpy_edges == ref_edges
+
+
+class TestVarsortability:
+    def test_varsortability_range(self, causal_chain_data):
+        # High varsortability data should return a value close to 1.0
+        W = np.array(
+            [
+                [0, 1, 0],
+                [0, 0, 1],
+                [0, 0, 0],
+            ],
+            dtype=float,
+        )
+        score = Varsortability(causal_chain_data.values, W)
+        assert isinstance(score, float)
+        assert 0.0 <= score <= 1.0
+        assert score >= 0.5
+
+    def test_standardized_data_lower_varsortability(self, causal_chain_data):
+        # Standardized data should have lower varsortability than raw data.
+        W = np.array(
+            [
+                [0, 1, 0],
+                [0, 0, 1],
+                [0, 0, 0],
+            ],
+            dtype=float,
+        )
+        X = causal_chain_data.values
+        X_std = (X - X.mean(axis=0)) / X.std(axis=0)
+
+        score_raw = Varsortability(X, W)
+        score_std = Varsortability(X_std, W)
+
+        assert score_std < score_raw
+
+    def test_empty_graph(self, causal_chain_data):
+        # Empty graph (no edges) should return 0.0
+        W = np.zeros((3, 3))
+        score = Varsortability(causal_chain_data.values, W)
+        assert score == 0.0
