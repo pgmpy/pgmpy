@@ -47,9 +47,7 @@ class _BaseCausalPrediction(RegressorMixin, BaseEstimator):
             # For numpy arrays, use range index as column names
             X_arr = np.asarray(X)
             if X_arr.ndim == 1:
-                raise ValueError(
-                    "Reshape your data: X must be 2D. If using a 1D array, reshape it to (n_samples, 1)."
-                )
+                raise ValueError("Reshape your data: X must be 2D. If using a 1D array, reshape it to (n_samples, 1).")
             X_df = pd.DataFrame(X_arr, columns=range(X_arr.shape[1]))
 
         # Step 3: Validation: column names must exactly match DAG variables

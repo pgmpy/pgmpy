@@ -5,7 +5,7 @@ class GaltonStature(_BaseDataset):
     """
     References
     ----------
-    .. [1] http://www.medicine.mcgill.ca/epidemiology/hanley/galton/
+    - :cite:p:`mcgill_galton`
     """
 
     _tags = {
@@ -24,12 +24,9 @@ class GaltonStature(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = (
-        "https://raw.githubusercontent.com/pgmpy/example_datasets/"
-        "refs/heads/main/real/galton-stature/"
-    )
+    base_url = "real/galton-stature"
 
-    data_url = base_url + "data/galton-stature.mixed.txt"
+    data_url = "data/galton-stature.mixed.txt"
     ground_truth_url = None
     expert_knowledge_url = None
 

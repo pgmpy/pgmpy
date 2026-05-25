@@ -1,4 +1,4 @@
-from typing import Hashable, Iterable, Optional
+from collections.abc import Hashable, Iterable
 
 import networkx as nx
 
@@ -68,18 +68,18 @@ class MAG(AncestralBase):
     Vertices of a specific role can be retrieved using ``get_role`` method.
 
     >>> mag.get_role("exposures")
-    ["A"]
+    ['A']
     >>> mag.get_role("adjustment")
-    ["L", "C"]
+    ['L', 'C']
 
     References
     ----------
-    .. [1] Zhang, J. (2008). Causal Reasoning with Ancestral Graphs. Journal of Machine Learning Research, 9(7).
+    - :cite:p:`zhang_2008`
     """
 
     def __init__(
         self,
-        ebunch: Optional[Iterable[tuple[Hashable, Hashable]]] = None,
+        ebunch: Iterable[tuple[Hashable, Hashable]] | None = None,
         latents: set[Hashable] = set(),
         exposures: set[Hashable] = set(),
         outcomes: set[Hashable] = set(),
@@ -318,8 +318,13 @@ class MAG(AncestralBase):
         >>> mag.add_edge("C", "B", "-", ">")
         >>> mag.add_edge("B", "C", ">", ">")
         >>> new_mag = mag.lower_manipulation({"A"})
-        >>> list(new_mag.edges(data=True))
-        [('B', 'C', {'marks': {'B': '>', 'C': '>'}})]
+        >>> edges = list(new_mag.edges(data=True))
+        >>> len(edges)
+        1
+        >>> edges[0][0], edges[0][1]
+        ('B', 'C')
+        >>> edges[0][2]['marks']['B'], edges[0][2]['marks']['C']
+        ('>', '>')
         """
         if not inplace:
             new_mag = self.copy()

@@ -1,17 +1,17 @@
-# -*- coding: utf-8 -*-
-
 import numbers
+import warnings
+from collections.abc import Hashable
 from itertools import chain
-from typing import Any, Dict, Hashable, List, Optional, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 
+from pgmpy import logger
 from pgmpy.base import DAG
 from pgmpy.estimators import ParameterEstimator
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
 
 
@@ -23,10 +23,17 @@ class BayesianEstimator(ParameterEstimator):
 
     def __init__(
         self,
-        model: Union[DAG, DiscreteBayesianNetwork],
+        model: DAG | DiscreteBayesianNetwork,
         data: pd.DataFrame,
         **kwargs,
     ):
+        warnings.warn(
+            "`pgmpy.estimators.BayesianEstimator` is deprecated and will be removed in v1.3.0. "
+            "Please use `pgmpy.parameter_estimator.DiscreteBayesianEstimator` instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
+
         if not isinstance(model, (DAG, DiscreteBayesianNetwork)):
             raise NotImplementedError(
                 "Bayesian Parameter Estimation is only implemented for DAG or DiscreteBayesianNetwork"
@@ -45,16 +52,16 @@ class BayesianEstimator(ParameterEstimator):
                 model = DiscreteBayesianNetwork(edges)
                 model.add_nodes_from(nodes)
 
-        super(BayesianEstimator, self).__init__(model, data, **kwargs)
+        super().__init__(model, data, **kwargs)
 
     def get_parameters(
         self,
         prior_type: str = "BDeu",
-        equivalent_sample_size: Union[int, Dict[Any, int]] = 5,
-        pseudo_counts: Optional[Union[int, Dict[Any, np.ndarray]]] = None,
+        equivalent_sample_size: int | dict[Any, int] = 5,
+        pseudo_counts: int | dict[Any, np.ndarray] | None = None,
         n_jobs: int = 1,
         weighted: bool = False,
-    ) -> List[TabularCPD]:
+    ) -> list[TabularCPD]:
         """
         Method to estimate the model parameters (CPDs).
 
@@ -109,7 +116,9 @@ class BayesianEstimator(ParameterEstimator):
         ... )
         >>> model = DiscreteBayesianNetwork([("A", "B"), ("C", "B"), ("C", "D")])
         >>> estimator = BayesianEstimator(model, values)
-        >>> estimator.get_parameters(prior_type="BDeu", equivalent_sample_size=5)
+        >>> estimator.get_parameters(
+        ...     prior_type="BDeu", equivalent_sample_size=5
+        ... )  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
         [<TabularCPD representing P(A:2) at 0x...>,
          <TabularCPD representing P(B:2 | A:2, C:2) at 0x...>,
          <TabularCPD representing P(C:2) at 0x...>,
@@ -118,9 +127,7 @@ class BayesianEstimator(ParameterEstimator):
 
         def _get_node_param(node: Hashable) -> TabularCPD:
             _equivalent_sample_size = (
-                equivalent_sample_size[node]
-                if isinstance(equivalent_sample_size, dict)
-                else equivalent_sample_size
+                equivalent_sample_size[node] if isinstance(equivalent_sample_size, dict) else equivalent_sample_size
             )
             if isinstance(pseudo_counts, numbers.Real):
                 _pseudo_counts = pseudo_counts
@@ -136,9 +143,7 @@ class BayesianEstimator(ParameterEstimator):
             )
             return cpd
 
-        parameters = Parallel(n_jobs=n_jobs)(
-            delayed(_get_node_param)(node) for node in self.model.nodes()
-        )
+        parameters = Parallel(n_jobs=n_jobs)(delayed(_get_node_param)(node) for node in self.model.nodes())
         # TODO: A hacky solution to return correct value for the chosen backend. Ref #1675
         parameters = [p.copy() for p in parameters]
 
@@ -148,10 +153,8 @@ class BayesianEstimator(ParameterEstimator):
         self,
         node: Hashable,
         prior_type: str = "BDeu",
-        pseudo_counts: Union[List[List[float]], np.ndarray, float, int] = [],
-        equivalent_sample_size: Union[
-            int, float, Dict[Hashable, Union[int, float]]
-        ] = 5,
+        pseudo_counts: list[list[float]] | np.ndarray | float | int = [],
+        equivalent_sample_size: int | float | dict[Hashable, int | float] = 5,
         weighted: bool = False,
     ) -> TabularCPD:
         """
@@ -223,11 +226,7 @@ class BayesianEstimator(ParameterEstimator):
         # Throw a warning if pseudo_count is specified without prior_type=dirichlet
         #     cast to np.array first to use the array.size attribute, which returns 0 also for [[],[]]
         #     (where len([[],[]]) evaluates to 2)
-        if (
-            pseudo_counts is not None
-            and np.array(pseudo_counts).size > 0
-            and (prior_type != "dirichlet")
-        ):
+        if pseudo_counts is not None and np.array(pseudo_counts).size > 0 and (prior_type != "dirichlet"):
             logger.warning(
                 f"pseudo count specified with {prior_type} prior. It will be ignored, "
                 "use dirichlet prior for specifying pseudo_counts"
@@ -241,9 +240,7 @@ class BayesianEstimator(ParameterEstimator):
                 if isinstance(equivalent_sample_size, dict)
                 else equivalent_sample_size
             )
-            alpha = float(equivalent_sample_size_val) / (
-                node_cardinality * np.prod(parents_cardinalities)
-            )
+            alpha = float(equivalent_sample_size_val) / (node_cardinality * np.prod(parents_cardinalities))
             pseudo_counts = np.ones(cpd_shape, dtype=float) * alpha
         elif prior_type == "dirichlet":
             if isinstance(pseudo_counts, numbers.Real):

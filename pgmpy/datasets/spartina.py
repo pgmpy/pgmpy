@@ -3,10 +3,9 @@ from pgmpy.datasets._base import _BaseDataset, _CovarianceMixin
 
 class Spartina(_CovarianceMixin, _BaseDataset):
     """
-        References
-        ----------
-        .. [1] Spirtes, P., Glymour, C. N., Scheines, R., & Heckerman, D. (2000). Causation,
-    prediction, and search. MIT press, p. 18.
+    References
+    ----------
+    - :cite:p:`spirtes_glymour_scheines_2001`
     """
 
     _tags = {
@@ -25,12 +24,9 @@ class Spartina(_CovarianceMixin, _BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = (
-        "https://raw.githubusercontent.com/pgmpy/example_datasets/"
-        "refs/heads/main/real/spartina/"
-    )
+    base_url = "real/spartina"
 
-    data_url = base_url + "data/spartina.cov.txt"
+    data_url = "data/spartina.cov.txt"
     ground_truth_url = None
     expert_knowledge_url = None
 

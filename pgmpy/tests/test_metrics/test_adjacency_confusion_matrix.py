@@ -74,9 +74,7 @@ def test_default_metrics(true_dag, est_dag):
 
 def test_selective_metrics(true_dag, est_dag):
     """Only requested metrics are returned."""
-    result = AdjacencyConfusionMatrix(metrics=["precision", "recall"]).evaluate(
-        true_dag, est_dag
-    )
+    result = AdjacencyConfusionMatrix(metrics=["precision", "recall"]).evaluate(true_dag, est_dag)
     assert set(result) == {"precision", "recall"}
 
 

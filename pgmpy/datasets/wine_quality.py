@@ -1,18 +1,14 @@
 from pgmpy.datasets._base import _BaseDataset
 
-BASE_URL = (
-    "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/"
-    "real/wine-quality/"
-)
-
-EXPERT_URL = BASE_URL + "ground.truth/wine.quality.knowledge.txt"
+BASE_URL = "real/wine-quality"
+EXPERT_URL = "ground.truth/wine.quality.knowledge.txt"
 
 
 class WineQualityRed(_BaseDataset):
     """
     References
     ----------
-    .. [1] https://archive.ics.uci.edu/ml/datasets/wine+quality
+    - :cite:p:`peerj_blue_driver`
     """
 
     _tags = {
@@ -32,7 +28,7 @@ class WineQualityRed(_BaseDataset):
     }
 
     base_url = BASE_URL
-    data_url = BASE_URL + "data/winequality-red.continuous.txt"
+    data_url = "data/winequality-red.continuous.txt"
     ground_truth_url = None
     expert_knowledge_url = EXPERT_URL
 
@@ -44,7 +40,7 @@ class WineQualityWhite(_BaseDataset):
     """
     References
     ----------
-    .. [1] https://archive.ics.uci.edu/ml/datasets/wine+quality
+    - :cite:p:`peerj_blue_driver`
     """
 
     _tags = {
@@ -64,7 +60,7 @@ class WineQualityWhite(_BaseDataset):
     }
 
     base_url = BASE_URL
-    data_url = BASE_URL + "data/winequality-white.continuous.txt"
+    data_url = "data/winequality-white.continuous.txt"
     ground_truth_url = None
     expert_knowledge_url = EXPERT_URL
 
@@ -76,7 +72,7 @@ class WineQualityRedWhiteMixed(_BaseDataset):
     """
     References
     ----------
-    .. [1] https://archive.ics.uci.edu/ml/datasets/wine+quality
+    - :cite:p:`peerj_blue_driver`
     """
 
     _tags = {
@@ -96,7 +92,7 @@ class WineQualityRedWhiteMixed(_BaseDataset):
     }
 
     base_url = BASE_URL
-    data_url = BASE_URL + "data/winequality-red-white.mixed.maximum.2.txt"
+    data_url = "data/winequality-red-white.mixed.maximum.2.txt"
     ground_truth_url = None
     expert_knowledge_url = EXPERT_URL
 

@@ -5,7 +5,7 @@ class PittsburghBridges(_BaseDataset):
     """
     References
     ----------
-    .. [1] https://archive.ics.uci.edu/ml/datasets/Pittsburgh+Bridges
+    - :cite:p:`uci_pittsburgh_bridges`
     """
 
     _tags = {
@@ -24,12 +24,9 @@ class PittsburghBridges(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = (
-        "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/"
-        "real/pittsburgh-bridges/"
-    )
+    base_url = "real/pittsburgh-bridges"
 
-    data_url = base_url + "data/bridges.data.version21.txt"
+    data_url = "data/bridges.data.version21.txt"
     ground_truth_url = None
     expert_knowledge_url = None
     missing_values_marker = "?"

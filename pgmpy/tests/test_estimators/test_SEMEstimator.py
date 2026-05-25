@@ -16,9 +16,7 @@ requires_torch = pytest.mark.skipif(
 @pytest.fixture
 def sem_models():
     config.set_backend("torch")
-    custom = SEMGraph(
-        ebunch=[("a", "b"), ("b", "c")], latents=[], err_corr=[], err_var={}
-    )
+    custom = SEMGraph(ebunch=[("a", "b"), ("b", "c")], latents=[], err_corr=[], err_var={})
     a = np.random.randn(10**3)
     b = a + np.random.normal(loc=0, scale=0.1, size=10**3)
     c = b + np.random.normal(loc=0, scale=0.2, size=10**3)
@@ -74,9 +72,7 @@ def sem_models():
         err_var={},
     )
 
-    union_data = pd.read_csv(
-        "pgmpy/tests/test_estimators/testdata/union1989b.csv", index_col=0, header=0
-    )
+    union_data = pd.read_csv("pgmpy/tests/test_estimators/testdata/union1989b.csv", index_col=0, header=0)
 
     yield {
         "custom": custom,
@@ -117,18 +113,14 @@ def iv_models():
 def test_get_init_values(sem_models):
     demo_estimator = SEMEstimator(sem_models["demo"])
     for method in ["random", "std"]:
-        B_init, zeta_init = demo_estimator.get_init_values(
-            data=sem_models["demo_data"], method=method
-        )
+        B_init, zeta_init = demo_estimator.get_init_values(data=sem_models["demo_data"], method=method)
 
         m = len(sem_models["demo_lisrel"].eta)
         assert B_init.shape == (m, m)
         assert zeta_init.shape == (m, m)
 
         union_estimator = SEMEstimator(sem_models["union"])
-        B_init, zeta_init = union_estimator.get_init_values(
-            data=sem_models["union_data"], method=method
-        )
+        B_init, zeta_init = union_estimator.get_init_values(data=sem_models["union_data"], method=method)
         m = len(sem_models["union_lisrel"].eta)
         assert B_init.shape == (m, m)
         assert zeta_init.shape == (m, m)

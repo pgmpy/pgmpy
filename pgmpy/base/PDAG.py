@@ -1,10 +1,10 @@
 import itertools
-from typing import Hashable, Iterable
+from collections.abc import Hashable, Iterable
 
 import networkx as nx
 
+from pgmpy import logger
 from pgmpy.base._mixin_roles import _GraphRolesMixin
-from pgmpy.global_vars import logger
 
 
 class PDAG(_GraphRolesMixin, nx.DiGraph):
@@ -49,15 +49,15 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
     >>> pdag = PDAG(
     ...     directed_ebunch=[("A", "C"), ("D", "C")],
     ...     undirected_ebunch=[("B", "A"), ("B", "D")],
-    ...     latents=["E"],
+    ...     latents=["A"],
     ...     roles={"exposures": ["A"], "outcomes": ["C"]},
     ... )
-    >>> pdag.directed_edges
-    {('A', 'C'), ('D', 'C')}
-    >>> pdag.undirected_edges
-    {('B', 'A'), ('B', 'D')}
+    >>> sorted(pdag.directed_edges)
+    [('A', 'C'), ('D', 'C')]
+    >>> sorted(pdag.undirected_edges)
+    [('B', 'A'), ('B', 'D')]
     >>> pdag.latents
-    {'E'}
+    {'A'}
     >>> pdag.exposures
     {'A'}
     """
@@ -74,10 +74,8 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         self.directed_edges = set(directed_ebunch)
         self.undirected_edges = set(undirected_ebunch)
 
-        super(PDAG, self).__init__(
-            self.directed_edges.union(self.undirected_edges).union(
-                set([(Y, X) for (X, Y) in self.undirected_edges])
-            )
+        super().__init__(
+            self.directed_edges.union(self.undirected_edges).union({(Y, X) for (X, Y) in self.undirected_edges})
         )
         self.latents = set(latents)
         self.exposures = set(exposures)
@@ -111,8 +109,8 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         ...     directed_ebunch=[("A", "C"), ("D", "C")],
         ...     undirected_ebunch=[("B", "A"), ("B", "D")],
         ... )
-        >>> pdag.all_neighbors("A")
-        {'B', 'C'}
+        >>> sorted(pdag.all_neighbors("A"))
+        ['B', 'C']
         """
         return {x for x in self.successors(node)} | {x for x in self.predecessors(node)}
 
@@ -170,6 +168,70 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         {'B'}
         """
         return {var for var in self.successors(node) if self.has_edge(var, node)}
+
+    def chain_component(self, node: Hashable) -> set[Hashable]:
+        """
+        Returns the chain component of `node`, i.e. all nodes reachable
+        through undirected edges.
+        """
+        visited: set[Hashable] = set()
+        to_visit: set[Hashable] = {node}
+
+        while to_visit:
+            current = to_visit.pop()
+            visited.add(current)
+            to_visit |= self.undirected_neighbors(current) - visited
+
+        return visited
+
+    def has_semidirected_path(
+        self,
+        source: Hashable,
+        target: Hashable,
+        blocked_nodes: Iterable[Hashable] | None = None,
+        ignore_direct_edge: bool = False,
+    ) -> bool:
+        """
+        Returns True if there exists a semi-directed path from `source` to `target`.
+
+        Semi-directed paths follow directed edges in their forward direction and
+        can traverse undirected edges in either direction.
+
+        Parameters
+        ----------
+        source, target: hashable
+            The endpoints of the path.
+
+        blocked_nodes: iterable, optional
+            Nodes that are not allowed on the path.
+
+        ignore_direct_edge: bool
+            If True, ignores the direct edge `source -> target` when checking for
+            a path.
+        """
+        blocked_nodes = set() if blocked_nodes is None else set(blocked_nodes)
+
+        if (source in blocked_nodes) or (target in blocked_nodes):
+            return False
+
+        graph = nx.DiGraph(self.subgraph(set(self.nodes()) - blocked_nodes))
+        if ignore_direct_edge and graph.has_edge(source, target):
+            graph.remove_edge(source, target)
+
+        if not graph.has_node(source) or not graph.has_node(target):
+            return False
+
+        return nx.has_path(graph, source, target)
+
+    def has_acyclic_extension(self) -> bool:
+        """
+        Returns True if the PDAG admits an acyclic DAG extension.
+        """
+        if not self.undirected_edges:
+            return nx.is_directed_acyclic_graph(nx.DiGraph(self.edges()))
+
+        dag = self.to_dag()
+        return nx.is_directed_acyclic_graph(dag)
 
     def is_adjacent(self, u, v):
         """
@@ -249,6 +311,21 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         if not inplace:
             return pdag
 
+    def is_clique(self, nodes: Iterable) -> bool:
+        """
+        Checks if a set of nodes forms a clique. A clique is a subgraph
+        where every pair of nodes is connected by an edge (fully connected).
+
+        Parameters
+        ----------
+        nodes: Iterable
+            The set of nodes to be checked for clique formation.
+        """
+        for node1, node2 in itertools.combinations(nodes, 2):
+            if not self.has_undirected_edge(node1, node2):
+                return False
+        return True
+
     def _check_new_unshielded_collider(self, u, v):
         """
         Tests if orienting an undirected edge u - v as u -> v creates new unshielded V-structures in the PDAG.
@@ -293,9 +370,9 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         >>> pdag = PDAG(
         ...     directed_ebunch=[("A", "B")], undirected_ebunch=[("B", "C"), ("C", "B")]
         ... )
-        >>> pdag.apply_meeks_rules()
-        >>> pdag.directed_edges
-        {('A', 'B'), ('B', 'C')}
+        >>> pdag = pdag.apply_meeks_rules()
+        >>> sorted(pdag.directed_edges)
+        [('A', 'B'), ('B', 'C')]
         """
         if inplace:
             pdag = self
@@ -322,9 +399,7 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
                             pdag.orient_undirected_edge(y, z, inplace=True)
                             changed = True
                             if debug:
-                                logger.info(
-                                    f"Applying Rule 1: {x} -> {y} - {z} => {x} -> {y} -> {z}"
-                                )
+                                logger.info(f"Applying Rule 1: {x} -> {y} - {z} => {x} -> {y} -> {z}")
 
             # Rule 2: If X -> Z -> Y  and X - Y =>  X → Y
             for z in pdag.nodes():
@@ -337,9 +412,7 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
                             pdag.orient_undirected_edge(x, y, inplace=True)
                             changed = True
                             if debug:
-                                logger.info(
-                                    f"Applying Rule 2: {x} -> {z} -> {y} and {x} - {y} => {x} -> {y}"
-                                )
+                                logger.info(f"Applying Rule 2: {x} -> {z} -> {y} and {x} - {y} => {x} -> {y}")
 
             # Rule 3: If X - {Y, Z, W} and {Z, Y} -> W => X -> W
             for x in pdag.nodes():
@@ -353,10 +426,7 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
                         pdag.orient_undirected_edge(x, w, inplace=True)
                         changed = True
                         if debug:
-                            logger.info(
-                                f"Applying Rule 3: {x} - {y}, {z}, {w} "
-                                f"{y}, {z} -> {w} => {x} -> {w}"
-                            )
+                            logger.info(f"Applying Rule 3: {x} - {y}, {z}, {w} {y}, {z} -> {w} => {x} -> {w}")
                         break
 
             # Rule 4: If d -> c -> b & a - {b, c, d} and b not adj d => a -> b
@@ -380,6 +450,44 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         if not inplace:
             return pdag
 
+    def calibrate_directed_undirected_edges(self) -> None:
+        """
+        Iterates through existing edges to correctly assign directed
+        and undirected edges.
+        """
+        all_edges = set(self.edges)
+        undirected = set()
+        directed = set()
+        for u, v in all_edges:
+            if (v, u) in all_edges:
+                if u > v:
+                    undirected.add((u, v))
+            else:
+                directed.add((u, v))
+
+        self.undirected_edges = undirected
+        self.directed_edges = directed
+
+    def to_cpdag(self):
+        """
+        Returns the CPDAG corresponding to one DAG extension of the PDAG.
+        """
+        from pgmpy.base import DAG
+
+        if self.undirected_edges:
+            dag = self.to_dag()
+        else:
+            dag = DAG()
+            dag.add_nodes_from(self.nodes())
+            dag.add_edges_from(self.edges())
+            dag.latents = self.latents
+
+        cpdag = dag.to_pdag()
+        for role, vars in self.get_role_dict().items():
+            cpdag.with_role(role=role, variables=vars, inplace=True)
+
+        return cpdag
+
     def to_dag(self):
         """
         Returns one possible DAG which is represented using the PDAG.
@@ -395,14 +503,12 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         ...     undirected_ebunch=[("C", "D"), ("D", "A")],
         ... )
         >>> dag = pdag.to_dag()
-        >>> print(dag.edges())
-        OutEdgeView([('A', 'B'), ('C', 'B'), ('D', 'C'), ('A', 'D')])
+        >>> sorted(dag.edges())
+        [('A', 'B'), ('C', 'B'), ('D', 'A'), ('D', 'C')]
 
         References
         ----------
-        [1] Dor, Dorit, and Michael Tarsi.
-          "A simple algorithm to construct a consistent extension of a partially oriented graph."
-            Technicial Report R-185, Cognitive Systems Laboratory, UCLA (1992): 45.
+        - :cite:p:`dor_tarsi_1992`
         """
         # Add required edges if it doesn't form a new v-structure or an opposite edge
         # is already present in the network.
@@ -423,17 +529,13 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
             for X in sorted(pdag.nodes()):
                 undirected_neighbors = pdag.undirected_neighbors(X)
                 neighbors_are_adjacent = all(
-                    (
-                        pdag.has_edge(Y, Z) or pdag.has_edge(Z, Y)
-                        for Z in pdag.all_neighbors(X)
-                        for Y in undirected_neighbors
-                        if not Y == Z
-                    )
+                    pdag.has_edge(Y, Z) or pdag.has_edge(Z, Y)
+                    for Z in pdag.all_neighbors(X)
+                    for Y in undirected_neighbors
+                    if not Y == Z
                 )
 
-                if not pdag.directed_children(X) and (
-                    not undirected_neighbors or neighbors_are_adjacent
-                ):
+                if not pdag.directed_children(X) and (not undirected_neighbors or neighbors_are_adjacent):
                     found = True
                     # add all edges of X as outgoing edges to dag
                     for Y in pdag.undirected_neighbors(X):
@@ -463,10 +565,10 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
 
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model("alarm")
-        >>> model.to_graphviz()
-        <AGraph <Swig Object of type 'Agraph_t *' at 0x7fdea4cde040>>
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/alarm")
+        >>> model.to_graphviz()  # doctest: +ELLIPSIS
+        <AGraph ...
         """
         return nx.nx_agraph.to_agraph(self)
 

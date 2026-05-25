@@ -5,7 +5,7 @@ class CreditApproval(_BaseDataset):
     """
     References
     ----------
-    .. [1] https://archive.ics.uci.edu/ml/datasets/Credit+Approval
+    - :cite:p:`ivandari_2022`
     """
 
     _tags = {
@@ -24,9 +24,9 @@ class CreditApproval(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/credit-approval/"
+    base_url = "real/credit-approval"
 
-    data_url = base_url + "data/crx.data.mixed.maximum.14.txt"
+    data_url = "data/crx.data.mixed.maximum.14.txt"
     ground_truth_url = None
     expert_knowledge_url = None
 

@@ -1,0 +1,82 @@
+import numpy as np
+import pandas as pd
+from scipy import stats
+
+from ._base import _CITestResult
+from .pearsonr import Pearsonr
+
+
+class FisherZ(Pearsonr):
+    r"""
+    Fisher's Z test for conditional independence on continuous data.
+
+    This test first computes the Pearson or partial correlation coefficient :math:`\rho_{XY \mid Z}` using
+    :class:`Pearsonr`. It then applies the Fisher transformation and computes the test statistic as:
+
+    .. math::
+        Z = \sqrt{n - |Z| - 3} \cdot \operatorname{arctanh}(\rho_{XY \mid Z}),
+
+    where :math:`n` is the sample size and :math:`|Z|` is the number of conditioning variables. Under the null
+    hypothesis :math:`X \perp Y \mid Z`, :math:`Z` is approximately standard normal.
+
+    The effect size is the absolute partial correlation :math:`|\rho_{XY \mid Z}|`.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        The dataset in which to test the independence condition.
+
+    Attributes
+    ----------
+    statistic_ : float
+        The Fisher Z test statistic. Set after calling the test.
+    p_value_ : float
+        The two-sided p-value for the test. Set after calling the test.
+    effect_size_ : float
+        Absolute partial correlation. Set after calling the test.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import pandas as pd
+    >>> from pgmpy.ci_tests import FisherZ
+    >>> rng = np.random.default_rng(seed=42)
+    >>> data = pd.DataFrame(data=rng.standard_normal(size=(1000, 3)), columns=["X", "Y", "Z"])
+    >>> test = FisherZ(data=data)
+    >>> test(X="X", Y="Y", Z=["Z"], significance_level=0.05)
+    np.True_
+    >>> round(test.statistic_, 2)
+    np.float64(0.17)
+    >>> round(test.p_value_, 2)
+    np.float64(0.87)
+    """
+
+    _tags = {
+        "name": "fisher_z",
+        "data_types": ("continuous",),
+        "default_for": None,
+        "requires_data": True,
+    }
+
+    def __init__(self, data: pd.DataFrame, use_cache: bool = True):
+        super().__init__(data=data, use_cache=use_cache)
+
+    def _compute_result(
+        self,
+        X: str,
+        Y: str,
+        Z: list,
+    ):
+        """
+        Compute the Fisher Z statistic and p-value.
+
+        Returns the Fisher Z statistic and p-value.
+        """
+        pearsonr_result = super()._compute_result(X=X, Y=Y, Z=Z)
+        partial_corr = pearsonr_result.statistic
+
+        rho = np.clip(partial_corr, -0.999999, 0.999999)
+        statistic = np.sqrt(self.data.shape[0] - len(Z) - 3) * np.arctanh(rho)
+        p_value = 2 * stats.norm.sf(np.abs(statistic))
+
+        return _CITestResult(statistic=statistic, p_value=p_value, effect_size=abs(partial_corr))

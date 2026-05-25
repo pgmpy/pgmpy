@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from typing import Optional
 
 import numpy as np
 from scipy.special import logsumexp
@@ -34,18 +33,9 @@ class MirrorDescentEstimator(MarginalEstimator):
 
     References
     ----------
-    [1] McKenna, Ryan, Daniel Sheldon, and Gerome Miklau.
-        "Graphical-model based estimation and inference for differential  privacy."
-          In Proceedings of the 36th International Conference on Machine Learning. 2019, Appendix A.1.
-        https://arxiv.org/abs/1901.09136.
-    [2] Beck, A. and Teboulle, M. Mirror descent and nonlinear projected subgradient methods for convex optimization.
-      Operations Research Letters, 31(3):167–175, 2003
-        https://www.sciencedirect.com/science/article/abs/pii/S0167637702002316.
-    [3] Wainwright, M. J. and Jordan, M. I.
-        Graphical models, exponential families, and variational inference.
-          Foundations and Trends in Machine Learning, 1(1-2):1–305, 2008,
-            Section 3.6 Conjugate Duality: Maximum Likelihood and Maximum Entropy.
-        https://people.eecs.berkeley.edu/~wainwrig/Papers/WaiJor08_FTML.pdf
+    - :cite:p:`mckenna_2019` (Appendix A.1).
+    - :cite:p:`beck_teboulle_2003`
+    - :cite:p:`wainwright_jordan_2008` (Section 3.6: Conjugate Duality).
     """
 
     def _calibrate(self, theta, n):
@@ -93,7 +83,7 @@ class MirrorDescentEstimator(MarginalEstimator):
         marginals: list[tuple[str, ...]],
         metric="L2",
         iterations=100,
-        stepsize: Optional[float] = None,
+        stepsize: float | None = None,
         show_progress=True,
     ):
         """
@@ -189,15 +179,9 @@ class MirrorDescentEstimator(MarginalEstimator):
         )
 
         # Step 2: Perform calibration to initialize variables.
-        theta = (
-            self.theta
-            if self.theta
-            else self.belief_propagation.junction_tree.clique_beliefs
-        )
+        theta = self.theta if self.theta else self.belief_propagation.junction_tree.clique_beliefs
         mu = self._calibrate(theta=theta, n=n)
-        answer = self._marginal_loss(
-            marginals=mu, clique_to_marginal=clique_to_marginal, metric=metric
-        )
+        answer = self._marginal_loss(marginals=mu, clique_to_marginal=clique_to_marginal, metric=metric)
 
         # Step 3: Optimize the potentials based off the observed marginals.
         pbar = tqdm(range(iterations)) if show_progress else range(iterations)
@@ -211,9 +195,9 @@ class MirrorDescentEstimator(MarginalEstimator):
                 pbar.set_description_str(
                     ",\t".join(
                         [
-                            "Loss: {:e}".format(curr_loss),
-                            "Grad Norm: {:e}".format(np.sqrt(dL.dot(dL))),
-                            "alpha: {:e}".format(alpha),
+                            f"Loss: {curr_loss:e}",
+                            f"Grad Norm: {np.sqrt(dL.dot(dL)):e}",
+                            f"alpha: {alpha:e}",
                         ]
                     )
                 )
@@ -226,9 +210,7 @@ class MirrorDescentEstimator(MarginalEstimator):
                 mu = self._calibrate(theta=theta, n=n)
 
                 # Compute the new loss with respect to the updated beliefs.
-                answer = self._marginal_loss(
-                    marginals=mu, clique_to_marginal=clique_to_marginal, metric=metric
-                )
+                answer = self._marginal_loss(marginals=mu, clique_to_marginal=clique_to_marginal, metric=metric)
                 # If we haven't appreciably improved, try reducing the step size.
                 # Otherwise, we break to the next iteration.
                 _step = 0.5 * alpha * dL.dot(nu - mu)

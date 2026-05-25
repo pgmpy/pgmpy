@@ -12,8 +12,8 @@ class Adjustment(_BaseIdentification):
     Given a causal graph, finds the adjustment set.
 
     This class implements a few variants for computing adjustment sets for
-    identifying the total causal effect of the `exposure` variables on
-    `outcome` variables. Additionally, it provides methods to check if the
+    identifying the total causal effect of the variables in the `exposures`
+    role on the variables in the `outcomes` role. Additionally, it provides methods to check if the
     current set of variables with role `adjustment` satisfy the backdoor
     criterion and to compute the backdoor adjustment formula.
 
@@ -39,18 +39,19 @@ class Adjustment(_BaseIdentification):
     ...     ],
     ...     roles={"exposures": "x1", "outcomes": "y1"},
     ... )
-    >>> dag_with_adj = Adjustment(variant="minimal").identify(dag)
-    >>> dag_with_adj.roles
-    {'exposure': 'x1', 'outcome': 'y1', 'adjustment': ['z1', 'z2']}
-    >>> Adjustment.validate(dag)
+    >>> dag_with_adj, success = Adjustment(variant="minimal").identify(dag)
+    >>> roles = dag_with_adj.get_role_dict()
+    >>> roles["exposures"]
+    ['x1']
+    >>> roles["outcomes"]
+    ['y1']
+    >>> Adjustment(variant="minimal").validate(dag_with_adj)
+    True
 
     References
     ----------
-    [1] Perkovi, Emilija, et al. "Complete graphical characterization and
-        construction of adjustment sets in Markov equivalence classes of ancestral
-        graphs." Journal of Machine Learning Research.
-    [2] Witte, Janine, et al. "On efficient adjustment in causal graphs."
-        Journal of Machine Learning Research.
+    - :cite:p:`perkovic_2018`
+    - :cite:p:`witte_2022`
     """
 
     def __init__(self, variant="minimal"):
@@ -64,14 +65,14 @@ class Adjustment(_BaseIdentification):
         """
         Returns a proper backdoor graph of the `causal_graph`.
 
-        For a `causal_graph` with variable roles `exposure` and `outcome`
+        For a `causal_graph` with variable roles `exposures` and `outcomes`
         defined, returns it's proper backdoor graph. A proper backdoor graph is
         a graph which removes the first edge of every proper causal path from
-        `exposure` to `outcome`.
+        `exposures` to `outcomes`.
 
         Parameters
         ----------
-        causal_graph: pgmpy.models.DAG
+        causal_graph: pgmpy.base.DAG, pgmpy.base.PDAG, pgmpy.base.ADMG, or pgmpy.base.MAG
             The causal graph for which the proper backdoor graph is to be computed.
 
         inplace: boolean
@@ -80,8 +81,8 @@ class Adjustment(_BaseIdentification):
 
         Examples
         --------
-        >>> from pgmpy.models import DAG
-        >>> from pgmpy.inference import Adjustment
+        >>> from pgmpy.base import DAG
+        >>> from pgmpy.identification import Adjustment
         >>> dag = DAG(
         ...     ebunch=[
         ...         ("x1", "y1"),
@@ -98,17 +99,13 @@ class Adjustment(_BaseIdentification):
 
         References
         ----------
-        [1] Perkovic, Emilija, et al. "Complete graphical characterization and
-            construction of adjustment sets in Markov equivalence classes of
-            ancestral graphs." The Journal of Machine Learning Research.
+        - :cite:p:`perkovic_2018`
         """
         # TODO: Make this work for all graph types.
         model = causal_graph if inplace else causal_graph.copy()
         edges_to_remove = []
         for source in causal_graph.get_role("exposures"):
-            paths = nx.all_simple_edge_paths(
-                causal_graph, source, causal_graph.get_role("outcomes")
-            )
+            paths = nx.all_simple_edge_paths(causal_graph, source, causal_graph.get_role("outcomes"))
             for path in paths:
                 edges_to_remove.append(path[0])
         model.remove_edges_from(edges_to_remove)
@@ -135,20 +132,14 @@ class Adjustment(_BaseIdentification):
         #         proper backdoor graph and compute the adjustment set.
         if self.variant == "minimal":
             if len(causal_graph.get_role("exposures")) != 1:
-                raise NotImplementedError(
-                    "Backdoor identification is only implemented for single exposure variable."
-                )
+                raise NotImplementedError("Backdoor identification is only implemented for single exposure variable.")
             if len(causal_graph.get_role("outcomes")) != 1:
-                raise NotImplementedError(
-                    "Backdoor identification is only implemented for single outcome variable."
-                )
+                raise NotImplementedError("Backdoor identification is only implemented for single outcome variable.")
 
             exposure = causal_graph.get_role("exposures")[0]
             outcome = causal_graph.get_role("outcomes")[0]
 
-            backdoor_graph = self._get_proper_backdoor_graph(
-                causal_graph, inplace=False
-            )
+            backdoor_graph = self._get_proper_backdoor_graph(causal_graph, inplace=False)
             adjustment_set = backdoor_graph.minimal_dseparator(exposure, outcome)
 
             if adjustment_set is None:
@@ -162,9 +153,7 @@ class Adjustment(_BaseIdentification):
         # Step 2: If variant = "minimal_variance", use the algorithm from [2].
         #         O(X, Y, G) = pa(cn(X, Y, G), G) \ forb(X, Y, G)
         elif self.variant == "minimal_variance":
-            raise NotImplementedError(
-                "Backdoor identification with minimal variance is not implemented yet."
-            )
+            raise NotImplementedError("Backdoor identification with minimal variance is not implemented yet.")
 
         # Step 3: If variant = "all", iterate over all possible sets of adjustment
         #         variables, and return all that are valid.
@@ -174,17 +163,13 @@ class Adjustment(_BaseIdentification):
 
             ancestors = causal_graph.get_ancestors([exposure, outcome])
             # Remove any variables on the path from exposure to outcome (these cannot be in the adjustment set)
-            ancestors -= set(
-                itertools.chain(*nx.all_simple_paths(causal_graph, exposure, outcome))
-            )
+            ancestors -= set(itertools.chain(*nx.all_simple_paths(causal_graph, exposure, outcome)))
             ancestors -= {exposure, outcome}
             ancestors -= set(causal_graph.latents)
 
             valid_adj_graphs = []
             for s in _powerset(ancestors):
-                adj_causal_graph = causal_graph.with_role(
-                    "adjustment", s, inplace=False
-                )
+                adj_causal_graph = causal_graph.with_role("adjustment", s, inplace=False)
                 if self.validate(causal_graph=adj_causal_graph):
                     valid_adj_graphs.append(adj_causal_graph)
 
@@ -194,7 +179,7 @@ class Adjustment(_BaseIdentification):
         """
         Validate the causal graph for backdoor identification.
 
-        Given a `causal_graph` with variable roles `exposure`, `outcome`, and
+        Given a `causal_graph` with variable roles `exposures`, `outcomes`, and
         `adjustment` defined, this method checks if the given `adjustment` set
         is valid.
 
@@ -222,11 +207,7 @@ class Adjustment(_BaseIdentification):
         for pred_var in predecessors:
             outcome_d_seps = []
             for outcome_var in outcome:
-                outcome_d_seps.append(
-                    causal_graph.is_dconnected(
-                        pred_var, outcome_var, observed=conditional_vars
-                    )
-                )
+                outcome_d_seps.append(causal_graph.is_dconnected(pred_var, outcome_var, observed=conditional_vars))
             parents_d_sep.append(not any(outcome_d_seps))
 
         return all(parents_d_sep)

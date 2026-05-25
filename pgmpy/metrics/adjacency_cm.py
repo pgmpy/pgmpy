@@ -1,5 +1,3 @@
-from typing import List, Optional
-
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -68,9 +66,7 @@ class AdjacencyConfusionMatrix(_BaseSupervisedMetric):
 
     References
     ----------
-    .. [1] Petersen, A. H. (2025). Are you doing better than random guessing? a call for using negative controls
-           when evaluating causal discovery algorithms. Proceedings of the Forty-First Conference on Uncertainty
-           in Artificial Intelligence. Rio de Janeiro, Brazil: JMLR.org. https://arxiv.org/abs/2412.10039
+    - :cite:p:`petersen_2025`
 
     """
 
@@ -83,7 +79,7 @@ class AdjacencyConfusionMatrix(_BaseSupervisedMetric):
         "supported_graph_types": (DAG, PDAG),
     }
 
-    def __init__(self, metrics: Optional[List[str]] = None):
+    def __init__(self, metrics: list[str] | None = None):
         self.metrics = metrics or [
             "cm",
             "precision",
@@ -98,12 +94,8 @@ class AdjacencyConfusionMatrix(_BaseSupervisedMetric):
         """Evaluate adjacency confusion matrix metrics."""
         # Step 1: Get adjacency matrices for both graphs
         nodes_list = sorted(true_causal_graph.nodes())
-        true_adj = nx.adjacency_matrix(
-            true_causal_graph, nodelist=nodes_list, weight=None
-        ).todense()
-        est_adj = nx.adjacency_matrix(
-            est_causal_graph, nodelist=nodes_list, weight=None
-        ).todense()
+        true_adj = nx.adjacency_matrix(true_causal_graph, nodelist=nodes_list, weight=None).todense()
+        est_adj = nx.adjacency_matrix(est_causal_graph, nodelist=nodes_list, weight=None).todense()
 
         true_skel = (true_adj + true_adj.T) > 0
         est_skel = (est_adj + est_adj.T) > 0

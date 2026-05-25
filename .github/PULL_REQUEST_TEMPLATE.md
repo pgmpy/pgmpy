@@ -1,6 +1,6 @@
-# The following checklist is mandatory.
+**The following checklist is mandatory**
 
-Your PR will be closed if you remove the checklist or do not answer the questions to a satisfactory level. Use of LLM is **strictly forbidden** for any part of this checklist (even for improving language).
+Your PR will be closed if you remove the checklist. Use of LLMs is **strictly forbidden** for any part of this checklist (including for improving language), and will result in a **ban** if we find any use of LLMs.
 
 ### Your checklist for this pull request
 
@@ -8,12 +8,26 @@ Your PR will be closed if you remove the checklist or do not answer the question
 - [ ] Does the PR fully address the linked issue and is within its defined scope? If you are still working on the PR, mark it as draft.
 - [ ] Are all the GitHub Actions checks passing? If not, mark your PR as draft while you fix it.
 
-Please answer the following questions:
+If you have used AI/LLMs for any assistance, please answer the following questions. Please refer [#2622](https://github.com/pgmpy/pgmpy/pull/2622) for an example of the level of detail we expect:
 
-- Did you use an LLM for any assistance? Please describe how and what you used it for?
-- What steps have you taken to verify that the changes correctly address the issue? And what edge cases have you considered?
-- Has the LLM added try-except blocks? They will need to be removed; any error handling must be explicit.
-- Have you used LLM for generating tests? They need to be compressed into a smaller number of tests without reducing coverage.
+- [ ] Have you reviewed our [AI usage policy](https://github.com/pgmpy/pgmpy/blob/dev/Contributing.md#ai-usage-policy)?
+- [ ] Are you able to fully explain your changes? We expect you to fully understand the algorithm and take full responsibility for any changes in this PR.  
+
+- Please list the AI tool(s) used, along with the model and its version used.
+
+[Please replace this with your answer]
+
+- Please describe in **detail** how and what you used AI assistance for? Please outline your whole workflow with the AI tool.
+
+[Please replace this with your answer]
+
+- What steps have you taken to verify that the changes correctly address the issue? What edge cases have you considered? Other than running tests, what else have you verified?  
+
+[Please replace this with your answer]
+
+- Have you used AI for generating tests? Can you compress them into a smaller number of tests without losing coverage?
+
+[Please replace this with your answer]
 
 ### Issue number(s) that this pull request fixes
 - Fixes #
