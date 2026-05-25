@@ -128,6 +128,14 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
     - :cite:p:`koller_friedman_2009`
     """
 
+    _tags = {
+        "data_types": ("depends_on_scoring_method"),
+        "assumed_relationship": (),
+        "supports_expert_knowledge": ("forbidden_edges", "required_edges", "search_space", "temporal_order"),
+        "noise_term": "",
+        "requires_target": False,
+    }
+
     def __init__(
         self,
         scoring_method: str | BaseStructureScore | None = None,

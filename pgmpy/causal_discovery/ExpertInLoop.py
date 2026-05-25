@@ -149,6 +149,18 @@ class ExpertInLoop(_BaseCausalDiscovery):
     and the GES algorithm.
     """
 
+    _tags = {
+        "data_types": ("depends_on_ci_test"),
+        "assumed_relationship": (),
+        "supports_expert_knowledge": (
+            "forbidden_edges",
+            "required_edges",
+            "temporal_order",
+        ),
+        "noise_term": "",
+        "requires_target": False,
+    }
+
     def __init__(
         self,
         pval_threshold: float = 0.05,

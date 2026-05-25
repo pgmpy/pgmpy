@@ -92,6 +92,14 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
     - https://github.com/juangamella/ges
     """
 
+    _tags = {
+        "data_types": ("depends_on_scoring_method"),
+        "assumed_relationship": (),
+        "supports_expert_knowledge": (),
+        "noise_term": "",
+        "requires_target": False,
+    }
+
     def __init__(
         self,
         scoring_method: str | BaseStructureScore | None = None,

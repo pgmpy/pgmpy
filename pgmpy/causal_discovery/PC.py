@@ -186,6 +186,14 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
     - :cite:p:`ramsey_2016`
     """
 
+    _tags = {
+        "data_types": ("depends_on_ci_test"),
+        "assumed_relationship": (),
+        "supports_expert_knowledge": ("forbidden_edges", "required_edges", "search_space", "temporal_order"),
+        "noise_term": "",
+        "requires_target": False,
+    }
+
     def __init__(
         self,
         variant: str = "parallel",
