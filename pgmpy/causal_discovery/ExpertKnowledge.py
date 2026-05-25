@@ -64,7 +64,7 @@ class ExpertKnowledge:
     ...     expert_knowledge=expert_knowledge,
     ...     show_progress=False,
     ... )
-    <pgmpy.base.DAG.PDAG object at 0x...>
+    <pgmpy.base.PDAG.PDAG object at 0x...>
 
     **Temporal order**
 
@@ -81,7 +81,7 @@ class ExpertKnowledge:
     ...     expert_knowledge=expert_knowledge,
     ...     show_progress=False,
     ... )
-    <pgmpy.base.DAG.PDAG object at 0x...>
+    <pgmpy.base.PDAG.PDAG object at 0x...>
     """
 
     def __init__(

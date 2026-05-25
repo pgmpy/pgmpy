@@ -39,8 +39,8 @@ def get_example_model(model: str):
     Example
     -------
     >>> from pgmpy.utils import get_example_model
-    >>> model = get_example_model(model="asia")
-    >>> model
+    >>> model = get_example_model(model="asia")  # doctest: +SKIP
+    >>> model  # doctest: +SKIP
 
     Returns
     -------
@@ -232,7 +232,7 @@ def discretize(data, cardinality, labels=dict(), method="rounding"):
     ...     },
     ... )
     >>> df_disc.head()
-        X    Y    Z
+          X    Y    Z
     0   mid  mid  mid
     1   mid  mid  low
     2   mid  mid  mid
@@ -515,11 +515,12 @@ def to_timeseries_format(df: pd.DataFrame, return_format: str = "pd-multiindex")
     array([[[1, 0, 0],
             [1, 0, 0],
             [0, 1, 0]],
-            [[0, 1, 1],
+    <BLANKLINE>
+           [[0, 1, 1],
             [2, 1, 1],
             [0, 1, 1]]])
 
-    >>> to_timeseries_format(df, return_format="pd-multiindex")
+    >>> to_timeseries_format(df, return_format="pd-multiindex")  # doctest: +NORMALIZE_WHITESPACE
     variable       D  G  I
     instance time
     0        0     1  1  0
@@ -529,7 +530,7 @@ def to_timeseries_format(df: pd.DataFrame, return_format: str = "pd-multiindex")
              1     1  1  1
              2     1  1  1
 
-    >>> to_timeseries_format(df, return_format="pd-list")
+    >>> to_timeseries_format(df, return_format="pd-list")  # doctest: +SKIP
     [variable  D  G  I
      time
      0         1  1  0
@@ -541,7 +542,7 @@ def to_timeseries_format(df: pd.DataFrame, return_format: str = "pd-multiindex")
      1         1  1  1
      2         1  1  1]
 
-    >>> to_timeseries_format(df, return_format="sorted")
+    >>> to_timeseries_format(df, return_format="sorted")  # doctest: +NORMALIZE_WHITESPACE
     variable D     G     I
     time     0 1 2 0 1 2 0 1 2
     0        1 0 0 1 0 0 0 1 0

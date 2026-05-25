@@ -58,17 +58,17 @@ class CorrelationScore(_BaseUnsupervisedMetric):
     >>> from pgmpy.example_models import load_model
     >>> from pgmpy.metrics import CorrelationScore
     >>> alarm = load_model("bnlearn/alarm")
-    >>> data = alarm.simulate(int(1e4))
+    >>> data = alarm.simulate(int(1e4), seed=42)
     >>> scorer = CorrelationScore(
     ...     ci_test="chi_square", significance_level=0.05, return_summary=False
     ... )
     >>> scorer(X=data, causal_graph=alarm)
-    0.911957950065703
+    0.910039113428944
 
     >>> scorer = CorrelationScore(
     ...     ci_test="chi_square", significance_level=0.05, return_summary=True
     ... )
-    >>> scorer(X=data, causal_graph=alarm).head()
+    >>> scorer(X=data, causal_graph=alarm).head()  # doctest: +NORMALIZE_WHITESPACE
         var1            var2  stat_test  d_connected
     0   HISTORY          CVP      False        False
     1   HISTORY         PCWP      False        False

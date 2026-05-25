@@ -66,13 +66,10 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         >>> edges = [("A", "B", "-", ">"), ("B", "C", ">", "-")]
         >>> graph = AncestralBase(ebunch=edges)
         >>> list(graph.edges(data=True))
-        [('A', 'B', {'marks': {'A': '-', 'B': '>'}}),
-         ('B', 'C', {'marks': {'B': '>', 'C': '-'}})]
+        [('A', 'B', {'marks': {'A': '-', 'B': '>'}}), ('B', 'C', {'marks': {'B': '>', 'C': '-'}})]
         >>> graph.add_edge("C", "D", "o", "o")
         >>> list(graph.edges(data=True))
-        [('A', 'B', {'marks': {'A': '-', 'B': '>'}}),
-         ('B', 'C', {'marks': {'B': '>', 'C': '-'}}),
-         ('C', 'D', {'marks': {'C': 'o', 'D': 'o'}})]
+        [('A', 'B', {'marks': {'A': '-', 'B': '>'}}), ('B', 'C', {'marks': {'B': '>', 'C': '-'}}), ('C', 'D', {'marks': {'C': 'o', 'D': 'o'}})]
 
         Roles can be assigned to nodes in the graph at construction or using methods.
 
@@ -92,9 +89,9 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         Vertices of a specific role can be retrieved using ``get_role`` method.
 
         >>> g.get_role("exposures")
-        ["A"]
+        ['A']
         >>> g.get_role("adjustment")
-        ["L", "C"]
+        ['L', 'C']
         """
         super().__init__()
         self.valid_marks = {">", "-", "o"}
@@ -268,9 +265,7 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         >>> edges = [("A", "B", "-", ">"), ("B", "C", ">", "-"), ("C", "D", "o", "o")]
         >>> g.add_edges_from(edges)
         >>> list(g.edges(data=True))
-        [('A', 'B', {'marks': {'A': '-', 'B': '>'}}),
-         ('B', 'C', {'marks': {'B': '>', 'C': '-'}}),
-         ('C', 'D', {'marks': {'C': 'o', 'D': 'o'}})]
+        [('A', 'B', {'marks': {'A': '-', 'B': '>'}}), ('B', 'C', {'marks': {'B': '>', 'C': '-'}}), ('C', 'D', {'marks': {'C': 'o', 'D': 'o'}})]
         """
         for u, v, u_mark, v_mark in ebunch:
             self.add_edge(u, v, u_mark, v_mark)
@@ -300,14 +295,14 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         >>> from pgmpy.base import AncestralBase
         >>> edges = [("A", "B", "-", ">"), ("B", "C", ">", "-"), ("C", "D", "o", "o")]
         >>> graph = AncestralBase(ebunch=edges)
-        >>> print(graph.get_neighbors("B"))
-        {'A', 'C'}
-        >>> print(graph.get_neighbors("B", u_type=">"))
-        {'C', 'A'}
-        >>> print(graph.get_neighbors("B", v_type="-"))
-        {'A', 'C'}
-        >>> print(graph.get_neighbors("B", u_type=">", v_type="-"))
-        {'C', 'A'}
+        >>> print(sorted(graph.get_neighbors("B")))
+        ['A', 'C']
+        >>> print(sorted(graph.get_neighbors("B", u_type=">")))
+        ['A', 'C']
+        >>> print(sorted(graph.get_neighbors("B", v_type="-")))
+        ['A', 'C']
+        >>> print(sorted(graph.get_neighbors("B", u_type=">", v_type="-")))
+        ['A', 'C']
         """
         if node not in self:
             return set()
@@ -342,12 +337,12 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         >>> from pgmpy.base import AncestralBase
         >>> edges = [("A", "B", "-", ">"), ("C", "B", "-", ">"), ("B", "D", "-", ">")]
         >>> graph = AncestralBase(ebunch=edges)
-        >>> print(graph.get_parents("B"))
-        {'A', 'C'}
-        >>> print(graph.get_parents("D"))
-        {'B'}
-        >>> print(graph.get_parents("A"))
-        set()
+        >>> print(sorted(graph.get_parents("B")))
+        ['A', 'C']
+        >>> print(sorted(graph.get_parents("D")))
+        ['B']
+        >>> print(sorted(graph.get_parents("A")))
+        []
         """
         return self.get_neighbors(node, u_type=">", v_type="-")
 
@@ -370,12 +365,12 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         >>> from pgmpy.base import AncestralBase
         >>> edges = [("A", "B", "-", ">"), ("A", "C", "-", ">"), ("B", "D", "-", ">")]
         >>> graph = AncestralBase(ebunch=edges)
-        >>> print(graph.get_children("A"))
-        {'B', 'C'}
-        >>> print(graph.get_children("B"))
-        {'D'}
-        >>> print(graph.get_children("D"))
-        set()
+        >>> print(sorted(graph.get_children("A")))
+        ['B', 'C']
+        >>> print(sorted(graph.get_children("B")))
+        ['D']
+        >>> print(sorted(graph.get_children("D")))
+        []
         """
         return self.get_neighbors(node, u_type="-", v_type=">")
 
@@ -431,12 +426,12 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         ...     ("E", "C", "-", ">"),
         ... ]
         >>> graph = AncestralBase(ebunch=edges)
-        >>> print(graph.get_ancestors("D"))
-        {'A', 'B', 'C', 'D', 'E'}
-        >>> print(graph.get_ancestors("C"))
-        {'A', 'B', 'C', 'E'}
-        >>> print(graph.get_ancestors("A"))
-        {'A'}
+        >>> print(sorted(graph.get_ancestors("D")))
+        ['A', 'B', 'C', 'D', 'E']
+        >>> print(sorted(graph.get_ancestors("C")))
+        ['A', 'B', 'C', 'E']
+        >>> print(sorted(graph.get_ancestors("A")))
+        ['A']
         """
         ancestors = set()
         visited = set()
@@ -474,12 +469,12 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         ...     ("B", "E", "-", ">"),
         ... ]
         >>> graph = AncestralBase(ebunch=edges)
-        >>> print(graph.get_descendants("A"))
-        {'A', 'B', 'C', 'D', 'E'}
-        >>> print(graph.get_descendants("B"))
-        {'B', 'C', 'D', 'E'}
-        >>> print(graph.get_descendants("D"))
-        {'D'}
+        >>> print(sorted(graph.get_descendants("A")))
+        ['A', 'B', 'C', 'D', 'E']
+        >>> print(sorted(graph.get_descendants("B")))
+        ['B', 'C', 'D', 'E']
+        >>> print(sorted(graph.get_descendants("D")))
+        ['D']
         """
         descendants = set()
         visited = set()
@@ -524,10 +519,10 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         ...     ("D", "E", "o", "o"),
         ... ]
         >>> graph = AncestralBase(ebunch=edges)
-        >>> print(graph.get_reachable_nodes("A", v_type=">"))
-        {'A', 'B', 'C'}
-        >>> print(graph.get_reachable_nodes("A", u_type="o", v_type="o"))
-        {'A', 'D', 'E'}
+        >>> print(sorted(graph.get_reachable_nodes("A", v_type=">")))
+        ['A', 'B', 'C']
+        >>> print(sorted(graph.get_reachable_nodes("A", u_type="o", v_type="o")))
+        ['A', 'D', 'E']
         """
         reachable = set()
         visited = set()
@@ -582,9 +577,9 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         mag {
         L -> X
         X -> Y
+        X [exposure]
         L [latents]
         Y [outcome]
-        X [exposure]
         }
 
         References
@@ -611,13 +606,15 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
             if (u_mark, v_mark) in edge_map:
                 symbol = edge_map[(u_mark, v_mark)]
                 if symbol in ["<-", "<-@", "--@"]:
-                    lines.append(f"{v} {symbol[::-1]} {u}")
+                    # Swap nodes and use the forward-direction symbol
+                    forward_map = {"<-": "->", "<-@": "@->", "--@": "@--"}
+                    lines.append(f"{v} {forward_map[symbol]} {u}")
                 else:
                     lines.append(f"{u} {symbol} {v}")
 
         dagitty_role_map = {"exposures": "exposure", "outcomes": "outcome"}
-        for role in self.get_roles():
-            for var in self.get_role(role):
+        for role in sorted(self.get_roles()):
+            for var in sorted(self.get_role(role)):
                 lines.append(f"{var} [{dagitty_role_map.get(role, role)}]")
 
         lines.append("}")
@@ -643,7 +640,7 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         Examples
         --------
         >>> from pgmpy.base import MAG
-        >>> dag_str = '''dag {
+        >>> dag_str = '''mag {
         ... L -> A
         ... B -> C
         ... L [latents]
@@ -682,12 +679,12 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         --------
         >>> from pgmpy.base import MAG
         >>> mag1 = MAG(
-        ...     ebunch=[("X", "Y", "-", ">"), ("Y", "Z", "-", ">")],
+        ...     ebunch=[("X", "Y", "-", ">"), ("Y", "Z", "-", ">"), ("L", "X", "-", ">")],
         ...     latents={"L"},
         ...     roles={"exposures": "X"},
         ... )
         >>> mag2 = MAG(
-        ...     ebunch=[("X", "Y", "-", ">"), ("Y", "Z", "-", ">")],
+        ...     ebunch=[("X", "Y", "-", ">"), ("Y", "Z", "-", ">"), ("L", "X", "-", ">")],
         ...     latents={"L"},
         ...     roles={"exposures": "X"},
         ... )
@@ -695,7 +692,9 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         True
 
         >>> mag3 = MAG(
-        ...     ebunch=[("X", "Y", "-", ">")], latents={"L"}, roles={"exposures": "X"}
+        ...     ebunch=[("X", "Y", "-", ">"), ("L", "X", "-", ">")],
+        ...     latents={"L"},
+        ...     roles={"exposures": "X"},
         ... )
         >>> mag1 == mag3
         False
