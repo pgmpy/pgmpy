@@ -10,9 +10,11 @@ import pandas as pd
 from skbase.base import BaseObject
 from skbase.lookup import all_objects
 
-from pgmpy.base import DAG
+from pgmpy.base import ADMG, DAG, MAG, PDAG
 from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.utils.hf_hub import read_hf_file
+
+CausalGraph = DAG | PDAG | ADMG | MAG
 
 
 @dataclass
@@ -20,7 +22,7 @@ class Dataset:
     name: str
     data: pd.DataFrame
     expert_knowledge: ExpertKnowledge | None = None
-    ground_truth: DAG | None = None
+    ground_truth: CausalGraph | None = None
 
     tags: dict[str, Any] = None
 
@@ -130,9 +132,17 @@ class _BaseDataset(BaseObject):
         )
 
     @classmethod
-    def load_dataframe(cls) -> pd.DataFrame:
+    def load_dataframe(cls, n_samples=None, seed=None) -> pd.DataFrame:
         """
         Fetches/reads from cache the data associated with the dataset.
+
+        Parameters
+        ----------
+        n_samples : int, optional
+            If provided, return a random subsample of this size. Capped at the
+            dataset size.
+        seed : int, optional
+            Random seed for reproducible subsampling.
         """
         raw_data = cls._get_raw_data(cls.data_url)
         df = pd.read_csv(io.BytesIO(raw_data), sep=getattr(cls, "sep", "\t"))
@@ -147,6 +157,9 @@ class _BaseDataset(BaseObject):
             for col, order in cls.ordinal_variables.items():
                 cat_type = pd.CategoricalDtype(categories=order, ordered=True)
                 df[col] = df[col].astype(cat_type)
+        if n_samples is not None:
+            n_samples = min(n_samples, len(df))
+            df = df.sample(n=n_samples, random_state=seed)
         return df
 
     @classmethod
@@ -160,13 +173,41 @@ class _BaseDataset(BaseObject):
         return expert_knowledge
 
     @classmethod
-    def load_ground_truth(cls) -> DAG:
-        """Fetches/reads from cache the ground truth DAG associated with the dataset."""
+    def load_ground_truth(cls, **kwargs) -> DAG:
+        """Fetches/reads from cache the ground truth DAG associated with the dataset.
+
+        Parameters
+        ----------
+        **kwargs
+            Absorbed for call-signature compatibility with ``load_dataset()``.
+            Static datasets ignore all forwarded arguments.
+        """
         if not cls.get_class_tag("has_ground_truth"):
             return None
 
         raw_data = cls._get_raw_data(cls.ground_truth_url).decode("utf-8-sig", errors="ignore")
         return DAG.from_dagitty(raw_data)
+
+
+class _SimulationMixin:
+    """
+    Mixin for simulated datasets. Concrete classes must implement
+    ``load_dataframe()`` and ``load_ground_truth()``.
+
+    When using this mixin, it should be the first parent class so that its
+    methods take precedence in the MRO (same convention as
+    ``_CovarianceMixin``).
+    """
+
+    @classmethod
+    def load_dataframe(cls, n_samples=None, seed=None, **sim_kwargs) -> pd.DataFrame:
+        """Generate and return simulated data. Must be implemented by each simulator."""
+        raise NotImplementedError(f"{cls.__name__} must implement load_dataframe().")
+
+    @classmethod
+    def load_ground_truth(cls, **sim_kwargs) -> CausalGraph:
+        """Construct and return the ground-truth graph. Must be implemented by each simulator."""
+        raise NotImplementedError(f"{cls.__name__} must implement load_ground_truth().")
 
 
 class _CovarianceMixin:
@@ -198,16 +239,28 @@ class _CovarianceMixin:
         return pd.DataFrame(mat, columns=names, index=names)
 
     @classmethod
-    def load_dataframe(cls) -> pd.DataFrame:
-        """Method to create data from covariance matrix. When the `_CovarDatasetMixin is
-        used this method is supposed to override the _BaseDataset.load_dataframe method.
+    def load_dataframe(cls, n_samples=None, seed=None) -> pd.DataFrame:
+        """Generate data from a covariance matrix.
 
-        ** Hence, when using this mixin, _CovarDatasetMixin should be the first parent class. **
+        When the ``_CovarianceMixin`` is used, this method overrides
+        ``_BaseDataset.load_dataframe``.  The mixin should be the first
+        parent class so that it takes precedence in the MRO.
+
+        Parameters
+        ----------
+        n_samples : int, optional
+            Number of samples to generate.  Defaults to the class tag
+            ``n_samples`` when not provided.
+        seed : int, optional
+            Random seed for reproducible generation.  When ``None``, the
+            existing unseeded behavior is preserved.
         """
         cov_matrix = cls._load_covariance_matrix()
         mean = [0] * cls.get_class_tag("n_variables")
+        actual_n = n_samples if n_samples is not None else cls.get_class_tag("n_samples")
+        rng = np.random.default_rng(seed) if seed is not None else np.random
         data = pd.DataFrame(
-            np.random.multivariate_normal(mean, cov_matrix.values, size=cls.get_class_tag("n_samples")),
+            rng.multivariate_normal(mean, cov_matrix.values, size=actual_n),
             columns=cov_matrix.columns,
         )
         return data
@@ -231,7 +284,12 @@ class _TubingenBenchmarkMixin:
         return DAG.from_dagitty(content)
 
 
-def load_dataset(name: str) -> Dataset:
+def load_dataset(
+    name: str,
+    n_samples: int | None = None,
+    seed: int | None = None,
+    **sim_kwargs,
+) -> Dataset:
     """
     Load a dataset by name.
 
@@ -239,6 +297,16 @@ def load_dataset(name: str) -> Dataset:
     ----------
     name : str
         Name of the dataset to load.
+    n_samples : int, optional
+        For static datasets, return a random subsample of this size (capped
+        at the dataset size).  For simulated datasets, the number of samples
+        to generate.
+    seed : int, optional
+        Random seed for reproducible subsampling or simulation.
+    **sim_kwargs
+        Additional keyword arguments forwarded to the simulator's
+        ``load_dataframe()`` and ``load_ground_truth()`` methods.  Passing
+        simulator kwargs to a static dataset raises ``TypeError``.
 
     Examples
     --------
@@ -246,6 +314,14 @@ def load_dataset(name: str) -> Dataset:
     >>> dataset = load_dataset("sachs_mixed")
     >>> df = dataset.data
     >>> ground_truth = dataset.ground_truth
+
+    Subsample a static dataset:
+
+    >>> dataset = load_dataset("sachs_continuous", n_samples=100, seed=42)
+
+    Load a simulated dataset:
+
+    >>> dataset = load_dataset("linear_gaussian_scm", n_samples=500, seed=42, n_nodes=8)
     """
     all_datasets = all_objects(object_types=_BaseDataset, package_name="pgmpy.datasets", return_names=False)
     if name.startswith("tubingen"):
@@ -255,6 +331,11 @@ def load_dataset(name: str) -> Dataset:
 
             if not (1 <= pair_id <= 108):
                 raise ValueError(f"Tubingen pair ID must be between 1 and 108. Got {pair_id}.")
+            if n_samples is not None or seed is not None or sim_kwargs:
+                raise ValueError(
+                    "Tubingen datasets do not support n_samples, seed, or simulator kwargs. "
+                    "Use load_dataset('tubingen/<pair_id>') without additional arguments."
+                )
             target_cls = next(
                 (cls for cls in all_datasets if cls.get_class_tag("name") == "tubingen"),
                 None,
@@ -286,9 +367,9 @@ def load_dataset(name: str) -> Dataset:
 
     return Dataset(
         name=name,
-        data=target_cls.load_dataframe(),
+        data=target_cls.load_dataframe(n_samples=n_samples, seed=seed, **sim_kwargs),
         expert_knowledge=target_cls.load_expert_knowledge(),
-        ground_truth=target_cls.load_ground_truth(),
+        ground_truth=target_cls.load_ground_truth(seed=seed, **sim_kwargs),
         tags=target_cls.get_class_tags(),
     )
 
