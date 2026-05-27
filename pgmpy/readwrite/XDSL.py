@@ -149,7 +149,7 @@ class XDSLReader:
         >>> from pgmpy.example_models import load_model
         >>> XDSLWriter(load_model("bnlearn/asia")).write("asia_test.xdsl")
         >>> reader = XDSLReader("asia_test.xdsl")
-        >>> reader.get_values() # doctest: NORMALIZE_WHITESPACE
+        >>> reader.get_values() # doctest: +NORMALIZE_WHITESPACE
         {'asia': [[0.01], [0.99]], 'tub': [[0.05, 0.01], [0.95, 0.99]], 'smoke': [[0.5], [0.5]],
          'lung': [[0.1, 0.01], [0.9, 0.99]], 'bronc': [[0.6, 0.3], [0.4, 0.7]],
          'either': [[1.0, 1.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]], 'xray': [[0.98, 0.05], [0.02, 0.95]],
