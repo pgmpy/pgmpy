@@ -69,7 +69,9 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         [('A', 'B', {'marks': {'A': '-', 'B': '>'}}), ('B', 'C', {'marks': {'B': '>', 'C': '-'}})]
         >>> graph.add_edge("C", "D", "o", "o")
         >>> list(graph.edges(data=True))
-        [('A', 'B', {'marks': {'A': '-', 'B': '>'}}), ('B', 'C', {'marks': {'B': '>', 'C': '-'}}), ('C', 'D', {'marks': {'C': 'o', 'D': 'o'}})]
+        [('A', 'B', {'marks': {'A': '-', 'B': '>'}}),
+         ('B', 'C', {'marks': {'B': '>', 'C': '-'}}),
+         ('C', 'D', {'marks': {'C': 'o', 'D': 'o'}})]
 
         Roles can be assigned to nodes in the graph at construction or using methods.
 
@@ -265,7 +267,9 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         >>> edges = [("A", "B", "-", ">"), ("B", "C", ">", "-"), ("C", "D", "o", "o")]
         >>> g.add_edges_from(edges)
         >>> list(g.edges(data=True))
-        [('A', 'B', {'marks': {'A': '-', 'B': '>'}}), ('B', 'C', {'marks': {'B': '>', 'C': '-'}}), ('C', 'D', {'marks': {'C': 'o', 'D': 'o'}})]
+        [('A', 'B', {'marks': {'A': '-', 'B': '>'}}),
+         ('B', 'C', {'marks': {'B': '>', 'C': '-'}}),
+         ('C', 'D', {'marks': {'C': 'o', 'D': 'o'}})]
         """
         for u, v, u_mark, v_mark in ebunch:
             self.add_edge(u, v, u_mark, v_mark)
