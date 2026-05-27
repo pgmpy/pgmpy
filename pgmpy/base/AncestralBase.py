@@ -68,7 +68,7 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         >>> list(graph.edges(data=True))
         [('A', 'B', {'marks': {'A': '-', 'B': '>'}}), ('B', 'C', {'marks': {'B': '>', 'C': '-'}})]
         >>> graph.add_edge("C", "D", "o", "o")
-        >>> list(graph.edges(data=True))
+        >>> list(graph.edges(data=True))  # doctest: +NORMALIZE_WHITESPACE
         [('A', 'B', {'marks': {'A': '-', 'B': '>'}}),
          ('B', 'C', {'marks': {'B': '>', 'C': '-'}}),
          ('C', 'D', {'marks': {'C': 'o', 'D': 'o'}})]
@@ -266,7 +266,7 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         >>> g = AncestralBase()
         >>> edges = [("A", "B", "-", ">"), ("B", "C", ">", "-"), ("C", "D", "o", "o")]
         >>> g.add_edges_from(edges)
-        >>> list(g.edges(data=True))
+        >>> list(g.edges(data=True))  # doctest: +NORMALIZE_WHITESPACE
         [('A', 'B', {'marks': {'A': '-', 'B': '>'}}),
          ('B', 'C', {'marks': {'B': '>', 'C': '-'}}),
          ('C', 'D', {'marks': {'C': 'o', 'D': 'o'}})]
