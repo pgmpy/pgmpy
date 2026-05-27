@@ -4,22 +4,10 @@ from itertools import combinations
 import networkx as nx
 import pandas as pd
 
-from pgmpy.base import DAG, PDAG
+from pgmpy.base import PDAG
 from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.causal_discovery._base import CausalDiscoverySummary, _BaseCausalDiscovery, _ConstraintMixin
-from pgmpy.ci_tests import get_ci_test
-from pgmpy.metrics import ImpliedCIs, get_metrics
-from pgmpy.structure_score import (
-    AIC,
-    BIC,
-    AICCondGauss,
-    AICGauss,
-    BICCondGauss,
-    BICGauss,
-    LogLikelihood,
-    LogLikelihoodCondGauss,
-    LogLikelihoodGauss,
-)
+from pgmpy.ci_tests import _BaseCITest, get_ci_test
 from pgmpy.utils import get_dataset_type
 
 
@@ -437,90 +425,12 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
 
         return pdag_oriented
 
-    def summary(self, summary_width: int = 30):
+    def summary(
+        self, summary_width: int = 35, significance_level: float = 0.05, ci_test: str | _BaseCITest | None = None
+    ):
         if not hasattr(self, "fit_info_"):
             raise ValueError("Model must be fit before calling summary().")
 
-        lines = []
-        self.fit_info_.summary(lines, summary_width=summary_width)
-        self.fit_info_.add_field(
-            "Enforce expert knowledge", self.fit_info_.enforce_expert_knowledge, lines, line_width=summary_width
-        )
-
-        # Structure
-        lines.append("\nStructure:")
-        self.fit_info_.add_field("Total Edges", self.fit_info_.n_edges, lines, line_width=summary_width)
-        if self.fit_info_.n_undirected is not None:
-            self.fit_info_.add_field("Directed Edges", self.fit_info_.n_directed, lines, line_width=summary_width)
-            self.fit_info_.add_field("Undirected Edges", self.fit_info_.n_undirected, lines, line_width=summary_width)
-
-        self.fit_info_.add_field(
-            "Average degree", (self.fit_info_.n_edges / self.fit_info_.n_variables), lines, line_width=summary_width
-        )
-
-        if self.fit_info_.graph_type == "PDAG":
-            dag = self.causal_graph_.to_dag()
-        else:
-            dag = self.causal_graph_
-
-        all_CIs = (
-            ImpliedCIs(ci_test=get_ci_test(test=self.ci_test, data=self.fit_info_.dataset))
-            .evaluate(self.fit_info_.dataset, dag)
-            .sort_values(by="p-value")
-        )
-
-        self.fit_info_.add_field(
-            "Significance level for CI", self.fit_info_.significance_level, lines, line_width=summary_width
-        )
-        self.fit_info_.add_field(
-            "Average p-value (implied CIs)", all_CIs["p-value"].mean(), lines, line_width=summary_width
-        )
-        self.fit_info_.add_field(
-            "Median p-value (implied CIs)", all_CIs["p-value"].median(), lines, line_width=summary_width
-        )
-
-        sep_set_size = 0
-        for sep_set in self.separating_sets_.values():
-            sep_set_size += len(sep_set)
-        self.fit_info_.add_field(
-            "Average separating set size", sep_set_size / len(self.separating_sets_), lines, line_width=summary_width
-        )
-
-        available_score_methods = {
-            "continuous": [
-                BICGauss,
-                AICGauss,
-                LogLikelihoodGauss,
-            ],
-            "discrete": [
-                BIC,
-                LogLikelihood,
-                AIC,
-            ],
-            "mixed": [
-                BICCondGauss,
-                LogLikelihoodCondGauss,
-                AICCondGauss,
-            ],
-        }
-
-        all_scores = available_score_methods[self.fit_info_.dataset_type]
-        all_metrics = get_metrics(
-            requires_true_graph=False,
-            requires_data=True,
-            supported_graph_types=(DAG,),
-        )
-
-        for score_cls in all_scores:
-            score_val = score_cls(self.fit_info_.dataset).score(self.causal_graph_)
-            self.fit_info_.add_field(
-                f"{score_cls.__name__} Score", round(score_val, 3), lines, line_width=summary_width
-            )
-
-        for metric_cls in all_metrics:
-            if metric_cls.__name__ == "ImpliedCIs" or metric_cls.__name__ == "StructureScore":
-                continue
-            score_val = metric_cls().evaluate(self.fit_info_.dataset, dag)
-            self.fit_info_.add_field(f"{metric_cls.__name__}", round(score_val, 3), lines, line_width=summary_width)
-
-        return "\n".join(lines)
+        self.fit_info_.significance_level = significance_level
+        self.fit_info_.ci_test = ci_test
+        return self.fit_info_.summary(self.causal_graph_, summary_width=summary_width)

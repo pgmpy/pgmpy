@@ -1,7 +1,7 @@
 import textwrap
 from collections import deque
 from collections.abc import Callable, Generator, Hashable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from itertools import combinations, permutations
 
 import networkx as nx
@@ -13,11 +13,22 @@ from sklearn.utils.validation import check_is_fitted, validate_data
 from tqdm.auto import tqdm
 
 from pgmpy import config, logger
-from pgmpy.base import DAG, UndirectedGraph
-from pgmpy.ci_tests import IndependenceMatch, get_ci_test
+from pgmpy.base import DAG, PDAG, UndirectedGraph
+from pgmpy.ci_tests import IndependenceMatch, _BaseCITest, get_ci_test
 from pgmpy.independencies import Independencies
-from pgmpy.metrics import get_metrics
-from pgmpy.structure_score import BaseStructureScore
+from pgmpy.metrics import ImpliedCIs, get_metrics
+from pgmpy.structure_score import (
+    AIC,
+    BIC,
+    AICCondGauss,
+    AICGauss,
+    BaseStructureScore,
+    BICCondGauss,
+    BICGauss,
+    LogLikelihood,
+    LogLikelihoodCondGauss,
+    LogLikelihoodGauss,
+)
 
 
 class _BaseCausalDiscovery(BaseEstimator):
@@ -583,14 +594,31 @@ class _ScoreMixin:
                     yield (operation, score_delta)
 
 
-@dataclass
+class PrintSummary:
+    """Class to help summary text render properly.
+
+    The summary can either be directly printed, or the summary methods
+    can be simply called and Python's REPL will use this class to render properly.
+    """
+
+    def __init__(self, summary_text):
+        self.summary_text = summary_text
+
+    def __str__(self):
+        return self.summary_text
+
+    def __repr__(self):
+        return self.summary_text
+
+
+@dataclass(repr=True)
 class CausalDiscoverySummary:
     # Data info
     algorithm: str = None
     n_samples: int = None
     n_variables: int = None
     dataset_type: str = None
-    dataset: pd.DataFrame = None
+    dataset: pd.DataFrame = field(default=None, repr=False)  # don't want to render the dataset
 
     # Graph info
     graph_type: str = None
@@ -600,9 +628,10 @@ class CausalDiscoverySummary:
 
     # Constraints info
     significance_level: float = None
-    enforce_expert_knowledge: str = None
+    ci_test: str | _BaseCITest | None = None
 
-    def summary(self, lines, summary_width=30):
+    def summary(self, causal_graph: PDAG | DAG, summary_width=35):
+        lines = []
         title = "\nCausal Discovery Summary"
         lines.append(title)
         lines.append("=" * len(title))
@@ -614,6 +643,87 @@ class CausalDiscoverySummary:
         self.add_field("Variables", self.n_variables, lines, line_width=summary_width)
         self.add_field("Variable Types", self.dataset_type, lines, line_width=summary_width)
         self.add_field("Graph Type", self.graph_type, lines, line_width=summary_width)
+
+        # Structure
+        lines.append("\nStructure:")
+        self.add_field("Total Edges", self.n_edges, lines, line_width=summary_width)
+        if self.n_undirected is not None:
+            self.add_field("Directed Edges", self.n_directed, lines, line_width=summary_width)
+            self.add_field("Undirected Edges", self.n_undirected, lines, line_width=summary_width)
+
+        self.add_field("Average node degree", (self.n_edges / self.n_variables), lines, line_width=summary_width)
+        available_score_methods = {
+            "continuous": [
+                BICGauss,
+                AICGauss,
+                LogLikelihoodGauss,
+            ],
+            "discrete": [
+                BIC,
+                LogLikelihood,
+                AIC,
+            ],
+            "mixed": [
+                BICCondGauss,
+                LogLikelihoodCondGauss,
+                AICCondGauss,
+            ],
+        }
+
+        all_scores = available_score_methods[self.dataset_type]
+        all_metrics = get_metrics(
+            requires_true_graph=False,
+            requires_data=True,
+            supported_graph_types=(DAG,),
+        )
+
+        for score_cls in all_scores:
+            score_val = score_cls(self.dataset).score(causal_graph)
+            self.add_field(f"{score_cls.__name__} Score", round(score_val, 3), lines, line_width=summary_width)
+
+        if self.graph_type == "PDAG":
+            logger.warning("Warning: Converting PDAG to DAG for unsupervised metrics")
+            dag = causal_graph.to_dag()
+        else:
+            dag = causal_graph
+
+        for metric_cls in all_metrics:
+            if metric_cls.__name__ == "ImpliedCIs" or metric_cls.__name__ == "StructureScore":
+                continue
+            score_val = metric_cls().evaluate(self.dataset, dag)
+            self.add_field(f"{metric_cls.__name__}", round(score_val, 3), lines, line_width=summary_width)
+
+        ci_test_for_CI = get_ci_test(test=self.ci_test, data=self.dataset)
+        all_CIs = ImpliedCIs(ci_test=ci_test_for_CI).evaluate(self.dataset, dag)
+
+        lines.append("\nIndependencies:")
+        self.add_field(
+            "ci_test used for independence tests", type(ci_test_for_CI).__name__, lines, line_width=summary_width
+        )
+
+        self.add_field(
+            "Significance level for independence tests", self.significance_level, lines, line_width=summary_width
+        )
+
+        self.add_field(
+            "Fraction of implied CIs accepted (w.r.t. significance level)",
+            (all_CIs["p-value"] > self.significance_level).sum() / len(all_CIs),
+            lines,
+            line_width=summary_width,
+        )
+
+        self.add_field("Average p-value (implied CIs)", all_CIs["p-value"].mean(), lines, line_width=summary_width)
+        self.add_field("Median p-value (implied CIs)", all_CIs["p-value"].median(), lines, line_width=summary_width)
+
+        non_empty = all_CIs["cond_vars"].apply(len) > 0
+        avg_sep_set_size = all_CIs.loc[non_empty, "cond_vars"].apply(len).mean()
+        max_sep_set_size = all_CIs.loc[:, "cond_vars"].apply(len).max()
+
+        self.add_field("Average conditioning set size (excluding ϕ)", avg_sep_set_size, lines, line_width=summary_width)
+
+        self.add_field("Max conditioning set size", max_sep_set_size, lines, line_width=summary_width)
+
+        return PrintSummary("\n".join(lines))
 
     def add_field(self, description, value, lines, line_width=30):
         if isinstance(value, (float, np.floating)):
