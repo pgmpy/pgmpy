@@ -783,6 +783,6 @@ def test_causal_discovery_summary():
         est.summary()
 
     est.fit(X=data)
-    summary_str = est.summary()
-    # check no. of lines in summary is at least 14 (common summary info)
-    assert len(summary_str.split("\n")) >= 14
+    summary = est.summary()
+    # check no. of lines in summary is 25
+    assert len(summary.summary_text.split("\n")) >= 25

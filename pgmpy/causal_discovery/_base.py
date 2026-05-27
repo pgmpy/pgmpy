@@ -598,7 +598,7 @@ class PrintSummary:
     """Class to help summary text render properly.
 
     The summary can either be directly printed, or the summary methods
-    can be simply called and Python's REPL will use this class to render properly.
+    can be simply called and Python's REPL will use this class to render it properly.
     """
 
     def __init__(self, summary_text):
