@@ -191,8 +191,10 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         ...     "x3", lambda parent: dist.Normal(parent["x2"] + 0.3, 2), parents=["x2"]
         ... )
         >>> model.add_cpds(cpd1, cpd2, cpd3)
-        >>> model.get_cpds()  # doctest: +ELLIPSIS
-        [<FunctionalCPD: P(x1) = lambda fun.> at ..., <FunctionalCPD: P(x2 | x1) = lambda fun.> at ..., <FunctionalCPD: P(x3 | x2) = lambda fun.> at ...]
+        >>> model.get_cpds()  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        [<FunctionalCPD: P(x1) = lambda fun.> at ...,
+         <FunctionalCPD: P(x2 | x1) = lambda fun.> at ...,
+         <FunctionalCPD: P(x3 | x2) = lambda fun.> at ...]
         >>> config.set_backend('numpy')
         """
         return super().get_cpds(node)

@@ -89,8 +89,9 @@ class XDSLReader:
         >>> from pgmpy.example_models import load_model
         >>> XDSLWriter(load_model("bnlearn/asia")).write("asia_test.xdsl")
         >>> reader = XDSLReader("asia_test.xdsl")
-        >>> reader.get_parents()
-        {'asia': [], 'tub': ['asia'], 'smoke': [], 'lung': ['smoke'], 'bronc': ['smoke'], 'either': ['lung', 'tub'], 'xray': ['either'], 'dysp': ['bronc', 'either']}
+        >>> reader.get_parents() # doctest: +NORMALIZE_WHITESPACE
+        {'asia': [], 'tub': ['asia'], 'smoke': [], 'lung': ['smoke'], 'bronc': ['smoke'],
+         'either': ['lung', 'tub'], 'xray': ['either'], 'dysp': ['bronc', 'either']}
         """
         variable_parents = {}
         for node in self.cpt_elements:
@@ -112,8 +113,9 @@ class XDSLReader:
         >>> from pgmpy.example_models import load_model
         >>> XDSLWriter(load_model("bnlearn/asia")).write("asia_test.xdsl")
         >>> reader = XDSLReader("asia_test.xdsl")
-        >>> reader.get_edges()
-        [['asia', 'tub'], ['smoke', 'lung'], ['smoke', 'bronc'], ['lung', 'either'], ['tub', 'either'], ['either', 'xray'], ['bronc', 'dysp'], ['either', 'dysp']]
+        >>> reader.get_edges() # doctest: +NORMALIZE_WHITESPACE
+        [['asia', 'tub'], ['smoke', 'lung'], ['smoke', 'bronc'], ['lung', 'either'],
+         ['tub', 'either'], ['either', 'xray'], ['bronc', 'dysp'], ['either', 'dysp']]
         """
         edge_list = [[value, key] for key in self.variable_parents for value in self.variable_parents[key]]
         return edge_list
@@ -128,8 +130,9 @@ class XDSLReader:
         >>> from pgmpy.example_models import load_model
         >>> XDSLWriter(load_model("bnlearn/asia")).write("asia_test.xdsl")
         >>> reader = XDSLReader("asia_test.xdsl")
-        >>> reader.get_states()
-        {'asia': ['yes', 'no'], 'tub': ['yes', 'no'], 'smoke': ['yes', 'no'], 'lung': ['yes', 'no'], 'bronc': ['yes', 'no'], 'either': ['yes', 'no'], 'xray': ['yes', 'no'], 'dysp': ['yes', 'no']}
+        >>> reader.get_states() # doctest: +NORMALIZE_WHITESPACE
+        {'asia': ['yes', 'no'], 'tub': ['yes', 'no'], 'smoke': ['yes', 'no'], 'lung': ['yes', 'no'],
+         'bronc': ['yes', 'no'], 'either': ['yes', 'no'], 'xray': ['yes', 'no'], 'dysp': ['yes', 'no']}
         """
         variable_states = {}
         for cpt in self.cpt_elements:
@@ -146,8 +149,11 @@ class XDSLReader:
         >>> from pgmpy.example_models import load_model
         >>> XDSLWriter(load_model("bnlearn/asia")).write("asia_test.xdsl")
         >>> reader = XDSLReader("asia_test.xdsl")
-        >>> reader.get_values()
-        {'asia': [[0.01], [0.99]], 'tub': [[0.05, 0.01], [0.95, 0.99]], 'smoke': [[0.5], [0.5]], 'lung': [[0.1, 0.01], [0.9, 0.99]], 'bronc': [[0.6, 0.3], [0.4, 0.7]], 'either': [[1.0, 1.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]], 'xray': [[0.98, 0.05], [0.02, 0.95]], 'dysp': [[0.9, 0.8, 0.7, 0.1], [0.1, 0.2, 0.3, 0.9]]}
+        >>> reader.get_values() # doctest: NORMALIZE_WHITESPACE
+        {'asia': [[0.01], [0.99]], 'tub': [[0.05, 0.01], [0.95, 0.99]], 'smoke': [[0.5], [0.5]],
+         'lung': [[0.1, 0.01], [0.9, 0.99]], 'bronc': [[0.6, 0.3], [0.4, 0.7]],
+         'either': [[1.0, 1.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]], 'xray': [[0.98, 0.05], [0.02, 0.95]],
+         'dysp': [[0.9, 0.8, 0.7, 0.1], [0.1, 0.2, 0.3, 0.9]]}
         """
         variable_CPD = {}
         for cpt in self.cpt_elements:
