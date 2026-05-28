@@ -387,3 +387,17 @@ def test_score():
     shd = est.score(true_graph=asia_model, metric="SHD")
     assert np.round(structure_score, 4) > -3e4
     assert shd, 2
+
+
+def test_causal_discovery_summary():
+    asia_model = load_model("bnlearn/asia")
+    data = asia_model.simulate(n_samples=int(1e3), seed=42)
+    est = HillClimbSearch(show_progress=False)
+
+    with pytest.raises(ValueError):
+        est.summary()
+
+    est.fit(X=data)
+    summary = est.summary()
+    # check no. of lines in summary is 25
+    assert len(summary.summary_text.split("\n")) >= 25

@@ -6,8 +6,9 @@ import pandas as pd
 
 from pgmpy.base import PDAG
 from pgmpy.causal_discovery import ExpertKnowledge
-from pgmpy.causal_discovery._base import _BaseCausalDiscovery, _ConstraintMixin
-from pgmpy.ci_tests import get_ci_test
+from pgmpy.causal_discovery._base import CausalDiscoverySummary, _BaseCausalDiscovery, _ConstraintMixin
+from pgmpy.ci_tests import _BaseCITest, get_ci_test
+from pgmpy.utils import get_dataset_type
 
 
 class PC(_ConstraintMixin, _BaseCausalDiscovery):
@@ -228,6 +229,14 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
 
         # CI test
         self.ci_test_ = get_ci_test(test=self.ci_test, data=X)
+        self.fit_info_ = CausalDiscoverySummary()
+        self.fit_info_.algorithm = self.__class__.__name__
+        self.fit_info_.n_samples = X.shape[0]
+        self.fit_info_.n_variables = X.shape[1]
+        self.fit_info_.dataset_type = get_dataset_type(X)
+        self.fit_info_.dataset = X
+        self.fit_info_.enforce_expert_knowledge = str(self.enforce_expert_knowledge)
+        self.fit_info_.significance_level = self.significance_level
 
         if self.expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
@@ -271,8 +280,18 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
 
         if self.return_type in ("pdag", "cpdag"):
             self.causal_graph_ = pdag
+            self.fit_info_.graph_type = "PDAG"
+            self.fit_info_.n_directed = len(self.causal_graph_.directed_edges)
+            self.fit_info_.n_undirected = len(self.causal_graph_.undirected_edges)
+            self.fit_info_.n_edges = self.fit_info_.n_directed + self.fit_info_.n_undirected
+
         elif self.return_type == "dag":
             self.causal_graph_ = pdag.to_dag()
+            self.fit_info_.graph_type = "DAG"
+            self.fit_info_.n_directed = len(self.causal_graph_.edges)
+            self.fit_info_.n_undirected = 0
+            self.fit_info_.n_edges = self.fit_info_.n_directed
+
         else:
             raise ValueError(f"return_type must be one of: dag, pdag, or cpdag. Got: {self.return_type}")
 
@@ -405,3 +424,13 @@ class PC(_ConstraintMixin, _BaseCausalDiscovery):
         pdag_oriented.add_nodes_from(pdag.nodes())
 
         return pdag_oriented
+
+    def summary(
+        self, summary_width: int = 35, significance_level: float = 0.05, ci_test: str | _BaseCITest | None = None
+    ):
+        if not hasattr(self, "fit_info_"):
+            raise ValueError("Model must be fit before calling summary().")
+
+        self.fit_info_.significance_level = significance_level
+        self.fit_info_.ci_test = ci_test
+        return self.fit_info_.summary(self.causal_graph_, summary_width=summary_width)

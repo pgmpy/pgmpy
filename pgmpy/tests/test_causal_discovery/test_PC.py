@@ -772,3 +772,17 @@ def test_orient_rule(orient_rule):
     pdag = est.causal_graph_
     assert ("Pollution", "Cancer") in pdag.edges() or ("Cancer", "Pollution") in pdag.edges()
     assert ("Smoker", "Cancer") in pdag.edges() or ("Cancer", "Smoker") in pdag.edges()
+
+
+def test_causal_discovery_summary():
+    asia_model = load_model("bnlearn/asia")
+    data = asia_model.simulate(n_samples=int(1e3), seed=42)
+    est = PC(show_progress=False)
+
+    with pytest.raises(ValueError):
+        est.summary()
+
+    est.fit(X=data)
+    summary = est.summary()
+    # check no. of lines in summary is 25
+    assert len(summary.summary_text.split("\n")) >= 25
