@@ -706,7 +706,7 @@ class CausalDiscoverySummary:
         )
 
         self.add_field(
-            "Fraction of implied CIs accepted (w.r.t. significance level)",
+            "Fraction of implied CIs accepted (above significance level)",
             (all_CIs["p-value"] > self.significance_level).sum() / len(all_CIs),
             lines,
             line_width=summary_width,
@@ -719,9 +719,11 @@ class CausalDiscoverySummary:
         avg_sep_set_size = all_CIs.loc[non_empty, "cond_vars"].apply(len).mean()
         max_sep_set_size = all_CIs.loc[:, "cond_vars"].apply(len).max()
 
-        self.add_field("Average conditioning set size (excluding ϕ)", avg_sep_set_size, lines, line_width=summary_width)
+        self.add_field(
+            "Average conditioning set size (excluding null)", avg_sep_set_size, lines, line_width=summary_width
+        )
 
-        self.add_field("Max conditioning set size", max_sep_set_size, lines, line_width=summary_width)
+        self.add_field("Maximum conditioning set size", max_sep_set_size, lines, line_width=summary_width)
 
         return PrintSummary("\n".join(lines))
 
