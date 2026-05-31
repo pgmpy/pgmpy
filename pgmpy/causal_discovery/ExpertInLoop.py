@@ -109,14 +109,16 @@ class ExpertInLoop(_BaseCausalDiscovery):
     ...     return (var1, var2) if var1 < var2 else (var2, var1)
     ...
     >>> eil = ExpertInLoop(orientation_fn=custom_orient, effect_size_threshold=0.0001)
-    >>> eil.fit(df)
-    >>> eil.causal_graph_.edges()
+    >>> eil.fit(df)  # doctest: +ELLIPSIS
+    ExpertInLoop(effect_size_threshold=0.0001,
+                 orientation_fn=<function custom_orient at 0x...>)
+    >>> _ = eil.causal_graph_.edges()
 
     Using pre-specified orientations:
 
     >>> orientations = {("Pollution", "Cancer"), ("Smoker", "Cancer")}
     >>> eil = ExpertInLoop(orientations=orientations, effect_size_threshold=0.0001)
-    >>> eil.fit(df)
+    >>> eil.fit(df)  # doctest: +SKIP
 
     Using expert knowledge with temporal ordering:
 
@@ -125,7 +127,9 @@ class ExpertInLoop(_BaseCausalDiscovery):
     ...     temporal_order=[["Pollution", "Smoker"], ["Cancer"], ["Xray", "Dyspnoea"]]
     ... )
     >>> eil = ExpertInLoop(expert_knowledge=expert, effect_size_threshold=0.0001)
-    >>> eil.fit(df)
+    >>> eil.fit(df)  # doctest: +ELLIPSIS
+    ExpertInLoop(effect_size_threshold=0.0001,
+                 expert_knowledge=Expert Knowledge: ...)
 
     Using LLM-based orientation (requires API key):
 
@@ -141,7 +145,7 @@ class ExpertInLoop(_BaseCausalDiscovery):
     ...     llm_model="gemini/gemini-1.5-flash",
     ... )
     >>> eil = ExpertInLoop(orientation_fn=orientation_fn)
-    >>> eil.fit(df)
+    >>> eil.fit(df)  # doctest: +SKIP
 
     References
     ----------

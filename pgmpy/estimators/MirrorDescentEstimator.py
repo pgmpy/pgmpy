@@ -136,7 +136,7 @@ class MirrorDescentEstimator(MarginalEstimator):
         >>> tree1 = MirrorDescentEstimator(model=model, data=data).estimate(
         ...     marginals=[("a", "b")]
         ... )
-        >>> print(tree1.factors[0])
+        >>> print(tree1.factors[0])  # doctest: +SKIP
         +------+------+------------+
         | a    | b    |   phi(a,b) |
         +======+======+============+
@@ -151,7 +151,7 @@ class MirrorDescentEstimator(MarginalEstimator):
         >>> tree2 = MirrorDescentEstimator(model=model, data=data).estimate(
         ...     marginals=[("a",)]
         ... )
-        >>> print(tree2.factors[0])
+        >>> print(tree2.factors[0])  # doctest: +SKIP
         +------+------+------------+
         | a    | b    |   phi(a,b) |
         +======+======+============+

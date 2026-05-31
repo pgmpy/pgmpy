@@ -105,7 +105,7 @@ pgmpy = [
 ]
 
 [tool.pytest.ini_options]
-addopts = "-p no:doctest"
+addopts = "--ignore=pgmpy/estimators/StructureScore.py --ignore=pgmpy/readwrite/PomdpX.py --ignore=pgmpy/extern/tabulate.py --ignore=pgmpy/models/SEM.py --ignore=pgmpy/sampling/base.py"
 norecursedirs = [".git", "ignore", "build", "__pycache__"]
 filterwarnings = ["default"]
 

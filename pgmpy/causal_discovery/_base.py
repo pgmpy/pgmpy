@@ -116,7 +116,8 @@ class _BaseCausalDiscovery(BaseEstimator):
         >>> from pgmpy.causal_discovery import PC
         >>> from pgmpy.metrics import get_metrics
         >>> from pgmpy.datasets import load_dataset
-        >>> data = load_dataset("lead")
+        >>> dataset = load_dataset("lead")
+        >>> data = dataset.data
         >>> dag = PC(return_type="dag").fit(data)
         >>> score = dag.score(X=data, metric="correlation_score")
         """

@@ -10,8 +10,8 @@ class _BaseIdentification:
 
     Examples
     --------
-    >>> from pgmpy.identification import BaseIdentification
-    >>> class SimpleId(BaseIdentification):
+    >>> from pgmpy.identification import _BaseIdentification
+    >>> class SimpleId(_BaseIdentification):
     ...     "A simple identification method when all variable are observed"
     ...
     ...     def _identify(self, causal_graph):
