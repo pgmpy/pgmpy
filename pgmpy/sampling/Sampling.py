@@ -571,13 +571,13 @@ class GibbsSampling(MarkovChain):
         >>> model.add_factors(factor_ab, factor_cb)
         >>> gibbs = GibbsSampling(model)
         >>> gen = gibbs.generate_sample(size=2, seed=42)
-        >>> [sample for sample in gen]
+        >>> [sample for sample in gen]  # doctest: +NORMALIZE_WHITESPACE
         [[State(var=np.str_('A'), state=np.int64(0)),
           State(var=np.str_('B'), state=np.int64(1)),
           State(var=np.str_('C'), state=np.int64(1))],
-         [State(var=np.str_('A'), state=np.int64(1)),
-          State(var=np.str_('B'), state=np.int64(0)),
-          State(var=np.str_('C'), state=np.int64(1))]]
+        [State(var=np.str_('A'), state=np.int64(1)),
+         State(var=np.str_('B'), state=np.int64(0)),
+         State(var=np.str_('C'), state=np.int64(1))]]
         """
         if seed is not None:
             np.random.seed(seed)

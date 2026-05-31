@@ -114,14 +114,17 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
     >>> from pgmpy.causal_discovery import HillClimbSearch
     >>> hc = HillClimbSearch(scoring_method="bic-d")
     >>> hc.fit(df)
-    >>> hc.causal_graph_.edges()
+    HillClimbSearch(scoring_method='bic-d')
+    >>> _ = hc.causal_graph_.edges()
 
     Use expert knowledge to constrain the search:
 
     >>> from pgmpy.causal_discovery import ExpertKnowledge
     >>> expert = ExpertKnowledge(forbidden_edges=[("HISTORY", "CVP")])
     >>> hc = HillClimbSearch(scoring_method="bic-d", expert_knowledge=expert)
-    >>> hc.fit(df)
+    >>> hc.fit(df)  # doctest: +ELLIPSIS
+    HillClimbSearch(expert_knowledge=Expert Knowledge: ...,
+                    scoring_method='bic-d')
 
     References
     ----------

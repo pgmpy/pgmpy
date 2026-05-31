@@ -119,7 +119,7 @@ class TreeSearch(StructureEstimator):
         ... )
         >>> plt.show()
         >>> est = TreeSearch(values)
-        >>> model = est.estimate(estimator_type="tan")
+        >>> model = est.estimate(estimator_type="tan", class_node="A")
         >>> nx.draw_circular(
         ...     model, with_labels=True, arrowsize=20, arrowstyle="fancy", alpha=0.3
         ... )
@@ -287,7 +287,7 @@ class TreeSearch(StructureEstimator):
         ...     columns=["A", "B", "C", "D", "E"],
         ... )
         >>> est = TreeSearch(values, root_node="B")
-        >>> model = est.estimate(estimator_type="tan")
+        >>> model = est.estimate(estimator_type="tan", class_node="A")
         """
         # Step 0: Check for edge weight computation method
         if edge_weights_fn == "mutual_info":

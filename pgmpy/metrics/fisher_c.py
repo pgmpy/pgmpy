@@ -49,10 +49,10 @@ class FisherC(_BaseUnsupervisedMetric):
     --------
     >>> from pgmpy.example_models import load_model
     >>> model = load_model("bnlearn/cancer")
-    >>> df = model.simulate(int(1e3))
+    >>> df = model.simulate(int(1e3), seed=42)
     >>> fisher_c = FisherC(ci_test="chi_square", compute_rmsea=False)
     >>> fisher_c(X=df, causal_graph=model)
-    0.7504
+    np.float64(0.9967454665123895)
     """
 
     _tags = {

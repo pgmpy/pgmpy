@@ -28,8 +28,8 @@ class StructureScore(_BaseUnsupervisedMetric):
     >>> model = load_model("bnlearn/alarm")
     >>> data = model.simulate(int(1e4), seed=42)
     >>> scorer = StructureScore(scoring_method="bic-d")
-    >>> scorer(X=data, causal_graph=model)
-    np.float64(-106325.43476616534)
+    >>> scorer(X=data, causal_graph=model)  # doctest: +ELLIPSIS
+    np.float64(-106325.4347661653...)
     """
 
     _tags = {

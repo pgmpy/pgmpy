@@ -38,16 +38,16 @@ class ImpliedCIs(_BaseUnsupervisedMetric):
     >>> from pgmpy.example_models import load_model
     >>> from pgmpy.metrics import ImpliedCIs
     >>> model = load_model("bnlearn/cancer")
-    >>> df = model.simulate(int(1e3))
+    >>> df = model.simulate(int(1e3), seed=42)
     >>> implied_cis = ImpliedCIs(ci_test="chi_square", show_progress=False)
-    >>> implied_cis.evaluate(X=df, causal_graph=model)
+    >>> implied_cis.evaluate(X=df, causal_graph=model)  # doctest: +NORMALIZE_WHITESPACE
            u         v cond_vars   p-value
-    0  Pollution    Smoker        []  0.189851
-    1  Pollution      Xray  [Cancer]  0.404149
-    2  Pollution  Dyspnoea  [Cancer]  0.613370
-    3     Smoker      Xray  [Cancer]  0.352665
-    4     Smoker  Dyspnoea  [Cancer]  1.000000
-    5       Xray  Dyspnoea  [Cancer]  0.888619
+    0  Pollution    Smoker        []  0.981578
+    1  Pollution      Xray  [Cancer]  1.000000
+    2  Pollution  Dyspnoea  [Cancer]  0.349070
+    3     Smoker      Xray  [Cancer]  0.806051
+    4     Smoker  Dyspnoea  [Cancer]  0.896017
+    5       Xray  Dyspnoea  [Cancer]  0.991716
     """
 
     _tags = {

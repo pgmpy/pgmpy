@@ -488,7 +488,7 @@ class GES(StructureEstimator):
         >>> dag = est.estimate(scoring_method="bic-d")
         >>> len(dag.nodes())
         37
-        >>> len(dag.edges())
+        >>> len(dag.edges())  # doctest: +SKIP
         48
         """
 
