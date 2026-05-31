@@ -1089,7 +1089,12 @@ class DiscreteBayesianNetwork(DAG):
         >>> len(copy_model.get_cpds())
         3
         """
-        model_copy = DiscreteBayesianNetwork(self)
+        model_copy = DiscreteBayesianNetwork(
+            self,
+            latents=self.latents.copy(),
+            exposures=self.exposures.copy(),
+            outcomes=self.outcomes.copy(),
+        )
         if self.cpds:
             model_copy.add_cpds(*[cpd.copy() for cpd in self.cpds])
         return model_copy
