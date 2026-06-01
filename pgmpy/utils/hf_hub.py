@@ -1,9 +1,6 @@
 from pathlib import Path
 
-from huggingface_hub import constants, hf_hub_download
-
-HF_ETAG_TIMEOUT = max(constants.HF_HUB_ETAG_TIMEOUT, 30)
-constants.HF_HUB_DOWNLOAD_TIMEOUT = max(constants.HF_HUB_DOWNLOAD_TIMEOUT, 30)
+from skbase.utils.dependencies import _check_soft_dependencies
 
 
 def read_hf_file(
@@ -16,6 +13,13 @@ def read_hf_file(
     """
     Downloads a file from the Hugging Face Hub and returns its cached contents.
     """
+    _check_soft_dependencies("huggingface_hub", obj="pgmpy.utils.hf_hub.read_hf_file")
+
+    from huggingface_hub import constants, hf_hub_download
+
+    HF_ETAG_TIMEOUT = max(constants.HF_HUB_ETAG_TIMEOUT, 30)
+    constants.HF_HUB_DOWNLOAD_TIMEOUT = max(constants.HF_HUB_DOWNLOAD_TIMEOUT, 30)
+
     cached_path = hf_hub_download(
         repo_id=repo_id,
         filename=filename.lstrip("/"),

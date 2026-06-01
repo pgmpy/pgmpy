@@ -3,6 +3,7 @@ import io
 
 from skbase.base import BaseObject
 from skbase.lookup import all_objects
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.base import DAG
 from pgmpy.readwrite import BIFReader
@@ -34,6 +35,8 @@ class _BaseExampleModel(BaseObject):
         """
         Fetches the model file from the Hugging Face Hub cache.
         """
+        _check_soft_dependencies("huggingface_hub", obj=self)
+
         return read_hf_file(
             repo_id=cls.repo_id,
             filename=cls.data_url,
