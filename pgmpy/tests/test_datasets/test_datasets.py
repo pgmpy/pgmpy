@@ -3,6 +3,7 @@ import random
 import numpy as np
 import pandas as pd
 import pytest
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.base import DAG
 from pgmpy.datasets import list_datasets, load_dataset
@@ -55,6 +56,11 @@ ALL_DATASETS = [
     "wine_quality_white",
     "yacht_hydrodynamics",
 ]
+
+pytestmark = pytest.mark.skipif(
+    not _check_soft_dependencies("huggingface-hub", severity="none"),
+    reason="execute only if required dependency present",
+)
 
 
 def test_list_datasets():
