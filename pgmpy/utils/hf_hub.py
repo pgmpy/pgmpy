@@ -3,6 +3,13 @@ from pathlib import Path
 from skbase.utils.dependencies import _check_soft_dependencies
 
 
+if _check_soft_dependencies("huggingface_hub", severity="none"):
+    from huggingface_hub import constants
+
+    HF_ETAG_TIMEOUT = max(constants.HF_HUB_ETAG_TIMEOUT, 30)
+    constants.HF_HUB_DOWNLOAD_TIMEOUT = max(constants.HF_HUB_DOWNLOAD_TIMEOUT, 30)
+
+
 def read_hf_file(
     *,
     repo_id: str,
@@ -15,10 +22,7 @@ def read_hf_file(
     """
     _check_soft_dependencies("huggingface_hub", obj="pgmpy.utils.hf_hub.read_hf_file")
 
-    from huggingface_hub import constants, hf_hub_download
-
-    HF_ETAG_TIMEOUT = max(constants.HF_HUB_ETAG_TIMEOUT, 30)
-    constants.HF_HUB_DOWNLOAD_TIMEOUT = max(constants.HF_HUB_DOWNLOAD_TIMEOUT, 30)
+    from huggingface_hub import hf_hub_download
 
     cached_path = hf_hub_download(
         repo_id=repo_id,
