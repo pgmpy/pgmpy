@@ -1,0 +1,248 @@
+# The tests in this file are validated against the lingam package v1.12.2.
+# Helper function to convert node indices to letters (used for validation only):
+# def num_letter(edges):
+#     def num_to_letter(n):
+#         return chr(ord('A') + n)
+#     return [(num_to_letter(u), num_to_letter(v)) for u, v in edges]
+
+import numpy as np
+import numpy.testing as np_test
+import pandas as pd
+import pytest
+from sklearn.decomposition import FastICA
+from sklearn.utils.estimator_checks import parametrize_with_checks
+
+from pgmpy.causal_discovery import LiNGAM
+
+
+def expected_failed_checks(estimator):
+    return {
+        "check_fit_score_takes_y": "Causal discovery estimators do not take y parameter in score method.",
+        "check_n_features_in_after_fitting": "Failing for score method (not for fit) for unknown reason.",
+        "check_pipeline_consistency": "FastICA generates NaNs internally on sklearn degenerate testing matrices.",
+        "check_estimators_pickle": "FastICA generates NaNs internally on sklearn degenerate testing matrices.",
+        "check_dtype_object": "LiNGAM only supports numeric data; object-dtype columns are rejected.",
+    }
+
+
+@parametrize_with_checks(
+    [LiNGAM(return_type="dag", ica=FastICA(random_state=42))],
+    expected_failed_checks=expected_failed_checks,
+)
+def test_lingam_compatibility(estimator, check):
+    check(estimator)
+
+
+@pytest.fixture
+def rand_data():
+    """
+    A -> B -> C
+    """
+    rng = np.random.default_rng(42)
+    data = pd.DataFrame(
+        rng.uniform(size=(100, 3)),
+        columns=list("ABC"),
+    )
+    data["B"] = 2.0 * data["A"] + data["B"]
+    data["C"] = -1.5 * data["B"] + data["C"]
+    return data
+
+
+@pytest.fixture
+def rand_data2():
+    r"""
+        / -> B -> D
+    A -
+        \ -> C -> E
+    """
+    rng = np.random.default_rng(42)
+    data = pd.DataFrame(
+        rng.laplace(size=(1000, 5)),
+        columns=list("ABCDE"),
+    )
+
+    data["B"] = 1.2 * data["A"] + data["B"]
+    data["C"] = -1.5 * data["A"] + data["C"]
+    data["D"] = 0.8 * data["B"] + data["D"]
+    data["E"] = -0.7 * data["C"] + data["E"]
+
+    return data
+
+
+@pytest.fixture
+def large_lingam_data():
+    r"""
+                     F --
+                   /      \
+            B --> D        --> H --
+          /         \     /          \
+         /            G --            \
+       A                                --> J
+         \            F --            /
+           \        /      \        /
+            C --> E         --> I --
+                    \      /
+                      G --
+    """
+
+    rng = np.random.default_rng(42)
+
+    data = pd.DataFrame(
+        rng.laplace(size=(5000, 10)),
+        columns=list("ABCDEFGHIJ"),
+    )
+
+    # Level 1
+    data["B"] = 1.5 * data["A"] + data["B"]
+    data["C"] = -1.2 * data["A"] + data["C"]
+
+    # Level 2
+    data["D"] = 0.8 * data["B"] + data["D"]
+    data["E"] = -1.0 * data["C"] + data["E"]
+
+    # Level 3
+    data["F"] = 1.3 * data["D"] + 0.7 * data["E"] + data["F"]
+    data["G"] = -0.9 * data["D"] + 0.5 * data["E"] + data["G"]
+
+    # Level 4
+    data["H"] = 0.5 * data["F"] - 1.1 * data["G"] + data["H"]
+    data["I"] = 0.6 * data["F"] + 0.8 * data["G"] + data["I"]
+
+    # Level 5
+    data["J"] = -0.7 * data["H"] + 0.9 * data["I"] + data["J"]
+
+    return data
+
+
+def test_fit_rand(rand_data):
+    # model = lingam.ICALiNGAM(random_state=42, max_iter=1000)
+
+    lingam = LiNGAM(ica=FastICA(random_state=42))
+    lingam.fit(rand_data)
+    graph = lingam.causal_graph_
+
+    # print(num_letter(networkx.convert_matrix.from_numpy_array(model.adjacency_matrix_).edges()))
+    # [('A', 'B'), ('B', 'C')]
+    assert set(graph.edges()) == {("A", "B"), ("B", "C")}
+
+    # Test adjacency matrix structure -- Main Goal is to check the association paths should be blocked
+    Adj_matrix = lingam.adjacency_matrix_
+    assert Adj_matrix.shape == (3, 3)
+
+    # print(model.adjacency_matrix_[0, 2]) -> 0.0
+    assert Adj_matrix.loc["A", "C"] == 0
+
+
+def test_fit_rand2(rand_data2):
+    # model = lingam.ICALiNGAM(random_state=42)
+
+    lingam = LiNGAM(ica=FastICA(random_state=42))
+    lingam.fit(rand_data2)
+    graph = lingam.causal_graph_
+
+    # print(num_letter(networkx.convert_matrix.from_numpy_array(model.adjacency_matrix_).edges()))
+    # [('A', 'B'), ('A', 'C'), ('B', 'D'), ('C', 'E')]
+    assert set(graph.edges()) == {("A", "B"), ("A", "C"), ("B", "D"), ("C", "E")}
+
+    # Test adjacency matrix structure -- Main Goal is to check the association paths should be blocked
+    Adj_matrix = lingam.adjacency_matrix_
+    assert Adj_matrix.shape == (5, 5)
+
+    # print(model.adjacency_matrix_[0, 3]) -> 0.0
+    assert np.isclose(Adj_matrix.loc["A", "D"], 0.0, atol=1e-10)
+    # print(model.adjacency_matrix_[0, 4]) -> 0.0
+    assert np.isclose(Adj_matrix.loc["A", "E"], 0.0, atol=1e-10)
+    # print(model.adjacency_matrix_[1, 2]) -> 0.0
+    assert np.isclose(Adj_matrix.loc["B", "C"], 0.0, atol=1e-10)
+    # print(model.adjacency_matrix_[3, 4]) -> 0.0
+    assert np.isclose(Adj_matrix.loc["D", "E"], 0.0, atol=1e-10)
+    # print(model.adjacency_matrix_[1, 4]) -> 0.0
+    assert np.isclose(Adj_matrix.loc["B", "E"], 0.0, atol=1e-10)
+    # print(model.adjacency_matrix_[2, 3]) -> 0.0
+    assert np.isclose(Adj_matrix.loc["C", "D"], 0.0, atol=1e-10)
+
+
+def test_large_lingam_data(large_lingam_data):
+    # model = lingam.ICALiNGAM(random_state=42)
+
+    lingam = LiNGAM(ica=FastICA(random_state=42))
+    lingam.fit(large_lingam_data)
+    graph = lingam.causal_graph_
+
+    # print(num_letter(networkx.convert_matrix.from_numpy_array(model.adjacency_matrix_).edges()))
+    # [('A', 'B'), ('A', 'C'), ('B', 'D'), ('C', 'E'), ('D', 'F'), ('D', 'G'), ('E', 'F'), ('E', 'G'), ('F', 'H'),
+    #  ('F', 'I'), ('G', 'H'), ('G', 'I'), ('H', 'J'), ('I', 'J')]
+    assert set(graph.edges()) == {
+        ("A", "B"),
+        ("A", "C"),
+        ("B", "D"),
+        ("C", "E"),
+        ("D", "F"),
+        ("D", "G"),
+        ("E", "F"),
+        ("E", "G"),
+        ("F", "H"),
+        ("F", "I"),
+        ("G", "H"),
+        ("G", "I"),
+        ("H", "J"),
+        ("I", "J"),
+    }
+
+    # Test adjacency matrix structure
+    Adj_matrix = lingam.adjacency_matrix_
+    assert Adj_matrix.shape == (10, 10)
+
+    # print(model.adjacency_matrix_)
+    test_matrix = np.array(
+        [
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [1.50456931, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [-1.21074647, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.80754453, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, -0.99998171, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 1.31147539, 0.6850421, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, -0.89242808, 0.49331201, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.49770536, -1.0948292, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.60129612, 0.79999919, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.70158999, 0.89914671, 0.0],
+        ]
+    )
+
+    # Transpose test_matrix from [target, source] to pgmpy's [source, target] convention.
+    # Assert structural properties instead of exact values (ICA weights vary across BLAS backends).
+    adj_values = Adj_matrix.to_numpy()
+    expected_adj = test_matrix.T
+    expected_edge_mask = expected_adj != 0
+
+    np_test.assert_array_equal(np.diag(adj_values), np.zeros(adj_values.shape[0]))
+    np_test.assert_array_equal(np.sign(adj_values[expected_edge_mask]), np.sign(expected_adj[expected_edge_mask]))
+    assert np.all(np.abs(adj_values[expected_edge_mask]) > 0.05)
+
+
+def test_lingam_error_non_numeric_data(rand_data):
+    rand_data["categorical"] = "A"
+    lingam = LiNGAM()
+    with pytest.raises(ValueError, match="All features must be numeric."):
+        lingam.fit(rand_data)
+
+
+def test_lingam_pdag_return_type(rand_data):
+    lingam = LiNGAM(return_type="pdag", ica=FastICA(random_state=42))
+    lingam.fit(rand_data)
+    from pgmpy.base import PDAG
+
+    assert isinstance(lingam.causal_graph_, PDAG)
+    assert set(lingam.causal_graph_.edges()) == {("A", "B"), ("B", "C")}
+
+
+def test_lingam_error_invalid_return_type(rand_data):
+    lingam = LiNGAM(return_type="invalid")
+    with pytest.raises(ValueError, match="return_type must be either 'dag' or 'pdag'."):
+        lingam.fit(rand_data)
+
+
+def test_lingam_error_dimensionality_mismatch(rand_data):
+    lingam = LiNGAM(ica=FastICA(n_components=1))
+    with pytest.raises(ValueError, match=r"FastICA n_components must equal n_features \(got 1 != 3\)."):
+        lingam.fit(rand_data)
