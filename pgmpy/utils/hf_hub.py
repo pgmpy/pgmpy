@@ -2,7 +2,6 @@ from pathlib import Path
 
 from skbase.utils.dependencies import _check_soft_dependencies
 
-
 if _check_soft_dependencies("huggingface_hub", severity="none"):
     from huggingface_hub import constants
 
