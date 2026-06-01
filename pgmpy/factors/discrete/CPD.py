@@ -474,7 +474,13 @@ class TabularCPD(DiscreteFactor):
         """
         tabular_cpd = self if inplace else self.copy()
         cpd = tabular_cpd.get_values()
-        tabular_cpd.values = (cpd / cpd.sum(axis=0)).reshape(
+        col_sums = cpd.sum(axis=0)
+        if np.any(col_sums == 0):
+            raise ValueError(
+                "Cannot normalize CPD with zero-sum column(s). "
+                "At least one conditional probability distribution has all-zero values."
+            )
+        tabular_cpd.values = (cpd / col_sums).reshape(
             tuple(tabular_cpd.cardinality)
         )
         if not inplace:

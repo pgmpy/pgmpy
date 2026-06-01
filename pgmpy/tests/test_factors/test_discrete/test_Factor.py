@@ -505,6 +505,13 @@ class TestFactorMethods(unittest.TestCase):
             ],
         )
 
+    def test_normalize_zero_sum_raises(self):
+        phi = DiscreteFactor(
+            variables=["x1", "x2"], cardinality=[2, 2], values=[0, 0, 0, 0]
+        )
+        with pytest.raises(ValueError):
+            phi.normalize()
+
     def test_reduce(self):
         self.phi1.reduce([("x1", 0), ("x2", 0)])
         np_test.assert_array_equal(self.phi1.values, np.array([0, 1]))
@@ -2917,6 +2924,20 @@ class TestTabularCPDMethods(unittest.TestCase):
             cpd_un_normalized.values,
             np.array([[[0.7, 0.2], [0.6, 0.2]], [[0.4, 0.4], [0.4, 0.8]]]),
         )
+
+    def test_normalize_zero_sum_raises(self):
+        cpd = TabularCPD(variable="A", variable_card=2, values=np.array([[0], [0]]))
+        with pytest.raises(ValueError):
+            cpd.normalize()
+
+    def test_normalize_zero_sum_not_in_place_raises(self):
+        cpd = TabularCPD(
+            variable="A", variable_card=2, values=np.array([[1], [0]])
+        )
+        cpd.values[0] = 0
+        cpd.values[1] = 0
+        with pytest.raises(ValueError):
+            cpd.normalize(inplace=False)
 
     def test__repr__(self):
         grade_cpd = TabularCPD(

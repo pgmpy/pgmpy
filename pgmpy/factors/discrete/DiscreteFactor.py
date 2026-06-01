@@ -527,7 +527,13 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         """
         phi = self if inplace else self.copy()
 
-        phi.values = phi.values / (phi.values.sum())
+        total = phi.values.sum()
+        if total == 0:
+            raise ValueError(
+                "Cannot normalize factor with zero sum. "
+                "The factor contains all-zero values."
+            )
+        phi.values = phi.values / total
 
         if not inplace:
             return phi
