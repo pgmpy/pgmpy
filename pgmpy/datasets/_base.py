@@ -123,7 +123,7 @@ class _BaseDataset(BaseObject):
         """
         Fetches a dataset file from the Hugging Face Hub cache.
         """
-        _check_soft_dependencies("huggingface_hub", obj=self)
+        _check_soft_dependencies("huggingface_hub", obj=cls)
 
         return read_hf_file(
             repo_id=cls.repo_id,
