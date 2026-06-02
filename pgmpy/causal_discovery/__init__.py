@@ -1,3 +1,4 @@
+from .castle import CASTLE
 from .ExpertInLoop import ExpertInLoop
 from .ExpertKnowledge import ExpertKnowledge
 from .GES import GES
@@ -6,6 +7,7 @@ from .PC import PC
 from .TOPIC import TOPIC
 
 __all__ = [
+    "CASTLE",
     "ExpertInLoop",
     "ExpertKnowledge",
     "GES",
