@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import re
+import warnings
 from dataclasses import dataclass
 from typing import Any
 
@@ -158,6 +159,11 @@ class BaseDataset(BaseObject):
                 cat_type = pd.CategoricalDtype(categories=order, ordered=True)
                 df[col] = df[col].astype(cat_type)
         if n_samples is not None:
+            if n_samples > len(df):
+                warnings.warn(
+                    f"Requested {n_samples} samples but dataset only has {len(df)}. "
+                    f"Returning all {len(df)} rows."
+                )
             n_samples = min(n_samples, len(df))
             df = df.sample(n=n_samples, random_state=seed)
         return df
@@ -174,7 +180,7 @@ class BaseDataset(BaseObject):
 
     @classmethod
     def load_ground_truth(cls, **kwargs) -> DAG | None:
-        """Fetches/reads from cache the ground truth DAG associated with the dataset.
+        """Fetches/reads from cache the ground truth graph associated with the dataset.
 
         Parameters
         ----------
@@ -327,10 +333,10 @@ def load_dataset(
 
             if not (1 <= pair_id <= 108):
                 raise ValueError(f"Tubingen pair ID must be between 1 and 108. Got {pair_id}.")
-            if n_samples is not None or seed is not None or sim_kwargs:
-                raise ValueError(
-                    "Tubingen datasets do not support n_samples, seed, or simulator kwargs. "
-                    "Use load_dataset('tubingen/<pair_id>') without additional arguments."
+            if sim_kwargs:
+                raise TypeError(
+                    "Tubingen datasets do not support simulator kwargs. "
+                    "Use load_dataset('tubingen/<pair_id>') without additional keyword arguments."
                 )
             target_cls = next(
                 (cls for cls in all_datasets if cls.get_class_tag("name") == "tubingen"),
@@ -338,6 +344,15 @@ def load_dataset(
             )
             df = target_cls.load_dataframe(pair_id)
             gt = target_cls.load_ground_truth(pair_id)
+
+            if n_samples is not None:
+                if n_samples > len(df):
+                    warnings.warn(
+                        f"Requested {n_samples} samples but dataset only has {len(df)}. "
+                        f"Returning all {len(df)} rows."
+                    )
+                n_samples = min(n_samples, len(df))
+                df = df.sample(n=n_samples, random_state=seed)
 
             tags = target_cls.get_class_tags()
             tags["n_samples"] = df.shape[0]
