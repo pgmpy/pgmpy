@@ -230,6 +230,29 @@ class _TubingenBenchmarkMixin:
         content = raw_data.decode("utf-8-sig", errors="ignore")
         return DAG.from_dagitty(content)
 
+import urllib.request
+import zipfile
+
+class _CausalityChallengeMixin:
+    """
+    Mixin for causality challenge datasets from https://www.causality.inf.ethz.ch/challenge.php
+    These datasets are fetched as zip files directly.
+    """
+
+    @classmethod
+    def load_dataframe(cls) -> pd.DataFrame:
+        name = cls.get_class_tag("name") # e.g. "lucas0"
+        url = f"https://www.causality.inf.ethz.ch/data/{name}_text.zip"
+        response = urllib.request.urlopen(url)
+        with zipfile.ZipFile(io.BytesIO(response.read())) as z:
+            with z.open(f"{name}_train.data") as f:
+                X = pd.read_csv(f, sep=r'\s+', header=None)
+                X.columns = [f"feature_{i}" for i in range(X.shape[1])]
+            with z.open(f"{name}_train.targets") as f:
+                y = pd.read_csv(f, header=None)
+                y.columns = ["target"]
+        return pd.concat([X, y], axis=1)
+
 
 def load_dataset(name: str) -> Dataset:
     """

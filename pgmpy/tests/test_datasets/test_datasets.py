@@ -38,6 +38,15 @@ ALL_DATASETS = [
     "pima_diabetes",
     "pittsburgh_bridges",
     "residential_building",
+    "causalbench_sachs",
+    "causalbench_dream3",
+    "causalbench_dream4",
+    "lucas0", "lucas1", "lucas2",
+    "lucap0", "lucap1", "lucap2",
+    "cina0", "cina1", "cina2",
+    "reged0", "reged1", "reged2",
+    "sido0", "sido1", "sido2",
+    "marti0", "marti1", "marti2",
     "sachs_continuous",
     "sachs_continuous_jittered",
     "sachs_continuous_jittered_logscale",
@@ -72,7 +81,14 @@ def test_list_datasets():
 
 
 def test_load_dataset():
-    for dataset_name in np.random.choice(ALL_DATASETS, size=5, replace=False):
+    # Filter out causalbench and challenge datasets to avoid downloading large files during random testing
+    testable_datasets = [d for d in ALL_DATASETS if not d.startswith("causalbench") and not d in {
+        "lucas0", "lucas1", "lucas2", "lucap0", "lucap1", "lucap2",
+        "cina0", "cina1", "cina2", "reged0", "reged1", "reged2",
+        "sido0", "sido1", "sido2", "marti0", "marti1", "marti2"
+    }]
+    for dataset_name in np.random.choice(testable_datasets, size=5, replace=False):
+
         dataset = load_dataset(dataset_name)
         assert dataset.name == dataset_name
         assert dataset.data.shape == (
@@ -87,12 +103,12 @@ def test_load_dataset():
         else:
             assert dataset.ground_truth is None
 
-        if dataset.tags["has_expert_knowledge"]:
+        if dataset.tags.get("has_expert_knowledge"):
             assert isinstance(dataset.expert_knowledge, ExpertKnowledge)
         else:
             assert dataset.expert_knowledge is None
 
-        if dataset.tags["has_missing_data"]:
+        if dataset.tags.get("has_missing_data"):
             assert dataset.data.isna().any().any()
 
 
@@ -152,3 +168,50 @@ def test_invalid_tag():
 
     with pytest.raises(ValueError, match="Unrecognized filter argument"):
         list_datasets(num_samples=100)  # wrong key name entirely
+
+
+import sys
+from unittest.mock import MagicMock, patch
+
+
+def test_causalbench_datasets_mocked():
+    # Use mock (virtual) technique to avoid downloading large datasets and using storage
+    mock_causalbench = MagicMock()
+    mock_causalbench.load_dataset.return_value = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+
+    with patch.dict(sys.modules, {"causalbench": mock_causalbench}):
+        for name in ["causalbench_sachs", "causalbench_dream3", "causalbench_dream4"]:
+            dataset = load_dataset(name)
+            assert dataset.name == name
+            assert isinstance(dataset.data, pd.DataFrame)
+            assert dataset.data.shape == (2, 2)
+            mock_causalbench.load_dataset.assert_called()
+
+
+def test_causalbench_datasets_import_error():
+    # Force ImportError by mocking sys.modules to None for causalbench
+    with patch.dict(sys.modules, {"causalbench": None}):
+        for name in ["causalbench_sachs", "causalbench_dream3", "causalbench_dream4"]:
+            with pytest.raises(ImportError, match="causalbench is required"):
+                dataset = load_dataset(name)
+
+def test_causality_challenge_mocked():
+    # Use mock technique to avoid downloading large datasets and using storage
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        # Create a valid dummy zip file in memory containing fake train.data and train.targets
+        import io, zipfile
+        fake_zip = io.BytesIO()
+        with zipfile.ZipFile(fake_zip, mode='w') as zf:
+            zf.writestr('lucas0_train.data', '1 2 3\n4 5 6\n')
+            zf.writestr('lucas0_train.targets', '1\n0\n')
+        
+        fake_zip.seek(0)
+        mock_response = MagicMock()
+        mock_response.read.return_value = fake_zip.read()
+        mock_urlopen.return_value = mock_response
+
+        dataset = load_dataset('lucas0')
+        assert dataset.name == 'lucas0'
+        assert dataset.data.shape == (2, 4) # 3 features + 1 target
+        assert 'target' in dataset.data.columns
+        mock_urlopen.assert_called()
