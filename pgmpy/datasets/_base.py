@@ -161,8 +161,7 @@ class BaseDataset(BaseObject):
         if n_samples is not None:
             if n_samples > len(df):
                 warnings.warn(
-                    f"Requested {n_samples} samples but dataset only has {len(df)}. "
-                    f"Returning all {len(df)} rows."
+                    f"Requested {n_samples} samples but dataset only has {len(df)}. Returning all {len(df)} rows."
                 )
             n_samples = min(n_samples, len(df))
             df = df.sample(n=n_samples, random_state=seed)
@@ -348,8 +347,7 @@ def load_dataset(
             if n_samples is not None:
                 if n_samples > len(df):
                     warnings.warn(
-                        f"Requested {n_samples} samples but dataset only has {len(df)}. "
-                        f"Returning all {len(df)} rows."
+                        f"Requested {n_samples} samples but dataset only has {len(df)}. Returning all {len(df)} rows."
                     )
                 n_samples = min(n_samples, len(df))
                 df = df.sample(n=n_samples, random_state=seed)
