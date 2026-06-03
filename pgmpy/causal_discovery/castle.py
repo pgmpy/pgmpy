@@ -84,8 +84,46 @@ class CASTLE(_BaseCausalDiscovery):
         seed: int = 42,
     ):
         """Initialize the CASTLE estimator."""
-        # TODO: Implement CASTLE parameter setup.
-        raise NotImplementedError("TBD")
+        super().__init__()
+
+        self.dag_weight = dag_weight
+        self.sparsity_weight = sparsity_weight
+        self.dag_penalty = dag_penalty
+        self.optimizer = optimizer
+        self.batch_size = batch_size
+        self.hidden_dim = hidden_dim
+        self.edge_threshold = edge_threshold
+        self.target_col = target_col
+        self.max_epochs = max_epochs
+        self.min_loss_improvement = min_loss_improvement
+        self.early_stop_patience = early_stop_patience
+        self.scaler = scaler
+        self.tensorboard_log_dir = tensorboard_log_dir
+        self.seed = seed
+
+        self.model_config_ = ModelConfig(
+            hidden_dim=hidden_dim,
+            batch_size=batch_size,
+            max_epochs=max_epochs,
+            optimizer=optimizer,
+            seed=seed,
+            min_loss_improvement=min_loss_improvement,
+            early_stop_patience=early_stop_patience,
+            tensorboard_log_dir=tensorboard_log_dir,
+            scaler=scaler,
+            target_col=target_col,
+        )
+        self.reg_config_ = RegularizationConfig(
+            dag_weight=dag_weight,
+            sparsity_weight=sparsity_weight,
+            dag_penalty=dag_penalty,
+            edge_threshold=edge_threshold,
+        )
+
+        self.causal_graph_ = None
+        self.adjacency_matrix_ = None
+        self.model_ = None
+        self.scaler_ = None
 
     def _fit(self, X: pd.DataFrame):
         """Fit the CASTLE model and construct the causal DAG."""
