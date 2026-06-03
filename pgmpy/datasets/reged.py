@@ -1,4 +1,5 @@
-from pgmpy.datasets._base import _CausalityChallengeMixin, _BaseDataset
+from pgmpy.datasets._base import _BaseDataset, _CausalityChallengeMixin
+
 
 class Reged0(_CausalityChallengeMixin, _BaseDataset):
     _tags = {
@@ -9,6 +10,7 @@ class Reged0(_CausalityChallengeMixin, _BaseDataset):
         "is_continuous": True,
     }
 
+
 class Reged1(_CausalityChallengeMixin, _BaseDataset):
     _tags = {
         "name": "reged1",
@@ -17,6 +19,7 @@ class Reged1(_CausalityChallengeMixin, _BaseDataset):
         "is_discrete": False,
         "is_continuous": True,
     }
+
 
 class Reged2(_CausalityChallengeMixin, _BaseDataset):
     _tags = {

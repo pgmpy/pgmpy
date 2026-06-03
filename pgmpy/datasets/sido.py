@@ -1,4 +1,5 @@
-from pgmpy.datasets._base import _CausalityChallengeMixin, _BaseDataset
+from pgmpy.datasets._base import _BaseDataset, _CausalityChallengeMixin
+
 
 class Sido0(_CausalityChallengeMixin, _BaseDataset):
     _tags = {
@@ -9,6 +10,7 @@ class Sido0(_CausalityChallengeMixin, _BaseDataset):
         "is_continuous": False,
     }
 
+
 class Sido1(_CausalityChallengeMixin, _BaseDataset):
     _tags = {
         "name": "sido1",
@@ -17,6 +19,7 @@ class Sido1(_CausalityChallengeMixin, _BaseDataset):
         "is_discrete": True,
         "is_continuous": False,
     }
+
 
 class Sido2(_CausalityChallengeMixin, _BaseDataset):
     _tags = {

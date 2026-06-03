@@ -1,4 +1,5 @@
-from pgmpy.datasets._base import _CausalityChallengeMixin, _BaseDataset
+from pgmpy.datasets._base import _BaseDataset, _CausalityChallengeMixin
+
 
 class Lucap0(_CausalityChallengeMixin, _BaseDataset):
     _tags = {
@@ -9,6 +10,7 @@ class Lucap0(_CausalityChallengeMixin, _BaseDataset):
         "is_continuous": False,
     }
 
+
 class Lucap1(_CausalityChallengeMixin, _BaseDataset):
     _tags = {
         "name": "lucap1",
@@ -17,6 +19,7 @@ class Lucap1(_CausalityChallengeMixin, _BaseDataset):
         "is_discrete": True,
         "is_continuous": False,
     }
+
 
 class Lucap2(_CausalityChallengeMixin, _BaseDataset):
     _tags = {

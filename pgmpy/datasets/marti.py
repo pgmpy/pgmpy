@@ -1,4 +1,5 @@
-from pgmpy.datasets._base import _CausalityChallengeMixin, _BaseDataset
+from pgmpy.datasets._base import _BaseDataset, _CausalityChallengeMixin
+
 
 class Marti0(_CausalityChallengeMixin, _BaseDataset):
     _tags = {
@@ -9,6 +10,7 @@ class Marti0(_CausalityChallengeMixin, _BaseDataset):
         "is_continuous": True,
     }
 
+
 class Marti1(_CausalityChallengeMixin, _BaseDataset):
     _tags = {
         "name": "marti1",
@@ -17,6 +19,7 @@ class Marti1(_CausalityChallengeMixin, _BaseDataset):
         "is_discrete": False,
         "is_continuous": True,
     }
+
 
 class Marti2(_CausalityChallengeMixin, _BaseDataset):
     _tags = {

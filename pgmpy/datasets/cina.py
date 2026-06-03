@@ -1,4 +1,5 @@
-from pgmpy.datasets._base import _CausalityChallengeMixin, _BaseDataset
+from pgmpy.datasets._base import _BaseDataset, _CausalityChallengeMixin
+
 
 class Cina0(_CausalityChallengeMixin, _BaseDataset):
     _tags = {
@@ -10,6 +11,7 @@ class Cina0(_CausalityChallengeMixin, _BaseDataset):
         "is_mixed": True,
     }
 
+
 class Cina1(_CausalityChallengeMixin, _BaseDataset):
     _tags = {
         "name": "cina1",
@@ -19,6 +21,7 @@ class Cina1(_CausalityChallengeMixin, _BaseDataset):
         "is_continuous": True,
         "is_mixed": True,
     }
+
 
 class Cina2(_CausalityChallengeMixin, _BaseDataset):
     _tags = {
