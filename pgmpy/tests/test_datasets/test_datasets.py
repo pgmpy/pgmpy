@@ -1,4 +1,8 @@
+import io
 import random
+import sys
+import zipfile
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
@@ -202,9 +206,6 @@ def test_invalid_tag():
         list_datasets(num_samples=100)  # wrong key name entirely
 
 
-import sys
-from unittest.mock import MagicMock, patch
-
 
 def test_causalbench_datasets_mocked():
     # Use mock (virtual) technique to avoid downloading large datasets and using storage
@@ -232,9 +233,6 @@ def test_causality_challenge_mocked():
     # Use mock technique to avoid downloading large datasets and using storage
     with patch("urllib.request.urlopen") as mock_urlopen:
         # Create a valid dummy zip file in memory containing fake train.data and train.targets
-        import io
-        import zipfile
-
         fake_zip = io.BytesIO()
         with zipfile.ZipFile(fake_zip, mode="w") as zf:
             zf.writestr("lucas0_train.data", "1 2 3\n4 5 6\n")

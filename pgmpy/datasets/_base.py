@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import io
 import re
+import urllib.request
+import zipfile
 from dataclasses import dataclass
 from typing import Any
 
@@ -230,9 +232,6 @@ class _TubingenBenchmarkMixin:
         content = raw_data.decode("utf-8-sig", errors="ignore")
         return DAG.from_dagitty(content)
 
-
-import urllib.request
-import zipfile
 
 
 class _CausalityChallengeMixin:
