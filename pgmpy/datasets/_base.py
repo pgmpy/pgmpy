@@ -8,10 +8,10 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from skbase.base import BaseObject
+from skbase.lookup import all_objects
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery import ExpertKnowledge
-from pgmpy.utils.discovery import discover_subclasses
 from pgmpy.utils.hf_hub import read_hf_file
 
 
@@ -247,7 +247,7 @@ def load_dataset(name: str) -> Dataset:
     >>> df = dataset.data
     >>> ground_truth = dataset.ground_truth
     """
-    all_datasets = discover_subclasses(BaseDataset, "pgmpy.datasets")
+    all_datasets = all_objects(object_types=BaseDataset, package_name="pgmpy.datasets", return_names=False)
     if name.startswith("tubingen"):
         name_parts = name.split("/")
         if len(name_parts) == 2 and name_parts[1].isdigit():
@@ -335,7 +335,12 @@ def list_datasets(**filter_tags) -> list[str]:
             f"Unrecognized filter argument(s): {sorted(invalid_tags)}. Valid filter tags are: {sorted(valid_tags)}."
         )
 
-    all_datasets = discover_subclasses(BaseDataset, "pgmpy.datasets", filter_tags)
+    all_datasets = all_objects(
+        object_types=BaseDataset,
+        package_name="pgmpy.datasets",
+        return_names=False,
+        filter_tags=filter_tags,
+    )
 
     dataset_names = [cls.get_class_tag("name") for cls in all_datasets if cls.get_class_tag("name") is not None]
 

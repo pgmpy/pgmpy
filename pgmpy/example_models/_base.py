@@ -2,10 +2,10 @@ import gzip
 import io
 
 from skbase.base import BaseObject
+from skbase.lookup import all_objects
 
 from pgmpy.base import DAG
 from pgmpy.readwrite import BIFReader
-from pgmpy.utils.discovery import discover_subclasses
 from pgmpy.utils.hf_hub import read_hf_file
 
 
@@ -137,7 +137,12 @@ def load_model(name: str):
     >>> print(model)
     DiscreteBayesianNetwork named 'unknown' with 8 nodes and 8 edges
     """
-    target_model = discover_subclasses(BaseExampleModel, "pgmpy.example_models", {"name": name})
+    target_model = all_objects(
+        object_types=BaseExampleModel,
+        package_name="pgmpy.example_models",
+        filter_tags={"name": name},
+        return_names=False,
+    )
 
     if not target_model:
         raise ValueError(f"Model with name '{name}' not found. Please use list_models() to see available datasets.")
@@ -181,7 +186,12 @@ def list_models(**filter_tags) -> list[str]:
             f"Unrecognized filter argument(s): {sorted(invalid_tags)}. Valid filter tags are: {sorted(valid_tags)}."
         )
 
-    all_models = discover_subclasses(BaseExampleModel, "pgmpy.example_models", filter_tags)
+    all_models = all_objects(
+        object_types=BaseExampleModel,
+        package_name="pgmpy.example_models",
+        return_names=False,
+        filter_tags=filter_tags,
+    )
 
     model_names = [cls.get_class_tag("name") for cls in all_models if cls.get_class_tag("name") is not None]
 
