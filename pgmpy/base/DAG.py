@@ -1659,7 +1659,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             - Tuple (X, Y): Compute for edge X → Y.
             - List of tuples: Compute for selected edges.
 
-        ci_test : str or instance of _BaseCITest
+        ci_test : str or instance of BaseCITest
             The conditional independence test whose effect size to use as edge strength
 
         Returns

@@ -18,7 +18,7 @@ from pgmpy.metrics import get_metrics
 from pgmpy.structure_score import BaseStructureScore
 
 
-class _BaseCausalDiscovery(BaseEstimator):
+class BaseCausalDiscovery(BaseEstimator):
     """
     Base class for all causal discovery estimators in pgmpy.
 

@@ -9,10 +9,10 @@
 # TODO: Add necessary imports here (e.g., numpy, scipy, sklearn, etc.)
 import pandas as pd
 
-from pgmpy.ci_tests._base import _BaseCITest, _CITestResult
+from pgmpy.ci_tests._base import BaseCITest, _CITestResult
 
 
-class YourCITest(_BaseCITest):
+class YourCITest(BaseCITest):
     """
     [One-line description of the CI test]
 
@@ -89,7 +89,7 @@ class YourCITest(_BaseCITest):
         Returns
         -------
         _CITestResult
-            Result payload consumed by `_BaseCITest.run_test`.
+            Result payload consumed by `BaseCITest.run_test`.
         """
         # TODO: Add logic for computing the test statistic and p-value. Can use self.data, and other params.
         statistic = None

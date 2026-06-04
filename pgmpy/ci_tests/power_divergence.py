@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from scipy import special, stats
 
-from ._base import _BaseCITest, _CITestResult
+from ._base import BaseCITest, _CITestResult
 
 _LAMBDA_ALIASES = {
     "pearson": 1.0,
@@ -14,7 +14,7 @@ _LAMBDA_ALIASES = {
 }
 
 
-class PowerDivergence(_BaseCITest):
+class PowerDivergence(BaseCITest):
     r"""
     Cressie-Read power divergence test for conditional independence on discrete data [1].
 

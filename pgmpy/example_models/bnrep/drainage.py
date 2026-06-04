@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Drainage(BIFMixin, _BaseExampleModel):
+class Drainage(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/drainage",
         "n_nodes": 11,

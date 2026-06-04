@@ -1,7 +1,7 @@
-from pgmpy.datasets._base import _BaseDataset, _CovarianceMixin
+from pgmpy.datasets._base import BaseDataset, _CovarianceMixin
 
 
-class Goldberg(_CovarianceMixin, _BaseDataset):
+class Goldberg(_CovarianceMixin, BaseDataset):
     _tags = {
         "name": "goldberg",
         "n_variables": 6,

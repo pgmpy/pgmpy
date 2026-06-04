@@ -1,7 +1,7 @@
-from .._base import DAGMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DAGMixin
 
 
-class MBias(DAGMixin, _BaseExampleModel):
+class MBias(DAGMixin, BaseExampleModel):
     """
     References
     ----------

@@ -9,10 +9,10 @@ from tqdm import tqdm
 from pgmpy.base import DAG
 from pgmpy.ci_tests import get_ci_test
 from pgmpy.global_vars import config
-from pgmpy.metrics import _BaseUnsupervisedMetric
+from pgmpy.metrics import BaseUnsupervisedMetric
 
 
-class FisherC(_BaseUnsupervisedMetric):
+class FisherC(BaseUnsupervisedMetric):
     """
     Returns a p-value for testing whether the given data is faithful to the
     model structure's constraints.

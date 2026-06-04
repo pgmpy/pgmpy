@@ -1,7 +1,7 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Sachs(DiscreteMixin, _BaseExampleModel):
+class Sachs(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------

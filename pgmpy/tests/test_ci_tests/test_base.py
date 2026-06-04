@@ -3,14 +3,14 @@ import pandas as pd
 import pytest
 from skbase.lookup import all_objects
 
-from pgmpy.ci_tests import ChiSquare, FisherZ, IndependenceMatch, Pearsonr, _BaseCITest, get_ci_test
+from pgmpy.ci_tests import BaseCITest, ChiSquare, FisherZ, IndependenceMatch, Pearsonr, get_ci_test
 
 
 def test_ci_registry():
     all_tests = [
         ci_test.get_class_tag("name")
         for ci_test in all_objects(
-            object_types=_BaseCITest,
+            object_types=BaseCITest,
             package_name="pgmpy.ci_tests",
             return_names=False,
         )

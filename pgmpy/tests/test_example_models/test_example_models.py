@@ -6,7 +6,7 @@ from skbase.lookup import all_objects
 
 from pgmpy.base import DAG
 from pgmpy.example_models import list_models, load_model
-from pgmpy.example_models._base import _BaseExampleModel
+from pgmpy.example_models._base import BaseExampleModel
 from pgmpy.models import (
     DiscreteBayesianNetwork,
     FunctionalBayesianNetwork,
@@ -315,7 +315,7 @@ def test_invalid_tag():
 def test_tags():
     for model_name in ALL_MODELS:
         tags = all_objects(
-            object_types=_BaseExampleModel,
+            object_types=BaseExampleModel,
             package_name="pgmpy.example_models",
             filter_tags={"name": model_name},
             return_names=False,
@@ -347,7 +347,7 @@ def test_load_model():
         )
 
         model_tags = all_objects(
-            object_types=_BaseExampleModel,
+            object_types=BaseExampleModel,
             package_name="pgmpy.example_models",
             filter_tags={"name": model_name},
             return_names=False,

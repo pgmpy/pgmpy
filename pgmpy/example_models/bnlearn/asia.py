@@ -1,7 +1,7 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Asia(DiscreteMixin, _BaseExampleModel):
+class Asia(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------

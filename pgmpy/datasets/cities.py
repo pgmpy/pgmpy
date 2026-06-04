@@ -1,7 +1,7 @@
-from pgmpy.datasets._base import _BaseDataset, _CovarianceMixin
+from pgmpy.datasets._base import BaseDataset, _CovarianceMixin
 
 
-class Cities(_CovarianceMixin, _BaseDataset):
+class Cities(_CovarianceMixin, BaseDataset):
     """
     References
     ----------

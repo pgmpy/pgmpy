@@ -7,12 +7,12 @@ import numpy as np
 import pandas as pd
 
 from pgmpy.base import PDAG
-from pgmpy.causal_discovery._base import _BaseCausalDiscovery, _ScoreMixin
+from pgmpy.causal_discovery._base import BaseCausalDiscovery, _ScoreMixin
 from pgmpy.structure_score import BaseStructureScore, get_scoring_method
 from pgmpy.utils.mathext import powerset
 
 
-class GES(_ScoreMixin, _BaseCausalDiscovery):
+class GES(_ScoreMixin, BaseCausalDiscovery):
     """
     Score-based causal discovery using Greedy Equivalence Search (GES).
 

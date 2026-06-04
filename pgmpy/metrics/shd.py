@@ -2,10 +2,10 @@ import networkx as nx
 import numpy as np
 
 from pgmpy.base import DAG, PDAG
-from pgmpy.metrics import _BaseSupervisedMetric
+from pgmpy.metrics import BaseSupervisedMetric
 
 
-class SHD(_BaseSupervisedMetric):
+class SHD(BaseSupervisedMetric):
     r"""
     Computes the Structural Hamming Distance (SHD) between two graphs.
 
