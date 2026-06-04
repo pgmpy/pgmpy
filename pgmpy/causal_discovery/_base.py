@@ -7,6 +7,11 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from sklearn.base import BaseEstimator
+from sklearn.metrics import (
+    adjusted_mutual_info_score,
+    mutual_info_score,
+    normalized_mutual_info_score,
+)
 from sklearn.utils.validation import check_is_fitted, validate_data
 from tqdm.auto import tqdm
 
@@ -580,3 +585,115 @@ class _ScoreMixin:
                         + prior_flip
                     )
                     yield (operation, score_delta)
+
+
+class _TreeSearchMixin:
+    """
+    Mixin class providing shared functionality for tree-based causal discovery
+    algorithms (Chow-Liu and TAN).
+
+    Provides static helpers for resolving the ``edge_weights_fn`` argument,
+    computing pairwise edge weights, and constructing a directed spanning tree
+    (DAG) from a weight matrix.  Both :class:`ChowLiu` and :class:`TAN` inherit
+    from this mixin so that the shared logic lives in exactly one place.
+    """
+
+    _EDGE_WEIGHT_FNS = {
+        "mutual_info": mutual_info_score,
+        "adjusted_mutual_info": adjusted_mutual_info_score,
+        "normalized_mutual_info": normalized_mutual_info_score,
+    }
+
+    @staticmethod
+    def _resolve_edge_weights_fn(edge_weights_fn):
+        """
+        Resolve ``edge_weights_fn`` to a callable of the form ``fn(array, array)``.
+
+        Accepts either one of the string shorthands in
+        :attr:`_EDGE_WEIGHT_FNS` or a callable (returned unchanged). Anything
+        else raises ``ValueError``.
+        """
+        if callable(edge_weights_fn):
+            return edge_weights_fn
+        try:
+            return _TreeSearchMixin._EDGE_WEIGHT_FNS[edge_weights_fn]
+        except (KeyError, TypeError):
+            raise ValueError(
+                f"edge_weights_fn should be one of {list(_TreeSearchMixin._EDGE_WEIGHT_FNS)}, "
+                f"or a callable of the form fn(array, array). Got: {edge_weights_fn!r}"
+            )
+
+    @staticmethod
+    def _get_weights(data, edge_weights_fn="mutual_info", n_jobs=-1, show_progress=True):
+        """
+        Compute the pairwise edge weight matrix.
+
+        Parameters
+        ----------
+        data : pd.DataFrame
+            Dataframe where each column represents one variable.
+
+        edge_weights_fn : str or callable, default="mutual_info"
+            Method to use for computing edge weights. Options are:
+
+            - ``"mutual_info"``: Mutual Information Score.
+            - ``"adjusted_mutual_info"``: Adjusted Mutual Information Score.
+            - ``"normalized_mutual_info"``: Normalized Mutual Information Score.
+            - A callable of the form ``fn(array, array) -> float``.
+
+        n_jobs : int, default=-1
+            Number of jobs to run in parallel. ``-1`` means use all processors.
+
+        show_progress : bool, default=True
+            If ``True``, shows a progress bar.
+
+        Returns
+        -------
+        weights : np.ndarray, shape (n_columns, n_columns)
+            Symmetric matrix where ``weights[i, j]`` is the edge weight between
+            variable *i* and variable *j*.
+        """
+        edge_weights_fn = _TreeSearchMixin._resolve_edge_weights_fn(edge_weights_fn)
+
+        n_vars = len(data.columns)
+        pbar = combinations(data.columns, 2)
+        if show_progress and config.SHOW_PROGRESS:
+            pbar = tqdm(pbar, total=(n_vars * (n_vars - 1) / 2), desc="Building tree")
+
+        vals = Parallel(n_jobs=n_jobs)(delayed(edge_weights_fn)(data.loc[:, u], data.loc[:, v]) for u, v in pbar)
+        weights = np.zeros((n_vars, n_vars))
+        indices = np.triu_indices(n_vars, k=1)
+        weights[indices] = vals
+        weights.T[indices] = vals
+        return weights
+
+    @staticmethod
+    def _create_tree_and_dag(weights, columns, root_node):
+        """
+        Build a DAG by computing the maximum spanning tree from a weight matrix
+        and directing all edges away from ``root_node`` via BFS.
+
+        Parameters
+        ----------
+        weights : np.ndarray, shape (n_columns, n_columns)
+            Symmetric matrix where each element represents an edge weight.
+
+        columns : list or array-like
+            Names of the columns (and rows) of the weight matrix.
+
+        root_node : str, int, or any hashable python object
+            The root node of the tree structure.
+
+        Returns
+        -------
+        model : pgmpy.base.DAG
+            The estimated DAG rooted at ``root_node``.
+        """
+        T = nx.maximum_spanning_tree(
+            nx.from_pandas_adjacency(
+                pd.DataFrame(weights, index=columns, columns=columns),
+                create_using=nx.Graph,
+            )
+        )
+        D = nx.bfs_tree(T, root_node)
+        return DAG(D)

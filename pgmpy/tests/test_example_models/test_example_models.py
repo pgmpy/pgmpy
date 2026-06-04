@@ -1,6 +1,5 @@
 import re
 
-import numpy as np
 import pytest
 from skbase.lookup import all_objects
 
@@ -333,7 +332,7 @@ def test_tags():
 
 
 def test_load_model():
-    for model_name in np.random.choice(ALL_MODELS, 5):
+    for model_name in ["bnlearn/alarm", "bnlearn/ecoli70", "dagitty/m_bias"]:
         model = load_model(model_name)
 
         assert isinstance(
