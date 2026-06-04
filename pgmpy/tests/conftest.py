@@ -1,13 +1,10 @@
 """Shared pytest fixtures for the pgmpy test suite.
 
-Example models and datasets are normally fetched from Hugging Face through
-``pgmpy.utils.hf_hub.read_hf_file``. To keep the test suite self-contained and
-free of network access, the autouse fixture below redirects that single
-byte-fetch seam to local fixture files committed under ``test_data/``.
-
-If a test requests an asset that is not committed locally, the redirect raises a
-clear ``FileNotFoundError`` instead of silently going online, so any new network
-dependency fails loudly.
+Example models and datasets are normally fetched from Hugging Face through ``pgmpy.utils.hf_hub.read_hf_file``. To keep
+the test suite self-contained and free of network access, the autouse fixture below redirects that single byte-fetch
+seam to local fixture files committed under ``test_data/``. If a test requests an asset that is not committed locally,
+the redirect raises a clear ``FileNotFoundError`` instead of silently going online, so any new network dependency fails
+loudly.
 """
 
 from pathlib import Path
