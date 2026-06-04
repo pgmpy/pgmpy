@@ -4,10 +4,10 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 
-from pgmpy.causal_discovery._base import _BaseCausalDiscovery, _TreeSearchMixin
+from pgmpy.causal_discovery._base import BaseCausalDiscovery, _TreeSearchMixin
 
 
-class ChowLiu(_TreeSearchMixin, _BaseCausalDiscovery):
+class ChowLiu(_TreeSearchMixin, BaseCausalDiscovery):
     """
     Chow-Liu algorithm for learning tree-structured Bayesian networks.
 

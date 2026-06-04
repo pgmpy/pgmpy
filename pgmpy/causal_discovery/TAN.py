@@ -9,10 +9,10 @@ from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
 from pgmpy import config
-from pgmpy.causal_discovery._base import _BaseCausalDiscovery, _TreeSearchMixin
+from pgmpy.causal_discovery._base import BaseCausalDiscovery, _TreeSearchMixin
 
 
-class TAN(_TreeSearchMixin, _BaseCausalDiscovery):
+class TAN(_TreeSearchMixin, BaseCausalDiscovery):
     """
     Tree-Augmented Naive Bayes (TAN) algorithm for learning a tree-structured
     classifier network.
