@@ -308,7 +308,7 @@ class TestLGBNMethods(unittest.TestCase):
     def test_fit_invalid_estimator(self):
         new_model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
         df = pd.DataFrame(np.random.randn(100, 3), columns=["x1", "x2", "x3"])
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             new_model.fit(df, estimator="unbiased")
 
     def test_predict_simple(self):
@@ -428,10 +428,6 @@ class TestLGBNMethods(unittest.TestCase):
         self.assertIsInstance(model1, LinearGaussianBayesianNetwork, "Incorrect instance")
         self.assertIsInstance(model2, LinearGaussianBayesianNetwork, "Incorrect instance")
 
-        model_fixed = LinearGaussianBayesianNetwork.get_random(n_nodes=7, n_edges=6)
-        self.assertEqual(len(model_fixed.edges()), 6)
-        self.assertIsInstance(model_fixed, LinearGaussianBayesianNetwork, "Incorrect instance")
-
         node_names = ["a", "aa", "aaa", "aaaa", "aaaaa"]
         model3 = LinearGaussianBayesianNetwork.get_random(n_nodes=5, edge_prob=0.5, node_names=node_names)
         self.assertEqual(len(model3.nodes()), 5)
@@ -473,6 +469,51 @@ class TestLGBNMethods(unittest.TestCase):
 
     def tearDown(self):
         del self.model, self.cpd1, self.cpd2, self.cpd3
+
+    def test_fit_update(self):
+        np.random.seed(42)
+        df_all = pd.DataFrame(
+            np.random.multivariate_normal(
+                mean=[1, -4.5, 8.5],
+                cov=[[16, 8, -8], [8, 20, -20], [-8, -20, 29]],
+                size=300,
+            ),
+            columns=["x1", "x2", "x3"],
+        )
+        df1 = df_all.iloc[:200].reset_index(drop=True)
+        df2 = df_all.iloc[200:].reset_index(drop=True)
+
+        # fit_update() should run without error and return self with valid CPDs
+        self.model.fit(df1)
+        result = self.model.fit_update(df2, n_prev_samples=200)
+        self.assertIsInstance(result, LinearGaussianBayesianNetwork)
+        for cpd in self.model.get_cpds():
+            self.assertIsNotNone(cpd.beta)
+            self.assertIsNotNone(cpd.std)
+            self.assertGreater(cpd.std, 0)
+
+        # fit(df1) + fit_update(df2) should give CPDs close to fit(df_all)
+        model_combined = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        model_combined.fit(df_all)
+        for node in ["x1", "x2", "x3"]:
+            cpd_updated = self.model.get_cpds(node)
+            cpd_combined = model_combined.get_cpds(node)
+
+            # Due to unbiased std in CPDs, exact covariance recovery is not possible.
+            # Hence, we check approximate equality.
+            np.testing.assert_array_almost_equal(cpd_updated.beta, cpd_combined.beta, decimal=1)
+            self.assertAlmostEqual(cpd_updated.std, cpd_combined.std, places=1)
+
+    def test_fit_update_raises(self):
+        np.random.seed(42)
+        df = pd.DataFrame(np.random.normal(0, 1, (50, 3)), columns=["x1", "x2", "x3"])
+        # fit_update() before fit() should raise ValueError
+        with self.assertRaises(ValueError):
+            self.model.fit_update(df)
+        # fit_update() with missing columns should raise ValueError
+        self.model.fit(df)
+        with self.assertRaises(ValueError):
+            self.model.fit_update(df.drop(columns=["x3"]))
 
     def test_structure_mismatch_with_same_cpds(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)

@@ -11,6 +11,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from scipy.stats import multivariate_normal
+from sklearn.linear_model import LinearRegression
 
 from pgmpy import logger
 from pgmpy.base import DAG
@@ -880,7 +881,8 @@ class LinearGaussianBayesianNetwork(DAG):
     def fit(
         self,
         data: pd.DataFrame,
-        estimator=None,
+        estimator: str = "mle",
+        std_estimator: str = "unbiased",
     ) -> LinearGaussianBayesianNetwork:
         """
         Estimates (fits) the Linear Gaussian CPDs from data.
@@ -919,19 +921,204 @@ class LinearGaussianBayesianNetwork(DAG):
         <LinearGaussianCPD: P(x2 | x1) = N(0.046*x1 + -0.012; 0.981) at 0x...,
         <LinearGaussianCPD: P(x3 | x2) = N(0.172*x2 + -0.078; 0.908) at 0x...]
         """
-        from pgmpy.parameter_estimator import LinearGaussianMLE
-        from pgmpy.parameter_estimator.base import GaussianParameterEstimator
+        # Step 1: Check the input
+        if len(missing_vars := (set(self.nodes()) - set(data.columns))) > 0:
+            raise ValueError(f"Following variables are missing in the data: {missing_vars}")
 
-        if estimator is None:
-            estimator = LinearGaussianMLE()
-        elif not isinstance(estimator, GaussianParameterEstimator):
-            raise TypeError(
-                "estimator must be an instance of a Gaussian parameter estimator. "
-                "Pass an initialized estimator, for example `LinearGaussianMLE()`."
+        if estimator not in {
+            "mle",
+        }:
+            raise ValueError("estimator must be {'mle'}")
+        if std_estimator not in {"mle", "unbiased"}:
+            raise ValueError("std_estimator must be one of {'mle', 'unbiased'}")
+
+        # Step 2: Estimate the LinearGaussianCPDs
+        cpds = []
+        for node in self.nodes():
+            parents = self.get_parents(node)
+            # Step 2.1: If node doesn't have any parents (i.e. root node),
+            #  simply take the mean and variance.
+
+            if len(parents) == 0:
+                ddof = 0 if std_estimator == "mle" else 1
+                cpds.append(
+                    LinearGaussianCPD(
+                        variable=node,
+                        beta=[data.loc[:, node].mean()],
+                        std=data.loc[:, node].std(ddof=ddof),
+                    )
+                )
+            # Step 2.2: Else, fit a linear regression model and take the coefficients and intercept.
+            # Compute error variance using predicted values.
+
+            else:
+                lm = LinearRegression().fit(data.loc[:, parents], data.loc[:, node])
+                residuals = data.loc[:, node] - lm.predict(data.loc[:, parents])
+                p = 1 + len(parents)  # intercept + coefficients
+                ddof = 0 if std_estimator == "mle" else p
+                cpds.append(
+                    LinearGaussianCPD(
+                        variable=node,
+                        beta=np.append([lm.intercept_], lm.coef_),
+                        std=residuals.std(ddof=ddof),
+                        evidence=parents,
+                    )
+                )
+
+        # Step 3: Add the estimated CPDs to the model
+        self.add_cpds(*cpds)
+
+        return self
+
+    def fit_update(
+        self,
+        data: pd.DataFrame,
+        n_prev_samples: int | None = None,
+    ) -> LinearGaussianBayesianNetwork:
+        """
+        Updates the parameters of the LinearGaussianBayesianNetwork with new
+        data without refitting from scratch.
+
+        The method computes the joint Gaussian :math:`(\\mu_1, \\Sigma_1)`
+        implied by the current CPD parameters, and :math:`(\\mu_2, \\Sigma_2)`
+        from the new data (with ``ddof=0``). Given :math:`n_1` = ``n_prev_samples``,
+        :math:`n_2` = ``len(data)``, and :math:`n_{total} = n_1 + n_2`,
+        the joint is updated using the exact pooled formulas:
+
+        .. math::
+
+            \\mu = \frac{n_1 \\mu_1 + n_2 \\mu_2}{n_{total}}
+
+        .. math::
+
+            \\Sigma = \frac{n_1 \\Sigma_1 + n_2 \\Sigma_2
+                     + n_1 (\\mu_1 - \\mu)(\\mu_1 - \\mu)^T
+                     + n_2 (\\mu_2 - \\mu)(\\mu_2 - \\mu)^T}{n_{total}}
+
+        CPD parameters are then re-extracted from :math:`(\\mu, \\Sigma)` using
+        conditional Gaussian relationships. For a root node :math:`i` (no parents):
+
+        .. math::
+
+            \beta_0 = \\mu_i, \\quad
+            \\sigma = \\sqrt{\\Sigma_{ii} \\cdot \frac{n_{total}}{n_{total} - 1}}
+
+        For a non-root node :math:`i` with parent index set :math:`pa`,
+        letting :math:`k = 1 + |pa|`:
+
+        .. math::
+
+            \beta = \\Sigma_{pa,pa}^{-1} \\Sigma_{pa,i}, \\quad
+            \beta_0 = \\mu_i - \beta^T \\mu_{pa}
+
+        .. math::
+
+            \\sigma = \\sqrt{\\max(\\Sigma_{ii} - \\Sigma_{i,pa} \beta,\\ 0)
+                     \\cdot \frac{n_{total}}{n_{total} - k}}
+
+        The :math:`n_{total} / (n_{total} - k)` factor matches pgmpy's unbiased
+        std estimator used in ``fit()``.
+
+        The model must have been previously fitted using ``fit()`` before
+        calling this method.
+
+        Parameters
+        ----------
+        data : pd.DataFrame
+            New observations to update the model with. Must contain all
+            model variables as columns.
+
+        n_prev_samples : int (optional)
+            The number of samples the model was previously trained on.
+            This also controls the weight given to old vs new data. When
+            ``n_prev_samples == len(data)``, old and new data are weighted
+            equally. Increasing it reduces the influence of new data on
+            the updated parameters. If None, defaults to the number of
+            rows in the new data.
+
+        Returns
+        -------
+        self : LinearGaussianBayesianNetwork
+            The model with updated CPD parameters.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> from pgmpy.models import LinearGaussianBayesianNetwork
+        >>> model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        >>> np.random.seed(42)
+        >>> df1 = pd.DataFrame(
+        ...     np.random.normal(0, 1, (100, 3)), columns=["x1", "x2", "x3"]
+        ... )
+        >>> df2 = pd.DataFrame(
+        ...     np.random.normal(0, 1, (50, 3)), columns=["x1", "x2", "x3"]
+        ... )
+        >>> model.fit(df1)  # doctest: +ELLIPSIS
+        <pgmpy.models.LinearGaussianBayesianNetwork.LinearGaussianBayesianNetwork object at 0x...>
+        >>> model.fit_update(df2)  # doctest: +ELLIPSIS
+        <pgmpy.models.LinearGaussianBayesianNetwork.LinearGaussianBayesianNetwork object at 0x...>
+        """
+        # Step 1: Check all variables are present in the new data
+        if len(missing_vars := (set(self.nodes()) - set(data.columns))) > 0:
+            raise ValueError(f"Following variables are missing in the data: {missing_vars}")
+
+        # Step 2: Check that fit() was called before fit_update()
+        if len(self.get_cpds()) == 0:
+            raise ValueError(
+                "fit_update() requires the model to be first fitted using fit(). Please call fit() before fit_update()."
             )
 
-        estimator.fit(self, data)
-        self.add_cpds(*estimator.parameters_)
+        if n_prev_samples is None:
+            n_prev_samples = data.shape[0]
+
+        # Step 3: Get topological order - used for joint stats and CPD extraction
+        variables = list(nx.topological_sort(self))
+        idx = {v: i for i, v in enumerate(variables)}
+
+        # Step 4: Compute batch statistics and retrieve previous joint from CPDs
+        n1 = n_prev_samples
+        n2 = len(data)
+        n_total = n1 + n2
+
+        mu1, cov1 = self.to_joint_gaussian()
+        mu2 = data[variables].mean().values
+        cov2 = data[variables].cov(ddof=0).values
+
+        # Step 5: Update joint Gaussian using exact pooled formula
+        mu_updated = (n1 * mu1 + n2 * mu2) / n_total
+
+        d1 = mu1 - mu_updated
+        d2 = mu2 - mu_updated
+        cov_updated = (n1 * cov1 + n2 * cov2 + n1 * np.outer(d1, d1) + n2 * np.outer(d2, d2)) / n_total
+
+        # Step 6: Re-extract CPD parameters from updated joint Gaussian
+        new_cpds = []
+        for node in variables:
+            parents = self.get_parents(node)
+            i = idx[node]
+            k = 1 + len(parents)  # intercept + number of parent coefficients
+
+            if len(parents) == 0:
+                # Root node: mean and variance come directly from joint
+                beta = np.array([mu_updated[i]])
+                std = float(np.sqrt(cov_updated[i, i] * n_total / (n_total - 1)))
+            else:
+                # Non-root node: use conditional Gaussian formulas
+                p_idx = [idx[p] for p in parents]
+                cov_pp = cov_updated[np.ix_(p_idx, p_idx)]
+                cov_ip = cov_updated[i, p_idx]
+
+                beta_coeffs = np.linalg.solve(cov_pp, cov_ip)
+                beta_intercept = mu_updated[i] - beta_coeffs @ mu_updated[p_idx]
+                sigma2_mle = cov_updated[i, i] - cov_ip @ beta_coeffs
+
+                beta = np.append([beta_intercept], beta_coeffs)
+                std = float(np.sqrt(max(sigma2_mle, 0) * n_total / (n_total - k)))
+
+            new_cpds.append(LinearGaussianCPD(variable=node, beta=beta, std=std, evidence=parents))
+
+        self.add_cpds(*new_cpds)
         return self
 
     def predict_probability(self, data: pd.DataFrame) -> tuple[list[str], np.ndarray, np.ndarray]:
@@ -989,9 +1176,9 @@ class LinearGaussianBayesianNetwork(DAG):
         mu_a = mu[missing_indexes]
         mu_b = mu[observed_indexes]
 
-        cov_aa = cov[np.ix_(missing_indexes, missing_indexes)]  # Full |a|×|a| submatrix
-        cov_bb = cov[np.ix_(observed_indexes, observed_indexes)]  # Full |b|×|b| submatrix
-        cov_ab = cov[np.ix_(missing_indexes, observed_indexes)]  # Full |a|×|b| submatrix
+        cov_aa = cov[np.ix_(missing_indexes, missing_indexes)]  # Full |a| x |a| submatrix
+        cov_bb = cov[np.ix_(observed_indexes, observed_indexes)]  # Full |b| x |b| submatrix
+        cov_ab = cov[np.ix_(missing_indexes, observed_indexes)]  # Full |a| x |b| submatrix
 
         # Step 2: Compute the conditional distributions
         X_b = data.loc[:, observed_vars].values  # shape: (n_samples, |observed|)
