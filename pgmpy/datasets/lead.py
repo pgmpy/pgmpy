@@ -1,7 +1,7 @@
-from pgmpy.datasets._base import _BaseDataset, _CovarianceMixin
+from pgmpy.datasets._base import BaseDataset, _CovarianceMixin
 
 
-class Lead(_CovarianceMixin, _BaseDataset):
+class Lead(_CovarianceMixin, BaseDataset):
     _tags = {
         "name": "lead",
         "n_variables": 7,

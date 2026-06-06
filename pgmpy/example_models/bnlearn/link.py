@@ -1,12 +1,11 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Link(DiscreteMixin, _BaseExampleModel):
+class Link(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    ..[1] C. S. Jensen and A. Kong. Blocking Gibbs Sampling for Linkage Analysis in Large Pedigrees with Many
-    Loops. The American Journal of Human Genetics, 65(3):885-901, 1999.
+    - :cite:p:`jensen_kong`
     """
 
     _tags = {

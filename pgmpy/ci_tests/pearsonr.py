@@ -2,10 +2,10 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from ._base import _BaseCITest, _CITestResult
+from ._base import BaseCITest, _CITestResult
 
 
-class Pearsonr(_BaseCITest):
+class Pearsonr(BaseCITest):
     r"""
     Partial Correlation test for conditional independence.
 
@@ -58,8 +58,8 @@ class Pearsonr(_BaseCITest):
 
     References
     ----------
-    .. [1] https://en.wikipedia.org/wiki/Pearson_correlation_coefficient
-    .. [2] https://en.wikipedia.org/wiki/Partial_correlation#Using_linear_regression
+    - :cite:p:`peerj_blue_driver`
+    - :cite:p:`wikipedia_partial_correlation`
     """
 
     _tags = {

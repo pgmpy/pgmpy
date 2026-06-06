@@ -1,11 +1,11 @@
-from .._base import DAGMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DAGMixin
 
 
-class Kampen2014(DAGMixin, _BaseExampleModel):
+class Kampen2014(DAGMixin, BaseExampleModel):
     """
     References
     ----------
-    ..[1] van Kampen, et al. (2014). Causal DAG for epidemiological analysis.
+    - :cite:p:`vankampen_2014`
     """
 
     _tags = {

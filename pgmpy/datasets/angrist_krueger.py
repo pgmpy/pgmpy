@@ -1,13 +1,12 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class AngristKrueger(_BaseDataset):
+class AngristKrueger(BaseDataset):
     """
     References
     ----------
-    .. [1] Angrist, J. D., & Krueger, A. B. (1991). Does Compulsory School Attendance Affect
-           Schooling and Earnings? The Quarterly Journal of Economics, 106(4), 979-1014.
-    .. [2] https://economics.mit.edu/sites/default/files/publications/asciiqob.zip
+    - :cite:p:`angrist_krueger_1991`
+    - :cite:p:`angrist_krueger_qob_dataset`
     """
 
     _tags = {

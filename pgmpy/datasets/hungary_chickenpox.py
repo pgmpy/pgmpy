@@ -1,14 +1,12 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class HungaryChickenpox(_BaseDataset):
+class HungaryChickenpox(BaseDataset):
     """
     References
     ----------
-    .. [1] Rozemberczki, B., Scherer, P., Kiss, O., Sarkar, R., & Ferenci, T. (2021). Chickenpox cases in hungary:
-           a benchmark dataset for spatiotemporal signal processing with graph neural networks.
-           arXiv preprint arXiv:2102.08100.
-    .. [2] https://archive.ics.uci.edu/ml/datasets/Hungarian+Chickenpox+Cases
+    - :cite:p:`rozemberczki_2021`
+    - :cite:p:`uci_hungarian_chickenpox`
     """
 
     _tags = {

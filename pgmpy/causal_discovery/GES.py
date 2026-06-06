@@ -7,12 +7,12 @@ import numpy as np
 import pandas as pd
 
 from pgmpy.base import PDAG
-from pgmpy.causal_discovery._base import _BaseCausalDiscovery, _ScoreMixin
+from pgmpy.causal_discovery._base import BaseCausalDiscovery, _ScoreMixin
 from pgmpy.structure_score import BaseStructureScore, get_scoring_method
 from pgmpy.utils.mathext import powerset
 
 
-class GES(_ScoreMixin, _BaseCausalDiscovery):
+class GES(_ScoreMixin, BaseCausalDiscovery):
     """
     Score-based causal discovery using Greedy Equivalence Search (GES).
 
@@ -88,11 +88,8 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
 
     References
     ----------
-    .. [1] Chickering, David Maxwell. "Optimal structure identification with
-           greedy search." Journal of machine learning research 3.Nov (2002):
-           507-554.
-
-    .. [2] https://github.com/juangamella/ges
+    - :cite:p:`chickering_2002b`
+    - https://github.com/juangamella/ges
     """
 
     def __init__(
@@ -295,14 +292,15 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
                                     s[-1] = True
 
                     if cond_1 and cond_2:
+                        # Chickering's conditions (clique-ness of NA_v,u ∪ T and
+                        # no semi-directed v->u path bypassing it) guarantee the
+                        # resulting graph has a consistent extension, so we don't
+                        # need to construct the post-insert graph just to verify.
                         parents_v = current_model.directed_parents(v)
                         new_parents = ordered_tuple(na_vuT | parents_v | {u}, current_model)
                         old_parents = ordered_tuple(na_vuT | parents_v, current_model)
                         score_delta = score_fn(v, new_parents) - score_fn(v, old_parents)
-
-                        new_model = self.insert(u, v, T, current_model)
-                        if new_model.has_acyclic_extension():
-                            valid_insert_ops.append((score_delta, u, v, T))
+                        valid_insert_ops.append((score_delta, u, v, T))
 
                 if valid_insert_ops == []:
                     score_deltas[index] = 0
@@ -415,10 +413,7 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
                                 u, ordered_tuple(parents_u | (C & na_vu) | {v}, current_model)
                             )
                             score_delta = new_score - old_score
-
-                            new_model = self.turn(u, v, C, current_model)
-                            if new_model.has_acyclic_extension():
-                                valid_turn_ops.append((score_delta, u, v, C))
+                            valid_turn_ops.append((score_delta, u, v, C))
                 else:
                     T0 = current_model.undirected_neighbors(v) - current_model.all_neighbors(u)
                     subsets = [[*T, False] for T in powerset(list(T0))]
@@ -461,10 +456,7 @@ class GES(_ScoreMixin, _BaseCausalDiscovery):
                                 u, ordered_tuple(parents_u, current_model)
                             )
                             score_delta = new_score - old_score
-
-                            new_model = self.turn(u, v, T, current_model)
-                            if new_model.has_acyclic_extension():
-                                valid_turn_ops.append((score_delta, u, v, T))
+                            valid_turn_ops.append((score_delta, u, v, T))
 
                 if valid_turn_ops == []:
                     score_deltas[index] = 0

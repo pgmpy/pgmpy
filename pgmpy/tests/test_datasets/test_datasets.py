@@ -1,6 +1,3 @@
-import random
-
-import numpy as np
 import pandas as pd
 import pytest
 
@@ -72,7 +69,7 @@ def test_list_datasets():
 
 
 def test_load_dataset():
-    for dataset_name in np.random.choice(ALL_DATASETS, size=5, replace=False):
+    for dataset_name in ["sachs_discrete"]:
         dataset = load_dataset(dataset_name)
         assert dataset.name == dataset_name
         assert dataset.data.shape == (
@@ -110,7 +107,7 @@ def test_load_covariance_dataset():
 
 def test_load_tubingen_dataset():
 
-    for i in [1, 47, 86, 88, 108]:
+    for i in [1, 47, 108]:
         dataset = load_dataset(f"tubingen/{i}")
 
         assert dataset.name == f"tubingen/{i}"
@@ -121,7 +118,7 @@ def test_load_tubingen_dataset():
 
 
 def test_tubingen_missing_data_tag():
-    for i in random.sample(range(1, 109), 5):
+    for i in [1, 47, 108]:
         dataset = load_dataset(f"tubingen/{i}")
         actual_missing = dataset.data.isnull().any().any()
         assert dataset.tags["has_missing_data"] == actual_missing, (

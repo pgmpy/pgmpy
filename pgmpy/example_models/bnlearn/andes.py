@@ -1,13 +1,11 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Andes(DiscreteMixin, _BaseExampleModel):
+class Andes(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    ..[1] C. Conati, A. S. Gertner, K. VanLehn, M. J. Druzdzel. On-line Student Modeling for Coached Problem
-    Solving Using Bayesian Networks. In Proceedings of the 6th International Conference on User Modeling, pages
-    231-242. Springer-Verlag, 1997.
+    - :cite:p:`conati_1997`
     """
 
     _tags = {

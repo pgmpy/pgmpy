@@ -213,15 +213,30 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
 
         if (source in blocked_nodes) or (target in blocked_nodes):
             return False
-
-        graph = nx.DiGraph(self.subgraph(set(self.nodes()) - blocked_nodes))
-        if ignore_direct_edge and graph.has_edge(source, target):
-            graph.remove_edge(source, target)
-
-        if not graph.has_node(source) or not graph.has_node(target):
+        if source == target:
+            return True
+        if not (self.has_node(source) and self.has_node(target)):
             return False
 
-        return nx.has_path(graph, source, target)
+        # BFS directly over the underlying DiGraph. Undirected edges are stored
+        # as both u->v and v->u in self._succ, so successors() naturally yields
+        # the correct semi-directed neighborhood without needing to materialize
+        # a filtered subgraph copy.
+        succ = self._succ
+        visited = {source}
+        stack = [source]
+        while stack:
+            node = stack.pop()
+            for child in succ[node]:
+                if child in visited or child in blocked_nodes:
+                    continue
+                if ignore_direct_edge and node == source and child == target:
+                    continue
+                if child == target:
+                    return True
+                visited.add(child)
+                stack.append(child)
+        return False
 
     def has_acyclic_extension(self) -> bool:
         """
@@ -508,9 +523,7 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
 
         References
         ----------
-        [1] Dor, Dorit, and Michael Tarsi.
-          "A simple algorithm to construct a consistent extension of a partially oriented graph."
-            Technicial Report R-185, Cognitive Systems Laboratory, UCLA (1992): 45.
+        - :cite:p:`dor_tarsi_1992`
         """
         # Add required edges if it doesn't form a new v-structure or an opposite edge
         # is already present in the network.

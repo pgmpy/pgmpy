@@ -5,10 +5,10 @@ from sklearn.linear_model import LinearRegression
 
 from pgmpy.utils import preprocess_data
 
-from ._base import _BaseCITest, _CITestResult, _ResidualMixin
+from ._base import BaseCITest, _CITestResult, _ResidualMixin
 
 
-class GCM(_ResidualMixin, _BaseCITest):
+class GCM(_ResidualMixin, BaseCITest):
     r"""
     Generalized Covariance Measure (GCM) [1] test for conditional independence.
 
@@ -46,8 +46,7 @@ class GCM(_ResidualMixin, _BaseCITest):
 
     References
     ----------
-    .. [1] Rajen D. Shah, and Jonas Peters. "The Hardness of Conditional Independence Testing and the Generalised
-        Covariance Measure".
+    - :cite:p:`shah_peters_2020`
     """
 
     _tags = {

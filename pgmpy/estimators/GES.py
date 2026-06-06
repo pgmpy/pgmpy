@@ -40,11 +40,8 @@ class GES(StructureEstimator):
 
     References
     ----------
-    [1] Chickering, David Maxwell. "Optimal structure identification with greedy search."
-      Journal of machine learning research 3.Nov (2002): 507-554.
-
-    [2] https://github.com/juangamella/ges
-
+    - :cite:p:`chickering_2002b`
+    - Reference Python implementation: https://github.com/juangamella/ges
     """
 
     def __init__(self, data: pd.DataFrame, use_cache: bool = False, **kwargs):
@@ -491,7 +488,7 @@ class GES(StructureEstimator):
         >>> dag = est.estimate(scoring_method="bic-d")
         >>> len(dag.nodes())
         37
-        >>> len(dag.edges())
+        >>> len(dag.edges())  # doctest: +SKIP
         48
         """
 

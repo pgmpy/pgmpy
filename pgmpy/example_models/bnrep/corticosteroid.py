@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Corticosteroid(BIFMixin, _BaseExampleModel):
+class Corticosteroid(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/corticosteroid",
         "n_nodes": 3,

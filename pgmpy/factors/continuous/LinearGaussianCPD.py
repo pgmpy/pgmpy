@@ -30,7 +30,7 @@ class LinearGaussianCPD(BaseFactor):
 
     References
     ----------
-    .. [1] https://cedar.buffalo.edu/~srihari/CSE574/Chap8/Ch8-PGM-GaussianBNs/8.5%20GaussianBNs.pdf
+    - :cite:p:`srihari_gaussian_bn`
 
     Parameters
     ----------
@@ -125,7 +125,7 @@ class LinearGaussianCPD(BaseFactor):
 
     def __repr__(self):
         str_repr = self.__str__()
-        return f"<LinearGaussianCPD: {str_repr} at {hex(id(self))}"
+        return f"<LinearGaussianCPD: {str_repr} at {hex(id(self))}>"
 
     @staticmethod
     def get_random(variable, evidence, loc=0.0, scale=1.0, seed=None):

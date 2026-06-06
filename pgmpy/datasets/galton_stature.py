@@ -1,11 +1,11 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class GaltonStature(_BaseDataset):
+class GaltonStature(BaseDataset):
     """
     References
     ----------
-    .. [1] http://www.medicine.mcgill.ca/epidemiology/hanley/galton/
+    - :cite:p:`mcgill_galton`
     """
 
     _tags = {

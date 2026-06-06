@@ -1,12 +1,12 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class USCrime(_BaseDataset):
+class USCrime(BaseDataset):
     """
     References
     ----------
-    .. [1] Der, G., and Everitt, B.S. (2002). A Handbook of Statistical Analysis using SAS, 2e. CRC.
-    .. [2] https://www.imsbio.co.jp/RGM/R_rdfile?f=ACSWR/man/usc.Rd&d=R_CC
+    - :cite:p:`der_everitt_2002`
+    - :cite:p:`acswr_usc_dataset`
     """
 
     _tags = {

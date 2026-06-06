@@ -249,8 +249,3 @@ class GaussianParameterEstimator(BaseParameterEstimator):
         model, _ = self._validate_inputs(model, data, sample_weight=sample_weight)
         self._model = model
         self._data = data
-
-
-_BaseParameterEstimator = BaseParameterEstimator
-_BaseDiscreteParameterEstimator = DiscreteParameterEstimator
-_BaseGaussianParameterEstimator = GaussianParameterEstimator

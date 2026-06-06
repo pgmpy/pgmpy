@@ -1,11 +1,11 @@
-from .._base import DAGMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DAGMixin
 
 
-class Polzer2012(DAGMixin, _BaseExampleModel):
+class Polzer2012(DAGMixin, BaseExampleModel):
     """
     References
     ----------
-    ..[1] Polzer, I., et al. (2012). Causal DAG for periodontitis / tooth loss and mortality.
+    - :cite:p:`polzer_2012`
     """
 
     _tags = {

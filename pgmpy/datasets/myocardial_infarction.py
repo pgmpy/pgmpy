@@ -1,11 +1,11 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class MyocardialInfarction(_BaseDataset):
+class MyocardialInfarction(BaseDataset):
     """
     References
     ----------
-    .. [1] https://archive.ics.uci.edu/ml/datasets/Myocardial+infarction+complications
+    - :cite:p:`springer_myocardial`
     """
 
     _tags = {

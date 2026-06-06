@@ -5,10 +5,10 @@ from sklearn.cross_decomposition import CCA
 
 from pgmpy.utils import preprocess_data
 
-from ._base import _BaseCITest, _CITestResult, _ResidualMixin
+from ._base import BaseCITest, _CITestResult, _ResidualMixin
 
 
-class PillaiTrace(_ResidualMixin, _BaseCITest):
+class PillaiTrace(_ResidualMixin, BaseCITest):
     r"""
     Pillai's trace test for conditional independence with mixed data [1].
 
@@ -71,13 +71,9 @@ class PillaiTrace(_ResidualMixin, _BaseCITest):
 
     References
     ----------
-    .. [1] Ankan, Ankur, and Johannes Textor. "A simple unified approach to testing high-dimensional conditional
-           independences for categorical and ordinal data." Proceedings of the AAAI Conference on Artificial
-           Intelligence.
-    .. [2] Li, C.; and Shepherd, B. E. 2010. Test of Association Between Two Ordinal Variables While Adjusting for
-           Covariates. Journal of the American Statistical Association.
-    .. [3] Muller, K. E. and Peterson B. L. (1984) Practical Methods for computing power in testing the multivariate
-           general linear hypothesis. Computational Statistics & Data Analysis.
+    - :cite:p:`ankan_textor_2023`
+    - :cite:p:`li_shepherd_2010`
+    - :cite:p:`muller_peterson_1984`
     """
 
     _tags = {

@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from scipy import special, stats
 
-from ._base import _BaseCITest, _CITestResult
+from ._base import BaseCITest, _CITestResult
 
 _LAMBDA_ALIASES = {
     "pearson": 1.0,
@@ -14,7 +14,7 @@ _LAMBDA_ALIASES = {
 }
 
 
-class PowerDivergence(_BaseCITest):
+class PowerDivergence(BaseCITest):
     r"""
     Cressie-Read power divergence test for conditional independence on discrete data [1].
 
@@ -94,8 +94,7 @@ class PowerDivergence(_BaseCITest):
 
     References
     ----------
-    .. [1] Cressie, Noel, and Timothy RC Read. "Multinomial goodness‐of‐fit tests." Journal of the Royal Statistical
-         Society: Series B (Methodological) 46.3 (1984): 440-464.
+    - :cite:p:`cressie_read_1984`
 
     Examples
     --------

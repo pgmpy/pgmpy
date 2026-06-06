@@ -1,7 +1,7 @@
-from pgmpy.datasets._base import _BaseDataset, _TubingenBenchmarkMixin
+from pgmpy.datasets._base import BaseDataset, _TubingenBenchmarkMixin
 
 
-class Tubingen(_TubingenBenchmarkMixin, _BaseDataset):
+class Tubingen(_TubingenBenchmarkMixin, BaseDataset):
     """
     Tubingen Cause-Effect Pairs Dataset.
     A benchmark collection of independent cause-effect pairs.

@@ -20,9 +20,9 @@ class PomdpXReader:
     -------
     reader = PomdpXReader('TestPomdpX.xml')
 
-    Reference
-    ---------
-    http://bigbird.comp.nus.edu.sg/pmwiki/farm/appl/index.php?n=Main.PomdpXDocumentation
+    References
+    ----------
+    - :cite:p:`pomdpx_format`
     """
 
     def __init__(self, path=None, string=None):

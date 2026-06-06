@@ -1,13 +1,12 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class AutoMpg(_BaseDataset):
+class AutoMpg(BaseDataset):
     """
     References
     ----------
-    .. [1] Lopez-Paz, D., Muandet, K., Schölkopf, B., & Tolstikhin, I. (2015, June). Towards a learning theory of
-           cause-effect inference. In International Conference on Machine Learning (pp. 1452-1461). PMLR.
-    .. [2] https://archive.ics.uci.edu/ml/datasets/auto+mpg
+    - :cite:p:`lopezpaz_2015`
+    - :cite:p:`uci_auto_mpg`
     """
 
     _tags = {

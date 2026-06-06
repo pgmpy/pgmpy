@@ -1,11 +1,11 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class CreditApproval(_BaseDataset):
+class CreditApproval(BaseDataset):
     """
     References
     ----------
-    .. [1] https://archive.ics.uci.edu/ml/datasets/Credit+Approval
+    - :cite:p:`ivandari_2022`
     """
 
     _tags = {

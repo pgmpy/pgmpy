@@ -8,11 +8,11 @@ from tqdm.auto import trange
 from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.causal_discovery import ExpertKnowledge
-from pgmpy.causal_discovery._base import _BaseCausalDiscovery, _ScoreMixin
+from pgmpy.causal_discovery._base import BaseCausalDiscovery, _ScoreMixin
 from pgmpy.structure_score import BaseStructureScore, get_scoring_method
 
 
-class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
+class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
     """
     Score-based causal discovery using hill climbing optimization.
 
@@ -114,19 +114,21 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
     >>> from pgmpy.causal_discovery import HillClimbSearch
     >>> hc = HillClimbSearch(scoring_method="bic-d")
     >>> hc.fit(df)
-    >>> hc.causal_graph_.edges()
+    HillClimbSearch(scoring_method='bic-d')
+    >>> _ = hc.causal_graph_.edges()
 
     Use expert knowledge to constrain the search:
 
     >>> from pgmpy.causal_discovery import ExpertKnowledge
     >>> expert = ExpertKnowledge(forbidden_edges=[("HISTORY", "CVP")])
     >>> hc = HillClimbSearch(scoring_method="bic-d", expert_knowledge=expert)
-    >>> hc.fit(df)
+    >>> hc.fit(df)  # doctest: +ELLIPSIS
+    HillClimbSearch(expert_knowledge=Expert Knowledge: ...,
+                    scoring_method='bic-d')
 
     References
     ----------
-    .. [1] Koller & Friedman, Probabilistic Graphical Models - Principles and
-           Techniques, 2009, Section 18.4.3 (page 811ff)
+    - :cite:p:`koller_friedman_2009`
     """
 
     def __init__(
