@@ -4,7 +4,7 @@ Your PR will be closed if you remove the checklist. Use of LLMs is **strictly fo
 
 ### Your checklist for this pull request
 
-- [ ] Have you followed all the steps from our [Contributing Guide](https://github.com/pgmpy/pgmpy/blob/dev/Contributing.md)?
+- [ ] Have you followed all the steps from our [Contributing Guide](https://github.com/pgmpy/pgmpy/blob/dev/CONTRIBUTING.md)?
 - [ ] Does the PR fully address the linked issue and is within its defined scope? If you are still working on the PR, mark it as draft.
 - [ ] Are all the GitHub Actions checks passing? If not, mark your PR as draft while you fix it.
 
