@@ -4,6 +4,7 @@ import re
 
 import networkx as nx
 import pandas as pd
+from skbase.utils.dependencies import _safe_import
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
@@ -16,8 +17,7 @@ class LLMPairwise(BaseCausalDiscovery):
     Orients the edge between exactly two variables by querying a Large Language
     Model with the variable names and optional text descriptions. The data
     values themselves are not used; they only provide the standard pgmpy
-    estimator ``fit`` interface. This is the estimator form of the
-    ``pgmpy.utils.llm_pairwise_orient`` helper.
+    estimator ``fit`` interface.
 
     Parameters
     ----------
@@ -108,7 +108,6 @@ class LLMPairwise(BaseCausalDiscovery):
 
         # Step 2: Build the prompt from the variable names and descriptions.
         x, y = X.columns
-        self.variables_ = [x, y]
         self.prompt_ = self._build_prompt(x, y)
 
         # Step 3: Query the LLM and parse the chosen direction.
@@ -117,11 +116,9 @@ class LLMPairwise(BaseCausalDiscovery):
         self.direction_score_ = 1.0 if (source, target) == (x, y) else -1.0
 
         # Step 4: Build the causal graph and store the fitted attributes.
-        dag = DAG()
-        dag.add_nodes_from(self.variables_)
-        dag.add_edge(source, target)
+        dag = DAG([(source, target)])
         self.causal_graph_ = dag
-        self.adjacency_matrix_ = nx.to_pandas_adjacency(dag, nodelist=self.variables_, weight=None, dtype="int")
+        self.adjacency_matrix_ = nx.to_pandas_adjacency(dag, nodelist=[x, y], weight=None, dtype="int")
 
         return self
 
@@ -149,17 +146,10 @@ class LLMPairwise(BaseCausalDiscovery):
 
     def _query_llm(self, messages):
         """Send `messages` to the LLM and return its text response."""
-        try:
-            from litellm import completion
-        except ImportError as e:
-            raise ImportError(
-                f"{e}. litellm is required for using"
-                " LLM based pairwise orientation. "
-                "Please install using: pip install litellm"
-            ) from None
+        litellm = _safe_import("litellm")
 
         llm_kwargs = self.llm_kwargs if self.llm_kwargs is not None else {}
-        response = completion(model=self.llm_model, messages=messages, **llm_kwargs)
+        response = litellm.completion(model=self.llm_model, messages=messages, **llm_kwargs)
         return response.choices[0].message.content
 
     def _parse_response(self, response, x, y):
