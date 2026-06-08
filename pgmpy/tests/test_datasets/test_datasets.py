@@ -149,3 +149,93 @@ def test_invalid_tag():
 
     with pytest.raises(ValueError, match="Unrecognized filter argument"):
         list_datasets(num_samples=100)  # wrong key name entirely
+
+
+# --- Static dataset subsampling ---
+
+
+def test_subsampling_row_count():
+    dataset = load_dataset("sachs_discrete", n_samples=100, seed=42)
+    assert dataset.data.shape[0] == 100
+    assert isinstance(dataset.data, pd.DataFrame)
+
+
+def test_subsampling_caps_at_dataset_size():
+    full = load_dataset("sachs_discrete")
+    with pytest.warns(UserWarning, match="Requested"):
+        oversized = load_dataset("sachs_discrete", n_samples=999999)
+    assert oversized.data.shape[0] == full.data.shape[0]
+
+
+def test_subsampling_warns_on_oversized():
+    with pytest.warns(UserWarning, match="Requested"):
+        load_dataset("sachs_discrete", n_samples=999999)
+
+
+def test_subsampling_seed_reproducibility():
+    ds1 = load_dataset("sachs_discrete", n_samples=50, seed=42)
+    ds2 = load_dataset("sachs_discrete", n_samples=50, seed=42)
+    pd.testing.assert_frame_equal(ds1.data.reset_index(drop=True), ds2.data.reset_index(drop=True))
+
+
+def test_static_dataset_rejects_sim_kwargs():
+    with pytest.raises(TypeError):
+        load_dataset("sachs_discrete", edge_prob=0.3)
+
+
+def test_static_ground_truth_with_forwarded_kwargs():
+    from pgmpy.datasets.sachs import SachsDiscrete
+
+    gt = SachsDiscrete.load_ground_truth(seed=42, n_nodes=8)
+    assert gt is not None
+    assert isinstance(gt, DAG)
+
+
+# --- _SimulationMixin contract ---
+
+
+def test_simulation_mixin_raises_not_implemented():
+    from pgmpy.datasets._base import _SimulationMixin
+
+    with pytest.raises(NotImplementedError):
+        _SimulationMixin.load_dataframe()
+
+    with pytest.raises(NotImplementedError):
+        _SimulationMixin.load_ground_truth()
+
+
+# --- Covariance datasets ---
+
+
+def test_covariance_datasets_load():
+    for name in ["goldberg", "spartina"]:
+        dataset = load_dataset(name)
+        assert dataset.name == name
+        assert isinstance(dataset.data, pd.DataFrame)
+        assert dataset.data.shape[0] > 0
+
+
+def test_covariance_seed_reproducibility():
+    ds1 = load_dataset("goldberg", seed=42)
+    ds2 = load_dataset("goldberg", seed=42)
+    pd.testing.assert_frame_equal(ds1.data, ds2.data)
+
+
+def test_covariance_n_samples():
+    dataset = load_dataset("goldberg", n_samples=25, seed=42)
+    assert dataset.data.shape[0] == 25
+
+
+# --- Tubingen ---
+
+
+def test_tubingen_rejects_sim_kwargs():
+    with pytest.raises(TypeError, match="do not support"):
+        load_dataset("tubingen/1", edge_prob=0.3)
+
+
+def test_tubingen_subsampling():
+    dataset = load_dataset("tubingen/1", n_samples=10, seed=42)
+    assert dataset.data.shape[0] == 10
+    assert list(dataset.data.columns) == ["x", "y"]
+    assert isinstance(dataset.ground_truth, DAG)
