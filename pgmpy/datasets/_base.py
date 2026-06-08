@@ -15,15 +15,13 @@ from pgmpy.base import ADMG, DAG, MAG, PDAG
 from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.utils.hf_hub import read_hf_file
 
-CausalGraph = DAG | PDAG | ADMG | MAG
-
 
 @dataclass
 class Dataset:
     name: str
     data: pd.DataFrame
     expert_knowledge: ExpertKnowledge | None = None
-    ground_truth: CausalGraph | None = None
+    ground_truth: DAG | PDAG | ADMG | MAG | None = None
 
     tags: dict[str, Any] = None
 
@@ -210,7 +208,7 @@ class _SimulationMixin:
         raise NotImplementedError(f"{cls.__name__} must implement load_dataframe().")
 
     @classmethod
-    def load_ground_truth(cls, **sim_kwargs) -> CausalGraph:
+    def load_ground_truth(cls, **sim_kwargs) -> DAG | PDAG | ADMG | MAG:
         """Construct and return the ground-truth graph. Must be implemented by each simulator."""
         raise NotImplementedError(f"{cls.__name__} must implement load_ground_truth().")
 
