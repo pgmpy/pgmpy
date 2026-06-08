@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Hashable
+import re
 
 import networkx as nx
 import pandas as pd
@@ -11,56 +11,56 @@ from pgmpy.causal_discovery._base import BaseCausalDiscovery
 
 class LLMPairwise(BaseCausalDiscovery):
     """
-    Pairwise causal discovery estimator using a Large Language Model.
+    LLM-based pairwise causal discovery estimator.
 
-    The estimator asks an LLM to orient the edge between exactly two variables
-    using their names and optional text descriptions. The data values are not
-    used for scoring; they are only used to provide the standard pgmpy
-    estimator ``fit`` interface.
+    Orients the edge between exactly two variables by querying a Large Language
+    Model with the variable names and optional text descriptions. The data
+    values themselves are not used; they only provide the standard pgmpy
+    estimator ``fit`` interface. This is the estimator form of the
+    ``pgmpy.utils.llm_pairwise_orient`` helper.
 
     Parameters
     ----------
-    descriptions : dict, optional
+    descriptions : dict, default=None
         Mapping from variable names to text descriptions. If a variable is
         missing, its name is used as the description.
 
-    system_prompt : str, optional
-        System instruction prepended to the prompt. If ``None``, defaults to
+    system_prompt : str, default=None
+        A system prompt to give the LLM. If ``None``, defaults to
         ``"You are an expert in Causal Inference"``.
 
     llm_model : str, default="gemini/gemini-1.5-flash"
-        The model name passed to ``litellm.completion``.
+        The LLM model to use. Please refer to the litellm documentation
+        (https://docs.litellm.ai/docs/providers) for the available models.
 
-    llm_kwargs : dict, optional
-        Additional keyword arguments passed to ``litellm.completion``.
-
-    show_progress : bool, default=True
-        Kept for consistency with other causal discovery estimators.
+    llm_kwargs : dict, default=None
+        Additional keyword arguments passed to ``litellm.completion``, for
+        example ``{"temperature": 0}``.
 
     Attributes
     ----------
-    causal_graph_ : DAG
-        The learned two-node causal graph.
+    causal_graph_ : pgmpy.base.DAG
+        The learned causal graph as a DAG.
 
     adjacency_matrix_ : pd.DataFrame
         Adjacency matrix representation of ``causal_graph_``.
 
     direction_score_ : float
-        ``1.0`` when the first input column is oriented toward the second input
-        column, and ``-1.0`` for the reverse direction. This is not a calibrated
-        confidence score.
+        Orientation indicator (not a calibrated confidence). It is ``1.0`` when
+        the edge points from the first variable to the second and ``-1.0`` when
+        it points the other way.
 
-    prompt_ : str
-        Prompt sent to the LLM.
+    prompt_ : list
+        The chat messages sent to the LLM.
 
     response_ : str
-        Raw text response returned by the LLM.
+        The raw text response returned by the LLM.
 
     n_features_in_ : int
-        The number of features in the data used to fit the estimator.
+        The number of features in the data used to learn the causal graph.
 
     feature_names_in_ : np.ndarray
-        The feature names in the data used to fit the estimator.
+        The feature names in the data used to learn the causal graph.
 
     Examples
     --------
@@ -77,81 +77,78 @@ class LLMPairwise(BaseCausalDiscovery):
 
     def __init__(
         self,
-        descriptions: dict[Hashable, str] | None = None,
+        descriptions: dict | None = None,
         system_prompt: str | None = None,
         llm_model: str = "gemini/gemini-1.5-flash",
         llm_kwargs: dict | None = None,
-        show_progress: bool = True,
     ):
         self.descriptions = descriptions
         self.system_prompt = system_prompt
         self.llm_model = llm_model
         self.llm_kwargs = llm_kwargs
-        self.show_progress = show_progress
 
     def _fit(self, X: pd.DataFrame):
         """
-        Fit the estimator on a two-column dataset.
+        Orient the edge between the two variables in `X` using an LLM.
 
         Parameters
         ----------
         X : pd.DataFrame
-            Dataset containing exactly two variables.
+            The data to learn the causal structure from. Must contain exactly
+            two variables.
 
         Returns
         -------
         self : LLMPairwise
-            Fitted estimator.
+            Returns the instance with the fitted attributes set.
         """
+        # Step 1: This estimator only orients a single pair of variables.
         if X.shape[1] != 2:
-            raise ValueError("LLMPairwise requires exactly two variables.")
+            raise ValueError(f"LLMPairwise requires exactly two variables, got {X.shape[1]}.")
 
+        # Step 2: Build the prompt from the variable names and descriptions.
         x, y = X.columns
         self.variables_ = [x, y]
         self.prompt_ = self._build_prompt(x, y)
-        response = self._call_llm(self.prompt_)
-        self.response_ = response.choices[0].message.content
 
-        edge = self._parse_response(self.response_, x, y)
-        self.direction_score_ = 1.0 if edge == (x, y) else -1.0
+        # Step 3: Query the LLM and parse the chosen direction.
+        self.response_ = self._query_llm(self.prompt_)
+        source, target = self._parse_response(self.response_, x, y)
+        self.direction_score_ = 1.0 if (source, target) == (x, y) else -1.0
 
+        # Step 4: Build the causal graph and store the fitted attributes.
         dag = DAG()
         dag.add_nodes_from(self.variables_)
-        dag.add_edge(*edge)
-
+        dag.add_edge(source, target)
         self.causal_graph_ = dag
-        self.adjacency_matrix_ = nx.to_pandas_adjacency(
-            dag,
-            nodelist=self.variables_,
-            weight=None,
-            dtype="int",
-        )
+        self.adjacency_matrix_ = nx.to_pandas_adjacency(dag, nodelist=self.variables_, weight=None, dtype="int")
 
         return self
 
-    def _build_prompt(self, x: Hashable, y: Hashable) -> str:
-        descriptions = self.descriptions or {}
+    def _build_prompt(self, x, y):
+        """Build the system and user chat messages describing `x` and `y`."""
+        descriptions = self.descriptions if self.descriptions is not None else {}
         system_prompt = self.system_prompt
         if system_prompt is None:
             system_prompt = "You are an expert in Causal Inference"
 
-        x_description = descriptions.get(x, str(x))
-        y_description = descriptions.get(y, str(y))
+        user_prompt = (
+            "You are given two variables with the following descriptions:\n"
+            f"<A>: {descriptions.get(x, x)}\n"
+            f"<B>: {descriptions.get(y, y)}\n\n"
+            "Which of the following two options is the most likely causal direction between them:\n"
+            "1. <A> causes <B>\n"
+            "2. <B> causes <A>\n\n"
+            "Return a single number (1 or 2) as your answer. I do not need the reasoning behind it.\n"
+            "Do not add any formatting in the answer."
+        )
+        return [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
 
-        return f""" {system_prompt}. You are
-      given two variables with the following descriptions:
-        <A>: {x_description}
-        <B>: {y_description}
-
-        Which of the following two options is the most likely causal direction between them:
-        1. <A> causes <B>
-        2. <B> causes <A>
-
-        Return a single number (1 or 2) as your answer. I do not need the reasoning behind it.
-        Do not add any formatting in the answer.
-        """
-
-    def _call_llm(self, prompt: str):
+    def _query_llm(self, messages):
+        """Send `messages` to the LLM and return its text response."""
         try:
             from litellm import completion
         except ImportError as e:
@@ -161,18 +158,22 @@ class LLMPairwise(BaseCausalDiscovery):
                 "Please install using: pip install litellm"
             ) from None
 
-        llm_kwargs = self.llm_kwargs or {}
-        return completion(
-            model=self.llm_model,
-            messages=[{"role": "user", "content": prompt}],
-            **llm_kwargs,
-        )
+        llm_kwargs = self.llm_kwargs if self.llm_kwargs is not None else {}
+        response = completion(model=self.llm_model, messages=messages, **llm_kwargs)
+        return response.choices[0].message.content
 
-    def _parse_response(self, response: str, x: Hashable, y: Hashable) -> tuple[Hashable, Hashable]:
+    def _parse_response(self, response, x, y):
+        """Parse the LLM `response` into a directed (source, target) edge."""
         response_txt = response.strip().lower().replace("*", "")
-        if response_txt in ("a", "1"):
-            return (x, y)
-        elif response_txt in ("b", "2"):
-            return (y, x)
-        else:
-            raise ValueError("Results from the LLM are unclear. Try calling the estimator again.")
+
+        # An explicit option number takes precedence over an option letter, so
+        # that responses like "1.", "Option 1" or "Answer: 2" are parsed.
+        number = re.search(r"[12]", response_txt)
+        if number is not None:
+            return (x, y) if number.group() == "1" else (y, x)
+
+        letter = re.search(r"\b[ab]\b", response_txt)
+        if letter is not None:
+            return (x, y) if letter.group() == "a" else (y, x)
+
+        raise ValueError("Results from the LLM are unclear. Try calling the estimator again.")
