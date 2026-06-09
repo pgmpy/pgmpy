@@ -42,6 +42,8 @@ class BDs(BDeu):
     state_names : dict, optional
         Dictionary mapping each variable to its discrete states. If not specified, the unique values observed in the
         data are used.
+    cache_size : int or None, default=10000
+        Maximum number of local scores to cache. If None, the cache is unlimited.
 
     Examples
     --------
@@ -76,8 +78,8 @@ class BDs(BDeu):
         "is_parameteric": True,
     }
 
-    def __init__(self, data, equivalent_sample_size=10, state_names=None):
-        super().__init__(data, equivalent_sample_size, state_names=state_names)
+    def __init__(self, data, equivalent_sample_size=10, state_names=None, cache_size=10000):
+        super().__init__(data, equivalent_sample_size, state_names=state_names, cache_size=cache_size)
 
     def structure_prior_ratio(self, operation) -> float:
         """Compute the prior ratio for a graph edit."""

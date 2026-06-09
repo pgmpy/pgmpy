@@ -22,6 +22,8 @@ class BICCondGauss(LogLikelihoodCondGauss):
         DataFrame where columns may be discrete or continuous variables.
     state_names : dict, optional
         Dictionary mapping discrete variable names to their possible states.
+    cache_size : int or None, default=10000
+        Maximum number of local scores to cache. If None, the cache is unlimited.
 
     Examples
     --------
@@ -57,8 +59,8 @@ class BICCondGauss(LogLikelihoodCondGauss):
         "is_parameteric": False,
     }
 
-    def __init__(self, data, state_names=None):
-        super().__init__(data, state_names=state_names)
+    def __init__(self, data, state_names=None, cache_size=10000):
+        super().__init__(data, state_names=state_names, cache_size=cache_size)
 
     def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
         ll = self._log_likelihood(variable=variable, parents=parents)
