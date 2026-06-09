@@ -41,6 +41,8 @@ class BaseStructureScore(BaseObject):
     def __init__(self, data, state_names=None, cache_size=10000):
         self.data, self.dtypes = preprocess_data(data)
         self.cache_size = cache_size
+        if cache_size is not None and cache_size <= 0:
+            raise ValueError(f"cache_size must be a positive integer or None. Got: {cache_size}")
 
         if self.data is not None:
             self.variables = list(self.data.columns.values)

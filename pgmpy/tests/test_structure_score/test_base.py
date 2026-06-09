@@ -12,9 +12,9 @@ from pgmpy.structure_score._base import get_scoring_method
 
 
 class CountingScore(BaseStructureScore):
-    def __init__(self, data):
+    def __init__(self, data, cache_size=10000):
         self.call_count = 0
-        super().__init__(data)
+        super().__init__(data, cache_size=cache_size)
 
     def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
         self.call_count += 1
@@ -30,6 +30,41 @@ class TestBaseStructureScore:
 
         with pytest.raises(TypeError, match=r"unexpected keyword argument 'foo'"):
             K2(data, foo=1)
+
+    @pytest.mark.parametrize(
+        ("cache_size", "expected_maxsize"),
+        [
+            (10000, 10000),  # default
+            (500, 500),  # custom
+            (None, None),  # unlimited
+        ],
+    )
+    def test_cache_size_sets_lru_maxsize(self, small_df, cache_size, expected_maxsize):
+        """cache_size is stored and reflected in lru_cache maxsize."""
+        data = small_df.astype("category")
+        score = K2(data, cache_size=cache_size)
+
+        assert score.cache_size == cache_size
+        assert score._cached_local_score.cache_info().maxsize == expected_maxsize
+
+    @pytest.mark.parametrize("invalid_cache_size", [0, -1])
+    def test_cache_size_invalid_raises(self, small_df, invalid_cache_size):
+        """cache_size of 0 or negative raises ValueError."""
+        data = small_df.astype("category")
+
+        with pytest.raises(ValueError, match=r"cache_size must be a positive integer or None"):
+            K2(data, cache_size=invalid_cache_size)
+
+    def test_cache_size_evicts_when_full(self, small_df):
+        """Cache evicts entries and recomputes when maxsize is reached."""
+        data = small_df.astype("category")
+        score = CountingScore(data, cache_size=1)
+
+        score.local_score("A", ("B",))
+        score.local_score("A", ("C",))
+        score.local_score("A", ("B",))
+
+        assert score.call_count == 3
 
 
 class TestGetScoringMethod:
@@ -91,6 +126,21 @@ class TestGetScoringMethod:
         assert returned_score.local_score("A", ("B",)) == 1.0
         assert returned_score.local_score("A", ("B",)) == 1.0
         assert score.call_count == 1
+
+    @pytest.mark.parametrize(
+        ("cache_size", "expected_maxsize"),
+        [
+            (500, 500),
+            (None, None),
+        ],
+    )
+    def test_cache_size_passed_through_get_scoring_method(self, small_df, cache_size, expected_maxsize):
+        """get_scoring_method correctly passes cache_size to score instance."""
+        data = small_df.astype("category")
+        score = get_scoring_method("k2", data, cache_size=cache_size)
+
+        assert score.cache_size == cache_size
+        assert score._cached_local_score.cache_info().maxsize == expected_maxsize
 
     def test_get_scoring_method_unknown_score_error(self, small_df):
         with pytest.raises(ValueError, match=r"Unknown scoring method: 'not-a-score'"):
