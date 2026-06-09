@@ -1,7 +1,7 @@
 import pytest
 
-from pgmpy.base.ADMG import ADMG
-from pgmpy.base.DAG import DAG
+from pgmpy.graph.ADMG import ADMG
+from pgmpy.graph.DAG import DAG
 
 
 class TestADMGInitialization:
@@ -320,7 +320,7 @@ class TestADMGGraphOperations:
         dag = self.admg.to_dag()
 
         # Should return a pgmpy DAG instance
-        from pgmpy.base.DAG import DAG as pgmpy_DAG
+        from pgmpy.graph.DAG import DAG as pgmpy_DAG
 
         assert isinstance(dag, pgmpy_DAG)
 

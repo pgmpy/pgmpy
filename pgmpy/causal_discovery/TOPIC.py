@@ -6,7 +6,7 @@ import pandas as pd
 from tqdm.auto import tqdm
 
 from pgmpy import config
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
 from pgmpy.structure_score import BaseStructureScore, get_scoring_method
 

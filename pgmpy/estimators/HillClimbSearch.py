@@ -11,7 +11,7 @@ import pandas as pd
 from tqdm.auto import trange
 
 from pgmpy import config
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.estimators import (
     StructureEstimator,

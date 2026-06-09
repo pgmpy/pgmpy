@@ -4,7 +4,7 @@ from typing import Any
 
 import networkx as nx
 
-from pgmpy.base._mixin_roles import _GraphRolesMixin
+from pgmpy.graph._mixin_roles import _GraphRolesMixin
 
 
 class _CoreGraph(nx.MultiGraph, _GraphRolesMixin):

@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from pgmpy.base import PDAG
+from pgmpy.graph import PDAG
 from pgmpy.estimators import GES
 from pgmpy.example_models import load_model
 

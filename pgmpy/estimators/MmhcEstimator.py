@@ -1,6 +1,6 @@
 import networkx as nx
 
-from pgmpy.base import UndirectedGraph
+from pgmpy.graph import UndirectedGraph
 from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.estimators import BDeu, HillClimbSearch, StructureEstimator
 from pgmpy.estimators.CITests import chi_square

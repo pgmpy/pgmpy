@@ -3,7 +3,7 @@ import re
 import pytest
 from skbase.lookup import all_objects
 
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 from pgmpy.example_models import list_models, load_model
 from pgmpy.example_models._base import BaseExampleModel
 from pgmpy.models import (

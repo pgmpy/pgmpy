@@ -517,7 +517,7 @@ class TestDAGParser(unittest.TestCase):
         self.assertEqual(set(model_from_str.edges()), expected_edges)
 
     def test_from_dagitty_DAG_ctor(self):
-        from pgmpy.base import DAG
+        from pgmpy.graph import DAG
 
         # Adapted from https://www.dagitty.net/manual-3.x.pdf#page=4 section 3.1 with beta modified
         model_str = """dag{

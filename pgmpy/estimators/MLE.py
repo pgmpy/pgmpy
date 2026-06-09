@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 from pgmpy.estimators import ParameterEstimator
 from pgmpy.factors import FactorDict
 from pgmpy.factors.discrete import TabularCPD

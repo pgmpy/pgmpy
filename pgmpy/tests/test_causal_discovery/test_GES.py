@@ -8,7 +8,7 @@ import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
-from pgmpy.base import PDAG
+from pgmpy.graph import PDAG
 from pgmpy.causal_discovery import GES
 from pgmpy.structure_score import K2
 

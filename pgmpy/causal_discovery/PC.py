@@ -4,7 +4,7 @@ from itertools import combinations
 import networkx as nx
 import pandas as pd
 
-from pgmpy.base import PDAG
+from pgmpy.graph import PDAG
 from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.causal_discovery._base import BaseCausalDiscovery, _ConstraintMixin
 from pgmpy.ci_tests import get_ci_test

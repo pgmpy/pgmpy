@@ -3,8 +3,8 @@ import collections
 import networkx as nx
 from networkx import MultiDiGraph
 
-from pgmpy.base._mixin_roles import _GraphRolesMixin
-from pgmpy.base.DAG import DAG as pgmpy_DAG
+from pgmpy.graph._mixin_roles import _GraphRolesMixin
+from pgmpy.graph.DAG import DAG as pgmpy_DAG
 
 
 class ADMG(_GraphRolesMixin, MultiDiGraph):

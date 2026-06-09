@@ -9,7 +9,7 @@ from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
 from pgmpy import config, logger
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 from pgmpy.estimators import (
     BayesianEstimator,
     MaximumLikelihoodEstimator,

@@ -13,7 +13,7 @@ import pandas as pd
 from scipy.stats import multivariate_normal
 
 from pgmpy import logger
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 from pgmpy.factors.continuous import LinearGaussianCPD
 
 

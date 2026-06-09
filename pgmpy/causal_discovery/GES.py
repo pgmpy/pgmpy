@@ -6,7 +6,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 
-from pgmpy.base import PDAG
+from pgmpy.graph import PDAG
 from pgmpy.causal_discovery._base import BaseCausalDiscovery, _ScoreMixin
 from pgmpy.structure_score import BaseStructureScore, get_scoring_method
 from pgmpy.utils.mathext import powerset

@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 from pgmpy.datasets import list_datasets, load_dataset
 from pgmpy.estimators import ExpertKnowledge
 

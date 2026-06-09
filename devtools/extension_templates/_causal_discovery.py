@@ -11,7 +11,7 @@
 # TODO: Add any other necessary imports here.
 import pandas as pd
 
-from pgmpy.base import DAG  # noqa: F401
+from pgmpy.graph import DAG  # noqa: F401
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
 
 # TODO: If the algorithm falls into a standard category (like constraint-based, score-based, etc.), mixin classes can be

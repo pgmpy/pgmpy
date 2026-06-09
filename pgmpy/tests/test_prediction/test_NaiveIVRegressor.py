@@ -5,7 +5,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 from pgmpy.prediction.NaiveIVRegressor import NaiveIVRegressor
 
 

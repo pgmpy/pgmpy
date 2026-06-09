@@ -1,4 +1,4 @@
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 from pgmpy.metrics import BaseUnsupervisedMetric
 from pgmpy.structure_score import get_scoring_method
 

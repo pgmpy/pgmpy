@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from pgmpy import config
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.utils import compat_fns, to_timeseries_format
 

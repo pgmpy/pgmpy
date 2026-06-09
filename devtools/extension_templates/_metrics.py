@@ -14,7 +14,7 @@
 # import pandas as pd
 # import numpy as np
 
-from pgmpy.base import DAG  # noqa: F401
+from pgmpy.graph import DAG  # noqa: F401
 
 # TODO: Choose the appropriate base class based on whether your metric requires ground truth:
 # For metrics that compare against a ground truth graph, import BaseSupervisedMetric

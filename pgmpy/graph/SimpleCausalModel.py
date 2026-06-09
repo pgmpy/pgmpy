@@ -1,6 +1,6 @@
 from collections.abc import Iterable
 
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 
 
 class SimpleCausalModel(DAG):

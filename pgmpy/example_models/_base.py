@@ -4,7 +4,7 @@ import io
 from skbase.base import BaseObject
 from skbase.lookup import all_objects
 
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 from pgmpy.readwrite import BIFReader
 from pgmpy.utils.hf_hub import read_hf_file
 

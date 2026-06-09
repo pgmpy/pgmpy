@@ -7,7 +7,7 @@ import pytest
 from sklearn.exceptions import NotFittedError
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
-from pgmpy.base import UndirectedGraph
+from pgmpy.graph import UndirectedGraph
 from pgmpy.causal_discovery import PC, ExpertKnowledge
 from pgmpy.example_models import load_model
 from pgmpy.independencies import Independencies

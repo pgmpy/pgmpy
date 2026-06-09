@@ -1,6 +1,6 @@
 import networkx as nx
 
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 from pgmpy.identification import Adjustment, BaseIdentification
 from pgmpy.utils.sets import _powerset
 

@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from pgmpy.base import AncestralBase
+from pgmpy.graph import AncestralBase
 
 
 @pytest.fixture

@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
 
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 from pgmpy.estimators import ExpertInLoop, ExpertKnowledge
 
 

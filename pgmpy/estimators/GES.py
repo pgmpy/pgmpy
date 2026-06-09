@@ -7,7 +7,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 
-from pgmpy.base import PDAG
+from pgmpy.graph import PDAG
 from pgmpy.estimators import (
     StructureEstimator,
     StructureScore,

@@ -1,6 +1,6 @@
 import unittest
 
-from pgmpy.base import DAG, PDAG
+from pgmpy.graph import DAG, PDAG
 
 
 class TestPDAG(unittest.TestCase):

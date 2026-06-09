@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 from pgmpy.causal_discovery import ExpertInLoop
 from pgmpy.ci_tests._base import BaseCITest
 from pgmpy.estimators import ExpertKnowledge

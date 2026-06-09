@@ -16,7 +16,7 @@ from sklearn.utils.validation import check_is_fitted, validate_data
 from tqdm.auto import tqdm
 
 from pgmpy import config, logger
-from pgmpy.base import DAG, UndirectedGraph
+from pgmpy.graph import DAG, UndirectedGraph
 from pgmpy.ci_tests import IndependenceMatch, get_ci_test
 from pgmpy.independencies import Independencies
 from pgmpy.metrics import get_metrics

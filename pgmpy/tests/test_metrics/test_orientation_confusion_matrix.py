@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from pgmpy.base import DAG, PDAG
+from pgmpy.graph import DAG, PDAG
 from pgmpy.metrics import OrientationConfusionMatrix
 
 

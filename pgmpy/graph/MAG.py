@@ -2,7 +2,7 @@ from collections.abc import Hashable, Iterable
 
 import networkx as nx
 
-from pgmpy.base import AncestralBase
+from pgmpy.graph import AncestralBase
 
 
 class MAG(AncestralBase):

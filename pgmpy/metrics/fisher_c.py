@@ -6,7 +6,7 @@ import pandas as pd
 from scipy import stats
 from tqdm import tqdm
 
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 from pgmpy.ci_tests import get_ci_test
 from pgmpy.global_vars import config
 from pgmpy.metrics import BaseUnsupervisedMetric

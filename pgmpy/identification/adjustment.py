@@ -2,7 +2,7 @@ import itertools
 
 import networkx as nx
 
-from pgmpy.base import ADMG, DAG, MAG, PDAG
+from pgmpy.graph import ADMG, DAG, MAG, PDAG
 from pgmpy.identification import BaseIdentification
 from pgmpy.utils.sets import _powerset
 

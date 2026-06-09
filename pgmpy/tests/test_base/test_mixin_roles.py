@@ -1,7 +1,7 @@
 # pgmpy/tests/test_base/test_mixin_roles.py
 import pytest
 
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 
 
 @pytest.fixture

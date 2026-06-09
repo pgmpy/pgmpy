@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from pgmpy.base import MAG
+from pgmpy.graph import MAG
 
 
 # graph has been taken from the zhang 2008 paper (figure 1)

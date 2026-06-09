@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 from skbase.base import BaseEstimator
 
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 from pgmpy.models import DiscreteBayesianNetwork, LinearGaussianBayesianNetwork
 from pgmpy.utils import build_state_names, preprocess_data
 

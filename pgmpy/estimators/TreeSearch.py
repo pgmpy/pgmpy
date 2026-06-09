@@ -14,7 +14,7 @@ from sklearn.metrics import (
 from tqdm.auto import tqdm
 
 from pgmpy import config
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 from pgmpy.estimators import StructureEstimator
 
 

@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 from sklearn.metrics import accuracy_score, f1_score
 
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 from pgmpy.example_models import load_model
 from pgmpy.metrics import CorrelationScore
 

@@ -4,7 +4,7 @@ from collections.abc import Hashable, Iterable
 import networkx as nx
 
 from pgmpy import logger
-from pgmpy.base._mixin_roles import _GraphRolesMixin
+from pgmpy.graph._mixin_roles import _GraphRolesMixin
 
 
 class PDAG(_GraphRolesMixin, nx.DiGraph):
@@ -487,7 +487,7 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         """
         Returns the CPDAG corresponding to one DAG extension of the PDAG.
         """
-        from pgmpy.base import DAG
+        from pgmpy.graph import DAG
 
         if self.undirected_edges:
             dag = self.to_dag()
@@ -527,7 +527,7 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         """
         # Add required edges if it doesn't form a new v-structure or an opposite edge
         # is already present in the network.
-        from pgmpy.base import DAG
+        from pgmpy.graph import DAG
 
         dag = DAG()
         # Add all the nodes and the directed edges

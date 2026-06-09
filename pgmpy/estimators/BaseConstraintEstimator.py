@@ -6,7 +6,7 @@ from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
 from pgmpy import config, logger
-from pgmpy.base import UndirectedGraph
+from pgmpy.graph import UndirectedGraph
 from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.estimators import StructureEstimator
 from pgmpy.estimators.CITests import ci_registry

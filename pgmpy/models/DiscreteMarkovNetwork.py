@@ -6,7 +6,7 @@ import networkx as nx
 import numpy as np
 from networkx.algorithms.components import connected_components
 
-from pgmpy.base import UndirectedGraph
+from pgmpy.graph import UndirectedGraph
 from pgmpy.factors import factor_product
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.independencies import Independencies

@@ -5,7 +5,7 @@ from joblib.externals.loky import get_reusable_executor
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.parameter_estimator import DiscreteBayesianEstimator

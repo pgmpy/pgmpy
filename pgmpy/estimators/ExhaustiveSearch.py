@@ -5,7 +5,7 @@ from itertools import combinations
 import networkx as nx
 
 from pgmpy import logger
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 from pgmpy.estimators import StructureEstimator
 from pgmpy.estimators.StructureScore import get_scoring_method
 from pgmpy.utils.mathext import powerset

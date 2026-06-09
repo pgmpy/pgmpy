@@ -9,7 +9,7 @@ import pandas as pd
 from skbase.utils.dependencies import _check_soft_dependencies
 
 import pgmpy.tests.help_functions as hf
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 from pgmpy.ci_tests import Pearsonr
 from pgmpy.example_models import load_model
 from pgmpy.models import LinearGaussianBayesianNetwork as LGBN

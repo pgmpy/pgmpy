@@ -2,7 +2,7 @@
 
 from collections import defaultdict
 
-from pgmpy.base import UndirectedGraph
+from pgmpy.graph import UndirectedGraph
 from pgmpy.factors import FactorDict, factor_product
 from pgmpy.utils import compat_fns
 

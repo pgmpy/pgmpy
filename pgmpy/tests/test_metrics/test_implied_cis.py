@@ -2,7 +2,7 @@ import networkx as nx
 import numpy as np
 import pytest
 
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 from pgmpy.example_models import load_model
 from pgmpy.metrics import ImpliedCIs
 

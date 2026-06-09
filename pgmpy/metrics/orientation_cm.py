@@ -1,7 +1,7 @@
 import networkx as nx
 import pandas as pd
 
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 from pgmpy.metrics import BaseSupervisedMetric
 
 

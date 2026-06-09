@@ -7,7 +7,7 @@ import networkx as nx
 import pandas as pd
 
 from pgmpy import config
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
 from pgmpy.ci_tests import get_ci_test
 from pgmpy.global_vars import logger

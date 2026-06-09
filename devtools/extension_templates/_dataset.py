@@ -9,7 +9,7 @@
 
 import pandas
 
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 from pgmpy.datasets._base import BaseDataset
 from pgmpy.estimators import ExpertKnowledge
 

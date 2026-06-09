@@ -4,7 +4,7 @@ from collections.abc import Hashable, Iterable
 import networkx as nx
 import numpy as np
 
-from pgmpy.base._mixin_roles import _GraphRolesMixin
+from pgmpy.graph._mixin_roles import _GraphRolesMixin
 from pgmpy.utils.parser import parse_dagitty
 
 

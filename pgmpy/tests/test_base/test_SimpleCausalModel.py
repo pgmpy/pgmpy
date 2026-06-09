@@ -1,7 +1,7 @@
 import networkx as nx
 import pytest
 
-from pgmpy.base import SimpleCausalModel
+from pgmpy.graph import SimpleCausalModel
 
 
 def test_simple_string_variables():

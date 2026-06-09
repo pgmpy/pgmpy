@@ -18,7 +18,7 @@ from joblib import Parallel, delayed
 from tqdm.auto import tqdm
 
 from pgmpy import logger
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 from pgmpy.factors.discrete import (
     DiscreteFactor,
     JointProbabilityDistribution,

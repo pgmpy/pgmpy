@@ -179,7 +179,7 @@ def get_example_model(model: str):
         return LinearGaussianBayesianNetwork.load(full_path)
 
     elif model in dag_models:
-        from pgmpy.base import DAG
+        from pgmpy.graph import DAG
 
         fullpath = files("pgmpy") / path
         return DAG.from_dagitty(filename=fullpath)

@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 
 import pgmpy.tests.help_functions as hf
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 from pgmpy.example_models import load_model
 from pgmpy.factors.discrete import (
     DiscreteFactor,

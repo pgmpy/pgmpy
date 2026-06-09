@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 from pgmpy import logger
-from pgmpy.base._mixin_roles import _GraphRolesMixin
+from pgmpy.graph._mixin_roles import _GraphRolesMixin
 from pgmpy.ci_tests import get_ci_test
 from pgmpy.independencies import Independencies
 from pgmpy.utils.parser import parse_dagitty, parse_lavaan
@@ -477,7 +477,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> sorted(list(moral_graph.edges()))
         [('diff', 'grade'), ('diff', 'intel'), ('grade', 'intel')]
         """
-        from pgmpy.base import UndirectedGraph
+        from pgmpy.graph import UndirectedGraph
 
         moral_graph = UndirectedGraph()
         moral_graph.add_nodes_from(self.nodes())
@@ -1054,7 +1054,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         directed_edges = [edge for edge, label in edge_labels.items() if label == "compelled"]
         undirected_edges = [edge for edge, label in edge_labels.items() if label == "reversible"]
 
-        from pgmpy.base import PDAG
+        from pgmpy.graph import PDAG
 
         pdag = PDAG(
             directed_ebunch=directed_edges,

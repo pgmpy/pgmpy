@@ -3,7 +3,7 @@ from itertools import combinations
 import pandas as pd
 from sklearn.metrics import f1_score
 
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 from pgmpy.ci_tests import get_ci_test
 from pgmpy.metrics import BaseUnsupervisedMetric
 

@@ -4,7 +4,7 @@ import numpy as np
 import numpy.testing as np_test
 import pandas as pd
 
-from pgmpy.base import DAG
+from pgmpy.graph import DAG
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.inference.CausalInference import CausalInference
 from pgmpy.models import DiscreteBayesianNetwork, SEMGraph
