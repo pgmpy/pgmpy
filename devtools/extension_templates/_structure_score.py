@@ -59,7 +59,12 @@ class MyStructureScore(BaseStructureScore):
 
     References
     ----------
-    .. [1] TODO: Add a reference for the score.
+    - :cite:p:`TODO_lastname_year`
+
+    .. note::
+        Add a BibTeX entry for your reference to ``docs/references.bib`` using
+        the key format ``lastname_year`` (e.g. ``cooper_herskovits_1992``), then
+        replace ``TODO_lastname_year`` above with that key.
     """
 
     # Required: metadata used for auto-discovery by get_scoring_method().
