@@ -1,7 +1,7 @@
-from .._base import DAGMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DAGMixin
 
 
-class Shrier2008(DAGMixin, _BaseExampleModel):
+class Shrier2008(DAGMixin, BaseExampleModel):
     """
     References
     ----------

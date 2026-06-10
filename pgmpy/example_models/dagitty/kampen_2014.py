@@ -1,7 +1,7 @@
-from .._base import DAGMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DAGMixin
 
 
-class Kampen2014(DAGMixin, _BaseExampleModel):
+class Kampen2014(DAGMixin, BaseExampleModel):
     """
     References
     ----------

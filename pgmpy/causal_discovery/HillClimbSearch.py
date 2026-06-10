@@ -8,11 +8,11 @@ from tqdm.auto import trange
 from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.causal_discovery import ExpertKnowledge
-from pgmpy.causal_discovery._base import _BaseCausalDiscovery, _ScoreMixin
+from pgmpy.causal_discovery._base import BaseCausalDiscovery, _ScoreMixin
 from pgmpy.structure_score import BaseStructureScore, get_scoring_method
 
 
-class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
+class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
     """
     Score-based causal discovery using hill climbing optimization.
 

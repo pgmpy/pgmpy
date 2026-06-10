@@ -34,7 +34,7 @@ class Dataset:
         return self.__str__()
 
 
-class _BaseDataset(BaseObject):
+class BaseDataset(BaseObject):
     """
     Base class for all datasets in pgmpy.
     Inherits from skbase.base.BaseObject to utilize its tag and lookup functionality.
@@ -173,7 +173,7 @@ class _CovarianceMixin:
     """
     This mixin class provides functionality to load datasets defined by a covariance matrix. Mainly the `load_dataframe`
     method is overridden to generate data from the covariance matrix instead of loading a static data file as is the
-    case with `_BaseDataset`.
+    case with `BaseDataset`.
     """
 
     @classmethod
@@ -200,7 +200,7 @@ class _CovarianceMixin:
     @classmethod
     def load_dataframe(cls) -> pd.DataFrame:
         """Method to create data from covariance matrix. When the `_CovarDatasetMixin is
-        used this method is supposed to override the _BaseDataset.load_dataframe method.
+        used this method is supposed to override the BaseDataset.load_dataframe method.
 
         ** Hence, when using this mixin, _CovarDatasetMixin should be the first parent class. **
         """
@@ -247,7 +247,7 @@ def load_dataset(name: str) -> Dataset:
     >>> df = dataset.data
     >>> ground_truth = dataset.ground_truth
     """
-    all_datasets = all_objects(object_types=_BaseDataset, package_name="pgmpy.datasets", return_names=False)
+    all_datasets = all_objects(object_types=BaseDataset, package_name="pgmpy.datasets", return_names=False)
     if name.startswith("tubingen"):
         name_parts = name.split("/")
         if len(name_parts) == 2 and name_parts[1].isdigit():
@@ -328,7 +328,7 @@ def list_datasets(**filter_tags) -> list[str]:
     >>> list_datasets(is_discrete=True, has_ground_truth=True)
     ['sachs_discrete']
     """
-    valid_tags = set(_BaseDataset._tags.keys())
+    valid_tags = set(BaseDataset._tags.keys())
 
     if invalid_tags := set(filter_tags.keys()) - valid_tags:
         raise ValueError(
@@ -336,7 +336,7 @@ def list_datasets(**filter_tags) -> list[str]:
         )
 
     all_datasets = all_objects(
-        object_types=_BaseDataset,
+        object_types=BaseDataset,
         package_name="pgmpy.datasets",
         return_names=False,
         filter_tags=filter_tags,

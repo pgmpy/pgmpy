@@ -1,7 +1,7 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class AbaloneContinuous(_BaseDataset):
+class AbaloneContinuous(BaseDataset):
     """
     References
     ----------
@@ -35,7 +35,7 @@ class AbaloneContinuous(_BaseDataset):
     ordinal_variables = dict()
 
 
-class AbaloneMixed(_BaseDataset):
+class AbaloneMixed(BaseDataset):
     """
     References
     ----------

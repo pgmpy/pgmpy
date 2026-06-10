@@ -1,7 +1,7 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Diabetes(DiscreteMixin, _BaseExampleModel):
+class Diabetes(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------

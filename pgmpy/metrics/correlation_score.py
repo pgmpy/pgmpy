@@ -5,10 +5,10 @@ from sklearn.metrics import f1_score
 
 from pgmpy.base import DAG
 from pgmpy.ci_tests import get_ci_test
-from pgmpy.metrics import _BaseUnsupervisedMetric
+from pgmpy.metrics import BaseUnsupervisedMetric
 
 
-class CorrelationScore(_BaseUnsupervisedMetric):
+class CorrelationScore(BaseUnsupervisedMetric):
     """
     Score to compute how well the model structure represents the correlations
     in the data. The model doesn't need to be parameterized for this score.

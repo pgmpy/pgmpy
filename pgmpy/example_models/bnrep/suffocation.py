@@ -1,7 +1,7 @@
-from .._base import ContinuousMixin, _BaseExampleModel
+from .._base import BaseExampleModel, ContinuousMixin
 
 
-class Suffocation(ContinuousMixin, _BaseExampleModel):
+class Suffocation(ContinuousMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/suffocation",
         "n_nodes": 35,

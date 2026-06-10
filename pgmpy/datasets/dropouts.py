@@ -1,7 +1,7 @@
-from pgmpy.datasets._base import _BaseDataset, _CovarianceMixin
+from pgmpy.datasets._base import BaseDataset, _CovarianceMixin
 
 
-class Dropouts(_CovarianceMixin, _BaseDataset):
+class Dropouts(_CovarianceMixin, BaseDataset):
     _tags = {
         "name": "dropouts",
         "n_variables": 8,

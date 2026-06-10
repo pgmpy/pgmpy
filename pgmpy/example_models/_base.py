@@ -9,7 +9,7 @@ from pgmpy.readwrite import BIFReader
 from pgmpy.utils.hf_hub import read_hf_file
 
 
-class _BaseExampleModel(BaseObject):
+class BaseExampleModel(BaseObject):
     """
     Base class for all models in pgmpy.
 
@@ -138,7 +138,7 @@ def load_model(name: str):
     DiscreteBayesianNetwork named 'unknown' with 8 nodes and 8 edges
     """
     target_model = all_objects(
-        object_types=_BaseExampleModel,
+        object_types=BaseExampleModel,
         package_name="pgmpy.example_models",
         filter_tags={"name": name},
         return_names=False,
@@ -179,7 +179,7 @@ def list_models(**filter_tags) -> list[str]:
     >>> list_models(is_parameterized=False)  # doctest: +SKIP
     ['dagitty/acid_1996', ...., ]
     """
-    valid_tags = set(_BaseExampleModel._tags.keys())
+    valid_tags = set(BaseExampleModel._tags.keys())
 
     if invalid_tags := set(filter_tags.keys()) - valid_tags:
         raise ValueError(
@@ -187,7 +187,7 @@ def list_models(**filter_tags) -> list[str]:
         )
 
     all_models = all_objects(
-        object_types=_BaseExampleModel,
+        object_types=BaseExampleModel,
         package_name="pgmpy.example_models",
         return_names=False,
         filter_tags=filter_tags,

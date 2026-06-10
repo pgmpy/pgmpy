@@ -1,7 +1,7 @@
-from .._base import ContinuousMixin, _BaseExampleModel
+from .._base import BaseExampleModel, ContinuousMixin
 
 
-class Ecoli70(ContinuousMixin, _BaseExampleModel):
+class Ecoli70(ContinuousMixin, BaseExampleModel):
     """
     References
     ----------

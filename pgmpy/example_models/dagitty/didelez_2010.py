@@ -1,7 +1,7 @@
-from .._base import DAGMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DAGMixin
 
 
-class Didelez2010(DAGMixin, _BaseExampleModel):
+class Didelez2010(DAGMixin, BaseExampleModel):
     """
     References
     ----------

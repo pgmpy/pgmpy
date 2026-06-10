@@ -1,7 +1,7 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class Airfoil(_BaseDataset):
+class Airfoil(BaseDataset):
     _tags = {
         "name": "airfoil",
         "n_variables": 6,
