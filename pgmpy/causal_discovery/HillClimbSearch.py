@@ -43,7 +43,7 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
         - Mixed data: 'll-cg', 'aic-cg', 'bic-cg'
 
         If None, the appropriate scoring method is automatically selected based
-        on the data type. If a string is provided, the corresponding scoring method 
+        on the data type. If a string is provided, the corresponding scoring method
         is instantiated with default parameters. To customize score-specific
         parameters, create a `BaseStructureScore` instance and pass it
         directly.

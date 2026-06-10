@@ -35,7 +35,7 @@ class TOPIC(BaseCausalDiscovery):
         If a string is provided, the corresponding scoring method is
         instantiated with default parameters. To customize score-specific
         parameters, pass a ``BaseStructureScore`` instance directly.
-        
+
     return_type : str, default="dag"
         The type of structure to return. One of ``"dag"`` (a fully directed DAG) or ``"pdag"`` (the DAG converted to a
         PDAG instance). TOPIC always orients every edge, so the PDAG is just a different wrapper around the same
