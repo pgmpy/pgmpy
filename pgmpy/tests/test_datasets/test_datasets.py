@@ -104,9 +104,17 @@ def test_load_covariance_dataset():
         assert isinstance(dataset.data, pd.DataFrame)
         assert isinstance(dataset.tags, dict)
 
+    # n_samples controls generated covariance dataset size.
+    dataset = load_dataset("goldberg", n_samples=25, seed=42)
+    assert dataset.data.shape[0] == 25
+
+    # The same seed produces identical generated data.
+    ds1 = load_dataset("goldberg", seed=42)
+    ds2 = load_dataset("goldberg", seed=42)
+    pd.testing.assert_frame_equal(ds1.data, ds2.data)
+
 
 def test_load_tubingen_dataset():
-
     for i in [1, 47, 108]:
         dataset = load_dataset(f"tubingen/{i}")
 
@@ -115,6 +123,19 @@ def test_load_tubingen_dataset():
         assert list(dataset.data.columns) == ["x", "y"]
 
         assert isinstance(dataset.ground_truth, DAG)
+
+    # Tubingen supports n_samples by subsampling the selected pair.
+    expected = load_dataset("tubingen/1")
+    dataset = load_dataset("tubingen/1", n_samples=10, seed=42)
+    assert dataset.data.shape == (10, expected.data.shape[1])
+    assert list(dataset.data.columns) == list(expected.data.columns)
+    assert set(dataset.ground_truth.edges()) == set(expected.ground_truth.edges())
+
+    # Simulator-specific kwargs are ignored with a warning.
+    with pytest.warns(UserWarning, match="ignore"):
+        actual = load_dataset("tubingen/1", edge_prob=0.3)
+    pd.testing.assert_frame_equal(actual.data, expected.data)
+    assert set(actual.ground_truth.edges()) == set(expected.ground_truth.edges())
 
 
 def test_tubingen_missing_data_tag():
@@ -152,13 +173,14 @@ def test_invalid_tag():
 
 
 def test_static_dataset_n_samples():
-    # n_samples controls the number of returned rows.
-    dataset = load_dataset("sachs_discrete", n_samples=100, seed=42)
-    assert dataset.data.shape[0] == 100
-    assert isinstance(dataset.data, pd.DataFrame)
-
-    # Oversized n_samples is capped at the dataset size and warns.
     full = load_dataset("sachs_discrete")
+
+    # n_samples controls the number of returned rows.
+    sampled = load_dataset("sachs_discrete", n_samples=100, seed=42)
+    assert sampled.data.shape == (100, full.data.shape[1])
+    assert list(sampled.data.columns) == list(full.data.columns)
+
+    # Oversized n_samples is capped at the full dataset size and warns.
     with pytest.warns(UserWarning, match="Requested"):
         oversized = load_dataset("sachs_discrete", n_samples=999999)
     assert oversized.data.shape[0] == full.data.shape[0]
@@ -166,20 +188,21 @@ def test_static_dataset_n_samples():
     # The same seed gives the same subsample.
     ds1 = load_dataset("sachs_discrete", n_samples=50, seed=42)
     ds2 = load_dataset("sachs_discrete", n_samples=50, seed=42)
-    pd.testing.assert_frame_equal(ds1.data.reset_index(drop=True), ds2.data.reset_index(drop=True))
+    pd.testing.assert_frame_equal(ds1.data, ds2.data)
 
 
 def test_static_dataset_kwargs():
     from pgmpy.datasets.sachs import SachsDiscrete
 
-    # Static dataframes should not accept simulator-specific kwargs.
+    # Static datasets reject unknown simulator kwargs.
     with pytest.raises(TypeError):
         load_dataset("sachs_discrete", edge_prob=0.3)
 
-    # Static ground truth ignores forwarded kwargs for load_dataset compatibility.
-    gt = SachsDiscrete.load_ground_truth(seed=42, n_nodes=8)
-    assert gt is not None
-    assert isinstance(gt, DAG)
+    # Forwarded kwargs do not change the ground truth.
+    expected = SachsDiscrete.load_ground_truth()
+    actual = SachsDiscrete.load_ground_truth(seed=42, n_nodes=8)
+    assert set(actual.nodes()) == set(expected.nodes())
+    assert set(actual.edges()) == set(expected.edges())
 
 
 def test_simulation_mixin_contract():
@@ -190,27 +213,3 @@ def test_simulation_mixin_contract():
 
     with pytest.raises(NotImplementedError):
         _SimulationMixin.load_ground_truth()
-
-
-def test_covariance_n_samples_and_seed():
-    # n_samples controls generated covariance dataset size.
-    dataset = load_dataset("goldberg", n_samples=25, seed=42)
-    assert dataset.data.shape[0] == 25
-
-    # The same seed gives the same generated covariance data.
-    ds1 = load_dataset("goldberg", seed=42)
-    ds2 = load_dataset("goldberg", seed=42)
-    pd.testing.assert_frame_equal(ds1.data, ds2.data)
-
-
-def test_tubingen_n_samples_and_sim_kwargs():
-    # Tubingen supports n_samples by subsampling the selected pair.
-    dataset = load_dataset("tubingen/1", n_samples=10, seed=42)
-    assert dataset.data.shape[0] == 10
-    assert list(dataset.data.columns) == ["x", "y"]
-    assert isinstance(dataset.ground_truth, DAG)
-
-    # Simulator-specific kwargs are ignored because Tubingen uses pair_id dispatch.
-    with pytest.warns(UserWarning, match="ignore"):
-        dataset = load_dataset("tubingen/1", edge_prob=0.3)
-    assert isinstance(dataset.data, pd.DataFrame)
