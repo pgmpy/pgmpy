@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import pandas as pd
 from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 
-from pgmpy.causal_discovery._base import _BaseCausalDiscovery
+from pgmpy.causal_discovery._base import BaseCausalDiscovery
 
 torch = _safe_import("torch")
 nn = _safe_import("torch.nn")
@@ -61,7 +61,7 @@ class _CASTLEModel(nn.Module):
         raise NotImplementedError("TBD")
 
 
-class CASTLE(_BaseCausalDiscovery):
+class CASTLE(BaseCausalDiscovery):
     """
     Supervised causal discovery using CASTLE.
     """
