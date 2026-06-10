@@ -5,17 +5,19 @@ from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery
 
-_check_soft_dependencies(
-    "torch",
-    msg=("CASTLE requires torch to be installed. "),
-)
 torch = _safe_import("torch")
-nn = torch.nn
+nn = _safe_import("torch.nn")
 
 
 @dataclass
-class ModelConfig:
+class NetworkConfig:
     hidden_dim: int
+    scaler: object
+    target_col: int | str | None
+
+
+@dataclass
+class TrainingConfig:
     batch_size: int
     max_epochs: int
     optimizer: object
@@ -23,8 +25,6 @@ class ModelConfig:
     min_loss_improvement: float
     early_stop_patience: int
     tensorboard_log_dir: str | None
-    scaler: object
-    target_col: int | str | None
 
 
 @dataclass
@@ -40,7 +40,7 @@ class _CASTLEModel(nn.Module):
     Internal masked autoencoder network used by CASTLE.
     """
 
-    def __init__(self, num_inputs: int, model_cfg: ModelConfig, reg_cfg: RegularizationConfig):
+    def __init__(self, num_inputs: int, network_cfg: NetworkConfig):
         """Initialize the internal CASTLE network."""
         # TODO: Implement the internal CASTLE model initialization.
         raise NotImplementedError("TBD")
@@ -84,6 +84,10 @@ class CASTLE(_BaseCausalDiscovery):
         seed: int = 42,
     ):
         """Initialize the CASTLE estimator."""
+        _check_soft_dependencies(
+            "torch",
+            msg="CASTLE requires PyTorch. Install it with: pip install torch",
+        )
         super().__init__()
 
         self.dag_weight = dag_weight
@@ -101,31 +105,30 @@ class CASTLE(_BaseCausalDiscovery):
         self.tensorboard_log_dir = tensorboard_log_dir
         self.seed = seed
 
-        self.model_config_ = ModelConfig(
-            hidden_dim=hidden_dim,
-            batch_size=batch_size,
-            max_epochs=max_epochs,
-            optimizer=optimizer,
-            seed=seed,
-            min_loss_improvement=min_loss_improvement,
-            early_stop_patience=early_stop_patience,
-            tensorboard_log_dir=tensorboard_log_dir,
-            scaler=scaler,
-            target_col=target_col,
+    def _fit(self, X: pd.DataFrame):
+        """Fit the CASTLE model and construct the causal DAG."""
+
+        self.network_config_ = NetworkConfig(
+            hidden_dim=self.hidden_dim,
+            scaler=self.scaler,
+            target_col=self.target_col,
+        )
+        self.train_config_ = TrainingConfig(
+            batch_size=self.batch_size,
+            max_epochs=self.max_epochs,
+            optimizer=self.optimizer,
+            seed=self.seed,
+            min_loss_improvement=self.min_loss_improvement,
+            early_stop_patience=self.early_stop_patience,
+            tensorboard_log_dir=self.tensorboard_log_dir,
         )
         self.reg_config_ = RegularizationConfig(
-            dag_weight=dag_weight,
-            sparsity_weight=sparsity_weight,
-            dag_penalty=dag_penalty,
-            edge_threshold=edge_threshold,
+            dag_weight=self.dag_weight,
+            sparsity_weight=self.sparsity_weight,
+            dag_penalty=self.dag_penalty,
+            edge_threshold=self.edge_threshold,
         )
-
         self.causal_graph_ = None
         self.adjacency_matrix_ = None
         self.model_ = None
         self.scaler_ = None
-
-    def _fit(self, X: pd.DataFrame):
-        """Fit the CASTLE model and construct the causal DAG."""
-        # TODO: Implement CASTLE fitting procedure.
-        raise NotImplementedError("TBD")
