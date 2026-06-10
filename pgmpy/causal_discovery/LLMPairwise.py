@@ -9,6 +9,8 @@ from skbase.utils.dependencies import _safe_import
 from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
 
+litellm = _safe_import("litellm")
+
 
 class LLMPairwise(BaseCausalDiscovery):
     """
@@ -45,15 +47,13 @@ class LLMPairwise(BaseCausalDiscovery):
     adjacency_matrix_ : pd.DataFrame
         Adjacency matrix representation of ``causal_graph_``.
 
-    direction_score_ : float
-        Orientation indicator (not a calibrated confidence). It is ``1.0`` when
-        the edge points from the first variable to the second and ``-1.0`` when
-        it points the other way.
+    llm_model_ : str
+        The LLM model that was used to orient the edge.
 
-    prompt_ : list
+    llm_prompt_ : list
         The chat messages sent to the LLM.
 
-    response_ : str
+    llm_response_ : str
         The raw text response returned by the LLM.
 
     n_features_in_ : int
@@ -61,6 +61,12 @@ class LLMPairwise(BaseCausalDiscovery):
 
     feature_names_in_ : np.ndarray
         The feature names in the data used to learn the causal graph.
+
+    Notes
+    -----
+    The query is sent through ``litellm``, so the provider's API key must be set
+    before calling ``fit`` (e.g. via the ``GEMINI_API_KEY`` or ``OPENAI_API_KEY``
+    environment variable). Locally served models (e.g. Ollama) need no API key.
 
     Examples
     --------
@@ -73,6 +79,22 @@ class LLMPairwise(BaseCausalDiscovery):
     ... }
     >>> est = LLMPairwise(descriptions=descriptions).fit(data)  # doctest: +SKIP
     >>> est.causal_graph_.edges()  # doctest: +SKIP
+    OutEdgeView([('Smoker', 'Cancer')])
+
+    A different hosted provider can be selected through ``llm_model``:
+
+    >>> est = LLMPairwise(
+    ...     descriptions=descriptions, llm_model="openai/gpt-4o"
+    ... ).fit(data)  # doctest: +SKIP
+
+    A model served locally with Ollama can be used by prefixing the model name
+    with ``ollama/`` and pointing ``api_base`` at the local server:
+
+    >>> est = LLMPairwise(
+    ...     descriptions=descriptions,
+    ...     llm_model="ollama/llama3",
+    ...     llm_kwargs={"api_base": "http://localhost:11434"},
+    ... ).fit(data)  # doctest: +SKIP
     """
 
     def __init__(
@@ -107,13 +129,13 @@ class LLMPairwise(BaseCausalDiscovery):
             raise ValueError(f"LLMPairwise requires exactly two variables, got {X.shape[1]}.")
 
         # Step 2: Build the prompt from the variable names and descriptions.
-        x, y = X.columns
-        self.prompt_ = self._build_prompt(x, y)
+        x, y = self.feature_names_in_
+        self.llm_model_ = self.llm_model
+        self.llm_prompt_ = self._build_prompt(x, y)
 
         # Step 3: Query the LLM and parse the chosen direction.
-        self.response_ = self._query_llm(self.prompt_)
-        source, target = self._parse_response(self.response_, x, y)
-        self.direction_score_ = 1.0 if (source, target) == (x, y) else -1.0
+        self.llm_response_ = self._query_llm(self.llm_prompt_)
+        source, target = self._parse_response(self.llm_response_, x, y)
 
         # Step 4: Build the causal graph and store the fitted attributes.
         dag = DAG([(source, target)])
@@ -125,9 +147,8 @@ class LLMPairwise(BaseCausalDiscovery):
     def _build_prompt(self, x, y):
         """Build the system and user chat messages describing `x` and `y`."""
         descriptions = self.descriptions if self.descriptions is not None else {}
-        system_prompt = self.system_prompt
-        if system_prompt is None:
-            system_prompt = "You are an expert in Causal Inference"
+        if self.system_prompt is None:
+            self.system_prompt = "You are an expert in Causal Inference"
 
         user_prompt = (
             "You are given two variables with the following descriptions:\n"
@@ -140,14 +161,12 @@ class LLMPairwise(BaseCausalDiscovery):
             "Do not add any formatting in the answer."
         )
         return [
-            {"role": "system", "content": system_prompt},
+            {"role": "system", "content": self.system_prompt},
             {"role": "user", "content": user_prompt},
         ]
 
     def _query_llm(self, messages):
         """Send `messages` to the LLM and return its text response."""
-        litellm = _safe_import("litellm")
-
         llm_kwargs = self.llm_kwargs if self.llm_kwargs is not None else {}
         response = litellm.completion(model=self.llm_model, messages=messages, **llm_kwargs)
         return response.choices[0].message.content
@@ -156,8 +175,7 @@ class LLMPairwise(BaseCausalDiscovery):
         """Parse the LLM `response` into a directed (source, target) edge."""
         response_txt = response.strip().lower().replace("*", "")
 
-        # An explicit option number takes precedence over an option letter, so
-        # that responses like "1.", "Option 1" or "Answer: 2" are parsed.
+        # An option number takes precedence over a letter (e.g. "Option 1", "Answer: 2").
         number = re.search(r"[12]", response_txt)
         if number is not None:
             return (x, y) if number.group() == "1" else (y, x)

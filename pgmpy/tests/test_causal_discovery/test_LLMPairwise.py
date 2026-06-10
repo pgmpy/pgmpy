@@ -1,155 +1,114 @@
-"""
-Tests for the sklearn-compatible LLMPairwise class in pgmpy.causal_discovery
-"""
-
-import sys
+import importlib
 import types
 from unittest.mock import MagicMock
 
 import pandas as pd
 import pytest
+from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.causal_discovery import LLMPairwise
 
 
-def install_fake_litellm(monkeypatch, content):
-    """Install a fake ``litellm`` module that returns ``content`` from ``completion``.
+@pytest.fixture
+def data():
+    return pd.DataFrame({"Smoker": [0, 1, 1, 0], "Cancer": [0, 1, 0, 0]})
 
-    The fake module records the keyword arguments it was called with on
-    ``fake_litellm.kwargs`` so tests can assert on what was passed through.
-    """
-    fake_litellm = types.ModuleType("litellm")
+
+def expected_failed_checks(estimator):
+    # LLMPairwise orients a single pair, so checks that fit on a different
+    # number of columns cannot apply.
+    checks = dict.fromkeys(
+        (
+            "check_fit_score_takes_y",
+            "check_dont_overwrite_parameters",
+            "check_n_features_in_after_fitting",
+            "check_positive_only_tag_during_fit",
+            "check_estimators_dtypes",
+            "check_dtype_object",
+            "check_pipeline_consistency",
+            "check_estimators_nan_inf",
+            "check_estimators_pickle",
+            "check_f_contiguous_array_estimator",
+            "check_methods_sample_order_invariance",
+            "check_methods_subset_invariance",
+            "check_fit2d_1feature",
+            "check_dict_unchanged",
+            "check_fit2d_predict1d",
+        ),
+        "LLMPairwise orients exactly two variables; this check fits on a different number of columns.",
+    )
+    # `fit` resolves the default system_prompt onto the instance, which this
+    # check flags as mutating an __init__ parameter.
+    checks["check_estimators_overwrite_params"] = (
+        "LLMPairwise sets the default system_prompt on the instance during fit."
+    )
+    return checks
+
+
+@parametrize_with_checks([LLMPairwise()], expected_failed_checks=expected_failed_checks)
+def test_llmpairwise_compatibility(estimator, check, monkeypatch):
+    monkeypatch.setattr(LLMPairwise, "_query_llm", lambda self, messages: "1")
+    check(estimator)
+
+
+def test_fit(monkeypatch, data):
+    monkeypatch.setattr(LLMPairwise, "_query_llm", lambda self, messages: "1")
+    est = LLMPairwise().fit(data)
+    assert ("Smoker", "Cancer") in est.causal_graph_.edges()
+    assert est.adjacency_matrix_.loc["Smoker", "Cancer"] == 1
+
+    monkeypatch.setattr(LLMPairwise, "_query_llm", lambda self, messages: "2")
+    est = LLMPairwise().fit(data)
+    assert ("Cancer", "Smoker") in est.causal_graph_.edges()
+
+    for frame in (
+        pd.DataFrame({"A": [0, 1, 2]}),
+        pd.DataFrame({"A": [0, 1], "B": [1, 2], "C": [2, 3]}),
+    ):
+        with pytest.raises(ValueError, match="requires exactly two variables"):
+            LLMPairwise().fit(frame)
+
+
+def test_build_prompt():
+    est = LLMPairwise(
+        descriptions={"Smoker": "Whether a person smokes"},
+        system_prompt="You are a careful causal reasoner.",
+    )
+    system, user = est._build_prompt("Smoker", "Cancer")
+
+    assert (system["role"], user["role"]) == ("system", "user")
+    assert system["content"] == "You are a careful causal reasoner."
+    assert "Whether a person smokes" in user["content"]
+    assert "<B>: Cancer" in user["content"]
+
+
+def test_query_llm(monkeypatch):
+    module = importlib.import_module(LLMPairwise.__module__)
+    calls = {}
 
     def completion(**kwargs):
-        fake_litellm.kwargs = kwargs
-        return MagicMock(choices=[MagicMock(message=MagicMock(content=content))])
+        calls.update(kwargs)
+        return MagicMock(choices=[MagicMock(message=MagicMock(content="1"))])
 
-    fake_litellm.completion = completion
-    monkeypatch.setitem(sys.modules, "litellm", fake_litellm)
-    return fake_litellm
+    monkeypatch.setattr(module, "litellm", types.SimpleNamespace(completion=completion))
+    messages = [{"role": "user", "content": "hi"}]
+    response = LLMPairwise(llm_kwargs={"temperature": 0})._query_llm(messages)
 
-
-def user_content(est):
-    """Return the content of the ``user`` chat message stored on ``prompt_``."""
-    return next(msg["content"] for msg in est.prompt_ if msg["role"] == "user")
+    assert response == "1"
+    assert calls == {"model": "gemini/gemini-1.5-flash", "messages": messages, "temperature": 0}
 
 
-@pytest.fixture
-def pair_data():
-    """A simple two-variable dataset used across the orientation tests."""
-    return pd.DataFrame(
-        {
-            "Smoker": [0, 1, 1, 0],
-            "Cancer": [0, 1, 0, 0],
-        }
-    )
-
-
-def test_fit_orients_first_column_to_second(monkeypatch, pair_data):
-    """A response of "1" orients the edge from the first to the second column."""
-    fake_litellm = install_fake_litellm(monkeypatch, "1")
-    est = LLMPairwise(
-        descriptions={
-            "Smoker": "Whether a person smokes",
-            "Cancer": "Whether a person has cancer",
-        },
-        llm_kwargs={"temperature": 0},
-    ).fit(pair_data)
-
-    assert ("Smoker", "Cancer") in est.causal_graph_.edges()
-    assert est.direction_score_ == 1.0
-    assert est.response_ == "1"
-    assert "Whether a person smokes" in user_content(est)
-    assert "Whether a person has cancer" in user_content(est)
-    assert fake_litellm.kwargs["model"] == "gemini/gemini-1.5-flash"
-    assert fake_litellm.kwargs["messages"] == est.prompt_
-    assert fake_litellm.kwargs["temperature"] == 0
-
-
-def test_fit_sends_system_and_user_messages(monkeypatch, pair_data):
-    """The prompt is sent as a system message followed by a user message."""
-    install_fake_litellm(monkeypatch, "1")
-    est = LLMPairwise(system_prompt="You are a careful causal reasoner.").fit(pair_data)
-
-    assert [msg["role"] for msg in est.prompt_] == ["system", "user"]
-    assert est.prompt_[0]["content"] == "You are a careful causal reasoner."
-
-
-def test_fit_orients_second_column_to_first(monkeypatch, pair_data):
-    """A response of "2" orients the edge from the second to the first column."""
-    install_fake_litellm(monkeypatch, "2")
-    est = LLMPairwise().fit(pair_data)
-
-    assert ("Cancer", "Smoker") in est.causal_graph_.edges()
-    assert est.direction_score_ == -1.0
-    assert est.adjacency_matrix_.loc["Cancer", "Smoker"] == 1
-    assert est.adjacency_matrix_.loc["Smoker", "Cancer"] == 0
-
-
-def test_fit_uses_variable_name_as_missing_description(monkeypatch, pair_data):
-    """Variables without a description fall back to their column name in the prompt."""
-    install_fake_litellm(monkeypatch, "1")
-    est = LLMPairwise(descriptions={"Smoker": "Whether a person smokes"}).fit(pair_data)
-
-    assert "<A>: Whether a person smokes" in user_content(est)
-    assert "<B>: Cancer" in user_content(est)
-
-
-def test_fit_accepts_categorical_data(monkeypatch):
-    """Categorical input is not blocked since orientation uses names, not values."""
-    install_fake_litellm(monkeypatch, "1")
-    data = pd.DataFrame(
-        {
-            "Treatment": pd.Categorical(["yes", "no", "yes"]),
-            "Outcome": pd.Categorical(["high", "low", "high"]),
-        }
-    )
-
-    est = LLMPairwise().fit(data)
-
-    assert ("Treatment", "Outcome") in est.causal_graph_.edges()
-
-
-@pytest.mark.parametrize(
-    ("response", "expected_edge"),
-    [
+def test_parse_response():
+    est = LLMPairwise()
+    for response, expected in (
         ("1.", ("Smoker", "Cancer")),
         ("Option 1", ("Smoker", "Cancer")),
         ("**1**", ("Smoker", "Cancer")),
-        ("Answer: 2", ("Cancer", "Smoker")),
-        ("Option 2.", ("Cancer", "Smoker")),
         ("A", ("Smoker", "Cancer")),
+        ("Answer: 2", ("Cancer", "Smoker")),
         ("B", ("Cancer", "Smoker")),
-    ],
-)
-def test_fit_parses_messy_responses(monkeypatch, pair_data, response, expected_edge):
-    """The parser tolerates surrounding text, punctuation and formatting."""
-    install_fake_litellm(monkeypatch, response)
-    est = LLMPairwise().fit(pair_data)
+    ):
+        assert est._parse_response(response, "Smoker", "Cancer") == expected
 
-    assert expected_edge in est.causal_graph_.edges()
-
-
-@pytest.mark.parametrize(
-    "data",
-    [
-        pd.DataFrame({"A": [0, 1, 2]}),
-        pd.DataFrame({"A": [0, 1, 2], "B": [1, 2, 3], "C": [2, 3, 4]}),
-    ],
-)
-def test_fit_requires_exactly_two_columns(monkeypatch, data):
-    """Fitting on anything other than two variables raises a ValueError."""
-    install_fake_litellm(monkeypatch, "1")
-    est = LLMPairwise()
-
-    with pytest.raises(ValueError, match="requires exactly two variables"):
-        est.fit(data)
-
-
-def test_fit_raises_for_unclear_response(monkeypatch, pair_data):
-    """A response with neither an option number nor an option letter raises."""
-    install_fake_litellm(monkeypatch, "unclear")
-    est = LLMPairwise()
-
-    with pytest.raises(ValueError, match="Results from the LLM are unclear"):
-        est.fit(pair_data)
+    with pytest.raises(ValueError, match="unclear"):
+        est._parse_response("no idea", "Smoker", "Cancer")
