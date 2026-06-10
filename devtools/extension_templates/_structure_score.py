@@ -41,12 +41,12 @@ class MyStructureScore(BaseStructureScore):
     Examples
     --------
     >>> import pandas as pd
-    >>> from pgmpy.models import DiscreteBayesianNetwork
+    >>> from pgmpy.base import DAG
     >>> from pgmpy.structure_score import MyStructureScore
     >>> data = pd.DataFrame(
     ...     {"A": [0, 1, 1, 0], "B": [1, 0, 1, 0], "C": [1, 1, 1, 0]}
     ... )
-    >>> model = DiscreteBayesianNetwork([("A", "B"), ("A", "C")])
+    >>> model = DAG([("A", "B"), ("A", "C")])
     >>> score = MyStructureScore(data)
     >>> score.score(model)       # global score summed over all nodes
     >>> score.local_score("B", ("A",))   # local score for one node
