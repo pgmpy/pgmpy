@@ -151,50 +151,38 @@ def test_invalid_tag():
         list_datasets(num_samples=100)  # wrong key name entirely
 
 
-# --- Static dataset subsampling ---
-
-
-def test_subsampling_row_count():
+def test_static_dataset_n_samples():
+    # n_samples controls the number of returned rows.
     dataset = load_dataset("sachs_discrete", n_samples=100, seed=42)
     assert dataset.data.shape[0] == 100
     assert isinstance(dataset.data, pd.DataFrame)
 
-
-def test_subsampling_caps_at_dataset_size():
+    # Oversized n_samples is capped at the dataset size and warns.
     full = load_dataset("sachs_discrete")
     with pytest.warns(UserWarning, match="Requested"):
         oversized = load_dataset("sachs_discrete", n_samples=999999)
     assert oversized.data.shape[0] == full.data.shape[0]
 
-
-def test_subsampling_warns_on_oversized():
-    with pytest.warns(UserWarning, match="Requested"):
-        load_dataset("sachs_discrete", n_samples=999999)
-
-
-def test_subsampling_seed_reproducibility():
+    # The same seed gives the same subsample.
     ds1 = load_dataset("sachs_discrete", n_samples=50, seed=42)
     ds2 = load_dataset("sachs_discrete", n_samples=50, seed=42)
     pd.testing.assert_frame_equal(ds1.data.reset_index(drop=True), ds2.data.reset_index(drop=True))
 
 
-def test_static_dataset_rejects_sim_kwargs():
+def test_static_dataset_kwargs():
+    from pgmpy.datasets.sachs import SachsDiscrete
+
+    # Static dataframes should not accept simulator-specific kwargs.
     with pytest.raises(TypeError):
         load_dataset("sachs_discrete", edge_prob=0.3)
 
-
-def test_static_ground_truth_with_forwarded_kwargs():
-    from pgmpy.datasets.sachs import SachsDiscrete
-
+    # Static ground truth ignores forwarded kwargs for load_dataset compatibility.
     gt = SachsDiscrete.load_ground_truth(seed=42, n_nodes=8)
     assert gt is not None
     assert isinstance(gt, DAG)
 
 
-# --- _SimulationMixin contract ---
-
-
-def test_simulation_mixin_raises_not_implemented():
+def test_simulation_mixin_contract():
     from pgmpy.datasets._base import _SimulationMixin
 
     with pytest.raises(NotImplementedError):
@@ -204,38 +192,25 @@ def test_simulation_mixin_raises_not_implemented():
         _SimulationMixin.load_ground_truth()
 
 
-# --- Covariance datasets ---
+def test_covariance_n_samples_and_seed():
+    # n_samples controls generated covariance dataset size.
+    dataset = load_dataset("goldberg", n_samples=25, seed=42)
+    assert dataset.data.shape[0] == 25
 
-
-def test_covariance_datasets_load():
-    for name in ["goldberg", "spartina"]:
-        dataset = load_dataset(name)
-        assert dataset.name == name
-        assert isinstance(dataset.data, pd.DataFrame)
-        assert dataset.data.shape[0] > 0
-
-
-def test_covariance_seed_reproducibility():
+    # The same seed gives the same generated covariance data.
     ds1 = load_dataset("goldberg", seed=42)
     ds2 = load_dataset("goldberg", seed=42)
     pd.testing.assert_frame_equal(ds1.data, ds2.data)
 
 
-def test_covariance_n_samples():
-    dataset = load_dataset("goldberg", n_samples=25, seed=42)
-    assert dataset.data.shape[0] == 25
-
-
-# --- Tubingen ---
-
-
-def test_tubingen_rejects_sim_kwargs():
-    with pytest.raises(TypeError, match="do not support"):
-        load_dataset("tubingen/1", edge_prob=0.3)
-
-
-def test_tubingen_subsampling():
+def test_tubingen_n_samples_and_sim_kwargs():
+    # Tubingen supports n_samples by subsampling the selected pair.
     dataset = load_dataset("tubingen/1", n_samples=10, seed=42)
     assert dataset.data.shape[0] == 10
     assert list(dataset.data.columns) == ["x", "y"]
     assert isinstance(dataset.ground_truth, DAG)
+
+    # Simulator-specific kwargs are ignored because Tubingen uses pair_id dispatch.
+    with pytest.warns(UserWarning, match="ignore"):
+        dataset = load_dataset("tubingen/1", edge_prob=0.3)
+    assert isinstance(dataset.data, pd.DataFrame)

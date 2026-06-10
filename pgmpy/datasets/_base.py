@@ -306,10 +306,11 @@ def load_dataset(
         to generate.
     seed : int, optional
         Random seed for reproducible subsampling or simulation.
-    **sim_kwargs
+    **sim_kwargs : dict, optional
         Additional keyword arguments forwarded to the simulator's
-        ``load_dataframe()`` and ``load_ground_truth()`` methods.  Passing
-        simulator kwargs to a static dataset raises ``TypeError``.
+        ``load_dataframe()`` and ``load_ground_truth()`` methods. Passing
+        simulator kwargs to a static dataset raises ``TypeError``. For Tubingen
+        datasets, these kwargs are ignored with a warning.
 
     Examples
     --------
@@ -331,9 +332,9 @@ def load_dataset(
             if not (1 <= pair_id <= 108):
                 raise ValueError(f"Tubingen pair ID must be between 1 and 108. Got {pair_id}.")
             if sim_kwargs:
-                raise TypeError(
-                    "Tubingen datasets do not support simulator kwargs. "
-                    "Use load_dataset('tubingen/<pair_id>') without additional keyword arguments."
+                warnings.warn(
+                    "Tubingen datasets ignore simulator kwargs.",
+                    UserWarning,
                 )
             target_cls = next(
                 (cls for cls in all_datasets if cls.get_class_tag("name") == "tubingen"),
