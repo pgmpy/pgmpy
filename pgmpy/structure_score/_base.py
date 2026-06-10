@@ -79,6 +79,32 @@ def get_scoring_method(
     scoring_method: str | BaseStructureScore | None,
     data: pd.DataFrame,
 ) -> BaseStructureScore:
+    """
+    Returns a structure score instance.
+
+    Parameters
+    ----------
+    scoring_method : str or BaseStructureScore or None
+        The scoring method to use.
+
+        If a string is provided, the corresponding scoring method is
+        instantiated with default parameters.
+
+        If a ``BaseStructureScore`` instance is provided, it is returned
+        unchanged, allowing custom score-specific parameters to be used.
+
+        If ``None``, the default scoring method for the data type is
+        selected automatically.
+
+    data : pandas.DataFrame
+        Dataset used to determine the default scoring method and to
+        initialize score instances.
+
+    Returns
+    -------
+    BaseStructureScore
+        An initialized structure score instance.
+    """
     if isinstance(scoring_method, BaseStructureScore):
         return scoring_method
 

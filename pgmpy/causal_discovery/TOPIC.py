@@ -24,11 +24,18 @@ class TOPIC(BaseCausalDiscovery):
     Parameters
     ----------
     scoring_method : str or BaseStructureScore instance, default=None
-        The local score used to evaluate edge additions and prunings. Supported structure scores: k2, bdeu, bds, bic-d,
-        aic-d, ll-g, aic-g, bic-g, ll-cg, aic-cg, bic-cg. Also accepts a custom score, but it should be an instance of
-        ``BaseStructureScore``. If ``None``, an appropriate default is selected automatically based on whether the
-        data is continuous or discrete.
+        The local score used to evaluate edge additions and prunings.
+        Supported structure scores are: ``k2``, ``bdeu``, ``bds``,
+        ``bic-d``, ``aic-d``, ``ll-g``, ``aic-g``, ``bic-g``,
+        ``ll-cg``, ``aic-cg``, and ``bic-cg``.
 
+        If ``None``, an appropriate default is selected automatically
+        based on the data type.
+
+        If a string is provided, the corresponding scoring method is
+        instantiated with default parameters. To customize score-specific
+        parameters, pass a ``BaseStructureScore`` instance directly.
+        
     return_type : str, default="dag"
         The type of structure to return. One of ``"dag"`` (a fully directed DAG) or ``"pdag"`` (the DAG converted to a
         PDAG instance). TOPIC always orients every edge, so the PDAG is just a different wrapper around the same
