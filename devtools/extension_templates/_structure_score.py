@@ -84,6 +84,8 @@ class MyStructureScore(BaseStructureScore):
         # TODO: Add extra hyperparameters as keyword arguments here (e.g., equivalent_sample_size=10).
         # TODO: Store extra hyperparameters as instance attributes before calling super().
         super().__init__(data, state_names=state_names)
+        # TODO: Optionally precompute anything that depends on self.data or self.state_names here
+        #       (e.g., BDeu precomputes encoded columns and cardinality arrays for performance).
 
     def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
         """
