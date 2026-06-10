@@ -3,8 +3,6 @@
 from collections import defaultdict
 from itertools import chain
 
-import numpy as np
-
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.models import (
     DiscreteBayesianNetwork,
@@ -16,7 +14,7 @@ from pgmpy.models import (
 from pgmpy.utils import compat_fns
 
 
-class Inference(object):
+class Inference:
     """
     Base class for all inference algorithms.
 
@@ -140,16 +138,12 @@ class Inference(object):
 
             self.start_bayesian_model.add_cpds(*self.model.get_cpds(time_slice=0))
 
-            cpd_inter = [
-                self.model.get_cpds(node) for node in self.model.get_interface_nodes(1)
-            ]
+            cpd_inter = [self.model.get_cpds(node) for node in self.model.get_interface_nodes(1)]
             self.interface_nodes = self.model.get_interface_nodes(0)
             self.one_and_half_model = DiscreteBayesianNetwork(
                 self.model.get_inter_edges() + self.model.get_intra_edges(1)
             )
-            self.one_and_half_model.add_cpds(
-                *(self.model.get_cpds(time_slice=1) + cpd_inter)
-            )
+            self.one_and_half_model.add_cpds(*(self.model.get_cpds(time_slice=1) + cpd_inter))
 
     def _prune_bayesian_model(self, variables, evidence):
         """
@@ -177,9 +171,7 @@ class Inference(object):
 
         References
         ----------
-        [1] Baker, M., & Boult, T. E. (2013).
-          Pruning Bayesian networks for efficient computation.
-            arXiv preprint arXiv:1304.1112.
+        - :cite:p:`baker_boult_2013`
         """
         evidence = {} if evidence is None else evidence
         variables = list(self.model.nodes()) if len(variables) == 0 else list(variables)
@@ -238,9 +230,7 @@ class Inference(object):
                     )
             var = cpd.variables[0]
             if var not in self.model.nodes():
-                raise ValueError(
-                    "Evidence provided for variable which is not in the model"
-                )
+                raise ValueError("Evidence provided for variable which is not in the model")
             elif len(cpd.variables) > 1:
                 raise ValueError(
                     "Virtual evidence should be defined on individual variables."
@@ -271,10 +261,7 @@ class Inference(object):
 
         References
         ----------
-        [1] Mrad, Ali Ben, et al. "Uncertain evidence in Bayesian networks:
-          Presentation and comparison on a simple example."
-            International Conference on Information Processing and Management
-              of Uncertainty in Knowledge-Based Systems. Springer, Berlin, Heidelberg, 2012.
+        - :cite:p:`benmrad_2012`
         """
         self._check_virtual_evidence(virtual_evidence)
 
@@ -283,9 +270,7 @@ class Inference(object):
             var = cpd.variables[0]
             new_var = "__" + var
             bn.add_edge(var, new_var)
-            values = compat_fns.get_compute_backend().vstack(
-                (cpd.values, 1 - cpd.values)
-            )
+            values = compat_fns.get_compute_backend().vstack((cpd.values, 1 - cpd.values))
             new_cpd = TabularCPD(
                 variable=new_var,
                 variable_card=2,

@@ -1,14 +1,11 @@
 from math import isclose
 
-from pgmpy.global_vars import logger
+from skbase.utils.dependencies import _safe_import
 
+from pgmpy import logger
 
-try:  # pragma: no cover
-    import torch
-
-    optim = torch.optim
-except ImportError:  # pragma: no cover
-    optim = None
+torch = _safe_import("torch")
+optim = _safe_import("torch.optim")
 
 
 def pinverse(t):
@@ -29,9 +26,7 @@ def pinverse(t):
     return t_inv
 
 
-def optimize(
-    loss_fn, params={}, loss_args={}, opt="adam", max_iter=10000, exit_delta=1e-4
-):
+def optimize(loss_fn, params={}, loss_args={}, opt="adam", max_iter=10000, exit_delta=1e-4):
     """
     Generic function to optimize loss functions.
 

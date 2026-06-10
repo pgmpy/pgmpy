@@ -1,7 +1,7 @@
 import unittest
 
-import networkx as nx
 import numpy as np
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
@@ -52,16 +52,12 @@ class TestUAIReader(unittest.TestCase):
     def test_get_network_type(self):
         network_type_expected = "MARKOV"
         self.assertEqual(self.reader_string.network_type, network_type_expected)
-        self.assertEqual(
-            self.reader_string_with_comment.network_type, network_type_expected
-        )
+        self.assertEqual(self.reader_string_with_comment.network_type, network_type_expected)
 
     def test_get_variables(self):
         variables_expected = ["var_0", "var_1", "var_2"]
         self.assertListEqual(self.reader_string.variables, variables_expected)
-        self.assertListEqual(
-            self.reader_string_with_comment.variables, variables_expected
-        )
+        self.assertListEqual(self.reader_string_with_comment.variables, variables_expected)
 
     def test_get_domain(self):
         domain_expected = {"var_1": "2", "var_2": "3", "var_0": "2"}
@@ -184,9 +180,7 @@ class TestUAIWriter(unittest.TestCase):
                 len(states[var]),
                 values,
                 evidence=parents[var],
-                evidence_card=[
-                    len(states[evidence_var]) for evidence_var in parents[var]
-                ],
+                evidence_card=[len(states[evidence_var]) for evidence_var in parents[var]],
             )
             tabular_cpds.append(cpd)
         self.bayesmodel.add_cpds(*tabular_cpds)
@@ -263,11 +257,13 @@ class TestUAIWriter(unittest.TestCase):
 4.0 2.4 1.0 0.0
 12
 2.25 3.25 3.75 0.0 0.0 10.0 1.875 4.0 3.333 2.0 2.0 3.4"""
-        self.assertEqual(
-            str(self.markovwriter.__str__()), str(self.expected_markov_file)
-        )
+        self.assertEqual(str(self.markovwriter.__str__()), str(self.expected_markov_file))
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestUAIReaderTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
@@ -313,16 +309,12 @@ class TestUAIReaderTorch(unittest.TestCase):
     def test_get_network_type(self):
         network_type_expected = "MARKOV"
         self.assertEqual(self.reader_string.network_type, network_type_expected)
-        self.assertEqual(
-            self.reader_string_with_comment.network_type, network_type_expected
-        )
+        self.assertEqual(self.reader_string_with_comment.network_type, network_type_expected)
 
     def test_get_variables(self):
         variables_expected = ["var_0", "var_1", "var_2"]
         self.assertListEqual(self.reader_string.variables, variables_expected)
-        self.assertListEqual(
-            self.reader_string_with_comment.variables, variables_expected
-        )
+        self.assertListEqual(self.reader_string_with_comment.variables, variables_expected)
 
     def test_get_domain(self):
         domain_expected = {"var_1": "2", "var_2": "3", "var_0": "2"}
@@ -395,6 +387,10 @@ class TestUAIReaderTorch(unittest.TestCase):
         config.set_backend("numpy")
 
 
+@unittest.skipUnless(
+    _check_soft_dependencies("pyro-ppl", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestUAIWriterTorch(unittest.TestCase):
     def setUp(self):
         config.set_backend("torch")
@@ -450,9 +446,7 @@ class TestUAIWriterTorch(unittest.TestCase):
                 len(states[var]),
                 values,
                 evidence=parents[var],
-                evidence_card=[
-                    len(states[evidence_var]) for evidence_var in parents[var]
-                ],
+                evidence_card=[len(states[evidence_var]) for evidence_var in parents[var]],
             )
             tabular_cpds.append(cpd)
         self.bayesmodel.add_cpds(*tabular_cpds)
@@ -529,9 +523,7 @@ class TestUAIWriterTorch(unittest.TestCase):
 4.0 2.4 1.0 0.0
 12
 2.25 3.25 3.75 0.0 0.0 10.0 1.875 4.0 3.333 2.0 2.0 3.4"""
-        self.assertEqual(
-            str(self.markovwriter.__str__()), str(self.expected_markov_file)
-        )
+        self.assertEqual(str(self.markovwriter.__str__()), str(self.expected_markov_file))
 
     def tearDown(self):
         config.set_backend("numpy")

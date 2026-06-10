@@ -1,32 +1,18 @@
-#!/usr/bin/env python
-
-from itertools import chain, combinations, permutations
-from typing import (
-    Callable,
-    Collection,
-    Dict,
-    FrozenSet,
-    Hashable,
-    Optional,
-    Set,
-    Tuple,
-    Union,
-)
+import warnings
+from collections.abc import Callable, Hashable
+from itertools import permutations
 
 import networkx as nx
 import pandas as pd
-from joblib import Parallel, delayed
-from tqdm.auto import tqdm
 
-from pgmpy import config
 from pgmpy.base import DAG, PDAG, UndirectedGraph
-from pgmpy.estimators import ExpertKnowledge, StructureEstimator
-from pgmpy.estimators.CITests import get_callable_ci_test
-from pgmpy.global_vars import logger
+from pgmpy.causal_discovery import ExpertKnowledge
+from pgmpy.estimators.BaseConstraintEstimator import BaseConstraintEstimator
+from pgmpy.estimators.CITests import ci_registry
 from pgmpy.independencies import Independencies
 
 
-class PC(StructureEstimator):
+class PC(BaseConstraintEstimator):
     """
     Class for constraint-based estimation of DAGs using the PC algorithm
     from a given data set.  Identifies (conditional) dependencies in data
@@ -83,33 +69,36 @@ class PC(StructureEstimator):
 
     References
     ----------
-    [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques,
-        2009, Section 18.2
-    [2] Neapolitan, Learning Bayesian Networks, Section 10.1.2 for the PC algorithm (page 550),
-      http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
+    - :cite:p:`koller_friedman_2009` (Section 18.2).
+    - :cite:p:`neapolitan_2009` (Section 10.1.2, page 550).
     """
 
     def __init__(
         self,
-        data: Optional[pd.DataFrame] = None,
-        independencies: Optional[Independencies] = None,
+        data: pd.DataFrame | None = None,
+        independencies: Independencies | None = None,
         **kwargs,
     ) -> None:
-        super(PC, self).__init__(data=data, independencies=independencies, **kwargs)
+        warnings.warn(
+            "PC is deprecated and will be removed in v1.3.0. Please use pgmpy.causal_discovery.PC instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        super().__init__(data=data, independencies=independencies, **kwargs)
 
     def estimate(
         self,
         variant: str = "parallel",
-        ci_test: Optional[Union[str, Callable]] = None,
+        ci_test: str | Callable | None = None,
         return_type: str = "pdag",
         significance_level: float = 0.01,
         max_cond_vars: int = 5,
-        expert_knowledge: Optional[ExpertKnowledge] = None,
+        expert_knowledge: ExpertKnowledge | None = None,
         enforce_expert_knowledge: bool = False,
         n_jobs: int = -1,
         show_progress: bool = True,
         **kwargs,
-    ) -> Union[DAG, PDAG, Tuple[nx.Graph, Dict[Tuple[str, str], Set[str]]]]:
+    ) -> DAG | PDAG | tuple[nx.Graph, dict[tuple[str, str], set[str]]]:
         """
         Estimates a DAG/PDAG from the given dataset using the PC algorithm which
         is a constraint-based structure learning algorithm[1]. The independencies
@@ -165,6 +154,10 @@ class PC(StructureEstimator):
                 2. pearsonr: If p-value > significance_level, it assumes that the
                     independence condition satisfied in the data.
 
+        max_cond_vars: int (default: 5)
+            The maximum number of variables to condition on while testing
+            independence.
+
         expert_knowledge: pgmpy.estimators.ExpertKnowledge instance
             Expert knowledge to be used with the algorithm. Expert knowledge
             includes required/forbidden edges in the final graph, temporal
@@ -190,6 +183,12 @@ class PC(StructureEstimator):
                     would either have u -> v or no edge except if v <- u is part of a
                     collider structure in the learned skeleton.
 
+        n_jobs: int (default: -1)
+            The number of jobs to run in parallel.
+
+        show_progress: bool (default: True)
+            If True, shows a progress bar while running the algorithm.
+
         Returns
         -------
         Estimated model: pgmpy.base.DAG, pgmpy.base.PDAG, or tuple(networkx.UndirectedGraph, dict)
@@ -200,40 +199,34 @@ class PC(StructureEstimator):
 
         References
         ----------
-        [1] Original PC: P. Spirtes, C. Glymour, and R. Scheines, Causation,
-                    Prediction, and Search, 2nd ed. Cambridge, MA: MIT Press, 2000.
-        [2] Stable PC:  D. Colombo and M. H. Maathuis, “A modification of the PC algorithm
-                    yielding order-independent skeletons,” ArXiv e-prints, Nov. 2012.
-        [3] Parallel PC: Le, Thuc, et al. "A fast PC algorithm for high dimensional causal
-                    discovery with multi-core PCs." IEEE/ACM transactions on computational
-                    biology and bioinformatics (2016).
-        [4] Expert Knowledge: Meek, Christopher. "Causal inference and causal
-                explanation with background knowledge." arXiv preprint arXiv:1302.4972
-                (2013).
+        - Original PC: :cite:p:`spirtes_glymour_scheines_2001`
+        - Stable PC: :cite:p:`colombo_maathuis_2014`
+        - Parallel PC: :cite:p:`le_2019`
+        - Expert knowledge: :cite:p:`meek_1995`
 
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model
+        >>> from pgmpy.example_models import load_model
         >>> from pgmpy.estimators import PC
-        >>> model = get_example_model("alarm")
-        >>> data = model.simulate(n_samples=1000)
+        >>> model = load_model("bnlearn/alarm")
+        >>> data = model.simulate(n_samples=1000, seed=42)
         >>> est = PC(data)
         >>> model_chi = est.estimate(ci_test="chi_square")
+        >>> model_chi  # doctest: +ELLIPSIS
+        <pgmpy.base.PDAG.PDAG object at 0x...>
         >>> print(len(model_chi.edges()))
-        28
+        38
         >>> model_gsq, _ = est.estimate(ci_test="g_sq", return_type="skeleton")
+        >>> model_gsq  # doctest: +ELLIPSIS
+        <networkx.classes.graph.Graph object at 0x...>
         >>> print(len(model_gsq.edges()))
-        33
+        28
         """
         # Step 0: Do checks that the specified parameters are correct, else throw meaningful error.
         if variant not in ("orig", "stable", "parallel"):
-            raise ValueError(
-                f"variant must be one of: orig, stable, or parallel. Got: {variant}"
-            )
+            raise ValueError(f"variant must be one of: orig, stable, or parallel. Got: {variant}")
 
-        ci_test = get_callable_ci_test(
-            ci_test, full=True, data=self.data, independencies=self.independencies
-        )
+        ci_test = ci_registry.get_test(ci_test, data=self.data)
 
         if expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
@@ -243,12 +236,13 @@ class PC(StructureEstimator):
 
         # Step 1: Run the PC algorithm to build the skeleton and get the separating sets.
         skel, separating_sets = self.build_skeleton(
+            variant=variant,
             ci_test=ci_test,
             significance_level=significance_level,
-            variant=variant,
-            n_jobs=n_jobs,
+            max_cond_vars=max_cond_vars,
             expert_knowledge=expert_knowledge,
             enforce_expert_knowledge=enforce_expert_knowledge,
+            n_jobs=n_jobs,
             show_progress=show_progress,
             **kwargs,
         )
@@ -257,9 +251,7 @@ class PC(StructureEstimator):
             return skel, separating_sets
 
         # Step 2: Orient the edges based on collider structures.
-        pdag = self.orient_colliders(
-            skel, separating_sets, expert_knowledge.temporal_ordering
-        )
+        pdag = self.orient_colliders(skel, separating_sets, expert_knowledge.temporal_ordering)
 
         # Step 3: Either return the CPDAG, integrate expert knowledge or fully orient the edges to build a DAG.
         if expert_knowledge.temporal_order != [[]]:
@@ -282,248 +274,13 @@ class PC(StructureEstimator):
         elif return_type.lower() == "dag":
             return pdag.to_dag()
         else:
-            raise ValueError(
-                f"return_type must be one of: dag, pdag, cpdag, or skeleton. Got: {return_type}"
-            )
-
-    def build_skeleton(
-        self,
-        variant: str = "stable",
-        ci_test: Union[str, Callable, None] = None,
-        significance_level: float = 0.01,
-        max_cond_vars: int = 5,
-        expert_knowledge: Optional[ExpertKnowledge] = None,
-        enforce_expert_knowledge: bool = False,
-        n_jobs: int = -1,
-        show_progress: bool = True,
-        **kwargs,
-    ) -> Tuple[UndirectedGraph, Dict[Tuple[str, str], Set[str]]]:
-        """
-        Estimates a graph skeleton (UndirectedGraph) from a set of independencies
-        using (the first part of) the PC algorithm. The independencies can either be
-        provided as an instance of the `Independencies`-class or by passing a
-        decision function that decides any conditional independency assertion.
-        Returns a tuple `(skeleton, separating_sets)`.
-
-        If an Independencies-instance is passed, the contained IndependenceAssertions
-        have to admit a faithful BN representation. This is the case if
-        they are obtained as a set of d-separations of some Bayesian network or
-        if the independence assertions are closed under the semi-graphoid axioms.
-        Otherwise, the procedure may fail to identify the correct structure.
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-        skeleton: UndirectedGraph
-            An estimate for the undirected graph skeleton of the BN underlying the data.
-
-        separating_sets: dict
-            A dict containing for each pair of not directly connected nodes a
-            separating set ("witnessing set") of variables that makes them
-            conditionally independent. (needed for edge orientation procedures)
-
-        References
-        ----------
-        [1] Neapolitan, Learning Bayesian Networks, Section 10.1.2, Algorithm 10.2 (page 550)
-            http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
-        [2] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
-            Section 3.4.2.1 (page 85), Algorithm 3.3
-        """
-        # Initialize initial values and structures.
-        lim_neighbors = 0
-        separating_sets = dict()
-        ci_test = get_callable_ci_test(
-            ci_test, full=True, data=None
-        )  # this is called twice, before on PC estimate
-
-        if expert_knowledge is None:
-            expert_knowledge = ExpertKnowledge()
-
-        if expert_knowledge.search_space:
-            expert_knowledge.limit_search_space(self.data.columns)
-
-        if show_progress and config.SHOW_PROGRESS:
-            pbar = tqdm(total=max_cond_vars)
-            pbar.set_description("Working for n conditional variables: 0")
-
-        # Step 1: Initialize a fully connected undirected graph
-        graph = nx.complete_graph(n=self.variables, create_using=nx.Graph)
-        temporal_ordering = expert_knowledge.temporal_ordering
-        if enforce_expert_knowledge:
-            graph.remove_edges_from(expert_knowledge.forbidden_edges)
-
-        # Exit condition: 1. If all the nodes in graph has less than `lim_neighbors` neighbors.
-        #             or  2. `lim_neighbors` is greater than `max_conditional_variables`.
-        while not all(
-            [len(list(graph.neighbors(var))) < lim_neighbors for var in self.variables]
-        ):
-            # Step 2: Iterate over the edges and find a conditioning set of
-            # size `lim_neighbors` which makes u and v independent.
-            if variant == "orig":
-                for u, v in graph.edges():
-                    if (enforce_expert_knowledge is False) or (
-                        (u, v) not in expert_knowledge.required_edges
-                    ):
-                        for separating_set in PC._get_potential_sepsets(
-                            u, v, temporal_ordering, graph, lim_neighbors
-                        ):
-                            # If a conditioning set exists remove the edge, store the separating set
-                            # and move on to finding conditioning set for next edge.
-                            if ci_test(
-                                u,
-                                v,
-                                separating_set,
-                                data=self.data,
-                                independencies=self.independencies,
-                                significance_level=significance_level,
-                                **kwargs,
-                            ):
-                                separating_sets[frozenset((u, v))] = separating_set
-                                graph.remove_edge(u, v)
-                                break
-
-            elif variant == "stable":
-                # In case of stable, precompute neighbors as this is the stable algorithm.
-                for u, v in graph.edges():
-                    if (enforce_expert_knowledge is False) or (
-                        (u, v) not in expert_knowledge.required_edges
-                    ):
-                        for separating_set in PC._get_potential_sepsets(
-                            u, v, temporal_ordering, graph, lim_neighbors
-                        ):
-                            # If a conditioning set exists remove the edge, store the
-                            # separating set and move on to finding conditioning set for next edge.
-                            if ci_test(
-                                u,
-                                v,
-                                separating_set,
-                                data=self.data,
-                                independencies=self.independencies,
-                                significance_level=significance_level,
-                                **kwargs,
-                            ):
-                                separating_sets[frozenset((u, v))] = separating_set
-                                graph.remove_edge(u, v)
-                                break
-
-            elif variant == "parallel":
-
-                def _parallel_fun(u, v):
-                    for separating_set in PC._get_potential_sepsets(
-                        u, v, temporal_ordering, graph, lim_neighbors
-                    ):
-                        if ci_test(
-                            u,
-                            v,
-                            separating_set,
-                            data=self.data,
-                            independencies=self.independencies,
-                            significance_level=significance_level,
-                            **kwargs,
-                        ):
-                            return (u, v), separating_set
-
-                results = Parallel(n_jobs=n_jobs)(
-                    delayed(_parallel_fun)(u, v)
-                    for (u, v) in graph.edges()
-                    if (enforce_expert_knowledge is False)
-                    or ((u, v) not in expert_knowledge.required_edges)
-                )
-                for result in results:
-                    if result is not None:
-                        (u, v), sep_set = result
-                        graph.remove_edge(u, v)
-                        separating_sets[frozenset((u, v))] = sep_set
-
-            else:
-                raise ValueError(
-                    f"variant must be one of (orig, stable, parallel). Got: {variant}"
-                )
-
-            # Step 3: After iterating over all the edges, expand the search space by increasing the size
-            #         of conditioning set by 1.
-            if lim_neighbors >= max_cond_vars:
-                logger.info(
-                    "Reached maximum number of allowed conditional variables. Exiting"
-                )
-                break
-            lim_neighbors += 1
-
-            if show_progress and config.SHOW_PROGRESS:
-                pbar.update(1)
-                pbar.set_description(
-                    f"Working for n conditional variables: {lim_neighbors}"
-                )
-
-        if show_progress and config.SHOW_PROGRESS:
-            pbar.update(max_cond_vars - lim_neighbors)
-            pbar.close()
-        return graph, separating_sets
-
-    @staticmethod
-    def _get_potential_sepsets(
-        u: Hashable,
-        v: Hashable,
-        temporal_ordering: Dict[Hashable, int],
-        graph: UndirectedGraph,
-        lim_neighbors: int,
-    ) -> Collection[Tuple]:
-        """
-        Return the temporally consistent superset of separating set of u, v.
-
-        The temporal order (if specified) of the superset can only be smaller
-        ("earlier") than the particular node. The neighbors of 'u' satisfying
-        this condition are returned.
-
-        Parameters
-        ----------
-        u: variable
-            The node whose neighbors are being considered for separating set.
-
-        v: variable
-            The node along with u whose separating set is being calculated.
-
-        temporal_ordering: dict
-            The temporal ordering of variables according to prior knowledge.
-
-        graph: UndirectedGraph
-            The graph where separating sets are being calculated for the edges.
-
-        lim_neighbors: int
-            The maximum number of neighbours (conditioning variables) for u, v.
-
-        Returns
-        --------
-        separating_set: set
-            Set containing the superset of separating set of u, v.
-        """
-        separating_set_u = set(graph.neighbors(u))
-        separating_set_v = set(graph.neighbors(v))
-        separating_set_u.discard(v)
-        separating_set_v.discard(u)
-
-        if temporal_ordering != dict():
-            max_order = min(temporal_ordering[u], temporal_ordering[u])
-            for neigh in list(separating_set_u):
-                if temporal_ordering[neigh] > max_order:
-                    separating_set_u.discard(neigh)
-
-            for neigh in list(separating_set_v):
-                if temporal_ordering[neigh] > max_order:
-                    separating_set_v.discard(neigh)
-
-        return chain(
-            combinations(separating_set_u, lim_neighbors),
-            combinations(separating_set_v, lim_neighbors),
-        )
+            raise ValueError(f"return_type must be one of: dag, pdag, cpdag, or skeleton. Got: {return_type}")
 
     @staticmethod
     def orient_colliders(
         skeleton: UndirectedGraph,
-        separating_sets: Dict[FrozenSet, Set],
-        temporal_ordering: Dict[Hashable, int] = dict(),
+        separating_sets: dict[frozenset, set],
+        temporal_ordering: dict[Hashable, int] = dict(),
     ) -> PDAG:
         """
         Orients the edges that form v-structures in a graph skeleton
@@ -550,24 +307,22 @@ class PC(StructureEstimator):
 
         References
         ----------
-        [1] Neapolitan, Learning Bayesian Networks, Section 10.1.2, Algorithm
-                10.2 (page 550)
-        [2] http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
+        - :cite:p:`neapolitan_2009` (Section 10.1.2, Algorithm 10.2, page 550).
 
         Examples
         --------
         >>> import pandas as pd
         >>> import numpy as np
         >>> from pgmpy.estimators import PC
-        >>> data = pd.DataFrame(
-        ...     np.random.randint(0, 4, size=(5000, 3)), columns=list("ABD")
-        ... )
+        >>> rng = np.random.default_rng(42)
+        >>> data = pd.DataFrame(rng.integers(0, 4, size=(5000, 3)), columns=list("ABD"))
         >>> data["C"] = data["A"] - data["B"]
         >>> data["D"] += data["A"]
         >>> c = PC(data)
-        >>> pdag = c.orient_colliders(*c.build_skeleton())
-        >>> pdag.edges()  # edges: A->C, B->C, A--D (not directed)
-        OutEdgeView([('B', 'C'), ('A', 'C'), ('A', 'D'), ('D', 'A')])
+        >>> skel, sep_sets = c.estimate(return_type="skeleton")
+        >>> pdag = PC.orient_colliders(skel, sep_sets)
+        >>> sorted(pdag.edges())
+        [('A', 'C'), ('A', 'D'), ('B', 'C'), ('D', 'A'), ('D', 'C')]
         """
 
         pdag = skeleton.to_directed()
@@ -593,9 +348,7 @@ class PC(StructureEstimator):
             else:
                 directed_edges.add((u, v))
 
-        pdag_oriented = PDAG(
-            directed_ebunch=directed_edges, undirected_ebunch=undirected_edges
-        )
+        pdag_oriented = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
         pdag_oriented.add_nodes_from(pdag.nodes())
 
         return pdag_oriented

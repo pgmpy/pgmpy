@@ -1,34 +1,34 @@
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
-import torch
 
 from pgmpy import config
-from pgmpy.inference import CausalInference
 from pgmpy.models import SEM, SEMAlg, SEMGraph
 from pgmpy.utils import compat_fns, optimize, pinverse
 
 
-class SEMEstimator(object):
+class SEMEstimator:
     """
     Base class of SEM estimators. All the estimators inherit this class.
     """
 
     def __init__(self, model):
-        if config.BACKEND == "numpy":
-            raise ValueError(
-                f"SEMEstimator requires torch backend. Currently it's numpy. "
-                "Call pgmpy.config.set_backend('torch') to switch"
+        if config.get_backend() == "numpy":
+            msg = (
+                f"{type(self)} requires pytorch backend, currently it is "
+                "set to numpy."
+                "Call pgmpy.config.set_backend('torch') to switch the backend globally."
             )
+            raise ValueError(msg)
 
         if isinstance(model, (SEMGraph, SEM)):
             self.model = model.to_lisrel()
         elif isinstance(model, SEMAlg):
             self.model = model
         else:
-            raise ValueError(
-                f"Model should be an instance of either SEMGraph or SEMAlg class. Got type: {type(model)}"
-            )
+            raise ValueError(f"Model should be an instance of either SEMGraph or SEMAlg class. Got type: {type(model)}")
+
+        import torch
 
         # Initialize trainable and fixed mask tensors
         self.B_mask = torch.tensor(
@@ -74,6 +74,8 @@ class SEMEstimator(object):
         """
         Computes the implied covariance matrix from the given parameters.
         """
+        import torch
+
         B_masked = torch.mul(B, self.B_mask) + self.B_fixed_mask
         B_inv = pinverse(self.B_eye - B_masked)
         zeta_masked = torch.mul(zeta, self.zeta_mask) + self.zeta_fixed_mask
@@ -105,12 +107,7 @@ class SEMEstimator(object):
         S = loss_args["S"]
         sigma = self._get_implied_cov(params["B"], params["zeta"])
 
-        return (
-            sigma.det().clamp(min=1e-4).log()
-            + (S @ pinverse(sigma)).trace()
-            - S.logdet()
-            - len(self.model.y)
-        )
+        return sigma.det().clamp(min=1e-4).log() + (S @ pinverse(sigma)).trace() - S.logdet() - len(self.model.y)
 
     def uls_loss(self, params, loss_args):
         r"""
@@ -169,10 +166,9 @@ class SEMEstimator(object):
         """
         Computes the starting values for the optimizer.
 
-        Reference
-        ---------
-        .. [1] Table 4C.1: Bollen, K. (2014). Structural Equations with Latent Variables.
-                New York, NY: John Wiley & Sons.
+        References
+        ----------
+        - :cite:p:`bollen_2014` (Table 4C.1).
 
         """
         # Initialize all the values even if the edge doesn't exist, masks would take care of that.
@@ -196,8 +192,7 @@ class SEMEstimator(object):
                         B[i, j] = 1.0
                     elif i != j:
                         B[i, j] = a * (
-                            data.loc[:, scaling_vars[eta[i]]].std()
-                            / data.loc[:, scaling_vars[eta[j]]].std()
+                            data.loc[:, scaling_vars[eta[i]]].std() / data.loc[:, scaling_vars[eta[j]]].std()
                         )
             zeta = np.random.rand(m, m)
             for i in range(m):
@@ -254,7 +249,7 @@ class SEMEstimator(object):
 
         References
         ----------
-        .. [1] Bollen, K. A. (2010). Structural equations with latent variables. New York: Wiley.
+        - :cite:p:`thoemmes_2013`
         """
         # Check if given arguments are valid
         if not isinstance(data, pd.DataFrame):
@@ -269,23 +264,19 @@ class SEMEstimator(object):
         # Initialize the values of parameters as tensors.
         backend = compat_fns.get_compute_backend()
 
+        import torch
+
         if isinstance(init_values, dict):
             B_init, zeta_init = init_values["B"], init_values["zeta"]
         else:
             B_init, zeta_init = self.get_init_values(data, method=init_values.lower())
-        B = torch.tensor(
-            B_init, device=config.DEVICE, dtype=config.DTYPE, requires_grad=True
-        )
-        zeta = torch.tensor(
-            zeta_init, device=config.DEVICE, dtype=config.DTYPE, requires_grad=True
-        )
+        B = torch.tensor(B_init, device=config.DEVICE, dtype=config.DTYPE, requires_grad=True)
+        zeta = torch.tensor(zeta_init, device=config.DEVICE, dtype=config.DTYPE, requires_grad=True)
 
         # Compute the covariance of the data
         variable_order = self.model.y
         S = data.cov().reindex(variable_order, axis=1).reindex(variable_order, axis=0)
-        S = torch.tensor(
-            S.values, device=config.DEVICE, dtype=config.DTYPE, requires_grad=False
-        )
+        S = torch.tensor(S.values, device=config.DEVICE, dtype=config.DTYPE, requires_grad=False)
 
         # Optimize the parameters
         if method.lower() == "ml":
@@ -339,9 +330,7 @@ class SEMEstimator(object):
         norm_residual = np.zeros(residual.shape)
         for i in range(norm_residual.shape[0]):
             for j in range(norm_residual.shape[1]):
-                norm_residual[i, j] = (
-                    sample_cov[i, j] - sigma_hat[i, j]
-                ) / backend.sqrt(
+                norm_residual[i, j] = (sample_cov[i, j] - sigma_hat[i, j]) / backend.sqrt(
                     ((sigma_hat[i, i] * sigma_hat[j, j]) + (sigma_hat[i, j] ** 2)) / N
                 )
 
@@ -374,9 +363,7 @@ class SEMEstimator(object):
         }
 
         # Update the model with the learned params
-        self.model.set_params(
-            B=compat_fns.to_numpy(params["B"]), zeta=compat_fns.to_numpy(params["zeta"])
-        )
+        self.model.set_params(B=compat_fns.to_numpy(params["B"]), zeta=compat_fns.to_numpy(params["zeta"]))
         return summary
 
 
@@ -391,6 +378,22 @@ class IVEstimator:
 
     Examples
     --------
+    >>> from pgmpy.models import SEM
+    >>> from pgmpy.estimators import IVEstimator
+    >>> model = SEM.from_graph(
+    ...     ebunch=[
+    ...         ("Z1", "X", 1.0),
+    ...         ("Z2", "X", 1.0),
+    ...         ("Z2", "W", 1.0),
+    ...         ("W", "U", 1.0),
+    ...         ("U", "X", 1.0),
+    ...         ("U", "Y", 1.0),
+    ...         ("X", "Y", 1.0),
+    ...     ],
+    ...     latents=["U"],
+    ...     err_var={"Z1": 1, "Z2": 1, "W": 1, "X": 1, "U": 1, "Y": 1},
+    ... )
+    >>> estimator = IVEstimator(model)
     """
 
     def __init__(self, model):
@@ -421,10 +424,37 @@ class IVEstimator:
             If not specified, tries to find the IVs from the model structure, fails if
             can't find either IV or Conditional IVs.
 
+        Returns
+        -------
+        tuple: (float, statsmodels.regression.linear_model.RegressionResultsWrapper)
+            A tuple where the first element is the estimated causal parameter
+            for X -> Y, and the second element is the fitted OLS results object
+            from the second stage regression (a RegressionResultsWrapper). Call
+            `.summary()` on this object to get the textual summary.
+
         Examples
         --------
-        >>> from pgmpy.estimators import IVEstimator  # TODO: Finish example.
+        >>> from pgmpy.models import SEM
+        >>> from pgmpy.estimators import IVEstimator
+        >>> model = SEM.from_graph(
+        ...     ebunch=[
+        ...         ("Z1", "X", 1.0),
+        ...         ("Z2", "X", 1.0),
+        ...         ("Z2", "W", 1.0),
+        ...         ("W", "U", 1.0),
+        ...         ("U", "X", 1.0),
+        ...         ("U", "Y", 1.0),
+        ...         ("X", "Y", 1.0),
+        ...     ],
+        ...     latents=["U"],
+        ...     err_var={"Z1": 1, "Z2": 1, "W": 1, "X": 1, "U": 1, "Y": 1},
+        ... )
+        >>> data = model.to_lisrel().generate_samples(500)
+        >>> estimator = IVEstimator(model)
+        >>> param, results = estimator.fit(X="X", Y="Y", data=data)
         """
+        from pgmpy.inference import CausalInference
+
         if (ivs is None) and (civs is None):
             inference = CausalInference(self.model)
             ivs = inference.get_ivs(X, Y)
@@ -443,17 +473,11 @@ class IVEstimator:
             civ_conditionals.extend(civ[1])
 
         # First stage regression.
-        params = (
-            sm.OLS(data.loc[:, X], data.loc[:, reg_covars + civ_conditionals])
-            .fit()
-            .params
-        )
+        params = sm.OLS(data.loc[:, X], data.loc[:, reg_covars + civ_conditionals]).fit().params
 
         data["X_pred"] = np.zeros(data.shape[0])
         for var in reg_covars:
             data.X_pred += params[var] * data.loc[:, var]
 
-        summary = sm.OLS(
-            data.loc[:, Y], data.loc[:, ["X_pred"] + civ_conditionals]
-        ).fit()
+        summary = sm.OLS(data.loc[:, Y], data.loc[:, ["X_pred"] + civ_conditionals]).fit()
         return summary.params["X_pred"], summary

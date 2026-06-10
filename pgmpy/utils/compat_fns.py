@@ -1,10 +1,20 @@
-## Redefines function for pytorch and numpy backends, so that they have same behavior
+"""Common API for torch and numpy backends."""
+
 from copy import deepcopy
 
 import numpy as np
-import torch
+from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 
 from pgmpy import config
+
+torch = _safe_import("torch")
+
+
+def _is_torch_tensor(obj):
+    if not _check_soft_dependencies("torch", severity="none"):
+        return False
+
+    return isinstance(obj, torch.Tensor)
 
 
 def size(arr):
@@ -20,16 +30,12 @@ def copy(arr):
             return np.array(arr)
         elif isinstance(arr, (int, float)):
             return deepcopy(arr)
-        raise Exception(
-            f"Invalid backend ({config.get_backend()}) for data type {type(arr)}"
-        )
+        raise Exception(f"Invalid backend ({config.get_backend()}) for data type {type(arr)}")
     else:
         if isinstance(arr, torch.Tensor):
             return arr.detach().clone()
         else:
-            return torch.tensor(
-                arr, dtype=config.get_dtype(), device=config.get_device()
-            )
+            return torch.tensor(arr, dtype=config.get_dtype(), device=config.get_device())
 
 
 def tobytes(arr):
@@ -71,7 +77,7 @@ def stack(arr_iter):
 
 
 def to_numpy(arr, decimals=None):
-    if isinstance(arr, torch.Tensor):
+    if _is_torch_tensor(arr):
         if arr.device.type.startswith("cuda"):
             arr = arr.cpu().detach().numpy()
         else:
@@ -102,18 +108,16 @@ def get_compute_backend():
     if config.get_backend() == "numpy":
         return np
     else:
+        import torch
+
         return torch
 
 
 def unique(arr, axis=0, return_counts=False, return_inverse=False):
     if isinstance(arr, np.ndarray):
-        return np.unique(
-            arr, axis=axis, return_counts=return_counts, return_inverse=return_inverse
-        )
+        return np.unique(arr, axis=axis, return_counts=return_counts, return_inverse=return_inverse)
     else:
-        return torch.unique(
-            arr, return_inverse=return_inverse, return_counts=return_counts, dim=axis
-        )
+        return torch.unique(arr, return_inverse=return_inverse, return_counts=return_counts, dim=axis)
 
 
 def flip(arr, axis=0):
@@ -149,15 +153,11 @@ def allclose(arr1, arr2, atol):
         return np.allclose(arr1, arr2, atol=atol)
     else:
         if isinstance(arr1, np.ndarray):
-            arr1 = torch.tensor(
-                arr1, dtype=config.get_dtype(), device=config.get_device()
-            )
+            arr1 = torch.tensor(arr1, dtype=config.get_dtype(), device=config.get_device())
         else:
             arr1 = arr1.detach().clone()
         if isinstance(arr2, np.ndarray):
-            arr2 = torch.tensor(
-                arr2, dtype=config.get_dtype(), device=config.get_device()
-            )
+            arr2 = torch.tensor(arr2, dtype=config.get_dtype(), device=config.get_device())
         else:
             arr2 = arr2.detach().clone()
         return torch.allclose(

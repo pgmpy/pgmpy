@@ -1,6 +1,7 @@
-#!/usr/bin/env python
+from __future__ import annotations
+
+import warnings
 from math import lgamma, log
-from typing import Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -11,34 +12,41 @@ from scipy.stats import multivariate_normal
 from pgmpy.estimators import BaseEstimator
 from pgmpy.utils import get_dataset_type
 
+warnings.warn(
+    "`pgmpy.estimators.StructureScore` is deprecated and will be removed in v1.3.0. "
+    "Use `pgmpy.structure_score` instead.",
+    FutureWarning,
+    stacklevel=2,
+)
+
 
 def get_scoring_method(
-    scoring_method: Optional[Union[str, "StructureScore"]],
+    scoring_method: str | StructureScore | None,
     data: pd.DataFrame,
     use_cache: bool,
-) -> Tuple["StructureScore", "StructureScore"]:
+    **kwargs,
+) -> tuple[StructureScore, StructureScore]:
     available_methods = {
         "continuous": {
+            "bic-g": BICGauss,
             "ll-g": LogLikelihoodGauss,
             "aic-g": AICGauss,
-            "bic-g": BICGauss,
         },
         "discrete": {
+            "bic-d": BIC,
             "k2": K2,
             "bdeu": BDeu,
             "bds": BDs,
-            "bic-d": BIC,
             "aic-d": AIC,
+            "ll-d": LogLikeliHood,
         },
         "mixed": {
+            "bic-cg": BICCondGauss,
             "ll-cg": LogLikelihoodCondGauss,
             "aic-cg": AICCondGauss,
-            "bic-cg": BICCondGauss,
         },
     }
-    all_available_methods = [
-        key for subdict in available_methods.values() for key in subdict.keys()
-    ]
+    all_available_methods = [key for subdict in available_methods.values() for key in subdict.keys()]
 
     var_type = get_dataset_type(data)
     supported_methods = available_methods[var_type] | available_methods["mixed"]
@@ -51,9 +59,7 @@ def get_scoring_method(
             "bicscore",
             "aicscore",
         ]:
-            raise ValueError(
-                "The scoring method names have been changed. Please refer the documentation."
-            )
+            raise ValueError("The scoring method names have been changed. Please refer the documentation.")
         elif scoring_method.lower() not in list(all_available_methods):
             raise ValueError(
                 "Unknown scoring method. Please refer documentation for a list of supported score metrics."
@@ -74,7 +80,7 @@ def get_scoring_method(
 
     score: StructureScore
     if isinstance(scoring_method, str):
-        score = supported_methods[scoring_method.lower()](data=data)
+        score = supported_methods[scoring_method.lower()](data=data, **kwargs)
     else:
         score = scoring_method
 
@@ -144,7 +150,7 @@ class StructureScore(BaseEstimator):
     """
 
     def __init__(self, data, **kwargs):
-        super(StructureScore, self).__init__(data, **kwargs)
+        super().__init__(data, **kwargs)
 
     def score(self, model):
         """
@@ -292,14 +298,12 @@ class K2(StructureScore):
 
     References
     ----------
-    [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009,
-        Section 18.3.4–18.3.6 (esp. page 806).
-    [2] AM Carvalho, Scoring functions for learning Bayesian networks,
-        http://www.lx.it.pt/~asmc/pub/talks/09-TA/ta_pres.pdf
+    - :cite:p:`koller_friedman_2009` (Section 18.3.4--18.3.6, esp. page 806).
+    - :cite:p:`liao_2022`
     """
 
     def __init__(self, data, **kwargs):
-        super(K2, self).__init__(data, **kwargs)
+        super().__init__(data, **kwargs)
 
     def local_score(self, variable, parents):
         """
@@ -338,8 +342,7 @@ class K2(StructureScore):
 
         References
         ----------
-        [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009,
-            Section 18.3.4–18.3.6 (esp. page 806).
+        - :cite:p:`koller_friedman_2009` (Section 18.3.4--18.3.6, esp. page 806).
         """
 
         var_states = self.state_names[variable]
@@ -370,11 +373,7 @@ class K2(StructureScore):
         # log_gamma_counts += gamma_counts_adj
         # log_gamma_conds += gamma_conds_adj
 
-        score = (
-            np.sum(log_gamma_counts)
-            - np.sum(log_gamma_conds)
-            + num_parents_states * lgamma(var_cardinality)
-        )
+        score = np.sum(log_gamma_counts) - np.sum(log_gamma_conds) + num_parents_states * lgamma(var_cardinality)
 
         return score
 
@@ -394,9 +393,11 @@ class BDeu(StructureScore):
         DataFrame where each column represents a discrete variable.
         Missing values should be set as `numpy.nan`.
         Note: pandas converts such columns to dtype float.
+
     equivalent_sample_size : int, optional (default: 10)
         The equivalent (imaginary) sample size for the Dirichlet hyperparameters.
         The score is sensitive to this value; experiment with different values as needed.
+
     state_names : dict, optional
         Dictionary mapping variable names to their discrete states.
         If not specified, unique values observed in the data are used as possible states.
@@ -420,15 +421,13 @@ class BDeu(StructureScore):
 
     References
     ----------
-    [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009,
-        Section 18.3.4–18.3.6 (esp. page 806).
-    [2] AM Carvalho, Scoring functions for learning Bayesian networks,
-        http://www.lx.it.pt/~asmc/pub/talks/09-TA/ta_pres.pdf
+    - :cite:p:`koller_friedman_2009` (Section 18.3.4--18.3.6, esp. page 806).
+    - :cite:p:`liao_2022`
     """
 
     def __init__(self, data, equivalent_sample_size=10, **kwargs):
         self.equivalent_sample_size = equivalent_sample_size
-        super(BDeu, self).__init__(data, **kwargs)
+        super().__init__(data, **kwargs)
 
     def local_score(self, variable, parents):
         """
@@ -474,11 +473,7 @@ class BDeu(StructureScore):
         gammaln(log_gamma_conds + alpha, out=log_gamma_conds)
 
         # Adjustment for missing zero-count columns (when using reindex=False to save memory).
-        gamma_counts_adj = (
-            (num_parents_states - counts.shape[1])
-            * len(self.state_names[variable])
-            * gammaln(beta)
-        )
+        gamma_counts_adj = (num_parents_states - counts.shape[1]) * len(self.state_names[variable]) * gammaln(beta)
         gamma_conds_adj = (num_parents_states - counts.shape[1]) * gammaln(alpha)
 
         # Final BDeu local score calculation.
@@ -534,12 +529,11 @@ class BDs(BDeu):
 
     References
     ----------
-    [1] Scutari, Marco. An Empirical-Bayes Score for Discrete Bayesian Networks.
-        Journal of Machine Learning Research, 2016, pp. 438–48
+    - :cite:p:`scutari_2016a`
     """
 
     def __init__(self, data, equivalent_sample_size=10, **kwargs):
-        super(BDs, self).__init__(data, equivalent_sample_size, **kwargs)
+        super().__init__(data, equivalent_sample_size, **kwargs)
 
     def structure_prior_ratio(self, operation):
         """
@@ -666,11 +660,7 @@ class BDs(BDeu):
         gammaln(log_gamma_conds + alpha, out=log_gamma_conds)
 
         # Adjustment because of missing 0 columns when using reindex=False for computing state_counts to save memory.
-        gamma_counts_adj = (
-            (num_parents_states - counts.shape[1])
-            * len(self.state_names[variable])
-            * gammaln(beta)
-        )
+        gamma_counts_adj = (num_parents_states - counts.shape[1]) * len(self.state_names[variable]) * gammaln(beta)
         gamma_conds_adj = (num_parents_states - counts.shape[1]) * gammaln(alpha)
 
         score = (
@@ -682,7 +672,54 @@ class BDs(BDeu):
         return score
 
 
-class BIC(StructureScore):
+class LogLikeliHood(StructureScore):
+    """
+    Log-likelihood structure score for Discrete Bayesian networks.
+
+    This score evaluates the fit of a Discrete Bayesian network structure
+    by computing the (unpenalized) log-likelihood of the observed data given the model.
+
+    Parameters
+    ----------
+    data: pandas DataFrame object
+        dataframe object where each column represents one variable.
+        (If some values in the data are missing the data cells should be set to `numpy.nan`.
+        Note that pandas converts each column containing `numpy.nan`s to dtype `float`.)
+    """
+
+    def __init__(self, data, **kwargs):
+        super().__init__(data, **kwargs)
+
+    def _log_likelihood(self, variable, parents):
+
+        var_states = self.state_names[variable]
+        var_cardinality = len(var_states)
+        parents = list(parents)
+        state_counts = self.state_counts(variable, parents, reindex=False)
+        num_parents_states = np.prod([len(self.state_names[var]) for var in parents])
+
+        counts = np.asarray(state_counts)
+        log_likelihoods = np.zeros_like(counts, dtype=float)
+
+        # Compute the log-counts
+        np.log(counts, out=log_likelihoods, where=counts > 0)
+
+        # Compute the log-conditional sample size
+        log_conditionals = np.sum(counts, axis=0, dtype=float)
+        np.log(log_conditionals, out=log_conditionals, where=log_conditionals > 0)
+
+        # Compute the log-likelihoods
+        log_likelihoods -= log_conditionals
+        log_likelihoods *= counts
+
+        return (np.sum(log_likelihoods), num_parents_states, var_cardinality)
+
+    def local_score(self, variable, parents):
+        ll, num_parents_states, var_cardinality = self._log_likelihood(variable=variable, parents=parents)
+        return ll
+
+
+class BIC(LogLikeliHood):
     """
     BIC (Bayesian Information Criterion) structure score for discrete Bayesian networks.
 
@@ -720,14 +757,12 @@ class BIC(StructureScore):
 
     References
     ----------
-    [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009,
-        Section 18.3.4–18.3.6 (esp. page 802).
-    [2] AM Carvalho, Scoring functions for learning Bayesian networks,
-        http://www.lx.it.pt/~asmc/pub/talks/09-TA/ta_pres.pdf
+    - :cite:p:`koller_friedman_2009` (Section 18.3.4--18.3.6, esp. page 802).
+    - :cite:p:`liao_2022`
     """
 
     def __init__(self, data, **kwargs):
-        super(BIC, self).__init__(data, **kwargs)
+        super().__init__(data, **kwargs)
 
     def local_score(self, variable, parents):
         """
@@ -763,34 +798,14 @@ class BIC(StructureScore):
             the data contains unsupported types (e.g., continuous values).
         """
 
-        var_states = self.state_names[variable]
-        var_cardinality = len(var_states)
-        parents = list(parents)
-        state_counts = self.state_counts(variable, parents, reindex=False)
         sample_size = len(self.data)
-        num_parents_states = np.prod([len(self.state_names[var]) for var in parents])
-
-        counts = np.asarray(state_counts)
-        log_likelihoods = np.zeros_like(counts, dtype=float)
-
-        # Compute the log-counts
-        np.log(counts, out=log_likelihoods, where=counts > 0)
-
-        # Compute the log-conditional sample size
-        log_conditionals = np.sum(counts, axis=0, dtype=float)
-        np.log(log_conditionals, out=log_conditionals, where=log_conditionals > 0)
-
-        # Compute the log-likelihoods
-        log_likelihoods -= log_conditionals
-        log_likelihoods *= counts
-
-        score = np.sum(log_likelihoods)
-        score -= 0.5 * log(sample_size) * num_parents_states * (var_cardinality - 1)
+        ll, num_parents_states, var_cardinality = self._log_likelihood(variable=variable, parents=parents)
+        score = ll - 0.5 * log(sample_size) * num_parents_states * (var_cardinality - 1)
 
         return score
 
 
-class AIC(StructureScore):
+class AIC(LogLikeliHood):
     """
     AIC (Akaike Information Criterion) structure score for discrete Bayesian networks.
 
@@ -831,14 +846,12 @@ class AIC(StructureScore):
 
     References
     ----------
-    [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009,
-        Section 18.3.4–18.3.6 (esp. page 802).
-    [2] AM Carvalho, Scoring functions for learning Bayesian networks,
-        http://www.lx.it.pt/~asmc/pub/talks/09-TA/ta_pres.pdf
+    - :cite:p:`koller_friedman_2009` (Section 18.3.4--18.3.6, esp. page 802).
+    - :cite:p:`liao_2022`
     """
 
     def __init__(self, data, **kwargs):
-        super(AIC, self).__init__(data, **kwargs)
+        super().__init__(data, **kwargs)
 
     def local_score(self, variable, parents):
         """
@@ -874,28 +887,8 @@ class AIC(StructureScore):
             the data contains unsupported types (e.g., continuous values).
         """
 
-        var_states = self.state_names[variable]
-        var_cardinality = len(var_states)
-        parents = list(parents)
-        state_counts = self.state_counts(variable, parents, reindex=False)
-        num_parents_states = np.prod([len(self.state_names[var]) for var in parents])
-
-        counts = np.asarray(state_counts)
-        log_likelihoods = np.zeros_like(counts, dtype=float)
-
-        # Compute the log-counts
-        np.log(counts, out=log_likelihoods, where=counts > 0)
-
-        # Compute the log-conditional sample size
-        log_conditionals = np.sum(counts, axis=0, dtype=float)
-        np.log(log_conditionals, out=log_conditionals, where=log_conditionals > 0)
-
-        # Compute the log-likelihoods
-        log_likelihoods -= log_conditionals
-        log_likelihoods *= counts
-
-        score = np.sum(log_likelihoods)
-        score -= num_parents_states * (var_cardinality - 1)
+        ll, num_parents_states, var_cardinality = self._log_likelihood(variable=variable, parents=parents)
+        score = ll - num_parents_states * (var_cardinality - 1)
 
         return score
 
@@ -940,7 +933,7 @@ class LogLikelihoodGauss(StructureScore):
     """
 
     def __init__(self, data, **kwargs):
-        super(LogLikelihoodGauss, self).__init__(data, **kwargs)
+        super().__init__(data, **kwargs)
 
     def _log_likelihood(self, variable, parents):
         """
@@ -978,9 +971,7 @@ class LogLikelihoodGauss(StructureScore):
         if len(parents) == 0:
             glm_model = smf.glm(formula=f"{variable} ~ 1", data=self.data).fit()
         else:
-            glm_model = smf.glm(
-                formula=f"{variable} ~ {' + '.join(parents)}", data=self.data
-            ).fit()
+            glm_model = smf.glm(formula=f"{variable} ~ {' + '.join(parents)}", data=self.data).fit()
 
         return (glm_model.llf, glm_model.df_model)
 
@@ -1057,7 +1048,7 @@ class BICGauss(LogLikelihoodGauss):
     """
 
     def __init__(self, data, **kwargs):
-        super(BICGauss, self).__init__(data, **kwargs)
+        super().__init__(data, **kwargs)
 
     def local_score(self, variable, parents):
         """
@@ -1134,7 +1125,7 @@ class AICGauss(LogLikelihoodGauss):
     """
 
     def __init__(self, data, **kwargs):
-        super(AICGauss, self).__init__(data, **kwargs)
+        super().__init__(data, **kwargs)
 
     def local_score(self, variable, parents):
         """
@@ -1215,13 +1206,11 @@ class LogLikelihoodCondGauss(StructureScore):
 
     References
     ----------
-    [1] Andrews, B., Ramsey, J., & Cooper, G. F. (2018). Scoring Bayesian
-        Networks of Mixed Variables. International journal of data science and
-        analytics, 6(1), 3–18. https://doi.org/10.1007/s41060-017-0085-7
+    - :cite:p:`andrews_ramsey_cooper_2018`
     """
 
     def __init__(self, data, **kwargs):
-        super(LogLikelihoodCondGauss, self).__init__(data, **kwargs)
+        super().__init__(data, **kwargs)
 
     @staticmethod
     def _adjusted_cov(df):
@@ -1257,9 +1246,7 @@ class LogLikelihoodCondGauss(StructureScore):
         """
         # If a number of rows less than number of variables, return variance 1 with no covariance.
         if (df.shape[0] == 1) or (df.shape[0] < len(df.columns)):
-            return pd.DataFrame(
-                np.eye(len(df.columns)), index=df.columns, columns=df.columns
-            )
+            return pd.DataFrame(np.eye(len(df.columns)), index=df.columns, columns=df.columns)
 
         # If the matrix is not positive semidefinite, add a small error to make it.
         df_cov = df.cov()
@@ -1332,9 +1319,7 @@ class LogLikelihoodCondGauss(StructureScore):
             k = self._cat_parents_product(parents=parents) * (n_cont_parents + 2)
         else:
             if n_cont_parents == 0:
-                k = self._cat_parents_product(parents=parents) * (
-                    self.data[variable].nunique() - 1
-                )
+                k = self._cat_parents_product(parents=parents) * (self.data[variable].nunique() - 1)
             else:
                 k = (
                     self._cat_parents_product(parents=parents)
@@ -1379,9 +1364,7 @@ class LogLikelihoodCondGauss(StructureScore):
 
         References
         ----------
-        [1] Andrews, B., Ramsey, J., & Cooper, G. F. (2018). Scoring Bayesian
-            Networks of Mixed Variables. International journal of data science and
-            analytics, 6(1), 3–18. https://doi.org/10.1007/s41060-017-0085-7
+        - :cite:p:`andrews_ramsey_cooper_2018`
         """
         df = self.data.loc[:, [variable] + parents]
 
@@ -1428,9 +1411,7 @@ class LogLikelihoodCondGauss(StructureScore):
                     p_c1c2_d = multivariate_normal.pdf(
                         x=df_d.loc[:, [c1] + c2],
                         mean=df_d.loc[:, [c1] + c2].mean(axis=0),
-                        cov=LogLikelihoodCondGauss._adjusted_cov(
-                            df_d.loc[:, [c1] + c2]
-                        ),
+                        cov=LogLikelihoodCondGauss._adjusted_cov(df_d.loc[:, [c1] + c2]),
                         allow_singular=True,
                     )
                     if len(c2) == 0:
@@ -1441,9 +1422,7 @@ class LogLikelihoodCondGauss(StructureScore):
                             multivariate_normal.pdf(
                                 x=df_d.loc[:, c2],
                                 mean=df_d.loc[:, c2].mean(axis=0),
-                                cov=LogLikelihoodCondGauss._adjusted_cov(
-                                    df_d.loc[:, c2]
-                                ),
+                                cov=LogLikelihoodCondGauss._adjusted_cov(df_d.loc[:, c2]),
                                 allow_singular=True,
                             ),
                         )
@@ -1504,9 +1483,7 @@ class LogLikelihoodCondGauss(StructureScore):
                             multivariate_normal.pdf(
                                 x=df_d1d2.loc[:, c],
                                 mean=df_d2.loc[:, c].mean(axis=0),
-                                cov=LogLikelihoodCondGauss._adjusted_cov(
-                                    df_d2.loc[:, c]
-                                ),
+                                cov=LogLikelihoodCondGauss._adjusted_cov(df_d2.loc[:, c]),
                                 allow_singular=True,
                             ),
                         )
@@ -1515,9 +1492,7 @@ class LogLikelihoodCondGauss(StructureScore):
                     for var, value in zip(d2, d_states[1:]):
                         p_d2 = p_d2.loc[p_d2.index.get_level_values(var) == value]
 
-                    log_like += np.sum(
-                        np.log((p_c_d1d2 * p_d1d2) / (p_c_d2 * p_d2.values.ravel()[0]))
-                    )
+                    log_like += np.sum(np.log((p_c_d1d2 * p_d1d2) / (p_c_d2 * p_d2.values.ravel()[0])))
             return log_like
 
     def local_score(self, variable, parents):
@@ -1593,13 +1568,11 @@ class BICCondGauss(LogLikelihoodCondGauss):
 
     References
     ----------
-    [1] Andrews, B., Ramsey, J., & Cooper, G. F. (2018). Scoring Bayesian
-        Networks of Mixed Variables. International journal of data science and
-        analytics, 6(1), 3–18. https://doi.org/10.1007/s41060-017-0085-7
+    - :cite:p:`andrews_ramsey_cooper_2018`
     """
 
     def __init__(self, data, **kwargs):
-        super(BICCondGauss, self).__init__(data, **kwargs)
+        super().__init__(data, **kwargs)
 
     def local_score(self, variable, parents):
         """
@@ -1678,13 +1651,11 @@ class AICCondGauss(LogLikelihoodCondGauss):
 
     References
     ----------
-    [1] Andrews, B., Ramsey, J., & Cooper, G. F. (2018). Scoring Bayesian
-        Networks of Mixed Variables. International journal of data science and
-        analytics, 6(1), 3–18. https://doi.org/10.1007/s41060-017-0085-7
+    - :cite:p:`andrews_ramsey_cooper_2018`
     """
 
     def __init__(self, data, **kwargs):
-        super(AICCondGauss, self).__init__(data, **kwargs)
+        super().__init__(data, **kwargs)
 
     def local_score(self, variable, parents):
         """

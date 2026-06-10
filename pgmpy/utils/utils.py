@@ -1,5 +1,5 @@
 import gzip
-import json
+import warnings
 
 import pandas as pd
 
@@ -9,7 +9,7 @@ except ImportError:
     # For python 3.8 and lower
     from importlib_resources import files
 
-from pgmpy.global_vars import logger
+from pgmpy import logger
 
 
 def get_example_model(model: str):
@@ -38,9 +38,9 @@ def get_example_model(model: str):
 
     Example
     -------
-    >>> from pgmpy.data import get_example_model
-    >>> model = get_example_model(model="asia")
-    >>> model
+    >>> from pgmpy.utils import get_example_model
+    >>> model = get_example_model(model="asia")  # doctest: +SKIP
+    >>> model  # doctest: +SKIP
 
     Returns
     -------
@@ -48,6 +48,12 @@ def get_example_model(model: str):
       one of the model classes in pgmpy.models
                            depending on the type of dataset.
     """
+    warnings.warn(
+        """`get_example_model` is deprecated and will be removed in v1.3.0. Please use `pgmpy.example_models.load_model`
+        instead.""",
+        FutureWarning,
+        stacklevel=2,
+    )
     cat_models = {
         "asia",
         "cancer",
@@ -151,10 +157,7 @@ def get_example_model(model: str):
     }
 
     if model not in filenames:
-        raise ValueError(
-            f"Unknown model name: {model}. Please refer"
-            " documentation for valid model names."
-        )
+        raise ValueError(f"Unknown model name: {model}. Please refer documentation for valid model names.")
 
     path = filenames[model]
 
@@ -170,45 +173,10 @@ def get_example_model(model: str):
             return reader.get_model()
 
     elif model in cont_models:
-        from pgmpy.factors.continuous import LinearGaussianCPD
         from pgmpy.models import LinearGaussianBayesianNetwork
 
-        with open(files("pgmpy") / path, "r") as f:
-            data = json.load(f)
-
-        # Extract nodes, arcs, and CPDs from the JSON file
-        nodes = data.get("nodes")
-        arcs = data.get("arcs")
-        cpds_data = data.get("cpds")
-
-        model = LinearGaussianBayesianNetwork(arcs)
-        model.add_nodes_from(nodes)
-
-        # Create CPDs and add them to the model
-        cpds = []
-        for node, cpd_info in cpds_data.items():
-            coefficients = cpd_info["coefficients"]
-            std = cpd_info["variance"][0]
-            parents = cpd_info["parents"]
-
-            # Extract the intercept
-            intercept = coefficients["(Intercept)"][0]
-
-            # Extract the parent coefficients
-            parent_coeffs = [coefficients[parent][0] for parent in parents]
-
-            # Create LinearGaussianCPD for the node
-            cpd = LinearGaussianCPD(
-                variable=node,
-                beta=[intercept] + parent_coeffs,
-                std=std,
-                evidence=parents,
-            )
-            cpds.append(cpd)
-
-        # Add CPDs to the model
-        model.add_cpds(*cpds)
-        return model
+        full_path = str(files("pgmpy") / path)
+        return LinearGaussianBayesianNetwork.load(full_path)
 
     elif model in dag_models:
         from pgmpy.base import DAG
@@ -264,7 +232,7 @@ def discretize(data, cardinality, labels=dict(), method="rounding"):
     ...     },
     ... )
     >>> df_disc.head()
-        X    Y    Z
+          X    Y    Z
     0   mid  mid  mid
     1   mid  mid  low
     2   mid  mid  mid
@@ -286,9 +254,7 @@ def discretize(data, cardinality, labels=dict(), method="rounding"):
             )
     elif method == "quantile":
         for column in data.columns:
-            df_copy[column] = pd.qcut(
-                df_copy[column], q=cardinality[column], labels=labels.get(column)
-            )
+            df_copy[column] = pd.qcut(df_copy[column], q=cardinality[column], labels=labels.get(column))
 
     return df_copy
 
@@ -313,7 +279,7 @@ def llm_pairwise_orient(
     y: str
         The second variable's name
 
-    description: dict
+    descriptions: dict
         A dict of the form {variable: description}
           containing text description of the variables.
 
@@ -357,9 +323,7 @@ def llm_pairwise_orient(
         Return a single number (1 or 2) as your answer. I do not need the reasoning behind it.
         Do not add any formatting in the answer.
         """
-    response = completion(
-        model=llm_model, messages=[{"role": "user", "content": prompt}]
-    )
+    response = completion(model=llm_model, messages=[{"role": "user", "content": prompt}])
     response = response.choices[0].message.content
     response_txt = response.strip().lower().replace("*", "")
     if response_txt in ("a", "1"):
@@ -367,9 +331,7 @@ def llm_pairwise_orient(
     elif response_txt in ("b", "2"):
         return (y, x)
     else:
-        raise ValueError(
-            "Results from the LLM are unclear. Try calling the function again."
-        )
+        raise ValueError("Results from the LLM are unclear. Try calling the function again.")
 
 
 def manual_pairwise_orient(x, y):
@@ -407,9 +369,8 @@ def preprocess_data(df):
     """
     Tries to figure out the data type of each variable `df`.
 
-    Assigns one of (numerical, categorical unordered,
-      categorical ordered) datatypes
-    to each column in `df`. Also changes any object datatypes to categorical.
+    Assigns one of (numerical, categorical unordered, categorical ordered) datatypes to each column in `df`. Also
+    changes any object datatypes to categorical.
 
     Parameters
     ----------
@@ -418,8 +379,7 @@ def preprocess_data(df):
 
     Returns
     -------
-    (pd.DataFrame, dtypes): tuple of transformed dataframe and
-      a dictionary with inferred datatype of each column.
+    (pd.DataFrame, dtypes): tuple of transformed dataframe and a dictionary with inferred datatype of each column.
     """
     df = df.copy()
     dtypes = {}
@@ -429,7 +389,7 @@ def preprocess_data(df):
             dtypes[col] = "N"
         elif pd.api.types.is_numeric_dtype(df[col]):
             dtypes[col] = "N"
-        elif pd.api.types.is_object_dtype(df[col]):
+        elif pd.api.types.is_object_dtype(df[col]) or pd.api.types.is_string_dtype(df[col]):
             dtypes[col] = "C"
             df[col] = df[col].astype("category")
         elif isinstance(df[col].dtype, pd.CategoricalDtype):
@@ -444,8 +404,7 @@ def preprocess_data(df):
             )
 
     logger.info(
-        f" Datatype (N=numerical, C=Categorical Unordered,O=Categorical Ordered)"
-        f"inferred from data: \n {dtypes}"
+        f" Datatype (N=numerical, C=Categorical Unordered,O=Categorical Ordered)inferred from data: \n {dtypes}"
     )
     return (df, dtypes)
 
@@ -495,3 +454,146 @@ def get_dataset_type(data: pd.DataFrame) -> str:
         elif "C" in dtypes_set:
             return "discrete"
     return "mixed"
+
+
+def to_timeseries_format(df: pd.DataFrame, return_format: str = "pd-multiindex"):
+    """
+    Converts given wide format dataframe to different time series formats.
+
+    Takes a pandas dataframe with columns taken as ("Variable name", timestep) and rows represented as
+    traces ( "wide" format) and converts it to different format as specified in `return_format` argument.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input dataframe represented in the wide format (on rows we have samples, on columns, unsorted pairs of
+        ("Variable", "timestep")
+
+    return_format : {'pd-multiindex', 'numpy3d', 'pd-list', 'sorted'}
+        Controls the return representation. The options are:
+
+        "numpy3d" : returns a numpy 3D tensor, where first dimension represents trace, second dimension
+                    represents variable, third dimension represent timestep
+
+        "pd-multiindex" : returns the pandas multiindex DataFrame, with indexes of ("Variable name", "timestep")
+
+        "pd-list" : returns a list of pandas DataFrames. For every sample, a Dataframe is created, where rows
+                    contain timestep and columns represent variables
+
+        "sorted" : makes sure that the representation of [sample, ("variable", "timestep")] is sorted, which
+                   makes further processing easier
+
+    Returns
+    -------
+    np.ndarray or pd.DataFrame or list of pd.DataFrame:
+        Depends on `return_format` variable. `numpy3d` returns a numpy array (`np.ndarray`), while rest of the
+        representations return a pandas DataFrame.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> df = pd.DataFrame(
+    ...     [
+    ...         [1, 1, 0, 0, 0, 0, 0, 1, 0],
+    ...         [0, 2, 0, 1, 1, 1, 1, 1, 1],
+    ...     ],
+    ...     columns=[
+    ...         ("D", 0), ("G" , 0), ("I" , 0),
+    ...         ("D", 1), ("G", 1),
+    ...         ("D", 2), ("G", 2),
+    ...         ("I", 1), ("I", 2)
+    ...     ],
+    ... )
+
+    For input dataframe `df`, represented in the wide format
+
+      (D, 0) (G, 0) (I, 0) (D, 1) (G, 1) (D, 2) (G, 2) (I, 1) (I, 2)
+    0      1      1      0      0      0      0      0      1      0
+    1      0      2      0      1      1      1      1      1      1
+
+    >>> to_timeseries_format(df, return_format="numpy3d")
+    array([[[1, 0, 0],
+            [1, 0, 0],
+            [0, 1, 0]],
+    <BLANKLINE>
+           [[0, 1, 1],
+            [2, 1, 1],
+            [0, 1, 1]]])
+
+    >>> to_timeseries_format(df, return_format="pd-multiindex")  # doctest: +NORMALIZE_WHITESPACE
+    variable       D  G  I
+    instance time
+    0        0     1  1  0
+             1     0  0  1
+             2     0  0  0
+    1        0     0  2  0
+             1     1  1  1
+             2     1  1  1
+
+    >>> to_timeseries_format(df, return_format="pd-list")  # doctest: +SKIP
+    [variable  D  G  I
+     time
+     0         1  1  0
+     1         0  0  1
+     2         0  0  0,
+     variable  D  G  I
+     time
+     0         0  2  0
+     1         1  1  1
+     2         1  1  1]
+
+    >>> to_timeseries_format(df, return_format="sorted")  # doctest: +NORMALIZE_WHITESPACE
+    variable D     G     I
+    time     0 1 2 0 1 2 0 1 2
+    0        1 0 0 1 0 0 0 1 0
+    1        0 1 1 2 1 1 0 1 1
+    """
+    x = df.copy()
+
+    # normalize the columns to multiindex
+    if not isinstance(x.columns, pd.MultiIndex):
+        x.columns = pd.MultiIndex.from_tuples(x.columns, names=["variable", "time"])
+    else:
+        x.columns = x.columns.set_names(["variable", "time"])
+
+    unique_variables = x.columns.get_level_values("variable").unique().tolist()
+    timesteps = sorted(x.columns.get_level_values("time").unique().tolist())
+    N, D, T = len(x), len(unique_variables), len(timesteps)
+
+    # sort the columns, to make the ordering easier
+    x = x.sort_index(axis=1)
+
+    # cast to different representation
+    panel = x
+    return_format = return_format.lower()
+
+    if return_format == "numpy3d":
+        # no guarantee that there will be order, which complicates the 3D tensor creation
+        panel = panel.to_numpy()
+        panel = panel.reshape(N, D, T)
+
+    elif return_format == "pd-multiindex":
+        panel = x.stack("time")
+        panel.index.set_names(["instance", "time"], inplace=True)
+        panel = panel.sort_index()
+        panel.columns = panel.columns.get_level_values("variable")
+
+    elif return_format == "pd-list":
+        # return the list of dataframes, one per time series
+        panel = x.stack("time")
+        panel.index.set_names(["instance", "time"], inplace=True)
+        panel = panel.sort_index()
+        panel.columns = panel.columns.get_level_values("variable")
+
+        panel = [pd.DataFrame(panel.loc[i]) for i in range(df.shape[0])]
+
+    elif return_format == "sorted":
+        panel.sort_index(inplace=True, axis=1)
+
+    else:
+        raise ValueError(
+            f"Unknown representation: {return_format}. Supported `return_types`"
+            "are: numpy3d, pd-multiindex, pd-list, sorted"
+        )
+
+    return panel

@@ -1,32 +1,62 @@
-#!/usr/bin/env python3
+from __future__ import annotations
 
 import itertools
+from collections.abc import Hashable, Iterable, Sequence
 from os import PathLike
-from typing import Hashable, Iterable, Optional, Sequence
 
 import networkx as nx
 import numpy as np
 import pandas as pd
 
-from pgmpy.base import UndirectedGraph
-from pgmpy.global_vars import logger
+from pgmpy import logger
+from pgmpy.base._mixin_roles import _GraphRolesMixin
+from pgmpy.ci_tests import get_ci_test
 from pgmpy.independencies import Independencies
 from pgmpy.utils.parser import parse_dagitty, parse_lavaan
 
 
-class DAG(nx.DiGraph):
-    """
-    Base class for all Directed Graphical Models.
+class DAG(_GraphRolesMixin, nx.DiGraph):
+    """Directed Graphical Model, graph with vertex roles.
 
-    Each node in the graph can represent either a random variable, `Factor`,
+    Each node in the graph can represent either a random variable, ``Factor``,
     or a cluster of random variables. Edges in the graph represent the
     dependencies between these.
 
+    Abstract roles can be assigned to nodes in the graph, such as
+    exposures, outcomes, adjustment sets, etc. These roles are used, or created,
+    by algorithms that use the graph, such as causal inference,
+    causal discovery, causal prediction.
+
     Parameters
     ----------
-    data: input graph
-        Data to initialize graph. If data=None (default) an empty graph is
-        created. The data can be an edge list or any Networkx graph object.
+    ebunch : input graph, optional
+        Data to initialize graph. If None (default) an empty
+        graph is created.  The data can be any format that is supported
+        by the to_networkx_graph() function, currently including edge list,
+        dict of dicts, dict of lists, NetworkX graph, 2D NumPy array, SciPy
+        sparse matrix, or PyGraphviz graph.
+
+    latents : set of nodes, default=set()
+        A set of latent variables in the graph. These are not observed
+        variables but are used to represent unobserved confounding or
+        other latent structures.
+
+    exposures : set, default=set()
+        Set of exposure variables in the graph. These are the variables
+        that represent the treatment or intervention being studied in a
+        causal analysis. Default is an empty set.
+
+    outcomes : set, default=set()
+        Set of outcome variables in the graph. These are the variables
+        that represent the response or dependent variables being studied
+        in a causal analysis. Default is an empty set.
+
+    roles : dict, optional (default: None)
+        A dictionary mapping roles to node names.
+        The keys are roles, and the values are role names (strings or iterables of str).
+        If provided, this will automatically assign roles to the nodes in the graph.
+        Passing a key-value pair via ``roles`` is equivalent to calling
+        ``with_role(role, variables)`` for each key-value pair in the dictionary.
 
     Examples
     --------
@@ -35,18 +65,22 @@ class DAG(nx.DiGraph):
     >>> from pgmpy.base import DAG
     >>> G = DAG()
 
-    G can be grown in several ways:
+    Edges and vertices can be passed to the constructor as an edge list.
+
+    >>> G = DAG([("a", "b"), ("b", "c")])
+
+    G can be also grown incrementally, in several ways:
 
     **Nodes:**
 
     Add one node at a time:
 
-    >>> G.add_node(node="a")
+    >>> G.add_node("a")
 
     Add the nodes from any container (a list, set or tuple or the nodes
     from another graph).
 
-    >>> G.add_nodes_from(nodes=["a", "b"])
+    >>> G.add_nodes_from(["a", "b"])
 
     **Edges:**
 
@@ -72,15 +106,97 @@ class DAG(nx.DiGraph):
     True
     >>> len(G)  # number of nodes in graph
     3
+
+    Roles can be assigned to nodes in the graph at construction or using methods.
+
+    At construction:
+
+    >>> G = DAG(
+    ...     ebunch=[("U", "X"), ("X", "M"), ("M", "Y"), ("U", "Y")],
+    ...     roles={"exposures": "X", "outcomes": "Y"},
+    ... )
+
+    Roles can also be assigned after creation using the ``with_role`` method.
+
+    >>> G = G.with_role("adjustment", {"U", "M"})
+
+    Vertices of a specific role can be retrieved using the ``get_role`` method.
+
+    >>> G.get_role("exposures")
+    ['X']
+    >>> G.get_role("adjustment")
+    ['U', 'M']
+
+    **Latents:**
+        Latent variables can be managed using the `latents` parameter at
+        initialization or by assigning the "latents" role to nodes. The
+        `latents` parameter is a convenient shortcut for `roles={'latents': ...}`.
+
+    Create a graph with initial latent variables 'U' and 'V', and exposure 'X':
+
+    >>> from pgmpy.base import DAG
+    >>> G = DAG(
+    ...     ebunch=[("U", "X"), ("X", "M"), ("M", "Y"), ("U", "Y"), ("V", "M")],
+    ...     latents={"U", "V"},
+    ...     exposures={"X"},
+    ... )
+    >>> sorted(G.latents)
+    ['U', 'V']
+    >>> G.exposures
+    {'X'}
+
+    Add a new latent variable 'Z' using the role system:
+
+    >>> G.add_node("Z")
+    >>> G.with_role(role="latents", variables="Z", inplace=True)
+    >>> sorted(G.latents)
+    ['U', 'V', 'Z']
+
+    You can also check for latents using the `get_role` method:
+
+    >>> sorted(G.get_role(role="latents"))
+    ['U', 'V', 'Z']
+
+    Remove a latent variable from the role:
+
+    >>> G.without_role(role="latents", variables="V", inplace=True)
+    >>> sorted(G.latents)
+    ['U', 'Z']
     """
 
     def __init__(
         self,
-        ebunch: Optional[Iterable[tuple[Hashable, Hashable]]] = None,
-        latents: set[Hashable] = set(),
-    ):
-        super(DAG, self).__init__(ebunch)
-        self.latents = set(latents)
+        ebunch: Iterable[tuple[Hashable, Hashable]] | None = None,
+        latents: set[Hashable] | None = None,
+        exposures: set[Hashable] | None = None,
+        outcomes: set[Hashable] | None = None,
+        roles: dict[str, Iterable] | None = None,
+    ) -> None:
+        super().__init__(ebunch)
+
+        self._check_cycles()
+
+        self.latents = set(latents) if latents is not None else set()
+        self.exposures = set(exposures) if exposures is not None else set()
+        self.outcomes = set(outcomes) if outcomes is not None else set()
+
+        if roles is None:
+            roles = {}
+        elif not isinstance(roles, dict):
+            raise TypeError("Roles must be provided as a dictionary.")
+
+        # set the roles to the vertices as networkx attributes
+        for role, vars in roles.items():
+            self.with_role(role=role, variables=vars, inplace=True)
+
+    def _check_cycles(self):
+        """Checks if the graph has cycles.
+
+        Raises
+        ------
+        ValueError
+            If the graph has cycles.
+        """
         cycles = []
         try:
             cycles = list(nx.find_cycle(self))
@@ -95,9 +211,9 @@ class DAG(nx.DiGraph):
     @classmethod
     def from_lavaan(
         cls,
-        string: Optional[str] = None,
-        filename: Optional[str | PathLike] = None,
-    ) -> "DAG":
+        string: str | None = None,
+        filename: str | PathLike | None = None,
+    ) -> DAG:
         """
         Initializes a `DAG` instance using lavaan syntax.
 
@@ -114,7 +230,7 @@ class DAG(nx.DiGraph):
         --------
         """
         if filename:
-            with open(filename, "r") as f:
+            with open(filename) as f:
                 lavaan_str = f.readlines()
         elif string:
             lavaan_str = string.split("\n")
@@ -122,13 +238,11 @@ class DAG(nx.DiGraph):
             raise ValueError("Either `filename` or `string` need to be specified")
         ebunch, latents, err_corr, _ = parse_lavaan(lavaan_str)
         if err_corr:
-            logger.warning(
-                f"Residual correlations {err_corr} are ignored in DAG. Use the SEM class to keep them."
-            )
+            logger.warning(f"Residual correlations {err_corr} are ignored in DAG. Use the SEM class to keep them.")
         return cls(ebunch=ebunch, latents=latents)
 
     @classmethod
-    def from_dagitty(cls, string=None, filename=None) -> "DAG":
+    def from_dagitty(cls, string=None, filename=None) -> DAG:
         """
         Initializes a `DAG` instance using DAGitty syntax.
 
@@ -149,7 +263,8 @@ class DAG(nx.DiGraph):
         --------
         >>> from pgmpy.base import DAG
         >>> dag = DAG.from_dagitty(
-        ...     "dag{'carry matches' [latent] cancer [outcome] smoking -> 'carry matches' [beta=0.2] smoking -> cancer [beta=0.5] 'carry matches' -> cancer }"
+        ...     "dag{'carry matches' [latent] cancer [outcome] smoking -> 'carry matches' [beta=0.2] "
+        ...     "smoking -> cancer [beta=0.5] 'carry matches' -> cancer }"
         ... )
 
         Creating a Linear Gaussian Bayesian network from dagitty:
@@ -165,23 +280,23 @@ class DAG(nx.DiGraph):
         >>> from pgmpy.models import LinearGaussianBayesianNetwork as LGBN
         """
         if filename:
-            with open(filename, "r") as f:
+            with open(filename) as f:
                 dagitty_str = f.readlines()
         elif string:
             dagitty_str = string.split("\n")
         else:
             raise ValueError("Either `filename` or `string` need to be specified")
 
-        ebunch, latents, coefs, nodes = parse_dagitty(dagitty_str)
+        ebunch, roles, coefs, nodes = parse_dagitty(dagitty_str)
         if len(coefs) == 0:
-            dag = cls(ebunch=ebunch, latents=latents)
+            dag = cls(ebunch=ebunch, roles=roles)
             dag.add_nodes_from(nodes)
             return dag
         else:
             from pgmpy.factors.continuous import LinearGaussianCPD
             from pgmpy.models import LinearGaussianBayesianNetwork
 
-            lgbn = LinearGaussianBayesianNetwork(ebunch=ebunch, latents=latents)
+            lgbn = LinearGaussianBayesianNetwork(ebunch=ebunch, roles=roles)
             lgbn.add_nodes_from(nodes)
 
             std = 1
@@ -214,118 +329,7 @@ class DAG(nx.DiGraph):
 
             return lgbn
 
-    def add_node(
-        self, node: Hashable, weight: Optional[float] = None, latent: bool = False
-    ):
-        """
-        Adds a single node to the Graph.
-
-        Parameters
-        ----------
-        node: str, int, or any hashable python object.
-            The node to add to the graph.
-
-        weight: int, float
-            The weight of the node.
-
-        latent: boolean (default: False)
-            Specifies whether the variable is latent or not.
-
-        Examples
-        --------
-        >>> from pgmpy.base import DAG
-        >>> G = DAG()
-        >>> G.add_node(node="A")
-        >>> sorted(G.nodes())
-        ['A']
-
-        Adding a node with some weight.
-
-        >>> G.add_node(node="B", weight=0.3)
-
-        The weight of these nodes can be accessed as:
-
-        >>> G.nodes["B"]
-        {'weight': 0.3}
-        >>> G.nodes["A"]
-        {'weight': None}
-        """
-
-        # Check for networkx 2.0 syntax
-        if isinstance(node, tuple) and len(node) == 2 and isinstance(node[1], dict):
-            node, attrs = node
-            if attrs.get("weight", None) is not None:
-                attrs["weight"] = weight
-        else:
-            attrs = {"weight": weight}
-
-        if latent:
-            self.latents.add(node)
-
-        super(DAG, self).add_node(node, weight=weight)
-
-    def add_nodes_from(
-        self,
-        nodes: Iterable[Hashable],
-        weights: Optional[list[float] | tuple[float]] = None,
-        latent: Sequence[bool] | bool = False,
-    ):
-        """
-        Add multiple nodes to the Graph.
-
-        **The behviour of adding weights is different than in networkx.
-
-        Parameters
-        ----------
-        nodes: iterable container
-            A container (list, dict, set) of nodes (str, int or any hashable python
-            object).
-
-        weights: list, tuple (default=None)
-            A container of weights (int, float). The weight value at index i
-            is associated with the variable at index i.
-
-        latent: bool, list, tuple (default=False)
-            A container of boolean. The value at index i tells whether the
-            node at index i is latent or not.
-
-        Examples
-        --------
-        >>> from pgmpy.base import DAG
-        >>> G = DAG()
-        >>> G.add_nodes_from(nodes=["A", "B", "C"])
-        >>> G.nodes()
-        NodeView(('A', 'B', 'C'))
-
-        Adding nodes with weights:
-
-        >>> G.add_nodes_from(nodes=["D", "E"], weights=[0.3, 0.6])
-        >>> G.nodes["D"]
-        {'weight': 0.3}
-        >>> G.nodes["E"]
-        {'weight': 0.6}
-        >>> G.nodes["A"]
-        {'weight': None}
-        """
-        nodes = list(nodes)
-
-        if isinstance(latent, bool):
-            latent = [latent] * len(nodes)
-
-        if weights:
-            if len(nodes) != len(weights):
-                raise ValueError(
-                    "The number of elements in nodes and weights" "should be equal."
-                )
-            for index in range(len(nodes)):
-                self.add_node(
-                    node=nodes[index], weight=weights[index], latent=latent[index]
-                )
-        else:
-            for index in range(len(nodes)):
-                self.add_node(node=nodes[index], latent=latent[index])
-
-    def add_edge(self, u: Hashable, v: Hashable, weight: Optional[int | float] = None):
+    def add_edge(self, u: Hashable, v: Hashable, weight: int | float | None = None):
         """
         Add an edge between u and v.
 
@@ -343,7 +347,7 @@ class DAG(nx.DiGraph):
         --------
         >>> from pgmpy.base import DAG
         >>> G = DAG()
-        >>> G.add_nodes_from(nodes=["Alice", "Bob", "Charles"])
+        >>> G.add_nodes_from(["Alice", "Bob", "Charles"])
         >>> G.add_edge(u="Alice", v="Bob")
         >>> G.nodes()
         NodeView(('Alice', 'Bob', 'Charles'))
@@ -353,18 +357,18 @@ class DAG(nx.DiGraph):
         When the node is not already present in the graph:
 
         >>> G.add_edge(u="Alice", v="Ankur")
-        >>> G.nodes()
-        NodeView(('Alice', 'Ankur', 'Bob', 'Charles'))
-        >>> G.edges()
-        OutEdgeView([('Alice', 'Bob'), ('Alice', 'Ankur')])
+        >>> sorted(G.nodes())
+        ['Alice', 'Ankur', 'Bob', 'Charles']
+        >>> sorted(G.edges())
+        [('Alice', 'Ankur'), ('Alice', 'Bob')]
 
         Adding edges with weight:
 
         >>> G.add_edge("Ankur", "Maria", weight=0.1)
-        >>> G.edge["Ankur"]["Maria"]
+        >>> G.edges["Ankur", "Maria"]
         {'weight': 0.1}
         """
-        super(DAG, self).add_edge(u, v, weight=weight)
+        super().add_edge(u, v, weight=weight)
 
     def add_edges_from(
         self,
@@ -394,8 +398,8 @@ class DAG(nx.DiGraph):
         --------
         >>> from pgmpy.base import DAG
         >>> G = DAG()
-        >>> G.add_nodes_from(nodes=["Alice", "Bob", "Charles"])
-        >>> G.add_edges_from(ebunch=[("Alice", "Bob"), ("Bob", "Charles")])
+        >>> G.add_nodes_from(["Alice", "Bob", "Charles"])
+        >>> G.add_edges_from([("Alice", "Bob"), ("Bob", "Charles")])
         >>> G.nodes()
         NodeView(('Alice', 'Bob', 'Charles'))
         >>> G.edges()
@@ -403,20 +407,20 @@ class DAG(nx.DiGraph):
 
         When the node is not already in the model:
 
-        >>> G.add_edges_from(ebunch=[("Alice", "Ankur")])
-        >>> G.nodes()
-        NodeView(('Alice', 'Bob', 'Charles', 'Ankur'))
-        >>> G.edges()
-        OutEdgeView([('Alice', 'Bob'), ('Bob', 'Charles'), ('Alice', 'Ankur')])
+        >>> G.add_edges_from([("Alice", "Ankur")])
+        >>> sorted(G.nodes())
+        ['Alice', 'Ankur', 'Bob', 'Charles']
+        >>> sorted(G.edges())
+        [('Alice', 'Ankur'), ('Alice', 'Bob'), ('Bob', 'Charles')]
 
         Adding edges with weights:
 
         >>> G.add_edges_from(
         ...     [("Ankur", "Maria"), ("Maria", "Mason")], weights=[0.3, 0.5]
         ... )
-        >>> G.edge["Ankur"]["Maria"]
+        >>> G.edges["Ankur", "Maria"]
         {'weight': 0.3}
-        >>> G.edge["Maria"]["Mason"]
+        >>> G.edges["Maria", "Mason"]
         {'weight': 0.5}
 
         or
@@ -427,9 +431,7 @@ class DAG(nx.DiGraph):
 
         if weights:
             if len(ebunch) != len(weights):
-                raise ValueError(
-                    "The number of elements in ebunch and weights" "should be equal"
-                )
+                raise ValueError("The number of elements in ebunch and weightsshould be equal")
             for index in range(len(ebunch)):
                 self.add_edge(ebunch[index][0], ebunch[index][1], weight=weights[index])
         else:
@@ -472,17 +474,17 @@ class DAG(nx.DiGraph):
         >>> from pgmpy.base import DAG
         >>> G = DAG(ebunch=[("diff", "grade"), ("intel", "grade")])
         >>> moral_graph = G.moralize()
-        >>> moral_graph.edges()
-        EdgeView([('intel', 'grade'), ('intel', 'diff'), ('grade', 'diff')])
+        >>> sorted(list(moral_graph.edges()))
+        [('diff', 'grade'), ('diff', 'intel'), ('grade', 'intel')]
         """
+        from pgmpy.base import UndirectedGraph
+
         moral_graph = UndirectedGraph()
         moral_graph.add_nodes_from(self.nodes())
         moral_graph.add_edges_from(self.to_undirected().edges())
 
         for node in self.nodes():
-            moral_graph.add_edges_from(
-                itertools.combinations(self.get_parents(node), 2)
-            )
+            moral_graph.add_edges_from(itertools.combinations(self.get_parents(node), 2))
 
         return moral_graph
 
@@ -516,9 +518,7 @@ class DAG(nx.DiGraph):
         >>> graph.get_roots()
         ['A', 'E']
         """
-        return [
-            node for node, in_degree in dict(self.in_degree()).items() if in_degree == 0
-        ]
+        return [node for node, in_degree in dict(self.in_degree()).items() if in_degree == 0]
 
     def get_children(self, node: Hashable):
         """
@@ -548,9 +548,7 @@ class DAG(nx.DiGraph):
         """
         return list(self.successors(node))
 
-    def get_independencies(
-        self, latex=False, include_latents=False
-    ) -> Independencies | list[str]:
+    def get_independencies(self, latex=False, include_latents=False) -> Independencies | list[str]:
         """
         Computes independencies in the DAG, by checking minimal d-seperation.
 
@@ -571,18 +569,16 @@ class DAG(nx.DiGraph):
         >>> chain.get_independencies()
         (X \u27c2 Z | Y)
         """
-        nodes = set(self.nodes())
+        nodes = sorted(self.nodes())
         if not include_latents:
-            nodes -= self.latents
+            nodes = [node for node in nodes if node not in self.latents]
 
         independencies = Independencies()
         for x, y in itertools.combinations(nodes, 2):
             if not self.has_edge(x, y) and not self.has_edge(y, x):
-                minimal_separator = self.minimal_dseparator(
-                    start=x, end=y, include_latents=include_latents
-                )
+                minimal_separator = self.minimal_dseparator(start=x, end=y, include_latents=include_latents)
                 if minimal_separator is not None:
-                    independencies.add_assertions([x, y, minimal_separator])
+                    independencies.add_assertions([x, y, sorted(minimal_separator)])
 
         independencies = independencies.reduce()
 
@@ -591,9 +587,7 @@ class DAG(nx.DiGraph):
         else:
             return independencies.latex_string()
 
-    def local_independencies(
-        self, variables: list[Hashable] | tuple[Hashable, ...] | str
-    ):
+    def local_independencies(self, variables: list[Hashable] | tuple[Hashable, ...] | str):
         """
         Returns an instance of Independencies containing the local independencies
         of each of the variables.
@@ -621,22 +615,14 @@ class DAG(nx.DiGraph):
         """
 
         independencies = Independencies()
-        for variable in (
-            variables if isinstance(variables, (list, tuple)) else [variables]
-        ):
-            non_descendents = (
-                set(self.nodes())
-                - {variable}
-                - set(nx.dfs_preorder_nodes(self, variable))
-            )
+        for variable in sorted(variables) if isinstance(variables, (list, tuple)) else [variables]:
+            non_descendents = set(self.nodes()) - {variable} - set(nx.dfs_preorder_nodes(self, variable))
             parents = set(self.get_parents(variable))
             if non_descendents - parents:
-                independencies.add_assertions(
-                    [variable, non_descendents - parents, parents]
-                )
+                independencies.add_assertions([variable, sorted(non_descendents - parents), sorted(parents)])
         return independencies
 
-    def is_iequivalent(self, model: "DAG"):
+    def is_iequivalent(self, model: DAG):
         """
         Checks whether the given model is I-equivalent
 
@@ -664,9 +650,7 @@ class DAG(nx.DiGraph):
 
         """
         if not isinstance(model, DAG):
-            raise TypeError(
-                f"Model must be an instance of DAG. Got type: {type(model)}"
-            )
+            raise TypeError(f"Model must be an instance of DAG. Got type: {type(model)}")
 
         if (self.to_undirected().edges() == model.to_undirected().edges()) and (
             self.get_immoralities() == model.get_immoralities()
@@ -696,16 +680,15 @@ class DAG(nx.DiGraph):
         ...         ("grade", "letter"),
         ...     ]
         ... )
-        >>> student.get_immoralities()
-        {('diff', 'intel')}
+        >>> imm = student.get_immoralities()
+        >>> imm["grade"]
+        [('diff', 'intel')]
         """
         immoralities = dict()
         for node in self.nodes():
             parent_pairs = []
             for parents in itertools.combinations(self.predecessors(node), 2):
-                if not self.has_edge(parents[0], parents[1]) and not self.has_edge(
-                    parents[1], parents[0]
-                ):
+                if not self.has_edge(parents[0], parents[1]) and not self.has_edge(parents[1], parents[0]):
                     parent_pairs.append(tuple(sorted(parents)))
             immoralities[node] = parent_pairs
         return immoralities
@@ -714,7 +697,7 @@ class DAG(nx.DiGraph):
         self,
         start: Hashable,
         end: Hashable,
-        observed: Optional[Sequence[Hashable]] = None,
+        observed: Sequence[Hashable] | None = None,
         include_latents=False,
     ):
         """
@@ -751,19 +734,12 @@ class DAG(nx.DiGraph):
         >>> student.is_dconnected("grades", "sat")
         True
         """
-        if (
-            end
-            in self.active_trail_nodes(
-                variables=start, observed=observed, include_latents=include_latents
-            )[start]
-        ):
+        if end in self.active_trail_nodes(variables=start, observed=observed, include_latents=include_latents)[start]:
             return True
         else:
             return False
 
-    def minimal_dseparator(
-        self, start: Hashable, end: Hashable, include_latents=False
-    ) -> set[Hashable]:
+    def minimal_dseparator(self, start: Hashable, end: Hashable, include_latents=False) -> set[Hashable]:
         """
         Finds the minimal d-separating set for `start` and `end`.
 
@@ -786,18 +762,12 @@ class DAG(nx.DiGraph):
 
         References
         ----------
-        [1] Algorithm 4, Page 10: Tian, Jin, Azaria Paz, and
-          Judea Pearl. Finding minimal d-separators. Computer Science Department,
-            University of California, 1998.
+        - :cite:p:`tian_paz_pearl_1998` (Algorithm 4, page 10).
         """
         if (end in self.neighbors(start)) or (start in self.neighbors(end)):
-            raise ValueError(
-                "No possible separators because start and end are adjacent"
-            )
+            raise ValueError("No possible separators because start and end are adjacent")
         an_graph = self.get_ancestral_graph([start, end])
-        separator = set(
-            itertools.chain(self.predecessors(start), self.predecessors(end))
-        )
+        separator = set(itertools.chain(self.predecessors(start), self.predecessors(end)))
 
         if not include_latents:
             # If any of the parents were latents, take the latent's parent
@@ -860,8 +830,8 @@ class DAG(nx.DiGraph):
         ...         ("v", "q"),
         ...     ]
         ... )
-        >>> G.get_markov_blanket("y")
-        ['s', 'w', 'x', 'u', 'z', 'v']
+        >>> sorted(G.get_markov_blanket("y"))
+        ['s', 'u', 'v', 'w', 'x', 'z']
         """
         children = self.get_children(node)
         parents = self.get_parents(node)
@@ -875,9 +845,7 @@ class DAG(nx.DiGraph):
     def active_trail_nodes(
         self,
         variables: list[Hashable] | Hashable,
-        observed: Optional[
-            Hashable | list[Hashable] | tuple[Hashable, Hashable]
-        ] = None,
+        observed: Hashable | list[Hashable] | tuple[Hashable, Hashable] | None = None,
         include_latents=False,
     ) -> dict[Hashable, set[Hashable]]:
         """
@@ -902,28 +870,24 @@ class DAG(nx.DiGraph):
         >>> student = DAG()
         >>> student.add_nodes_from(["diff", "intel", "grades"])
         >>> student.add_edges_from([("diff", "grades"), ("intel", "grades")])
-        >>> student.active_trail_nodes("diff")
-        {'diff': {'diff', 'grades'}}
-        >>> student.active_trail_nodes(["diff", "intel"], observed="grades")
-        {'diff': {'diff', 'intel'}, 'intel': {'diff', 'intel'}}
+        >>> {k: sorted(v) for k, v in student.active_trail_nodes("diff").items()}
+        {'diff': ['diff', 'grades']}
+        >>> {k: sorted(v) for k, v in student.active_trail_nodes(["diff", "intel"], observed="grades").items()}
+        {'diff': ['diff', 'intel'], 'intel': ['diff', 'intel']}
 
         References
         ----------
-        Details of the algorithm can be found in 'Probabilistic Graphical Model
-        Principles and Techniques' - Koller and Friedman
-        Page 75 Algorithm 3.1
+        - :cite:p:`koller_friedman_2009` (page 75, Algorithm 3.1).
         """
         observed_list: list[Hashable] | tuple[Hashable, Hashable]
         if observed:
             if isinstance(observed, set):
                 observed = list(observed)
 
-            observed_list = (
-                observed if isinstance(observed, (list, tuple)) else [observed]
-            )
+            observed_list = observed if isinstance(observed, (list, tuple)) else [observed]
         else:
             observed_list = []
-        ancestors_list = self._get_ancestors_of(observed_list)
+        ancestors_list = self.get_ancestors(observed_list)
 
         # Direction of flow of information
         # up ->  from parent to child
@@ -960,9 +924,7 @@ class DAG(nx.DiGraph):
 
         return active_trails
 
-    def _get_ancestors_of(
-        self, nodes: str | tuple[Hashable, Hashable] | Iterable[Hashable]
-    ) -> set[Hashable]:
+    def get_ancestors(self, nodes: str | tuple[Hashable, Hashable] | Iterable[Hashable]) -> set[Hashable]:
         """
         Returns a dictionary of all ancestors of all the observed nodes including the
         node itself.
@@ -976,10 +938,10 @@ class DAG(nx.DiGraph):
         --------
         >>> from pgmpy.base import DAG
         >>> model = DAG([("D", "G"), ("I", "G"), ("G", "L"), ("I", "L")])
-        >>> model._get_ancestors_of("G")
-        {'D', 'G', 'I'}
-        >>> model._get_ancestors_of(["G", "I"])
-        {'D', 'G', 'I'}
+        >>> sorted(model.get_ancestors("G"))
+        ['D', 'G', 'I']
+        >>> sorted(model.get_ancestors(["G", "I"]))
+        ['D', 'G', 'I']
         """
         if not isinstance(nodes, (list, tuple)):
             nodes = [nodes]
@@ -1011,12 +973,11 @@ class DAG(nx.DiGraph):
         >>> dag = DAG([("A", "B"), ("B", "C"), ("C", "D")])
         >>> pdag = dag.to_pdag()
         >>> pdag.directed_edges
-        {('A', 'B'), ('B', 'C'), ('C', 'D')}
+        set()
 
         References
         ----------
-        [1] Chickering, David Maxwell. "Learning equivalence classes of Bayesian-network structures."
-          Journal of machine learning research 2.Feb (2002): 445-498. Figure 4 and 5.
+        - :cite:p:`chickering_2002a` (Figures 4 and 5).
         """
         # Perform a topological sort on the nodes
         topo_order = list(nx.topological_sort(self))
@@ -1046,22 +1007,16 @@ class DAG(nx.DiGraph):
             unordered_edges.remove((x, y))
 
         # Label every edge as "unknown"
-        edge_labels = {edge: "unknown" for edge in self.edges()}
+        edge_labels = dict.fromkeys(self.edges(), "unknown")
 
         # While there are edges labeled "unknown"
         while any(label == "unknown" for label in edge_labels.values()):
             # Let x -> y be the lowest ordered edge that is labeled "unknown"
-            unknown_edges = [
-                (edge, edge_order[edge])
-                for edge, label in edge_labels.items()
-                if label == "unknown"
-            ]
+            unknown_edges = [(edge, edge_order[edge]) for edge, label in edge_labels.items() if label == "unknown"]
             x, y = min(unknown_edges, key=lambda x: x[1])[0]
 
             # Check compelled parents
-            compelled_parents = [
-                w for w in self.get_parents(x) if edge_labels.get((w, x)) == "compelled"
-            ]
+            compelled_parents = [w for w in self.get_parents(x) if edge_labels.get((w, x)) == "compelled"]
             for w in compelled_parents:
                 if not self.has_edge(w, y):
                     # Label x -> y and every edge incident into y with "compelled"
@@ -1096,17 +1051,18 @@ class DAG(nx.DiGraph):
                             edge_labels[(z, y)] = "reversible"
 
         # Create PDAG with directed and undirected edges
-        directed_edges = [
-            edge for edge, label in edge_labels.items() if label == "compelled"
-        ]
-        undirected_edges = [
-            edge for edge, label in edge_labels.items() if label == "reversible"
-        ]
-        return PDAG(
+        directed_edges = [edge for edge, label in edge_labels.items() if label == "compelled"]
+        undirected_edges = [edge for edge, label in edge_labels.items() if label == "reversible"]
+
+        from pgmpy.base import PDAG
+
+        pdag = PDAG(
             directed_ebunch=directed_edges,
             undirected_ebunch=undirected_edges,
             latents=self.latents,
         )
+        pdag.add_nodes_from(self.nodes())
+        return pdag
 
     def do(
         self,
@@ -1143,12 +1099,12 @@ class DAG(nx.DiGraph):
         >>> # Applying the do-operator will return a new DAG with the desired structure.
         >>> graph_do_A = graph.do("A")
         >>> # Which we can verify is missing the edges we would expect.
-        >>> graph_do_A.edges
-        OutEdgeView([('A', 'B'), ('A', 'Y')])
+        >>> sorted(graph_do_A.edges)
+        [('A', 'B'), ('A', 'Y')]
 
         References
         ----------
-        Causality: Models, Reasoning, and Inference, Judea Pearl (2000). p.70.
+        - :cite:p:`pearl_2009` (page 70).
         """
         dag = self if inplace else self.copy()
 
@@ -1158,9 +1114,7 @@ class DAG(nx.DiGraph):
             nodes = list(nodes)
 
         if not set(nodes).issubset(set(self.nodes())):
-            raise ValueError(
-                f"Nodes not found in the model: {set(nodes) - set(self.nodes())}"
-            )
+            raise ValueError(f"Nodes not found in the model: {set(nodes) - set(self.nodes())}")
 
         for node in nodes:
             parents = list(dag.predecessors(node))
@@ -1191,7 +1145,7 @@ class DAG(nx.DiGraph):
         >>> anc_dag.edges()
         OutEdgeView([('D', 'A'), ('D', 'B')])
         """
-        return self.subgraph(nodes=self._get_ancestors_of(nodes=nodes))
+        return self.subgraph(nodes=self.get_ancestors(nodes=nodes))
 
     def to_daft(
         self,
@@ -1247,18 +1201,22 @@ class DAG(nx.DiGraph):
         --------
         >>> from pgmpy.base import DAG
         >>> dag = DAG([("a", "b"), ("b", "c"), ("d", "c")])
-        >>> dag.to_daft(node_pos={"a": (0, 0), "b": (1, 0), "c": (2, 0), "d": (1, 1)})
-        <daft.PGM at 0x7fc756e936d0>
-        >>> dag.to_daft(node_pos="circular")
-        <daft.PGM at 0x7f9bb48c5eb0>
-        >>> dag.to_daft(node_pos="circular", pgm_params={"observed_style": "inner"})
-        <daft.PGM at 0x7f9bb48b0bb0>
+        >>> dag.to_daft(
+        ...     node_pos={"a": (0, 0), "b": (1, 0), "c": (2, 0), "d": (1, 1)}
+        ... )  # doctest: +SKIP
+        <daft.PGM at ...>
+        >>> dag.to_daft(node_pos="circular")  # doctest: +SKIP
+        <daft.PGM at ...>
+        >>> dag.to_daft(
+        ...     node_pos="circular", pgm_params={"observed_style": "inner"}
+        ... )  # doctest: +SKIP
+        <daft.PGM at ...>
         >>> dag.to_daft(
         ...     node_pos="circular",
         ...     edge_params={("a", "b"): {"label": 2}},
         ...     node_params={"a": {"shape": "rectangle"}},
-        ... )
-        <daft.PGM at 0x7f9bb48b0bb0>
+        ...     )  # doctest: +SKIP
+        <daft.PGM at ...>
         """
         try:
             from daft import PGM
@@ -1294,10 +1252,7 @@ class DAG(nx.DiGraph):
                 "spiral": nx.spiral_layout,
             }
             if node_pos not in supported_layouts:
-                raise ValueError(
-                    "Unknown node_pos argument. Please refer docstring "
-                    "for accepted values"
-                )
+                raise ValueError("Unknown node_pos argument. Please refer docstring for accepted values")
             else:
                 node_pos = supported_layouts[node_pos](self)
         elif isinstance(node_pos, dict):
@@ -1305,16 +1260,12 @@ class DAG(nx.DiGraph):
                 if node not in node_pos:
                     raise ValueError(f"No position specified for {node}.")
         else:
-            raise ValueError(
-                "Argument node_pos not valid. Please refer to the docstring."
-            )
+            raise ValueError("Argument node_pos not valid. Please refer to the docstring.")
 
         daft_pgm = PGM(**pgm_params)
         for node in self.nodes():
-            try:
-                extra_params = node_params[node]
-            except KeyError:
-                extra_params = dict()
+            observed = node in self.observed
+            extra_params = node_params.get(node, dict())
 
             if latex:
                 daft_pgm.add_node(
@@ -1322,7 +1273,7 @@ class DAG(nx.DiGraph):
                     rf"${node}$",
                     node_pos[node][0],
                     node_pos[node][1],
-                    observed=True,
+                    observed=observed,
                     **extra_params,
                 )
             else:
@@ -1331,7 +1282,7 @@ class DAG(nx.DiGraph):
                     f"{node}",
                     node_pos[node][0],
                     node_pos[node][1],
-                    observed=True,
+                    observed=observed,
                     **extra_params,
                 )
 
@@ -1355,27 +1306,34 @@ class DAG(nx.DiGraph):
     @staticmethod
     def get_random(
         n_nodes=5,
-        edge_prob=0.5,
-        node_names: Optional[list[Hashable]] = None,
+        n_edges: int | None = None,
+        edge_prob: float | None = None,
+        node_names: list[Hashable] | None = None,
         latents=False,
-        seed: Optional[int] = None,
-    ) -> "DAG":
+        seed: int | None = None,
+    ) -> DAG:
         """
-        Returns a randomly generated DAG with `n_nodes` number of nodes with
-        edge probability being `edge_prob`.
+        Returns a randomly generated DAG with `n_nodes` number of nodes.
+
+        If `n_edges` is specified, generates a DAG with exactly that many edges.
+        If `n_edges` is None, edges are added randomly with probability `edge_prob`.
+        If both `n_edges` and `edge_prob` are None, uses default `edge_prob=0.5`.
 
         Parameters
         ----------
         n_nodes: int
             The number of nodes in the randomly generated DAG.
 
-        edge_prob: float
+        n_edges: int or None (default: None)
+            The number of edges in the randomly generated DAG.
+
+        edge_prob: float or None
             The probability of edge between any two nodes in the topologically
             sorted DAG.
 
         node_names: list (default: None)
             A list of variables names to use in the random graph.
-            If None, the node names are integer values starting from 0.
+            If None, the node names are "X_0", "X_1", ..., "X_{n-1}".
 
         latents: bool (default: False)
             If True, includes latent variables in the generated DAG.
@@ -1388,37 +1346,73 @@ class DAG(nx.DiGraph):
         Random DAG: pgmpy.base.DAG
             The randomly generated DAG.
 
+        Raises
+        ------
+        ValueError
+            If `len(node_names) != n_nodes`.
+            If `n_edges` is outside `[0, n_nodes * (n_nodes - 1) // 2]`.
+            If both `n_edges` and `edge_prob` are specified.
+
         Examples
         --------
         >>> from pgmpy.base import DAG
-        >>> random_dag = DAG.get_random(n_nodes=10, edge_prob=0.3)
-        >>> random_dag.nodes()
-        NodeView((0, 1, 2, 3, 4, 5, 6, 7, 8, 9))
-        >>> random_dag.edges()
-        OutEdgeView([(0, 6), (1, 6), (1, 7), (7, 9), (2, 5), (2, 7), (2, 8), (5, 9), (3, 7)])
+        >>> random_dag = DAG.get_random(n_nodes=10, edge_prob=0.3, seed=42)
+        >>> sorted(random_dag.nodes())
+        ['X_0', 'X_1', 'X_2', 'X_3', 'X_4', 'X_5', 'X_6', 'X_7', 'X_8', 'X_9']
+        >>> sorted(random_dag.edges())  # doctest: +NORMALIZE_WHITESPACE
+        [('X_0', 'X_2'), ('X_0', 'X_3'), ('X_2', 'X_9'), ('X_3', 'X_1'),
+         ('X_3', 'X_4'), ('X_3', 'X_8'), ('X_5', 'X_2'), ('X_5', 'X_6'),
+         ('X_5', 'X_9'), ('X_6', 'X_0'), ('X_6', 'X_1'), ('X_6', 'X_3'),
+         ('X_6', 'X_4'), ('X_6', 'X_9'), ('X_7', 'X_1'), ('X_7', 'X_2'),
+         ('X_7', 'X_4'), ('X_7', 'X_8')]
+
+        >>> dag = DAG.get_random(n_nodes=5, n_edges=6, seed=42)
+        >>> dag.number_of_edges()
+        6
         """
-        # Step 1: Generate a matrix of 0 and 1. Prob of choosing 1 = edge_prob
         gen = np.random.default_rng(seed=seed)
-        adj_mat = gen.choice(
-            [0, 1], size=(n_nodes, n_nodes), p=[1 - edge_prob, edge_prob]
-        )
 
-        # Step 2: Use the upper triangular part of the matrix as adjacency.
         if node_names is None:
-            node_names = list([f"X_{i}" for i in range(n_nodes)])
+            node_names = [f"X_{i}" for i in range(n_nodes)]
 
-        adj_pd = pd.DataFrame(
-            np.triu(adj_mat, k=1), columns=node_names, index=node_names
-        )
+        if len(node_names) != n_nodes:
+            raise ValueError(f"Length of node_names ({len(node_names)}) must be equal to n_nodes ({n_nodes}).")
+
+        if n_edges is not None and edge_prob is not None:
+            raise ValueError("Only one of n_edges or edge_prob can be specified.")
+
+        if n_edges is None and edge_prob is None:
+            edge_prob = 0.5
+            logger.info("Using default edge_prob=0.5 since neither n_edges nor edge_prob were specified.")
+
+        shuffled_names = list(node_names)
+        gen.shuffle(shuffled_names)
+        if n_edges is not None:
+            max_edges = n_nodes * (n_nodes - 1) // 2
+            if n_edges < 0 or n_edges > max_edges:
+                raise ValueError(f"Invalid n_edges={n_edges}. For n_nodes={n_nodes}, valid range is [0, {max_edges}].")
+            # Apply a random node permutation to avoid label-order bias
+            perm = gen.permutation(n_nodes)
+            upper_i, upper_j = np.triu_indices(n_nodes, k=1)
+            chosen = gen.choice(len(upper_i), size=n_edges, replace=False)
+
+            adj_mat = np.zeros((n_nodes, n_nodes), dtype=int)
+            adj_mat[perm[upper_i[chosen]], perm[upper_j[chosen]]] = 1
+            adj_pd = pd.DataFrame(adj_mat, columns=shuffled_names, index=shuffled_names)
+
+        else:
+            # Step 1: Generate a matrix of 0 and 1. Prob of choosing 1 = edge_prob
+            adj_mat = gen.choice([0, 1], size=(n_nodes, n_nodes), p=[1 - edge_prob, edge_prob])
+            # Step 2: Use the upper triangular part of the matrix as adjacency.
+            adj_pd = pd.DataFrame(np.triu(adj_mat, k=1), columns=shuffled_names, index=shuffled_names)
+
         nx_dag = nx.from_pandas_adjacency(adj_pd, create_using=nx.DiGraph)
-
         dag = DAG(nx_dag)
+
         dag.add_nodes_from(node_names)
 
         if latents:
-            dag.latents = set(
-                gen.choice(dag.nodes(), gen.integers(low=0, high=len(dag.nodes())))
-            )
+            dag.latents = set(gen.choice(dag.nodes(), gen.integers(low=0, high=len(dag.nodes()))))
         return dag
 
     def to_graphviz(self, plot_edge_strength=False):
@@ -1439,11 +1433,10 @@ class DAG(nx.DiGraph):
 
         Examples
         --------
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model("alarm")
-        >>> model.to_graphviz()
-        <AGraph <Swig Object of type 'Agraph_t *' at 0x7fdea4cde040>>
-        >>> model.draw("model.png", prog="neato")
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/alarm")
+        >>> model.to_graphviz()  # doctest: +ELLIPSIS
+        <AGraph b'unknown' <Swig Object of type 'Agraph_t *' at 0x...>
         """
         if plot_edge_strength:
             missing_strengths = []
@@ -1467,77 +1460,131 @@ class DAG(nx.DiGraph):
 
         return agraph
 
-    def fit(self, data, estimator=None, state_names=[], n_jobs=1, **kwargs) -> "DAG":
+    def to_lavaan(self) -> str:
         """
-        Estimates the CPD for each variable based on a given data set.
+        Convert the DAG to lavaan syntax representation.
 
-        Parameters
-        ----------
-        data: pandas DataFrame object
-            DataFrame object with column names identical to the variable names of the network.
-            (If some values in the data are missing the data cells should be set to `numpy.nan`.
-            Note that pandas converts each column containing `numpy.nan`s to dtype `float`.)
-
-        estimator: Estimator class
-            One of:
-            - MaximumLikelihoodEstimator (default)
-            - BayesianEstimator: In this case, pass 'prior_type' and either 'pseudo_counts'
-            or 'equivalent_sample_size' as additional keyword arguments.
-            See `BayesianEstimator.get_parameters()` for usage.
-            - ExpectationMaximization
-
-        state_names: dict (optional)
-            A dict indicating, for each variable, the discrete set of states
-            that the variable can take. If unspecified, the observed values
-            in the data set are taken to be the only possible states.
-
-        n_jobs: int (default: 1)
-            Number of threads/processes to use for estimation. Using n_jobs > 1
-            for small models or datasets might be slower.
+        The lavaan syntax represents structural equations where each line
+        shows a dependent variable regressed on its parents using the ~ operator.
+        Isolated nodes (nodes with no parents) are not included in the output.
 
         Returns
         -------
-        Fitted Model: DiscreteBayesianNetwork
-            Returns a DiscreteBayesianNetwork object with learned CPDs.
-            The DAG structure is preserved, and parameters (CPDs) are added.
-            This allows the DAG to represent both the structure and the parameters of a Bayesian Network.
+        str
+            String representation of the DAG in lavaan syntax format.
+            Each line represents a regression equation where the dependent
+            variable is regressed on its parents.
 
         Examples
         --------
-        >>> import pandas as pd
-        >>> from pgmpy.models import DiscreteBayesianNetwork
         >>> from pgmpy.base import DAG
-        >>> data = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
-        >>> model = DAG([("A", "C"), ("B", "C")])
-        >>> fitted_model = model.fit(data)
-        >>> fitted_model.get_cpds()
-        [<TabularCPD representing P(A:2) at 0x17945372c30>,
-        <TabularCPD representing P(B:2) at 0x17945a19760>,
-        <TabularCPD representing P(C:2 | A:2, B:2) at 0x17944f42690>]
+        >>> dag = DAG([("X", "Y"), ("Z", "Y")])
+        >>> print(dag.to_lavaan())
+        Y ~ X + Z
+
+        >>> dag2 = DAG([("A", "B"), ("B", "C")])
+        >>> print(dag2.to_lavaan())
+        B ~ A
+        C ~ B
+
+        >>> # Empty DAG returns empty string
+        >>> empty_dag = DAG()
+        >>> empty_dag.to_lavaan()
+        ''
+
+        Notes
+        -----
+        - Node names are converted to string representations using str().
+        - If node names contain spaces or special characters, they will be used as-is.
+        - Users should ensure node names are valid in R/lavaan context if needed.
+
+        References
+        ----------
+        lavaan syntax: http://lavaan.ugent.be/tutorial/syntax1.html
         """
-        from pgmpy.estimators import BaseEstimator, MaximumLikelihoodEstimator
-        from pgmpy.models import DiscreteBayesianNetwork
+        lavaan_statements = []
 
-        if isinstance(self, DiscreteBayesianNetwork):
-            bn = self
+        # Create regression equations for nodes with parents in the format "Y ~ X + Z"
+        for node in sorted(self.nodes(), key=str):
+            parents = self.get_parents(node)
+            if parents:
+                node_str = str(node)
+                parent_strs = sorted([str(parent) for parent in parents], key=str)
+                parents_str = " + ".join(parent_strs)
+                lavaan_statements.append(f"{node_str} ~ {parents_str}")
+
+        return "\n".join(lavaan_statements)
+
+    def to_dagitty(self) -> str:
+        """
+        Convert the DAG to dagitty syntax representation.
+
+        The dagitty syntax represents directed acyclic graphs using
+        the dag { statements } format with -> for directed edges.
+        Isolated nodes (nodes with no edges) are included as standalone nodes.
+
+        Returns
+        -------
+        str
+            String representation of the DAG in dagitty syntax format.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> dag = DAG([("X", "Y"), ("Z", "Y")])
+        >>> print(dag.to_dagitty())
+        dag {
+        X -> Y
+        Z -> Y
+        }
+
+        >>> dag2 = DAG([("A", "B"), ("B", "C")])
+        >>> print(dag2.to_dagitty())
+        dag {
+        A -> B
+        B -> C
+        }
+
+        >>> # DAG with isolated node
+        >>> dag3 = DAG()
+        >>> dag3.add_nodes_from(["A", "B"])
+        >>> dag3.add_edge("A", "B")
+        >>> dag3.add_node("C")  # Isolated node
+        >>> print(dag3.to_dagitty())
+        dag {
+        A -> B
+        C
+        }
+
+        Notes
+        -----
+        - Node names are converted to string representations using str().
+        - If node names contain spaces or special characters, they will be used as-is.
+        - Users should ensure node names are valid in R/dagitty context if needed.
+
+        References
+        ----------
+        dagitty syntax: https://cran.r-project.org/web/packages/dagitty/dagitty.pdf
+        """
+        statements = []
+
+        # Create edge statements in "X -> Y" format and add isolated nodes
+        if self.edges():
+            edge_statements = []
+            for parent, child in sorted(self.edges(), key=lambda x: (str(x[0]), str(x[1]))):
+                parent_str = str(parent)
+                child_str = str(child)
+                edge_statements.append(f"{parent_str} -> {child_str}")
+            statements.extend(edge_statements)
+
+        for node in sorted(nx.isolates(self), key=str):
+            statements.append(str(node))
+
+        content = "\n".join(statements)
+        if content:
+            return f"dag {{\n{content}\n}}"
         else:
-            bn = DiscreteBayesianNetwork(self.edges())
-            bn.add_nodes_from(self.nodes())
-
-        if estimator is None:
-            estimator = MaximumLikelihoodEstimator
-        else:
-            if not issubclass(estimator, BaseEstimator):
-                raise TypeError("Estimator object should be a valid pgmpy estimator.")
-
-        _estimator = estimator(
-            bn,
-            data,
-            state_names=state_names,
-        )
-        cpds_list = _estimator.get_parameters(n_jobs=n_jobs, **kwargs)
-        bn.add_cpds(*cpds_list)
-        return bn
+            return "dag {\n}"
 
     def _variable_name_contains_non_string(self):
         """
@@ -1549,11 +1596,41 @@ class DAG(nx.DiGraph):
         return False
 
     def copy(self):
-        dag = DAG(ebunch=self.edges(), latents=self.latents)
+        """Returns a copy of the DAG object."""
+        dag = DAG(ebunch=self.edges())
         dag.add_nodes_from(self.nodes())
+
+        for role, vars in self.get_role_dict().items():
+            dag.with_role(role=role, variables=vars, inplace=True)
+
         return dag
 
-    def edge_strength(self, data, edges=None):
+    def __eq__(self, other):
+        """
+        Checks if two DAGs are equal. Two DAGs are considered equal if they
+        have the same nodes, edges, latent variables, and variable roles.
+
+        Parameters
+        ----------
+        other: DAG object
+            The other DAG to compare with.
+
+        Returns
+        -------
+        bool
+            True if the DAGs are equal, False otherwise.
+        """
+        if not isinstance(other, DAG):
+            return False
+
+        return (
+            set(self.nodes()) == set(other.nodes())
+            and set(self.edges()) == set(other.edges())
+            and self.latents == other.latents
+            and self.get_role_dict() == other.get_role_dict()
+        )
+
+    def edge_strength(self, data, edges=None, ci_test=None):
         """
         Computes the strength of each edge in `edges`. The strength is bounded
         between 0 and 1, with 1 signifying strong effect.
@@ -1582,6 +1659,9 @@ class DAG(nx.DiGraph):
             - Tuple (X, Y): Compute for edge X → Y.
             - List of tuples: Compute for selected edges.
 
+        ci_test : str or instance of BaseCITest
+            The conditional independence test whose effect size to use as edge strength
+
         Returns
         -------
         dict
@@ -1590,6 +1670,7 @@ class DAG(nx.DiGraph):
         Examples
         --------
         >>> from pgmpy.models import LinearGaussianBayesianNetwork as LGBN
+        >>> from pgmpy.factors.continuous import LinearGaussianCPD
         >>> # Create a linear Gaussian Bayesian network
         >>> linear_model = LGBN([("X", "Y"), ("Z", "Y")])
         >>> # Create CPDs with specific beta values
@@ -1601,21 +1682,23 @@ class DAG(nx.DiGraph):
         >>> # Add CPDs to the model
         >>> linear_model.add_cpds(x_cpd, y_cpd, z_cpd)
         >>> # Simulate data from the model
+        >>> import numpy as np
+        >>> np.random.seed(42)
         >>> data = linear_model.simulate(n_samples=int(1e4))
         >>> # Create DAG and compute edge strengths
         >>> dag = DAG([("X", "Y"), ("Z", "Y")])
-        >>> strengths = dag.edge_strength(data)
-        {('X', 'Y'): np.float64(0.14587166611282304),
-         ('Z', 'Y'): np.float64(0.25683780900125613)}
+        >>> strengths = dag.edge_strength(data)  # doctest: +SKIP
+        >>> sorted(strengths.items())  # doctest: +SKIP
+        [(('X', 'Y'), 0.4...), (('Z', 'Y'), 0.6...)]
+        >>> strengths[("X", "Y")]  # doctest: +SKIP
+        np.float64(0.1454172599124535)
+        >>> strengths[("Z", "Y")]  # doctest: +SKIP
+        np.float64(0.26003467856256834)
 
         References
         ----------
-        [1] Ankan, Ankur, and Johannes Textor. "A simple unified approach to testing high-dimensional
-        conditional independences for categorical and ordinal data." Proceedings of the AAAI Conference
-        on Artificial Intelligence.
+        - :cite:p:`ankan_textor_2023`
         """
-
-        from pgmpy.estimators.CITests import pillai_trace
 
         # If edges is None, compute for all edges in the DAG
         if edges is None:
@@ -1624,14 +1707,14 @@ class DAG(nx.DiGraph):
         elif isinstance(edges, tuple) and len(edges) == 2:
             edges_to_compute = [edges]
         # If edges is a list of edge tuples
-        elif isinstance(edges, list) and all(
-            isinstance(edge, tuple) and len(edge) == 2 for edge in edges
-        ):
+        elif isinstance(edges, list) and all(isinstance(edge, tuple) and len(edge) == 2 for edge in edges):
             edges_to_compute = edges
         else:
             raise ValueError(
                 "edges parameter must be either None, a 2-tuple (X, Y), or a list of 2-tuples [(X1, Y1), (X2, Y2), ...]"
             )
+
+        ci_test = get_ci_test(test=ci_test, data=data)
 
         strengths = {}
         skipped_edges = []
@@ -1643,11 +1726,7 @@ class DAG(nx.DiGraph):
             pa_Y = self.get_parents(y)
 
             # Check if either x or y is a latent node
-            if (
-                x in self.latents
-                or y in self.latents
-                or any(parent in self.latents for parent in pa_Y)
-            ):
+            if x in self.latents or y in self.latents or any(parent in self.latents for parent in pa_Y):
                 skipped_edges.append(edge)
                 continue
 
@@ -1655,15 +1734,13 @@ class DAG(nx.DiGraph):
             conditioning_set = set(pa_Y) - {x, y}
 
             # Run CI test and get effect size
-            effect_size, _ = pillai_trace(
-                X=x, Y=y, Z=list(conditioning_set), data=data, boolean=False
-            )
+            ci_test.run_test(X=x, Y=y, Z=tuple(conditioning_set))
 
             # Store the edge strength
-            strengths[edge] = effect_size
+            strengths[edge] = ci_test.effect_size_
 
             # store the values in the graph as well
-            self.edges[edge]["strength"] = effect_size
+            self.edges[edge]["strength"] = ci_test.effect_size_
 
         if skipped_edges:
             logger.warning(
@@ -1673,423 +1750,193 @@ class DAG(nx.DiGraph):
 
         return strengths
 
-
-class PDAG(nx.DiGraph):
-    """
-    Class for representing PDAGs (also known as CPDAG). PDAGs are the equivalence classes of
-    DAGs and contain both directed and undirected edges.
-
-    Note: In this class, undirected edges are represented using two edges in both direction i.e.
-    an undirected edge between X - Y is represented using X -> Y and X <- Y.
-    """
-
-    def __init__(
-        self,
-        directed_ebunch: list[tuple[Hashable, Hashable]] = [],
-        undirected_ebunch: list[tuple[Hashable, Hashable]] = [],
-        latents: Iterable[Hashable] = [],
-    ):
+    def __hash__(self):
         """
-        Initializes a PDAG class.
-
-        Parameters
-        ----------
-        directed_ebunch: list, array-like of 2-tuples
-            List of directed edges in the PDAG.
-
-        undirected_ebunch: list, array-like of 2-tuples
-            List of undirected edges in the PDAG.
-
-        latents: list, array-like
-            List of nodes which are latent variables.
-
-        Returns
-        -------
-        An instance of the PDAG object.
-
-        Examples
-        --------
+        Returns a hash value for the DAG object. The hash value is computed based on
+        the nodes, edges, latent variables, and variable roles of the DAG.
         """
-        self.latents = set(latents)
-        self.directed_edges = set(directed_ebunch)
-        self.undirected_edges = set(undirected_ebunch)
-
-        super(PDAG, self).__init__(
-            self.directed_edges.union(self.undirected_edges).union(
-                set([(Y, X) for (X, Y) in self.undirected_edges])
+        return hash(
+            (
+                frozenset(self.nodes()),
+                frozenset(self.edges()),
+                frozenset(self.latents),
+                frozenset((role, frozenset(self.get_role(role))) for role in self.get_roles()),
             )
         )
 
-    def all_neighbors(self, node):
+    def get_stats(self):
         """
-        Returns a set of all neighbors of a node in the PDAG. This includes both directed and undirected edges.
-
-        Parameters
-        ----------
-        node: any hashable python object
-            The node for which to get the neighboring nodes.
+        Returns a dictionary of summary statistics about the structure of the DAG.
 
         Returns
         -------
-        set: A set of neighboring nodes.
+        dict
+            Dictionary containing summary statistics of the DAG.
+
+        n_nodes : int
+            Number of nodes in the DAG.
+        n_edges : int
+            Number of edges in the DAG.
+        n_root_nodes : int
+            Number of nodes with no parents.
+        n_leaf_nodes : int
+            Number of nodes with no children.
+        edge_density : float
+            Ratio of edges to maximum possible edges.
+        n_connected_components : int
+            Number of weakly connected components.
+        n_v_structures : int
+            Number of v-structures (immoralities).
+        avg_n_parents : float
+            Average number of parents per node.
+        max_n_parents : int
+            Maximum number of parents of any node.
+        n_latent_nodes : int
+            Number of latent (unobserved) nodes in the DAG.
+
+        Causal statistics : only computed if exposures and outcomes are provided.
+        n_exposures : int
+            Number of exposure nodes.
+        n_outcomes : int
+            Number of outcome nodes.
+        n_causal_paths : int
+            Number of directed paths from exposures to outcomes.
+        n_direct_paths : int
+            Number of causal paths with no mediator.
+        n_mediated_paths : int
+            Number of causal paths through at least one mediator.
+        n_mediators : int
+            Number of nodes mediating at least one exposure-outcome path.
+        n_confounding_paths : int
+            Number of backdoor paths from exposures to outcomes.
 
         Examples
         --------
-        >>> from pgmpy.base import PDAG
-        >>> pdag = PDAG(
-        ...     directed_ebunch=[("A", "C"), ("D", "C")],
-        ...     undirected_ebunch=[("B", "A"), ("B", "D")],
+        >>> from pgmpy.base import DAG
+        >>> from pprint import pprint
+        >>> dag = DAG([('D', 'G'), ('I', 'G'), ('G', 'L'), ('I', 'S')])
+        >>> pprint(dag.get_stats())
+        {'avg_n_parents': 0.8,
+         'edge_density': 0.4,
+         'max_n_parents': 2,
+         'n_connected_components': 1,
+         'n_edges': 4,
+         'n_latent_nodes': 0,
+         'n_leaf_nodes': 2,
+         'n_nodes': 5,
+         'n_root_nodes': 2,
+         'n_v_structures': 1}
+        >>> dag2 = DAG(
+        ...     ebunch=[('D', 'G'), ('I', 'G'), ('G', 'L'), ('I', 'S')],
+        ...     roles={'exposures': 'D', 'outcomes': 'L'}
         ... )
-        >>> pdag.all_neighbors("A")
-        {'B', 'C'}
+        >>> pprint(dag2.get_stats())
+        {'avg_n_parents': 0.8,
+         'edge_density': 0.4,
+         'max_n_parents': 2,
+         'n_causal_paths': 1,
+         'n_confounding_paths': 0,
+         'n_connected_components': 1,
+         'n_direct_paths': 0,
+         'n_edges': 4,
+         'n_exposures': 1,
+         'n_latent_nodes': 0,
+         'n_leaf_nodes': 2,
+         'n_mediated_paths': 1,
+         'n_mediators': 1,
+         'n_nodes': 5,
+         'n_outcomes': 1,
+         'n_root_nodes': 2,
+         'n_v_structures': 1}
         """
-        return {x for x in self.successors(node)} | {x for x in self.predecessors(node)}
+        no_of_nodes = self.number_of_nodes()
+        no_of_edges = self.number_of_edges()
 
-    def directed_children(self, node):
-        """
-        Returns a set of children of node such that there is a directed edge from `node` to child.
-        """
-        return {x for x in self.successors(node) if (node, x) in self.directed_edges}
+        in_degrees = dict(self.in_degree())
+        out_degrees = dict(self.out_degree())
 
-    def directed_parents(self, node):
-        """
-        Returns a set of parents of node such that there is a directed edge from the parent to `node`.
-        """
-        return {x for x in self.predecessors(node) if (x, node) in self.directed_edges}
+        n_v_structures = sum(len(pairs) for pairs in self.get_immoralities().values())
 
-    def has_directed_edge(self, u, v):
-        """
-        Returns True if there is a directed edge u -> v in the PDAG.
-        """
-        if (u, v) in self.directed_edges:
-            return True
-        else:
-            return False
+        stats = {
+            "n_nodes": no_of_nodes,
+            "n_edges": no_of_edges,
+            "n_root_nodes": sum(d == 0 for d in in_degrees.values()),
+            "n_leaf_nodes": sum(d == 0 for d in out_degrees.values()),
+            "edge_density": ((no_of_edges) / (no_of_nodes * (no_of_nodes - 1) / 2) if no_of_nodes > 1 else 0),
+            "n_connected_components": nx.number_weakly_connected_components(self),
+            "n_v_structures": n_v_structures,
+            "avg_n_parents": no_of_edges / no_of_nodes if no_of_nodes else 0,
+            "max_n_parents": max(in_degrees.values()) if in_degrees else 0,
+            "n_latent_nodes": len(getattr(self, "latents", [])),
+        }
 
-    def has_undirected_edge(self, u, v):
-        """
-        Returns True if there is an undirected edge u - v in the PDAG.
-        """
-        if (u, v) in self.undirected_edges or (v, u) in self.undirected_edges:
-            return True
-        else:
-            return False
+        exposures = self.get_role("exposures")
+        outcomes = self.get_role("outcomes")
 
-    def undirected_neighbors(self, node):
-        """
-        Returns a set of neighboring nodes such that all of them have an undirected edge with `node`.
+        if len(exposures) > 0 and len(outcomes) > 0:
+            exposures = set(exposures)
+            outcomes = set(outcomes)
+            # Used for calculation of n_causal_paths and n_compounding_paths
+            topo_order = list(nx.topological_sort(self))
 
-        Parameters
-        ----------
-        node: any hashable python object
-            The node for which to get the undirected neighboring nodes.
+            # n_causal_paths
+            paths_fwd = dict.fromkeys(self.nodes(), 0)
+            for exp in exposures:
+                paths_fwd[exp] = 1
 
-        Returns
-        -------
-        set: A set of neighboring nodes.
+            for node in topo_order:
+                for child in self.successors(node):
+                    paths_fwd[child] += paths_fwd[node]
 
-        Examples
-        --------
-        >>> from pgmpy.base import PDAG
-        >>> pdag = PDAG(
-        ...     directed_ebunch=[("A", "C"), ("D", "C")],
-        ...     undirected_ebunch=[("B", "A"), ("B", "D")],
-        ... )
-        >>> pdag.undirected_neighbors("A")
-        {'B'}
-        """
-        return {var for var in self.successors(node) if self.has_edge(var, node)}
+            n_causal_paths = sum(paths_fwd[out] for out in outcomes)
 
-    def is_adjacent(self, u, v):
-        """
-        Returns True if there is an edge between u and v. This can be either of u - v, u -> v, or u <- v.
-        """
-        if (u, v) in self.edges or (v, u) in self.edges:
-            return True
-        else:
-            return False
+            # n_direct_paths
+            n_direct_paths = sum(self.has_edge(exp, out) for exp in exposures for out in outcomes)
 
-    def copy(self):
-        """
-        Returns a copy of the object instance.
+            # n_mediated_paths
+            n_mediated_paths = n_causal_paths - n_direct_paths
 
-        Returns
-        -------
-        Copy of PDAG: pgmpy.dag.PDAG
-            Returns a copy of self.
-        """
-        pdag = PDAG(
-            directed_ebunch=list(self.directed_edges.copy()),
-            undirected_ebunch=list(self.undirected_edges.copy()),
-            latents=self.latents,
-        )
-        pdag.add_nodes_from(self.nodes())
-        return pdag
+            # n_mediators
+            reachable_from_exp = set()
+            for exp in exposures:
+                reachable_from_exp |= nx.descendants(self, exp)
 
-    def _directed_graph(self):
-        """
-        Returns a subgraph containing only directed edges.
-        """
-        dag = nx.DiGraph(self.directed_edges)
-        dag.add_nodes_from(self.nodes())
-        return dag
+            can_reach_outcome = set()
+            for out in outcomes:
+                can_reach_outcome |= nx.ancestors(self, out)
 
-    def orient_undirected_edge(self, u, v, inplace=False):
-        """
-        Orients an undirected edge u - v as u -> v.
+            mediator_nodes = (reachable_from_exp & can_reach_outcome) - exposures - outcomes
+            n_mediators = len(mediator_nodes)
 
-        Parameters
-        ----------
-        u, v: Any hashable python objects
-            The node names.
+            # n_confounding_paths
+            relevant_nodes = set(self.nodes()) - exposures
+            blocked_graph = self.subgraph(relevant_nodes)
 
-        inplace: boolean (default=False)
-            If True, the PDAG object is modified inplace, otherwise a new modified copy is returned.
+            n_confounding_paths = 0
 
-        Returns
-        -------
-        None or pgmpy.base.PDAG: The modified PDAG object.
-            If inplace=True, returns None and the object itself is modified.
-            If inplace=False, returns a PDAG object.
-        """
+            for exp in exposures:
+                for parent in self.predecessors(exp):
+                    paths_conf = dict.fromkeys(blocked_graph.nodes(), 0)
+                    if parent in paths_conf:
+                        paths_conf[parent] = 1
+                    for node in topo_order:
+                        if node not in blocked_graph:
+                            continue
+                        for child in blocked_graph.successors(node):
+                            paths_conf[child] += paths_conf[node]
 
-        if inplace:
-            pdag = self
-        else:
-            pdag = self.copy()
+                    n_confounding_paths += sum(paths_conf[out] for out in outcomes if out in paths_conf)
 
-        # Remove the edge for undirected_edges.
-        if (u, v) in pdag.undirected_edges:
-            pdag.undirected_edges.discard((u, v))
-        elif (v, u) in pdag.undirected_edges:
-            pdag.undirected_edges.discard((v, u))
-        else:
-            raise ValueError(f"Undirected Edge {u} - {v} not present in the PDAG.")
+            stats.update(
+                {
+                    "n_exposures": len(exposures),
+                    "n_outcomes": len(outcomes),
+                    "n_causal_paths": n_causal_paths,
+                    "n_direct_paths": n_direct_paths,
+                    "n_mediated_paths": n_mediated_paths,
+                    "n_mediators": n_mediators,
+                    "n_confounding_paths": n_confounding_paths,
+                }
+            )
 
-        # Remove the inverse edge from the graph
-        pdag.remove_edge(v, u)
-
-        # Add the edge to directed_edges.
-        pdag.directed_edges.add((u, v))
-
-        if not inplace:
-            return pdag
-
-    def _check_new_unshielded_collider(self, u, v):
-        """
-        Tests if orienting an undirected edge u - v as u -> v creates new unshielded V-structures in the PDAG.
-
-        Checks whether v has any directed parents other than u that are not adjacent to u.
-
-        Returns
-        -------
-        True, if the orientation u -> v would lead to creation of a new V-structure.
-        False, if no new V-structures are formed.
-        """
-        for node in self.directed_parents(v):
-            if (node != u) and (not self.is_adjacent(u, node)):
-                return True
-        return False
-
-    def apply_meeks_rules(self, apply_r4=False, inplace=False, debug=False):
-        """
-        Applies the Meek's rules to orient the undirected edges of a PDAG to return a CPDAG.
-
-        Parameters
-        ----------
-        apply_r4: boolean (default=False)
-            If True, applies Rules 1 - 4 of Meek's rules.
-            If False, applies only Rules 1 - 3.
-
-        inplace: boolean (default=False)
-            If True, the PDAG object is modified inplace, otherwise a new modified copy is returned.
-
-        debug: boolean (default=False)
-            If True, prints the rules being applied to the PDAG.
-
-        Returns
-        -------
-        None or pgmpy.base.PDAG: The modified PDAG object.
-            If inplace=True, returns None and the object itself is modified.
-            If inplace=False, returns a PDAG object.
-
-        Examples
-        --------
-        >>> from pgmpy.base import PDAG
-        >>> pdag = PDAG(
-        ...     directed_ebunch=[("A", "B")], undirected_ebunch=[("B", "C"), ("C", "B")]
-        ... )
-        >>> pdag.apply_meeks_rules()
-        >>> pdag.directed_edges
-        {('A', 'B'), ('B', 'C')}
-        """
-        if inplace:
-            pdag = self
-        else:
-            pdag = self.copy()
-
-        changed = True
-        while changed:
-            changed = False
-
-            # Rule 1: If X -> Y - Z and
-            #            (X not adj Z) and
-            #            (adding Y -> Z doesn't create cycle) and
-            #            (adding Y -> Z doesn't create an unshielded collider) =>  Y → Z
-            for y in pdag.nodes():
-                # Select x's such that there are directed edges x -> y.
-                for x in pdag.directed_parents(y):
-                    for z in pdag.undirected_neighbors(y):
-                        if (
-                            (not pdag.is_adjacent(x, z))
-                            and (not pdag._check_new_unshielded_collider(y, z))
-                            and (not nx.has_path(pdag._directed_graph(), z, y))
-                        ):
-                            pdag.orient_undirected_edge(y, z, inplace=True)
-                            changed = True
-                            if debug:
-                                logger.info(
-                                    f"Applying Rule 1: {x} -> {y} - {z} => {x} -> {y} -> {z}"
-                                )
-
-            # Rule 2: If X -> Z -> Y  and X - Y =>  X → Y
-            for z in pdag.nodes():
-                xs = pdag.directed_parents(z)
-                ys = pdag.directed_children(z)
-
-                for x in xs:
-                    for y in ys:
-                        if pdag.has_undirected_edge(x, y):
-                            pdag.orient_undirected_edge(x, y, inplace=True)
-                            changed = True
-                            if debug:
-                                logger.info(
-                                    f"Applying Rule 2: {x} -> {z} -> {y} and {x} - {y} => {x} -> {y}"
-                                )
-
-            # Rule 3: If X - {Y, Z, W} and {Z, Y} -> W => X -> W
-            for x in pdag.nodes():
-                undirected_nbs = pdag.undirected_neighbors(x)
-
-                if len(undirected_nbs) < 3:
-                    continue
-
-                for y, z, w in itertools.permutations(undirected_nbs, 3):
-                    if pdag.has_directed_edge(y, w) and pdag.has_directed_edge(z, w):
-                        pdag.orient_undirected_edge(x, w, inplace=True)
-                        changed = True
-                        if debug:
-                            logger.info(
-                                f"Applying Rule 3: {x} - {y}, {z}, {w} "
-                                f"{y}, {z} -> {w} => {x} -> {w}"
-                            )
-                        break
-
-            # Rule 4: If d -> c -> b & a - {b, c, d} and b not adj d => a -> b
-            if apply_r4:
-                for c in pdag.nodes():
-                    for b in pdag.directed_children(c):
-                        for d in pdag.directed_parents(c):
-                            if b == d or pdag.is_adjacent(b, d):
-                                continue  # b adjacent d => rule not applicable
-
-                            # find nodes a that are undirected neighbor to b, d,
-                            #  and directed or undirected neighbor to c
-                            cand = set(pdag.undirected_neighbors(b)).intersection(
-                                pdag.all_neighbors(c),
-                                pdag.undirected_neighbors(d),
-                            )
-                            for a in cand:
-                                pdag.orient_undirected_edge(a, b, inplace=True)
-                                changed = True
-                                break
-        if not inplace:
-            return pdag
-
-    def to_dag(self) -> "DAG":
-        """
-        Returns one possible DAG which is represented using the PDAG.
-
-        Returns
-        -------
-        pgmpy.base.DAG: Returns an instance of DAG.
-
-        Examples
-        --------
-        >>> pdag = PDAG(
-        ...     directed_ebunch=[("A", "B"), ("C", "B")],
-        ...     undirected_ebunch=[("C", "D"), ("D", "A")],
-        ... )
-        >>> dag = pdag.to_dag()
-        >>> print(dag.edges())
-        OutEdgeView([('A', 'B'), ('C', 'B'), ('D', 'C'), ('A', 'D')])
-
-        References
-        ----------
-        [1] Dor, Dorit, and Michael Tarsi.
-          "A simple algorithm to construct a consistent extension of a partially oriented graph."
-            Technicial Report R-185, Cognitive Systems Laboratory, UCLA (1992): 45.
-        """
-        # Add required edges if it doesn't form a new v-structure or an opposite edge
-        # is already present in the network.
-        dag = DAG()
-        # Add all the nodes and the directed edges
-        dag.add_nodes_from(self.nodes())
-        dag.add_edges_from(self.directed_edges)
-        dag.latents = self.latents
-
-        pdag = self.copy()
-        while pdag.number_of_nodes() > 0:
-            # find node with (1) no directed outgoing edges and
-            #                (2) the set of undirected neighbors is either empty or
-            #                    undirected neighbors + parents of X are adjacent
-            found = False
-            for X in sorted(pdag.nodes()):
-                undirected_neighbors = pdag.undirected_neighbors(X)
-                neighbors_are_adjacent = all(
-                    (
-                        pdag.has_edge(Y, Z) or pdag.has_edge(Z, Y)
-                        for Z in pdag.all_neighbors(X)
-                        for Y in undirected_neighbors
-                        if not Y == Z
-                    )
-                )
-
-                if not pdag.directed_children(X) and (
-                    not undirected_neighbors or neighbors_are_adjacent
-                ):
-                    found = True
-                    # add all edges of X as outgoing edges to dag
-                    for Y in pdag.undirected_neighbors(X):
-                        dag.add_edge(Y, X)
-                    pdag.remove_node(X)
-                    break
-
-            if not found:
-                logger.warning(
-                    "PDAG has no faithful extension (= no oriented DAG with the "
-                    + "same v-structures as PDAG). Remaining undirected PDAG edges "
-                    + "oriented arbitrarily."
-                )
-                for X, Y in pdag.edges():
-                    if not dag.has_edge(Y, X):
-                        try:
-                            dag.add_edge(X, Y)
-                        except ValueError:
-                            pass
-                break
-        return dag
-
-    def to_graphviz(self) -> object:
-        """
-        Retuns a pygraphviz object for the DAG. pygraphviz is useful for
-        visualizing the network structure.
-
-        Examples
-        --------
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model("alarm")
-        >>> model.to_graphviz()
-        <AGraph <Swig Object of type 'Agraph_t *' at 0x7fdea4cde040>>
-        """
-        return nx.nx_agraph.to_agraph(self)
+        return stats

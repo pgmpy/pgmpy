@@ -1,16 +1,5 @@
 #!/usr/bin/env python
 from pgmpy.estimators import (
-    AIC,
-    BIC,
-    K2,
-    AICCondGauss,
-    AICGauss,
-    BDeu,
-    BDs,
-    BICCondGauss,
-    BICGauss,
-    LogLikelihoodCondGauss,
-    LogLikelihoodGauss,
     StructureScore,
 )
 
@@ -35,22 +24,17 @@ class ScoreCache(StructureScore):
     **kwargs
         Additional arguments that will be handed to the super constructor.
 
-    Reference
-    ---------
-    Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
-    Section 18.3
+    References
+    ----------
+    - :cite:p:`koller_friedman_2009` (Section 18.3).
     """
 
     def __init__(self, base_scorer, data, max_size=10000, **kwargs):
-        assert isinstance(
-            base_scorer, StructureScore
-        ), "Base scorer has to be of type StructureScore."
+        assert isinstance(base_scorer, StructureScore), "Base scorer has to be of type StructureScore."
 
         self.base_scorer = base_scorer
-        self.cache = LRUCache(
-            original_function=self._wrapped_original, max_size=int(max_size)
-        )
-        super(ScoreCache, self).__init__(data, **kwargs)
+        self.cache = LRUCache(original_function=self._wrapped_original, max_size=int(max_size))
+        super().__init__(data, **kwargs)
 
     def local_score(self, variable, parents):
         hashable = tuple(parents)

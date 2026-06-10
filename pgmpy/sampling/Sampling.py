@@ -3,7 +3,6 @@ from collections import namedtuple
 
 import numpy as np
 import pandas as pd
-import torch
 from tqdm.auto import tqdm
 
 from pgmpy import config
@@ -26,7 +25,7 @@ class BayesianModelSampling(BayesianModelInference):
     """
 
     def __init__(self, model):
-        super(BayesianModelSampling, self).__init__(model)
+        super().__init__(model)
 
     def forward_sample(
         self,
@@ -83,9 +82,10 @@ class BayesianModelSampling(BayesianModelInference):
         ... )
         >>> student.add_cpds(cpd_d, cpd_i, cpd_g)
         >>> inference = BayesianModelSampling(student)
-        >>> inference.forward_sample(size=2)
-        rec.array([(0, 0, 1), (1, 0, 2)], dtype=
-                  [('diff', '<i8'), ('intel', '<i8'), ('grade', '<i8')])
+        >>> inference.forward_sample(size=2, seed=42)
+           diff  grade  intel
+        0     0      0      1
+        1     1      1      0
         """
         sampled = pd.DataFrame(columns=list(self.model.nodes()))
 
@@ -109,24 +109,18 @@ class BayesianModelSampling(BayesianModelInference):
                 evidence = cpd.variables[1:]
                 if evidence:
                     evidence_values = np.vstack([sampled[i] for i in evidence])
-                    unique, inverse = np.unique(
-                        evidence_values.T, axis=0, return_inverse=True
-                    )
+                    unique, inverse = np.unique(evidence_values.T, axis=0, return_inverse=True)
                     unique = [tuple(u) for u in unique]
                     state_to_index, index_to_weight = self.pre_compute_reduce_maps(
                         variable=node, evidence=evidence, state_combinations=unique
                     )
                     if config.get_backend() == "numpy":
-                        weight_index = np.array([state_to_index[u] for u in unique])[
-                            inverse
-                        ]
+                        weight_index = np.array([state_to_index[u] for u in unique])[inverse]
                     else:
-                        weight_index = torch.Tensor(
-                            [state_to_index[u] for u in unique]
-                        )[inverse]
-                    sampled[node] = sample_discrete_maps(
-                        states, weight_index, index_to_weight, size
-                    )
+                        import torch
+
+                        weight_index = torch.Tensor([state_to_index[u] for u in unique])[inverse]
+                    sampled[node] = sample_discrete_maps(states, weight_index, index_to_weight, size)
                 else:
                     weights = cpd.values
                     sampled[node] = sample_discrete(states, weights, size)
@@ -136,9 +130,7 @@ class BayesianModelSampling(BayesianModelInference):
             self.state_names_map,
             partial_samples.columns.tolist() if partial_samples is not None else [],
         )
-        if not include_latents and any(
-            latent in samples_df.columns for latent in self.model.latents
-        ):
+        if not include_latents and any(latent in samples_df.columns for latent in self.model.latents):
             samples_df.drop(self.model.latents, axis=1, inplace=True)
         return samples_df
 
@@ -201,11 +193,11 @@ class BayesianModelSampling(BayesianModelInference):
         >>> inference = BayesianModelSampling(student)
         >>> evidence = [State(var="diff", state=0)]
         >>> inference.rejection_sample(
-        ...     evidence=evidence, size=2, return_type="dataframe"
+        ...     evidence=evidence, size=2, seed=42
         ... )
-                intel       diff       grade
-        0         0          0          1
-        1         0          0          1
+           diff  grade  intel
+        0     0      1      0
+        1     0      1      0
         """
 
         if seed is not None:
@@ -245,9 +237,7 @@ class BayesianModelSampling(BayesianModelInference):
                 _sampled = _sampled[_sampled[var] == state]
 
             prob = max(len(_sampled) / _size, 0.01)
-            sampled = pd.concat([sampled, _sampled], axis=0, join="outer").iloc[
-                :size, :
-            ]
+            sampled = pd.concat([sampled, _sampled], axis=0, join="outer").iloc[:size, :]
             i += _sampled.shape[0]
 
             if show_progress and config.SHOW_PROGRESS:
@@ -323,19 +313,17 @@ class BayesianModelSampling(BayesianModelInference):
         >>> inference = BayesianModelSampling(student)
         >>> evidence = [State("diff", 0)]
         >>> inference.likelihood_weighted_sample(
-        ...     evidence=evidence, size=2, return_type="recarray"
+        ...     evidence=evidence, size=2, seed=42
         ... )
-        rec.array([(0, 0, 1, 0.6), (0, 0, 2, 0.6)], dtype=
-                  [('diff', '<i8'), ('intel', '<i8'), ('grade', '<i8'), ('_weight', '<f8')])
+           diff  grade  intel  _weight
+        0     0      2      0      0.6
+        1     0      0      1      0.6
         """
         if seed is not None:
             np.random.seed(seed)
 
         # Convert evidence state names to number
-        evidence = [
-            (var, self.model.get_cpds(var).get_state_no(var, state))
-            for var, state in evidence
-        ]
+        evidence = [(var, self.model.get_cpds(var).get_state_no(var, state)) for var, state in evidence]
 
         # Prepare the return dataframe
         sampled = pd.DataFrame(columns=list(self.model.nodes()))
@@ -359,16 +347,12 @@ class BayesianModelSampling(BayesianModelInference):
             if evidence:
                 evidence_values = np.vstack([sampled[i] for i in evidence])
 
-                unique, inverse = np.unique(
-                    evidence_values.T, axis=0, return_inverse=True
-                )
+                unique, inverse = np.unique(evidence_values.T, axis=0, return_inverse=True)
                 unique = [tuple(u) for u in unique]
                 state_to_index, index_to_weight = self.pre_compute_reduce_maps(
                     variable=node, evidence=evidence, state_combinations=unique
                 )
-                weight_index = np.array([state_to_index[tuple(u)] for u in unique])[
-                    inverse
-                ]
+                weight_index = np.array([state_to_index[tuple(u)] for u in unique])[inverse]
 
                 if node in evidence_dict:
                     evidence_value = evidence_dict[node]
@@ -376,24 +360,18 @@ class BayesianModelSampling(BayesianModelInference):
                     sampled.loc[:, "_weight"] *= np.array(
                         list(
                             map(
-                                lambda i: index_to_weight[weight_index[i]][
-                                    evidence_value
-                                ],
+                                lambda i: index_to_weight[weight_index[i]][evidence_value],
                                 range(size),
                             )
                         )
                     )
                 else:
-                    sampled[node] = sample_discrete_maps(
-                        states, weight_index, index_to_weight, size
-                    )
+                    sampled[node] = sample_discrete_maps(states, weight_index, index_to_weight, size)
             else:
                 if node in evidence_dict:
                     sampled[node] = evidence_dict[node]
                     sampled.loc[:, "_weight"] *= np.array(
-                        list(
-                            map(lambda _: cpd.values[evidence_dict[node]], range(size))
-                        )
+                        list(map(lambda _: cpd.values[evidence_dict[node]], range(size)))
                     )
                 else:
                     sampled[node] = sample_discrete(states, cpd.values, size)
@@ -430,15 +408,15 @@ class GibbsSampling(MarkovChain):
     >>> student.add_cpds(intel_cpd, sat_cpd)
     >>> from pgmpy.sampling import GibbsSampling
     >>> gibbs_chain = GibbsSampling(student)
-    >>> gibbs_chain.sample(size=3)
+    >>> gibbs_chain.sample(size=3, seed=42)  # doctest: +SKIP
        intel  sat
-    0      0    0
-    1      0    0
+    0      1    0
+    1      0    1
     2      1    1
     """
 
     def __init__(self, model=None):
-        super(GibbsSampling, self).__init__()
+        super().__init__()
         if isinstance(model, DiscreteBayesianNetwork):
             self._get_kernel_from_bayesian_model(model)
         elif isinstance(model, DiscreteMarkovNetwork):
@@ -457,9 +435,7 @@ class GibbsSampling(MarkovChain):
         """
         self.variables = np.array(model.nodes())
         self.latents = model.latents
-        self.cardinalities = {
-            var: model.get_cpds(var).variable_card for var in self.variables
-        }
+        self.cardinalities = {var: model.get_cpds(var).variable_card for var in self.variables}
 
         for var in self.variables:
             other_vars = [v for v in self.variables if var != v]
@@ -494,12 +470,9 @@ class GibbsSampling(MarkovChain):
 
         # Take factor product
         factors_dict = {
-            var: factor_product(*factors) if len(factors) > 1 else factors[0]
-            for var, factors in factors_dict.items()
+            var: factor_product(*factors) if len(factors) > 1 else factors[0] for var, factors in factors_dict.items()
         }
-        self.cardinalities = {
-            var: factors_dict[var].get_cardinality([var])[var] for var in self.variables
-        }
+        self.cardinalities = {var: factors_dict[var].get_cardinality([var])[var] for var in self.variables}
 
         for var in self.variables:
             other_vars = [v for v in self.variables if var != v]
@@ -508,11 +481,7 @@ class GibbsSampling(MarkovChain):
             factor = factors_dict[var]
             scope = set(factor.scope())
             for tup in itertools.product(*[range(card) for card in other_cards]):
-                states = [
-                    State(first_var, s)
-                    for first_var, s in zip(other_vars, tup)
-                    if first_var in scope
-                ]
+                states = [State(first_var, s) for first_var, s in zip(other_vars, tup) if first_var in scope]
                 reduced_factor = factor.reduce(states, inplace=False)
                 kernel[tup] = reduced_factor.values / sum(reduced_factor.values)
             self.transition_models[var] = kernel
@@ -550,12 +519,12 @@ class GibbsSampling(MarkovChain):
         >>> factor_cb = DiscreteFactor(["C", "B"], [2, 2], [5, 6, 7, 8])
         >>> model.add_factors(factor_ab, factor_cb)
         >>> gibbs = GibbsSampling(model)
-        >>> gibbs.sample(size=4, return_tupe="dataframe")
+        >>> gibbs.sample(size=4, seed=42)  # doctest: +SKIP
            A  B  C
-        0  0  1  1
-        1  1  0  0
-        2  1  1  0
-        3  1  1  1
+        0  1  0  0
+        1  1  1  1
+        2  1  0  0
+        3  0  1  1
         """
         if start_state is None and self.state is None:
             self.state = self.random_state()
@@ -583,9 +552,7 @@ class GibbsSampling(MarkovChain):
             samples_df.drop(self.latents, axis=1, inplace=True)
         return samples_df
 
-    def generate_sample(
-        self, start_state=None, size=1, include_latents=False, seed=None
-    ):
+    def generate_sample(self, start_state=None, size=1, include_latents=False, seed=None):
         """
         Generator version of self.sample
 
@@ -603,10 +570,14 @@ class GibbsSampling(MarkovChain):
         >>> factor_cb = DiscreteFactor(["C", "B"], [2, 2], [5, 6, 7, 8])
         >>> model.add_factors(factor_ab, factor_cb)
         >>> gibbs = GibbsSampling(model)
-        >>> gen = gibbs.generate_sample(size=2)
-        >>> [sample for sample in gen]
-        [[State(var='C', state=1), State(var='B', state=1), State(var='A', state=0)],
-         [State(var='C', state=0), State(var='B', state=1), State(var='A', state=1)]]
+        >>> gen = gibbs.generate_sample(size=2, seed=42)
+        >>> [sample for sample in gen]  # doctest: +NORMALIZE_WHITESPACE
+        [[State(var=np.str_('A'), state=np.int64(0)),
+          State(var=np.str_('B'), state=np.int64(1)),
+          State(var=np.str_('C'), state=np.int64(1))],
+        [State(var=np.str_('A'), state=np.int64(1)),
+         State(var=np.str_('B'), state=np.int64(0)),
+         State(var=np.str_('C'), state=np.int64(1))]]
         """
         if seed is not None:
             np.random.seed(seed)

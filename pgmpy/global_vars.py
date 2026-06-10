@@ -1,32 +1,14 @@
 import logging
-from typing import Any, Optional
+import os
+from pathlib import Path
 
 import numpy as np
-import torch
+from skbase.utils.dependencies import _check_soft_dependencies
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("pgmpy")
+logger.addHandler(logging.NullHandler())
 
-
-class DuplicateFilter(logging.Filter):
-    """
-    A logging filter that prevents duplicate consecutive log messages.
-    This filter only allows a message to pass through if it differs from the previous message.
-    """
-
-    def __init__(self):
-        super().__init__()
-        self.last_msg = None
-
-    def filter(self, record):
-        msg = record.getMessage()
-        is_new = msg != self.last_msg
-        if is_new:
-            self.last_msg = msg
-        return is_new
-
-
-logger.addFilter(DuplicateFilter())
+PGMPY_DATA_HOME = os.path.join(Path.home(), ".pgmpy")
 
 
 class Config:
@@ -35,7 +17,7 @@ class Config:
         Default configuration initilization.
         """
         self.BACKEND = "numpy"
-        self.DTYPE: str | np.dtype | torch.dtype = "float64"
+        self.DTYPE = "float64"
         self.DEVICE = None
         self.SHOW_PROGRESS = True
 
@@ -50,9 +32,9 @@ class Config:
             If None, sets to cuda if GPU is available else uses CPU.
         """
         if self.BACKEND == "numpy":
-            raise ValueError(
-                f"Current backend is numpy. Device can only be set for torch backend"
-            )
+            raise ValueError("Current backend is numpy. Device can only be set for torch backend")
+
+        import torch
 
         if device is None:
             if torch.cuda.is_available():
@@ -61,9 +43,7 @@ class Config:
                 self.DEVICE = torch.device("cpu")
         else:
             if not device.startswith(("cuda", "cpu")):
-                raise ValueError(
-                    f"device must be either 'cuda', 'cuda:x' or 'cpu'. Got: {device}"
-                )
+                raise ValueError(f"device must be either 'cuda', 'cuda:x' or 'cpu'. Got: {device}")
             elif device.startswith("cuda"):
                 if torch.cuda.is_available():
                     self.DEVICE = torch.device(device)
@@ -79,8 +59,8 @@ class Config:
     def set_backend(
         self,
         backend: str,
-        device: Optional[str] = None,
-        dtype: Optional[np.dtype[Any] | torch._C.dtype] = None,
+        device: str | None = None,
+        dtype=None,
     ):
         """
         Setup the compute backend.
@@ -99,14 +79,19 @@ class Config:
             torch.float64 depending on the backend.
         """
         if backend not in ["numpy", "torch"]:
-            raise ValueError(
-                f"backend can either be `numpy` or `torch`. Got: {backend}"
-            )
+            raise ValueError(f"backend can either be `numpy` or `torch`. Got: {backend}")
 
         if backend == "numpy":
             self.BACKEND = "numpy"
             self.DEVICE = None
         else:
+            msg = (
+                "Error in pgmpy Config.set_backend: setting the pgmpy backend to torch "
+                "requires torch to be installed in the python environment, but "
+                "torch was not found. Ensure to install torch using "
+                "`pip install pgmpy[torch]`, or `pip install pgmpy[optional]`"
+            )
+            _check_soft_dependencies("torch", msg=msg)
             self.BACKEND = "torch"
             self.set_device(device)
         self.set_dtype(dtype=dtype)
@@ -137,7 +122,7 @@ class Config:
         """
         return self.SHOW_PROGRESS
 
-    def set_dtype(self, dtype: Optional[np.dtype[Any] | torch.dtype] = None):
+    def set_dtype(self, dtype=None):
         """
         Sets the dtype for value matrices.
 
@@ -154,6 +139,8 @@ class Config:
 
         elif self.BACKEND == "torch":
             if dtype is None:
+                import torch
+
                 self.DTYPE = torch.float64
             else:
                 self.DTYPE = dtype
@@ -169,6 +156,8 @@ class Config:
             return np
 
         else:
+            import torch
+
             return torch
 
 

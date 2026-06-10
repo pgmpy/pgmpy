@@ -1,17 +1,18 @@
 import random
+import warnings
 import xml.dom.minidom as md
 import xml.etree.ElementTree as etree
 from itertools import chain
 
 import networkx as nx
 
+from pgmpy import logger
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import compat_fns
 
 
-class XDSLReader(object):
+class XDSLReader:
     """
     Initializes the reader object for XDSL file formats[1] created through GeNIe[2].
     Note that XDSLReader only supports cpt blocks from the XDSL file format; elements like
@@ -27,17 +28,17 @@ class XDSLReader(object):
 
     Examples
     --------
-    >>> # AsiaDiagnosis.xdsl is an example file downloadable from
-    >>> # https://repo.bayesfusion.com/bayesbox.html
-    >>> # The file has been modified slightly to adhere to XDSLReader requirements
-    >>> from pgmpy.readwrite import XDSLReader
-    >>> reader = XDSLReader("AsiaDiagnosis.xdsl")
+    >>> from pgmpy.readwrite import XDSLReader, XDSLWriter
+    >>> from pgmpy.example_models import load_model
+    >>> asia = load_model("bnlearn/asia")
+    >>> XDSLWriter(asia).write("asia_test.xdsl")
+    >>> reader = XDSLReader("asia_test.xdsl")
     >>> model = reader.get_model()
 
-    Reference
-    ---------
-    [1] https://support.bayesfusion.com/docs/GeNIe/saving_xdslfileformat.html
-    [2] https://www.bayesfusion.com/genie/
+    References
+    ----------
+    - :cite:p:`bayesfusion_xdsl`
+    - :cite:p:`bayesfusion_genie`
     """
 
     def __init__(self, path=None, string=None):
@@ -61,9 +62,12 @@ class XDSLReader(object):
 
         Examples
         --------
-        >>> reader = XDSLReader("AsiaDiagnosis.xdsl")
+        >>> from pgmpy.readwrite import XDSLReader, XDSLWriter
+        >>> from pgmpy.example_models import load_model
+        >>> XDSLWriter(load_model("bnlearn/asia")).write("asia_test.xdsl")
+        >>> reader = XDSLReader("asia_test.xdsl")
         >>> reader.get_variables()
-        ['asia', 'tub', 'smoke', 'lung', 'either', 'xray', 'bronc', 'dysp']
+        ['asia', 'tub', 'smoke', 'lung', 'bronc', 'either', 'xray', 'dysp']
         """
         variables = [variable.attrib["id"] for variable in self.cpt_elements]
         for var in variables:
@@ -81,17 +85,13 @@ class XDSLReader(object):
 
         Examples
         --------
-        >>> reader = XDSLReader("AsiaDiagnosis.xdsl")
-        >>> reader.get_parents()
-        {'asia': [],
-        'tub': ['asia'],
-        'smoke': [],
-        'lung': ['smoke'],
-        'either': ['tub', 'lung'],
-        'xray': ['either'],
-        'bronc': ['smoke'],
-        'dysp': ['either', 'bronc']
-        }
+        >>> from pgmpy.readwrite import XDSLReader, XDSLWriter
+        >>> from pgmpy.example_models import load_model
+        >>> XDSLWriter(load_model("bnlearn/asia")).write("asia_test.xdsl")
+        >>> reader = XDSLReader("asia_test.xdsl")
+        >>> reader.get_parents() # doctest: +NORMALIZE_WHITESPACE
+        {'asia': [], 'tub': ['asia'], 'smoke': [], 'lung': ['smoke'], 'bronc': ['smoke'],
+         'either': ['lung', 'tub'], 'xray': ['either'], 'dysp': ['bronc', 'either']}
         """
         variable_parents = {}
         for node in self.cpt_elements:
@@ -109,22 +109,15 @@ class XDSLReader(object):
 
         Examples
         --------
-        >>> reader = XDSLReader("AsiaDiagnosis.xdsl")
-        >>> reader.get_edges()
-        [['asia', 'tub'],
-        ['smoke', 'lung'],
-        ['tub', 'either'],
-        ['lung', 'either'],
-        ['either', 'xray'],
-        ['smoke', 'bronc'],
-        ['either', 'dysp'],
-        ['bronc', 'dysp']]
+        >>> from pgmpy.readwrite import XDSLReader, XDSLWriter
+        >>> from pgmpy.example_models import load_model
+        >>> XDSLWriter(load_model("bnlearn/asia")).write("asia_test.xdsl")
+        >>> reader = XDSLReader("asia_test.xdsl")
+        >>> reader.get_edges() # doctest: +NORMALIZE_WHITESPACE
+        [['asia', 'tub'], ['smoke', 'lung'], ['smoke', 'bronc'], ['lung', 'either'],
+         ['tub', 'either'], ['either', 'xray'], ['bronc', 'dysp'], ['either', 'dysp']]
         """
-        edge_list = [
-            [value, key]
-            for key in self.variable_parents
-            for value in self.variable_parents[key]
-        ]
+        edge_list = [[value, key] for key in self.variable_parents for value in self.variable_parents[key]]
         return edge_list
 
     def get_states(self):
@@ -133,24 +126,17 @@ class XDSLReader(object):
 
         Examples
         --------
-        >>> reader = XDSLReader("AsiaDiagnosis.xdsl")
-        >>> reader.get_states()
-        {'asia': ['no', 'yes'],
-        'tub': ['no', 'yes'],
-        'smoke': ['no', 'yes'],
-        'lung': ['no', 'yes'],
-        'either': ['Nothing',
-        'CancerORTuberculosis'],
-        'xray': ['Normal', 'Abnormal'],
-        'bronc': ['Absent', 'Present'], '
-        dysp': ['Absent', 'Present']
-        }
+        >>> from pgmpy.readwrite import XDSLReader, XDSLWriter
+        >>> from pgmpy.example_models import load_model
+        >>> XDSLWriter(load_model("bnlearn/asia")).write("asia_test.xdsl")
+        >>> reader = XDSLReader("asia_test.xdsl")
+        >>> reader.get_states() # doctest: +NORMALIZE_WHITESPACE
+        {'asia': ['yes', 'no'], 'tub': ['yes', 'no'], 'smoke': ['yes', 'no'], 'lung': ['yes', 'no'],
+         'bronc': ['yes', 'no'], 'either': ['yes', 'no'], 'xray': ['yes', 'no'], 'dysp': ['yes', 'no']}
         """
         variable_states = {}
         for cpt in self.cpt_elements:
-            variable_states[cpt.attrib["id"]] = [
-                state.attrib["id"] for state in cpt.findall("state")
-            ]
+            variable_states[cpt.attrib["id"]] = [state.attrib["id"] for state in cpt.findall("state")]
         return variable_states
 
     def get_values(self):
@@ -159,17 +145,15 @@ class XDSLReader(object):
 
         Examples
         --------
-        >>> reader = XDSLReader("AsiaDiagnosis.xdsl")
-        >>> reader.get_values()
-        {'asia': [[0.99], [0.01]],
-        'tub': [[0.99, 0.95], [0.01, 0.05]],
-        'smoke': [[0.5], [0.5]],
-        'lung': [[0.99, 0.9], [0.01, 0.1]],
-        'either': [[1.0, 1.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]],
-        'xray': [[0.95, 0.02], [0.05, 0.98]],
-        'bronc': [[0.7, 0.4], [0.3, 0.6]],
-        'dysp': [[0.9, 0.2, 0.3, 0.1], [0.1, 0.8, 0.7, 0.9]]
-        }
+        >>> from pgmpy.readwrite import XDSLReader, XDSLWriter
+        >>> from pgmpy.example_models import load_model
+        >>> XDSLWriter(load_model("bnlearn/asia")).write("asia_test.xdsl")
+        >>> reader = XDSLReader("asia_test.xdsl")
+        >>> reader.get_values() # doctest: +NORMALIZE_WHITESPACE
+        {'asia': [[0.01], [0.99]], 'tub': [[0.05, 0.01], [0.95, 0.99]], 'smoke': [[0.5], [0.5]],
+         'lung': [[0.1, 0.01], [0.9, 0.99]], 'bronc': [[0.6, 0.3], [0.4, 0.7]],
+         'either': [[1.0, 1.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]], 'xray': [[0.98, 0.05], [0.02, 0.95]],
+         'dysp': [[0.9, 0.8, 0.7, 0.1], [0.1, 0.2, 0.3, 0.9]]}
         """
         variable_CPD = {}
         for cpt in self.cpt_elements:
@@ -200,8 +184,10 @@ class XDSLReader(object):
 
         Examples
         --------
-        >>> from pgmpy.readwrite import XDSLReader
-        >>> reader = XDSLReader("AsiaDiagnosis.xdsl")
+        >>> from pgmpy.readwrite import XDSLReader, XDSLWriter
+        >>> from pgmpy.example_models import load_model
+        >>> XDSLWriter(load_model("bnlearn/asia")).write("asia_test.xdsl")
+        >>> reader = XDSLReader("asia_test.xdsl")
         >>> model = reader.get_model()
         """
         model = DiscreteBayesianNetwork()
@@ -211,10 +197,7 @@ class XDSLReader(object):
 
         tabular_cpds = []
         for var, values in self.variable_CPD.items():
-            evidence_card = [
-                len(self.variable_states[evidence_var])
-                for evidence_var in self.variable_parents[var]
-            ]
+            evidence_card = [len(self.variable_states[evidence_var]) for evidence_var in self.variable_parents[var]]
             cpd = TabularCPD(
                 var,
                 len(self.variable_states[var]),
@@ -233,7 +216,7 @@ class XDSLReader(object):
         return model
 
 
-class XDSLWriter(object):
+class XDSLWriter:
     """
     Initialise a XDSL writer object to export pgmpy models to XDSL file format[1] used by GeNIe[2].
 
@@ -257,15 +240,15 @@ class XDSLWriter(object):
     Examples
     ---------
     >>> from pgmpy.readwrite import XDSLWriter
-    >>> from pgmpy.utils import get_example_model
-    >>> asia = get_example_model("asia")
+    >>> from pgmpy.example_models import load_model
+    >>> asia = load_model("bnlearn/asia")
     >>> writer = XDSLWriter(asia)
-    >>> writer.write_xdsl("asia.xdsl")
+    >>> writer.write("asia.xdsl")
 
-    Reference
-    ---------
-    [1] https://support.bayesfusion.com/docs/GeNIe/saving_xdslfileformat.html
-    [2] https://www.bayesfusion.com/genie/
+    References
+    ----------
+    - :cite:p:`bayesfusion_xdsl`
+    - :cite:p:`bayesfusion_genie`
     """
 
     def __init__(
@@ -305,25 +288,18 @@ class XDSLWriter(object):
 
         Examples
         --------
-        >>> writer = XDSLWriter(model)
-        >>> writer.get_variables()
-        {'asia': <Element 'cpt' at 0x000001DC6BFA1350>,
-        'tub': <Element 'cpt' at 0x000001DC6BFA35B0>,
-        'smoke': <Element 'cpt' at 0x000001DC6BFA3560>,
-        'lung': <Element 'cpt' at 0x000001DC6BFA12B0>,
-        'bronc': <Element 'cpt' at 0x000001DC6BFA1260>,
-        'either': <Element 'cpt' at 0x000001DC6BFA3510>,
-        'xray': <Element 'cpt' at 0x000001DC6BFA34C0>,
-        'dysp': <Element 'cpt' at 0x000001DC6BFA1210>}
+        >>> from pgmpy.readwrite import XDSLWriter
+        >>> from pgmpy.example_models import load_model
+        >>> writer = XDSLWriter(load_model("bnlearn/asia"))
+        >>> sorted(writer.get_variables().keys())
+        ['asia', 'bronc', 'dysp', 'either', 'lung', 'smoke', 'tub', 'xray']
         """
         variable_tag = {}
         nodes_elem = etree.SubElement(self.root, "nodes")
 
         for var in self.model.nodes:
             if isinstance(var, str) and " " in var:
-                logger.warning(
-                    f" Node '{var}' contains whitespaces. This can create issues when loading the model. "
-                )
+                logger.warning(f" Node '{var}' contains whitespaces. This can create issues when loading the model. ")
             variable_tag[var] = etree.SubElement(nodes_elem, "cpt", {"id": var})
 
         return variable_tag
@@ -338,16 +314,11 @@ class XDSLWriter(object):
 
         Examples
         -------
-        >>> writer = XDSLWriter(model)
-        >>> writer.get_values()
-        {'asia': <TabularCPD representing P(asia:2) at 0x1885817c830>,
-        'tub': <TabularCPD representing P(tub:2 | asia:2) at 0x1885a7e57c0>,
-        'smoke': <TabularCPD representing P(smoke:2) at 0x18858327950>,
-        'lung': <TabularCPD representing P(lung:2 | smoke:2) at 0x188583278f0>,
-        'bronc': <TabularCPD representing P(bronc:2 | smoke:2) at 0x18855e05610>,
-        'either': <TabularCPD representing P(either:2 | lung:2, tub:2) at 0x188582792e0>,
-        'xray': <TabularCPD representing P(xray:2 | either:2) at 0x1885a7e5910>,
-        'dysp': <TabularCPD representing P(dysp:2 | bronc:2, either:2) at 0x18858278b90>}
+        >>> from pgmpy.readwrite import XDSLWriter
+        >>> from pgmpy.example_models import load_model
+        >>> writer = XDSLWriter(load_model("bnlearn/asia"))
+        >>> sorted(writer.get_cpds().keys())
+        ['asia', 'bronc', 'dysp', 'either', 'lung', 'smoke', 'tub', 'xray']
         """
         outcome_tag = {}
         cpds = self.model.get_cpds()
@@ -382,7 +353,7 @@ class XDSLWriter(object):
             # Flatten in column-major order so that for each parent
             #  configuration the probabilities for all states are listed.
             flat_values = compat_fns.ravel_f(values)
-            probs_elem.text = " ".join("{:.16f}".format(float(x)) for x in flat_values)
+            probs_elem.text = " ".join(f"{float(x):.16f}" for x in flat_values)
 
             outcome_tag[var] = cpd
 
@@ -416,9 +387,7 @@ class XDSLWriter(object):
             # Appearance details (colors, font).
             etree.SubElement(node_elem, "interior", {"color": "e5f6f7"})
             etree.SubElement(node_elem, "outline", {"color": "000080"})
-            etree.SubElement(
-                node_elem, "font", {"color": "000000", "name": "Arial", "size": "8"}
-            )
+            etree.SubElement(node_elem, "font", {"color": "000000", "name": "Arial", "size": "8"})
 
             # Set node position (x1, y1, x2, y2).
             # Provide random position to each node.
@@ -432,7 +401,7 @@ class XDSLWriter(object):
                 {"active": "true", "width": "128", "height": "128"},
             )
 
-    def write_xdsl(self, filename=None):
+    def write(self, filename=None):
         """
         Write the xdsl data into the file.
 
@@ -443,10 +412,10 @@ class XDSLWriter(object):
         Examples
         --------
         >>> from pgmpy.readwrite import XDSLWriter
-        >>> from pgmpy.utils import get_example_model
-        >>> model = get_example_model("asia")
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/asia")
         >>> writer = XDSLWriter(model)
-        >>> writer.write_xdsl("asia.xdsl")
+        >>> writer.write("asia.xdsl")
         """
         xml_str = etree.tostring(self.root, encoding=self.encoding)
         parsed = md.parseString(xml_str)
@@ -455,3 +424,12 @@ class XDSLWriter(object):
         if filename is not None:
             with open(filename, "wb") as f:
                 f.write(pretty_xml_str)
+
+    def write_xdsl(self, filename):
+        warnings.warn(
+            """`XDSLWriter.write_xdsl` is deprecated and will be removed in v1.3.0. Please use `XDSLWriter.write`
+            instead.""",
+            FutureWarning,
+            stacklevel=2,
+        )
+        self.write(filename)

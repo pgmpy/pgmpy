@@ -32,7 +32,7 @@ class NaiveBayes(DiscreteBayesianNetwork):
         else:
             ebunch = []
 
-        super(NaiveBayes, self).__init__(ebunch=ebunch)
+        super().__init__(ebunch=ebunch)
 
     def add_edge(self, u, v, *kwargs):
         """
@@ -62,12 +62,10 @@ class NaiveBayes(DiscreteBayesianNetwork):
         OutEdgeView([('a', 'b'), ('a', 'c')])
         """
         if self.dependent and u != self.dependent:
-            raise ValueError(
-                f"Model can only have edges outgoing from: {self.dependent}"
-            )
+            raise ValueError(f"Model can only have edges outgoing from: {self.dependent}")
         self.dependent = u
         self.features.add(v)
-        super(NaiveBayes, self).add_edge(u, v, *kwargs)
+        super().add_edge(u, v, *kwargs)
 
     def add_edges_from(self, ebunch):
         """
@@ -98,19 +96,6 @@ class NaiveBayes(DiscreteBayesianNetwork):
         for u, v in ebunch:
             self.add_edge(u, v)
 
-    def _get_ancestors_of(self, obs_nodes_list):
-        """
-        Returns a list of all ancestors of all the observed nodes.
-
-        Parameters
-        ----------
-        obs_nodes_list: string, list-type
-            name of all the observed nodes
-        """
-        if not obs_nodes_list:
-            return set()
-        return set(obs_nodes_list) | set(self.dependent)
-
     def active_trail_nodes(self, start, observed=None):
         """
         Returns all the nodes reachable from start via an active trail.
@@ -128,10 +113,10 @@ class NaiveBayes(DiscreteBayesianNetwork):
         >>> model = NaiveBayes()
         >>> model.add_nodes_from(["a", "b", "c", "d"])
         >>> model.add_edges_from([("a", "b"), ("a", "c"), ("a", "d")])
-        >>> model.active_trail_nodes("a")
-        {'a', 'd', 'c', 'b'}
-        >>> model.active_trail_nodes("a", ["b", "c"])
-        {'a', 'd'}
+        >>> sorted(model.active_trail_nodes("a"))
+        ['a', 'b', 'c', 'd']
+        >>> sorted(model.active_trail_nodes("a", ["b", "c"]))
+        ['a', 'd']
         >>> model.active_trail_nodes("b", ["a"])
         {'b'}
         """
@@ -158,15 +143,14 @@ class NaiveBayes(DiscreteBayesianNetwork):
         >>> model = NaiveBayes()
         >>> model.add_edges_from([("a", "b"), ("a", "c"), ("a", "d")])
         >>> ind = model.local_independencies("b")
-        >>> ind
-        (b \u27c2 d, c | a)
+        >>> assertion = ind.get_assertions()[0]
+        >>> sorted(assertion.event1), sorted(assertion.event2), sorted(assertion.event3)
+        (['b'], ['c', 'd'], ['a'])
         """
         independencies = Independencies()
         for variable in [variables] if isinstance(variables, str) else variables:
             if variable != self.dependent:
-                independencies.add_assertions(
-                    [variable, list(set(self.features) - set(variable)), self.dependent]
-                )
+                independencies.add_assertions([variable, list(set(self.features) - set(variable)), self.dependent])
         return independencies
 
     def fit(self, data, parent_node=None, estimator=None):
@@ -183,9 +167,9 @@ class NaiveBayes(DiscreteBayesianNetwork):
             Parent node of the model, if not specified it looks for a previously specified
             parent node.
 
-        estimator: Estimator class
-            Any pgmpy estimator. If nothing is specified, the default ``MaximumLikelihoodEstimator``
-            would be used.
+        estimator: discrete parameter estimator, optional
+            An initialized estimator instance from `pgmpy.parameter_estimator`.
+            If not specified, defaults to ``DiscreteMLE()``.
 
         Examples
         --------
@@ -198,14 +182,14 @@ class NaiveBayes(DiscreteBayesianNetwork):
         ...     columns=["A", "B", "C", "D", "E"],
         ... )
         >>> model.fit(values, "A")
-        >>> model.get_cpds()
-        [<TabularCPD representing P(D:2 | A:2) at 0x4b72870>,
-         <TabularCPD representing P(E:2 | A:2) at 0x4bb2150>,
-         <TabularCPD representing P(A:2) at 0x4bb23d0>,
-         <TabularCPD representing P(B:2 | A:2) at 0x4bb24b0>,
-         <TabularCPD representing P(C:2 | A:2) at 0x4bb2750>]
-        >>> model.edges()
-        [('A', 'D'), ('A', 'E'), ('A', 'B'), ('A', 'C')]
+        >>> model.get_cpds()  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        [<TabularCPD representing P(A:2) at 0x...>,
+         <TabularCPD representing P(B:2 | A:2) at 0x...>,
+         <TabularCPD representing P(C:2 | A:2) at 0x...>,
+         <TabularCPD representing P(D:2 | A:2) at 0x...>,
+         <TabularCPD representing P(E:2 | A:2) at 0x...>]
+        >>> sorted(model.edges())
+        [('A', 'B'), ('A', 'C'), ('A', 'D'), ('A', 'E')]
         """
         if not parent_node:
             if not self.dependent:
@@ -213,10 +197,8 @@ class NaiveBayes(DiscreteBayesianNetwork):
             else:
                 parent_node = self.dependent
         if parent_node not in data.columns:
-            raise ValueError(
-                f"Dependent variable: {parent_node} is not present in the data"
-            )
+            raise ValueError(f"Dependent variable: {parent_node} is not present in the data")
         for child_node in data.columns:
             if child_node != parent_node:
                 self.add_edge(parent_node, child_node)
-        super(NaiveBayes, self).fit(data, estimator)
+        super().fit(data, estimator)
