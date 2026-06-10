@@ -1,7 +1,7 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Hepar2(DiscreteMixin, _BaseExampleModel):
+class Hepar2(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------

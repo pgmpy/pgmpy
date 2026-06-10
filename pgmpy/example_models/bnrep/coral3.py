@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Coral3(BIFMixin, _BaseExampleModel):
+class Coral3(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/coral3",
         "n_nodes": 8,

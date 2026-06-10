@@ -3,10 +3,10 @@ import pandas as pd
 
 from pgmpy.utils import preprocess_data
 
-from ._base import _BaseCITest, _CITestResult, _ResidualMixin
+from ._base import BaseCITest, _CITestResult, _ResidualMixin
 
 
-class GeneralizedCov(_ResidualMixin, _BaseCITest):
+class GeneralizedCov(_ResidualMixin, BaseCITest):
     r"""
     Residual cross-covariance determinant CI test with permutation-based p-values [1].
 

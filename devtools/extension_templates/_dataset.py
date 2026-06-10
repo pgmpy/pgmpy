@@ -10,13 +10,13 @@
 import pandas
 
 from pgmpy.base import DAG
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 from pgmpy.estimators import ExpertKnowledge
 
 
 # TODO: Rename the class for your dataset. If the data file is reading a covariance matrix instead of tabular data, the
-# class signature should be `class YourDatasetClass(_CovarianceMixin, _BaseDataset):`.
-class YourDatasetClass(_BaseDataset):
+# class signature should be `class YourDatasetClass(_CovarianceMixin, BaseDataset):`.
+class YourDatasetClass(BaseDataset):
     # TODO: Fill in the tags for your dataset.
     # Note: 'name' is mandatory and must match the string used in load_dataset().
     _tags = {

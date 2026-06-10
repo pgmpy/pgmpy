@@ -1,4 +1,4 @@
-class _BaseIdentification:
+class BaseIdentification:
     """Base class for all identification methods.
 
     All identification methods in pgmpy must inherit `BaseIdentification`.
@@ -10,8 +10,8 @@ class _BaseIdentification:
 
     Examples
     --------
-    >>> from pgmpy.identification import _BaseIdentification
-    >>> class SimpleId(_BaseIdentification):
+    >>> from pgmpy.identification import BaseIdentification
+    >>> class SimpleId(BaseIdentification):
     ...     "A simple identification method when all variable are observed"
     ...
     ...     def _identify(self, causal_graph):

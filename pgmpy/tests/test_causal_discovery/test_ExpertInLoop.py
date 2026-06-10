@@ -10,7 +10,7 @@ from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery import ExpertInLoop
-from pgmpy.ci_tests._base import _BaseCITest
+from pgmpy.ci_tests._base import BaseCITest
 from pgmpy.estimators import ExpertKnowledge
 
 
@@ -440,7 +440,7 @@ def simple_dag():
     return dag
 
 
-class WeakCI(_BaseCITest):
+class WeakCI(BaseCITest):
     def __init__(self, data):
         self.data = data
         super().__init__()
@@ -451,7 +451,7 @@ class WeakCI(_BaseCITest):
         return (0.01, 0.9)
 
 
-class StrongCI(_BaseCITest):
+class StrongCI(BaseCITest):
     def __init__(self, data):
         self.data = data
         super().__init__()
@@ -462,7 +462,7 @@ class StrongCI(_BaseCITest):
         return (0.5, 0.001)
 
 
-class MockCI(_BaseCITest):
+class MockCI(BaseCITest):
     def __init__(self, data):
         self.data = data
         super().__init__()

@@ -1,7 +1,7 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class HTRU2(_BaseDataset):
+class HTRU2(BaseDataset):
     """
     References
     ----------

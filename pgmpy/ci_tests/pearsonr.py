@@ -2,10 +2,10 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from ._base import _BaseCITest, _CITestResult
+from ._base import BaseCITest, _CITestResult
 
 
-class Pearsonr(_BaseCITest):
+class Pearsonr(BaseCITest):
     r"""
     Partial Correlation test for conditional independence.
 

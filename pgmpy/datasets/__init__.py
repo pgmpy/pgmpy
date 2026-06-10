@@ -1,7 +1,7 @@
-from ._base import _BaseDataset, list_datasets, load_dataset
+from ._base import BaseDataset, list_datasets, load_dataset
 
 __all__ = [
-    "_BaseDataset",
+    "BaseDataset",
     "load_dataset",
     "list_datasets",
 ]

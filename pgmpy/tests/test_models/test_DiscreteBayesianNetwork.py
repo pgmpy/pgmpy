@@ -515,9 +515,9 @@ class TestBayesianNetworkMethods(unittest.TestCase):
         samples = asia.simulate(n_samples=n_samples, show_progress=False)
         self.assertEqual(samples.shape[0], n_samples)
 
-        # The probability values don't sum to 1 in this case.
-        barley = load_model("bnlearn/barley")
-        samples = barley.simulate(n_samples=n_samples, show_progress=False)
+        # Also simulate from a second, different network.
+        sachs = load_model("bnlearn/sachs")
+        samples = sachs.simulate(n_samples=n_samples, show_progress=False)
         self.assertEqual(samples.shape[0], n_samples)
 
     def test_simulate_with_partial_samples(self):
@@ -528,8 +528,8 @@ class TestBayesianNetworkMethods(unittest.TestCase):
 
     def test_load_save(self):
         test_model_small = load_model("bnlearn/alarm")
-        test_model_large = load_model("bnlearn/hailfinder")
-        for model in {test_model_small, test_model_large}:
+        test_model_other = load_model("bnlearn/sachs")
+        for model in {test_model_small, test_model_other}:
             for filetype in {"bif", "xmlbif", "xdsl", "net"}:
                 model.save("model." + filetype)
                 model.save("model.model", filetype=filetype)

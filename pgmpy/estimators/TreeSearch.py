@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+import warnings
 from itertools import combinations
 
 import networkx as nx
@@ -48,6 +48,11 @@ class TreeSearch(StructureEstimator):
     """
 
     def __init__(self, data, root_node=None, n_jobs=-1, **kwargs):
+        warnings.warn(
+            "TreeSearch is deprecated. Please use pgmpy.causal_discovery.TreeSearch instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
         if root_node is not None and root_node not in data.columns:
             raise ValueError(f"Root node: {root_node} not found in data columns.")
 

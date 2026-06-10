@@ -128,7 +128,7 @@ class _CITestResult:
     attributes: dict[str, object] = field(default_factory=dict)
 
 
-class _BaseCITest(BaseObject):
+class BaseCITest(BaseObject):
     """
     Base class for all Conditional Independence (CI) tests.
 
@@ -275,7 +275,7 @@ def get_ci_test(test=None, data=None, use_cache=True):
     This is the recommended factory for obtaining a CI test. It supports four
     calling patterns:
 
-    1. **Pass-through**: if ``test`` is already a :class:`_BaseCITest` instance, it is
+    1. **Pass-through**: if ``test`` is already a :class:`BaseCITest` instance, it is
        returned as-is.
     2. **Callable**: if ``test`` is any other callable (e.g. a custom function), it is
        returned as-is.
@@ -286,7 +286,7 @@ def get_ci_test(test=None, data=None, use_cache=True):
 
     Parameters
     ----------
-    test : str, _BaseCITest instance, callable, or None
+    test : str, BaseCITest instance, callable, or None
         The CI test to retrieve. If a string, must match the ``name`` tag of a
         registered CI test (e.g. ``"chi_square"``, ``"pearsonr"``). If ``None``,
         the default test for the data type of ``data`` is used.
@@ -296,7 +296,7 @@ def get_ci_test(test=None, data=None, use_cache=True):
 
     Returns
     -------
-    _BaseCITest or callable
+    BaseCITest or callable
         An instantiated CI test object ready to call, or the original callable if
         ``test`` was already callable.
 
@@ -309,7 +309,7 @@ def get_ci_test(test=None, data=None, use_cache=True):
     ValueError
         If the resolved CI test requires data but ``data`` is ``None``.
     ValueError
-        If ``test`` is not a string, ``_BaseCITest`` instance, callable, or ``None``.
+        If ``test`` is not a string, ``BaseCITest`` instance, callable, or ``None``.
 
     Examples
     --------
@@ -347,7 +347,7 @@ def get_ci_test(test=None, data=None, use_cache=True):
 
     from pgmpy.utils import get_dataset_type
 
-    if isinstance(test, _BaseCITest):
+    if isinstance(test, BaseCITest):
         return test
 
     if callable(test):
@@ -366,7 +366,7 @@ def get_ci_test(test=None, data=None, use_cache=True):
         raise ValueError(f"Invalid `test` argument: {test!r}")
 
     tests = all_objects(
-        object_types=_BaseCITest,
+        object_types=BaseCITest,
         package_name="pgmpy.ci_tests",
         return_names=False,
         filter_tags=filter_tags,
