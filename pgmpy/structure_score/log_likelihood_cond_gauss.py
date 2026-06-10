@@ -31,7 +31,7 @@ class LogLikelihoodCondGauss(BaseStructureScore):
         DataFrame where columns may be discrete or continuous variables.
     state_names : dict, optional
         Dictionary mapping discrete variable names to their possible states.
-    cache_size : int or None, default=10000
+    max_cache_size : int or None, default=10000
         Maximum number of local scores to cache. If None, the cache is unlimited.
 
     Examples
@@ -68,8 +68,8 @@ class LogLikelihoodCondGauss(BaseStructureScore):
         "is_parameteric": False,
     }
 
-    def __init__(self, data, state_names=None, cache_size=10000):
-        super().__init__(data, state_names=state_names, cache_size=cache_size)
+    def __init__(self, data, state_names=None, max_cache_size=10000):
+        super().__init__(data, state_names=state_names, max_cache_size=max_cache_size)
 
     @staticmethod
     def _adjusted_cov(df: pd.DataFrame) -> pd.DataFrame:

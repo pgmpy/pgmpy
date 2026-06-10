@@ -26,7 +26,7 @@ class BaseStructureScore(BaseObject):
     state_names : dict, optional
         Dictionary mapping each variable name to its allowed states. If not specified, the
         observed values in the data are used.
-    cache_size : int or None, default=10000
+    max_cache_size : int or None, default=10000
         Maximum number of local scores to cache. If None, the cache is unlimited.
         Increase this for large datasets to avoid cache thrashing.
     """
@@ -38,17 +38,17 @@ class BaseStructureScore(BaseObject):
         "is_parameteric": False,
     }
 
-    def __init__(self, data, state_names=None, cache_size=10000):
+    def __init__(self, data, state_names=None, max_cache_size=10000):
         self.data, self.dtypes = preprocess_data(data)
-        self.cache_size = cache_size
-        if cache_size is not None and cache_size <= 0:
-            raise ValueError(f"cache_size must be a positive integer or None. Got: {cache_size}")
+        self.cache_size = max_cache_size
+        if max_cache_size is not None and max_cache_size <= 0:
+            raise ValueError(f"cache_size must be a positive integer or None. Got: {max_cache_size}")
 
         if self.data is not None:
             self.variables = list(self.data.columns.values)
             self.state_names = build_state_names(self.data, state_names=state_names)
 
-        self._cached_local_score = lru_cache(maxsize=cache_size)(self._local_score)
+        self._cached_local_score = lru_cache(maxsize=max_cache_size)(self._local_score)
 
     def local_score(self, variable: str, parents: tuple[str, ...]) -> float:
         """Compute the cached local score for `variable` given `parents`."""
@@ -78,7 +78,6 @@ class BaseStructureScore(BaseObject):
 def get_scoring_method(
     scoring_method: str | BaseStructureScore | None,
     data: pd.DataFrame,
-    cache_size: int | None = 10000,
 ) -> BaseStructureScore:
     if isinstance(scoring_method, BaseStructureScore):
         return scoring_method
@@ -105,7 +104,7 @@ def get_scoring_method(
         if data is None:
             raise ValueError(f"Scoring method '{cls.__name__}' requires data, but data is None.")
 
-        return cls(data=data, cache_size=cache_size)
+        return cls(data=data)
 
     else:
         raise ValueError(f"Unknown scoring method: {scoring_method!r}")
