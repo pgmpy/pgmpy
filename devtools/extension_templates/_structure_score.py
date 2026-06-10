@@ -123,14 +123,15 @@ class MyStructureScore(BaseStructureScore):
     # Optional overrides
     # -------------------------------------------------------------------------
 
-    # Override structure_prior() to add a log prior over graph structures
-    # (e.g., penalise dense graphs). The default returns 0.
+    # Override structure_prior() to return the absolute log prior for a full graph.
+    # Used by score(model). Default returns 0 (flat prior).
     #
     # def structure_prior(self, model) -> float:
     #     return 0.0
 
-    # Override structure_prior_ratio() to support efficient incremental updates
-    # during structure search (e.g., Hill-Climb). The default returns 0.
+    # Override structure_prior_ratio() to return the log prior delta for a single
+    # edge operation ("+", "-", "flip"). Used by Hill-Climb/GES per candidate operation.
+    # Must be consistent with structure_prior(). Default returns 0.
     #
     # def structure_prior_ratio(self, operation) -> float:
     #     return 0.0
