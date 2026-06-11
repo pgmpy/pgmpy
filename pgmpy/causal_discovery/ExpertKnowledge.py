@@ -346,7 +346,7 @@ class ExpertKnowledge:
 
     def limit_search_space(self, data):
         """
-        Restrict the structure learning search space by subtracting the
+        Forms an additive set of forbidden edges by subtracting the
         search space from the set of all possible edges.
 
         If `screening_method` is specified, a search space is first generated
