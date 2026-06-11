@@ -7,10 +7,10 @@ from sklearn.base import clone
 from tqdm.auto import trange
 
 from pgmpy import config
-from pgmpy.causal_discovery._base import _BaseCausalDiscovery
+from pgmpy.causal_discovery._base import BaseCausalDiscovery
 
 
-class BootstrapEstimator(_BaseCausalDiscovery):
+class BootstrapEstimator(BaseCausalDiscovery):
     """
     Bootstrap meta-estimator for causal discovery.
 
@@ -21,10 +21,10 @@ class BootstrapEstimator(_BaseCausalDiscovery):
 
     Parameters
     ----------
-    estimator : _BaseCausalDiscovery instance
+    estimator : BaseCausalDiscovery instance
         The base causal discovery estimator to be wrapped (e.g., PC, HillClimbSearch, GES).
 
-    n_bootstraps : int, default=100
+    n_bootstraps : int, default=10
         The number of bootstrap samples to generate and fit.
 
     sample_size : float, default=1.0
@@ -84,29 +84,29 @@ class BootstrapEstimator(_BaseCausalDiscovery):
 
     def __init__(
         self,
-        estimator: _BaseCausalDiscovery,
-        n_bootstraps: int = 100,
+        estimator: BaseCausalDiscovery,
+        n_bootstraps: int = 10,
         sample_size: float = 1,
         threshold: float = 0.5,
-        n_jobs: int = -1,
         show_progress: bool = True,
         seed: int | None = None,
+        n_jobs: int = -1,
     ):
         self.estimator = estimator
         self.n_bootstraps = n_bootstraps
         self.sample_size = sample_size
         self.threshold = threshold
-        self.n_jobs = n_jobs
         self.show_progress = show_progress
         self.seed = seed
+        self.n_jobs = n_jobs
 
     @staticmethod
     def _bootstrap_iteration(
         X: pd.DataFrame,
-        base_estimator: _BaseCausalDiscovery,
+        base_estimator: BaseCausalDiscovery,
         bootstrap_sample_size: int,
         seed: int | np.random.SeedSequence,
-    ) -> tuple[list[int], _BaseCausalDiscovery]:
+    ) -> tuple[list[int], BaseCausalDiscovery]:
         """Helper function to run a single bootstrap iteration."""
 
         # Create new sample by resampling
@@ -115,7 +115,7 @@ class BootstrapEstimator(_BaseCausalDiscovery):
         sample = X.iloc[row_indices]
 
         # Fit the resample data on base estimator.
-        base_estimator = cast(_BaseCausalDiscovery, clone(base_estimator))
+        base_estimator = cast(BaseCausalDiscovery, clone(base_estimator))
         est = base_estimator.fit(sample)
         return row_indices, est
 
@@ -130,8 +130,8 @@ class BootstrapEstimator(_BaseCausalDiscovery):
         """
 
         # Step 0: Initialize variables
-        if not isinstance(self.estimator, _BaseCausalDiscovery):
-            raise ValueError("estimator must be an instance of _BaseCausalDiscovery.")
+        if not isinstance(self.estimator, BaseCausalDiscovery):
+            raise ValueError("estimator must be an instance of BaseCausalDiscovery Class.")
 
         N = self.n_features_in_
         variables = self.feature_names_in_
@@ -195,7 +195,8 @@ class BootstrapEstimator(_BaseCausalDiscovery):
             self.direction_prob_[edge] = f_utov / presence
 
         # Step 2.2: Calculate the edge probabilities
-        self.edge_prob_ = edge_presence / self.n_bootstraps
+        edge_presence /= self.n_bootstraps
+        self.edge_prob_ = edge_presence
 
         # Step 3: Form a consensus graph by adding edges to the graph one by one.
         # Make edge prob 0 for the edges which is less than threshold.
