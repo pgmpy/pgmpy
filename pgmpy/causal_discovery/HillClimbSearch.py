@@ -185,8 +185,8 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
         else:
             expert_knowledge = self.expert_knowledge
 
-        # Step 1.3.1: If search_space in expert_knowledge is not None, limit the search space
-        if expert_knowledge.search_space:
+        # Step 1.3.1: If search_space or screening method in expert_knowledge is not None, limit the search space
+        if expert_knowledge.search_space or expert_knowledge.screening_method:
             expert_knowledge.limit_search_space(X)
 
         # Step 1.4: Check if required edges cause a cycle

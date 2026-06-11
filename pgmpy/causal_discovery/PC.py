@@ -234,7 +234,7 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
         else:
             expert_knowledge = self.expert_knowledge
 
-        if expert_knowledge.search_space:
+        if expert_knowledge.search_space or expert_knowledge.screening_method:
             expert_knowledge.limit_search_space(X)
 
         # Step 1: Build the skeleton
