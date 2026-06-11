@@ -9,7 +9,7 @@ from .TAN import TAN
 from .TOPIC import TOPIC
 
 __all__ = [
-    "CASTLE",  
+    "CASTLE",
     "ChowLiu",
     "ExpertInLoop",
     "ExpertKnowledge",

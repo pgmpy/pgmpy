@@ -42,8 +42,19 @@ class _CASTLEModel(nn.Module):
 
     def __init__(self, num_inputs: int, network_cfg: NetworkConfig):
         """Initialize the internal CASTLE network."""
-        # TODO: Implement the internal CASTLE model initialization.
-        raise NotImplementedError("TBD")
+        super().__init__()
+        self.num_inputs = num_inputs
+        self.hidden_dim = network_cfg.hidden_dim
+
+        self.input_layers = nn.ModuleList([nn.Linear(num_inputs, self.hidden_dim) for _ in range(num_inputs)])
+        for k in range(num_inputs):
+            mask = torch.ones(self.hidden_dim, num_inputs)
+            mask[:, k] = 0.0
+            self.register_buffer(f"mask_{k}", mask)
+
+        self.hidden_layers = nn.ModuleList([nn.Linear(self.hidden_dim, self.hidden_dim)])
+
+        self.output_layers = nn.ModuleList([nn.Linear(self.hidden_dim, 1) for _ in range(num_inputs)])
 
     def forward(self, X):
         """Run a forward pass through the CASTLE network."""
