@@ -16,28 +16,24 @@ class LLMPairwise(BaseCausalDiscovery):
     """
     LLM-based pairwise causal discovery estimator.
 
-    Orients the edge between exactly two variables by querying a Large Language
-    Model with the variable names and optional text descriptions. The data
-    values themselves are not used; they only provide the standard pgmpy
-    estimator ``fit`` interface.
+    Orients the edge between exactly two variables by querying a Large Language Model with the variable names and
+    optional text descriptions. The data values themselves are not used; they only provide the standard pgmpy estimator
+    ``fit`` interface.
 
     Parameters
     ----------
     descriptions : dict, default=None
-        Mapping from variable names to text descriptions. If a variable is
-        missing, its name is used as the description.
+        Mapping from variable names to text descriptions. If a variable is missing, its name is used as the description.
 
     system_prompt : str, default=None
-        A system prompt to give the LLM. If ``None``, defaults to
-        ``"You are an expert in Causal Inference"``.
+        A system prompt to give the LLM. If ``None``, defaults to ``"You are an expert in Causal Inference"``.
 
     llm_model : str, default="gemini/gemini-1.5-flash"
-        The LLM model to use. Please refer to the litellm documentation
-        (https://docs.litellm.ai/docs/providers) for the available models.
+        The LLM model to use. This can be any model supported by LiteLLM. Please refer to the LiteLLM documentation
+        (https://docs.litellm.ai/docs/providers) for the full list.
 
     llm_kwargs : dict, default=None
-        Additional keyword arguments passed to ``litellm.completion``, for
-        example ``{"temperature": 0}``.
+        Additional keyword arguments passed to ``litellm.completion``, for example ``{"temperature": 0}``.
 
     Attributes
     ----------
@@ -64,28 +60,26 @@ class LLMPairwise(BaseCausalDiscovery):
 
     Notes
     -----
-    The query is sent through ``litellm``, so the provider's API key must be set
-    before calling ``fit`` (e.g. via the ``GEMINI_API_KEY`` or ``OPENAI_API_KEY``
-    environment variable). Locally served models (e.g. Ollama) need no API key.
+    The query is sent through ``LiteLLM``, so the provider's API key must be set before calling ``fit`` (e.g. via the
+    ``GEMINI_API_KEY`` or ``OPENAI_API_KEY`` environment variable). Locally served models (e.g. Ollama) need no API key
+    but require the API endpoint to be specified in ``llm_kwargs``.
 
     Examples
     --------
     >>> import pandas as pd
     >>> from pgmpy.causal_discovery import LLMPairwise
-    >>> data = pd.DataFrame({"Smoker": [0, 1], "Cancer": [0, 1]})
+    >>> df = pd.DataFrame({"Smoker": [0, 1], "Cancer": [0, 1]})
     >>> descriptions = {
     ...     "Smoker": "Whether a person smokes",
     ...     "Cancer": "Whether a person has cancer",
     ... }
-    >>> est = LLMPairwise(descriptions=descriptions).fit(data)  # doctest: +SKIP
+    >>> est = LLMPairwise(descriptions=descriptions).fit(df)  # doctest: +SKIP
     >>> est.causal_graph_.edges()  # doctest: +SKIP
     OutEdgeView([('Smoker', 'Cancer')])
 
     A different hosted provider can be selected through ``llm_model``:
 
-    >>> est = LLMPairwise(
-    ...     descriptions=descriptions, llm_model="openai/gpt-4o"
-    ... ).fit(data)  # doctest: +SKIP
+    >>> est = LLMPairwise(descriptions=descriptions, llm_model="openai/gpt-4o").fit(df)  # doctest: +SKIP
 
     A model served locally with Ollama can be used by prefixing the model name
     with ``ollama/`` and pointing ``api_base`` at the local server:
@@ -94,7 +88,7 @@ class LLMPairwise(BaseCausalDiscovery):
     ...     descriptions=descriptions,
     ...     llm_model="ollama/llama3",
     ...     llm_kwargs={"api_base": "http://localhost:11434"},
-    ... ).fit(data)  # doctest: +SKIP
+    ... ).fit(df)  # doctest: +SKIP
     """
 
     def __init__(
