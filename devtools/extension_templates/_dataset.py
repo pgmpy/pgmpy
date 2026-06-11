@@ -14,8 +14,11 @@ from pgmpy.datasets._base import BaseDataset
 from pgmpy.estimators import ExpertKnowledge
 
 
-# TODO: Rename the class for your dataset. If the data file is reading a covariance matrix instead of tabular data, the
-# class signature should be `class YourDatasetClass(_CovarianceMixin, BaseDataset):`.
+# TODO: Rename the class for your dataset. Most datasets subclass `BaseDataset` directly. For specialized strategies,
+# subclass one of the dedicated base classes instead : `BaseCovarianceDataset` if the data file is a covariance matrix,
+# `BaseTubingenDataset` for cause-effect pair benchmarks, or `BaseSimulatedDataset` for programmatically generated
+# data. Those base classes already set the relevant tags (e.g. `is_simulated`), so a subclass only needs its non-default
+# tags.
 class YourDatasetClass(BaseDataset):
     # TODO: Fill in the tags for your dataset.
     # Note: 'name' is mandatory and must match the string used in load_dataset().

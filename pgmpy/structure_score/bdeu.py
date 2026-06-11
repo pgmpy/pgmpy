@@ -38,6 +38,8 @@ class BDeu(BaseStructureScore):
     state_names : dict, optional
         Dictionary mapping each variable to its discrete states. If not specified, the unique
         values observed in the data are used.
+    max_cache_size : int or None, default=10000
+        Maximum number of local scores to cache. If None, the cache is unlimited.
 
     Examples
     --------
@@ -73,9 +75,9 @@ class BDeu(BaseStructureScore):
         "is_parameteric": True,
     }
 
-    def __init__(self, data, equivalent_sample_size=10, state_names=None):
+    def __init__(self, data, equivalent_sample_size=10, state_names=None, max_cache_size=10000):
         self.equivalent_sample_size = equivalent_sample_size
-        super().__init__(data, state_names=state_names)
+        super().__init__(data, state_names=state_names, max_cache_size=max_cache_size)
         self._codes, self._cardinalities = encode_columns(self.data, self.state_names)
 
     def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
