@@ -99,6 +99,22 @@ class ExpertKnowledge:
     ...     show_progress=False,
     ... )
     <pgmpy.base.PDAG.PDAG object at 0x...>
+
+    **CI-test-based search space generation**
+
+    >>> data = cancer_model.simulate(n_samples=int(1e4), seed=42)
+    >>> expert_knowledge = ExpertKnowledge(
+    ...     screening_method="chi_square",
+    ...     significance_level=0.05,
+    ... )
+    >>> expert_knowledge.limit_search_space(data)
+    >>> est = PC(data)
+    >>> est.estimate(
+    ...     variant="stable",
+    ...     expert_knowledge=expert_knowledge,
+    ...     show_progress=False,
+    ... )
+    <pgmpy.base.PDAG.PDAG object at 0x...>
     """
 
     def __init__(
@@ -247,17 +263,15 @@ class ExpertKnowledge:
 
     def _generate_screening_search_space(self, data):
         """
-        Generate a search space using a conditional independence test.
+        Generate a search space using a marginal independence test (Z=[]).
 
         Variable pairs that reject marginal independence according to the
-        configured CI test are added to `self.search_space`.
+        specified CI test are added to the search space.
 
         Parameters
         ----------
         data : pandas.DataFrame
             Dataset used for evaluating variable dependencies.
-
-        Note: The generated search space is merged with any existing user-provided search space.
         """
         ci_test = get_ci_test(test=self.screening_method, data=data)
 
@@ -332,7 +346,8 @@ class ExpertKnowledge:
 
     def limit_search_space(self, data):
         """
-        Restrict the structure learning search space.
+        Restrict the structure learning search space by subtracting the
+        search space from the set of all possible edges.
 
         If `screening_method` is specified, a search space is first generated
         from the data using the configured conditional independence test.
