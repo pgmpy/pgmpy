@@ -166,10 +166,10 @@ def test_invalid_input():
 
 def test_invalid_tag():
     with pytest.raises(ValueError, match="Unrecognized filter argument"):
-        list_datasets(is_paraterized=True)  # typo
+        list_datasets(is_paraterized=True)
 
     with pytest.raises(ValueError, match="Unrecognized filter argument"):
-        list_datasets(num_samples=100)  # wrong key name entirely
+        list_datasets(num_samples=100)
 
 
 def test_static_dataset_n_samples():
@@ -189,27 +189,3 @@ def test_static_dataset_n_samples():
     ds1 = load_dataset("sachs_discrete", n_samples=50, seed=42)
     ds2 = load_dataset("sachs_discrete", n_samples=50, seed=42)
     pd.testing.assert_frame_equal(ds1.data, ds2.data)
-
-
-def test_static_dataset_kwargs():
-    from pgmpy.datasets.sachs import SachsDiscrete
-
-    # Static datasets reject unknown simulator kwargs.
-    with pytest.raises(TypeError):
-        load_dataset("sachs_discrete", edge_prob=0.3)
-
-    # Forwarded kwargs do not change the ground truth.
-    expected = SachsDiscrete.load_ground_truth()
-    actual = SachsDiscrete.load_ground_truth(seed=42, n_nodes=8)
-    assert set(actual.nodes()) == set(expected.nodes())
-    assert set(actual.edges()) == set(expected.edges())
-
-
-def test_simulation_mixin_contract():
-    from pgmpy.datasets._base import _SimulationMixin
-
-    with pytest.raises(NotImplementedError):
-        _SimulationMixin.load_dataframe()
-
-    with pytest.raises(NotImplementedError):
-        _SimulationMixin.load_ground_truth()

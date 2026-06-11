@@ -192,33 +192,15 @@ class BaseDataset(BaseObject):
         return DAG.from_dagitty(raw_data)
 
 
-class _SimulationMixin:
+class BaseCovarianceDataset(BaseDataset):
     """
-    Mixin for simulated datasets. Concrete classes must implement
-    ``load_dataframe()`` and ``load_ground_truth()``.
+    Base class for datasets defined by a covariance matrix.
 
-    When using this mixin, it should be the first parent class so that its
-    methods take precedence in the MRO (same convention as
-    ``_CovarianceMixin``).
+    Instead of loading a static data file, ``load_dataframe`` generates samples from a multivariate normal distribution
+    parameterized by the dataset's covariance matrix.
     """
 
-    @classmethod
-    def load_dataframe(cls, n_samples=None, seed=None, **sim_kwargs) -> pd.DataFrame:
-        """Generate and return simulated data. Must be implemented by each simulator."""
-        raise NotImplementedError(f"{cls.__name__} must implement load_dataframe().")
-
-    @classmethod
-    def load_ground_truth(cls, **sim_kwargs) -> DAG | PDAG | ADMG | MAG:
-        """Construct and return the ground-truth graph. Must be implemented by each simulator."""
-        raise NotImplementedError(f"{cls.__name__} must implement load_ground_truth().")
-
-
-class _CovarianceMixin:
-    """
-    This mixin class provides functionality to load datasets defined by a covariance matrix. Mainly the `load_dataframe`
-    method is overridden to generate data from the covariance matrix instead of loading a static data file as is the
-    case with `BaseDataset`.
-    """
+    _tags = {"is_simulated": True}
 
     @classmethod
     def _load_covariance_matrix(cls) -> pd.DataFrame:
@@ -245,10 +227,6 @@ class _CovarianceMixin:
     def load_dataframe(cls, n_samples=None, seed=None) -> pd.DataFrame:
         """Generate data from a covariance matrix.
 
-        When the ``_CovarianceMixin`` is used, this method overrides
-        ``BaseDataset.load_dataframe``.  The mixin should be the first
-        parent class so that it takes precedence in the MRO.
-
         Parameters
         ----------
         n_samples : int, optional
@@ -269,9 +247,9 @@ class _CovarianceMixin:
         return data
 
 
-class _TubingenBenchmarkMixin:
+class BaseTubingenDataset(BaseDataset):
     """
-    Mixin for Tubingen datasets that consist of multiple independent pairs/files.
+    Base class for benchmark datasets that consist of multiple independent cause-effect pairs/files.
     URL: https://webdav.tuebingen.mpg.de/cause-effect/
     """
 
@@ -285,6 +263,27 @@ class _TubingenBenchmarkMixin:
         raw_data = cls._get_raw_data(f"pair{pair_id:04}_graph.txt")
         content = raw_data.decode("utf-8-sig", errors="ignore")
         return DAG.from_dagitty(content)
+
+
+class BaseSimulatedDataset(BaseDataset):
+    """
+    Base class for simulated datasets.
+
+    Concrete subclasses generate data and the corresponding ground-truth graph programmatically instead of
+    loading static files, and must implement ``load_dataframe()`` and ``load_ground_truth()``.
+    """
+
+    _tags = {"is_simulated": True}
+
+    @classmethod
+    def load_dataframe(cls, n_samples=None, seed=None, **sim_kwargs) -> pd.DataFrame:
+        """Generate and return simulated data. Must be implemented by each simulator."""
+        raise NotImplementedError(f"{cls.__name__} must implement load_dataframe().")
+
+    @classmethod
+    def load_ground_truth(cls, **sim_kwargs) -> DAG | PDAG | ADMG | MAG:
+        """Construct and return the ground-truth graph. Must be implemented by each simulator."""
+        raise NotImplementedError(f"{cls.__name__} must implement load_ground_truth().")
 
 
 def load_dataset(
