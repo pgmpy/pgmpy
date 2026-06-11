@@ -235,7 +235,7 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
             expert_knowledge = self.expert_knowledge
 
         if expert_knowledge.search_space:
-            expert_knowledge.limit_search_space(X.columns)
+            expert_knowledge.limit_search_space(X)
 
         # Step 1: Build the skeleton
         self.skeleton_, self.separating_sets_ = self._build_skeleton(
