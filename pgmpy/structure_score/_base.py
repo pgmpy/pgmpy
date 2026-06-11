@@ -87,13 +87,11 @@ def get_scoring_method(
     scoring_method : str or BaseStructureScore or None
         The scoring method to use.
 
-        If a string is provided, the corresponding scoring method is
+        - If a string is provided, the corresponding scoring method is
         instantiated with default parameters.
-
-        If a ``BaseStructureScore`` instance is provided, it is returned
+        - If a ``BaseStructureScore`` instance is provided, it is returned
         unchanged, allowing custom score-specific parameters to be used.
-
-        If ``None``, the default scoring method for the data type is
+        - If ``None``, the default scoring method for the data type is
         selected automatically.
 
     data : pandas.DataFrame
@@ -104,6 +102,32 @@ def get_scoring_method(
     -------
     BaseStructureScore
         An initialized structure score instance.
+
+    Examples
+    --------
+    >>> from pgmpy.example_models import load_model
+    >>> from pgmpy.structure_score import BDeu, get_scoring_method
+    >>> model = load_model("bnlearn/asia")
+    >>> data = model.simulate(n_samples=1000, seed=42)
+
+    Use a scoring method by name:
+
+    >>> score = get_scoring_method("k2", data)
+
+    Use the default scoring method for the dataset type:
+
+    >>> score = get_scoring_method(None, data)
+
+    Use a custom scoring method with non-default parameters:
+
+    >>> score = BDeu(data, equivalent_sample_size=20, max_cache_size=20000)
+    >>> score = get_scoring_method(score, data)
+
+    Raises
+    ------
+    ValueError
+        If ``scoring_method`` is invalid, unknown, or if ``data`` is
+        required but not provided.
     """
     if isinstance(scoring_method, BaseStructureScore):
         return scoring_method
