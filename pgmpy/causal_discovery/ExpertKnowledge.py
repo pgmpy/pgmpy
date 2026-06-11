@@ -31,6 +31,10 @@ class ExpertKnowledge:
             Refer to the algorithm documentation for details on how the
             argument is handled.
 
+            If both `search_space` and `screening_method` are specified,
+            the generated search space is merged with the user-provided
+            search space.
+
     temporal_order: iterator (default: None)
             The temporal ordering of variables according to prior knowledge.
             Each list/structure in the (2 dimensional) iterator contains
@@ -41,6 +45,10 @@ class ExpertKnowledge:
     screening_method: str | BaseCITest | callable (default: None)
             Conditional independence test used for generating
             a search space from data.
+
+            If `search_space` is also specified, the generated
+            search space is merged with the user-provided
+            search space.
 
     significance_level: float (default: 0.05)
             Significance threshold used for screening variable
@@ -109,6 +117,8 @@ class ExpertKnowledge:
         self.search_space = self._validate_edges(search_space) if search_space is not None else set()
         self.screening_method = screening_method
         self.significance_level = significance_level
+        if not (0 < significance_level < 1):
+            raise ValueError("significance_level must be between 0 and 1.")
 
         self.temporal_order = temporal_order if temporal_order is not None else [[]]
         self.temporal_ordering = self._get_temporal_ordering(self.temporal_order)
@@ -247,10 +257,7 @@ class ExpertKnowledge:
         data : pandas.DataFrame
             Dataset used for evaluating variable dependencies.
 
-        Returns
-        -------
-        generated_search_space: set
-            Set of directed edges retained after CI-test-based screening.
+        Note: The generated search space is merged with any existing user-provided search space.
         """
         ci_test = get_ci_test(test=self.screening_method, data=data)
 
@@ -260,9 +267,12 @@ class ExpertKnowledge:
 
         for i, X in enumerate(columns):
             for Y in columns[i + 1 :]:
-                _, p_value = ci_test.run_test(X=X, Y=Y, Z=[])
-
-                if p_value < self.significance_level:
+                if not ci_test.is_independent(
+                    X=X,
+                    Y=Y,
+                    Z=[],
+                    significance_level=self.significance_level,
+                ):
                     generated_search_space.add((X, Y))
                     generated_search_space.add((Y, X))
 
@@ -338,11 +348,6 @@ class ExpertKnowledge:
             If `screening_method` is not None, the dataset is additionally
             used to generate a search space based on marginal conditional
             independence tests.
-
-        Returns
-        -------
-        forbidden_edges_additive: set
-            Set of edges that are not allowed in the structure.
         """
         if self.screening_method is not None:
             self._generate_screening_search_space(data)
