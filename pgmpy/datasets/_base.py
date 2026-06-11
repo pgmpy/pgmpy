@@ -161,8 +161,8 @@ class BaseDataset(BaseObject):
                 warnings.warn(
                     f"Requested {n_samples} samples but dataset only has {len(df)}. Returning all {len(df)} rows."
                 )
-            n_samples = min(n_samples, len(df))
-            df = df.sample(n=n_samples, random_state=seed).reset_index(drop=True)
+            else:
+                df = df.sample(n=n_samples, random_state=seed).reset_index(drop=True)
         return df
 
     @classmethod
@@ -347,8 +347,8 @@ def load_dataset(
                     warnings.warn(
                         f"Requested {n_samples} samples but dataset only has {len(df)}. Returning all {len(df)} rows."
                     )
-                n_samples = min(n_samples, len(df))
-                df = df.sample(n=n_samples, random_state=seed).reset_index(drop=True)
+                else:
+                    df = df.sample(n=n_samples, random_state=seed).reset_index(drop=True)
 
             tags = target_cls.get_class_tags()
             tags["n_samples"] = df.shape[0]
