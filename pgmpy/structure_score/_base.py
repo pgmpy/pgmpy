@@ -85,12 +85,12 @@ def get_scoring_method(
     Parameters
     ----------
     scoring_method : str or BaseStructureScore or None
-        The scoring method to use.
+        The scoring method whose instance is to be returned.
 
         - If a string is provided, the corresponding scoring method is
         instantiated with default parameters.
         - If a ``BaseStructureScore`` instance is provided, it is returned
-        unchanged, allowing custom score-specific parameters to be used.
+        unchanged.
         - If ``None``, the default scoring method for the data type is
         selected automatically.
 
