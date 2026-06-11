@@ -135,9 +135,94 @@ class TestCASTLEFit:
 
 
 class TestCASTLEModel:
+    def _make_model(self, num_inputs=4, hidden_dim=8):
+        cfg = NetworkConfig(hidden_dim=hidden_dim, scaler=None, target_col=None)
+        return _CASTLEModel(num_inputs=num_inputs, network_cfg=cfg)
+
+    # --- __init__ ---
+
     @requires_torch
     def test_castle_model_signature(self):
         sig = inspect.signature(_CASTLEModel.__init__)
         params = list(sig.parameters.keys())
         assert "num_inputs" in params
         assert "network_cfg" in params
+
+    @requires_torch
+    def test_layer_shapes(self):
+        num_inputs, hidden_dim = 4, 8
+        model = self._make_model(num_inputs=num_inputs, hidden_dim=hidden_dim)
+        assert len(model.input_layers) == num_inputs
+        assert len(model.output_layers) == num_inputs
+        assert len(model.hidden_layers) == 1
+        for k in range(num_inputs):
+            assert model.input_layers[k].weight.shape == (hidden_dim, num_inputs)
+            assert model.output_layers[k].weight.shape == (1, hidden_dim)
+        assert model.hidden_layers[0].weight.shape == (hidden_dim, hidden_dim)
+
+    @requires_torch
+    def test_mask_buffers_exist_and_shape(self):
+        num_inputs, hidden_dim = 4, 8
+        model = self._make_model(num_inputs=num_inputs, hidden_dim=hidden_dim)
+        buffer_names = dict(model.named_buffers()).keys()
+        for k in range(num_inputs):
+            assert f"mask_{k}" in buffer_names
+            assert getattr(model, f"mask_{k}").shape == (hidden_dim, num_inputs)
+
+    @requires_torch
+    def test_mask_diagonal_column_zeroed(self):
+        import torch
+
+        num_inputs, hidden_dim = 4, 8
+        model = self._make_model(num_inputs=num_inputs, hidden_dim=hidden_dim)
+        for k in range(num_inputs):
+            mask = getattr(model, f"mask_{k}")
+            assert torch.all(mask[:, k] == 0)
+            for j in range(num_inputs):
+                if j != k:
+                    assert torch.all(mask[:, j] == 1)
+
+    # --- forward ---
+
+    @requires_torch
+    def test_output_shapes(self):
+        import torch
+
+        B, num_inputs = 10, 4
+        model = self._make_model(num_inputs=num_inputs)
+        Out, out_0 = model(torch.randn(B, num_inputs))
+        assert Out.shape == (B, num_inputs)
+        assert out_0.shape == (B, 1)
+
+    @requires_torch
+    def test_out_0_matches_first_column(self):
+        import torch
+
+        B, num_inputs = 10, 4
+        model = self._make_model(num_inputs=num_inputs)
+        Out, out_0 = model(torch.randn(B, num_inputs))
+        assert torch.allclose(out_0, Out[:, 0:1])
+
+    @requires_torch
+    def test_self_masking_in_forward(self):
+        import torch
+
+        B, num_inputs = 10, 4
+        model = self._make_model(num_inputs=num_inputs)
+        X = torch.randn(B, num_inputs)
+        Out1, _ = model(X)
+        X_modified = X.clone()
+        X_modified[:, 2] = 999.0
+        Out2, _ = model(X_modified)
+        assert torch.allclose(Out1[:, 2], Out2[:, 2])
+        assert not torch.allclose(Out1[:, 0], Out2[:, 0])
+
+    @requires_torch
+    def test_single_sample_batch(self):
+        import torch
+
+        num_inputs = 4
+        model = self._make_model(num_inputs=num_inputs)
+        Out, out_0 = model(torch.randn(1, num_inputs))
+        assert Out.shape == (1, num_inputs)
+        assert out_0.shape == (1, 1)

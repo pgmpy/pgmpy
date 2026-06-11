@@ -58,8 +58,17 @@ class _CASTLEModel(nn.Module):
 
     def forward(self, X):
         """Run a forward pass through the CASTLE network."""
-        # TODO: Implement the CASTLE forward pass.
-        raise NotImplementedError("TBD")
+        outputs = []
+        for k in range(self.num_inputs):
+            mask_k = getattr(self, f"mask_{k}")
+            h = torch.relu(nn.functional.linear(X, self.input_layers[k].weight * mask_k, self.input_layers[k].bias))
+            for layer in self.hidden_layers:
+                h = torch.relu(layer(h))
+            outputs.append(self.output_layers[k](h))
+
+        Out = torch.cat(outputs, dim=1)
+        out_0 = Out[:, 0:1]
+        return Out, out_0
 
     def train(self, X_tensor):
         """Train the CASTLE model and return the adjacency matrix."""
