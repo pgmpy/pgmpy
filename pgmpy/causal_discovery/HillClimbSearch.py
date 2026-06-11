@@ -191,7 +191,7 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
 
         # Step 1.3.1: If search_space in expert_knowledge is not None, limit the search space
         if expert_knowledge.search_space:
-            expert_knowledge.limit_search_space(X.columns)
+            expert_knowledge.limit_search_space(X)
 
         # Step 1.4: Check if required edges cause a cycle
         start_dag.add_edges_from(expert_knowledge.required_edges)

@@ -225,7 +225,7 @@ class HillClimbSearch(StructureEstimator):
 
         # Step 1.3.1: If search_space in expert_knowledge is not None, limit the search space
         if expert_knowledge.search_space:
-            expert_knowledge.limit_search_space(self.data.columns)
+            expert_knowledge.limit_search_space(self.data)
 
         # Step 1.4: Check if required edges cause a cycle
         start_dag.add_edges_from(expert_knowledge.required_edges)

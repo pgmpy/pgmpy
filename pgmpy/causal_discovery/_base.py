@@ -320,7 +320,7 @@ class _ConstraintMixin:
             expert_knowledge = ExpertKnowledge()
 
         if expert_knowledge.search_space:
-            expert_knowledge.limit_search_space(data.columns)
+            expert_knowledge.limit_search_space(data)
 
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=max_cond_vars)

@@ -1,6 +1,7 @@
 from itertools import chain, permutations
 
 from pgmpy import logger
+from pgmpy.ci_tests import get_ci_test
 
 
 class ExpertKnowledge:
@@ -36,6 +37,14 @@ class ExpertKnowledge:
             variables with the same temporal significance; the more prior
             (parental) variables are at the start while the priority decreases
             as we go move towards the end of the structure (iterator).
+
+    screening_method: str | BaseCITest | callable (default: None)
+            Conditional independence test used for generating
+            a search space from data.
+
+    significance_level: float (default: 0.05)
+            Significance threshold used for screening variable
+            pairs when generating a search space.
 
     Examples
     --------
@@ -90,12 +99,16 @@ class ExpertKnowledge:
         required_edges=None,
         temporal_order=None,
         search_space=None,
+        screening_method=None,
+        significance_level=0.05,
         **kwargs,
     ):
         self.forbidden_edges = self._validate_edges(forbidden_edges) if forbidden_edges is not None else set()
         self.required_edges = self._validate_edges(required_edges) if required_edges is not None else set()
 
         self.search_space = self._validate_edges(search_space) if search_space is not None else set()
+        self.screening_method = screening_method
+        self.significance_level = significance_level
 
         self.temporal_order = temporal_order if temporal_order is not None else [[]]
         self.temporal_ordering = self._get_temporal_ordering(self.temporal_order)
@@ -222,6 +235,39 @@ class ExpertKnowledge:
 
         self.forbidden_edges = self.forbidden_edges.union(forbidden_edges)
 
+    def _generate_screening_search_space(self, data):
+        """
+        Generate a search space using a conditional independence test.
+
+        Variable pairs that reject marginal independence according to the
+        configured CI test are added to `self.search_space`.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame
+            Dataset used for evaluating variable dependencies.
+
+        Returns
+        -------
+        generated_search_space: set
+            Set of directed edges retained after CI-test-based screening.
+        """
+        ci_test = get_ci_test(test=self.screening_method, data=data)
+
+        generated_search_space = set()
+
+        columns = list(data.columns)
+
+        for i, X in enumerate(columns):
+            for Y in columns[i + 1 :]:
+                _, p_value = ci_test.run_test(X=X, Y=Y, Z=[])
+
+                if p_value < self.significance_level:
+                    generated_search_space.add((X, Y))
+                    generated_search_space.add((Y, X))
+
+        self.search_space = self.search_space.union(generated_search_space)
+
     def apply_expert_knowledge(self, pdag):
         """
         Method to check consistency and orient edges in a graph based on expert knowledge.
@@ -274,24 +320,37 @@ class ExpertKnowledge:
 
         return pdag
 
-    def limit_search_space(self, data_coulumn_labels):
+    def limit_search_space(self, data):
         """
-        Forms an additive set of forbidden edges by subtracting the
-        search space from the set of all possible edges.
+        Restrict the structure learning search space.
+
+        If `screening_method` is specified, a search space is first generated
+        from the data using the configured conditional independence test.
+        The search space is then converted into an additive set of
+        forbidden edges by subtracting it from the set of all possible edges.
 
         Parameters
         ----------
-        data_coulumn_labels: set | list | pd.DataFrame.columns
-            Set of edges to be used for structure learning.
-            If None, all possible edges are used.
+        data : pandas.DataFrame
+            Dataset used for structure learning. The column names are treated
+            as variables when constructing the set of all possible edges.
+
+            If `screening_method` is not None, the dataset is additionally
+            used to generate a search space based on marginal conditional
+            independence tests.
 
         Returns
         -------
         forbidden_edges_additive: set
             Set of edges that are not allowed in the structure.
         """
+        if self.screening_method is not None:
+            self._generate_screening_search_space(data)
+
+        data_column_labels = data.columns
+
         # Generate all possible edges
-        all_possible_edges = set(permutations(data_coulumn_labels, 2))
+        all_possible_edges = set(permutations(data_column_labels, 2))
 
         # Calculate forbidden edges by subtracting the search space from all possible edges
         forbidden_edges_additive = set(all_possible_edges) - self.search_space
