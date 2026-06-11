@@ -158,13 +158,16 @@ class BootstrapEstimator(BaseCausalDiscovery):
         )
 
         # Step 1: Run bootstrap iterations
-        results = Parallel(n_jobs=self.n_jobs, prefer="threads")(
-            delayed(self._bootstrap_iteration)(X, self.estimator, bootstrap_sample_size, child_seeds[i])
-            for i in trange(
-                self.n_bootstraps,
-                desc="Bootstrapping",
-                disable=not (self.show_progress and config.SHOW_PROGRESS),
-            )
+        results = cast(
+            list[tuple[list[int], BaseCausalDiscovery]],
+            Parallel(n_jobs=self.n_jobs, prefer="threads")(
+                delayed(self._bootstrap_iteration)(X, self.estimator, bootstrap_sample_size, child_seeds[i])
+                for i in trange(
+                    self.n_bootstraps,
+                    desc="Bootstrapping",
+                    disable=not (self.show_progress and config.SHOW_PROGRESS),
+                )
+            ),
         )
 
         # Step 2: Aggregating the bootstrap results.
@@ -180,8 +183,8 @@ class BootstrapEstimator(BaseCausalDiscovery):
             undirected_counts += undirected.astype(int)
 
         # Step 2.1: Calculate the direction probabilities
-        stacked = edge_presence.stack()
-        edges = set(stacked[stacked > 0].index)
+        rows, cols = np.where(edge_presence > 0)
+        edges = list(zip(variables[rows], variables[cols]))
 
         self.direction_prob_ = {}
         for edge in edges:
