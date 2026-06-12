@@ -35,6 +35,11 @@ class RegularizationConfig:
     edge_threshold: float
 
 
+def _dag_constraint(W: "torch.Tensor") -> "torch.Tensor":
+    """Compute the acyclicity constraint h(W) = tr(exp(W * W)) - d."""
+    return torch.trace(torch.linalg.matrix_exp(W * W)) - W.shape[0]
+
+
 class _CASTLEModel(nn.Module):
     """
     Internal masked autoencoder network used by CASTLE.
@@ -77,8 +82,10 @@ class _CASTLEModel(nn.Module):
 
     def get_W(self):
         """Compute the weighted adjacency matrix from input-layer weights."""
-        # TODO: Implement the CASTLE adjacency matrix extraction.
-        raise NotImplementedError("TBD")
+        return torch.stack(
+            [(layer.weight * getattr(self, f"mask_{j}")).norm(dim=0) for j, layer in enumerate(self.input_layers)],
+            dim=1,
+        )
 
 
 class CASTLE(BaseCausalDiscovery):
