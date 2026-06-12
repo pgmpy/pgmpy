@@ -45,21 +45,31 @@ class _CASTLEModel(nn.Module):
     Internal masked autoencoder network used by CASTLE.
     """
 
-    def __init__(self, num_inputs: int, network_cfg: NetworkConfig):
+    def __init__(
+        self,
+        num_inputs: int,
+        network_cfg: NetworkConfig,
+        train_cfg: TrainingConfig,
+        reg_cfg: RegularizationConfig,
+    ):
         """Initialize the internal CASTLE network."""
         super().__init__()
         self.num_inputs = num_inputs
-        self.hidden_dim = network_cfg.hidden_dim
+        self.network_cfg = network_cfg
+        self.train_cfg = train_cfg
+        self.reg_cfg = reg_cfg
 
-        self.input_layers = nn.ModuleList([nn.Linear(num_inputs, self.hidden_dim) for _ in range(num_inputs)])
+        self.input_layers = nn.ModuleList(
+            [nn.Linear(num_inputs, self.network_cfg.hidden_dim) for _ in range(num_inputs)]
+        )
         for k in range(num_inputs):
-            mask = torch.ones(self.hidden_dim, num_inputs)
+            mask = torch.ones(self.network_cfg.hidden_dim, num_inputs)
             mask[:, k] = 0.0
             self.register_buffer(f"mask_{k}", mask)
 
-        self.hidden_layers = nn.ModuleList([nn.Linear(self.hidden_dim, self.hidden_dim)])
+        self.hidden_layers = nn.ModuleList([nn.Linear(self.network_cfg.hidden_dim, self.network_cfg.hidden_dim)])
 
-        self.output_layers = nn.ModuleList([nn.Linear(self.hidden_dim, 1) for _ in range(num_inputs)])
+        self.output_layers = nn.ModuleList([nn.Linear(self.network_cfg.hidden_dim, 1) for _ in range(num_inputs)])
 
     def forward(self, X):
         """Run a forward pass through the CASTLE network."""
@@ -159,3 +169,14 @@ class CASTLE(BaseCausalDiscovery):
         self.adjacency_matrix_ = None
         self.model_ = None
         self.scaler_ = None
+
+        # TODO:
+        # 1. Preprocess X: reorder columns so target is at index 0, fit StandardScaler,
+        #    scale X, store scaler as self.scaler_ and column order as self.cols_
+        # 2. Convert scaled data to a torch.Tensor
+        # 3. Instantiate self.model_ = _CASTLEModel(num_inputs, network_config_,
+        #    train_config_, reg_config_)
+        # 4. Call W_final = self.model_.train(X_tensor)
+        # 5. Build self.adjacency_matrix_ (pd.DataFrame from W_final, columns=self.cols_)
+        # 6. Build self.causal_graph_ (pgmpy.base.DAG) from adjacency_matrix_
+        # 7. Return self

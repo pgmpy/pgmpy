@@ -136,8 +136,18 @@ class TestCASTLEFit:
 
 class TestCASTLEModel:
     def _make_model(self, num_inputs=4, hidden_dim=8):
-        cfg = NetworkConfig(hidden_dim=hidden_dim, scaler=None, target_col=None)
-        return _CASTLEModel(num_inputs=num_inputs, network_cfg=cfg)
+        network_cfg = NetworkConfig(hidden_dim=hidden_dim, scaler=None, target_col=None)
+        train_cfg = TrainingConfig(
+            batch_size=32,
+            max_epochs=1,
+            optimizer=None,
+            seed=None,
+            min_loss_improvement=1e-4,
+            early_stop_patience=10,
+            tensorboard_log_dir=None,
+        )
+        reg_cfg = RegularizationConfig(dag_weight=1.0, sparsity_weight=5.0, dag_penalty=1.0, edge_threshold=0.3)
+        return _CASTLEModel(num_inputs=num_inputs, network_cfg=network_cfg, train_cfg=train_cfg, reg_cfg=reg_cfg)
 
     # --- __init__ ---
 
@@ -147,6 +157,8 @@ class TestCASTLEModel:
         params = list(sig.parameters.keys())
         assert "num_inputs" in params
         assert "network_cfg" in params
+        assert "train_cfg" in params
+        assert "reg_cfg" in params
 
     @requires_torch
     def test_layer_shapes(self):
