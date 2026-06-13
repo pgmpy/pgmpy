@@ -4,8 +4,8 @@ from .correlation_score import CorrelationScore
 from .fisher_c import FisherC
 from .implied_cis import ImpliedCIs
 from .orientation_cm import OrientationConfusionMatrix
-from .self_compatibility_score import SelfCompatibilityScore
 from .shd import SHD
+from .self_compatibility_score import SelfCompatibilityScore
 from .structure_score import StructureScore
 
 __all__ = [

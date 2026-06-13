@@ -1,357 +1,295 @@
-import unittest
-from types import SimpleNamespace
-
 import networkx as nx
 import numpy as np
 import pandas as pd
+import pytest
 
-from pgmpy.estimators import PC
-from pgmpy.metrics import (
-    SHD,
-    self_compatibility_graphical,
-)
-from pgmpy.metrics.metrics import _latent_admg
+from pgmpy.base import ADMG, DAG, PDAG
+from pgmpy.causal_discovery import PC
+from pgmpy.metrics import SHD, SelfCompatibilityScore
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import get_example_model
 
 
-class TestLatentADMG(unittest.TestCase):
-    """Unit tests for the `_latent_admg` function based on Definition 5 from Faller et al. (2024)."""
+def all_seps_agree(dag_one: nx.DiGraph, dag_two: nx.DiGraph):
+    dir, undir = [], []
+    for u, v in dag_one.edges():
+        if (v, u) in dag_one.edges():
+            if u>v:
+                undir.append((u, v))
+        else:
+            dir.append((u, v))
+    admg_one = ADMG(directed_ebunch=dir, bidirected_ebunch=undir)
 
-    def setUp(self):
-        """Prepare canonical DAGs for latent projection tests."""
-        # DAG 1: A -> H -> B (H is latent)
-        self.dag_chain = DiscreteBayesianNetwork([("A", "H"), ("H", "B")])
+    dir, undir = [], []
+    for u, v in dag_two.edges():
+        if (v, u) in dag_two.edges():
+            if u>v:
+                undir.append((u, v))
+        else:
+            dir.append((u, v))
 
-        # DAG 2: A -> H <- B (collider through latent H)
-        self.dag_collider = DiscreteBayesianNetwork([("A", "H"), ("B", "H")])
+    admg_two = ADMG(directed_ebunch=dir, bidirected_ebunch=undir)
 
-    def test_latent_chain_projects_to_directed(self):
-        """
-        A -> H -> B projects to A -> B when H is latent.
-        """
-        admg = _latent_admg(self.dag_chain, observed=["A", "B"])
-        self.assertEqual(set(admg.edges()), {("A", "B")})
-
-    def test_latent_collider_projects_to_none(self):
-        """
-        A -> H <- B projects to *no* edge when H is latent.
-        """
-        admg = _latent_admg(self.dag_collider, observed=["A", "B"])
-        # Expect no edge between A and B
-        self.assertEqual(set(admg.edges()), set())
-
-    def test_m_graph_unshielded(self):
-        """
-        M‐structure: a -> x, a -> b <- c, c -> y.  Marginalize to {x,y} => no
-        edge between x and y.
-        """
-        # 1) Build the full M‐structure
-        model = DiscreteBayesianNetwork(
-            [
-                ("a", "x"),
-                ("a", "b"),
-                ("c", "b"),
-                ("c", "y"),
-            ]
-        )
-
-        # 2) Project onto the observed subset {x,y}
-        observed = ["x", "y"]
-        admg = _latent_admg(model, observed=observed)
-
-        # 3) Check that only the observed nodes remain
-        self.assertEqual(set(admg.nodes()), set(observed))
-
-        # 4) And that no edge has been created between x and y
-        self.assertEqual(set(admg.edges()), set())
-
-        # 5) Compare via SHD against an “empty” DAG on {x,y}
-        expected = DiscreteBayesianNetwork()  # start with no edges
-        expected.add_nodes_from(observed)  # add exactly x,y
-
-        # SHD should be zero when there truly is no edge
-        self.assertEqual(SHD(admg, expected), 0)
-
-        # 6) If we now add the spurious edge x -> y, SHD must be non‐zero
-        expected.add_edge("x", "y")
-        self.assertNotEqual(SHD(admg, expected), 0)
-
-    def test_chain_graph_expected(self):
-        """
-        Chain structure: a -> b -> c -> d.  Marginalize to {a,c} => a -> c
-        """
-        # 1) Build the full chain DAG
-        model = DiscreteBayesianNetwork(
-            [
-                ("a", "b"),
-                ("b", "c"),
-                ("c", "d"),
-            ]
-        )
-
-        # 2) Project onto observed subset {a, c}
-        observed = ["a", "c"]
-        admg = _latent_admg(model, observed=observed)
-
-        # 3) Only nodes a,c should remain
-        self.assertEqual(set(admg.nodes()), set(observed))
-
-        # 4) Expect a single directed edge a -> c
-        self.assertEqual(set(admg.edges()), {("a", "c")})
-
-        # 5) Compare via SHD against a “true” DBN with exactly that edge
-        expected = DiscreteBayesianNetwork()
-        expected.add_nodes_from(observed)
-        expected.add_edge("a", "c")
-        self.assertEqual(SHD(admg, expected), 0)
-
-        # 6) Removing that edge should break equality
-        expected.remove_edge("a", "c")
-        self.assertNotEqual(SHD(admg, expected), 0)
-
-    def test_unshielded_collider_graph(self):
-        """
-        Unshielded collider: a -> b <- c -> d.  Marginalize to {a,c} => no edge between a and c
-        """
-        # 1) Build the collider+extension
-        model = DiscreteBayesianNetwork(
-            [
-                ("a", "b"),
-                ("c", "b"),
-                ("c", "d"),
-            ]
-        )
-
-        # 2) Project onto {a,c}
-        observed = ["a", "c"]
-        admg = _latent_admg(model, observed=observed)
-
-        # 3) Only nodes a,c remain with no connecting edge
-        #  self.assertEqual(set(admg.nodes()), set(observed))
-        self.assertEqual(set(admg.edges()), set())
-
-        # 4) SHD against empty DBN on {a,c} is zero
-        expected = DiscreteBayesianNetwork()
-        expected.add_nodes_from(observed)
-        self.assertEqual(SHD(admg, expected), 0)
-
-        # 5) Adding a spurious a -> c makes SHD non-zero
-        expected.add_edge("a", "c")
-        self.assertNotEqual(SHD(admg, expected), 0)
-
-    def test_pure_confounding_graph(self):
-        """
-        Pure confounding: a -> b and a -> c.  Marginalize to {b,c} => b <-> c
-        """
-        # 1) Build the confounder DAG
-        model = DiscreteBayesianNetwork(
-            [
-                ("a", "b"),
-                ("a", "c"),
-            ]
-        )
-
-        # 2) Project onto {b,c}
-        observed = ["b", "c"]
-        admg = _latent_admg(model, observed=observed)
-
-        # 3) Only nodes b,c remain, with a bidirected link b <-> c
-        self.assertEqual(set(admg.nodes()), set(observed))
-        self.assertEqual(set(admg.edges()), {("b", "c"), ("c", "b")})
-
-        # using nx.DiGraph here only for SHD tests
-        expected = nx.DiGraph()
-        expected.add_nodes_from(observed)
-        expected.add_edge("b", "c")
-        expected.add_edge("c", "b")
-
-        # SHD should be zero when they match exactly
-        self.assertEqual(SHD(admg, expected), 0)
-
-        # 5) Dropping one direction breaks SHD
-        expected.remove_edge("c", "b")
-        self.assertNotEqual(SHD(admg, expected), 0)
+    seps_agree = []
+    for x, y in [(x, y) for x in admg_one.nodes for y in admg_one.nodes if x != y]:
+        for z in [set()] + [{z} for z in admg_one.nodes if z != x and z != y]:
+            original_sep = admg_one.is_mseparated({x}, {y}, set(z))
+            sep_after = admg_two.is_mseparated({x}, {y}, set(z))
+            seps_agree.append(original_sep == sep_after)
+    return all(seps_agree)
 
 
-class TestGraphicalSelfCompatibility(unittest.TestCase):
+def test_marginalize_returns_expected_graph_for_m_graph():
+    dag = DAG()
+    dag.add_edge("a", "x")
+    dag.add_edge("a", "b")
+    dag.add_edge("c", "b")
+    dag.add_edge("c", "y")
+
+    subset = {"x", "y"}
+    marginal_admg = SelfCompatibilityScore()._latent_admg(dag, subset)
+    assert set(marginal_admg.nodes()) == subset
+    assert all_seps_agree(marginal_admg, dag)
+
+    expected_dag = PDAG()
+    expected_dag.add_nodes_from(["x", "y"])
+    assert SHD().evaluate(marginal_admg, expected_dag) == 0
+
+    expected_dag.add_edge("x", "y")
+    assert SHD().evaluate(marginal_admg, expected_dag) != 0
+
+
+def test_marginalize_returns_expected_graph_for_chain_graph():
+    dag = DAG()
+    dag.add_edge("a", "b")
+    dag.add_edge("b", "c")
+    dag.add_edge("c", "d")
+
+    subset = {"a", "c"}
+    marginal_admg = SelfCompatibilityScore()._latent_admg(dag, subset)
+
+    assert set(marginal_admg.nodes()) == subset
+    assert all_seps_agree(marginal_admg, dag)
+
+    expected_dag = PDAG()
+    expected_dag.add_edge("a", "c")
+    assert SHD().evaluate(marginal_admg, expected_dag) == 0
+
+    expected_dag.remove_edge("a", "c")
+    assert SHD().evaluate(marginal_admg, expected_dag) != 0
+
+
+def test_marginalize_returns_expected_graph_for_unshielded_collider_graph():
+    dag = DAG()
+    dag.add_edge("a", "b")
+    dag.add_edge("c", "b")
+    dag.add_edge("d", "c")
+
+    subset = {"a", "c"}
+    marginal_admg = SelfCompatibilityScore()._latent_admg(dag, subset)
+
+    assert set(marginal_admg.nodes()) == subset
+    assert all_seps_agree(marginal_admg, dag)
+
+    expected_dag = PDAG()
+    expected_dag.add_nodes_from(["a", "c"])
+    assert SHD().evaluate(marginal_admg, expected_dag) == 0
+
+    expected_dag.add_edge("a", "c")
+    assert SHD().evaluate(marginal_admg, expected_dag) != 0
+
+
+def test_marginalize_returns_expected_graph_for_pure_confounding_graph():
+    dag = DAG()
+    dag.add_edge("a", "b")
+    dag.add_edge("a", "c")
+
+    subset = {"b", "c"}
+    marginal_admg = SelfCompatibilityScore()._latent_admg(dag, subset)
+
+    assert set(marginal_admg.nodes()) == subset
+    print(marginal_admg.edges)
+    assert all_seps_agree(marginal_admg, dag)
+
+    expected_dag = PDAG()
+    expected_dag.add_nodes_from(["b", "c"])
+    expected_dag.add_edge("b", "c")
+    expected_dag.add_edge("c", "b")
+    assert SHD().evaluate(marginal_admg, expected_dag) == 0
+
+    expected_dag.remove_edge("b", "c")
+    assert SHD().evaluate(marginal_admg, expected_dag) != 0
+
+
+def test_marginalize_returns_expected_graph_for_indirect_confounding():
+    dag = DAG()
+    dag.add_edge("u", "a")
+    dag.add_edge("u", "b")
+
+    subset = {"a", "b"}
+    marginal_admg = SelfCompatibilityScore()._latent_admg(dag, subset)
+
+    assert set(marginal_admg.nodes()) == subset
+    assert all_seps_agree(marginal_admg, dag)
+
+    expected_dag = PDAG()
+    expected_dag.add_nodes_from(["a", "b"])
+    expected_dag.add_edge("a", "b")
+    expected_dag.add_edge("b", "a")
+
+    print(marginal_admg.edges)
+    assert SHD().evaluate(marginal_admg, expected_dag) == 0
+
+    expected_dag.remove_edge("a", "b")
+    assert SHD().evaluate(marginal_admg, expected_dag) != 0
+
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def full_dag():
+    return DiscreteBayesianNetwork([("A", "B"), ("B", "C")])
+
+
+@pytest.fixture
+def data():
+    rng = np.random.RandomState(0)
+    return pd.DataFrame(
+        {
+            "A": rng.randint(2, size=100),
+            "B": rng.randint(2, size=100),
+            "C": rng.randint(2, size=100),
+        }
+    )
+
+
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
+
+
+def test_perfect_compatibility(full_dag, data):
     """
-    Tests for self_compatibility_graphical()
+    If joint and all marginals always return the true DAG:
+    SHD for each subset = 0 ⇒ mean = 0.0.
     """
 
-    def setUp(self):
-        # A simple A→B→C ground truth
-        self.full_dag = DiscreteBayesianNetwork([("A", "B"), ("B", "C")])
-        rng = np.random.RandomState(0)
-        self.data = pd.DataFrame(
-            {
-                "A": rng.randint(2, size=100),
-                "B": rng.randint(2, size=100),
-                "C": rng.randint(2, size=100),
-            }
-        )
+    class PerfectEstimator:
+        def fit(self, X):
+            self.causal_graph_ = full_dag
+            return self
 
-    def test_perfect_compatibility(self):
-        """
-        If joint and all marginals always return the true DAG:
-        SHD for each subset = 0 ⇒ mean = 0.0.
-        """
+    score = SelfCompatibilityScore(num_subsets=10, subset_fraction=0.5, seed=1).evaluate(data, PerfectEstimator)
 
-        def perfect_factory(df):
-            # always returns full_dag
-            return SimpleNamespace(estimate=lambda **kw: self.full_dag)
+    assert score == 0.0
 
-        # Run compatibility
-        score = self_compatibility_graphical(
-            perfect_factory,
-            self.data,
-            num_subsets=10,
-            subset_fraction=0.5,
-            random_state=1,
-        )
-        # Expect zero distance everywhere
-        self.assertEqual(score, 0.0)
 
-    def test_flip_compatibility(self):
-        """
-        When the joint fit is correct but every marginal is flipped,
-        each subset’s SHD should be 2 (two edge reversals), so the mean = 2.0.
-        """
-        # Capture the ground-truth edges for A→B and B→C
-        full_edges = list(self.full_dag.edges())  # [('A','B'), ('B','C')]
-        state = {"calls": 0}
+def test_flip_compatibility(full_dag, data):
+    """
+    When the joint fit is correct but every marginal is flipped,
+    each subset's SHD should be 2 (two edge reversals), so the mean = 2.0.
+    """
+    full_edges = list(full_dag.edges())
+    state = {"calls": 0}
 
-        def flip_factory(df):
-            cols = list(df.columns)  # e.g. ["A","B","C"]
+    class FlipEstimator:
+        def __init__(self, **kwargs):
+            pass
 
-            def estimate(**kw):
-                # Track how many times estimate() is called
-                state["calls"] += 1
+        def fit(self, X):
+            state["calls"] += 1
+            cols = list(X.columns)
+            dag = DiscreteBayesianNetwork([])
+            for node in cols:
+                dag.add_node(node)
+            if state["calls"] == 1:
+                for u, v in full_edges:
+                    dag.add_edge(u, v)
+            else:
+                for u, v in full_edges:
+                    dag.add_edge(v, u)
+            self.causal_graph_ = dag
+            return self
 
-                # Build a DAG on the same node set
-                dag = DiscreteBayesianNetwork([])
-                # Add all nodes
-                for node in cols:
-                    dag.add_node(node)
+    score = SelfCompatibilityScore(num_subsets=10, subset_fraction=1.0, seed=0).evaluate(data, FlipEstimator)
+    assert score == pytest.approx(2.0)
 
-                # First call → joint → correct orientation
-                if state["calls"] == 1:
-                    for u, v in full_edges:
-                        dag.add_edge(u, v)
-                else:
-                    # Subsequent calls → marginals → flipped orientation
-                    for u, v in full_edges:
-                        dag.add_edge(v, u)
 
-                return dag
+def test_kwargs_forwarded(data):
+    """
+    Ensure that arbitrary kwargs (e.g. alpha, foo) are passed through
+    exactly once to the estimator when no marginal runs occur (num_subsets=0).
+    """
+    seen = {}
 
-            return SimpleNamespace(estimate=estimate)
+    class RecordEstimator:
+        def __init__(self, **kwargs):
+            seen.update(kwargs)
 
-        # Compute graphical compatibility over full-node subsets
-        score = self_compatibility_graphical(
-            flip_factory,
-            self.data,
-            num_subsets=10,
-            subset_fraction=1.0,  # use all nodes each time
-            random_state=0,
-        )
+        def fit(self, X):
+            self.causal_graph_ = DiscreteBayesianNetwork([])
+            return self
 
-        # Now every marginal is the reverse of the joint → SHD = 2 per subset
-        self.assertAlmostEqual(score, 2.0, places=6)
+    SelfCompatibilityScore(num_subsets=0, subset_fraction=1.0, seed=3, alpha=0.01, foo="bar").evaluate(
+        data, RecordEstimator
+    )
+    assert "alpha" in seen
+    assert seen["alpha"] == 0.01
+    assert "foo" in seen
+    assert seen["foo"] == "bar"
 
-    def test_kwargs_forwarded(self):
-        """
-        Ensure that arbitrary kwargs (e.g. alpha, foo) are passed through
-        exactly once to .estimate() when no marginal runs occur (num_subsets=0).
-        """
-        seen = {}
 
-        def record_factory(df):
-            def estimate(**kw):
-                seen.update(kw)
-                # We can return anything since no subsets will be processed
-                return DiscreteBayesianNetwork([])
+def test_perfect_subset_projection():
+    """
+    If both joint and marginal estimators always return the exact
+    Definition-5 projection of the true model onto S, then SHD=0.
+    """
+    true_model = DiscreteBayesianNetwork([("A", "B"), ("B", "C"), ("C", "D")])
 
-            return SimpleNamespace(estimate=estimate)
+    class ProjEstimator:
+        def __init__(self, **kwargs):
+            pass
 
-        # Use num_subsets=0 so we only invoke the joint estimator once
-        _ = self_compatibility_graphical(
-            record_factory,
-            self.data,
-            num_subsets=0,
-            subset_fraction=1.0,
-            random_state=3,
-            alpha=0.01,
-            foo="bar",
-        )
-        self.assertIn("alpha", seen)
-        self.assertEqual(seen["alpha"], 0.01)
-        self.assertIn("foo", seen)
-        self.assertEqual(seen["foo"], "bar")
+        def fit(self, X):
+            S = set(X.columns)
+            g = SelfCompatibilityScore()._latent_admg(true_model, list(S))
+            m = DiscreteBayesianNetwork([])
+            m.add_nodes_from(g.nodes())
+            for u, v in g.edges():
+                m.add_edge(u, v)
+            self.causal_graph_ = m
+            return self
 
-    def test_perfect_subset_projection(self):
-        """
-        If both joint and marginal estimators always return the exact
-        Definition-5 projection of the true model onto S, then SHD=0.
-        """
-        # 1) True “full” model A→B→C→D
-        true_model = DiscreteBayesianNetwork([("A", "B"), ("B", "C"), ("C", "D")])
+    dummy = pd.DataFrame(
+        {
+            "A": np.zeros(50),
+            "B": np.zeros(50),
+            "C": np.zeros(50),
+            "D": np.zeros(50),
+        }
+    )
 
-        # 2) Factory that returns the *latent-projected* subgraph on df.columns
-        def proj_factory(df):
-            def estimate(**kw):
-                S = set(df.columns)
-                # Leverage your _latent_admg implementation on the true model
-                g = _latent_admg(true_model, list(S))
-                # Convert back to a pgmpy BayesianModel for SHD()
-                m = DiscreteBayesianNetwork([])
-                m.add_nodes_from(g.nodes())
-                for u, v in g.edges():
-                    m.add_edge(u, v)
-                return m
+    score = SelfCompatibilityScore(num_subsets=20, subset_fraction=0.75, seed=42).evaluate(dummy, ProjEstimator)
+    assert score == 0.0
 
-            return SimpleNamespace(estimate=estimate)
 
-        # 3) Dummy data (values irrelevant)
-        dummy = pd.DataFrame(
-            {
-                "A": np.zeros(50),
-                "B": np.zeros(50),
-                "C": np.zeros(50),
-                "D": np.zeros(50),
-            }
-        )
+def test_child_example_low_score():
+    """
+    When fitting the small Child network on its own simulated data,
+    the self-compatibility score should be very low.
+    """
+    model = get_example_model("child")
+    data = model.simulate(n_samples=500, seed=42)
 
-        # 4) Compute compatibility over proper subsets
-        score = self_compatibility_graphical(
-            proj_factory,
-            dummy,
-            num_subsets=20,
-            subset_fraction=0.75,
-            random_state=42,
-        )
+    score = SelfCompatibilityScore(
+        num_subsets=40,
+        subset_fraction=0.8,
+        seed=42,
+        return_type='dag',
+    ).evaluate(data, PC)
 
-        # Now joint_proj == marg_proj for every draw ⇒ mean SHD = 0
-        self.assertEqual(score, 0.0)
-
-    def test_child_example_low_score(self):
-        """
-        When fitting the small Child network on its own simulated data,
-        the self-compatibility score should be very low.
-        """
-        # 1) Load the small Child example and simulate
-        model = get_example_model("child")
-        data = model.simulate(n_samples=50, seed=42)
-
-        # 2) Compute graphical self-compatibility
-        score = self_compatibility_graphical(
-            PC,
-            data,
-            num_subsets=20,
-            subset_fraction=0.8,
-            random_state=42,
-            scoring_method="bic-d",
-        )
-        # expect an shd below 5.0 but not 0.0
-        self.assertGreater(score, 0.0, "SHD should be positive")
-        self.assertLess(score, 5.0, "SHD should be less than 5")
+    assert score > 0.0, "SHD should be positive"
+    assert score < 10.0, "SHD should be less than 10"

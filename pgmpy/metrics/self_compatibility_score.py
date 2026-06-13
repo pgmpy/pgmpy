@@ -132,7 +132,6 @@ class SelfCompatibilityScore:
         “Self-compatibility: Evaluating Causal Discovery without Ground Truth.”
         In AISTATS. arXiv:2307.09552
         """
-        # pdb.set_trace()
         observed_set = set(observed)
         latent_set = set(dag.nodes()) - observed_set
         full_directed = dag
