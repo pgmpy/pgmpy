@@ -1,7 +1,7 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class NSLM(_BaseDataset):
+class NSLM(BaseDataset):
     """
     References
     ----------
