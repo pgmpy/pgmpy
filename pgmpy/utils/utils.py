@@ -39,8 +39,8 @@ def get_example_model(model: str):
     Example
     -------
     >>> from pgmpy.utils import get_example_model
-    >>> model = get_example_model(model="asia")
-    >>> model
+    >>> model = get_example_model(model="asia")  # doctest: +SKIP
+    >>> model  # doctest: +SKIP
 
     Returns
     -------
@@ -49,7 +49,8 @@ def get_example_model(model: str):
                            depending on the type of dataset.
     """
     warnings.warn(
-        "`get_example_model` is deprecated. Please use `pgmpy.example_models.load_model` instead.",
+        """`get_example_model` is deprecated and will be removed in v1.3.0. Please use `pgmpy.example_models.load_model`
+        instead.""",
         FutureWarning,
         stacklevel=2,
     )
@@ -231,7 +232,7 @@ def discretize(data, cardinality, labels=dict(), method="rounding"):
     ...     },
     ... )
     >>> df_disc.head()
-        X    Y    Z
+          X    Y    Z
     0   mid  mid  mid
     1   mid  mid  low
     2   mid  mid  mid
@@ -490,6 +491,19 @@ def to_timeseries_format(df: pd.DataFrame, return_format: str = "pd-multiindex")
 
     Examples
     --------
+    >>> import pandas as pd
+    >>> df = pd.DataFrame(
+    ...     [
+    ...         [1, 1, 0, 0, 0, 0, 0, 1, 0],
+    ...         [0, 2, 0, 1, 1, 1, 1, 1, 1],
+    ...     ],
+    ...     columns=[
+    ...         ("D", 0), ("G" , 0), ("I" , 0),
+    ...         ("D", 1), ("G", 1),
+    ...         ("D", 2), ("G", 2),
+    ...         ("I", 1), ("I", 2)
+    ...     ],
+    ... )
 
     For input dataframe `df`, represented in the wide format
 
@@ -498,14 +512,15 @@ def to_timeseries_format(df: pd.DataFrame, return_format: str = "pd-multiindex")
     1      0      2      0      1      1      1      1      1      1
 
     >>> to_timeseries_format(df, return_format="numpy3d")
-    [[[1 0 0]
-      [1 0 0]
-      [0 1 0]]
-     [[0 1 1]
-      [2 1 1]
-      [0 1 1]]]
+    array([[[1, 0, 0],
+            [1, 0, 0],
+            [0, 1, 0]],
+    <BLANKLINE>
+           [[0, 1, 1],
+            [2, 1, 1],
+            [0, 1, 1]]])
 
-    >>> to_timeseries_format(df, return_format="pd-multiindex")
+    >>> to_timeseries_format(df, return_format="pd-multiindex")  # doctest: +NORMALIZE_WHITESPACE
     variable       D  G  I
     instance time
     0        0     1  1  0
@@ -515,7 +530,7 @@ def to_timeseries_format(df: pd.DataFrame, return_format: str = "pd-multiindex")
              1     1  1  1
              2     1  1  1
 
-    >>> to_timeseries_format(df, return_format="pd-list")
+    >>> to_timeseries_format(df, return_format="pd-list")  # doctest: +SKIP
     [variable  D  G  I
      time
      0         1  1  0
@@ -527,11 +542,11 @@ def to_timeseries_format(df: pd.DataFrame, return_format: str = "pd-multiindex")
      1         1  1  1
      2         1  1  1]
 
-    >>> to_timeseries_format(df, return_format="sorted")
-            (D,0), (D,1), (D,2), (G,0), (G,1), (G,2), (I,0), (I,1), (I,2)
-    0         1      0      0      1      0      0      0      1      0
-    1         0      1      1      2      1      1      0      1      1
-
+    >>> to_timeseries_format(df, return_format="sorted")  # doctest: +NORMALIZE_WHITESPACE
+    variable D     G     I
+    time     0 1 2 0 1 2 0 1 2
+    0        1 0 0 1 0 0 0 1 0
+    1        0 1 1 2 1 1 0 1 1
     """
     x = df.copy()
 

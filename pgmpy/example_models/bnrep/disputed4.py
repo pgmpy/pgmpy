@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Disputed4(BIFMixin, _BaseExampleModel):
+class Disputed4(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/disputed4",
         "n_nodes": 23,

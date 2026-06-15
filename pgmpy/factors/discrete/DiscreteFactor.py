@@ -63,7 +63,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
     >>> phi = DiscreteFactor(
     ...     variables=["x1", "x2", "x3"], cardinality=[2, 2, 2], values=np.ones(8)
     ... )
-    >>> phi
+    >>> phi #doctest: +ELLIPSIS
     <DiscreteFactor representing phi(x1:2, x2:2, x3:2) at 0x...>
     >>> print(phi)
     +-------+-------+-------+-----------------+
@@ -930,7 +930,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         """
         Checks if the factor's values can be used for a valid CPD.
         """
-        return config.get_compute_backend().allclose(
+        return compat_fns.allclose(
             self.to_factor().marginalize(self.scope()[:1], inplace=False).values.flatten(),
             compat_fns.ones(np.prod(self.cardinality[:0:-1])),
             atol=0.01,

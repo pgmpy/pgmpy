@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+import warnings
 from itertools import combinations
 
 import networkx as nx
@@ -43,15 +43,16 @@ class TreeSearch(StructureEstimator):
 
     References
     ----------
-    [1] Chow, C. K.; Liu, C.N. (1968), "Approximating discrete probability
-        distributions with dependence trees", IEEE Transactions on Information
-        Theory, IT-14 (3): 462–467
-
-    [2] Friedman N, Geiger D and Goldszmidt M (1997). Bayesian network classifiers.
-        Machine Learning 29: 131–163
+    - :cite:p:`chow_liu_1968`
+    - :cite:p:`friedman_geiger_goldszmidt_1997`
     """
 
     def __init__(self, data, root_node=None, n_jobs=-1, **kwargs):
+        warnings.warn(
+            "TreeSearch is deprecated. Please use pgmpy.causal_discovery.TreeSearch instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
         if root_node is not None and root_node not in data.columns:
             raise ValueError(f"Root node: {root_node} not found in data columns.")
 
@@ -123,7 +124,7 @@ class TreeSearch(StructureEstimator):
         ... )
         >>> plt.show()
         >>> est = TreeSearch(values)
-        >>> model = est.estimate(estimator_type="tan")
+        >>> model = est.estimate(estimator_type="tan", class_node="A")
         >>> nx.draw_circular(
         ...     model, with_labels=True, arrowsize=20, arrowstyle="fancy", alpha=0.3
         ... )
@@ -291,7 +292,7 @@ class TreeSearch(StructureEstimator):
         ...     columns=["A", "B", "C", "D", "E"],
         ... )
         >>> est = TreeSearch(values, root_node="B")
-        >>> model = est.estimate(estimator_type="tan")
+        >>> model = est.estimate(estimator_type="tan", class_node="A")
         """
         # Step 0: Check for edge weight computation method
         if edge_weights_fn == "mutual_info":

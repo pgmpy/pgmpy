@@ -1,13 +1,11 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Alarm(DiscreteMixin, _BaseExampleModel):
+class Alarm(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    ..[1] I. A. Beinlich, H. J. Suermondt, R. M. Chavez, and G. F. Cooper. The ALARM Monitoring System: A Case Study
-    with Two Probabilistic Inference Techniques for Belief Networks. In Proceedings of the 2nd European Conference on
-    Artificial Intelligence in Medicine, pages 247-256. Springer-Verlag, 1989.
+    - :cite:p:`beinlich_alarm_1989`
     """
 
     _tags = {

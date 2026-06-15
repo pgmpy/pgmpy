@@ -1,12 +1,11 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Sachs(DiscreteMixin, _BaseExampleModel):
+class Sachs(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    ..[1] K. Sachs, O. Perez, D. Pe'er, D. A. Lauffenburger and G. P. Nolan. Causal Protein-Signaling Networks
-    Derived from Multiparameter Single-Cell Data. Science, 308:523-529, 2005.
+    - :cite:p:`sachs_2005`
     """
 
     _tags = {

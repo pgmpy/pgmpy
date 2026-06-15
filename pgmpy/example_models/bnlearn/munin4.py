@@ -1,13 +1,11 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Munin4(DiscreteMixin, _BaseExampleModel):
+class Munin4(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    ..[1] S. Andreassen, F. V. Jensen, S. K. Andersen, B. Falck, U. Kjærulff, M. Woldbye, A. R. Sørensen, A.
-    Rosenfalck, and F. Jensen. MUNIN - an Expert EMG Assistant. In Computer-Aided Electromyography and Expert
-    Systems, Chapter 21. Elsevier (North-Holland), 1989.
+    - :cite:p:`andreassen_munin`
     """
 
     _tags = {

@@ -1,13 +1,11 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Water(DiscreteMixin, _BaseExampleModel):
+class Water(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    ..[1] F. V. Jensen, U. Kjærulff, K. G. Olesen and J. Pedersen. Et Forprojekt Til et Ekspertsystem for Drift af
-    Spildevandsrensning (An Expert System for Control of Waste Water Treatment - A Pilot Project). Technical Report,
-    Judex Datasystemer A/S, Aalborg, 1989. In Danish.
+    - :cite:p:`jensen_water_1989`
     """
 
     _tags = {

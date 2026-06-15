@@ -1,11 +1,11 @@
-from .._base import DAGMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DAGMixin
 
 
-class Schipf2010(DAGMixin, _BaseExampleModel):
+class Schipf2010(DAGMixin, BaseExampleModel):
     """
     References
     ----------
-    ..[1] Schipf, S., et al. (2010). Causal DAG for type 2 diabetes and related factors.
+    - :cite:p:`schipf_2010`
     """
 
     _tags = {

@@ -20,6 +20,8 @@ class AICCondGauss(LogLikelihoodCondGauss):
         DataFrame where columns may be discrete or continuous variables.
     state_names : dict, optional
         Dictionary mapping discrete variable names to their possible states.
+    max_cache_size : int or None, default=10000
+        Maximum number of local scores to cache. If None, the cache is unlimited.
 
     Examples
     --------
@@ -45,8 +47,7 @@ class AICCondGauss(LogLikelihoodCondGauss):
 
     References
     ----------
-    .. [1] Andrews, B., Ramsey, J., & Cooper, G. F. (2018). Scoring Bayesian Networks of Mixed Variables. International
-        Journal of Data Science and Analytics, 6(1), 3-18. https://doi.org/10.1007/s41060-017-0085-7
+    - :cite:p:`andrews_ramsey_cooper_2018`
     """
 
     _tags = {
@@ -55,9 +56,6 @@ class AICCondGauss(LogLikelihoodCondGauss):
         "default_for": None,
         "is_parameteric": False,
     }
-
-    def __init__(self, data, state_names=None):
-        super().__init__(data, state_names=state_names)
 
     def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
         ll = self._log_likelihood(variable=variable, parents=parents)

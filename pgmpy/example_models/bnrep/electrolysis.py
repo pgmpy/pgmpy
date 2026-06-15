@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Electrolysis(BIFMixin, _BaseExampleModel):
+class Electrolysis(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/electrolysis",
         "n_nodes": 16,

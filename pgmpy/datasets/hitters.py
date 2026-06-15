@@ -1,12 +1,11 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class Hitters(_BaseDataset):
+class Hitters(BaseDataset):
     """
     References
     ----------
-    .. [1] https://gist.githubusercontent.com/keeganhines/59974f1ebef97bbaa44fb19143f90bad/raw
-           /d9bcf657f97201394a59fffd801c44347eb7e28d/Hitters.csv
+    - :cite:p:`islr_hitters`
     """
 
     _tags = {
@@ -25,9 +24,9 @@ class Hitters(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/hitters/"
+    base_url = "real/hitters"
 
-    data_url = base_url + "data/hitters.txt"
+    data_url = "data/hitters.txt"
     ground_truth_url = None
     expert_knowledge_url = None
     missing_values_marker = "*"

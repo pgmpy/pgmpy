@@ -1,22 +1,19 @@
 from __future__ import annotations
 
-import hashlib
 import io
-import os
 import re
-import shutil
+import warnings
 from dataclasses import dataclass
 from typing import Any
-from urllib.request import urlopen
 
 import numpy as np
 import pandas as pd
 from skbase.base import BaseObject
 from skbase.lookup import all_objects
 
-from pgmpy.base import DAG
+from pgmpy.base import ADMG, DAG, MAG, PDAG
 from pgmpy.causal_discovery import ExpertKnowledge
-from pgmpy.global_vars import PGMPY_DATA_HOME
+from pgmpy.utils.hf_hub import read_hf_file
 
 
 @dataclass
@@ -24,7 +21,7 @@ class Dataset:
     name: str
     data: pd.DataFrame
     expert_knowledge: ExpertKnowledge | None = None
-    ground_truth: DAG | None = None
+    ground_truth: DAG | PDAG | ADMG | MAG | None = None
 
     tags: dict[str, Any] = None
 
@@ -38,7 +35,7 @@ class Dataset:
         return self.__str__()
 
 
-class _BaseDataset(BaseObject):
+class BaseDataset(BaseObject):
     """
     Base class for all datasets in pgmpy.
     Inherits from skbase.base.BaseObject to utilize its tag and lookup functionality.
@@ -60,6 +57,11 @@ class _BaseDataset(BaseObject):
         "is_mixed": False,
         "is_ordinal": False,
     }
+
+    base_url = ""
+    repo_id = "pgmpy/example_datasets"
+    repo_type = "dataset"
+    revision = "main"
 
     @staticmethod
     def _parse_expert_knowledge(raw_expert_knowledge: bytes) -> ExpertKnowledge:
@@ -117,37 +119,31 @@ class _BaseDataset(BaseObject):
         return ExpertKnowledge(forbidden_edges=forbids, required_edges=requires, temporal_order=temporal)
 
     @classmethod
-    def _get_raw_data(cls, data_type, url) -> bytes:
+    def _get_raw_data(cls, filename) -> bytes:
         """
-        Checks if the data is cached locally; if not, fetches it from the URL and caches it.
+        Fetches a dataset file from the Hugging Face Hub cache.
         """
-        name = cls.get_class_tag("name")
-        cache_dir_path = os.path.join(
-            PGMPY_DATA_HOME,
-            hashlib.sha256(f"{name}_{cls.base_url}".encode()).hexdigest(),
+        return read_hf_file(
+            repo_id=cls.repo_id,
+            filename=f"{cls.base_url}/{filename}",
+            repo_type=cls.repo_type,
+            revision=cls.revision,
         )
 
-        path = os.path.join(cache_dir_path, data_type)
-
-        if os.path.exists(path):
-            with open(path, "rb") as f:
-                raw_data = f.read()
-        else:
-            os.makedirs(cache_dir_path, exist_ok=True)
-
-            with urlopen(url, timeout=60) as response:
-                raw_data = response.read()
-
-            with open(path, "wb") as f:
-                f.write(raw_data)
-        return raw_data
-
     @classmethod
-    def load_dataframe(cls) -> pd.DataFrame:
+    def load_dataframe(cls, n_samples=None, seed=None) -> pd.DataFrame:
         """
         Fetches/reads from cache the data associated with the dataset.
+
+        Parameters
+        ----------
+        n_samples : int, optional
+            If provided, return a random subsample of this size. Capped at the
+            dataset size.
+        seed : int, optional
+            Random seed for reproducible subsampling.
         """
-        raw_data = cls._get_raw_data("data", cls.data_url)
+        raw_data = cls._get_raw_data(cls.data_url)
         df = pd.read_csv(io.BytesIO(raw_data), sep=getattr(cls, "sep", "\t"))
         if cls.get_class_tag("has_missing_data"):
             df.replace(cls.missing_values_marker, pd.NA, inplace=True)
@@ -160,6 +156,13 @@ class _BaseDataset(BaseObject):
             for col, order in cls.ordinal_variables.items():
                 cat_type = pd.CategoricalDtype(categories=order, ordered=True)
                 df[col] = df[col].astype(cat_type)
+        if n_samples is not None:
+            if n_samples > len(df):
+                warnings.warn(
+                    f"Requested {n_samples} samples but dataset only has {len(df)}. Returning all {len(df)} rows."
+                )
+            else:
+                df = df.sample(n=n_samples, random_state=seed).reset_index(drop=True)
         return df
 
     @classmethod
@@ -168,41 +171,43 @@ class _BaseDataset(BaseObject):
         if not cls.get_class_tag("has_expert_knowledge"):
             return None
 
-        raw_data = cls._get_raw_data("expert_knowledge", cls.expert_knowledge_url)
+        raw_data = cls._get_raw_data(cls.expert_knowledge_url)
         expert_knowledge = cls._parse_expert_knowledge(raw_data)
         return expert_knowledge
 
     @classmethod
-    def load_ground_truth(cls) -> DAG:
-        """Fetches/reads from cache the ground truth DAG associated with the dataset."""
+    def load_ground_truth(cls, **kwargs) -> DAG | None:
+        """Fetches/reads from cache the ground truth graph associated with the dataset.
+
+        Parameters
+        ----------
+        **kwargs
+            Absorbed for call-signature compatibility with ``load_dataset()``.
+            Static datasets ignore all forwarded arguments.
+        """
         if not cls.get_class_tag("has_ground_truth"):
             return None
 
-        raw_data = cls._get_raw_data("ground_truth", cls.ground_truth_url).decode("utf-8-sig", errors="ignore")
+        raw_data = cls._get_raw_data(cls.ground_truth_url).decode("utf-8-sig", errors="ignore")
         return DAG.from_dagitty(raw_data)
 
-    @staticmethod
-    def clear_cache() -> None:
-        """
-        Clears the cached data for all datasets.
-        """
-        if os.path.exists(PGMPY_DATA_HOME):
-            shutil.rmtree(PGMPY_DATA_HOME)
 
+class BaseCovarianceDataset(BaseDataset):
+    """
+    Base class for datasets defined by a covariance matrix.
 
-class _CovarianceMixin:
+    Instead of loading a static data file, ``load_dataframe`` generates samples from a multivariate normal distribution
+    parameterized by the dataset's covariance matrix.
     """
-    This mixin class provides functionality to load datasets defined by a covariance matrix. Mainly the `load_dataframe`
-    method is overridden to generate data from the covariance matrix instead of loading a static data file as is the
-    case with `_BaseDataset`.
-    """
+
+    _tags = {"is_simulated": True}
 
     @classmethod
     def _load_covariance_matrix(cls) -> pd.DataFrame:
         """
         Fetches the data and creates a covariance matrix DataFrame.
         """
-        raw_data = cls._get_raw_data("covariance_matrix", cls.data_url).decode("utf-8-sig", errors="ignore")
+        raw_data = cls._get_raw_data(cls.data_url).decode("utf-8-sig", errors="ignore")
 
         lines = raw_data.strip().splitlines()
         # First replace multiple spaces with a single space and then split the line on either \t or space. Datasets are
@@ -219,44 +224,74 @@ class _CovarianceMixin:
         return pd.DataFrame(mat, columns=names, index=names)
 
     @classmethod
-    def load_dataframe(cls) -> pd.DataFrame:
-        """Method to create data from covariance matrix. When the `_CovarDatasetMixin is
-        used this method is supposed to override the _BaseDataset.load_dataframe method.
+    def load_dataframe(cls, n_samples=None, seed=None) -> pd.DataFrame:
+        """Generate data from a covariance matrix.
 
-        ** Hence, when using this mixin, _CovarDatasetMixin should be the first parent class. **
+        Parameters
+        ----------
+        n_samples : int, optional
+            Number of samples to generate.  Defaults to the class tag
+            ``n_samples`` when not provided.
+        seed : int, optional
+            Random seed for reproducible generation.  When ``None``, the
+            existing unseeded behavior is preserved.
         """
         cov_matrix = cls._load_covariance_matrix()
         mean = [0] * cls.get_class_tag("n_variables")
+        actual_n = n_samples if n_samples is not None else cls.get_class_tag("n_samples")
+        rng = np.random.default_rng(seed) if seed is not None else np.random
         data = pd.DataFrame(
-            np.random.multivariate_normal(mean, cov_matrix.values, size=cls.get_class_tag("n_samples")),
+            rng.multivariate_normal(mean, cov_matrix.values, size=actual_n),
             columns=cov_matrix.columns,
         )
         return data
 
 
-class _TubingenBenchmarkMixin:
+class BaseTubingenDataset(BaseDataset):
     """
-    Mixin for Tubingen datasets that consist of multiple independent pairs/files.
+    Base class for benchmark datasets that consist of multiple independent cause-effect pairs/files.
     URL: https://webdav.tuebingen.mpg.de/cause-effect/
     """
 
     @classmethod
     def load_dataframe(cls, pair_id: int) -> pd.DataFrame:
-        url = f"{cls.base_url}/pair{pair_id:04}.txt"
-        cache_name = f"pair_{pair_id:04}_data"
-        raw_data = cls._get_raw_data(cache_name, url)
+        raw_data = cls._get_raw_data(f"pair{pair_id:04}.txt")
         return pd.read_csv(io.BytesIO(raw_data), sep=r"\s+", header=None, names=["x", "y"])
 
     @classmethod
     def load_ground_truth(cls, pair_id: int) -> DAG:
-        url = f"{cls.base_url}/pair{pair_id:04}_graph.txt"
-        cache_name = f"pair_{pair_id:04}_graph"
-        raw_data = cls._get_raw_data(cache_name, url)
+        raw_data = cls._get_raw_data(f"pair{pair_id:04}_graph.txt")
         content = raw_data.decode("utf-8-sig", errors="ignore")
         return DAG.from_dagitty(content)
 
 
-def load_dataset(name: str) -> Dataset:
+class BaseSimulatedDataset(BaseDataset):
+    """
+    Base class for simulated datasets.
+
+    Concrete subclasses generate data and the corresponding ground-truth graph programmatically instead of
+    loading static files, and must implement ``load_dataframe()`` and ``load_ground_truth()``.
+    """
+
+    _tags = {"is_simulated": True}
+
+    @classmethod
+    def load_dataframe(cls, n_samples=None, seed=None, **sim_kwargs) -> pd.DataFrame:
+        """Generate and return simulated data. Must be implemented by each simulator."""
+        raise NotImplementedError(f"{cls.__name__} must implement load_dataframe().")
+
+    @classmethod
+    def load_ground_truth(cls, **sim_kwargs) -> DAG | PDAG | ADMG | MAG:
+        """Construct and return the ground-truth graph. Must be implemented by each simulator."""
+        raise NotImplementedError(f"{cls.__name__} must implement load_ground_truth().")
+
+
+def load_dataset(
+    name: str,
+    n_samples: int | None = None,
+    seed: int | None = None,
+    **sim_kwargs,
+) -> Dataset:
     """
     Load a dataset by name.
 
@@ -264,6 +299,17 @@ def load_dataset(name: str) -> Dataset:
     ----------
     name : str
         Name of the dataset to load.
+    n_samples : int, optional
+        For static datasets, return a random subsample of this size (capped
+        at the dataset size).  For simulated datasets, the number of samples
+        to generate.
+    seed : int, optional
+        Random seed for reproducible subsampling or simulation.
+    **sim_kwargs : dict, optional
+        Additional keyword arguments forwarded to the simulator's
+        ``load_dataframe()`` and ``load_ground_truth()`` methods. Passing
+        simulator kwargs to a static dataset raises ``TypeError``. For Tubingen
+        datasets, these kwargs are ignored with a warning.
 
     Examples
     --------
@@ -271,8 +317,12 @@ def load_dataset(name: str) -> Dataset:
     >>> dataset = load_dataset("sachs_mixed")
     >>> df = dataset.data
     >>> ground_truth = dataset.ground_truth
+
+    Subsample a static dataset:
+
+    >>> dataset = load_dataset("sachs_continuous", n_samples=100, seed=42)
     """
-    all_datasets = all_objects(object_types=_BaseDataset, package_name="pgmpy.datasets", return_names=False)
+    all_datasets = all_objects(object_types=BaseDataset, package_name="pgmpy.datasets", return_names=False)
     if name.startswith("tubingen"):
         name_parts = name.split("/")
         if len(name_parts) == 2 and name_parts[1].isdigit():
@@ -280,6 +330,11 @@ def load_dataset(name: str) -> Dataset:
 
             if not (1 <= pair_id <= 108):
                 raise ValueError(f"Tubingen pair ID must be between 1 and 108. Got {pair_id}.")
+            if sim_kwargs:
+                warnings.warn(
+                    "Tubingen datasets ignore simulator kwargs.",
+                    UserWarning,
+                )
             target_cls = next(
                 (cls for cls in all_datasets if cls.get_class_tag("name") == "tubingen"),
                 None,
@@ -287,8 +342,17 @@ def load_dataset(name: str) -> Dataset:
             df = target_cls.load_dataframe(pair_id)
             gt = target_cls.load_ground_truth(pair_id)
 
+            if n_samples is not None:
+                if n_samples > len(df):
+                    warnings.warn(
+                        f"Requested {n_samples} samples but dataset only has {len(df)}. Returning all {len(df)} rows."
+                    )
+                else:
+                    df = df.sample(n=n_samples, random_state=seed).reset_index(drop=True)
+
             tags = target_cls.get_class_tags()
             tags["n_samples"] = df.shape[0]
+            tags["has_missing_data"] = bool(df.isnull().any().any())
 
             return Dataset(
                 name=name,
@@ -310,9 +374,9 @@ def load_dataset(name: str) -> Dataset:
 
     return Dataset(
         name=name,
-        data=target_cls.load_dataframe(),
+        data=target_cls.load_dataframe(n_samples=n_samples, seed=seed, **sim_kwargs),
         expert_knowledge=target_cls.load_expert_knowledge(),
-        ground_truth=target_cls.load_ground_truth(),
+        ground_truth=target_cls.load_ground_truth(seed=seed, **sim_kwargs),
         tags=target_cls.get_class_tags(),
     )
 
@@ -352,7 +416,7 @@ def list_datasets(**filter_tags) -> list[str]:
     >>> list_datasets(is_discrete=True, has_ground_truth=True)
     ['sachs_discrete']
     """
-    valid_tags = set(_BaseDataset._tags.keys())
+    valid_tags = set(BaseDataset._tags.keys())
 
     if invalid_tags := set(filter_tags.keys()) - valid_tags:
         raise ValueError(
@@ -360,7 +424,7 @@ def list_datasets(**filter_tags) -> list[str]:
         )
 
     all_datasets = all_objects(
-        object_types=_BaseDataset,
+        object_types=BaseDataset,
         package_name="pgmpy.datasets",
         return_names=False,
         filter_tags=filter_tags,
