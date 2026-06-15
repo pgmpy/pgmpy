@@ -233,7 +233,7 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
             expert_knowledge = ExpertKnowledge()
         else:
             expert_knowledge = self.expert_knowledge
-            
+
         # If search_space or screening method in expert_knowledge is not None, limit the search space
         if expert_knowledge.search_space or expert_knowledge.screening_method is not None:
             expert_knowledge.limit_search_space(X)
