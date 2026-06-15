@@ -229,6 +229,7 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
         # CI test
         self.ci_test_ = get_ci_test(test=self.ci_test, data=X)
 
+        # Check if expert knowledge was specified
         if self.expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
         else:
