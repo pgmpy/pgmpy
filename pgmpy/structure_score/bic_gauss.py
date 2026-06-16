@@ -24,6 +24,8 @@ class BICGauss(LogLikelihoodGauss):
         DataFrame where each column represents a continuous variable.
     state_names : dict, optional
         Accepted for API consistency but not typically used for Gaussian networks.
+    max_cache_size : int or None, default=10000
+        Maximum number of local scores to cache. If None, the cache is unlimited.
 
     Examples
     --------
@@ -54,9 +56,6 @@ class BICGauss(LogLikelihoodGauss):
         "default_for": "continuous",
         "is_parameteric": False,
     }
-
-    def __init__(self, data, state_names=None):
-        super().__init__(data, state_names=state_names)
 
     def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
         ll, df_model = self._log_likelihood(variable=variable, parents=parents)

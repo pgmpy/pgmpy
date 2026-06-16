@@ -1,7 +1,7 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Win95pts(DiscreteMixin, _BaseExampleModel):
+class Win95pts(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------

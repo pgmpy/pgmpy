@@ -1,7 +1,7 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class PimaDiabetes(_BaseDataset):
+class PimaDiabetes(BaseDataset):
     """
     References
     ----------

@@ -24,6 +24,8 @@ class BIC(LogLikelihood):
     state_names : dict, optional
         Dictionary mapping each variable to its discrete states. If not specified, the unique values observed in the
         data are used.
+    max_cache_size : int or None, default=10000
+        Maximum number of local scores to cache. If None, the cache is unlimited.
 
     Examples
     --------
@@ -58,9 +60,6 @@ class BIC(LogLikelihood):
         "default_for": "discrete",
         "is_parameteric": False,
     }
-
-    def __init__(self, data, state_names=None):
-        super().__init__(data, state_names=state_names)
 
     def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
         sample_size = len(self.data)

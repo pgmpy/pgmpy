@@ -1,7 +1,7 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Water(DiscreteMixin, _BaseExampleModel):
+class Water(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------

@@ -26,6 +26,9 @@ class BaseStructureScore(BaseObject):
     state_names : dict, optional
         Dictionary mapping each variable name to its allowed states. If not specified, the
         observed values in the data are used.
+    max_cache_size : int or None, default=10000
+        Maximum number of local scores to cache. If None, the cache is unlimited.
+        Increase this for large datasets to avoid cache thrashing.
     """
 
     _tags = {
@@ -35,14 +38,17 @@ class BaseStructureScore(BaseObject):
         "is_parameteric": False,
     }
 
-    def __init__(self, data, state_names=None):
+    def __init__(self, data, state_names=None, max_cache_size=10000):
         self.data, self.dtypes = preprocess_data(data)
+        self.cache_size = max_cache_size
+        if max_cache_size is not None and max_cache_size <= 0:
+            raise ValueError(f"cache_size must be a positive integer or None. Got: {max_cache_size}")
 
         if self.data is not None:
             self.variables = list(self.data.columns.values)
             self.state_names = build_state_names(self.data, state_names=state_names)
 
-        self._cached_local_score = lru_cache(maxsize=10000)(self._local_score)
+        self._cached_local_score = lru_cache(maxsize=max_cache_size)(self._local_score)
 
     def local_score(self, variable: str, parents: tuple[str, ...]) -> float:
         """Compute the cached local score for `variable` given `parents`."""
@@ -73,6 +79,56 @@ def get_scoring_method(
     scoring_method: str | BaseStructureScore | None,
     data: pd.DataFrame,
 ) -> BaseStructureScore:
+    """
+    Returns a structure score instance.
+
+    Parameters
+    ----------
+    scoring_method : str or BaseStructureScore or None
+        The scoring method whose instance is to be returned.
+
+        - If a string is provided, the corresponding scoring method is
+        instantiated with default parameters.
+        - If a ``BaseStructureScore`` instance is provided, it is returned
+        unchanged.
+        - If ``None``, the default scoring method for the data type is
+        selected automatically.
+
+    data : pandas.DataFrame
+        Dataset used to determine the default scoring method and to
+        initialize score instances.
+
+    Returns
+    -------
+    BaseStructureScore
+        An initialized structure score instance.
+
+    Examples
+    --------
+    >>> from pgmpy.example_models import load_model
+    >>> from pgmpy.structure_score import BDeu, get_scoring_method
+    >>> model = load_model("bnlearn/asia")
+    >>> data = model.simulate(n_samples=1000, seed=42)
+
+    Use a scoring method by name:
+
+    >>> score = get_scoring_method("k2", data)
+
+    Use the default scoring method for the dataset type:
+
+    >>> score = get_scoring_method(None, data)
+
+    Use a custom scoring method with non-default parameters:
+
+    >>> score = BDeu(data, equivalent_sample_size=20, max_cache_size=20000)
+    >>> score = get_scoring_method(score, data)
+
+    Raises
+    ------
+    ValueError
+        If ``scoring_method`` is invalid, unknown, or if ``data`` is
+        required but not provided.
+    """
     if isinstance(scoring_method, BaseStructureScore):
         return scoring_method
 

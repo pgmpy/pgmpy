@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Asia(BIFMixin, _BaseExampleModel):
+class Asia(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/asia",
         "n_nodes": 8,

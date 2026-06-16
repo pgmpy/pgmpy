@@ -6,11 +6,11 @@ import pandas as pd
 
 from pgmpy.base import PDAG
 from pgmpy.causal_discovery import ExpertKnowledge
-from pgmpy.causal_discovery._base import _BaseCausalDiscovery, _ConstraintMixin
+from pgmpy.causal_discovery._base import BaseCausalDiscovery, _ConstraintMixin
 from pgmpy.ci_tests import get_ci_test
 
 
-class PC(_ConstraintMixin, _BaseCausalDiscovery):
+class PC(_ConstraintMixin, BaseCausalDiscovery):
     """
     The PC algorithm for causal discovery / structure learning.
 

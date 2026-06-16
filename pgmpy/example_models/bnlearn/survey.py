@@ -1,7 +1,7 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Survey(DiscreteMixin, _BaseExampleModel):
+class Survey(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------

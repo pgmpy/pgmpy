@@ -1,7 +1,7 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Hailfinder(DiscreteMixin, _BaseExampleModel):
+class Hailfinder(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------

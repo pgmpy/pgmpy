@@ -8,11 +8,11 @@ from tqdm.auto import trange
 from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.causal_discovery import ExpertKnowledge
-from pgmpy.causal_discovery._base import _BaseCausalDiscovery, _ScoreMixin
+from pgmpy.causal_discovery._base import BaseCausalDiscovery, _ScoreMixin
 from pgmpy.structure_score import BaseStructureScore, get_scoring_method
 
 
-class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
+class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
     """
     Score-based causal discovery using hill climbing optimization.
 
@@ -35,16 +35,12 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
     Parameters
     ----------
     scoring_method : str or BaseStructureScore instance, default=None
-        The score to be optimized during structure estimation. Supported
-        structure scores:
+        The score to be optimized during structure estimation. Please refer :doc:`/api/structure_score` for a list of
+        available scoring methods.
 
-        - Discrete data: 'k2', 'bdeu', 'bds', 'bic-d', 'aic-d'
-        - Continuous data: 'll-g', 'aic-g', 'bic-g'
-        - Mixed data: 'll-cg', 'aic-cg', 'bic-cg'
-
-        If None, the appropriate scoring method is automatically selected based
-        on the data type. Also accepts a custom score instance that inherits
-        from `BaseStructureScore`.
+        If ``None``, the appropriate scoring method is automatically selected based on the data type. If a string is
+        provided, the corresponding scoring method is instantiated with default parameters. To customize score-specific
+        parameters, please pass an instance of the scoring class.
 
     start_dag : DAG instance, default=None
         The starting point for the local search. By default, a completely
@@ -114,14 +110,17 @@ class HillClimbSearch(_ScoreMixin, _BaseCausalDiscovery):
     >>> from pgmpy.causal_discovery import HillClimbSearch
     >>> hc = HillClimbSearch(scoring_method="bic-d")
     >>> hc.fit(df)
-    >>> hc.causal_graph_.edges()
+    HillClimbSearch(scoring_method='bic-d')
+    >>> _ = hc.causal_graph_.edges()
 
     Use expert knowledge to constrain the search:
 
     >>> from pgmpy.causal_discovery import ExpertKnowledge
     >>> expert = ExpertKnowledge(forbidden_edges=[("HISTORY", "CVP")])
     >>> hc = HillClimbSearch(scoring_method="bic-d", expert_knowledge=expert)
-    >>> hc.fit(df)
+    >>> hc.fit(df)  # doctest: +ELLIPSIS
+    HillClimbSearch(expert_knowledge=Expert Knowledge: ...,
+                    scoring_method='bic-d')
 
     References
     ----------

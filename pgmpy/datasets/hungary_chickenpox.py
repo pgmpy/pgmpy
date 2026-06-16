@@ -1,7 +1,7 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class HungaryChickenpox(_BaseDataset):
+class HungaryChickenpox(BaseDataset):
     """
     References
     ----------

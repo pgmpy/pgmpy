@@ -1,7 +1,7 @@
-from .._base import DAGMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DAGMixin
 
 
-class Confounding(DAGMixin, _BaseExampleModel):
+class Confounding(DAGMixin, BaseExampleModel):
     """
     References
     ----------

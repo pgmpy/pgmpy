@@ -1,7 +1,7 @@
-from .._base import ContinuousMixin, _BaseExampleModel
+from .._base import BaseExampleModel, ContinuousMixin
 
 
-class MagicIRRI(ContinuousMixin, _BaseExampleModel):
+class MagicIRRI(ContinuousMixin, BaseExampleModel):
     """
     References
     ----------

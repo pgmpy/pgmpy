@@ -1,7 +1,7 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class BlueDriver(_BaseDataset):
+class BlueDriver(BaseDataset):
     """
     References
     ----------
