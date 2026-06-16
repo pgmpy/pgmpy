@@ -4,10 +4,10 @@ from sklearn.base import clone
 from sklearn.linear_model import LinearRegression
 
 from pgmpy.base import DAG
-from pgmpy.causal_discovery._base import _BaseCausalDiscovery
+from pgmpy.causal_discovery._base import BaseCausalDiscovery
 
 
-class SortnRegress(_BaseCausalDiscovery):
+class SortnRegress(BaseCausalDiscovery):
     r"""
     Implementation of the R²-SortnRegress algorithm for causal discovery.
 
