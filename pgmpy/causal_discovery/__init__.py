@@ -6,7 +6,7 @@ from .GES import GES
 from .HillClimbSearch import HillClimbSearch
 from .LLMPairwise import LLMPairwise
 from .PC import PC
-from .SortnRegress import SortnRegress, Varsortability
+from .SortnRegress import SortnRegress
 from .TAN import TAN
 from .TOPIC import TOPIC
 
@@ -22,5 +22,4 @@ __all__ = [
     "SortnRegress",
     "TAN",
     "TOPIC",
-    "Varsortability",
 ]
