@@ -1,4 +1,5 @@
 import networkx as nx
+import numpy as np
 from sklearn.base import clone
 from sklearn.linear_model import LinearRegression
 
@@ -8,25 +9,33 @@ from pgmpy.causal_discovery._base import _BaseCausalDiscovery
 
 class SortnRegress(_BaseCausalDiscovery):
     r"""
-    Implementation of the SortnRegress algorithm for causal discovery.
+    Implementation of the R²-SortnRegress algorithm for causal discovery.
 
-    SortnRegress is based on the phenomenon of "varsortability," where in many
-    linear additive noise models, the causal order of variables is correlated
-    with the order of their marginal variances.
+    R²-SortnRegress is a scale-invariant causal discovery method based on the
+    phenomenon that the explainable fraction of a variable's variance, captured
+    by the coefficient of determination (R²), tends to increase along the
+    causal order in linear additive noise.
 
     Given an :math:`n \times d` dataset :math:`\mathbf{X}` with columns
     :math:`X_1, \dots, X_d`, the algorithm proceeds as follows:
 
-    1. Variance Ordering: Compute the marginal variance of each variable and
-       sort them in ascending order to obtain a permutation :math:`\pi` such that:
+    1. **Global R² Estimation**: For each variable :math:`X_t`, fit a linear
+       regression using all remaining variables :math:`\mathbf{X}_{\setminus \{t\}}`
+       as predictors to calculate its global R² value:
 
        .. math::
 
-           \widehat{\text{Var}}(X_{\pi(1)}) \leq
-           \widehat{\text{Var}}(X_{\pi(2)}) \leq \dots \leq
-           \widehat{\text{Var}}(X_{\pi(d)})
+           R^2(X_t) = 1 - \frac{\text{Var}(X_t - \widehat{X}_t)}{\text{Var}(X_t)}
 
-    2. Iterative Regression: For each target node :math:`X_{\pi(i)}`
+    2. **Candidate Causal Ordering**: Sort the variables in ascending order
+       of their estimated global R² values to form a candidate topological
+       ordering :math:`\pi`:
+
+       .. math::
+
+           R^2(X_{\pi(1)}) \leq R^2(X_{\pi(2)}) \leq \dots \leq R^2(X_{\pi(d)})
+
+    3. Iterative Regression: For each target node :math:`X_{\pi(i)}`
        (for :math:`i = 2, \dots, d`), fit a linear regression on all preceding
        variables (potential parents :math:`X_{\pi(1)}, \dots, X_{\pi(i-1)}`):
 
@@ -38,7 +47,7 @@ class SortnRegress(_BaseCausalDiscovery):
        where :math:`\varepsilon_{\pi(i)}` is the noise term and
        :math:`\beta_{j,\pi(i)}` are the regression coefficients.
 
-    3. Edge Selection: Add a directed edge :math:`X_{\pi(j)} \to X_{\pi(i)}`
+    4. Edge Selection: Add a directed edge :math:`X_{\pi(j)} \to X_{\pi(i)}`
        if:
 
        .. math::
@@ -51,7 +60,7 @@ class SortnRegress(_BaseCausalDiscovery):
         The absolute value threshold for regression coefficients. Edges with
         coefficients below this value are pruned to sparsify the graph.
         A default of 0.3 is chosen to align with the benchmarking settings
-        described in Reisach et al. (2021).
+        described in Reisach et al. (2023).
 
     estimator : sklearn-style regression estimator, default=None
         The regression estimator instance to use for edge selection.
@@ -86,10 +95,10 @@ class SortnRegress(_BaseCausalDiscovery):
 
     References
     ----------
-    .. [1] Reisach, A. G., Seiler, C., & Weichwald, S. (2021). Beware of the
-       Simulated DAG! Causal Discovery Benchmarks May Be Easy To Game.
-       Advances in Neural Information Processing Systems, 34.
-       https://arxiv.org/abs/2102.13647
+    .. [1] Reisach, A. G., Tami, M., Chambaz, A., Seiler, C., & Weichwald, S. (2023).
+       A Scale-Invariant Sorting Criterion to Find a Causal Order in Additive Noise Models.
+       Advances in Neural Information Processing Systems, 36.
+       https://arxiv.org/abs/2303.18211
     """
 
     def __init__(self, threshold=0.3, estimator=None):
@@ -114,8 +123,25 @@ class SortnRegress(_BaseCausalDiscovery):
         # clone the estimator or use default LinearRegression
         model_reg = clone(self.estimator) if self.estimator else LinearRegression()
 
-        variances = X.var().sort_values()
-        sorted_nodes = variances.index.tolist()
+        r2_values = {}
+        for target in feature_name_list:
+            other_nodes = [node for node in feature_name_list if node != target]
+
+            y = X[target].values.astype(float)
+            predictors = X[other_nodes].values.astype(float)
+
+            model_reg.fit(predictors, y)
+            predictions = model_reg.predict(predictors)
+
+            residuals_variance = np.var(y - predictions)
+            total_variance = np.var(y)
+
+            if total_variance == 0:
+                r2_values[target] = 0.0
+            else:
+                r2_values[target] = 1 - (residuals_variance / total_variance)
+
+        sorted_nodes = sorted(r2_values, key=r2_values.get)
 
         model = DAG()
         model.add_nodes_from(sorted_nodes)
