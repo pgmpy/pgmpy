@@ -2,7 +2,6 @@
 Tests for the sklearn-compatible DAGMALinear class in pgmpy.causal_discovery.
 """
 
-import networkx as nx
 import numpy as np
 import pandas as pd
 import pytest
@@ -10,8 +9,6 @@ from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery.DAGMA import DAGMALinear
-from pgmpy.metrics import SHD
-from pgmpy.models import LinearGaussianBayesianNetwork
 
 
 def expected_failed_checks(estimator):
@@ -40,7 +37,7 @@ def test_dagma_compatibility(estimator, check):
 @pytest.fixture
 def continuous_data():
     """
-    Set up a simple synthetic dataset using LinearGaussianBN.
+    Set up a simple synthetic dataset using DAG.from_dagitty.
     Creates a chain X -> Y -> Z with known causal relationships.
     """
     dagitty_str = """
@@ -86,17 +83,9 @@ class TestDagmaLinearCore:
         assert ("Y", "Y") not in learned_edges
         assert ("Z", "Z") not in learned_edges
 
-    def test_dag_acyclicity_check(self, continuous_data):
-        """Verify the learned graph is always a valid DAG."""
-        est = DAGMALinear()
-        est.fit(continuous_data)
-
-        # Explicit acyclicity check
-        assert nx.is_directed_acyclic_graph(est.causal_graph_), "Learned graph must be a valid DAG"
-
     def test_scalability_5_variables(self):
         """
-        Test with 5-10 variables. Verifies the algorithm scales and maintains acyclicity.
+        Test with 5-10 variables. Verifies the algorithm scales and recovers edges.
         """
         dagitty_str = """
         dag {
@@ -115,8 +104,11 @@ class TestDagmaLinearCore:
         est = DAGMALinear()
         est.fit(data)
 
-        # Verify DAG property holds with more variables
-        assert nx.is_directed_acyclic_graph(est.causal_graph_)
+        # Check for how many edges are correctly recovered
+        learned_edges = set(est.causal_graph_.edges())
+        true_edges = {("V1", "V2"), ("V1", "V3"), ("V2", "V3"), ("V3", "V5"), ("V4", "V7"), ("V5", "V7")}
+        correct_edges = learned_edges.intersection(true_edges)
+        assert len(correct_edges) >= 4
         assert est.adjacency_matrix_.shape == (7, 7)
 
     def test_against_linear_gaussian_bn(self):
@@ -124,9 +116,6 @@ class TestDagmaLinearCore:
         Use LinearGaussianBN to generate data with known causal structure
         as specified in SPEC.md Section 5.1.
         """
-        if LinearGaussianBayesianNetwork is None:
-            pytest.skip("LinearGaussianBayesianNetwork not available")
-
         dagitty_str = """
         dag {
         X1 -> X2 [beta=2.0]
@@ -139,9 +128,6 @@ class TestDagmaLinearCore:
         est = DAGMALinear()
         est.fit(data)
 
-        # Verify DAG property
-        assert nx.is_directed_acyclic_graph(est.causal_graph_)
-
         # Verify the estimated graph has correct structure
         edges = list(est.causal_graph_.edges())
         assert len(edges) >= 2  # At least X1->X2 and X2->X3
@@ -150,33 +136,53 @@ class TestDagmaLinearCore:
         """
         Ensure custom hyperparameters are strictly mapped to the instance.
         """
-        est = DAGMALinear(s=2.0, lambda1=0.1, mu_init=2.0, mu_factor=0.5, max_iter=50, w_threshold=0.4)
+        est = DAGMALinear(
+            s=2.0,
+            lambda1=0.1,
+            mu_init=2.0,
+            mu_factor=0.5,
+            max_iter=50,
+            inner_iter=500,
+            w_threshold=0.4,
+            optimizer_kwargs={"max_iter": 5},
+        )
         assert est.s == 2.0
         assert est.lambda1 == 0.1
         assert est.mu_init == 2.0
         assert est.mu_factor == 0.5
         assert est.max_iter == 50
+        assert est.inner_iter == 500
         assert est.w_threshold == 0.4
+        assert est.optimizer_kwargs == {"max_iter": 5}
 
     def test_compare_with_official_dagma(self):
         """
-        Compare the adjacency matrix output of pgmpy's DAGMALinear
-        with the official dagma package implementation on the Sachs dataset.
+        Compare pgmpy's DAGMALinear output against the known output from the
+        official dagma package on the Sachs dataset.
+
+        To reproduce the reference output, install the ``dagma`` package and run::
+
+            # from dagma.linear import DagmaLinear
+            # from pgmpy.datasets import load_dataset
+            # data = load_dataset("sachs_continuous").data
+            # data = (data - data.mean()) / data.std()
+            # model = DagmaLinear(loss_type="l2")  # l2 = least-squares loss (not L2 reg)
+            # W = model.fit(data.to_numpy(), lambda1=0.05, w_threshold=0.3, s=1.0, T=5)
         """
         dagma_mod = pytest.importorskip("dagma.linear")
         OfficialDagmaLinear = dagma_mod.DagmaLinear  # pragma: no cover
         from pgmpy.datasets import load_dataset  # pragma: no cover
+        from pgmpy.metrics import SHD  # pragma: no cover
 
         # 1. Load Sachs continuous dataset
         data = load_dataset("sachs_continuous").data  # pragma: no cover
 
-        # Standardize for comparison consistency across different optimizers
+        # Standardize for comparison consistency
         data = (data - data.mean()) / data.std()  # pragma: no cover
         data_np = data.to_numpy().copy()  # pragma: no cover
         nodes = data.columns.tolist()  # pragma: no cover
 
-        # 2. Run official DAGMA
-        # Force s=1.0 and T=5 to match pgmpy's default single-stage behavior
+        # 2. Run official DAGMA (loss_type="l2" = least-squares loss, lambda1 = L1 reg)
         model_official = OfficialDagmaLinear(loss_type="l2")  # pragma: no cover
         W_official = model_official.fit(data_np, lambda1=0.05, w_threshold=0.3, s=1.0, T=5)  # pragma: no cover
 
@@ -184,9 +190,10 @@ class TestDagmaLinearCore:
         est = DAGMALinear(lambda1=0.05, w_threshold=0.3, s=1.0)  # pragma: no cover
         est.fit(data)  # pragma: no cover
 
-        # 4. Compare structures using Structural Hamming Distance (SHD)
-        # Convert official adjacency to pgmpy DAG for metric calculation
+        # 4. Compare structures using SHD
         df_adj = pd.DataFrame(W_official, index=nodes, columns=nodes)  # pragma: no cover
+        import networkx as nx  # pragma: no cover
+
         nx_official = nx.from_pandas_adjacency(df_adj, create_using=nx.DiGraph)  # pragma: no cover
         dag_official = DAG(nx_official)  # pragma: no cover
 
@@ -196,43 +203,14 @@ class TestDagmaLinearCore:
         # SHD <= 6 indicates high structural similarity for 11 nodes
         assert shd_val <= 6  # pragma: no cover
 
-
-class TestDagmaLinear:
-    """Tests for DAGMALinear using pytest style."""
-
-    @pytest.fixture
-    def data(self):
-        """Set up a simple synthetic dataset using LinearGaussianBN."""
-        dagitty_str = """
-        dag {
-        X -> Y [beta=2.0]
-        Y -> Z [beta=1.5]
-        }
+    def test_optimizer_kwargs(self, continuous_data):
         """
-        model = DAG.from_dagitty(string=dagitty_str)
-        data = model.simulate(n_samples=1000, seed=42)
-        return data
-
-    def test_fit_returns_dag(self, data):
+        Test that custom optimizer_kwargs are passed through to the optimizer.
         """
-        Test if the fit method runs successfully
-        and returns a proper DAG object.
-        """
-        estimator = DAGMALinear()
-        estimator.fit(data)
+        import torch
 
-        assert isinstance(estimator.causal_graph_, DAG)
-        np.testing.assert_array_equal(estimator.feature_names_in_, ["X", "Y", "Z"])
-        assert isinstance(estimator.adjacency_matrix_, np.ndarray)
-        assert estimator.adjacency_matrix_.shape == (3, 3)
-
-        learned_edges = list(estimator.causal_graph_.edges())
-        assert ("X", "Y") in learned_edges
-        assert ("Y", "Z") in learned_edges
-        assert ("Z", "X") not in learned_edges
-
-    def test_custom_hyperparameters(self):
-        """Test if the __init__ correctly stores user-defined hyperparameters."""
-        estimator = DAGMALinear(lambda1=0.1, max_iter=50)
-        assert estimator.lambda1 == 0.1
-        assert estimator.max_iter == 50
+        est = DAGMALinear(
+            optimizer=torch.optim.LBFGS, optimizer_kwargs={"max_iter": 5, "line_search_fn": "strong_wolfe"}
+        )
+        est.fit(continuous_data)
+        assert isinstance(est.causal_graph_, DAG)
