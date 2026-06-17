@@ -1,3 +1,4 @@
+import math
 from collections import deque
 from collections.abc import Callable, Generator, Hashable
 from itertools import combinations, permutations
@@ -6,6 +7,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
+from skbase.utils.dependencies import _safe_import
 from sklearn.base import BaseEstimator
 from sklearn.metrics import (
     adjusted_mutual_info_score,
@@ -21,6 +23,8 @@ from pgmpy.ci_tests import IndependenceMatch, get_ci_test
 from pgmpy.independencies import Independencies
 from pgmpy.metrics import get_metrics
 from pgmpy.structure_score import BaseStructureScore
+
+torch = _safe_import("torch")
 
 
 class BaseCausalDiscovery(BaseEstimator):
@@ -169,6 +173,120 @@ class BaseCausalDiscovery(BaseEstimator):
             return metric.evaluate(true_causal_graph=true_graph, est_causal_graph=self.causal_graph_)
         else:
             raise ValueError("Either `X` or `true_graph` needs to be specified")
+
+
+class _BaseDAGMAMixin:
+    """
+    Mixin class implementing shared acyclicity constraint, optimization, and graph reconstruction logic for DAGMA and
+    its variants.
+    """
+
+    def _resolve_device_and_dtype(self) -> tuple:
+        """
+        Queries the global pgmpy configurations to resolve the PyTorch device and tensor float precision (mapping
+        string representations to torch.dtype objects).
+        """
+        device = config.get_device()
+        dtype_str = config.get_dtype()
+        if isinstance(dtype_str, str):
+            dtype = getattr(torch, dtype_str)
+        else:
+            dtype = dtype_str
+        return device, dtype
+
+    def _log_det_barrier(self, W, s: float):
+        """
+        Computes the log-determinant acyclicity barrier function:
+        h(W) = -log det(sI - W o W) + d log s
+
+        Returns
+        -------
+        is_cyclic : bool
+            True if the matrix violates the M-matrix domain (sign <= 0).
+        h : torch.Tensor or None
+            The computed barrier value if acyclic, otherwise None.
+        """
+        d = W.shape[0]
+        I = torch.eye(d, device=W.device, dtype=W.dtype)
+        M = s * I - W * W
+
+        sign, logdet = torch.slogdet(M)
+        if sign <= 0:
+            return True, None
+
+        h = -logdet + d * math.log(s)
+        return False, h
+
+    def _convert_to_dag(self, W: np.ndarray, feature_names: list, w_threshold: float, return_type: str):
+        """
+        Thresholds the estimated weight matrix and converts it into a pgmpy DAG or CPDAG.
+        """
+        W_thresh = np.where(np.abs(W) > w_threshold, W, 0)
+        dag = nx.DiGraph()
+        dag.add_nodes_from(feature_names)
+
+        edges = []
+        for i in range(W.shape[0]):
+            for j in range(W.shape[1]):
+                if W_thresh[i, j] != 0:
+                    edges.append((feature_names[i], feature_names[j]))
+        dag.add_edges_from(edges)
+
+        if return_type == "dag":
+            return DAG(dag)
+        elif return_type == "cpdag":
+            return DAG(dag).to_pdag()
+        else:
+            raise ValueError(f"return_type must be 'dag' or 'cpdag', got {return_type}")
+
+    def _optimize(
+        self,
+        W_tensor,
+        optimizer_cls,
+        optimizer_kwargs: dict,
+        objective_fn,
+        mu_init: float,
+        mu_factor: float,
+        max_iter: int,
+        inner_iter: int = 1,
+    ) -> np.ndarray:
+        """
+        Unified optimization loop executing the dual-loop DAGMA optimization.
+
+        - Outer loop (max_iter): Decays the penalty parameter mu (mu *= mu_factor).
+        - Inner loop (inner_iter): Runs multiple optimizer steps per mu level to
+          allow convergence before decaying mu further. Critical for first-order
+          optimizers (e.g., Adam) that need many steps per mu level.
+
+        For L-BFGS, inner_iter=1 is typical since each .step() performs ~10-20
+        internal line search evaluations. For Adam, inner_iter=3000+ is needed
+        to match the official DAGMA implementation.
+        """
+        mu = mu_init
+        W_est = W_tensor.detach().cpu().numpy()
+
+        for _ in range(max_iter):
+            # Create a fresh PyTorch parameter for the current outer iteration
+            W_tensor_iter = torch.nn.Parameter(torch.from_numpy(W_est).to(device=W_tensor.device, dtype=W_tensor.dtype))
+
+            # Initialize optimizer
+            optimizer = optimizer_cls([W_tensor_iter], **optimizer_kwargs)
+
+            def closure():
+                optimizer.zero_grad()
+                loss = objective_fn(W_tensor_iter, mu)
+                loss.backward()
+                return loss
+
+            # Inner optimization loop: run multiple steps at this mu level
+            for _ in range(inner_iter):
+                optimizer.step(closure)
+
+            # Extract updated W for the next iteration
+            W_est = W_tensor_iter.detach().cpu().numpy()
+            mu *= mu_factor
+
+        return W_est
 
 
 class _ConstraintMixin:
