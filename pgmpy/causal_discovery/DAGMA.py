@@ -4,12 +4,12 @@ import numpy as np
 import pandas as pd
 from skbase.utils.dependencies import _safe_import
 
-from pgmpy.causal_discovery._base import _BaseCausalDiscovery, _BaseDAGMAMixin
+from pgmpy.causal_discovery._base import BaseCausalDiscovery, _BaseDAGMAMixin
 
 torch = _safe_import("torch")
 
 
-class DAGMALinear(_BaseDAGMAMixin, _BaseCausalDiscovery):
+class DAGMALinear(_BaseDAGMAMixin, BaseCausalDiscovery):
     r"""
     DAGMA is a continuous optimization algorithm for causal discovery.
 
