@@ -5,23 +5,25 @@ from pgmpy.datasets._base import BaseSimulatedDataset
 from pgmpy.models import LinearGaussianBayesianNetwork
 
 
-class LinearGaussian(BaseSimulatedDataset):
+class LinearGaussianSCM(BaseSimulatedDataset):
     """
-    Simulated dataset from a random Linear Gaussian Structural Causal Model.
+    Simulates a dataset from a random Linear Gaussian SCM.
 
-    Wraps :meth:`LinearGaussianBayesianNetwork.get_random` for graph/parameter
-    generation and :meth:`LinearGaussianBayesianNetwork.simulate` for data
-    sampling.
+    Delegates graph and parameter generation to
+    ``LinearGaussianBayesianNetwork.get_random`` and data sampling
+    to ``LinearGaussianBayesianNetwork.simulate``.
 
-    Parameters accepted via keyword arguments in :func:`load_dataset`:
-
-    * **n_nodes** (int, default 5) – Number of variables.
-    * **edge_prob** (float, default 0.5) – Probability of an edge between any
-      two topologically ordered nodes.
-    * **scale** (float, default 1) – Scale parameter passed to
-      ``get_random``.  Controls the standard deviation of the normal
-      distribution used when sampling both linear coefficients and CPD
-      noise terms.
+    Parameters
+    ----------
+    n_nodes : int, default 5
+        Number of variables in the generated DAG.
+    edge_prob : float, default 0.5
+        Probability of an edge between any two topologically ordered
+        nodes.
+    scale : float, default 1
+        Scale parameter passed to ``get_random``. Controls the standard
+        deviation of the normal distribution used when sampling both
+        linear coefficients and CPD noise terms.
     """
 
     _tags = {
@@ -38,7 +40,24 @@ class LinearGaussian(BaseSimulatedDataset):
         edge_prob: float = 0.5,
         scale: float = 1.0,
     ) -> LinearGaussianBayesianNetwork:
-        """Build and return a fitted LinearGaussianBayesianNetwork."""
+        """Build a fitted LinearGaussianBayesianNetwork from random parameters.
+
+        Parameters
+        ----------
+        seed : int, optional
+            Random seed for reproducible graph generation.
+        n_nodes : int, default 5
+            Number of variables in the generated DAG.
+        edge_prob : float, default 0.5
+            Probability of an edge between any two topologically ordered
+            nodes.
+        scale : float, default 1.0
+            Scale parameter for coefficient and noise sampling.
+
+        Returns
+        -------
+        LinearGaussianBayesianNetwork
+        """
         return LinearGaussianBayesianNetwork.get_random(
             n_nodes=n_nodes,
             edge_prob=edge_prob,
@@ -63,11 +82,12 @@ class LinearGaussian(BaseSimulatedDataset):
             Number of samples to generate. Defaults to 1000.
         seed : int, optional
             Random seed for reproducible graph and data generation.
-        n_nodes : int, optional
+        n_nodes : int, default 5
             Number of variables in the generated DAG.
-        edge_prob : float, optional
-            Probability of an edge between any two topologically ordered nodes.
-        scale : float, optional
+        edge_prob : float, default 0.5
+            Probability of an edge between any two topologically ordered
+            nodes.
+        scale : float, default 1.0
             Scale parameter for coefficient and noise sampling in
             ``LinearGaussianBayesianNetwork.get_random``.
 
@@ -93,17 +113,19 @@ class LinearGaussian(BaseSimulatedDataset):
         seed : int, optional
             Must match the seed used in ``load_dataframe`` to get the
             corresponding graph.
-        n_nodes : int, optional
+        n_nodes : int, default 5
             Number of variables in the generated DAG.
-        edge_prob : float, optional
-            Probability of an edge between any two topologically ordered nodes.
-        scale : float, optional
-            Accepted for call-signature compatibility with ``load_dataset()``.
-            The graph structure is independent of this value.
+        edge_prob : float, default 0.5
+            Probability of an edge between any two topologically ordered
+            nodes.
+        scale : float, default 1.0
+            Accepted for call-signature compatibility with
+            ``load_dataset``. The graph structure is independent of
+            this value.
 
         Returns
         -------
-        pgmpy.base.DAG
+        DAG
         """
         # scale is intentionally not forwarded — graph structure is
         # determined only by n_nodes, edge_prob, and seed.

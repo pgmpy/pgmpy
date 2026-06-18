@@ -31,7 +31,6 @@ ALL_DATASETS = [
     "htru2",
     "iq_brain_size",
     "lead",
-    "linear_gaussian",
     "myocardial_infarction",
     "pima_diabetes",
     "pittsburgh_bridges",
@@ -190,28 +189,3 @@ def test_static_dataset_n_samples():
     ds1 = load_dataset("sachs_discrete", n_samples=50, seed=42)
     ds2 = load_dataset("sachs_discrete", n_samples=50, seed=42)
     pd.testing.assert_frame_equal(ds1.data, ds2.data)
-
-
-def test_load_linear_gaussian_dataset():
-    ds = load_dataset("linear_gaussian", seed=42)
-    assert ds.data.shape == (1000, 5)
-    assert set(ds.ground_truth.nodes()) == set(ds.data.columns)
-    assert isinstance(ds.ground_truth, DAG)
-
-    ds_custom = load_dataset("linear_gaussian", n_samples=200, seed=42, n_nodes=8, edge_prob=0.3)
-    assert ds_custom.data.shape == (200, 8)
-    assert set(ds_custom.data.columns) == set(ds_custom.ground_truth.nodes())
-
-    ds_repeat = load_dataset("linear_gaussian", seed=42)
-    pd.testing.assert_frame_equal(ds.data, ds_repeat.data)
-    assert set(ds.ground_truth.edges()) == set(ds_repeat.ground_truth.edges())
-
-    ds_low = load_dataset("linear_gaussian", seed=42, scale=0.1)
-    ds_high = load_dataset("linear_gaussian", seed=42, scale=10.0)
-    assert not ds_low.data.equals(ds_high.data)
-    assert set(ds_low.ground_truth.edges()) == set(ds_high.ground_truth.edges())
-
-    ds_empty = load_dataset("linear_gaussian", seed=42, n_nodes=8, edge_prob=0)
-    assert set(ds_empty.ground_truth.nodes()) == {f"X_{i}" for i in range(8)}
-    assert not ds_empty.ground_truth.edges()
-    assert "linear_gaussian" in list_datasets(is_simulated=True)
