@@ -8,6 +8,7 @@ from torch.func import grad
 from torch.nn.functional import logsigmoid
 
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery
+from pgmpy.global_vars import config
 
 
 class DiBS(_BaseCausalDiscovery):
@@ -100,7 +101,7 @@ class DiBS(_BaseCausalDiscovery):
         Number of variables in the fitted data.
     feature_names_in_ : list
         Column names of the fitted pandas DataFrame.
-    device : torch.device
+    device_ : torch.device
         Device used for tensor computations.
     _graph_particle_samples : torch.Tensor
         Hard adjacency matrices obtained from the final latent particles.
@@ -157,7 +158,6 @@ class DiBS(_BaseCausalDiscovery):
         self.n_particles = n_particles
         self.n_steps = n_steps
         self.log_likelihood = log_likelihood
-        self._log_likelihood_fn = self._lgbn_log_likelihood if log_likelihood is None else log_likelihood
         self.learning_rate = learning_rate
         self.edge_prob_threshold = edge_prob_threshold  # Used for summarization of the graphs later.
         self.kernel = kernel
@@ -166,17 +166,11 @@ class DiBS(_BaseCausalDiscovery):
         self.baseline = baseline
         self.alpha_linear = alpha_linear
         self.beta_linear = beta_linear
-        self.alpha = lambda t: alpha_linear * (t + 1)
-        self.beta = lambda t: beta_linear * (t + 1)
         self.latent_dim = latent_dim  # dimension of each U_i and V_i.
         self.n_grad_mc_samples = n_grad_mc_samples
         self.n_acyclicity_mc_samples = n_acyclicity_mc_samples
         self.latent_prior_std = latent_prior_std
         self.tau = tau
-        if torch.cuda.is_available():
-            self.device = torch.device("cuda")
-        else:
-            self.device = torch.device("cpu")
 
     def _lgbn_log_likelihood(
         self,
@@ -316,7 +310,7 @@ class DiBS(_BaseCausalDiscovery):
 
         # Draw some hard graph samples:
         U, V = particles.chunk(2, dim=-1)
-        soft_graphs = torch.sigmoid(self.alpha(t) * U @ V.transpose(-1, -2))
+        soft_graphs = torch.sigmoid(self.alpha_(t) * U @ V.transpose(-1, -2))
         hard_graph_samples = (
             torch.rand((p, n_samples, n_nodes, n_nodes), device=soft_graphs.device) < soft_graphs.unsqueeze(1)
         ).to(soft_graphs.dtype)
@@ -333,7 +327,7 @@ class DiBS(_BaseCausalDiscovery):
         # function that computes log_p(G|Z), see eq. 6
         def log_p(G, Z):
             U, V = Z.chunk(2, dim=-1)
-            scores = self.alpha(t) * (U @ V.transpose(-1, -2))
+            scores = self.alpha_(t) * (U @ V.transpose(-1, -2))
             mask = 1.0 - torch.eye(scores.shape[-1], device=scores.device, dtype=scores.dtype)
 
             G = G.to(scores.dtype)
@@ -421,7 +415,7 @@ class DiBS(_BaseCausalDiscovery):
             # equation 13:
             U, V = Z.chunk(2, dim=-1)
             interactions = U @ V.transpose(-1, -2)
-            graph_taus = torch.sigmoid(self.tau * (L + self.alpha(t) * interactions))
+            graph_taus = torch.sigmoid(self.tau * (L + self.alpha_(t) * interactions))
             graph_taus = graph_taus * (1 - torch.eye(n_nodes, device=graph_taus.device, dtype=graph_taus.dtype))
             return graph_taus
 
@@ -492,7 +486,7 @@ class DiBS(_BaseCausalDiscovery):
         For the acyclicity term, use a Gumbel-softmax / Concrete
         reparameterization estimator with `n_acyclicity_mc_samples`.
         """
-        alpha, beta = self.alpha(t), self.beta(t)
+        alpha, beta = self.alpha_(t), self.beta_(t)
 
         particles = particles.detach().requires_grad_(True)
         p, d, _ = particles.shape
@@ -705,9 +699,9 @@ class DiBS(_BaseCausalDiscovery):
             ``(n_particles, n_nodes, n_nodes)``.
         """
 
-        X_t = torch.tensor(X.to_numpy(), device=self.device, dtype=torch.float32)
+        X_t = torch.tensor(X.to_numpy(dtype=np.float64), device=self.device_, dtype=self.dtype_)
         n_nodes = X.shape[1]
-        particles = torch.nn.Parameter(self._initialize_particles(n_nodes).to(self.device))
+        particles = torch.nn.Parameter(self._initialize_particles(n_nodes).to(self.device_, dtype=self.dtype_))
         optimizer = torch.optim.RMSprop([particles], lr=self.learning_rate, maximize=True)
 
         for t in range(self.n_steps):
@@ -721,7 +715,7 @@ class DiBS(_BaseCausalDiscovery):
 
         # compute G_infty(Z):
         U, V = torch.chunk(particles.detach(), 2, dim=2)
-        graphs_infty = ((U @ V.transpose(-1, -2)) > 0) * ~torch.eye(n_nodes, dtype=torch.bool, device=self.device)
+        graphs_infty = ((U @ V.transpose(-1, -2)) > 0) * ~torch.eye(n_nodes, dtype=torch.bool, device=self.device_)
 
         self._graph_particle_samples = graphs_infty.detach().cpu()
 
@@ -824,17 +818,23 @@ class DiBS(_BaseCausalDiscovery):
             Fitted estimator.
         """
 
-        self.n_features_in_ = X.shape[1]
-        self.feature_names_in_ = X.columns.tolist()
+        # Extended part of the __init__ to ensure sklearn backwards compatibility:
+        self._log_likelihood_fn = self._lgbn_log_likelihood if self.log_likelihood is None else self.log_likelihood
+        self.alpha_ = lambda t: self.alpha_linear * (t + 1)
+        self.beta_ = lambda t: self.beta_linear * (t + 1)
+        config.set_backend("torch")
+        self.dtype_ = config.get_dtype()
+        self.device_ = config.get_device()
+        #################################################################################
 
         # Run inference and store particle graph samples
         self._run_inference(X)
 
         # Convert particle samples to graphs
-        self.graph_samples = self._sample_graphs(X.columns.tolist())
+        self.graph_samples_ = self._sample_graphs(self.feature_names_in_)
 
         # Summarize posterior samples into one final DAG
-        summary_graph, edge_probs, adjacency_matrix = self._summarize_graphs(self.graph_samples)
+        summary_graph, edge_probs, adjacency_matrix = self._summarize_graphs(self.graph_samples_)
 
         self.causal_graph_ = summary_graph
         self.edge_probs_ = edge_probs

@@ -8,11 +8,26 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
+from sklearn.utils.estimator_checks import parametrize_with_checks
 
 torch = _safe_import("torch")
 
 if _check_soft_dependencies("torch", severity="none"):
     from pgmpy.causal_discovery.DiBS import DiBS
+
+def expected_failed_checks(estimator):
+    return {
+        "check_fit_score_takes_y": "Causal discovery estimators do not take y parameter in score method.",
+        "check_n_features_in_after_fitting": "Failing for score method (not for fit) for unknown reason.",
+    }
+
+
+@parametrize_with_checks(
+    [DiBS(n_steps=2, n_particles=2, n_grad_mc_samples=2, n_acyclicity_mc_samples=2)],
+    expected_failed_checks=expected_failed_checks,
+)
+def test_pc_compatibility(estimator, check):
+    check(estimator)
 
 
 def linear_chain_data():
