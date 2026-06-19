@@ -16,7 +16,7 @@ def expected_failed_checks(estimator):
 
 
 @parametrize_with_checks(
-    [BootstrapEstimator(estimator=PC())],
+    [BootstrapEstimator(estimator=HillClimbSearch(return_type="dag"), n_bootstraps=2, n_jobs=1)],
     expected_failed_checks=expected_failed_checks,
 )
 def test_bootstrap_estimator_compatibility(estimator, check):
@@ -143,7 +143,7 @@ def test_bootstrap_asia():
     )
     est_pc.fit(df)
 
-    assert set(est_pc.causal_graph_.edges()) == {
+    assert set(est_pc.causal_graph_.directed_edges) == {
         ("tub", "xray"),
         ("lung", "either"),
         ("xray", "either"),
