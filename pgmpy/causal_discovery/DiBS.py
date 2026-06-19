@@ -9,6 +9,7 @@ from torch.nn.functional import logsigmoid
 
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery
 from pgmpy.global_vars import config
+from pgmpy.base.DAG import DAG
 
 
 class DiBS(_BaseCausalDiscovery):
@@ -797,7 +798,10 @@ class DiBS(_BaseCausalDiscovery):
             columns=nodes,
         )
 
-        return summary_graph, edge_probs, adjacency_matrix
+        summary_graph_dag = DAG()
+        summary_graph_dag.add_nodes_from(summary_graph.nodes())
+        summary_graph_dag.add_edges_from(summary_graph.edges())
+        return summary_graph_dag, edge_probs, adjacency_matrix
 
     def _fit(self, X: pd.DataFrame):
         """
