@@ -87,7 +87,25 @@ class _CASTLEModel(nn.Module):
 
     def train(self, X_tensor):
         """Train the CASTLE model and return the adjacency matrix."""
-        # TODO: Implement the CASTLE training loop.
+        # 1. Set seed for reproducibility.
+
+        # 2. Setup optimizer.
+
+        # 3. Initialize state for early stopping.
+
+        # 4. Epoch loop:
+        #    a. Shuffle data and iterate over mini-batches.
+        #    b. Forward pass: compute Out, out_0.
+        #    c. Compute losses:
+        #       - supervised_loss = MSE(out_0, target)
+        #       - reconstruction_loss = MSE(Out, X_batch)
+        #       - acyclicity_penalty = h(W)^2
+        #       - sparsity_loss = L1 norm of masked input weights
+        #       - total_loss = supervised + dag_weight * (recon + acyclicity + sparsity_weight * sparsity)
+        #    d. Backprop and optimizer step.
+        #    e. Check early stopping criteria.
+
+        # 5. Set eval mode, detach and threshold W, then return.
         raise NotImplementedError("TBD")
 
     def get_W(self):
