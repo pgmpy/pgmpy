@@ -56,11 +56,6 @@ class DiBS(_BaseCausalDiscovery):
     edge_prob_threshold : float, default=0.0
         Minimum posterior edge probability required for an edge to be considered
         during summary-graph construction.
-    kernel : str, default="frobenius"
-        Kernel used in the SVGD update. Currently supports ``"frobenius"``.
-    kernel_bandwidth : float or str, default="median"
-        Bandwidth for the SVGD kernel. If ``"median"``, the median pairwise
-        squared particle distance is used.
     grad_estimator_z : {"score", "reparam"}, default="score"
         Gradient estimator used for the likelihood contribution. ``"score"``
         uses a score-function estimator; ``"reparam"`` uses a Gumbel-softmax /
@@ -144,8 +139,6 @@ class DiBS(_BaseCausalDiscovery):
         log_likelihood: Callable | None = None,
         learning_rate: float = 5e-3,
         edge_prob_threshold: float = 0.0,
-        kernel: str = "frobenius",
-        kernel_bandwidth: float | str = "median",
         grad_estimator_z: str = "score",
         baseline: float = 0.0,
         alpha_linear: float = 0.05,
@@ -161,8 +154,6 @@ class DiBS(_BaseCausalDiscovery):
         self.log_likelihood = log_likelihood
         self.learning_rate = learning_rate
         self.edge_prob_threshold = edge_prob_threshold  # Used for summarization of the graphs later.
-        self.kernel = kernel
-        self.kernel_bandwidth = kernel_bandwidth
         self.grad_estimator_z = grad_estimator_z
         self.baseline = baseline
         self.alpha_linear = alpha_linear
@@ -406,7 +397,7 @@ class DiBS(_BaseCausalDiscovery):
         # location 0 and scale 1.
         # To this, end, use that the quantile function is given by Q(p) = log p / (1-p)
         # See https://en.wikipedia.org/wiki/Logistic_distribution#Quantile_function
-        n_nodes = X_t.shape[1]
+        n_nodes = self.n_features_in_
         eps = torch.finfo(particles.dtype).eps
         uniform_samples = torch.rand(
             (particles.shape[0], self.n_grad_mc_samples, n_nodes, n_nodes),
@@ -591,42 +582,31 @@ class DiBS(_BaseCausalDiscovery):
             Pairwise kernel matrix of shape ``(n_particles, n_particles)``.
         kernel_fn : Callable
             Function computing the kernel value between two individual particles.
-
-        Raises
-        ------
-        ValueError
-            If the requested kernel is not supported.
         """
-
-        kernel_name = self.kernel
-        bandwidth = self.kernel_bandwidth
 
         flat_particles = particles.reshape(particles.shape[0], -1)
 
-        if bandwidth == "median":
-            distances = torch.cdist(flat_particles, flat_particles) ** 2
+        distances = torch.cdist(flat_particles, flat_particles) ** 2
 
-            mask = ~torch.eye(
-                distances.shape[0],
-                dtype=torch.bool,
-                device=distances.device,
-            )
-            bandwidth = torch.median(distances[mask]).clamp_min(1e-8)
+        mask = ~torch.eye(
+            distances.shape[0],
+            dtype=torch.bool,
+            device=distances.device,
+        )
+        bandwidth = torch.median(distances[mask]).clamp_min(1e-8)
 
-        if kernel_name == "frobenius":
-            interactions = flat_particles @ flat_particles.T
-            self_interactions = interactions.diagonal()
+        interactions = flat_particles @ flat_particles.T
+        self_interactions = interactions.diagonal()
 
-            # using ||A-B||_F^2 = ||A||_F^2 + ||B||_F^2 - 2<A,B>_F
-            norm_diff = self_interactions.unsqueeze(1) + self_interactions.unsqueeze(0) - 2 * interactions
+        # using ||A-B||_F^2 = ||A||_F^2 + ||B||_F^2 - 2<A,B>_F
+        norm_diff = self_interactions.unsqueeze(1) + self_interactions.unsqueeze(0) - 2 * interactions
 
-            def k(x, y):
-                # flatten particles:
-                x, y = x.flatten(), y.flatten()
-                return torch.exp(-((x - y) ** 2).sum() / bandwidth)
+        def k(x, y):
+            # flatten particles:
+            x, y = x.flatten(), y.flatten()
+            return torch.exp(-((x - y) ** 2).sum() / bandwidth)
 
-            return torch.exp(-norm_diff / bandwidth), k
-        raise ValueError(f"Unknown kernel name: {kernel_name}")
+        return torch.exp(-norm_diff / bandwidth), k
 
     def _svgd_increment(
         self,
@@ -707,7 +687,7 @@ class DiBS(_BaseCausalDiscovery):
         """
 
         X_t = torch.tensor(X.to_numpy(dtype=np.float64), device=self.device_, dtype=self.dtype_)
-        n_nodes = X.shape[1]
+        n_nodes = self.n_features_in_
         particles = torch.nn.Parameter(self._initialize_particles(n_nodes).to(self.device_, dtype=self.dtype_))
         optimizer = torch.optim.RMSprop([particles], lr=self.learning_rate, maximize=True)
 
@@ -742,7 +722,7 @@ class DiBS(_BaseCausalDiscovery):
         list[nx.DiGraph]
             One directed graph per particle.
         """
-        nodes = list(nodes)
+        nodes = self.feature_names_in_
         graph_samples = self._graph_particle_samples.detach().cpu().numpy()
 
         sampled_graphs = []
@@ -770,7 +750,7 @@ class DiBS(_BaseCausalDiscovery):
         tuple
             ``(summary_graph, edge_probs, adjacency_matrix)``.
         """
-        nodes = list(graph_samples[0].nodes())
+        nodes = self.feature_names_in_
         adjs = np.stack(
             [nx.to_numpy_array(graph, nodelist=nodes, dtype=float) for graph in graph_samples],
             axis=0,
