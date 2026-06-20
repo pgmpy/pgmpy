@@ -173,6 +173,12 @@ class DiBS(_BaseCausalDiscovery):
         self.latent_prior_std = latent_prior_std
         self.tau = tau
 
+    def _alpha(self, t: int):
+        return self.alpha_linear * (t + 1)
+
+    def _beta(self, t: int):
+        return self.beta_linear * (t + 1)
+
     def _lgbn_log_likelihood(
         self,
         data: torch.Tensor,
@@ -311,7 +317,7 @@ class DiBS(_BaseCausalDiscovery):
 
         # Draw some hard graph samples:
         U, V = particles.chunk(2, dim=-1)
-        soft_graphs = torch.sigmoid(self.alpha_(t) * U @ V.transpose(-1, -2))
+        soft_graphs = torch.sigmoid(self._alpha(t) * U @ V.transpose(-1, -2))
         hard_graph_samples = (
             torch.rand((p, n_samples, n_nodes, n_nodes), device=soft_graphs.device) < soft_graphs.unsqueeze(1)
         ).to(soft_graphs.dtype)
@@ -328,7 +334,7 @@ class DiBS(_BaseCausalDiscovery):
         # function that computes log_p(G|Z), see eq. 6
         def log_p(G, Z):
             U, V = Z.chunk(2, dim=-1)
-            scores = self.alpha_(t) * (U @ V.transpose(-1, -2))
+            scores = self._alpha(t) * (U @ V.transpose(-1, -2))
             mask = 1.0 - torch.eye(scores.shape[-1], device=scores.device, dtype=scores.dtype)
 
             G = G.to(scores.dtype)
@@ -416,7 +422,7 @@ class DiBS(_BaseCausalDiscovery):
             # equation 13:
             U, V = Z.chunk(2, dim=-1)
             interactions = U @ V.transpose(-1, -2)
-            graph_taus = torch.sigmoid(self.tau * (L + self.alpha_(t) * interactions))
+            graph_taus = torch.sigmoid(self.tau * (L + self._alpha(t) * interactions))
             graph_taus = graph_taus * (1 - torch.eye(n_nodes, device=graph_taus.device, dtype=graph_taus.dtype))
             return graph_taus
 
@@ -487,7 +493,7 @@ class DiBS(_BaseCausalDiscovery):
         For the acyclicity term, use a Gumbel-softmax / Concrete
         reparameterization estimator with `n_acyclicity_mc_samples`.
         """
-        alpha, beta = self.alpha_(t), self.beta_(t)
+        alpha, beta = self._alpha(t), self._beta(t)
 
         particles = particles.detach().requires_grad_(True)
         p, d, _ = particles.shape
@@ -824,8 +830,6 @@ class DiBS(_BaseCausalDiscovery):
 
         # Extended part of the __init__ to ensure sklearn backwards compatibility:
         self._log_likelihood_fn = self._lgbn_log_likelihood if self.log_likelihood is None else self.log_likelihood
-        self.alpha_ = lambda t: self.alpha_linear * (t + 1)
-        self.beta_ = lambda t: self.beta_linear * (t + 1)
         config.set_backend("torch")
         self.dtype_ = config.get_dtype()
         self.device_ = config.get_device()

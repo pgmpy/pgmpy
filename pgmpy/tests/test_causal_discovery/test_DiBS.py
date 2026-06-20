@@ -26,7 +26,7 @@ def expected_failed_checks(estimator):
     [DiBS(n_steps=2, n_particles=2, n_grad_mc_samples=2, n_acyclicity_mc_samples=2)],
     expected_failed_checks=expected_failed_checks,
 )
-def test_pc_compatibility(estimator, check):
+def test_DiBS_compatibility(estimator, check):
     check(estimator)
 
 
@@ -72,7 +72,7 @@ class TestDiBSCore(unittest.TestCase):
         self.assertIsInstance(est.adjacency_matrix_, pd.DataFrame)
 
         self.assertEqual(est.n_features_in_, 3)
-        self.assertEqual(est.feature_names_in_, ["A", "B", "C"])
+        self.assertEqual(est.feature_names_in_.tolist(), ["A", "B", "C"])
         self.assertEqual(est.edge_probs_.shape, (3, 3))
         self.assertEqual(est.adjacency_matrix_.shape, (3, 3))
 
