@@ -240,35 +240,6 @@ class DiBS(_BaseCausalDiscovery):
         scores = torch.stack(scores).reshape(batch_shape)
         return scores[0] if single_graph else scores
 
-    def _initialize_particles(
-        self,
-        n_nodes: int,
-    ) -> torch.Tensor:
-        """
-        Initialize latent SVGD particles.
-
-        Each particle contains one latent representation for every node. The last
-        dimension has size ``2 * latent_dim`` because each node stores both a source
-        embedding U_i and a target embedding V_i. Edge probabilities are later
-        computed from inner products between source and target embeddings.
-
-        Parameters
-        ----------
-        n_nodes : int
-            Number of variables/nodes in the graph.
-
-        Returns
-        -------
-        torch.Tensor
-            Tensor of shape ``(n_particles, n_nodes, 2 * latent_dim)`` containing
-            randomly initialized latent particles.
-        """
-        n = self.n_particles
-
-        # TODO: maybe divide by sqrt of latent_dim so that every row in U and V have unit variance.
-        # last dim is self.latent_dim * 2 since Z = [U, V] and each U_i and V_i are of dim self.latent_dim.
-        # Ignore acyclicity part in prior as no (efficient) sampler exists.
-        return self.latent_prior_std * torch.randn((n, n_nodes, self.latent_dim * 2))
 
     def _grad_z_likelihood_score_function(
         self,
@@ -406,9 +377,6 @@ class DiBS(_BaseCausalDiscovery):
         ).clamp(eps, 1 - eps)
         logistic_samples = torch.log(uniform_samples / (1 - uniform_samples))
 
-        # todo: discuss correctness of eq. 12 with ankur; is the chain rule applied correctly?
-        # todo: for the time being, use a custom stable rewrite and use autodiff.
-
         def graph_tau(L, Z):
             # equation 13:
             U, V = Z.chunk(2, dim=-1)
@@ -464,7 +432,6 @@ class DiBS(_BaseCausalDiscovery):
             return self._grad_z_likelihood_score_function
         elif name == "reparam":
             return self._grad_z_likelihood_gumbel
-        raise ValueError(f"Unknown grad estimator: {name}")
 
     def _compute_particle_posterior_scores(
         self,
@@ -688,7 +655,14 @@ class DiBS(_BaseCausalDiscovery):
 
         X_t = torch.tensor(X.to_numpy(dtype=np.float64), device=self.device_, dtype=self.dtype_)
         n_nodes = self.n_features_in_
-        particles = torch.nn.Parameter(self._initialize_particles(n_nodes).to(self.device_, dtype=self.dtype_))
+
+        # initialize particles:
+        # TODO: maybe divide by sqrt of latent_dim so that every row in U and V have unit variance.
+        # last dim is self.latent_dim * 2 since Z = [U, V] and each U_i and V_i are of dim self.latent_dim.
+        # Ignore acyclicity part in prior as no (efficient) sampler exists.
+        particles = self.latent_prior_std * torch.randn((self.n_particles, n_nodes, self.latent_dim * 2))
+        particles = torch.nn.Parameter(particles.to(self.device_, dtype=self.dtype_))
+
         optimizer = torch.optim.RMSprop([particles], lr=self.learning_rate, maximize=True)
 
         for t in range(self.n_steps):
@@ -814,6 +788,9 @@ class DiBS(_BaseCausalDiscovery):
         self.dtype_ = config.get_dtype()
         self.device_ = config.get_device()
         #################################################################################
+
+        if not self.grad_estimator_z in ["score", "reparam"]:
+            raise ValueError(f"Unknown grad estimator: {self.grad_estimator_z}. Must be one of ['score', 'reparam'].")
 
         # Run inference and store particle graph samples
         self._run_inference(X)

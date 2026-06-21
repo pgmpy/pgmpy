@@ -140,6 +140,6 @@ class TestDiBSCore(unittest.TestCase):
 )
 class TestDiBSLikelihoodValidation(unittest.TestCase):
     def test_unknown_grad_estimator_raises(self):
-        est = DiBS()
+        est = DiBS(grad_estimator_z="Nonsense estimator")
         with self.assertRaisesRegex(ValueError, "Unknown grad estimator"):
-            est._make_likelihood_grad_estimator("invalid")
+            est.fit(linear_chain_data())
