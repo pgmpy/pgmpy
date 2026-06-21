@@ -630,33 +630,6 @@ class DiBS(_BaseCausalDiscovery):
         return (driving_term + repulsive_term) / M
 
 
-    def _sample_graphs(self, nodes):
-        """
-        Convert stored particle adjacency matrices into NetworkX directed graphs.
-
-        Parameters
-        ----------
-        nodes : list-like
-            Node labels in adjacency-matrix order.
-
-        Returns
-        -------
-        list[nx.DiGraph]
-            One directed graph per particle.
-        """
-        nodes = self.feature_names_in_
-        graph_samples = self._graph_particle_samples.detach().cpu().numpy()
-
-        sampled_graphs = []
-        for adj in graph_samples:
-            graph = nx.DiGraph()
-            graph.add_nodes_from(nodes)
-            src_idx, dst_idx = np.where(adj)
-            graph.add_edges_from((nodes[i], nodes[j]) for i, j in zip(src_idx, dst_idx) if i != j)
-            sampled_graphs.append(graph)
-
-        return sampled_graphs
-
     def _summarize_graphs(self, graph_samples):
         """
         Aggregate sampled graphs into edge marginal probabilities and summarize them
@@ -773,11 +746,19 @@ class DiBS(_BaseCausalDiscovery):
 
         self._graph_particle_samples = graphs_infty.detach().cpu()
 
-        # Convert particle samples to graphs
-        self.graph_samples_ = self._sample_graphs(self.feature_names_in_)
+        # Convert stored particle adjacency matrices into NetworkX directed graphs.
+        nodes = self.feature_names_in_
+        graph_samples = self._graph_particle_samples.detach().cpu().numpy()
+        sampled_graphs = []
+        for adj in graph_samples:
+            graph = nx.DiGraph()
+            graph.add_nodes_from(nodes)
+            src_idx, dst_idx = np.where(adj)
+            graph.add_edges_from((nodes[i], nodes[j]) for i, j in zip(src_idx, dst_idx) if i != j)
+            sampled_graphs.append(graph)
 
         # Summarize posterior samples into one final DAG
-        summary_graph, edge_probs, adjacency_matrix = self._summarize_graphs(self.graph_samples_)
+        summary_graph, edge_probs, adjacency_matrix = self._summarize_graphs(sampled_graphs)
 
         self.causal_graph_ = summary_graph
         self.edge_probs_ = edge_probs
