@@ -1,3 +1,4 @@
+from .DiBS import DiBS
 from .ExpertInLoop import ExpertInLoop
 from .ExpertKnowledge import ExpertKnowledge
 from .GES import GES

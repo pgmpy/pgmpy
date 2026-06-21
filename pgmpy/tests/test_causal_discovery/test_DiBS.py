@@ -14,7 +14,7 @@ from pgmpy.base import DAG
 torch = _safe_import("torch")
 
 if _check_soft_dependencies("torch", severity="none"):
-    from pgmpy.causal_discovery.DiBS import DiBS
+    from pgmpy.causal_discovery import DiBS
 
 def expected_failed_checks(estimator):
     return {
