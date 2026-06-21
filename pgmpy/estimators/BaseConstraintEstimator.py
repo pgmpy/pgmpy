@@ -7,9 +7,9 @@ from tqdm.auto import tqdm
 
 from pgmpy import config, logger
 from pgmpy.base import UndirectedGraph
-from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.estimators import StructureEstimator
 from pgmpy.estimators.CITests import ci_registry
+from pgmpy.estimators.ExpertKnowledge import ExpertKnowledge
 
 
 class BaseConstraintEstimator(StructureEstimator):
