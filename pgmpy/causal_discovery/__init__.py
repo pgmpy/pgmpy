@@ -4,6 +4,7 @@ from .ExpertKnowledge import ExpertKnowledge
 from .GES import GES
 from .HillClimbSearch import HillClimbSearch
 from .PC import PC
+from .TOPIC import TOPIC
 
 __all__ = [
     "DiBS",
@@ -12,4 +13,5 @@ __all__ = [
     "GES",
     "HillClimbSearch",
     "PC",
+    "TOPIC",
 ]
