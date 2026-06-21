@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 from sklearn.utils.estimator_checks import parametrize_with_checks
+from pgmpy.base import DAG
 
 torch = _safe_import("torch")
 
@@ -67,7 +68,7 @@ class TestDiBSCore(unittest.TestCase):
         self.assertTrue(hasattr(est, "n_features_in_"))
         self.assertTrue(hasattr(est, "feature_names_in_"))
 
-        self.assertIsInstance(est.causal_graph_, nx.DiGraph)
+        self.assertIsInstance(est.causal_graph_, DAG)
         self.assertIsInstance(est.edge_probs_, pd.DataFrame)
         self.assertIsInstance(est.adjacency_matrix_, pd.DataFrame)
 

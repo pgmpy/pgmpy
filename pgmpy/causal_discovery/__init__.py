@@ -5,6 +5,7 @@ from .HillClimbSearch import HillClimbSearch
 from .PC import PC
 
 __all__ = [
+    "DiBS",
     "ExpertInLoop",
     "ExpertKnowledge",
     "GES",

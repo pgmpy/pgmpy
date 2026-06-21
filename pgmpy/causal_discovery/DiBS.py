@@ -9,7 +9,7 @@ from torch.nn.functional import logsigmoid
 
 from pgmpy.causal_discovery._base import _BaseCausalDiscovery
 from pgmpy.global_vars import config
-from pgmpy.base.DAG import DAG
+from pgmpy.base import DAG
 
 
 class DiBS(_BaseCausalDiscovery):
@@ -629,58 +629,6 @@ class DiBS(_BaseCausalDiscovery):
 
         return (driving_term + repulsive_term) / M
 
-    def _run_inference(
-        self,
-        X: pd.DataFrame,
-    ):
-        """
-        Run SVGD inference over latent graph particles.
-
-        The input data are converted to a torch tensor, latent particles are
-        initialized, and the particles are updated for ``n_steps`` iterations. After
-        optimization, each particle is converted into a hard adjacency matrix using
-        the limiting edge rule ``U_i^T V_j > 0`` with the diagonal set to zero.
-
-        Parameters
-        ----------
-        X : pd.DataFrame
-            Observational data with shape ``(n_samples, n_nodes)``.
-
-        Returns
-        -------
-        torch.Tensor
-            Boolean adjacency matrices of shape
-            ``(n_particles, n_nodes, n_nodes)``.
-        """
-
-        X_t = torch.tensor(X.to_numpy(dtype=np.float64), device=self.device_, dtype=self.dtype_)
-        n_nodes = self.n_features_in_
-
-        # initialize particles:
-        # TODO: maybe divide by sqrt of latent_dim so that every row in U and V have unit variance.
-        # last dim is self.latent_dim * 2 since Z = [U, V] and each U_i and V_i are of dim self.latent_dim.
-        # Ignore acyclicity part in prior as no (efficient) sampler exists.
-        particles = self.latent_prior_std * torch.randn((self.n_particles, n_nodes, self.latent_dim * 2))
-        particles = torch.nn.Parameter(particles.to(self.device_, dtype=self.dtype_))
-
-        optimizer = torch.optim.RMSprop([particles], lr=self.learning_rate, maximize=True)
-
-        for t in range(self.n_steps):
-            optimizer.zero_grad()
-            # estimate score grad_Z log p(Z | D)
-            scores = self._compute_particle_posterior_scores(X_t, particles, t).detach()
-
-            # run svgd update: Z_new = Z_old + eta_t phi_t(Z_old)
-            particles.grad = self._svgd_increment(scores, particles).detach()
-            optimizer.step()
-
-        # compute G_infty(Z):
-        U, V = torch.chunk(particles.detach(), 2, dim=2)
-        graphs_infty = ((U @ V.transpose(-1, -2)) > 0) * ~torch.eye(n_nodes, dtype=torch.bool, device=self.device_)
-
-        self._graph_particle_samples = graphs_infty.detach().cpu()
-
-        return graphs_infty
 
     def _sample_graphs(self, nodes):
         """
@@ -792,8 +740,38 @@ class DiBS(_BaseCausalDiscovery):
         if not self.grad_estimator_z in ["score", "reparam"]:
             raise ValueError(f"Unknown grad estimator: {self.grad_estimator_z}. Must be one of ['score', 'reparam'].")
 
-        # Run inference and store particle graph samples
-        self._run_inference(X)
+
+        #Run SVGD inference over latent graph particles.
+        # The input data are converted to a torch tensor, latent particles are
+        # initialized, and the particles are updated for ``n_steps`` iterations. After
+        # optimization, each particle is converted into a hard adjacency matrix using
+        # the limiting edge rule ``U_i^T V_j > 0`` with the diagonal set to zero.
+        X_t = torch.tensor(X.to_numpy(dtype=np.float64), device=self.device_, dtype=self.dtype_)
+        n_nodes = self.n_features_in_
+
+        # initialize particles:
+        # TODO: maybe divide by sqrt of latent_dim so that every row in U and V have unit variance.
+        # last dim is self.latent_dim * 2 since Z = [U, V] and each U_i and V_i are of dim self.latent_dim.
+        # Ignore acyclicity part in prior as no (efficient) sampler exists.
+        particles = self.latent_prior_std * torch.randn((self.n_particles, n_nodes, self.latent_dim * 2))
+        particles = torch.nn.Parameter(particles.to(self.device_, dtype=self.dtype_))
+
+        optimizer = torch.optim.RMSprop([particles], lr=self.learning_rate, maximize=True)
+
+        for t in range(self.n_steps):
+            optimizer.zero_grad()
+            # estimate score grad_Z log p(Z | D)
+            scores = self._compute_particle_posterior_scores(X_t, particles, t).detach()
+
+            # run svgd update: Z_new = Z_old + eta_t phi_t(Z_old)
+            particles.grad = self._svgd_increment(scores, particles).detach()
+            optimizer.step()
+
+        # compute G_infty(Z):
+        U, V = torch.chunk(particles.detach(), 2, dim=2)
+        graphs_infty = ((U @ V.transpose(-1, -2)) > 0) * ~torch.eye(n_nodes, dtype=torch.bool, device=self.device_)
+
+        self._graph_particle_samples = graphs_infty.detach().cpu()
 
         # Convert particle samples to graphs
         self.graph_samples_ = self._sample_graphs(self.feature_names_in_)
