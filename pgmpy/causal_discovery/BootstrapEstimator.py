@@ -202,13 +202,23 @@ class BootstrapEstimator(BaseCausalDiscovery):
         self.edge_prob_ = edge_presence / self.n_bootstraps
 
         # Step 3: Form a consensus graph.
+        self.causal_graph_ = self._estimate_consensus_graph(self.threshold)
+
+        self.adjacency_matrix_ = nx.to_pandas_adjacency(self.causal_graph_, weight=1, dtype="int")
+
+        return self
+
+    def _estimate_consensus_graph(self, threshold: float) -> DAG | PDAG:
+
+        variables = self.feature_names_in_
+
         if hasattr(self.estimator, "return_type"):
             return_type = self.estimator.return_type.lower()
         else:
             return_type = "dag"
 
         # Determine candidate edges based on edge probability and threshold
-        rows, cols = np.where(self.edge_prob_ >= self.threshold)
+        rows, cols = np.where(self.edge_prob_ >= threshold)
         candidate_edges = [
             (
                 variables[r],
@@ -219,12 +229,12 @@ class BootstrapEstimator(BaseCausalDiscovery):
             if r != c
         ]
 
-        # Sort by descending probability, then alphabetical tie-breaker
+        # sort by descending probability, then alphabetical tie-breaker
         candidate_edges.sort(key=lambda x: (-x[2], x[0], x[1]))
         candidate_set = {(u, v) for u, v, _ in candidate_edges}
 
         if return_type in ("pdag", "cpdag"):
-            # Initialize consensus PDAG
+            # initialize consensus pdag
             pdag = PDAG()
             pdag.add_nodes_from(variables)
 
@@ -236,7 +246,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
                     continue
                 processed_pairs.add(pair)
 
-                # Check if reverse orientation is present in candidate_edges
+                # check if reverse orientation is present in candidate_edges
                 if (v, u) in candidate_set:
                     p_utov = self.direction_prob_.get((u, v), 0.0)
                     p_vtou = self.direction_prob_.get((v, u), 0.0)
@@ -249,7 +259,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
                 else:
                     target = "directed"
 
-                # Add the edge and check for cyclicity
+                # add the edge and check for cyclicity
                 if target == "undirected":
                     pdag.add_edge(u, v)
                     pdag.add_edge(v, u)
@@ -259,7 +269,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
                         pdag.remove_edge(v, u)
                         pdag.calibrate_directed_undirected_edges()
                 else:  # target == "directed"
-                    # Determine which direction to try first by comparing edge probabilities
+                    # determine which direction to try first by comparing edge probabilities
                     prob_utov = self.edge_prob_.loc[u, v]
                     prob_vtou = self.edge_prob_.loc[v, u]
 
@@ -275,7 +285,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
                         pdag.remove_edge(x, y)
                         pdag.calibrate_directed_undirected_edges()
 
-                        # Try opposite direction as backup only if it has support
+                        # try opposite direction as backup only if it has support
                         if self.edge_prob_.loc[y, x] > 0:
                             pdag.add_edge(y, x)
                             pdag.calibrate_directed_undirected_edges()
@@ -283,11 +293,10 @@ class BootstrapEstimator(BaseCausalDiscovery):
                                 pdag.remove_edge(y, x)
                                 pdag.calibrate_directed_undirected_edges()
 
-            # Apply Meek's rules to complete the PDAG to a CPDAG
-            self.causal_graph_ = pdag.apply_meeks_rules()
+            return pdag
 
         else:
-            # Initialize consensus DAG
+            # initialize consensus dag
             dag = DAG()
             dag.add_nodes_from(variables)
 
@@ -295,9 +304,4 @@ class BootstrapEstimator(BaseCausalDiscovery):
                 if not nx.has_path(dag, v, u):
                     dag.add_edge(u, v)
 
-            self.causal_graph_ = dag
-
-        # Step 3.5: Form adjacency matrix from the graph itself.
-        self.adjacency_matrix_ = nx.to_pandas_adjacency(self.causal_graph_, weight=1, dtype="int")
-
-        return self
+            return dag
