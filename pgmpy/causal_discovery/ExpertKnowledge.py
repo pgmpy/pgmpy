@@ -166,8 +166,8 @@ class ExpertKnowledge(BaseEstimator):
         Compute the search space implied by a marginal independence test (Z=[]).
 
         Variable pairs that reject marginal independence according to the specified CI
-        test are returned (in both directions). Unlike
-        :meth:`_generate_screening_search_space`, this helper does not mutate the object.
+        test are returned (in both directions). This helper returns the pairs as a set
+        without mutating the instance; :meth:`fit` merges the result into ``search_space_``.
 
         Parameters
         ----------
@@ -275,14 +275,13 @@ class ExpertKnowledge(BaseEstimator):
         Orient the edges of ``graph`` according to the fitted expert knowledge.
 
         Uses the fitted ``forbidden_edges_`` and ``required_edges_`` attributes (set by
-        :meth:`initialize`) to orient still-undirected edges of ``graph`` in place.
+        :meth:`fit`) to orient still-undirected edges of ``graph`` in place.
         Required edges ``(u, v)`` are oriented ``u -> v``; forbidden edges ``(u, v)`` are
         oriented away from the forbidden direction (``v -> u``). Edges that already
         conflict with the learned structure are left unchanged and a warning is logged.
 
-        Unlike :meth:`apply_expert_knowledge`, this method does not mutate the expert
-        knowledge object; temporal constraints are already resolved into
-        ``forbidden_edges_`` by :meth:`initialize`.
+        This method does not mutate the expert knowledge object; temporal constraints are
+        already resolved into ``forbidden_edges_`` by :meth:`fit`.
 
         Parameters
         ----------

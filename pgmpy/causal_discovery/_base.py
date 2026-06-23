@@ -259,12 +259,7 @@ class _ConstraintMixin:
             independence.
 
         expert_knowledge: pgmpy.causal_discovery.ExpertKnowledge instance
-            Expert knowledge to be used with the algorithm. Expert knowledge
-            includes required/forbidden edges in the final graph, temporal
-            information about the variables etc. It must already be initialized
-            (via :meth:`ExpertKnowledge.initialize`); if not, it is initialized
-            here. Please refer pgmpy.causal_discovery.ExpertKnowledge class for more
-            details.
+            Expert knowledge to be used with the algorithm.
 
         n_jobs: int (default: -1)
             The number of jobs to run in parallel.
