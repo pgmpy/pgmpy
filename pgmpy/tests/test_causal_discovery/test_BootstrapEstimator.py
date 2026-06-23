@@ -190,3 +190,35 @@ def test_bootstrap_alarm():
     assert len(est_pc.causal_graph_.edges()) > 0
     assert len(est_pc.causal_graph_.undirected_edges) > 0
     assert ((est_pc.edge_prob_ > 0.0) & (est_pc.edge_prob_ < 1.0)).any().any()
+
+
+def test_bootstrap_threshold_invalid(rand_data):
+    est = BootstrapEstimator(estimator=HillClimbSearch(return_type="dag"), show_progress=False)
+    est.fit(rand_data)
+    for invalid_threshold in [-0.5, 1.5]:
+        with pytest.raises(ValueError):
+            est.get_causal_graph(threshold=invalid_threshold)
+        with pytest.raises(ValueError):
+            est.get_adjacency_matrix(threshold=invalid_threshold)
+
+
+def test_bootstrap_threshold_variation():
+    asia_model = load_model("bnlearn/asia")
+    df = asia_model.simulate(n_samples=500, seed=42)
+
+    est = BootstrapEstimator(
+        estimator=HillClimbSearch(return_type="dag"),
+        n_bootstraps=5,
+        seed=42,
+        show_progress=False,
+    )
+    est.fit(df)
+
+    graph_low = est.get_causal_graph(threshold=0.1)
+    matrix_low = est.get_adjacency_matrix(threshold=0.1)
+
+    graph_high = est.get_causal_graph(threshold=0.9)
+    matrix_high = est.get_adjacency_matrix(threshold=0.9)
+
+    assert set(graph_low.edges()) != set(graph_high.edges())
+    assert not matrix_low.equals(matrix_high)

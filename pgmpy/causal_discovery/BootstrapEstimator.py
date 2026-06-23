@@ -305,3 +305,54 @@ class BootstrapEstimator(BaseCausalDiscovery):
                     dag.add_edge(u, v)
 
             return dag
+
+    def get_causal_graph(self, threshold: float) -> DAG | PDAG:
+        """
+        Returns the consensus causal graph estimated using a specified edge probability threshold.
+
+        Parameters
+        ----------
+        threshold : float
+            The threshold for edge presence probability. Only edges that appear in at least
+            this fraction of the bootstrap graphs are included. Must be between 0.0 and 1.0.
+
+        Returns
+        -------
+        consensus_graph : DAG or PDAG
+            The consensus causal graph (either a DAG or a PDAG/CPDAG depending on the return
+            type of the base estimator).
+
+        Examples
+        --------
+        >>> from pgmpy.causal_discovery import BootstrapEstimator, HillClimbSearch
+        >>> from pgmpy.utils import get_example_model
+        >>> data = get_example_model("asia").simulate(n_samples=100)
+        >>> est = BootstrapEstimator(HillClimbSearch(data))
+        >>> est.fit(data)
+        >>> consensus_graph = est.get_causal_graph(threshold=0.3)
+        """
+        if not (0.0 <= threshold <= 1.0):
+            raise ValueError(f"Threshold must be between 0.0 and 1.0. Got {threshold} instead.")
+
+        return self._estimate_consensus_graph(threshold)
+
+    def get_adjacency_matrix(self, threshold: float) -> pd.DataFrame:
+        """
+        Returns the adjacency matrix of the consensus causal graph estimated using a specified threshold.
+
+        Parameters
+        ----------
+        threshold : float
+            The threshold for edge presence probability. Only edges that appear in at least
+            this fraction of the bootstrap graphs are included. Must be between 0.0 and 1.0.
+
+        Returns
+        -------
+        adjacency_matrix : pandas.DataFrame
+            The adjacency matrix representation of the consensus causal graph.
+        """
+        if not (0.0 <= threshold <= 1.0):
+            raise ValueError(f"Threshold must be between 0.0 and 1.0. Got {threshold} instead.")
+
+        graph = self._estimate_consensus_graph(threshold)
+        return nx.to_pandas_adjacency(graph, weight=1, dtype="int")
