@@ -49,7 +49,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
     Attributes
     ----------
     causal_graph_ : DAG or PDAG
-        The learned robust consensus causal graph. The reuturn type will be of
+        The learned robust consensus causal graph. The return type will be of
         type provided by the base estimator.
 
     adjacency_matrix_ : pd.DataFrame
@@ -268,7 +268,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
                         pdag.remove_edge(u, v)
                         pdag.remove_edge(v, u)
                         pdag.calibrate_directed_undirected_edges()
-                else:  # target == "directed"
+                else:
                     # determine which direction to try first by comparing edge probabilities
                     prob_utov = self.edge_prob_.loc[u, v]
                     prob_vtou = self.edge_prob_.loc[v, u]
@@ -296,7 +296,6 @@ class BootstrapEstimator(BaseCausalDiscovery):
             return pdag
 
         else:
-            # initialize consensus dag
             dag = DAG()
             dag.add_nodes_from(variables)
 
