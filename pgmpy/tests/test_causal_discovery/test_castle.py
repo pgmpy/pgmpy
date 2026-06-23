@@ -16,6 +16,7 @@ from pgmpy.causal_discovery.castle import (
     RegularizationConfig,
     TrainingConfig,
     _CASTLEModel,
+    _dag_constraint,
 )
 
 requires_torch = pytest.mark.skipif(
@@ -37,6 +38,31 @@ class TestDataclasses:
         assert dataclasses.is_dataclass(RegularizationConfig)
 
 
+@requires_torch
+class TestDagConstraint:
+    def test_returns_scalar_tensor(self):
+        import torch
+
+        W = torch.zeros(4, 4)
+        result = _dag_constraint(W)
+        assert result.shape == torch.Size([])
+
+    def test_zero_matrix_is_dag(self):
+        import torch
+
+        W = torch.zeros(4, 4)
+        assert _dag_constraint(W).item() == pytest.approx(0.0, abs=1e-5)
+
+    def test_non_dag_matrix_is_positive(self):
+        import torch
+
+        # A cyclic graph: node 0 -> node 1 -> node 0
+        W = torch.zeros(4, 4)
+        W[0, 1] = 1.0
+        W[1, 0] = 1.0
+        assert _dag_constraint(W).item() > 0.0
+
+
 def test_missing_torch_raises_import_error(monkeypatch):
     import pgmpy.causal_discovery.castle as _castle
 
@@ -56,7 +82,8 @@ class TestCASTLEInit:
         assert est.dag_weight == 1.0
         assert est.sparsity_weight == 5.0
         assert est.dag_penalty == 1.0
-        assert est.optimizer is None
+        assert est.optimizer == "adam"
+        assert est.optimizer_kwargs == {}
         assert est.batch_size == 32
         assert est.hidden_dim == 32
         assert est.edge_threshold == 0.3
@@ -92,7 +119,9 @@ class TestCASTLEFit:
             target_col="A",
             batch_size=16,
             max_epochs=5,
-            optimizer=None,
+            optimizer="sgd",
+            lr=0.01,
+            momentum=0.9,
             seed=0,
             min_loss_improvement=1e-3,
             early_stop_patience=5,
@@ -112,7 +141,8 @@ class TestCASTLEFit:
         assert isinstance(est.train_config_, TrainingConfig)
         assert est.train_config_.batch_size == 16
         assert est.train_config_.max_epochs == 5
-        assert est.train_config_.optimizer is None
+        assert est.train_config_.optimizer == "sgd"
+        assert est.train_config_.optimizer_kwargs == {"lr": 0.01, "momentum": 0.9}
         assert est.train_config_.seed == 0
         assert est.train_config_.min_loss_improvement == 1e-3
         assert est.train_config_.early_stop_patience == 5
@@ -134,13 +164,54 @@ class TestCASTLEFit:
         CASTLE().fit(numeric_df)
 
 
+class TestOptimizerValidation:
+    """Validation fires in __init__ — no torch or fit required."""
+
+    def test_invalid_optimizer_string_raises(self):
+        with pytest.raises(ValueError, match="Supported optimizers are"):
+            CASTLE(optimizer="rmsprop")
+
+    @pytest.mark.parametrize(
+        ("optimizer", "bad_kwargs"),
+        [
+            ("adam", {"momentum": 0.9}),
+            ("sgd", {"betas": (0.9, 0.999)}),
+            ("adamw", {"nesterov": True}),
+        ],
+    )
+    def test_unknown_kwarg_raises(self, optimizer, bad_kwargs):
+        with pytest.raises(ValueError, match="Unknown optimizer_kwargs"):
+            CASTLE(optimizer=optimizer, **bad_kwargs)
+
+    @pytest.mark.parametrize(
+        ("optimizer", "valid_kwargs"),
+        [
+            ("adam", {"lr": 1e-4, "betas": (0.9, 0.999)}),
+            ("sgd", {"lr": 0.01, "momentum": 0.9}),
+            ("adamw", {"lr": 5e-4, "weight_decay": 1e-4}),
+        ],
+    )
+    def test_valid_kwargs_accepted(self, optimizer, valid_kwargs):
+        CASTLE(optimizer=optimizer, **valid_kwargs)
+
+    def test_params_kwarg_raises(self):
+        with pytest.raises(ValueError, match="params"):
+            CASTLE(optimizer="adam", params=[1, 2, 3])
+
+    def test_case_insensitive_optimizer_name(self):
+        CASTLE(optimizer="Adam")
+        CASTLE(optimizer="SGD", lr=0.01)
+        CASTLE(optimizer="AdamW")
+
+
 class TestCASTLEModel:
     def _make_model(self, num_inputs=4, hidden_dim=8):
         network_cfg = NetworkConfig(hidden_dim=hidden_dim, scaler=None, target_col=None)
         train_cfg = TrainingConfig(
             batch_size=32,
             max_epochs=1,
-            optimizer=None,
+            optimizer="adam",
+            optimizer_kwargs={},
             seed=None,
             min_loss_improvement=1e-4,
             early_stop_patience=10,
@@ -148,6 +219,29 @@ class TestCASTLEModel:
         )
         reg_cfg = RegularizationConfig(dag_weight=1.0, sparsity_weight=5.0, dag_penalty=1.0, edge_threshold=0.3)
         return _CASTLEModel(num_inputs=num_inputs, network_cfg=network_cfg, train_cfg=train_cfg, reg_cfg=reg_cfg)
+
+    # --- get_W ---
+
+    @requires_torch
+    def test_get_W_shape(self):
+        num_inputs = 4
+        model = self._make_model(num_inputs=num_inputs)
+        W = model.get_W()
+        assert W.shape == (num_inputs, num_inputs)
+
+    @requires_torch
+    def test_get_W_diagonal_all_zeros(self):
+        import torch
+
+        num_inputs = 4
+        model = self._make_model(num_inputs=num_inputs)
+        assert torch.all(model.get_W().diagonal() == 0.0)
+
+    @requires_torch
+    def test_get_W_non_negative(self):
+        num_inputs = 4
+        model = self._make_model(num_inputs=num_inputs)
+        assert (model.get_W() >= 0.0).all()
 
     # --- __init__ ---
 
@@ -228,6 +322,21 @@ class TestCASTLEModel:
         Out2, _ = model(X_modified)
         assert torch.allclose(Out1[:, 2], Out2[:, 2])
         assert not torch.allclose(Out1[:, 0], Out2[:, 0])
+
+    @requires_torch
+    def test_target_subnetwork_self_masking(self):
+        """Sub-network 0 (the target predictor) must not use the target column
+        (column 0) as its own input — changing it should not affect Out[:, 0]."""
+        import torch
+
+        B, num_inputs = 10, 4
+        model = self._make_model(num_inputs=num_inputs)
+        X = torch.randn(B, num_inputs)
+        Out1, _ = model(X)
+        X_modified = X.clone()
+        X_modified[:, 0] = 999.0
+        Out2, _ = model(X_modified)
+        assert torch.allclose(Out1[:, 0], Out2[:, 0])
 
     @requires_torch
     def test_single_sample_batch(self):
