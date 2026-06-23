@@ -55,8 +55,8 @@ class TestExpertKnowledge:
             ("D", "B"),
             ("D", "C"),  # tier 2 -> lower tiers
         }
-        # Pristine constructor attributes are untouched; fit is idempotent.
-        assert ek.forbidden_edges == {("A", "B")}
+        # Pristine constructor attributes are stored verbatim and untouched; fit is idempotent.
+        assert ek.forbidden_edges == [("A", "B")]
         forbidden_first = set(ek.forbidden_edges_)
         ek.fit(data)
         assert ek.forbidden_edges_ == forbidden_first
@@ -69,8 +69,8 @@ class TestExpertKnowledge:
         assert ek.search_space_ == {("A", "B"), ("B", "C")}
         # forbidden_edges_ = all directed pairs not in the search space
         assert ek.forbidden_edges_ == {("A", "C"), ("B", "A"), ("C", "A"), ("C", "B")}
-        # pristine search_space untouched
-        assert ek.search_space == {("A", "B"), ("B", "C")}
+        # pristine search_space stored verbatim and untouched
+        assert ek.search_space == [("A", "B"), ("B", "C")]
 
     def test_apply_to_orients_required_forbidden_and_warns(self, caplog):
         data = pd.DataFrame({c: [0, 1] for c in ["A", "B", "C", "D", "E", "F"]})
@@ -131,5 +131,12 @@ class TestExpertKnowledge:
         # clone produces an equivalent, unfitted copy.
         ek_clone = clone(ek)
         assert ek_clone is not ek
-        assert ek_clone.required_edges == {("A", "B")}
+        assert ek_clone.required_edges == [("A", "B")]
         assert not hasattr(ek_clone, "required_edges_")
+
+    def test_validation_deferred_to_fit(self):
+        # __init__ stores params verbatim and does not validate; validation happens in fit().
+        ek = ExpertKnowledge(significance_level=5)
+        assert ek.significance_level == 5
+        with pytest.raises(ValueError, match="significance_level"):
+            ek.fit()
