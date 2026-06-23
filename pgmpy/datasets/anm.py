@@ -160,7 +160,7 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
         n_samples: int,
         noise_scale: float,
         rng: np.random.Generator,
-        seed: int | None,
+        noise_seed: int | None,
     ) -> np.ndarray:
         """Sample additive noise for one node.
 
@@ -174,8 +174,10 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
             Multiplier applied only when *noise* is ``None``.
         rng : numpy.random.Generator
             Seeded RNG for the default Gaussian path.
-        seed : int or None
-            Seed for the ``skpro`` path (sets global ``np.random.seed``).
+        noise_seed : int or None
+            Per-node seed for the ``skpro`` path (sets global
+            ``np.random.seed``).  Must be unique per node to ensure
+            independent noise draws.
 
         Returns
         -------
@@ -185,19 +187,38 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
             return rng.normal(0, 1, size=n_samples) * noise_scale
 
         # Custom skpro distribution path
-        if seed is not None:
-            np.random.seed(seed)  # noqa: NPY002
+        if noise_seed is not None:
+            np.random.seed(noise_seed)  # noqa: NPY002
         samples = noise.sample(n_samples=n_samples)
         return np.asarray(samples).flatten()
 
     @staticmethod
     def _validate_params(
+        n_samples: int | None,
+        n_nodes: int,
+        edge_prob: float,
         function_type: str | Any,
         weight_range: tuple[float, float],
         noise: Any,
         noise_scale: float,
     ) -> None:
         """Validate simulator parameters, raising on invalid combinations."""
+        # n_samples
+        if n_samples is not None and (not isinstance(n_samples, int) or n_samples < 1):
+            raise ValueError(f"n_samples must be a positive integer or None, got {n_samples!r}.")
+
+        # n_nodes
+        if not isinstance(n_nodes, int) or n_nodes < 1:
+            raise ValueError(f"n_nodes must be a positive integer, got {n_nodes!r}.")
+
+        # edge_prob
+        if not 0 <= edge_prob <= 1:
+            raise ValueError(f"edge_prob must be between 0 and 1, got {edge_prob!r}.")
+
+        # noise_scale
+        if noise_scale <= 0:
+            raise ValueError(f"noise_scale must be positive, got {noise_scale!r}.")
+
         # function_type
         if not callable(function_type) and not isinstance(function_type, str):
             raise TypeError(f"function_type must be a string or callable, got {type(function_type).__name__}.")
@@ -207,6 +228,8 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
             )
 
         # weight_range
+        if not isinstance(weight_range, (tuple, list)) or len(weight_range) != 2:
+            raise ValueError(f"weight_range must be a (low, high) tuple of length 2, got {weight_range!r}.")
         if weight_range[0] <= 0 or weight_range[1] <= 0:
             raise ValueError("weight_range bounds must be positive.")
         if weight_range[0] > weight_range[1]:
@@ -281,7 +304,7 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
         -------
         pd.DataFrame
         """
-        cls._validate_params(function_type, weight_range, noise, noise_scale)
+        cls._validate_params(n_samples, n_nodes, edge_prob, function_type, weight_range, noise, noise_scale)
 
         graph = cls._get_dag(dag, n_nodes, edge_prob, seed)
         rng = np.random.default_rng(seed)
@@ -292,7 +315,10 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
 
         for node in topo_order:
             parents = list(graph.predecessors(node))
-            noise_vals = cls._sample_noise(noise, n, noise_scale, rng, seed)
+            # Derive a unique per-node seed so that custom skpro noise
+            # draws are independent across nodes but still reproducible.
+            noise_seed = int(rng.integers(0, 2**31)) if seed is not None else None
+            noise_vals = cls._sample_noise(noise, n, noise_scale, rng, noise_seed)
 
             if not parents:
                 data[node] = noise_vals
