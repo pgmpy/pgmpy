@@ -103,6 +103,15 @@ def test_anm_validation():
     with pytest.raises(ValueError, match="n_samples"):
         load_dataset("anm", seed=42, n_samples=0)
 
+    # dag is not a DAG instance.
+    with pytest.raises(TypeError, match="dag must be"):
+        load_dataset("anm", seed=42, dag="not_a_dag")
+
+    # Custom callable returns wrong shape.
+    with pytest.raises(ValueError, match="function_type callable must return"):
+        bad_fn = lambda x: x  # returns (n_samples, n_parents) instead of (n_samples,)  # noqa: E731
+        load_dataset("anm", seed=42, function_type=bad_fn)
+
 
 @pytest.mark.skipif(
     not _check_soft_dependencies("skpro", severity="none"),
@@ -127,3 +136,7 @@ def test_anm_skpro_noise():
     assert not np.allclose(ds_iso.data["A"].values, ds_iso.data["B"].values), (
         "Noise draws for isolated nodes A and B should be independent"
     )
+
+    # noise must be a skpro BaseDistribution, not an arbitrary object.
+    with pytest.raises(TypeError, match="noise must be a skpro BaseDistribution"):
+        load_dataset("anm", seed=42, noise="not_a_distribution")
