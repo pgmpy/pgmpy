@@ -502,7 +502,8 @@ class CausalInference:
 
         transformed_graph, dependent_var = self._iv_transformations(X, Y, scaling_indicators=scaling_indicators)
         if (X, Y) in transformed_graph.edges:
-            G_c = transformed_graph.remove_edge(X, Y)
+            transformed_graph.remove_edge(X, Y)
+            G_c = transformed_graph
         else:
             G_c = transformed_graph
 
