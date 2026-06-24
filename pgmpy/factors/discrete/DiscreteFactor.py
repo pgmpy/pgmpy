@@ -698,7 +698,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         ----------
         phi1: float or `DiscreteFactor` instance
             If float, all the values are multiplied with `phi1`.
-            else if `DiscreteFactor` instance, mutliply based on matching rows.
+            else if `DiscreteFactor` instance, multiply based on matching rows.
 
         inplace: boolean
             If inplace=True it will modify the factor itself, else would return
