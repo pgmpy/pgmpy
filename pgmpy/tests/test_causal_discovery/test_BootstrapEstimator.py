@@ -57,9 +57,10 @@ def test_bootstrap_rand_data(rand_data):
     hc_graph = hc.causal_graph_
     pc_graph = pc.causal_graph_
 
-    expected_edges = {("A", "C"), ("B", "C"), ("B", "E"), ("C", "D"), ("D", "E")}
-    assert set(hc_graph.edges()) == expected_edges
-    assert set(pc_graph.edges()) == expected_edges
+    expected_edges_hc = {("C", "B"), ("C", "D"), ("D", "E"), ("C", "E"), ("B", "E"), ("A", "C")}
+    expected_edges_pc = {("B", "C"), ("C", "D"), ("D", "E"), ("B", "E"), ("A", "C")}
+    assert set(hc_graph.edges()) == expected_edges_hc
+    assert set(pc_graph.edges()) == expected_edges_pc
 
 
 def test_bootstrap_asia():
@@ -71,15 +72,14 @@ def test_bootstrap_asia():
     est.fit(df)
 
     expected_edges = {
-        ("either", "lung"),
-        ("either", "tub"),
         ("either", "smoke"),
-        ("either", "xray"),
-        ("either", "dysp"),
+        ("bronc", "smoke"),
         ("lung", "tub"),
-        ("lung", "dysp"),
-        ("smoke", "bronc"),
+        ("either", "dysp"),
         ("bronc", "dysp"),
+        ("either", "xray"),
+        ("either", "tub"),
+        ("either", "lung"),
     }
 
     assert set(est.causal_graph_.edges()) == expected_edges
@@ -87,13 +87,13 @@ def test_bootstrap_asia():
     expected_edge_prob = np.array(
         [
             [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [0.0, 0.0, 0.75, 0.0, 0.0, 0.45, 0.05, 0.0],
-            [0.15, 0.25, 0.0, 0.0, 0.1, 0.0, 0.0, 0.0],
-            [0.0, 0.0, 0.45, 0.0, 0.7, 0.6, 0.65, 0.5],
-            [0.0, 0.0, 0.4, 0.3, 0.0, 0.05, 0.6, 0.0],
-            [0.0, 0.55, 0.05, 0.2, 0.1, 0.0, 0.0, 0.0],
-            [0.0, 0.0, 0.0, 0.3, 0.0, 0.0, 0.0, 0.0],
-            [0.0, 0.0, 0.0, 0.5, 0.0, 0.05, 0.0, 0.0],
+            [0.0, 0.0, 0.55, 0.0, 0.0, 0.65, 0.0, 0.0],
+            [0.15, 0.45, 0.0, 0.2, 0.1, 0.0, 0.0, 0.05],
+            [0.0, 0.0, 0.4, 0.0, 0.75, 0.6, 0.55, 0.65],
+            [0.0, 0.0, 0.25, 0.25, 0.0, 0.1, 0.55, 0.0],
+            [0.05, 0.35, 0.0, 0.2, 0.05, 0.0, 0.0, 0.05],
+            [0.0, 0.0, 0.0, 0.25, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.35, 0.0, 0.0, 0.0, 0.0],
         ]
     )
     np_test.assert_allclose(
@@ -102,28 +102,29 @@ def test_bootstrap_asia():
     )
 
     expected_direction_prob = {
-        ("tub", "either"): 0.3157894736842105,
-        ("either", "tub"): 0.6842105263157895,
-        ("either", "dysp"): 1.0,
-        ("either", "lung"): 0.7,
-        ("either", "smoke"): 0.75,
-        ("either", "xray"): 0.5,
-        ("dysp", "lung"): 0.2,
-        ("dysp", "asia"): 1.0,
-        ("dysp", "bronc"): 0.25,
-        ("lung", "tub"): 1.0,
-        ("lung", "either"): 0.3,
-        ("lung", "dysp"): 0.8,
-        ("lung", "smoke"): 0.3333333333333333,
+        ("smoke", "asia"): 1.0,
         ("smoke", "either"): 0.25,
-        ("smoke", "dysp"): 1.0,
-        ("smoke", "lung"): 0.6666666666666666,
-        ("smoke", "bronc"): 0.55,
-        ("xray", "either"): 0.5,
-        ("xray", "smoke"): 1.0,
-        ("bronc", "tub"): 1.0,
-        ("bronc", "dysp"): 0.75,
-        ("bronc", "smoke"): 0.45,
+        ("smoke", "lung"): 0.3333333333333333,
+        ("smoke", "xray"): 1.0,
+        ("smoke", "bronc"): 0.35,
+        ("tub", "either"): 0.3125,
+        ("either", "smoke"): 0.75,
+        ("either", "tub"): 0.6875,
+        ("either", "lung"): 0.75,
+        ("either", "dysp"): 0.6666666666666666,
+        ("either", "xray"): 0.65,
+        ("lung", "smoke"): 0.6666666666666666,
+        ("lung", "tub"): 1.0,
+        ("lung", "either"): 0.25,
+        ("lung", "dysp"): 0.7142857142857143,
+        ("dysp", "asia"): 1.0,
+        ("dysp", "either"): 0.3333333333333333,
+        ("dysp", "lung"): 0.2857142857142857,
+        ("dysp", "xray"): 1.0,
+        ("dysp", "bronc"): 0.45,
+        ("xray", "either"): 0.35,
+        ("bronc", "smoke"): 0.65,
+        ("bronc", "dysp"): 0.55,
     }
 
     assert len(est.direction_prob_) == len(expected_direction_prob)
@@ -148,6 +149,7 @@ def test_bootstrap_asia():
         ("lung", "either"),
         ("xray", "either"),
         ("lung", "xray"),
+        ("lung", "smoke"),
     }
 
     assert {tuple(sorted(edge)) for edge in est_pc.causal_graph_.undirected_edges} == {

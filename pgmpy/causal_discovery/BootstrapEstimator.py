@@ -106,20 +106,17 @@ class BootstrapEstimator(BaseCausalDiscovery):
     def _bootstrap_iteration(
         X: pd.DataFrame,
         base_estimator: BaseCausalDiscovery,
-        bootstrap_sample_size: int,
-        seed: int | np.random.SeedSequence,
-    ) -> tuple[list[int], BaseCausalDiscovery]:
+        bootstrap_sample: list[int],
+    ) -> BaseCausalDiscovery:
         """Helper function to run a single bootstrap iteration."""
 
         # Create new sample by resampling
-        rng = np.random.default_rng(seed)
-        row_indices = list(rng.choice(X.index, size=bootstrap_sample_size, replace=True))
-        sample = X.iloc[row_indices]
+        sample = X.iloc[bootstrap_sample]
 
         # Fit the resample data on base estimator.
         base_estimator = cast(BaseCausalDiscovery, clone(base_estimator))
         est = base_estimator.fit(sample)
-        return row_indices, est
+        return est
 
     def _fit(self, X: pd.DataFrame):
         """
@@ -141,11 +138,6 @@ class BootstrapEstimator(BaseCausalDiscovery):
         self.bootstrap_samples_ = list()
         self.bootstrap_graphs_ = list()
 
-        seed_seq = np.random.SeedSequence(self.seed)
-        child_seeds = seed_seq.spawn(self.n_bootstraps)
-
-        bootstrap_sample_size = int(len(X) * self.sample_size)
-
         edge_presence = pd.DataFrame(
             np.zeros((N, N)),
             index=variables,
@@ -158,11 +150,17 @@ class BootstrapEstimator(BaseCausalDiscovery):
             columns=variables,
         )
 
-        # Step 1: Run bootstrap iterations
+        rng = np.random.default_rng(self.seed)
+        bootstrap_sample_size = int(len(X) * self.sample_size)
+
+        for _ in range(self.n_bootstraps):
+            bootstrap_sample = list(rng.choice(len(X), size=bootstrap_sample_size, replace=True))
+            self.bootstrap_samples_.append(bootstrap_sample)
+
         results = cast(
-            list[tuple[list[int], BaseCausalDiscovery]],
+            list[BaseCausalDiscovery],
             Parallel(n_jobs=self.n_jobs)(
-                delayed(self._bootstrap_iteration)(X, self.estimator, bootstrap_sample_size, child_seeds[i])
+                delayed(self._bootstrap_iteration)(X, self.estimator, self.bootstrap_samples_[i])
                 for i in trange(
                     self.n_bootstraps,
                     desc="Bootstrapping",
@@ -172,11 +170,10 @@ class BootstrapEstimator(BaseCausalDiscovery):
         )
 
         # Step 2: Aggregating the bootstrap results.
-        for row_indices, est in results:
+        for est in results:
             causal_graph = est.causal_graph_
             adjacency_matrix = est.adjacency_matrix_
 
-            self.bootstrap_samples_.append(row_indices)
             self.bootstrap_graphs_.append(causal_graph)
 
             edge_presence += adjacency_matrix
