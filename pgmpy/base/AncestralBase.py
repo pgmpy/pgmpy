@@ -745,8 +745,8 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         if not isinstance(other, type(self)):
             return False
 
-        self_edges = {(u, v, frozenset(data["marks"].items())) for u, v, data in self.edges(data=True)}
-        other_edges = {(u, v, frozenset(data["marks"].items())) for u, v, data in other.edges(data=True)}
+        # self_edges = {(u, v, frozenset(data["marks"].items())) for u, v, data in self.edges(data=True)}
+        # other_edges = {(u, v, frozenset(data["marks"].items())) for u, v, data in other.edges(data=True)}
         # self_edges = {
         #     (u, v, frozenset(data["marks"].items()))
         #     for u, v, data in self.edges(data=True)

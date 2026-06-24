@@ -1,17 +1,5 @@
 from collections.abc import Callable, Collection, Hashable
-from itertools import chain, combinations
 from itertools import chain, combinations, permutations
-from typing import (
-    Callable,
-    Collection,
-    Dict,
-    FrozenSet,
-    Hashable,
-    Optional,
-    Set,
-    Tuple,
-    Union,
-)
 
 import networkx as nx
 from joblib import Parallel, delayed
@@ -21,13 +9,8 @@ from pgmpy import config, logger
 from pgmpy.base import UndirectedGraph
 from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.estimators import StructureEstimator
-from pgmpy import config
-from pgmpy.base import UndirectedGraph
-from pgmpy.estimators import ExpertKnowledge, StructureEstimator
-from pgmpy.estimators.CITests import ci_registry
 
 # from pgmpy.estimators.CITests import CITestRegistry
-from pgmpy.global_vars import logger
 
 
 # ci_registry = CITestRegistry()
@@ -351,8 +334,8 @@ class BaseConstraintEstimator(StructureEstimator):
     @staticmethod
     def orient_colliders(
         skeleton: UndirectedGraph,
-        separating_sets: Dict[FrozenSet, Set],
-        temporal_ordering: Dict[Hashable, int] = None,
+        separating_sets: dict[frozenset, set],
+        temporal_ordering: dict[Hashable, int] = None,
     ):
         if temporal_ordering is None:
             temporal_ordering = {}
@@ -375,8 +358,7 @@ class BaseConstraintEstimator(StructureEstimator):
 
                 if temporal_ordering:
                     if not (
-                        temporal_ordering[Z] >= temporal_ordering[X]
-                        and temporal_ordering[Z] >= temporal_ordering[Y]
+                        temporal_ordering[Z] >= temporal_ordering[X] and temporal_ordering[Z] >= temporal_ordering[Y]
                     ):
                         continue
 
