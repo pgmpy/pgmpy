@@ -324,7 +324,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
         >>> from pgmpy.example_models import load_model
         >>> data = load_model("bnlearn/asia").simulate(n_samples=100)
         >>> est = BootstrapEstimator(HillClimbSearch())
-        >>> est.fit(data)
+        >>> est = est.fit(data)
         >>> consensus_graph = est.get_causal_graph(threshold=0.3)
         """
         if not (0.0 <= threshold <= 1.0):
