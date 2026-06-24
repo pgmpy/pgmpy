@@ -8,30 +8,6 @@ from pgmpy.causal_discovery._base import BaseCausalDiscovery
 torch = _safe_import("torch")
 nn = _safe_import("torch.nn")
 
-_OPTIMIZER_VALID_KWARGS = {
-    "adam": {"lr", "betas", "weight_decay", "amsgrad", "maximize", "eps"},
-    "sgd": {"lr", "weight_decay", "momentum", "dampening", "nesterov", "maximize"},
-    "adamw": {"lr", "betas", "weight_decay", "amsgrad", "maximize", "eps"},
-}
-
-
-def _validate_optimizer(optimizer: str, optimizer_kwargs: dict) -> None:
-    """Validate optimizer name and kwargs, raising ValueError on any invalid input."""
-    name = optimizer.lower()
-    if name not in _OPTIMIZER_VALID_KWARGS:
-        valid = ", ".join(f"'{k}'" for k in sorted(_OPTIMIZER_VALID_KWARGS))
-        raise ValueError(f"Unknown optimizer '{optimizer}'. Supported optimizers are: {valid}.")
-    if "params" in optimizer_kwargs:
-        raise ValueError("'params' cannot be passed as an optimizer kwarg. CASTLE manages model parameters internally.")
-    valid_keys = _OPTIMIZER_VALID_KWARGS[name]
-    unknown = set(optimizer_kwargs) - valid_keys
-    if unknown:
-        unknown_str = ", ".join(f"'{k}'" for k in sorted(unknown))
-        valid_str = ", ".join(f"'{k}'" for k in sorted(valid_keys))
-        raise ValueError(
-            f"Unknown optimizer_kwargs for '{optimizer}': {unknown_str}. Accepted kwargs are: {valid_str}."
-        )
-
 
 @dataclass
 class NetworkConfig:
@@ -58,6 +34,31 @@ class RegularizationConfig:
     sparsity_weight: float
     dag_penalty: float
     edge_threshold: float
+
+
+_OPTIMIZER_VALID_KWARGS = {
+    "adam": {"lr", "betas", "weight_decay", "amsgrad", "maximize", "eps"},
+    "sgd": {"lr", "weight_decay", "momentum", "dampening", "nesterov", "maximize"},
+    "adamw": {"lr", "betas", "weight_decay", "amsgrad", "maximize", "eps"},
+}
+
+
+def _validate_optimizer(optimizer: str, optimizer_kwargs: dict) -> None:
+    """Validate optimizer name and kwargs, raising ValueError on any invalid input."""
+    name = optimizer.lower()
+    if name not in _OPTIMIZER_VALID_KWARGS:
+        valid = ", ".join(f"'{k}'" for k in sorted(_OPTIMIZER_VALID_KWARGS))
+        raise ValueError(f"Unknown optimizer '{optimizer}'. Supported optimizers are: {valid}.")
+    if "params" in optimizer_kwargs:
+        raise ValueError("'params' cannot be passed as an optimizer kwarg. CASTLE manages model parameters internally.")
+    valid_keys = _OPTIMIZER_VALID_KWARGS[name]
+    unknown = set(optimizer_kwargs) - valid_keys
+    if unknown:
+        unknown_str = ", ".join(f"'{k}'" for k in sorted(unknown))
+        valid_str = ", ".join(f"'{k}'" for k in sorted(valid_keys))
+        raise ValueError(
+            f"Unknown optimizer_kwargs for '{optimizer}': {unknown_str}. Accepted kwargs are: {valid_str}."
+        )
 
 
 def _dag_constraint(W: "torch.Tensor") -> "torch.Tensor":
