@@ -165,8 +165,6 @@ class TestCASTLEFit:
 
 
 class TestOptimizerValidation:
-    """Validation fires in __init__ — no torch or fit required."""
-
     def test_invalid_optimizer_string_raises(self):
         with pytest.raises(ValueError, match="Supported optimizers are"):
             CASTLE(optimizer="rmsprop")
@@ -183,6 +181,7 @@ class TestOptimizerValidation:
         with pytest.raises(ValueError, match="Unknown optimizer_kwargs"):
             CASTLE(optimizer=optimizer, **bad_kwargs)
 
+    @requires_torch
     @pytest.mark.parametrize(
         ("optimizer", "valid_kwargs"),
         [
@@ -198,6 +197,7 @@ class TestOptimizerValidation:
         with pytest.raises(ValueError, match="params"):
             CASTLE(optimizer="adam", params=[1, 2, 3])
 
+    @requires_torch
     def test_case_insensitive_optimizer_name(self):
         CASTLE(optimizer="Adam")
         CASTLE(optimizer="SGD", lr=0.01)
