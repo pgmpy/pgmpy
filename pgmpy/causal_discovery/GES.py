@@ -29,16 +29,12 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
     Parameters
     ----------
     scoring_method : str or BaseStructureScore instance, default=None
-        The score to be optimized during structure estimation. Supported
-        structure scores:
+        The score to be optimized during structure estimation. Please refer :doc:`/api/structure_score` for a list of
+        available scoring methods.
 
-        - Discrete data: 'k2', 'bdeu', 'bds', 'bic-d', 'aic-d'
-        - Continuous data: 'll-g', 'aic-g', 'bic-g'
-        - Mixed data: 'll-cg', 'aic-cg', 'bic-cg'
-
-        If None, the appropriate scoring method is automatically selected based
-        on the data type. Also accepts a custom score instance that inherits
-        from `BaseStructureScore`.
+        If ``None``, the appropriate scoring method is automatically selected based on the data type. If a string is
+        provided, the corresponding scoring method is instantiated with default parameters. To customize score-specific
+        parameters, please pass an instance of the scoring class.
 
     return_type : str, default='pdag'
         The type of graph to return. Options are:
