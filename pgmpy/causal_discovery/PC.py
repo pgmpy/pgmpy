@@ -2,6 +2,7 @@ from collections.abc import Callable, Hashable
 from itertools import combinations
 
 import networkx as nx
+import numpy as np
 import pandas as pd
 
 from pgmpy.base import PDAG
@@ -130,6 +131,13 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
     show_progress : bool, default=True
         If True, shows a progress bar while learning the causal structure.
 
+    seed : int or None, default=None
+        Seed for reproducibility. Controls randomness in the PDAG-to-DAG
+        conversion when ``return_type="dag"``. Accepts:
+
+        - `int`: Used to seed a new `numpy.random.Generator`.
+        - `None`: No fixed seed; results may vary across runs.
+
     Attributes
     ----------
     causal_graph_ : :class:`~pgmpy.base.DAG` or :class: `~pgmpy.base.PDAG`
@@ -198,6 +206,7 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
         enforce_expert_knowledge: bool = False,
         n_jobs: int = -1,
         show_progress: bool = True,
+        seed: int | None = None,
     ):
         self.variant = variant
         self.ci_test = ci_test
@@ -209,6 +218,7 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
         self.enforce_expert_knowledge = enforce_expert_knowledge
         self.n_jobs = n_jobs
         self.show_progress = show_progress
+        self.seed = seed
 
     def _fit(self, X: pd.DataFrame, independencies=None):
         """
@@ -226,6 +236,7 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
             Returns the instance with the fitted attributes.
         """
 
+        rng = np.random.default_rng(self.seed)
         # CI test
         self.ci_test_ = get_ci_test(test=self.ci_test, data=X)
 
@@ -272,7 +283,7 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
         if self.return_type in ("pdag", "cpdag"):
             self.causal_graph_ = pdag
         elif self.return_type == "dag":
-            self.causal_graph_ = pdag.to_dag()
+            self.causal_graph_ = pdag.to_dag(rng=rng)
         else:
             raise ValueError(f"return_type must be one of: dag, pdag, or cpdag. Got: {self.return_type}")
 
