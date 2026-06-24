@@ -107,6 +107,11 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
                 )
             return dag
 
+        if not isinstance(n_nodes, int) or n_nodes < 1:
+            raise ValueError(f"n_nodes must be a positive integer, got {n_nodes!r}.")
+        if not 0 <= edge_prob <= 1:
+            raise ValueError(f"edge_prob must be between 0 and 1, got {edge_prob!r}.")
+
         return DAG.get_random(n_nodes=n_nodes, edge_prob=edge_prob, seed=seed)
 
     @staticmethod
@@ -186,17 +191,20 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
         if noise is None:
             return rng.normal(0, 1, size=n_samples) * noise_scale
 
-        # Custom skpro distribution path
-        if noise_seed is not None:
-            np.random.seed(noise_seed)  # noqa: NPY002
-        samples = noise.sample(n_samples=n_samples)
+        # skpro distribution path — save/restore global RNG state so
+        # the simulator never leaks side effects to the caller.
+        state = np.random.get_state()  # noqa: NPY002
+        try:
+            if noise_seed is not None:
+                np.random.seed(noise_seed)  # noqa: NPY002
+            samples = noise.sample(n_samples=n_samples)
+        finally:
+            np.random.set_state(state)  # noqa: NPY002
         return np.asarray(samples).flatten()
 
     @staticmethod
     def _validate_params(
         n_samples: int | None,
-        n_nodes: int,
-        edge_prob: float,
         function_type: str | Any,
         weight_range: tuple[float, float],
         noise: Any,
@@ -206,14 +214,6 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
         # n_samples
         if n_samples is not None and (not isinstance(n_samples, int) or n_samples < 1):
             raise ValueError(f"n_samples must be a positive integer or None, got {n_samples!r}.")
-
-        # n_nodes
-        if not isinstance(n_nodes, int) or n_nodes < 1:
-            raise ValueError(f"n_nodes must be a positive integer, got {n_nodes!r}.")
-
-        # edge_prob
-        if not 0 <= edge_prob <= 1:
-            raise ValueError(f"edge_prob must be between 0 and 1, got {edge_prob!r}.")
 
         # noise_scale
         if noise_scale <= 0:
@@ -235,7 +235,7 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
         if weight_range[0] > weight_range[1]:
             raise ValueError("weight_range lower bound must be <= upper bound.")
 
-        # noise + noise_scale conflict
+        # noise and noise_scale conflict
         if noise is not None and noise_scale != 1.0:
             raise ValueError(
                 "noise_scale cannot be used with a custom noise distribution. "
@@ -304,7 +304,7 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
         -------
         pd.DataFrame
         """
-        cls._validate_params(n_samples, n_nodes, edge_prob, function_type, weight_range, noise, noise_scale)
+        cls._validate_params(n_samples, function_type, weight_range, noise, noise_scale)
 
         graph = cls._get_dag(dag, n_nodes, edge_prob, seed)
         rng = np.random.default_rng(seed)
