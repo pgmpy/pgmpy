@@ -12,6 +12,8 @@
 # TODO: Add any other necessary imports here (e.g., numpy, scipy).
 # import numpy as np
 
+from collections.abc import Hashable
+
 from pgmpy.structure_score import BaseStructureScore
 
 # TODO: If your score builds on an existing score (e.g., BIC extends LogLikelihood),
@@ -77,7 +79,7 @@ class MyStructureScore(BaseStructureScore):
         # for that data type. Set to None if this should not be a default.
         "default_for": None,
         # Set to True if this score estimates parameters (e.g., MLE-based penalties).
-        "is_parameteric": False,
+        "is_parametric": False,
     }
 
     def __init__(self, data, state_names=None):
@@ -87,7 +89,7 @@ class MyStructureScore(BaseStructureScore):
         # TODO: Optionally precompute anything that depends on self.data or self.state_names here
         #       (e.g., BDeu precomputes encoded columns and cardinality arrays for performance).
 
-    def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
+    def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         """
         Compute the local score for `variable` given `parents`.
 
@@ -96,9 +98,9 @@ class MyStructureScore(BaseStructureScore):
 
         Parameters
         ----------
-        variable : str
+        variable : hashable
             The target variable whose local score is computed.
-        parents : tuple of str
+        parents : tuple of hashable
             The parent variables of `variable` in the candidate structure.
 
         Returns
