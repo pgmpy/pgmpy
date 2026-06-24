@@ -1,5 +1,6 @@
 from collections import deque
 from collections.abc import Hashable, Iterable
+from copy import deepcopy
 
 import networkx as nx
 import numpy as np
@@ -728,12 +729,7 @@ class AncestralBase(nx.Graph, _GraphRolesMixin):
         ebunch = [(u, v, data["marks"][u], data["marks"][v]) for u, v, data in self.edges(data=True)]
         ancestral_base = self.__class__(
             ebunch=ebunch,
-            latents=self.latents.copy(),
-            exposures=self.exposures.copy(),
-            outcomes=self.outcomes.copy(),
         )
-
-        for role, vars in self.get_role_dict().items():
-            ancestral_base.with_role(role=role, variables=vars, inplace=True)
+        ancestral_base.add_nodes_from((node, deepcopy(attrs)) for node, attrs in self.nodes(data=True))
 
         return ancestral_base

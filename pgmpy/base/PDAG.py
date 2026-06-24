@@ -1,5 +1,6 @@
 import itertools
 from collections.abc import Hashable, Iterable
+from copy import deepcopy
 
 import networkx as nx
 
@@ -269,12 +270,8 @@ class PDAG(_GraphRolesMixin, nx.DiGraph):
         pdag = PDAG(
             directed_ebunch=list(self.directed_edges.copy()),
             undirected_ebunch=list(self.undirected_edges.copy()),
-            latents=self.latents,
         )
-        pdag.add_nodes_from(self.nodes())
-
-        for role, vars in self.get_role_dict().items():
-            pdag.with_role(role=role, variables=vars, inplace=True)
+        pdag.add_nodes_from((node, deepcopy(attrs)) for node, attrs in self.nodes(data=True))
         return pdag
 
     def _directed_graph(self):

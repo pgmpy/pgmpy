@@ -920,6 +920,15 @@ class TestCoreGraph:
             },
         )
 
+    def test_copy_with_roles_is_independent(self):
+        graph = _CoreGraph(ebunch=[("A", "B", "->")], roles={"test_role": ["A"]})
+
+        graph_copy = graph.copy()
+        graph_copy.with_role("new_role", ["A"], inplace=True)
+
+        assert graph.get_role_dict() == {"test_role": ["A"]}
+        assert graph_copy.get_role_dict() == {"new_role": ["A"], "test_role": ["A"]}
+
     def test_copy_with_all_values(self):
         """Test the `copy` method of a `_CoreGraph` with all values."""
         edges = [("A", "B", "->"), ("B", "C", "->"), ("C", "D", "oo")]

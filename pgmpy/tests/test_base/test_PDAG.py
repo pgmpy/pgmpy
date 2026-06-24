@@ -320,6 +320,31 @@ class TestPDAG(unittest.TestCase):
         self.assertEqual(pdag_copy.get_role("outcomes"), ["C"])
         self.assertEqual(sorted(pdag_copy.get_roles()), sorted(["exposures", "outcomes"]))
 
+    def test_copy_roles_are_independent(self):
+        pdag = PDAG(
+            directed_ebunch=[("A", "B")],
+            exposures={"A"},
+            outcomes={"B"},
+            roles={"test_role": ["A"]},
+        )
+
+        pdag_copy = pdag.copy()
+        pdag_copy.with_role("new_role", ["A"], inplace=True)
+
+        self.assertEqual(
+            pdag.get_role_dict(),
+            {"exposures": ["A"], "outcomes": ["B"], "test_role": ["A"]},
+        )
+        self.assertEqual(
+            pdag_copy.get_role_dict(),
+            {
+                "exposures": ["A"],
+                "new_role": ["A"],
+                "outcomes": ["B"],
+                "test_role": ["A"],
+            },
+        )
+
         pdag_copy = self.pdag_role_list.copy()
         expected_edges = {
             ("A", "C"),

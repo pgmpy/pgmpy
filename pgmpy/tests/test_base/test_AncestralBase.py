@@ -168,6 +168,29 @@ class TestAncestralBase:
         assert "exposures" in new_graph.nodes["A"]["roles"]
         assert "outcomes" in new_graph.nodes["B"]["roles"]
 
+    def test_copy_roles_are_independent(self):
+        graph = AncestralBase(
+            ebunch=[("A", "B", "-", ">")],
+            exposures={"A"},
+            outcomes={"B"},
+            roles={"test_role": ["A"]},
+        )
+
+        graph_copy = graph.copy()
+        graph_copy.with_role("new_role", ["A"], inplace=True)
+
+        assert graph.get_role_dict() == {
+            "exposures": ["A"],
+            "outcomes": ["B"],
+            "test_role": ["A"],
+        }
+        assert graph_copy.get_role_dict() == {
+            "exposures": ["A"],
+            "new_role": ["A"],
+            "outcomes": ["B"],
+            "test_role": ["A"],
+        }
+
     def test_equality_with_roles(self):
         edges = [("A", "B", "-", ">")]
         roles = {"exposures": "A"}
