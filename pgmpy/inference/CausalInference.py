@@ -344,7 +344,7 @@ class CausalInference:
         Parameters
         ----------
         X: node
-            The explantory variable.
+            The explanatory variable.
 
         Y: node
             The dependent variable.
@@ -466,7 +466,7 @@ class CausalInference:
             The observed variable's name
 
         Y: node
-            The oberved variable's name
+            The observed variable's name
 
         scaling_indicators: dict (optional)
             A dict representing which observed variable to use as scaling indicator for
@@ -931,7 +931,7 @@ class CausalInference:
             :math:`P(X | do(Y), Z)`.
 
         evidence: dict (default: None)
-            Dictionary of the form {variable_name: variable_state} repesenting
+            Dictionary of the form {variable_name: variable_state} representing
             the conditional variables in the query i.e. `Z` in :math:`P(X |
             do(Y), Z)`.
 
@@ -945,7 +945,7 @@ class CausalInference:
             Propagation.
 
         kwargs: Any
-            Additional paramters which needs to be passed to inference
+            Additional parameters which needs to be passed to inference
             algorithms.  Please refer to the pgmpy.inference.Inference for
             details.
 
