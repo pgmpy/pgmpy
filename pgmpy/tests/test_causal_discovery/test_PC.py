@@ -699,6 +699,7 @@ def test_temporal_ordering_sepsets_and_skeleton():
     np.random.seed(42)
     data = pd.DataFrame(np.random.randint(0, 2, size=(100, 4)), columns=["A", "B", "C", "D"])
     expert = ExpertKnowledge(temporal_order=[["D"], ["B"], ["C"], ["A"]])
+    expert.fit(data)
 
     skel, _ = PC(
         variant="stable",

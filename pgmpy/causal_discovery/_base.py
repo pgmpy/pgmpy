@@ -291,11 +291,6 @@ class _ConstraintMixin:
         else:
             ci_test = get_ci_test(test=ci_test, data=data)
 
-        if expert_knowledge is None:
-            from pgmpy.causal_discovery import ExpertKnowledge
-
-            expert_knowledge = ExpertKnowledge()
-
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=max_cond_vars)
             pbar.set_description("Working for n conditional variables: 0")
@@ -307,12 +302,15 @@ class _ConstraintMixin:
 
         # Step 1: Initialize a fully connected undirected graph
         graph = nx.complete_graph(n=variables, create_using=nx.Graph)
-        temporal_ordering = expert_knowledge.temporal_ordering_
-        required_edges = expert_knowledge.required_edges_
+        if expert_knowledge is None:
+            temporal_ordering, required_edges, forbidden_edges = {}, set(), set()
+        else:
+            temporal_ordering = expert_knowledge.temporal_ordering_
+            required_edges = expert_knowledge.required_edges_
+            forbidden_edges = expert_knowledge.forbidden_edges_
 
         # Remove edges that are forbidden in both directions. Directed forbidden are enforced as orientations after the
         # skeleton is learned.
-        forbidden_edges = expert_knowledge.forbidden_edges_
         graph.remove_edges_from([(u, v) for (u, v) in forbidden_edges if (v, u) in forbidden_edges])
 
         # Exit condition: 1. If all the nodes in graph has less than `lim_neighbors` neighbors.

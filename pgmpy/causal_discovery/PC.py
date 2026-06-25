@@ -212,7 +212,7 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
         )
 
         # Step 3: Apply orientation rules and expert knowledge as hard directional constraints.
-        if expert_knowledge.temporal_order != [[]]:
+        if expert_knowledge.temporal_order is not None:
             pdag = expert_knowledge.apply_to(pdag)
             pdag = pdag.apply_meeks_rules(apply_r4=True)
         else:

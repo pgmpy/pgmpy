@@ -103,10 +103,10 @@ class ExpertKnowledge(BaseEstimator):
         significance_level=0.05,
         **kwargs,
     ):
-        self.forbidden_edges = self._validate_edges(forbidden_edges) if forbidden_edges is not None else set()
-        self.required_edges = self._validate_edges(required_edges) if required_edges is not None else set()
+        self.forbidden_edges = forbidden_edges if forbidden_edges is not None else set()
+        self.required_edges = required_edges if required_edges is not None else set()
 
-        self.search_space = self._validate_edges(search_space) if search_space is not None else set()
+        self.search_space = search_space if search_space is not None else set()
         self.screening_method = screening_method
         self.significance_level = significance_level
         if not (0 < significance_level < 1):
@@ -130,23 +130,15 @@ class ExpertKnowledge(BaseEstimator):
         lines = ["Expert Knowledge:"]
 
         if self.required_edges:
-            lines.append(f"Required Edges: {self.required_edges}")
+            lines.append(f"Required Edges: {set(self.required_edges)}")
         if self.forbidden_edges:
-            lines.append(f"Forbidden Edges: {self.forbidden_edges}")
+            lines.append(f"Forbidden Edges: {set(self.forbidden_edges)}")
         if self.search_space:
-            lines.append(f"Search Space: {self.search_space}")
+            lines.append(f"Search Space: {set(self.search_space)}")
         if self.temporal_order:
             lines.append(f"Temporal Order: {self.temporal_order}")
 
         return "\n".join(lines)
-
-    def _validate_edges(self, edge_list):
-        if not hasattr(edge_list, "__iter__"):
-            raise TypeError(f"Expected iterator type for edge information. Got {type(edge_list)} instead.")
-        elif not isinstance(edge_list, set):
-            return set(edge_list)
-        else:
-            return edge_list
 
     def _get_temporal_ordering(self, temporal_order):
         """
