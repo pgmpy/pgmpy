@@ -288,12 +288,9 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
         if orient_rule is None:
             for X, Y in combinations(sorted(pdag.nodes()), 2):
                 if not skeleton.has_edge(X, Y):
-                    # A non-adjacent pair with no recorded separating set was removed by an
-                    # expert-knowledge constraint (a both-direction forbidden / search-space
-                    # complement pair) rather than a CI test, so it does not drive collider
-                    # orientation.
                     sepset = separating_sets.get(frozenset((X, Y)))
                     if sepset is None:
+                        # This edge was removed by expert knowledge. Ignore.
                         continue
                     for Z in set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y)):
                         if Z not in sepset:
@@ -311,9 +308,8 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
             candidates = []
             for X, Y in combinations(sorted(pdag.nodes()), 2):
                 if not skeleton.has_edge(X, Y):
-                    # Skip pairs removed by an expert-knowledge constraint (no separating set);
-                    # collider orientation is driven by CI-discovered non-adjacencies only.
                     if frozenset((X, Y)) not in separating_sets:
+                        # This edge was removed by expert knowledge. Ignore.
                         continue
                     common_neighbors = set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y))
                     if not common_neighbors:

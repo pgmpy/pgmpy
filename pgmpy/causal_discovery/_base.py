@@ -296,11 +296,6 @@ class _ConstraintMixin:
 
             expert_knowledge = ExpertKnowledge()
 
-        # The estimator's `_fit` normally initializes the expert knowledge; do it here as a
-        # fallback so the resolved `*_` attributes are always available.
-        if not hasattr(expert_knowledge, "forbidden_edges_"):
-            expert_knowledge.fit(data)
-
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=max_cond_vars)
             pbar.set_description("Working for n conditional variables: 0")

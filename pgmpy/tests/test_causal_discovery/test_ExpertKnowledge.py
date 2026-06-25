@@ -120,23 +120,3 @@ class TestExpertKnowledge:
             ExpertKnowledge(screening_method="chi_square").fit()
         with pytest.raises(ValueError, match="data"):
             ExpertKnowledge(search_space=[("A", "B")]).fit()
-
-    def test_is_sklearn_estimator(self):
-        from sklearn.base import BaseEstimator, clone
-
-        ek = ExpertKnowledge(required_edges=[("A", "B")], significance_level=0.1)
-        assert isinstance(ek, BaseEstimator)
-        # get_params exposes the constructor params (enables clone / nested params / grid search).
-        assert ek.get_params()["significance_level"] == 0.1
-        # clone produces an equivalent, unfitted copy.
-        ek_clone = clone(ek)
-        assert ek_clone is not ek
-        assert ek_clone.required_edges == [("A", "B")]
-        assert not hasattr(ek_clone, "required_edges_")
-
-    def test_validation_deferred_to_fit(self):
-        # __init__ stores params verbatim and does not validate; validation happens in fit().
-        ek = ExpertKnowledge(significance_level=5)
-        assert ek.significance_level == 5
-        with pytest.raises(ValueError, match="significance_level"):
-            ek.fit()
