@@ -156,7 +156,7 @@ class TestExpertKnowledge:
         data = pd.DataFrame({c: [0, 1] for c in ["A", "B"]})
         with pytest.raises(ValueError, match="marginally_dependent"):
             ExpertKnowledge(search_space="bogus").fit(data)
-    
+
     def test_root_nodes_generate_forbidden_edges(self):
         data = pd.DataFrame(
             {

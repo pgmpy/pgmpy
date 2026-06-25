@@ -101,7 +101,7 @@ class ExpertKnowledge(BaseEstimator):
         ci_test=None,
         significance_level=0.05,
         **kwargs,
-):
+    ):
         self.forbidden_edges = forbidden_edges if forbidden_edges is not None else set()
         self.required_edges = required_edges if required_edges is not None else set()
 
@@ -291,9 +291,7 @@ class ExpertKnowledge(BaseEstimator):
         if data is not None and self.root_nodes:
             for root in self.root_nodes:
                 if root not in data.columns:
-                    raise ValueError(
-                        f"Root node {root} not present in data."
-                    )
+                    raise ValueError(f"Root node {root} not present in data.")
 
                 for node in data.columns:
                     if node != root:
