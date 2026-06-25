@@ -7,9 +7,9 @@ import pandas as pd
 
 from pgmpy import config, logger
 from pgmpy.base import DAG
-from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.estimators import StructureEstimator
 from pgmpy.estimators.CITests import ci_registry
+from pgmpy.estimators.ExpertKnowledge import ExpertKnowledge
 from pgmpy.utils import llm_pairwise_orient
 
 

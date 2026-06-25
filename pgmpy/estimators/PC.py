@@ -6,9 +6,9 @@ import networkx as nx
 import pandas as pd
 
 from pgmpy.base import DAG, PDAG, UndirectedGraph
-from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.estimators.BaseConstraintEstimator import BaseConstraintEstimator
 from pgmpy.estimators.CITests import ci_registry
+from pgmpy.estimators.ExpertKnowledge import ExpertKnowledge
 from pgmpy.independencies import Independencies
 
 
@@ -232,7 +232,7 @@ class PC(BaseConstraintEstimator):
             expert_knowledge = ExpertKnowledge()
 
         if expert_knowledge.search_space:
-            expert_knowledge.limit_search_space(self.data.columns)
+            expert_knowledge.limit_search_space(self.data)
 
         # Step 1: Run the PC algorithm to build the skeleton and get the separating sets.
         skel, separating_sets = self.build_skeleton(

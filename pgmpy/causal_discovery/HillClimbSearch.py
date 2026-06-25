@@ -3,6 +3,7 @@ from collections.abc import Hashable
 
 import networkx as nx
 import pandas as pd
+from sklearn.base import clone
 from tqdm.auto import trange
 
 from pgmpy import config
@@ -119,7 +120,7 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
     >>> expert = ExpertKnowledge(forbidden_edges=[("HISTORY", "CVP")])
     >>> hc = HillClimbSearch(scoring_method="bic-d", expert_knowledge=expert)
     >>> hc.fit(df)  # doctest: +ELLIPSIS
-    HillClimbSearch(expert_knowledge=Expert Knowledge: ...,
+    HillClimbSearch(expert_knowledge=ExpertKnowledge(...),
                     scoring_method='bic-d')
 
     References
@@ -183,20 +184,19 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
         if self.expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
         else:
-            expert_knowledge = self.expert_knowledge
+            # Clone so the fitted (`*_`) attributes land on a fresh copy, not the user's object.
+            expert_knowledge = clone(self.expert_knowledge)
 
-        # Step 1.3.1: If search_space in expert_knowledge is not None, limit the search space
-        if expert_knowledge.search_space:
-            expert_knowledge.limit_search_space(X.columns)
+        # Step 1.3.1: Resolve the expert knowledge into its fitted (`*_`) attributes.
+        expert_knowledge.fit(X)
 
         # Step 1.4: Check if required edges cause a cycle
-        start_dag.add_edges_from(expert_knowledge.required_edges)
+        start_dag.add_edges_from(expert_knowledge.required_edges_)
         if not nx.is_directed_acyclic_graph(start_dag):
             raise ValueError(
                 "required_edges create a cycle in start_dag. Please modify either required_edges or start_dag."
             )
-        expert_knowledge._orient_temporal_forbidden_edges(start_dag, only_edges=False)
-        start_dag.remove_edges_from(expert_knowledge.forbidden_edges)
+        start_dag.remove_edges_from(expert_knowledge.forbidden_edges_)
 
         # Step 1.5: Initialize max_indegree, tabu_list, and progress bar
         max_indegree = self.max_indegree
@@ -221,8 +221,8 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
                     scoring_method=score,
                     tabu_list=tabu_list,
                     max_indegree=max_indegree,
-                    forbidden_edges=expert_knowledge.forbidden_edges,
-                    required_edges=expert_knowledge.required_edges,
+                    forbidden_edges=expert_knowledge.forbidden_edges_,
+                    required_edges=expert_knowledge.required_edges_,
                 ),
                 key=lambda t: t[1],
                 default=(None, None),

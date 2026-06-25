@@ -198,7 +198,6 @@ class _ConstraintMixin:
         significance_level: float = 0.01,
         max_cond_vars: int = 5,
         expert_knowledge=None,
-        enforce_expert_knowledge: bool = False,
         n_jobs: int = -1,
         show_progress: bool = True,
         **kwargs,
@@ -259,30 +258,8 @@ class _ConstraintMixin:
             The maximum number of variables to condition on while testing
             independence.
 
-        expert_knowledge: pgmpy.estimators.ExpertKnowledge instance
-            Expert knowledge to be used with the algorithm. Expert knowledge
-            includes required/forbidden edges in the final graph, temporal
-            information about the variables etc. Please refer
-            pgmpy.estimators.ExpertKnowledge class for more details.
-
-        enforce_expert_knowledge: boolean (default: False)
-            If True, the algorithm modifies the search space according to the
-            edges specified in expert knowledge object. This implies the following:
-                1. For every edge (u, v) specified in `forbidden_edges`, there will
-                    be no edge between u and v.
-                2. For every edge (u, v) specified in `required_edges`, one of the
-                    following would be present in the final model: u -> v, u <-
-                    v, or u - v (if CPDAG is returned).
-
-            If False, the algorithm attempts to make the edge orientations as
-            specified by expert knowledge after learning the skeleton. This
-            implies the following:
-                1. For every edge (u, v) specified in `forbidden_edges`, the final
-                    graph would have either v <- u or no edge except if u -> v is part
-                    of a collider structure in the learned skeleton.
-                2. For every edge (u, v) specified in `required_edges`, the final graph
-                    would either have u -> v or no edge except if v <- u is part of a
-                    collider structure in the learned skeleton.
+        expert_knowledge: pgmpy.causal_discovery.ExpertKnowledge instance
+            Expert knowledge to be used with the algorithm.
 
         n_jobs: int (default: -1)
             The number of jobs to run in parallel.
@@ -314,14 +291,6 @@ class _ConstraintMixin:
         else:
             ci_test = get_ci_test(test=ci_test, data=data)
 
-        if expert_knowledge is None:
-            from pgmpy.causal_discovery import ExpertKnowledge
-
-            expert_knowledge = ExpertKnowledge()
-
-        if expert_knowledge.search_space:
-            expert_knowledge.limit_search_space(data.columns)
-
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=max_cond_vars)
             pbar.set_description("Working for n conditional variables: 0")
@@ -333,9 +302,16 @@ class _ConstraintMixin:
 
         # Step 1: Initialize a fully connected undirected graph
         graph = nx.complete_graph(n=variables, create_using=nx.Graph)
-        temporal_ordering = expert_knowledge.temporal_ordering
-        if enforce_expert_knowledge:
-            graph.remove_edges_from(expert_knowledge.forbidden_edges)
+        if expert_knowledge is None:
+            temporal_ordering, required_edges, forbidden_edges = {}, set(), set()
+        else:
+            temporal_ordering = expert_knowledge.temporal_ordering_
+            required_edges = expert_knowledge.required_edges_
+            forbidden_edges = expert_knowledge.forbidden_edges_
+
+        # Remove edges that are forbidden in both directions. Directed forbidden are enforced as orientations after the
+        # skeleton is learned.
+        graph.remove_edges_from([(u, v) for (u, v) in forbidden_edges if (v, u) in forbidden_edges])
 
         # Exit condition: 1. If all the nodes in graph has less than `lim_neighbors` neighbors.
         #             or  2. `lim_neighbors` is greater than `max_conditional_variables`.
@@ -344,7 +320,7 @@ class _ConstraintMixin:
             # size `lim_neighbors` which makes u and v independent.
             if variant == "orig":
                 for u, v in graph.edges():
-                    if (enforce_expert_knowledge is False) or ((u, v) not in expert_knowledge.required_edges):
+                    if (u, v) not in required_edges:
                         for separating_set in self._get_potential_sepsets(
                             u, v, temporal_ordering, graph, lim_neighbors
                         ):
@@ -365,7 +341,7 @@ class _ConstraintMixin:
                 edges_to_remove = []
                 # In case of stable, precompute neighbors as this is the stable algorithm.
                 for u, v in graph.edges():
-                    if (enforce_expert_knowledge is False) or ((u, v) not in expert_knowledge.required_edges):
+                    if (u, v) not in required_edges:
                         sep_vars = set()
                         found_independence = False
                         for separating_set in self._get_potential_sepsets(
@@ -402,9 +378,7 @@ class _ConstraintMixin:
                         return (u, v), tuple(sorted(sep_vars, key=repr))
 
                 results = parallel_pool(
-                    delayed(_parallel_fun)(u, v)
-                    for (u, v) in graph.edges()
-                    if (enforce_expert_knowledge is False) or ((u, v) not in expert_knowledge.required_edges)
+                    delayed(_parallel_fun)(u, v) for (u, v) in graph.edges() if (u, v) not in required_edges
                 )
                 for result in results:
                     if result is not None:
