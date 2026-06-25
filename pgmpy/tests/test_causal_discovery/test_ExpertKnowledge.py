@@ -1,5 +1,6 @@
 import logging
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -71,6 +72,21 @@ class TestExpertKnowledge:
         assert ek.forbidden_edges_ == {("A", "C"), ("B", "A"), ("C", "A"), ("C", "B")}
         # pristine search_space stored verbatim and untouched
         assert ek.search_space == [("A", "B"), ("B", "C")]
+
+    def test_screening_search_space(self):
+        rng = np.random.default_rng(42)
+        n = 2000
+        x = rng.integers(0, 2, size=n)
+        y = x.copy()
+        flip = rng.random(n) < 0.1
+        y[flip] = 1 - y[flip]
+        data = pd.DataFrame({"X": x, "Y": y, "Z": rng.integers(0, 2, size=n)})
+
+        ek = ExpertKnowledge(screening_method="chi_square", significance_level=0.05)
+        screened = ek._screening_search_space(data)
+
+        assert screened == {("X", "Y"), ("Y", "X")}
+        assert ek.search_space == set()
 
     def test_apply_to_orients_required_forbidden_and_warns(self, caplog):
         data = pd.DataFrame({c: [0, 1] for c in ["A", "B", "C", "D", "E", "F"]})
