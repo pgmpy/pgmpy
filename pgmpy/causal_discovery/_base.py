@@ -314,9 +314,9 @@ class _ConstraintMixin:
         graph = nx.complete_graph(n=variables, create_using=nx.Graph)
         temporal_ordering = expert_knowledge.temporal_ordering_
         required_edges = expert_knowledge.required_edges_
-        # Remove adjacencies that are forbidden in both directions (genuine non-adjacencies,
-        # e.g. the search-space complement). Single-direction prohibitions keep the adjacency
-        # and are enforced as orientations after the skeleton is learned.
+
+        # Remove edges that are forbidden in both directions. Directed forbidden are enforced as orientations after the
+        # skeleton is learned.
         forbidden_edges = expert_knowledge.forbidden_edges_
         graph.remove_edges_from([(u, v) for (u, v) in forbidden_edges if (v, u) in forbidden_edges])
 

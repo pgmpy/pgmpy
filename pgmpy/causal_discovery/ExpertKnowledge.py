@@ -1,4 +1,4 @@
-from itertools import chain, permutations
+from itertools import chain, combinations, permutations
 
 from sklearn.base import BaseEstimator
 
@@ -25,16 +25,17 @@ class ExpertKnowledge(BaseEstimator):
             documentation for details on how the argument is handled.
 
     search_space: iterable (default: None)
-            The set of directed edges that form the search space for the structure learning algorithm (a white list of
-            all possible edges). Refer to the algorithm documentation for details on how the argument is handled.
+            The set of directed edges that form the search space for the structure learning algorithm (i.e., a white
+            list of all possible edges). Refer to the algorithm documentation for details on how the argument is
+            handled.
 
             If both `search_space` and `screening_method` are specified, the generated search space is merged with the
             user-provided search space.
 
     temporal_order: iterator (default: None)
-            The temporal ordering of variables according to prior knowledge. Each list/structure in the (2 dimensional)
-            iterator contains variables with the same temporal significance. The order is defined as: [(variables at the
-            root / 1st temporal order), (variables at 2nd temporal order), ... (leaf nodes / last temporal order)]
+            The temporal ordering of variables according to prior knowledge. This should be defined as nested list of
+            the form: [(variables at the root / 1st temporal order), (variables at 2nd temporal order), ... (leaf nodes
+            / last temporal order)].
 
     screening_method: str | BaseCITest | callable (default: None)
             Conditional independence test used for generating a search space from data.
@@ -44,6 +45,18 @@ class ExpertKnowledge(BaseEstimator):
 
     significance_level: float (default: 0.05)
             Significance threshold used for screening variable pairs when generating a search space.
+
+    Notes
+    -----
+    Calling :meth:`fit` resolves the constructor arguments into the fitted ``*_`` attributes:
+
+    - ``temporal_ordering_``: maps each variable to its tier index in ``temporal_order``.
+    - ``required_edges_``: ``required_edges`` as a set.
+    - ``search_space_``: ``search_space`` merged with the screening result (variable pairs that are
+      marginally independent under ``screening_method`` at ``significance_level``).
+    - ``forbidden_edges_``: ``forbidden_edges`` plus the temporal-order complement (every edge from a
+      later tier to an earlier tier) plus the search-space complement (all directed pairs absent from
+      ``search_space_``, when a search space is given).
 
     Examples
     --------
@@ -99,12 +112,12 @@ class ExpertKnowledge(BaseEstimator):
         if not (0 < significance_level < 1):
             raise ValueError("significance_level must be between 0 and 1.")
 
-        self.temporal_order = temporal_order if temporal_order is not None else [[]]
+        self.temporal_order = temporal_order
         self.temporal_ordering = self._get_temporal_ordering(self.temporal_order)
 
     def __repr__(self):
         # Calculate total number of nodes in temporal order
-        n_temporal_nodes = sum(len(tier) for tier in self.temporal_order)
+        n_temporal_nodes = sum(len(tier) for tier in (self.temporal_order or []))
 
         return (
             f"Expert Knowledge: {len(self.required_edges)} required edges, "
@@ -122,7 +135,7 @@ class ExpertKnowledge(BaseEstimator):
             lines.append(f"Forbidden Edges: {self.forbidden_edges}")
         if self.search_space:
             lines.append(f"Search Space: {self.search_space}")
-        if self.temporal_order and self.temporal_order != [[]]:
+        if self.temporal_order:
             lines.append(f"Temporal Order: {self.temporal_order}")
 
         return "\n".join(lines)
@@ -149,6 +162,8 @@ class ExpertKnowledge(BaseEstimator):
         temporal_ordering: dict
             Dictionary with the tier (0, 1, 2, 3 etc.) for each node.
         """
+        if temporal_order is None:
+            return dict()
         if not hasattr(temporal_order, "__iter__"):
             raise TypeError(f"Expected iterator type for temporal order. Got {type(temporal_order)} instead.")
 
@@ -183,18 +198,14 @@ class ExpertKnowledge(BaseEstimator):
 
         generated_search_space = set()
 
-        columns = list(data.columns)
-
-        for i, X in enumerate(columns):
-            for Y in columns[i + 1 :]:
-                if not ci_test.is_independent(
-                    X=X,
-                    Y=Y,
-                    Z=[],
-                    significance_level=self.significance_level,
-                ):
-                    generated_search_space.add((X, Y))
-                    generated_search_space.add((Y, X))
+        for X, Y in combinations(data.columns, 2):
+            if not ci_test.is_independent(
+                X=X,
+                Y=Y,
+                Z=[],
+                significance_level=self.significance_level,
+            ):
+                generated_search_space.update([(X, Y), (Y, X)])
 
         return generated_search_space
 
@@ -233,37 +244,40 @@ class ExpertKnowledge(BaseEstimator):
         temporal_ordering_ : dict
             Mapping from each variable to its temporal tier.
         """
+        # Step 1: `data` is required only for the resolutions that depend on it (screening, search-space complement).
         if data is None:
             if self.screening_method is not None:
                 raise ValueError("`data` is required to fit when `screening_method` is specified.")
             if self.search_space:
                 raise ValueError("`data` is required to fit when `search_space` is specified.")
 
-        # Validate the temporal order (if given) covers exactly the data's variables.
-        if self.temporal_order != [[]]:
+        # Step 2: Validate the temporal order (if given) covers exactly the data's variables.
+        if self.temporal_order is not None:
             if len(set.intersection(*map(set, self.temporal_order))) != 0:
                 raise ValueError("Node found in multiple tiers of temporal order.")
             if data is not None and set(chain(*self.temporal_order)) != set(data.columns):
                 missing = set(data.columns) - set(chain(*self.temporal_order))
                 raise ValueError(f"Missing nodes in temporal order - {missing}")
 
+        # Step 3: Resolve the attributes taken directly from the declared knowledge.
         self.temporal_ordering_ = dict(self.temporal_ordering)
         self.required_edges_ = set(self.required_edges)
 
-        # Resolve the search space (user whitelist + screening) without mutating the inputs.
+        # Step 4: Resolve the search space (user whitelist + screening) without mutating the inputs.
         self.search_space_ = set(self.search_space)
         if self.screening_method is not None:
             self.search_space_ |= self._screening_search_space(data)
 
-        # forbidden_edges_ = user forbidden edges
-        #   + temporal complement: any edge from a later tier to an earlier tier
-        #   + search-space complement (when a search space is in play).
+        # Step 5: Resolve forbidden_edges_ = user forbidden edges
+        #         + temporal complement (any edge from a later tier to an earlier tier)
+        #         + search-space complement (all pairs outside search_space_, when a search space is given).
         forbidden = set(self.forbidden_edges)
-        for tier in range(1, len(self.temporal_order)):
-            for node in self.temporal_order[tier]:
-                for lower_tier in range(tier):
-                    for lower_node in self.temporal_order[lower_tier]:
-                        forbidden.add((node, lower_node))
+        if self.temporal_order is not None:
+            for tier in range(1, len(self.temporal_order)):
+                for node in self.temporal_order[tier]:
+                    for lower_tier in range(tier):
+                        for lower_node in self.temporal_order[lower_tier]:
+                            forbidden.add((node, lower_node))
         if data is not None and (self.search_space or self.screening_method is not None):
             forbidden |= set(permutations(data.columns, 2)) - self.search_space_
         self.forbidden_edges_ = forbidden
