@@ -1,4 +1,3 @@
-from networkx.generators import spectral_graph_forge
 from itertools import chain, combinations, permutations
 
 from sklearn.base import BaseEstimator
@@ -93,15 +92,15 @@ class ExpertKnowledge(BaseEstimator):
     """
 
     def __init__(
-    self,
-    forbidden_edges=None,
-    required_edges=None,
-    temporal_order=None,
-    root_nodes=None,
-    search_space=None,
-    ci_test=None,
-    significance_level=0.05,
-    **kwargs,
+        self,
+        forbidden_edges=None,
+        required_edges=None,
+        temporal_order=None,
+        root_nodes=None,
+        search_space=None,
+        ci_test=None,
+        significance_level=0.05,
+        **kwargs,
 ):
         self.forbidden_edges = forbidden_edges if forbidden_edges is not None else set()
         self.required_edges = required_edges if required_edges is not None else set()
