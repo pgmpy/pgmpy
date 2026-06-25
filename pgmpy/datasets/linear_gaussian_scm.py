@@ -32,38 +32,20 @@ class LinearGaussianSCM(BaseSimulatedDataset):
         "is_continuous": True,
     }
 
-    @classmethod
-    def _build_model(
-        cls,
+    def __init__(
+        self,
         seed: int | None = None,
         n_nodes: int = 5,
         edge_prob: float = 0.5,
         scale: float = 1.0,
-    ) -> LinearGaussianBayesianNetwork:
-        """Build a fitted LinearGaussianBayesianNetwork from random parameters.
-
-        Parameters
-        ----------
-        seed : int, optional
-            Random seed for reproducible graph generation.
-        n_nodes : int, default 5
-            Number of variables in the generated DAG.
-        edge_prob : float, default 0.5
-            Probability of an edge between any two topologically ordered
-            nodes.
-        scale : float, default 1.0
-            Scale parameter for coefficient and noise sampling.
-
-        Returns
-        -------
-        LinearGaussianBayesianNetwork
-        """
-        return LinearGaussianBayesianNetwork.get_random(
+    ):
+        self.model = LinearGaussianBayesianNetwork.get_random(
             n_nodes=n_nodes,
             edge_prob=edge_prob,
             scale=scale,
             seed=seed,
         )
+        self.seed = seed
 
     @classmethod
     def load_dataframe(
@@ -95,8 +77,11 @@ class LinearGaussianSCM(BaseSimulatedDataset):
         -------
         pd.DataFrame
         """
-        model = cls._build_model(seed=seed, n_nodes=n_nodes, edge_prob=edge_prob, scale=scale)
-        return model.simulate(n_samples=n_samples if n_samples is not None else 1000, seed=seed)
+        scm = cls(seed=seed, n_nodes=n_nodes, edge_prob=edge_prob, scale=scale)
+        return scm.model.simulate(
+            n_samples=n_samples if n_samples is not None else 1000,
+            seed=seed,
+        )
 
     @classmethod
     def load_ground_truth(
@@ -127,10 +112,5 @@ class LinearGaussianSCM(BaseSimulatedDataset):
         -------
         DAG
         """
-        # scale is intentionally not forwarded — graph structure is
-        # determined only by n_nodes, edge_prob, and seed.
-        model = cls._build_model(seed=seed, n_nodes=n_nodes, edge_prob=edge_prob)
-        dag = DAG()
-        dag.add_nodes_from(model.nodes())
-        dag.add_edges_from(model.edges())
-        return dag
+        scm = cls(seed=seed, n_nodes=n_nodes, edge_prob=edge_prob)
+        return DAG(scm.model)
