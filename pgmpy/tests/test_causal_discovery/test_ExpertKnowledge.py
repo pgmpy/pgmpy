@@ -36,6 +36,12 @@ class TestExpertKnowledge:
         assert "('B', 'C')" in str(ek)
         assert "Temporal Order: [['A'], ['B']]" in str(ek)
 
+        # A strategy-string search space is described, not counted character-by-character.
+        ek_screen = ExpertKnowledge(search_space="marginally_dependent")
+        assert "marginally_dependent" in repr(ek_screen)
+        assert "search space edges" not in repr(ek_screen)
+        assert "marginally_dependent" in str(ek_screen)
+
     def test_fit_temporal_required_forbidden(self):
         data = pd.DataFrame({c: [0, 1] for c in ["A", "B", "C", "D"]})
         ek = ExpertKnowledge(
@@ -74,6 +80,7 @@ class TestExpertKnowledge:
         assert ek.search_space == [("A", "B"), ("B", "C")]
 
     def test_screening_search_space(self):
+        # Y is a noisy copy of X (strongly dependent); Z is independent noise.
         rng = np.random.default_rng(42)
         n = 2000
         x = rng.integers(0, 2, size=n)
@@ -82,11 +89,19 @@ class TestExpertKnowledge:
         y[flip] = 1 - y[flip]
         data = pd.DataFrame({"X": x, "Y": y, "Z": rng.integers(0, 2, size=n)})
 
-        ek = ExpertKnowledge(screening_method="chi_square", significance_level=0.05)
+        # ci_test defaults to None -> auto-detected from the (discrete) data.
+        ek = ExpertKnowledge(search_space="marginally_dependent")
         screened = ek._screening_search_space(data)
 
+        # The dependent pair X-Y is screened in (both directions); the independent Z is excluded.
         assert screened == {("X", "Y"), ("Y", "X")}
-        assert ek.search_space == set()
+        # The strategy string is stored verbatim; the helper does not mutate the instance.
+        assert ek.search_space == "marginally_dependent"
+
+        # fit resolves the strategy into search_space_; forbidden_edges_ is its complement.
+        ek.fit(data)
+        assert ek.search_space_ == {("X", "Y"), ("Y", "X")}
+        assert ek.forbidden_edges_ == {("X", "Z"), ("Y", "Z"), ("Z", "X"), ("Z", "Y")}
 
     def test_apply_to_orients_required_forbidden_and_warns(self, caplog):
         data = pd.DataFrame({c: [0, 1] for c in ["A", "B", "C", "D", "E", "F"]})
@@ -131,8 +146,13 @@ class TestExpertKnowledge:
         assert ek.search_space_ == set()
 
     def test_fit_without_data_raises_when_data_required(self):
-        # Screening and search-space resolution both need the dataset.
+        # Both a screening strategy and an explicit whitelist need the dataset.
         with pytest.raises(ValueError, match="data"):
-            ExpertKnowledge(screening_method="chi_square").fit()
+            ExpertKnowledge(search_space="marginally_dependent").fit()
         with pytest.raises(ValueError, match="data"):
             ExpertKnowledge(search_space=[("A", "B")]).fit()
+
+    def test_unknown_search_space_strategy_raises(self):
+        data = pd.DataFrame({c: [0, 1] for c in ["A", "B"]})
+        with pytest.raises(ValueError, match="marginally_dependent"):
+            ExpertKnowledge(search_space="bogus").fit(data)
