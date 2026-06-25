@@ -1,3 +1,4 @@
+from networkx.generators import spectral_graph_forge
 from itertools import chain, combinations, permutations
 
 from sklearn.base import BaseEstimator
@@ -92,21 +93,25 @@ class ExpertKnowledge(BaseEstimator):
     """
 
     def __init__(
-        self,
-        forbidden_edges=None,
-        required_edges=None,
-        temporal_order=None,
-        search_space=None,
-        ci_test=None,
-        significance_level=0.05,
-        **kwargs,
-    ):
+    self,
+    forbidden_edges=None,
+    required_edges=None,
+    temporal_order=None,
+    root_nodes=None,
+    search_space=None,
+    ci_test=None,
+    significance_level=0.05,
+    **kwargs,
+):
         self.forbidden_edges = forbidden_edges if forbidden_edges is not None else set()
         self.required_edges = required_edges if required_edges is not None else set()
+
+        self.root_nodes = root_nodes if root_nodes is not None else []
 
         self.search_space = search_space if search_space is not None else set()
         self.ci_test = ci_test
         self.significance_level = significance_level
+
         if not (0 < significance_level < 1):
             raise ValueError("significance_level must be between 0 and 1.")
 
@@ -273,14 +278,28 @@ class ExpertKnowledge(BaseEstimator):
         #         + temporal complement (any edge from a later tier to an earlier tier)
         #         + search-space complement (all pairs outside search_space_, when a search space is given).
         forbidden = set(self.forbidden_edges)
+
         if self.temporal_order is not None:
             for tier in range(1, len(self.temporal_order)):
                 for node in self.temporal_order[tier]:
                     for lower_tier in range(tier):
                         for lower_node in self.temporal_order[lower_tier]:
                             forbidden.add((node, lower_node))
+
         if data is not None and self.search_space:
             forbidden |= set(permutations(data.columns, 2)) - self.search_space_
+
+        if data is not None and self.root_nodes:
+            for root in self.root_nodes:
+                if root not in data.columns:
+                    raise ValueError(
+                        f"Root node {root} not present in data."
+                    )
+
+                for node in data.columns:
+                    if node != root:
+                        forbidden.add((node, root))
+
         self.forbidden_edges_ = forbidden
 
         return self
