@@ -85,6 +85,9 @@ class _CASTLEModel(nn.Module):
         self.train_cfg = train_cfg
         self.reg_cfg = reg_cfg
 
+        if train_cfg.seed is not None:
+            torch.manual_seed(train_cfg.seed)
+
         self.input_layers = nn.ModuleList(
             [nn.Linear(num_inputs, self.network_cfg.hidden_dim) for _ in range(num_inputs)]
         )
@@ -111,28 +114,68 @@ class _CASTLEModel(nn.Module):
         out_0 = Out[:, 0:1]
         return Out, out_0
 
-    def train(self, X_tensor):
+    def train(self, X_tensor=True):
         """Train the CASTLE model and return the adjacency matrix."""
-        # 1. Set seed for reproducibility.
+        if isinstance(X_tensor, bool):
+            return nn.Module.train(self, X_tensor)
+        if self.train_cfg.seed is not None:
+            torch.manual_seed(self.train_cfg.seed)
 
-        # 2. Setup optimizer.
+        optimizer_cls = {
+            "adam": torch.optim.Adam,
+            "sgd": torch.optim.SGD,
+            "adamw": torch.optim.AdamW,
+        }[self.train_cfg.optimizer]
+        optimizer = optimizer_cls(self.parameters(), **self.train_cfg.optimizer_kwargs)
 
-        # 3. Initialize state for early stopping.
+        best_loss = float("inf")
+        patience_counter = 0
+        N = X_tensor.shape[0]
 
-        # 4. Epoch loop:
-        #    a. Shuffle data and iterate over mini-batches.
-        #    b. Forward pass: compute Out, out_0.
-        #    c. Compute losses:
-        #       - supervised_loss = MSE(out_0, target)
-        #       - reconstruction_loss = MSE(Out, X_batch)
-        #       - acyclicity_penalty = h(W)^2
-        #       - sparsity_loss = L1 norm of masked input weights
-        #       - total_loss = supervised + dag_weight * (recon + acyclicity + sparsity_weight * sparsity)
-        #    d. Backprop and optimizer step.
-        #    e. Check early stopping criteria.
+        for _ in range(self.train_cfg.max_epochs):
+            perm = torch.randperm(N)
+            epoch_loss = 0.0
+            num_batches = 0
 
-        # 5. Set eval mode, detach and threshold W, then return.
-        raise NotImplementedError("TBD")
+            for start in range(0, N, self.train_cfg.batch_size):
+                X_batch = X_tensor[perm[start : start + self.train_cfg.batch_size]]
+
+                Out, out_0 = self(X_batch)
+
+                supervised_loss = nn.functional.mse_loss(out_0, X_batch[:, 0:1])
+                reconstruction_loss = nn.functional.mse_loss(Out, X_batch)
+
+                W = self.get_W()
+                acyclicity_penalty = self.reg_cfg.dag_penalty * _dag_constraint(W) ** 2
+                sparsity_loss = sum(
+                    (layer.weight * getattr(self, f"mask_{k}")).abs().sum() for k, layer in enumerate(self.input_layers)
+                )
+
+                total_loss = supervised_loss + self.reg_cfg.dag_weight * (
+                    reconstruction_loss + acyclicity_penalty + self.reg_cfg.sparsity_weight * sparsity_loss
+                )
+
+                optimizer.zero_grad()
+                total_loss.backward()
+                optimizer.step()
+
+                epoch_loss += total_loss.item()
+                num_batches += 1
+
+            epoch_loss /= num_batches
+
+            if best_loss - epoch_loss >= self.train_cfg.min_loss_improvement:
+                best_loss = epoch_loss
+                patience_counter = 0
+            else:
+                patience_counter += 1
+                if patience_counter >= self.train_cfg.early_stop_patience:
+                    break
+
+        self.eval()
+        W_final = self.get_W().detach().clone()
+        W_final[W_final < self.reg_cfg.edge_threshold] = 0.0
+        return W_final
 
     def get_W(self):
         """Compute the weighted adjacency matrix from input-layer weights."""

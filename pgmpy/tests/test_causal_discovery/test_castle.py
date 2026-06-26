@@ -347,3 +347,54 @@ class TestCASTLEModel:
         Out, out_0 = model(torch.randn(1, num_inputs))
         assert Out.shape == (1, num_inputs)
         assert out_0.shape == (1, 1)
+
+
+@requires_torch
+class TestCASTLEModelTraining:
+    @pytest.fixture
+    def small_tensor(self):
+        import torch
+
+        return torch.randn(20, 4, generator=torch.Generator().manual_seed(0))
+
+    def _make_model(self, num_inputs=4, hidden_dim=8, seed=0, edge_threshold=0.3, max_epochs=5):
+        network_cfg = NetworkConfig(hidden_dim=hidden_dim, scaler=None, target_col=None)
+        train_cfg = TrainingConfig(
+            batch_size=32,
+            max_epochs=max_epochs,
+            optimizer="adam",
+            optimizer_kwargs={},
+            seed=seed,
+            min_loss_improvement=1e-4,
+            early_stop_patience=10,
+            tensorboard_log_dir=None,
+        )
+        reg_cfg = RegularizationConfig(
+            dag_weight=1.0, sparsity_weight=5.0, dag_penalty=1.0, edge_threshold=edge_threshold
+        )
+        return _CASTLEModel(num_inputs=num_inputs, network_cfg=network_cfg, train_cfg=train_cfg, reg_cfg=reg_cfg)
+
+    def test_train_returns_tensor_of_correct_shape(self, small_tensor):
+        import torch
+
+        W_final = self._make_model().train(small_tensor)
+        assert isinstance(W_final, torch.Tensor)
+        assert W_final.shape == (4, 4)
+
+    def test_train_diagonal_is_zero(self, small_tensor):
+        import torch
+
+        W_final = self._make_model().train(small_tensor)
+        assert torch.all(W_final.diagonal() == 0.0)
+
+    def test_train_no_values_below_threshold(self, small_tensor):
+        edge_threshold = 0.3
+        W_final = self._make_model(edge_threshold=edge_threshold).train(small_tensor)
+        assert not ((W_final > 0.0) & (W_final < edge_threshold)).any()
+
+    def test_train_reproducibility(self, small_tensor):
+        import torch
+
+        W1 = self._make_model(seed=42).train(small_tensor)
+        W2 = self._make_model(seed=42).train(small_tensor)
+        assert torch.equal(W1, W2)
