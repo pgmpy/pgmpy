@@ -288,6 +288,8 @@ class ExpertKnowledge(BaseEstimator):
         if data is not None and self.search_space:
             forbidden |= set(permutations(data.columns, 2)) - self.search_space_
 
+        # Step 6: Add forbidden incoming edges for declared root nodes
+        #         so that root nodes cannot have parents in the learned graph.
         if data is not None and self.root_nodes:
             for root in self.root_nodes:
                 if root not in data.columns:

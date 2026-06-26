@@ -166,11 +166,15 @@ class TestExpertKnowledge:
             }
         )
 
-        ek = ExpertKnowledge(root_nodes=["Age"])
+        ek = ExpertKnowledge(root_nodes=["Age", "Income"])
         ek.fit(data)
 
-        assert ("Income", "Age") in ek.forbidden_edges_
+        # Incoming edges to root nodes should be forbidden
         assert ("Education", "Age") in ek.forbidden_edges_
+        assert ("Education", "Income") in ek.forbidden_edges_
 
-        assert ("Age", "Income") not in ek.forbidden_edges_
+        # Outgoing edges from root nodes should remain allowed
         assert ("Age", "Education") not in ek.forbidden_edges_
+        assert ("Income", "Education") not in ek.forbidden_edges_
+
+  
