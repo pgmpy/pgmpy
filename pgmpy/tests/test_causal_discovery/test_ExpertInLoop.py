@@ -9,9 +9,8 @@ import pytest
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.base import DAG
-from pgmpy.causal_discovery import ExpertInLoop
+from pgmpy.causal_discovery import ExpertInLoop, ExpertKnowledge
 from pgmpy.ci_tests._base import BaseCITest
-from pgmpy.estimators import ExpertKnowledge
 
 
 def simple_orient(var1, var2, **kwargs):
