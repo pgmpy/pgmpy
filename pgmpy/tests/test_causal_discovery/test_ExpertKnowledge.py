@@ -176,5 +176,3 @@ class TestExpertKnowledge:
         # Outgoing edges from root nodes should remain allowed
         assert ("Age", "Education") not in ek.forbidden_edges_
         assert ("Income", "Education") not in ek.forbidden_edges_
-
-  
