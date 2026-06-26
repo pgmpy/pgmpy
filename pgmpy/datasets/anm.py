@@ -10,17 +10,11 @@ import pandas as pd
 from pgmpy.base import DAG
 from pgmpy.datasets._base import BaseSimulatedDataset
 
-_SUPPORTED_FUNCTION_TYPES = {"sine_add", "polynomial", "sigmoid_add"}
-
-
-def _sigmoid(x: np.ndarray) -> np.ndarray:
-    """Numerically stable sigmoid."""
-    return np.where(x >= 0, 1 / (1 + np.exp(-x)), np.exp(x) / (1 + np.exp(x)))
+_DEFAULT_FUNCTIONS = (np.sin, np.cos, np.tanh)
 
 
 class AdditiveNoiseModel(BaseSimulatedDataset):
-    """
-    Simulated dataset from a random Additive Noise Model.
+    """Simulated dataset from a random Additive Noise Model.
 
     Generates data according to the model:
 
@@ -28,35 +22,36 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
 
         X_j = f_j(\\text{Pa}(X_j)) + N_j
 
-    where :math:`f_j` are non-linear functions and :math:`N_j` are independent
-    noise terms (Hoyer et al., 2008).
+    where :math:`f_j` are non-linear functions and :math:`N_j` are
+    independent noise terms :cite:p:`hoyer_2008`.
 
     Parameters accepted via keyword arguments in :func:`load_dataset`:
 
-    * **dag** (DAG, optional) – A user-provided DAG.  When given,
-      ``n_nodes`` and ``edge_prob`` are ignored with a warning.
-    * **n_nodes** (int, default 5) – Number of variables in the random DAG.
-    * **edge_prob** (float, default 0.5) – Probability of an edge between any
-      two topologically ordered nodes in the random DAG.
-    * **noise** (BaseDistribution, optional) – A ``skpro`` distribution
-      instance for noise terms.  When ``None``, standard Gaussian noise is
-      used.  ``skpro`` must be installed separately.
-    * **function_type** (str or callable, default ``"sine_add"``) – The
-      non-linear function applied to parent values.  Supported strings:
-      ``"sine_add"``, ``"polynomial"``, ``"sigmoid_add"``.  A callable must
-      accept an array of shape ``(n_samples, n_parents)`` and return an
-      array of shape ``(n_samples,)``.
-    * **noise_scale** (float, default 1.0) – Multiplier for the default
-      Gaussian noise.  Cannot be used together with a custom ``noise``
-      distribution.
-    * **weight_range** (tuple of float, default ``(0.5, 2.0)``) – Range
-      for randomly sampled coefficients in preset functions.  Ignored when
-      ``function_type`` is a callable.
+    Parameters
+    ----------
+    dag : DAG, optional
+        A user-provided DAG.  When given, ``n_nodes`` and
+        ``edge_prob`` are ignored with a warning.
+    n_nodes : int, optional (default 5)
+        Number of variables in the random DAG.
+    edge_prob : float, optional (default 0.5)
+        Probability of an edge between any two topologically
+        ordered nodes in the random DAG.
+    noise : BaseDistribution, optional
+        A ``skpro`` distribution instance for noise terms.
+        When ``None``, standard normal :math:`\\mathcal{N}(0, 1)`
+        noise is used.  ``skpro`` must be installed separately.
+    function_type : set, tuple, or list of callable, optional
+        Non-linear functions to randomly apply to parent
+        values.  Each callable must accept and return a numpy
+        array.  Default is ``(np.sin, np.cos, np.tanh)``.
+    weight_range : tuple of float, optional (default ``(-1, 1)``)
+        Range ``(low, high)`` for randomly sampled edge
+        coefficients.
 
     References
     ----------
-    Hoyer, P., Janzing, D., Mooij, J. M., Peters, J., & Schölkopf, B. (2008).
-    Nonlinear causal discovery with additive noise models. *NeurIPS*.
+    - :cite:p:`hoyer_2008`
     """
 
     _tags = {
@@ -64,10 +59,6 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
         "has_ground_truth": True,
         "is_continuous": True,
     }
-
-    # ------------------------------------------------------------------
-    # Private helpers
-    # ------------------------------------------------------------------
 
     @staticmethod
     def _get_dag(
@@ -81,12 +72,12 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
         Parameters
         ----------
         dag : DAG or None
-            A user-provided DAG.  When given, *n_nodes* and *edge_prob* are
-            ignored and a ``UserWarning`` is emitted.
+            A user-provided DAG.  When given, *n_nodes* and
+            *edge_prob* are ignored and a warning is emitted.
         n_nodes : int
-            Number of nodes for the random DAG (ignored if *dag* is given).
+            Number of nodes for the random DAG.
         edge_prob : float
-            Edge probability for the random DAG (ignored if *dag* is given).
+            Edge probability for the random DAG.
         seed : int or None
             Seed forwarded to ``DAG.get_random``.
 
@@ -115,147 +106,79 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
         return DAG.get_random(n_nodes=n_nodes, edge_prob=edge_prob, seed=seed)
 
     @staticmethod
-    def _make_function(
-        function_type: str | Any,
-        n_parents: int,
-        rng: np.random.Generator,
-        weight_range: tuple[float, float],
-    ):
-        """Return a callable ``f(parent_data) -> signal`` for one node.
-
-        Parameters
-        ----------
-        function_type : str or callable
-            Preset name or user-provided callable.
-        n_parents : int
-            Number of parents for the current node.
-        rng : numpy.random.Generator
-            Seeded RNG for sampling random coefficients.
-        weight_range : tuple of float
-            ``(low, high)`` range for coefficient magnitudes.
-
-        Returns
-        -------
-        callable
-            ``f(parent_data: ndarray (n_samples, n_parents)) -> ndarray (n_samples,)``
-        """
-        if callable(function_type):
-            return function_type
-
-        low, high = weight_range
-        weights = rng.uniform(low, high, size=n_parents)
-        signs = rng.choice([-1, 1], size=n_parents)
-        weights = weights * signs
-
-        if function_type == "sine_add":
-            return lambda x, w=weights: (w * np.sin(x)).sum(axis=1)
-        elif function_type == "polynomial":
-            degrees = rng.choice([2, 3], size=n_parents)
-            return lambda x, w=weights, d=degrees: (w * np.power(x, d)).sum(axis=1)
-        elif function_type == "sigmoid_add":
-            return lambda x, w=weights: (w * _sigmoid(x)).sum(axis=1)
-        else:
-            raise ValueError(
-                f"Unknown function_type '{function_type}'. Supported: {sorted(_SUPPORTED_FUNCTION_TYPES)}."
-            )
-
-    @staticmethod
     def _sample_noise(
         noise: Any,
         n_samples: int,
-        noise_scale: float,
         rng: np.random.Generator,
-        noise_seed: int | None,
     ) -> np.ndarray:
         """Sample additive noise for one node.
+
+        When *noise* is ``None``, samples are drawn from a
+        standard normal distribution using the isolated *rng*
+        generator (no global state is touched).  When a custom
+        ``skpro`` distribution is provided, ``noise.sample()``
+        is called directly.
 
         Parameters
         ----------
         noise : BaseDistribution or None
-            ``None`` uses default Gaussian; otherwise calls ``dist.sample()``.
+            ``None`` uses standard normal :math:`N(0, 1)`;
+            otherwise calls ``noise.sample()``.
         n_samples : int
             Number of noise samples to generate.
-        noise_scale : float
-            Multiplier applied only when *noise* is ``None``.
         rng : numpy.random.Generator
             Seeded RNG for the default Gaussian path.
-        noise_seed : int or None
-            Per-node seed for the ``skpro`` path (sets global
-            ``np.random.seed``).  Must be unique per node to ensure
-            independent noise draws.
 
         Returns
         -------
-        numpy.ndarray of shape (n_samples,)
+        numpy.ndarray of shape ``(n_samples,)``
         """
         if noise is None:
-            return rng.normal(0, 1, size=n_samples) * noise_scale
+            return rng.normal(0, 1, size=n_samples)
 
-        # skpro distribution path — save/restore global RNG state so
-        # the simulator never leaks side effects to the caller.
-        state = np.random.get_state()  # noqa: NPY002
-        try:
-            if noise_seed is not None:
-                np.random.seed(noise_seed)  # noqa: NPY002
-            samples = noise.sample(n_samples=n_samples)
-        finally:
-            np.random.set_state(state)  # noqa: NPY002
+        samples = noise.sample(n_samples=n_samples)
         return np.asarray(samples).flatten()
 
     @staticmethod
     def _validate_params(
         n_samples: int | None,
-        function_type: str | Any,
+        function_type: set | tuple | list,
         weight_range: tuple[float, float],
         noise: Any,
-        noise_scale: float,
     ) -> None:
-        """Validate simulator parameters, raising on invalid combinations."""
-        # n_samples
+        """Validate simulator parameters.
+
+        Checks *n_samples* (positive int or None),
+        *function_type* (non-empty collection of callables),
+        *weight_range* (two-element tuple with low <= high),
+        and *noise* (skpro BaseDistribution or None).
+        """
         if n_samples is not None and (not isinstance(n_samples, int) or n_samples < 1):
             raise ValueError(f"n_samples must be a positive integer or None, got {n_samples!r}.")
 
-        # noise_scale
-        if noise_scale <= 0:
-            raise ValueError(f"noise_scale must be positive, got {noise_scale!r}.")
-
-        # function_type
-        if not callable(function_type) and not isinstance(function_type, str):
-            raise TypeError(f"function_type must be a string or callable, got {type(function_type).__name__}.")
-        if isinstance(function_type, str) and function_type not in _SUPPORTED_FUNCTION_TYPES:
-            raise ValueError(
-                f"Unknown function_type '{function_type}'. Supported: {sorted(_SUPPORTED_FUNCTION_TYPES)}."
+        # function_type must be a collection of callables
+        if not isinstance(function_type, (set, tuple, list)):
+            raise TypeError(
+                f"function_type must be a set, tuple, or list of callables, got {type(function_type).__name__}."
             )
+        if len(function_type) == 0:
+            raise ValueError("function_type must contain at least one callable.")
+        for fn in function_type:
+            if not callable(fn):
+                raise TypeError(f"All items in function_type must be callable, got {type(fn).__name__}.")
 
         # weight_range
         if not isinstance(weight_range, (tuple, list)) or len(weight_range) != 2:
             raise ValueError(f"weight_range must be a (low, high) tuple of length 2, got {weight_range!r}.")
-        if weight_range[0] <= 0 or weight_range[1] <= 0:
-            raise ValueError("weight_range bounds must be positive.")
         if weight_range[0] > weight_range[1]:
             raise ValueError("weight_range lower bound must be <= upper bound.")
 
-        # noise and noise_scale conflict
-        if noise is not None and noise_scale != 1.0:
-            raise ValueError(
-                "noise_scale cannot be used with a custom noise distribution. "
-                "Set the scale via the distribution's own parameters."
-            )
-
-        # Check skpro availability when custom noise is provided
+        # Check skpro availability when custom noise is given
         if noise is not None:
-            try:
-                from skpro.distributions.base import BaseDistribution
-            except ImportError:
-                raise ImportError(
-                    "skpro is required for custom noise distributions. Install with: pip install skpro"
-                ) from None
+            from skpro.distributions.base import BaseDistribution
+
             if not isinstance(noise, BaseDistribution):
                 raise TypeError(f"noise must be a skpro BaseDistribution instance or None, got {type(noise).__name__}.")
-
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
 
     @classmethod
     def load_dataframe(
@@ -266,70 +189,72 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
         n_nodes: int = 5,
         edge_prob: float = 0.5,
         noise: Any = None,
-        function_type: str | Any = "sine_add",
-        noise_scale: float = 1.0,
-        weight_range: tuple[float, float] = (0.5, 2.0),
+        function_type: set | tuple | list = _DEFAULT_FUNCTIONS,
+        weight_range: tuple[float, float] = (-1, 1),
     ) -> pd.DataFrame:
         """Generate data from a random Additive Noise Model.
+
+        For each child node :math:`X_j` with parents
+        :math:`\\text{Pa}(X_j)`, a function is randomly chosen
+        from *function_type*, applied element-wise to each
+        parent column, multiplied by a random weight sampled
+        from *weight_range*, summed, and combined with additive
+        noise.
 
         Parameters
         ----------
         n_samples : int, optional
             Number of samples to generate.  Defaults to 1000.
         seed : int, optional
-            Random seed for reproducible graph and data generation.
+            Random seed for reproducible graph and data
+            generation.
         dag : DAG, optional
-            A user-provided DAG.  When given, ``n_nodes`` and ``edge_prob``
-            are ignored.
+            A user-provided DAG.  When given, ``n_nodes`` and
+            ``edge_prob`` are ignored.
         n_nodes : int, optional
             Number of variables in the generated DAG.
         edge_prob : float, optional
-            Probability of an edge between any two topologically ordered nodes.
+            Edge probability for the random DAG.
         noise : BaseDistribution, optional
-            A ``skpro`` distribution for additive noise.  When ``None``,
-            standard Gaussian noise is used.
-        function_type : str or callable, optional
-            Non-linearity applied to parent values.  Supported preset
-            strings: ``"sine_add"``, ``"polynomial"``, ``"sigmoid_add"``.
-            A callable must accept ``(n_samples, n_parents)`` and return
-            ``(n_samples,)``.
-        noise_scale : float, optional
-            Multiplier for the default Gaussian noise.  Cannot be used
-            together with a custom *noise* distribution.
+            A ``skpro`` distribution for additive noise.  When
+            ``None``, standard normal :math:`\\mathcal{N}(0, 1)`
+            noise is used.
+        function_type : set, tuple, or list of callable, optional
+            Non-linear functions to randomly apply to each
+            parent column.  Default is
+            ``(np.sin, np.cos, np.tanh)``.
         weight_range : tuple of float, optional
-            ``(low, high)`` range for random coefficients in preset
-            functions.  Ignored for custom callables.
+            ``(low, high)`` range for random edge coefficients.
+            Default is ``(-1, 1)``.
 
         Returns
         -------
         pd.DataFrame
         """
-        cls._validate_params(n_samples, function_type, weight_range, noise, noise_scale)
+        cls._validate_params(n_samples, function_type, weight_range, noise)
 
         graph = cls._get_dag(dag, n_nodes, edge_prob, seed)
         rng = np.random.default_rng(seed)
         topo_order = list(nx.topological_sort(graph))
         n = n_samples if n_samples is not None else 1000
+        funcs = list(function_type)
 
         data = pd.DataFrame(0.0, index=range(n), columns=list(graph.nodes()))
 
         for node in topo_order:
             parents = list(graph.predecessors(node))
-            # Derive a unique per-node seed so that custom skpro noise
-            # draws are independent across nodes but still reproducible.
-            noise_seed = int(rng.integers(0, 2**31)) if seed is not None else None
-            noise_vals = cls._sample_noise(noise, n, noise_scale, rng, noise_seed)
+            noise_vals = cls._sample_noise(noise, n, rng)
 
             if not parents:
                 data[node] = noise_vals
             else:
                 parent_data = data[parents].values
-                func = cls._make_function(function_type, len(parents), rng, weight_range)
-                result = func(parent_data)
-
-                if result.shape != (n,):
-                    raise ValueError(f"function_type callable must return array of shape ({n},), got {result.shape}.")
-                data[node] = result + noise_vals
+                signal = np.zeros(n)
+                for i, parent_col in enumerate(parents):
+                    w = rng.uniform(*weight_range)
+                    fn = rng.choice(funcs)
+                    signal += w * fn(parent_data[:, i])
+                data[node] = signal + noise_vals
 
         return data
 
@@ -347,26 +272,21 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
         Parameters
         ----------
         seed : int, optional
-            Must match the seed used in ``load_dataframe`` to get the
-            corresponding graph.
+            Must match the seed used in ``load_dataframe`` to
+            get the corresponding graph.
         dag : DAG, optional
-            A user-provided DAG.  When given, ``n_nodes`` and ``edge_prob``
-            are ignored.
+            A user-provided DAG.  When given, ``n_nodes`` and
+            ``edge_prob`` are ignored.
         n_nodes : int, optional
             Number of variables in the generated DAG.
         edge_prob : float, optional
-            Probability of an edge between any two topologically ordered nodes.
+            Edge probability for the random DAG.
         **kwargs
-            Absorbed for call-signature compatibility with ``load_dataset()``.
-            The graph structure is independent of ``noise``,
-            ``function_type``, ``noise_scale``, and ``weight_range``.
+            Absorbed for call-signature compatibility with
+            ``load_dataset()``.
 
         Returns
         -------
         pgmpy.base.DAG
         """
-        graph = cls._get_dag(dag, n_nodes, edge_prob, seed)
-        gt = DAG()
-        gt.add_nodes_from(graph.nodes())
-        gt.add_edges_from(graph.edges())
-        return gt
+        return cls._get_dag(dag, n_nodes, edge_prob, seed)
