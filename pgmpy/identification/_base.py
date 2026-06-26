@@ -84,3 +84,16 @@ class BaseIdentification:
     def __call__(self, causal_graph):
         """Alias for the `identify` method"""
         return self.identify(causal_graph)
+
+
+def get_c_components(self):
+    visited = set()
+    components = []
+
+    for node in self.nodes():
+        if node not in visited:
+            component = self.get_reachable_nodes(node, "<>")
+            visited.update(component)
+            components.append(self.subgraph(component))
+
+    return components
