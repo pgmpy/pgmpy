@@ -163,6 +163,65 @@ class TestCASTLEFit:
     def test_fit_accepts_dataframe(self, numeric_df):
         CASTLE().fit(numeric_df)
 
+    # --- Group A: input validation ---
+
+    @pytest.mark.parametrize(
+        ("df_fn", "kwargs", "match"),
+        [
+            (lambda df: df[["A"]], {}, "at least 2 columns"),
+            (lambda df: df.assign(A=df["A"].astype(str)), {}, "numeric"),
+            (lambda df: df, {"target_col": "Z"}, "target_col"),
+            (lambda df: df, {"target_col": 99}, "target_col"),
+        ],
+    )
+    def test_invalid_input_raises(self, numeric_df, df_fn, kwargs, match):
+        with pytest.raises(ValueError, match=match):
+            CASTLE(max_epochs=1, **kwargs).fit(df_fn(numeric_df))
+
+    # --- Group B: structural correctness ---
+
+    def test_all_attributes_set_after_fit(self, numeric_df):
+        est = CASTLE(max_epochs=5, seed=0)
+        est.fit(numeric_df)
+        assert est.causal_graph_ is not None
+        assert est.adjacency_matrix_ is not None
+        assert est.model_ is not None
+        assert est.scaler_ is not None
+        assert est.predictor_names_ is not None
+        assert est.cols_ is not None
+
+    def test_adjacency_matrix_shape(self, numeric_df):
+        est = CASTLE(max_epochs=5, seed=0)
+        est.fit(numeric_df)
+        d = numeric_df.shape[1]
+        assert est.adjacency_matrix_.shape == (d, d)
+
+    def test_causal_graph_valid(self, numeric_df):
+        from pgmpy.base import DAG
+
+        est = CASTLE(max_epochs=5, seed=0)
+        est.fit(numeric_df)
+        assert isinstance(est.causal_graph_, DAG)
+        assert set(est.causal_graph_.nodes()) == set(est.cols_)
+        assert not any(u == v for u, v in est.causal_graph_.edges())
+
+    @pytest.mark.parametrize(
+        "target_col",
+        ["A", 0, None],
+    )
+    def test_target_col_variants_same_cols(self, numeric_df, target_col):
+        est = CASTLE(max_epochs=5, seed=0, target_col=target_col)
+        est.fit(numeric_df)
+        assert est.cols_[0] == "A"
+
+    def test_custom_scaler_used(self, numeric_df):
+        from sklearn.preprocessing import StandardScaler
+
+        custom_scaler = StandardScaler()
+        est = CASTLE(max_epochs=5, seed=0, scaler=custom_scaler)
+        est.fit(numeric_df)
+        assert est.scaler_ is custom_scaler
+
 
 class TestOptimizerValidation:
     def test_invalid_optimizer_string_raises(self):

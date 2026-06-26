@@ -2,7 +2,9 @@ from dataclasses import dataclass
 
 import pandas as pd
 from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
+from sklearn.preprocessing import StandardScaler
 
+from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
 
 torch = _safe_import("torch")
@@ -296,6 +298,24 @@ class CASTLE(BaseCausalDiscovery):
 
     def _fit(self, X: pd.DataFrame):
         """Fit the CASTLE model and construct the causal DAG."""
+        if X.shape[1] == 1:
+            raise ValueError("CASTLE requires at least 2 columns (one target and at least one feature).")
+        non_numeric = [col for col in X.columns if not pd.api.types.is_numeric_dtype(X[col])]
+        if non_numeric:
+            raise ValueError(f"All columns must be numeric. Non-numeric columns found: {non_numeric}.")
+
+        if self.target_col is None:
+            target_col = X.columns[0]
+        elif isinstance(self.target_col, str):
+            if self.target_col not in X.columns:
+                raise ValueError(f"target_col '{self.target_col}' not found in DataFrame columns {list(X.columns)}.")
+            target_col = self.target_col
+        else:
+            if not (0 <= self.target_col < X.shape[1]):
+                raise ValueError(
+                    f"target_col index {self.target_col} is out of range for DataFrame with {X.shape[1]} columns."
+                )
+            target_col = X.columns[self.target_col]
 
         self.network_config_ = NetworkConfig(
             hidden_dim=self.hidden_dim,
@@ -318,18 +338,26 @@ class CASTLE(BaseCausalDiscovery):
             dag_penalty=self.dag_penalty,
             edge_threshold=self.edge_threshold,
         )
-        self.causal_graph_ = None
-        self.adjacency_matrix_ = None
-        self.model_ = None
-        self.scaler_ = None
 
-        # TODO:
-        # 1. Preprocess X: reorder columns so target is at index 0, fit StandardScaler,
-        #    scale X, store scaler as self.scaler_ and column order as self.cols_
-        # 2. Convert scaled data to a torch.Tensor
-        # 3. Instantiate self.model_ = _CASTLEModel(num_inputs, network_config_,
-        #    train_config_, reg_config_)
-        # 4. Call W_final = self.model_.train(X_tensor)
-        # 5. Build self.adjacency_matrix_ (pd.DataFrame from W_final, columns=self.cols_)
-        # 6. Build self.causal_graph_ (pgmpy.base.DAG) from adjacency_matrix_
-        # 7. Return self
+        self.cols_ = [target_col] + [c for c in X.columns if c != target_col]
+        self.predictor_names_ = self.cols_[1:]
+        X = X[self.cols_]
+
+        self.scaler_ = self.scaler if self.scaler is not None else StandardScaler()
+        X_scaled = self.scaler_.fit_transform(X.to_numpy())
+
+        X_tensor = torch.tensor(X_scaled, dtype=torch.float32)
+
+        self.model_ = _CASTLEModel(len(self.cols_), self.network_config_, self.train_config_, self.reg_config_)
+        W_final = self.model_.train(X_tensor)
+
+        self.adjacency_matrix_ = pd.DataFrame(W_final.cpu().numpy(), index=self.cols_, columns=self.cols_)
+
+        self.causal_graph_ = DAG()
+        self.causal_graph_.add_nodes_from(self.cols_)
+        for src in self.cols_:
+            for dst in self.cols_:
+                if self.adjacency_matrix_.loc[src, dst] > 0:
+                    self.causal_graph_.add_edge(src, dst)
+
+        return self
