@@ -37,6 +37,10 @@ class BootstrapEstimator(BaseCausalDiscovery):
         The threshold for edge presence probability. Only edges that appear in at least this fraction of the bootstrap
         graphs are included in the final consensus graph. Must be between 0 and 1.
 
+    warm_start : bool, default=False
+        When set to True, reuse the solution of the previous call to fit and add more
+        bootstraps to the estimator.
+
     n_jobs : int, default=-1
         The number of jobs to run in parallel. -1 means using all processors.
 
@@ -71,11 +75,11 @@ class BootstrapEstimator(BaseCausalDiscovery):
         Both keys (u, v) and (v, u) are present for any connected pair. The probability of the
         undirected edge u - v is 1 - direction_prob_[(u, v)] - direction_prob_[(v, u)].
 
-    bootstrap_samples_ : list
-        List of bootstrap samples. Each index contains a list of sample indexes.
+    bootstrap_samples_ : np.ndarray
+        2D numpy array containing the sample indices for each bootstrap.
 
-    bootstrap_graphs_ : list
-        List of graphs learned from the bootstrap samples.
+    bootstrap_graphs_ : np.ndarray
+        3D numpy array containing the adjacency matrices of the graphs learned from each bootstrap sample.
 
     n_features_in_ : int
         The number of features in the data used to learn the causal graph.
@@ -90,23 +94,25 @@ class BootstrapEstimator(BaseCausalDiscovery):
         n_bootstraps: int = 10,
         sample_size: float = 1,
         threshold: float = 0.5,
+        warm_start: bool = False,
+        n_jobs: int = -1,
         show_progress: bool = True,
         seed: int | None = None,
-        n_jobs: int = -1,
     ):
         self.estimator = estimator
         self.n_bootstraps = n_bootstraps
         self.sample_size = sample_size
         self.threshold = threshold
+        self.warm_start = warm_start
+        self.n_jobs = n_jobs
         self.show_progress = show_progress
         self.seed = seed
-        self.n_jobs = n_jobs
 
     @staticmethod
     def _bootstrap_iteration(
         X: pd.DataFrame,
         base_estimator: BaseCausalDiscovery,
-        bootstrap_sample: list[int],
+        bootstrap_sample: np.ndarray,
     ) -> BaseCausalDiscovery:
         """Helper function to run a single bootstrap iteration."""
 
@@ -132,57 +138,97 @@ class BootstrapEstimator(BaseCausalDiscovery):
         if not isinstance(self.estimator, BaseCausalDiscovery):
             raise ValueError("estimator must be an instance of BaseCausalDiscovery Class.")
 
-        N = self.n_features_in_
         variables = self.feature_names_in_
 
-        self.bootstrap_samples_ = list()
-        self.bootstrap_graphs_ = list()
-
-        edge_presence = pd.DataFrame(
-            np.zeros((N, N)),
-            index=variables,
-            columns=variables,
-        )
-
-        undirected_counts = pd.DataFrame(
-            np.zeros((N, N)),
-            index=variables,
-            columns=variables,
-        )
-
+        # Step 1: Resample dataset and fit base estimators
         rng = np.random.default_rng(self.seed)
         bootstrap_sample_size = int(len(X) * self.sample_size)
 
-        for _ in range(self.n_bootstraps):
-            bootstrap_sample = list(rng.choice(len(X), size=bootstrap_sample_size, replace=True))
-            self.bootstrap_samples_.append(bootstrap_sample)
+        if self.warm_start and hasattr(self, "bootstrap_samples_"):
+            n_existing = len(self.bootstrap_samples_)
 
-        results = cast(
-            list[BaseCausalDiscovery],
-            Parallel(n_jobs=self.n_jobs)(
-                delayed(self._bootstrap_iteration)(X, self.estimator, self.bootstrap_samples_[i])
-                for i in trange(
-                    self.n_bootstraps,
-                    desc="Bootstrapping",
-                    disable=not (self.show_progress and config.SHOW_PROGRESS),
+            # Generate all required bootstrap sample index arrays
+            sample_indices = []
+            for _ in range(self.n_bootstraps):
+                sample_idx = rng.choice(len(X), size=bootstrap_sample_size, replace=True)
+                sample_indices.append(sample_idx)
+            all_samples = np.array(sample_indices)
+
+            if self.n_bootstraps > n_existing:
+                # Select only the new bootstrap samples needed beyond existing ones
+                new_samples = all_samples[n_existing:]
+                new_results = cast(
+                    list[BaseCausalDiscovery],
+                    Parallel(n_jobs=self.n_jobs)(
+                        delayed(self._bootstrap_iteration)(X, self.estimator, new_samples[i])
+                        for i in trange(
+                            len(new_samples),
+                            desc="Bootstrapping",
+                            disable=not (self.show_progress and config.SHOW_PROGRESS),
+                        )
+                    ),
                 )
-            ),
-        )
+
+                # Extract and align adjacency matrices for each newly fitted estimator
+                new_graph_matrices = []
+                for est in new_results:
+                    adj_df = est.adjacency_matrix_.reindex(index=variables, columns=variables, fill_value=0)
+                    new_graph_matrices.append(adj_df.values)
+                new_graphs = np.array(new_graph_matrices)
+
+                # Append new samples and graphs onto existing warm start arrays
+                self.bootstrap_samples_ = np.concatenate([self.bootstrap_samples_, new_samples], axis=0)
+                self.bootstrap_graphs_ = np.concatenate([self.bootstrap_graphs_, new_graphs], axis=0)
+            else:
+                # Trim arrays if requested n_bootstraps is less than existing count
+                self.bootstrap_samples_ = self.bootstrap_samples_[: self.n_bootstraps]
+                self.bootstrap_graphs_ = self.bootstrap_graphs_[: self.n_bootstraps]
+        else:
+            # Generate bootstrap sample index arrays from scratch
+            sample_indices = []
+            for _ in range(self.n_bootstraps):
+                sample_idx = rng.choice(len(X), size=bootstrap_sample_size, replace=True)
+                sample_indices.append(sample_idx)
+            self.bootstrap_samples_ = np.array(sample_indices)
+
+            results = cast(
+                list[BaseCausalDiscovery],
+                Parallel(n_jobs=self.n_jobs)(
+                    delayed(self._bootstrap_iteration)(X, self.estimator, self.bootstrap_samples_[i])
+                    for i in trange(
+                        self.n_bootstraps,
+                        desc="Bootstrapping",
+                        disable=not (self.show_progress and config.SHOW_PROGRESS),
+                    )
+                ),
+            )
+
+            # Extract and align adjacency matrices for all fitted estimators
+            graph_matrices = []
+            for est in results:
+                adj_df = est.adjacency_matrix_.reindex(index=variables, columns=variables, fill_value=0)
+                graph_matrices.append(adj_df.values)
+            self.bootstrap_graphs_ = np.array(graph_matrices)
 
         # Step 2: Aggregating the bootstrap results.
-        for est in results:
-            causal_graph = est.causal_graph_
-            adjacency_matrix = est.adjacency_matrix_
+        edge_presence_mat = self.bootstrap_graphs_.sum(axis=0)
+        edge_presence = pd.DataFrame(
+            edge_presence_mat,
+            index=variables,
+            columns=variables,
+        )
 
-            self.bootstrap_graphs_.append(causal_graph)
-
-            edge_presence += adjacency_matrix
-            undirected = (adjacency_matrix == 1) & (adjacency_matrix.T == 1)
-            undirected_counts += undirected.astype(int)
+        undirected_mats = (self.bootstrap_graphs_ == 1) & (np.swapaxes(self.bootstrap_graphs_, 1, 2) == 1)
+        undirected_counts_mat = undirected_mats.astype(int).sum(axis=0)
+        undirected_counts = pd.DataFrame(
+            undirected_counts_mat,
+            index=variables,
+            columns=variables,
+        )
 
         # Step 2.1: Calculate the direction probabilities
-        rows, cols = np.where(edge_presence > 0)
-        edges = list(zip(variables[rows], variables[cols]))
+        rows, cols = np.where(edge_presence_mat > 0)
+        edges = zip(variables[rows], variables[cols])
 
         self.direction_prob_ = {}
         for edge in edges:
@@ -302,7 +348,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
 
             return dag
 
-    def get_causal_graph(self, threshold: float) -> DAG | PDAG:
+    def get_consensus_graph(self, threshold: float) -> DAG | PDAG:
         """
         Returns the consensus causal graph estimated using a specified edge probability threshold.
 
@@ -325,12 +371,25 @@ class BootstrapEstimator(BaseCausalDiscovery):
         >>> data = load_model("bnlearn/asia").simulate(n_samples=100)
         >>> est = BootstrapEstimator(HillClimbSearch())
         >>> est = est.fit(data)
-        >>> consensus_graph = est.get_causal_graph(threshold=0.3)
+        >>> consensus_graph = est.get_consensus_graph(threshold=0.3)
         """
         if not (0.0 <= threshold <= 1.0):
             raise ValueError(f"Threshold must be between 0.0 and 1.0. Got {threshold} instead.")
 
         return self._estimate_consensus_graph(threshold)
+
+    def get_causal_graph(self, threshold: float) -> DAG | PDAG:
+        """
+        Deprecated alias for get_consensus_graph.
+        """
+        import warnings
+
+        warnings.warn(
+            "get_causal_graph is deprecated, please use get_consensus_graph instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.get_consensus_graph(threshold)
 
     def get_adjacency_matrix(self, threshold: float) -> pd.DataFrame:
         """
