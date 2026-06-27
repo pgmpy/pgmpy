@@ -1,13 +1,11 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Asia(DiscreteMixin, _BaseExampleModel):
+class Asia(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    ..[1] S. Lauritzen, D. Spiegelhalter. Local Computation with Probabilities on Graphical Structures and their
-    Application to Expert Systems (with discussion). Journal of the Royal Statistical Society: Series B (Statistical
-    Methodology), 50(2):157-224, 1988.
+    - :cite:p:`lauritzen_spiegelhalter_1988`
     """
 
     _tags = {

@@ -1,12 +1,11 @@
-from .._base import ContinuousMixin, _BaseExampleModel
+from .._base import BaseExampleModel, ContinuousMixin
 
 
-class Arth150(ContinuousMixin, _BaseExampleModel):
+class Arth150(ContinuousMixin, BaseExampleModel):
     """
     References
     ----------
-    ..[1] R. Opgen-Rhein and K. Strimmer (2007). From Correlation to Causation Networks: a Simple Approximate Learning
-    Algorithm and its Application to High-Dimensional Plant Gene Expression Data. BMC System Biology, 1(37).
+    - :cite:p:`opgenrhein_strimmer_2007`
     """
 
     _tags = {

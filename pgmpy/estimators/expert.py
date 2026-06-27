@@ -7,16 +7,17 @@ import pandas as pd
 
 from pgmpy import config, logger
 from pgmpy.base import DAG
-from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.estimators import StructureEstimator
 from pgmpy.estimators.CITests import ci_registry
+from pgmpy.estimators.ExpertKnowledge import ExpertKnowledge
 from pgmpy.utils import llm_pairwise_orient
 
 
 class ExpertInLoop(StructureEstimator):
     def __init__(self, data: pd.DataFrame | None = None, **kwargs):
         warnings.warn(
-            "ExpertInLoop is deprecated. Please use pgmpy.causal_discovery.ExpertInLoop instead.",
+            """ExpertInLoop is deprecated and will be removed in v1.3.0. Please use pgmpy.causal_discovery.ExpertInLoop
+            instead.""",
             FutureWarning,
             stacklevel=2,
         )
@@ -164,7 +165,7 @@ class ExpertInLoop(StructureEstimator):
         >>> df = model.simulate(int(1e3))
 
         >>> # Using manual orientation
-        >>> dag = ExpertInLoop(df).estimate(
+        >>> dag = ExpertInLoop(df).estimate(  # doctest: +SKIP
         ...     effect_size_threshold=0.0001, orientation_fn=manual_pairwise_orient
         ... )
 
@@ -176,13 +177,13 @@ class ExpertInLoop(StructureEstimator):
         ...     "Pollution": "A binary variable representing whether the person is in a high-pollution area or not.",
         ...     "Dyspnoea": "A binary variable representing whether a person has shortness of breath.",
         ... }
-        >>> dag = ExpertInLoop(df).estimate(
+        >>> dag = ExpertInLoop(df).estimate(  # doctest: +SKIP
         ...     effect_size_threshold=0.0001,
         ...     orientation_fn=llm_pairwise_orient,
         ...     variable_descriptions=variable_descriptions,
         ...     llm_model="gemini/gemini-1.5-flash",
         ... )
-        >>> dag.edges()
+        >>> dag.edges()  # doctest: +SKIP
         OutEdgeView([('Smoker', 'Cancer'), ('Cancer', 'Xray'), ('Cancer', 'Dyspnoea'), ('Pollution', 'Cancer')])
 
         >>> # Using a custom orientation function
@@ -203,10 +204,10 @@ class ExpertInLoop(StructureEstimator):
         ...     # Default: use alphabetical ordering
         ...     return (var1, var2) if var1 < var2 else (var2, var1)
         ...
-        >>> dag = ExpertInLoop(df).estimate(
+        >>> dag = ExpertInLoop(df).estimate(  # doctest: +SKIP
         ...     effect_size_threshold=0.0001, orientation_fn=my_orientation_func
         ... )
-        >>> dag.edges()
+        >>> dag.edges()  # doctest: +SKIP
         OutEdgeView([('Smoker', 'Cancer'), ('Cancer', 'Xray'), ('Cancer', 'Dyspnoea'), ('Pollution', 'Cancer')])
         """
         # Step 0: Create a new DAG on all the variables with no edge.

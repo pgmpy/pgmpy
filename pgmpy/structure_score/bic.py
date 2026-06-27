@@ -24,6 +24,8 @@ class BIC(LogLikelihood):
     state_names : dict, optional
         Dictionary mapping each variable to its discrete states. If not specified, the unique values observed in the
         data are used.
+    max_cache_size : int or None, default=10000
+        Maximum number of local scores to cache. If None, the cache is unlimited.
 
     Examples
     --------
@@ -48,9 +50,8 @@ class BIC(LogLikelihood):
 
     References
     ----------
-    .. [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009, Section 18.3.4-18.3.6.
-    .. [2] AM Carvalho, Scoring functions for learning Bayesian networks,
-        http://www.lx.it.pt/~asmc/pub/talks/09-TA/ta_pres.pdf
+    - :cite:p:`koller_friedman_2009`
+    - :cite:p:`liao_2022`
     """
 
     _tags = {
@@ -59,9 +60,6 @@ class BIC(LogLikelihood):
         "default_for": "discrete",
         "is_parameteric": False,
     }
-
-    def __init__(self, data, state_names=None):
-        super().__init__(data, state_names=state_names)
 
     def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
         sample_size = len(self.data)

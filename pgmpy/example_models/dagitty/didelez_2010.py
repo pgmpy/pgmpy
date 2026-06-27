@@ -1,11 +1,11 @@
-from .._base import DAGMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DAGMixin
 
 
-class Didelez2010(DAGMixin, _BaseExampleModel):
+class Didelez2010(DAGMixin, BaseExampleModel):
     """
     References
     ----------
-    ..[1] Didelez, V., et al. (2010). Causal effect of hormone replacement therapy.
+    - :cite:p:`didelez_2010`
     """
 
     _tags = {

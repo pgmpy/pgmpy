@@ -698,7 +698,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         ----------
         phi1: float or `DiscreteFactor` instance
             If float, all the values are multiplied with `phi1`.
-            else if `DiscreteFactor` instance, mutliply based on matching rows.
+            else if `DiscreteFactor` instance, multiply based on matching rows.
 
         inplace: boolean
             If inplace=True it will modify the factor itself, else would return
@@ -930,7 +930,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         """
         Checks if the factor's values can be used for a valid CPD.
         """
-        return config.get_compute_backend().allclose(
+        return compat_fns.allclose(
             self.to_factor().marginalize(self.scope()[:1], inplace=False).values.flatten(),
             compat_fns.ones(np.prod(self.cardinality[:0:-1])),
             atol=0.01,

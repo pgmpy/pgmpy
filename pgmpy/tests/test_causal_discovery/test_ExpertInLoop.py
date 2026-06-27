@@ -6,13 +6,11 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import pytest
-from skbase.utils.dependencies import _check_soft_dependencies
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.base import DAG
-from pgmpy.causal_discovery import ExpertInLoop
-from pgmpy.ci_tests._base import _BaseCITest
-from pgmpy.estimators import ExpertKnowledge
+from pgmpy.causal_discovery import ExpertInLoop, ExpertKnowledge
+from pgmpy.ci_tests._base import BaseCITest
 
 
 def simple_orient(var1, var2, **kwargs):
@@ -159,10 +157,6 @@ def true_dag_edges():
 # --- Tests ---
 
 
-@pytest.mark.skipif(
-    not _check_soft_dependencies("xgboost", severity="none"),
-    reason="execute only if required dependency present",
-)
 def test_estimate(adult_data, true_dag_edges):
     """Test basic estimation with oracle orientation function."""
     true_dag = nx.DiGraph(true_dag_edges)
@@ -191,10 +185,6 @@ def test_estimate(adult_data, true_dag_edges):
     assert nx.is_directed_acyclic_graph(estimator.causal_graph_)
 
 
-@pytest.mark.skipif(
-    not _check_soft_dependencies("xgboost", severity="none"),
-    reason="execute only if required dependency present",
-)
 def test_estimate_with_orientations(adult_data_small, orientations_small):
     """Test estimation with pre-specified orientations."""
     estimator = ExpertInLoop(
@@ -211,10 +201,6 @@ def test_estimate_with_orientations(adult_data_small, orientations_small):
         assert edge in estimator.causal_graph_.edges(), f"Pre-specified orientation {edge} not found in learned graph"
 
 
-@pytest.mark.skipif(
-    not _check_soft_dependencies("xgboost", severity="none"),
-    reason="execute only if required dependency present",
-)
 def test_estimate_with_cache(adult_data_small, orientations_small):
     """Test estimation with cached orientations."""
     # Create estimator and set the orientation cache
@@ -235,10 +221,6 @@ def test_estimate_with_cache(adult_data_small, orientations_small):
     assert estimator.orientation_cache_ == orientations_small
 
 
-@pytest.mark.skipif(
-    not _check_soft_dependencies("xgboost", severity="none"),
-    reason="execute only if required dependency present",
-)
 def test_estimate_with_custom_orient_fn(adult_data_small):
     """Test estimation with custom orientation function."""
 
@@ -267,10 +249,6 @@ def test_estimate_with_custom_orient_fn(adult_data_small):
         assert edge[0] < edge[1]
 
 
-@pytest.mark.skipif(
-    not _check_soft_dependencies("xgboost", severity="none"),
-    reason="execute only if required dependency present",
-)
 def test_estimate_with_orient_fn_kwargs(adult_data_small):
     """Test that orientation function works with different configurations."""
 
@@ -306,10 +284,6 @@ def test_estimate_with_orient_fn_kwargs(adult_data_small):
         assert edge[0] > edge[1]
 
 
-@pytest.mark.skipif(
-    not _check_soft_dependencies("xgboost", severity="none"),
-    reason="execute only if required dependency present",
-)
 def test_combined_expert_knowledge(adult_data):
     """Test combination of forbidden edges, required edges, and temporal order."""
     expert_knowledge = ExpertKnowledge(
@@ -335,10 +309,6 @@ def test_combined_expert_knowledge(adult_data):
         assert u_order <= v_order, f"Edge {u}->{v} violates temporal order"
 
 
-@pytest.mark.skipif(
-    not _check_soft_dependencies("xgboost", severity="none"),
-    reason="execute only if required dependency present",
-)
 def test_edge_orientation_priority(adult_data):
     """Test that edge orientation follows the correct priority order."""
     expert_knowledge = ExpertKnowledge(temporal_order=[["Age", "Race"], ["Education"], ["Income", "HoursPerWeek"]])
@@ -469,7 +439,7 @@ def simple_dag():
     return dag
 
 
-class WeakCI(_BaseCITest):
+class WeakCI(BaseCITest):
     def __init__(self, data):
         self.data = data
         super().__init__()
@@ -480,7 +450,7 @@ class WeakCI(_BaseCITest):
         return (0.01, 0.9)
 
 
-class StrongCI(_BaseCITest):
+class StrongCI(BaseCITest):
     def __init__(self, data):
         self.data = data
         super().__init__()
@@ -491,7 +461,7 @@ class StrongCI(_BaseCITest):
         return (0.5, 0.001)
 
 
-class MockCI(_BaseCITest):
+class MockCI(BaseCITest):
     def __init__(self, data):
         self.data = data
         super().__init__()

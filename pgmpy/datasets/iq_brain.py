@@ -1,11 +1,11 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class IQBrainSize(_BaseDataset):
+class IQBrainSize(BaseDataset):
     """
     References
     ----------
-    .. [1] http://lib.stat.cmu.edu/datasets/IQ_Brain_Size
+    - :cite:p:`cmu_iqbrain`
     """
 
     _tags = {

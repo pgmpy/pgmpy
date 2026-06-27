@@ -7,9 +7,9 @@ from tqdm.auto import tqdm
 
 from pgmpy import config, logger
 from pgmpy.base import UndirectedGraph
-from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.estimators import StructureEstimator
 from pgmpy.estimators.CITests import ci_registry
+from pgmpy.estimators.ExpertKnowledge import ExpertKnowledge
 
 
 class BaseConstraintEstimator(StructureEstimator):
@@ -155,10 +155,8 @@ class BaseConstraintEstimator(StructureEstimator):
 
         References
         ----------
-        [1] Neapolitan, Learning Bayesian Networks, Section 10.1.2, Algorithm 10.2 (page 550)
-            http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
-        [2] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
-            Section 3.4.2.1 (page 85), Algorithm 3.3
+        - :cite:p:`neapolitan_2009` (Section 10.1.2, Algorithm 10.2, page 550).
+        - :cite:p:`koller_friedman_2009` (Section 3.4.2.1, page 85, Algorithm 3.3).
         """
         # Initialize initial values and structures.
         lim_neighbors = 0
@@ -169,7 +167,7 @@ class BaseConstraintEstimator(StructureEstimator):
             expert_knowledge = ExpertKnowledge()
 
         if expert_knowledge.search_space:
-            expert_knowledge.limit_search_space(self.data.columns)
+            expert_knowledge.limit_search_space(self.data)
 
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=max_cond_vars)

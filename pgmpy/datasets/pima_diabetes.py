@@ -1,11 +1,11 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class PimaDiabetes(_BaseDataset):
+class PimaDiabetes(BaseDataset):
     """
     References
     ----------
-    .. [1] https://www.kaggle.com/uciml/pima-indians-diabetes-database
+    - :cite:p:`lella_2022`
     """
 
     _tags = {

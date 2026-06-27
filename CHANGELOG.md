@@ -4,22 +4,85 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.1.2] - 2026-04-30
 ### Added
-1. Uniform warning behavior for commas in state names across file writers (BIF, XMLBIF, NET, XDSL).
-   - Writers now issue a warning when state names contain commas, which can cause issues when loading the file.
-   - The warning helps users identify potentially problematic state names.
-   - This affects `BIFWriter`, `XMLBIFWriter`, `NETWriter`, and `XDSLWriter` classes.
-   - Note: While XDSL format can handle commas in state names, a warning is still issued for consistency.
+1. Prioritization option for PC orientation to control rule application order (#3363).
+2. Effect sizes for CI tests (#3358).
+3. Caching support to CI tests for faster repeated queries (#3349).
+4. New CI tests (#3344).
+5. Estimator argument to Pillai Trace CI test (#3072).
+6. `DAG.get_random` can now generate graphs with a fixed number of edges (#3086).
+7. Causal stats in `DAG.get_stats()` method (#3143).
+8. Exposes estimators as attributes in residual based CI tests (#3367).
 
 ### Changed
-1. `BIFWriter.get_states` no longer silently replaces commas with underscores in state names.
-2. `XMLBIFWriter._make_valid_state_name` now issues a warning when it encounters commas in state names.
-3. `NETWriter.get_states` now issues a warning when it encounters commas in state names.
-4. `XDSLWriter.get_cpds` now issues a warning when it encounters commas in state names.
+1. Optimizes `power_divergence` test and PC algorithm for better performance (#3356).
+2. Refactors parameter estimation methods into a dedicated `pgmpy.parameter_estimator` package (#3325).
+3. Refactors `SHD` to accept covariant arguments in `__init__` for composability (#3310).
+4. Improves deprecation warning messages (#3343).
+5. Uses combinations instead of permutations in `_orient_colliders` for better performance (#3195).
+6. Revamps documentation website (#2615).
+7. Reject negative probability values in `is_valid_cpd` (#3052).
 
 ### Fixed
-1. Improved consistency in how different file writers handle state names with special characters.
+1. Fixes bug in collider orientation for PC (#3362).
+2. Fixes edge orientation in GES (#3304).
+3. Fixes GES forward/backward/turning phases to be deterministic across hash seeds (#3303).
+4. Fixes `__eq__` to check structure equality in `LinearGaussianBayesianNetwork` (#3276).
+5. Fixes incorrect `has_missing_data` tag for tubingen dataset (#3231).
+6. Fixes minor typo in ValueError messages in `state_name.py` (#3309).
+7. Fixes failing doctests in `BIF`, `NET`, `XMLBIF`, and `UAI` readwrite modules (#3226, #3230, #3262, #3263).
+
+## [1.1.1] - 2026-04-30
+Version skipped due to errors in build and tagging.
+
+## [1.1.0] - 2026-04-01
+### Added
+1. New role-aware causal graph infrastructure, including `PDAG`, `ADMG`, `MAG`, `AncestralBase`, and `SimpleCausalModel`.
+2. New graph utilities in `DAG`, including `to_pdag`, `to_dagitty`, `to_lavaan`, public `get_ancestors`, `edge_strength`, `get_stats`, and `__hash__`.
+3. `DAG.to_daft` and `DAG.to_graphviz` can now annotate plots with computed edge strengths.
+4. `DAG.from_dagitty` can now construct `LinearGaussianBayesianNetwork` instances when the dagitty model includes beta coefficients.
+5. New sklearn-compatible causal discovery package `pgmpy.causal_discovery` with refactored `PC`, `GES`, `HillClimbSearch`, and `ExpertInLoop` estimators.
+6. `ExpertKnowledge` now supports `search_space`, richer string representations, temporal-order handling, and tighter integration with causal discovery and `ExpertInLoop`.
+7. New causal effect APIs built around `pgmpy.identification`, including shared identification base classes and adjustment/frontdoor workflows.
+8. New `pgmpy.prediction` module with sklearn-compatible causal prediction estimators: `NaiveAdjustmentRegressor`, `DoubleMLRegressor`, and `NaiveIVRegressor`.
+9. New `pgmpy.ci_tests` package with class-based CI tests and registry-based lookup, including `FisherZ`, `PearsonrEquivalence`, and estimator-configurable `GCM`.
+10. New `pgmpy.structure_score` package and new causal graph evaluation metrics: `AdjacencyConfusionMatrix` and `OrientationConfusionMatrix`.
+11. `LinearGaussianBayesianNetwork` now supports JSON `load`/`save`, `log_likelihood`, `predict_probability`, improved `predict`, and richer simulation features for interventions, evidence, virtual interventions, and missing-data generation.
+12. `FunctionalBayesianNetwork` sampling now supports vectorized `FunctionalCPD` functions and interventional simulation.
+13. `ExpectationMaximization` gained `apply_smoothing`, configurable `init_cpds`, and support for node-specific priors.
+14. `DynamicBayesianNetwork.simulate` gained a `return_format` argument.
+15. New dataset and example-model registries, `pgmpy.datasets` and `pgmpy.example_models`, with filterable catalogs and on-demand loading.
+16. Many new benchmark datasets were added, including Boston Housing, Wine Quality, Galton Stature, Seoul Bike, Pima Diabetes, Student Performance, South German Credit, Cystic Fibrosis, Yacht Hydrodynamics, HTRU2, Myocardial Infarction, IQ Brain Size, Contraceptive Method, Pittsburgh Bridges, Residential Building, Hitters, Superconductivity, Lead, Cities, College Plans, Depression Coping, US Crime, Hungary chickenpox, the Angrist-Krueger 1980 census extract, dropout covariance data, and the Tuebingen pairs.
+17. Many new example models were added through `bnlearn`, `bnrep`, and DAG-only registries, including Andes, Barley, Child, Hailfinder, Hepar2, Insurance, Link, Munin 1-4, Pathfinder, Pigs, Sachs, Survey, Water, and continuous models such as `magic_irri`.
+18. `DiscreteBayesianNetwork` / readwrite support now includes NET/HUGIN files, improved XDSL support, and a JSON schema for Linear Gaussian model serialization.
+
+### Changed
+1. `PC`, `GES`, `HillClimbSearch`, and `ExpertInLoop` were refactored into sklearn-style causal discovery estimators with `fit`, learned `causal_graph_`, and automatic CI-test / structure-score selection based on the data type.
+2. Graph role names are now standardized to plural keys such as `exposures`, `outcomes`, and `confounders` across graph, identification, and prediction APIs.
+3. `ExpertKnowledge` now lives under `pgmpy.causal_discovery`, and structure scores are organized under `pgmpy.structure_score`.
+4. Example datasets and example models are now loaded through Hugging Face-backed registries instead of being bundled directly in the repository.
+5. `MarkovNetwork` is now deprecated in favor of `DiscreteMarkovNetwork`.
+6. `DAG.fit` moved to `DiscreteBayesianNetwork.fit`, and Bayesian-network simulation argument ordering was made more consistent across model classes.
+7. Causal discovery estimators can now score themselves, and structure scoring defaults are more automatic and BIC-oriented.
+8. CI-test internals were refactored toward registry/class-based implementations, and `scikit-base` is now used for object lookup in datasets, metrics, example models, and CI tests.
+9. Optional dependencies such as `torch` / `pyro`, Graphviz, documentation tooling, and LLM integrations are isolated more cleanly as extras.
+10. Packaging migrated from `setup.py` to `pyproject.toml`, and `pyparsing` is now an explicit dependency for read/write features.
+11. `list_models` and `list_datasets` now validate filter tags explicitly and expose richer metadata such as `has_missing_data` and `has_index_col`.
+12. `BIF`, `XMLBIF`, `NET`, and `XDSL` writers now warn when state names contain commas, and `BIFWriter` no longer silently rewrites those state names.
+
+### Fixed
+1. Fixes correctness issues in `GES`, including the latest algorithmic fix in `#3228`.
+2. Fixes order-independence issues in the stable variant of `PC`, along with earlier bugs around `max_cond_vars` propagation and skeleton building.
+3. Fixes role validation and pretreatment handling in causal prediction / DML workflows, plus multiple exposure/outcome naming inconsistencies in identification and examples.
+4. Fixes random model generation edge cases in `LinearGaussianBayesianNetwork`, including handling of isolated latent nodes and `seed=0` in `get_random_cpds`.
+5. Fixes `LinearGaussianBayesianNetwork.predict`, `predict_probability`, invalid virtual evidence errors, unbiased standard deviation estimation, and several simulation / documentation mismatches.
+6. Fixes inference and sampling issues in `FunctionalBayesianNetwork`, `ApproxInference`, and `DBNInference`.
+7. Improves `ExpectationMaximization` handling of missing data by treating all-missing columns as latent variables, dropping partially missing rows explicitly, and adding clearer validation.
+8. Improves BIF/XDSL/NET/XMLBIF read-write robustness, including faster and more reliable BIF parsing, better node/state-name handling, and cleaner warnings for punctuation in state names.
+9. Fixes `SHD` on graphs with isolated nodes, `CorrelationScore` on very small graphs, `MarkovChain.add_transition_model` validation, `FactorGraph.add_edge` defaults, and Bayesian-estimator model reconstruction with isolated nodes.
+10. Fixes compatibility issues with newer dependency and platform versions, including pandas 3 string dtype changes, newer xgboost, Python 3.14, and macOS / Windows CI environments.
+11. Many notebooks, docstrings, and usage examples across causal discovery, inference, factors, and model APIs were corrected to match the current behavior.
 
 ## [1.0.0] - 2024-03-31
 ### Added

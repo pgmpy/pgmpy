@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Mountaingoat(BIFMixin, _BaseExampleModel):
+class Mountaingoat(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/mountaingoat",
         "n_nodes": 7,

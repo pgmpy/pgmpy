@@ -1,11 +1,11 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class AppleWatchFitbit(_BaseDataset):
+class AppleWatchFitbit(BaseDataset):
     """
     References
     ----------
-    .. [1] https://www.kaggle.com/aleespinosa/apple-watch-and-fitbit-data
+    - :cite:p:`khan_2025`
     """
 
     _tags = {

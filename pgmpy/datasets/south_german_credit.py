@@ -1,11 +1,11 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class SouthGermanCredit(_BaseDataset):
+class SouthGermanCredit(BaseDataset):
     """
     References
     ----------
-    .. [1] https://archive.ics.uci.edu/ml/datasets/South+German+Credit+%28UPDATE%29
+    - :cite:p:`mendhe_2024`
     """
 
     _tags = {

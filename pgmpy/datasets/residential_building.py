@@ -1,11 +1,11 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class ResidentialBuilding(_BaseDataset):
+class ResidentialBuilding(BaseDataset):
     """
     References
     ----------
-    .. [1] https://archive.ics.uci.edu/ml/datasets/Residential+Building+Data+Set
+    - :cite:p:`uci_residential_building`
     """
 
     _tags = {

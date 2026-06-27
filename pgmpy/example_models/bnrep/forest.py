@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Forest(BIFMixin, _BaseExampleModel):
+class Forest(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/forest",
         "n_nodes": 80,

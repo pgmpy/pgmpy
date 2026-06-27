@@ -1,11 +1,11 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class DryBean(_BaseDataset):
+class DryBean(BaseDataset):
     """
     References
     ----------
-    .. [1] https://archive.ics.uci.edu/ml/datasets/Dry+Bean+Dataset
+    - :cite:p:`uci_dry_bean`
     """
 
     _tags = {

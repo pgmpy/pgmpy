@@ -9,7 +9,7 @@ from pgmpy.readwrite import BIFReader
 from pgmpy.utils.hf_hub import read_hf_file
 
 
-class _BaseExampleModel(BaseObject):
+class BaseExampleModel(BaseObject):
     """
     Base class for all models in pgmpy.
 
@@ -114,8 +114,8 @@ def load_model(name: str):
     DiscreteBayesianNetwork named 'unknown' with 37 nodes and 46 edges
     >>> len(model.nodes())
     37
-    >>> model.get_cpds("HISTORY")
-    <TabularCPD representing P(HISTORY:2 | LVFAILURE:2) at 0x7d4527a84230>
+    >>> model.get_cpds("HISTORY")  # doctest: +ELLIPSIS
+    <TabularCPD representing P(HISTORY:2 | LVFAILURE:2) at 0x...>
 
     # Loading a DAG without parameters.
 
@@ -138,7 +138,7 @@ def load_model(name: str):
     DiscreteBayesianNetwork named 'unknown' with 8 nodes and 8 edges
     """
     target_model = all_objects(
-        object_types=_BaseExampleModel,
+        object_types=BaseExampleModel,
         package_name="pgmpy.example_models",
         filter_tags={"name": name},
         return_names=False,
@@ -172,14 +172,14 @@ def list_models(**filter_tags) -> list[str]:
     Examples
     --------
     >>> from pgmpy.example_models import list_models
-    >>> list_models()
+    >>> list_models()  # doctest: +SKIP
     ['bnlearn/alarm', 'bnlearn/arth150', ..... ]
-    >>> list_models(is_discrete=True)
+    >>> list_models(is_discrete=True)  # doctest: +SKIP
     ['bnlearn/alarm', 'bnlearn/asia', 'bnlearn/cancer', ..... ]
-    >>> list_models(is_parameterized=False)
+    >>> list_models(is_parameterized=False)  # doctest: +SKIP
     ['dagitty/acid_1996', ...., ]
     """
-    valid_tags = set(_BaseExampleModel._tags.keys())
+    valid_tags = set(BaseExampleModel._tags.keys())
 
     if invalid_tags := set(filter_tags.keys()) - valid_tags:
         raise ValueError(
@@ -187,7 +187,7 @@ def list_models(**filter_tags) -> list[str]:
         )
 
     all_models = all_objects(
-        object_types=_BaseExampleModel,
+        object_types=BaseExampleModel,
         package_name="pgmpy.example_models",
         return_names=False,
         filter_tags=filter_tags,

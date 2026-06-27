@@ -1,3 +1,4 @@
+import warnings
 from collections.abc import Hashable
 from itertools import chain
 
@@ -52,6 +53,13 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         data: pd.DataFrame,
         **kwargs,
     ) -> None:
+        warnings.warn(
+            "`pgmpy.estimators.MaximumLikelihoodEstimator` is deprecated and will be removed in v1.3.0. "
+            "Please use `pgmpy.parameter_estimator.DiscreteMLE` instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
+
         if not isinstance(model, (DiscreteBayesianNetwork, JunctionTree, DAG)):
             raise NotImplementedError(
                 "Maximum Likelihood Estimate is only implemented for DiscreteBayesianNetwork, JunctionTree, and DAG"
@@ -217,12 +225,9 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
             Estimated potentials for the entire graphical model.
 
         References
-        ---------
-        [1] Kevin P. Murphy, ML Machine Learning - A Probabilistic Perspective
-            Algorithm 19.2 Iterative Proportional Fitting algorithm
-              for tabular MRFs & Section 19.5.7.4 IPF for decomposable graphical models.
-        [2] Eric P. Xing, Meng Song, Li Zhou, Probabilistic Graphical Models 10-708, Spring 2014.
-            https://www.cs.cmu.edu/~epxing/Class/10708-14/scribe_notes/scribe_note_lecture8.pdf.
+        ----------
+        - :cite:p:`murphy_2012` (Algorithm 19.2 IPF; Section 19.5.7.4).
+        - :cite:p:`xing_2014_lectures`
 
         Examples
         --------

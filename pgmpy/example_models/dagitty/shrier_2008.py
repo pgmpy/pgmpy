@@ -1,12 +1,11 @@
-from .._base import DAGMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DAGMixin
 
 
-class Shrier2008(DAGMixin, _BaseExampleModel):
+class Shrier2008(DAGMixin, BaseExampleModel):
     """
     References
     ----------
-    ..[1] Shrier, I. (2008). Understanding the causal effect of warm-up on injury risk.
-    British Journal of Sports Medicine, 42(10), 852–853.
+    - :cite:p:`shrier_2008`
     """
 
     _tags = {

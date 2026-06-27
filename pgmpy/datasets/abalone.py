@@ -1,13 +1,12 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class AbaloneContinuous(_BaseDataset):
+class AbaloneContinuous(BaseDataset):
     """
     References
     ----------
-    .. [1] Lopez-Paz, D., Muandet, K., Schölkopf, B., & Tolstikhin, I. (2015, June). Towards a learning theory of
-           cause-effect inference. In International Conference on Machine Learning (pp. 1452-1461). PMLR.
-    .. [2] https://archive.ics.uci.edu/ml/datasets/abalone
+    - :cite:p:`lopezpaz_2015`
+    - :cite:p:`uci_abalone`
     """
 
     _tags = {
@@ -36,13 +35,12 @@ class AbaloneContinuous(_BaseDataset):
     ordinal_variables = dict()
 
 
-class AbaloneMixed(_BaseDataset):
+class AbaloneMixed(BaseDataset):
     """
     References
     ----------
-    .. [1] Lopez-Paz, D., Muandet, K., Schölkopf, B., & Tolstikhin, I. (2015, June). Towards a learning theory of
-           cause-effect inference. In International Conference on Machine Learning (pp. 1452-1461). PMLR.
-    .. [2] https://archive.ics.uci.edu/ml/datasets/abalone
+    - :cite:p:`lopezpaz_2015`
+    - :cite:p:`uci_abalone`
     """
 
     _tags = {

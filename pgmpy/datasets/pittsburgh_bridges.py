@@ -1,11 +1,11 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class PittsburghBridges(_BaseDataset):
+class PittsburghBridges(BaseDataset):
     """
     References
     ----------
-    .. [1] https://archive.ics.uci.edu/ml/datasets/Pittsburgh+Bridges
+    - :cite:p:`uci_pittsburgh_bridges`
     """
 
     _tags = {
