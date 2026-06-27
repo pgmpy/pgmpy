@@ -9,11 +9,11 @@ from tqdm import tqdm
 
 from pgmpy import config
 from pgmpy.base import DAG
-from pgmpy.estimators.CITests import ci_registry
-from pgmpy.metrics import _BaseUnsupervisedMetric
+from pgmpy.ci_tests import get_ci_test
+from pgmpy.metrics import BaseUnsupervisedMetric
 
 
-class PermutationTest(_BaseUnsupervisedMetric):
+class PermutationTest(BaseUnsupervisedMetric):
     """
     Permutation-based test for falsifying causal graphs using observational data.
 
@@ -29,7 +29,7 @@ class PermutationTest(_BaseUnsupervisedMetric):
 
     Parameters
     ----------
-    dag: pgmpy.base.DAG
+    dag : pgmpy.base.DAG
         The causal graph to test.
 
     data : pandas.DataFrame
@@ -39,12 +39,12 @@ class PermutationTest(_BaseUnsupervisedMetric):
         Significance level for conditional independence tests. Lower values make
         the test more conservative for accepting the null hypothesis.
 
-    n_permutations : int, optional
+    n_permutations : int or None
         Number of random node permutations to generate for the baseline.
         If None, uses max(20, int(1/significance_level)).
         If -1, uses all possible permutations (factorial of number of nodes)
 
-    ci_test : str, Instance of BaseCITest, optional
+    ci_test : str, Instance of BaseCITest
         The statistical conditional independence test to use for evaluating the Local Markov Conditions in data.
         See :class:`pgmpy.estimators.CITests` for more details.
 
@@ -171,15 +171,13 @@ class PermutationTest(_BaseUnsupervisedMetric):
         n_tpa_violations = 0
         for triple in triples:
             p_node, p_nd, p_parents = self._permute_triple(triple, perm_mapping)
-            res = ci_test(
+            ci_test(
                 X=p_node,
                 Y=p_nd,
                 Z=p_parents,
-                data=X,
-                boolean=False,
                 significance_level=self.significance_level,
             )
-            pval = res[1]
+            pval = ci_test.p_value_
             if pval <= self.significance_level:
                 n_lmc_violations += 1
             # TPA: check d-separation in original DAG
@@ -209,9 +207,7 @@ class PermutationTest(_BaseUnsupervisedMetric):
         X: pd.DataFrame,
         causal_graph: DAG,
     ):
-
         # Step 0: Initialize variables and validate inputs.
-
         nodes = list(causal_graph.nodes())
         data_columns = set(X.columns)
 
@@ -226,17 +222,15 @@ class PermutationTest(_BaseUnsupervisedMetric):
         else:
             n_permutations = self.n_permutations
 
-        ci_test = ci_registry.get_test(self.ci_test, data=X)
+        ci_test = get_ci_test(test=self.ci_test, data=X)
         permutation_violations = []
         tpa_violations = []
         n_within_mec = 0
 
         # Step 1: Compute LMC violations for the given DAG.
-
         n_lmc_violations, _, triples = self._get_violations(ci_test, X, causal_graph)
 
         # Step 2: Generate permutations and compute LMC violations for each to construct null distribution.
-
         perm_list = self._get_permutation_list(nodes, n_permutations)
         if self.show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(perm_list, desc="Constructing Null Distribution")
