@@ -388,18 +388,43 @@ def test_search_space():
         ("Age", "Income"),
     ]
 
+    allowed_adjacencies = {frozenset(edge) for edge in search_space}
+
     expert_knowledge = ExpertKnowledge(search_space=search_space)
 
     est = PC(
         expert_knowledge=expert_knowledge,
-        enforce_expert_knowledge=True,
         show_progress=False,
     )
 
     est.fit(X=adult_data)
-    # assert if dag is a subset of search_space
-    for edge in est.causal_graph_.edges():
-        assert edge in search_space
+    # The learned adjacencies are restricted to the search space (no flag needed).
+    for u, v in est.causal_graph_.edges():
+        assert frozenset((u, v)) in allowed_adjacencies
+
+
+def test_required_edge_enforced_against_independent_data():
+    # A, B, C are mutually independent, so PC would normally drop every edge.
+    rng = np.random.default_rng(42)
+    data = pd.DataFrame(
+        {
+            "A": rng.integers(0, 2, size=2000),
+            "B": rng.integers(0, 2, size=2000),
+            "C": rng.integers(0, 2, size=2000),
+        }
+    )
+    expert = ExpertKnowledge(required_edges=[("A", "B")])
+    est = PC(
+        variant="stable",
+        ci_test="chi_square",
+        expert_knowledge=expert,
+        n_jobs=1,
+        show_progress=False,
+    )
+    est.fit(X=data)
+    pdag = est.causal_graph_
+    # The required edge is retained and oriented A->B despite A, B being independent.
+    assert ("A", "B") in pdag.directed_edges
 
 
 @pytest.mark.parametrize("ci_test", ["pearsonr", "pillai", "gcm"])
@@ -674,6 +699,7 @@ def test_temporal_ordering_sepsets_and_skeleton():
     np.random.seed(42)
     data = pd.DataFrame(np.random.randint(0, 2, size=(100, 4)), columns=["A", "B", "C", "D"])
     expert = ExpertKnowledge(temporal_order=[["D"], ["B"], ["C"], ["A"]])
+    expert.fit(data)
 
     skel, _ = PC(
         variant="stable",

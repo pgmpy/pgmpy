@@ -2,8 +2,8 @@ import pandas as pd
 import pytest
 
 from pgmpy.base import DAG
+from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.datasets import list_datasets, load_dataset
-from pgmpy.estimators import ExpertKnowledge
 
 ALL_DATASETS = [
     "abalone_continuous",
