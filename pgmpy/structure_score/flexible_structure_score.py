@@ -125,10 +125,6 @@ class FlexibleStructureScore(BaseStructureScore):
         self.n_params_fn = n_params
         super().__init__(data, state_names=state_names)
 
-    # ------------------------------------------------------------------
-    # Public interface (required by BaseStructureScore)
-    # ------------------------------------------------------------------
-
     def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
         """
         Compute the local structure score for ``variable`` given ``parents``.
