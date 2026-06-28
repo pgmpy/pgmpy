@@ -47,6 +47,8 @@ _OPTIMIZER_VALID_KWARGS = {
 
 def _validate_optimizer(optimizer: str, optimizer_kwargs: dict) -> None:
     """Validate optimizer name and kwargs, raising ValueError on any invalid input."""
+    if not isinstance(optimizer, str):
+        raise ValueError(f"optimizer must be a string, got {type(optimizer)}")
     name = optimizer.lower()
     if name not in _OPTIMIZER_VALID_KWARGS:
         valid = ", ".join(f"'{k}'" for k in sorted(_OPTIMIZER_VALID_KWARGS))
@@ -127,8 +129,8 @@ class _CASTLEModel(nn.Module):
             "adam": torch.optim.Adam,
             "sgd": torch.optim.SGD,
             "adamw": torch.optim.AdamW,
-        }[self.train_cfg.optimizer]
-        optimizer = optimizer_cls(self.parameters(), **self.train_cfg.optimizer_kwargs)
+        }[self.train_cfg.optimizer.lower()]
+        optimizer = optimizer_cls(self.parameters(), **(self.train_cfg.optimizer_kwargs or {}))
 
         best_loss = float("inf")
         patience_counter = 0
@@ -270,10 +272,9 @@ class CASTLE(BaseCausalDiscovery):
         scaler: object | None = None,
         tensorboard_log_dir: str | None = None,
         seed: int = 42,
-        **optimizer_kwargs,
+        optimizer_kwargs: dict | None = None,
     ):
         """Initialize the CASTLE estimator."""
-        _validate_optimizer(optimizer, optimizer_kwargs)
         _check_soft_dependencies(
             "torch",
             msg="CASTLE requires PyTorch. Install it with: pip install torch",
@@ -283,7 +284,7 @@ class CASTLE(BaseCausalDiscovery):
         self.dag_weight = dag_weight
         self.sparsity_weight = sparsity_weight
         self.dag_penalty = dag_penalty
-        self.optimizer = optimizer.lower()
+        self.optimizer = optimizer
         self.optimizer_kwargs = optimizer_kwargs
         self.batch_size = batch_size
         self.hidden_dim = hidden_dim
@@ -298,11 +299,10 @@ class CASTLE(BaseCausalDiscovery):
 
     def _fit(self, X: pd.DataFrame):
         """Fit the CASTLE model and construct the causal DAG."""
+        _validate_optimizer(self.optimizer, self.optimizer_kwargs or {})
+
         if X.shape[1] == 1:
             raise ValueError("CASTLE requires at least 2 columns (one target and at least one feature).")
-        non_numeric = [col for col in X.columns if not pd.api.types.is_numeric_dtype(X[col])]
-        if non_numeric:
-            raise ValueError(f"All columns must be numeric. Non-numeric columns found: {non_numeric}.")
 
         if self.target_col is None:
             target_col = X.columns[0]
