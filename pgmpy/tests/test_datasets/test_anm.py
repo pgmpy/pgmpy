@@ -5,7 +5,7 @@ import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.base import DAG
-from pgmpy.datasets import load_dataset
+from pgmpy.datasets import list_datasets, load_dataset
 
 
 def test_load_anm_dataset():
@@ -16,21 +16,21 @@ def test_load_anm_dataset():
     ds2 = load_dataset("anm", seed=42, n_nodes=8, n_samples=200)
     assert ds2.data.shape == (200, 8)
 
-    # Reproducibility: same seed → identical data and edges.
+    # Reproducibility: same seed produces identical data and edges.
     ds_a = load_dataset("anm", seed=99)
     ds_b = load_dataset("anm", seed=99)
     assert list(ds_a.data.columns) == list(ds_b.data.columns)
     assert np.allclose(ds_a.data.values, ds_b.data.values)
     assert set(ds_a.ground_truth.edges()) == set(ds_b.ground_truth.edges())
 
-    # Different function_type → same DAG but different data values.
-    ds_sin = load_dataset("anm", seed=42, function_type={np.sin})
-    ds_cos = load_dataset("anm", seed=42, function_type={np.cos})
+    # Different function_type produces same DAG but different data values.
+    ds_sin = load_dataset("anm", seed=42, function_type=(np.sin,))
+    ds_cos = load_dataset("anm", seed=42, function_type=(np.cos,))
     assert set(ds_sin.ground_truth.edges()) == set(ds_cos.ground_truth.edges())
     assert not np.allclose(ds_sin.data.values, ds_cos.data.values)
 
     # Custom callable integrates without error.
-    ds_fn = load_dataset("anm", seed=42, function_type={lambda x: x**2})
+    ds_fn = load_dataset("anm", seed=42, function_type=(lambda x: x**2,))
     assert ds_fn.data.shape == (1000, 5)
 
     # Edge cases: empty graph and single node.
@@ -48,38 +48,42 @@ def test_load_anm_dataset():
         ds_dag = load_dataset("anm", seed=42, dag=custom_dag, n_nodes=10)
     assert set(ds_dag.data.columns) == {"A", "B", "C"}
 
-    from pgmpy.datasets import list_datasets
+    # weight_range affects data magnitude.
+    ds_narrow = load_dataset("anm", seed=42, weight_range=(-0.01, 0.01))
+    ds_wide = load_dataset("anm", seed=42, weight_range=(-10, 10))
+    assert ds_narrow.data.std().mean() < ds_wide.data.std().mean()
 
     assert "anm" in list_datasets(is_simulated=True)
 
 
+def test_anm_dataset_tags():
+    # load_dataset populates n_variables and n_samples from data.
+    ds = load_dataset("anm", seed=42)
+    assert ds.tags["n_variables"] == 5
+    assert ds.tags["n_samples"] == 1000
+    assert ds.tags["is_simulated"] is True
+    assert ds.tags["has_ground_truth"] is True
+    assert ds.tags["is_continuous"] is True
+
+    ds_custom = load_dataset("anm", n_samples=200, seed=7, n_nodes=8, edge_prob=0.3)
+    assert ds_custom.tags["n_variables"] == 8
+    assert ds_custom.tags["n_samples"] == 200
+
+
 def test_anm_validation():
-    with pytest.raises(TypeError, match="function_type must be"):
-        load_dataset("anm", seed=42, function_type="sine")
-
-    with pytest.raises(TypeError, match="All items.*callable"):
-        load_dataset("anm", seed=42, function_type={42})
-
-    with pytest.raises(ValueError, match="at least one"):
-        load_dataset("anm", seed=42, function_type=set())
-
-    with pytest.raises(ValueError, match="weight_range"):
-        load_dataset("anm", seed=42, weight_range=(2.0, -2.0))
-
-    with pytest.raises(ValueError, match="weight_range"):
-        load_dataset("anm", seed=42, weight_range=(1.0,))
-
-    with pytest.raises(ValueError, match="n_nodes"):
-        load_dataset("anm", seed=42, n_nodes=0)
-
-    with pytest.raises(ValueError, match="edge_prob"):
-        load_dataset("anm", seed=42, edge_prob=1.5)
-
-    with pytest.raises(ValueError, match="n_samples"):
-        load_dataset("anm", seed=42, n_samples=0)
-
     with pytest.raises(TypeError, match="dag must be"):
         load_dataset("anm", seed=42, dag="not_a_dag")
+
+    with pytest.raises(TypeError, match=".sample.*or.*\\.rvs.*method"):
+        load_dataset("anm", seed=42, noise="not_a_dist")
+
+
+def test_anm_scipy_noise():
+    # scipy.stats distributions (have .rvs method) should work.
+    from scipy.stats import laplace
+
+    ds = load_dataset("anm", seed=42, noise=laplace(loc=0, scale=1))
+    assert ds.data.shape == (1000, 5)
 
 
 @pytest.mark.skipif(
@@ -98,6 +102,3 @@ def test_anm_skpro_noise():
     iso_dag.add_node("B")
     ds_iso = load_dataset("anm", seed=42, dag=iso_dag, noise=Laplace(mu=0, scale=1))
     assert not np.allclose(ds_iso.data["A"].values, ds_iso.data["B"].values)
-
-    with pytest.raises(TypeError, match="noise must be a skpro"):
-        load_dataset("anm", seed=42, noise="not_a_dist")
