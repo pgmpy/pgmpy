@@ -20,6 +20,7 @@ from pgmpy.structure_score import FlexibleStructureScore
 # Shared fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def linear_gaussian_data():
     """Ground truth: y = 2*x + noise, noise ~ N(0, 1)."""
@@ -32,15 +33,18 @@ def linear_gaussian_data():
 @pytest.fixture
 def spline_lr():
     """CAM-style estimator: spline features + linear regression."""
-    return Pipeline([
-        ("spline", SplineTransformer(degree=3, n_knots=5)),
-        ("lr", LinearRegression()),
-    ])
+    return Pipeline(
+        [
+            ("spline", SplineTransformer(degree=3, n_knots=5)),
+            ("lr", LinearRegression()),
+        ]
+    )
 
 
 # ---------------------------------------------------------------------------
 # Initialisation
 # ---------------------------------------------------------------------------
+
 
 class TestInit:
     def test_defaults(self, linear_gaussian_data):
@@ -50,25 +54,27 @@ class TestInit:
         assert s.n_params_fn is None
 
     def test_custom_noise_dist(self, linear_gaussian_data):
-        s = FlexibleStructureScore(linear_gaussian_data, LinearRegression(),
-                                   noise_dist=stats.laplace)
+        s = FlexibleStructureScore(
+            linear_gaussian_data, LinearRegression(), noise_dist=stats.laplace
+        )
         assert s.noise_dist is stats.laplace
 
     def test_none_penalty(self, linear_gaussian_data):
-        s = FlexibleStructureScore(linear_gaussian_data, LinearRegression(),
-                                   penalty=None)
+        s = FlexibleStructureScore(
+            linear_gaussian_data, LinearRegression(), penalty=None
+        )
         assert s.penalty is None
 
     def test_callable_penalty_stored(self, linear_gaussian_data):
         fn = lambda k, n: k * 2.0
-        s = FlexibleStructureScore(linear_gaussian_data, LinearRegression(),
-                                   penalty=fn)
+        s = FlexibleStructureScore(linear_gaussian_data, LinearRegression(), penalty=fn)
         assert s.penalty is fn
 
 
 # ---------------------------------------------------------------------------
 # _penalty_value
 # ---------------------------------------------------------------------------
+
 
 class TestPenaltyValue:
     def setup_method(self):
@@ -101,6 +107,7 @@ class TestPenaltyValue:
 # _n_params
 # ---------------------------------------------------------------------------
 
+
 class TestNParams:
     def test_sklearn_linear_regression(self, linear_gaussian_data):
         s = FlexibleStructureScore(linear_gaussian_data, LinearRegression())
@@ -110,18 +117,24 @@ class TestNParams:
         assert s._n_params(est, X) == 2
 
     def test_custom_n_params_fn(self, linear_gaussian_data):
-        s = FlexibleStructureScore(linear_gaussian_data, LinearRegression(),
-                                   n_params=lambda est, X: 99)
+        s = FlexibleStructureScore(
+            linear_gaussian_data, LinearRegression(), n_params=lambda est, X: 99
+        )
         X = linear_gaussian_data[["x"]].to_numpy()
         est = LinearRegression().fit(X, linear_gaussian_data["y"].to_numpy())
         assert s._n_params(est, X) == 99
 
     def test_statsmodels_convention(self, linear_gaussian_data):
         """Estimator with df_model attribute (statsmodels-like)."""
+
         class FakeStatsmodels:
             df_model = 3
-            def fit(self, X, y): return self
-            def predict(self, X): return np.zeros(len(X))
+
+            def fit(self, X, y):
+                return self
+
+            def predict(self, X):
+                return np.zeros(len(X))
 
         s = FlexibleStructureScore(linear_gaussian_data, FakeStatsmodels())
         est = FakeStatsmodels()
@@ -131,10 +144,15 @@ class TestNParams:
 
     def test_pygam_convention(self, linear_gaussian_data):
         """Estimator with statistics_['edof'] attribute (pygam-like)."""
+
         class FakePygam:
             statistics_ = {"edof": 7}
-            def fit(self, X, y): return self
-            def predict(self, X): return np.zeros(len(X))
+
+            def fit(self, X, y):
+                return self
+
+            def predict(self, X):
+                return np.zeros(len(X))
 
         s = FlexibleStructureScore(linear_gaussian_data, FakePygam())
         est = FakePygam()
@@ -143,8 +161,11 @@ class TestNParams:
 
     def test_unknown_estimator_raises(self, linear_gaussian_data):
         class WeirdEst:
-            def fit(self, X, y): return self
-            def predict(self, X): return np.zeros(len(X))
+            def fit(self, X, y):
+                return self
+
+            def predict(self, X):
+                return np.zeros(len(X))
 
         s = FlexibleStructureScore(linear_gaussian_data, WeirdEst())
         est = WeirdEst()
@@ -156,6 +177,7 @@ class TestNParams:
 # ---------------------------------------------------------------------------
 # _local_score correctness
 # ---------------------------------------------------------------------------
+
 
 class TestLocalScore:
     def test_returns_float(self, linear_gaussian_data):
@@ -173,42 +195,53 @@ class TestLocalScore:
 
     def test_true_parent_scores_higher_than_no_parent(self, linear_gaussian_data):
         """True causal parent should give higher score than empty parent set."""
-        s = FlexibleStructureScore(linear_gaussian_data, LinearRegression(),
-                                   penalty=None)
+        s = FlexibleStructureScore(
+            linear_gaussian_data, LinearRegression(), penalty=None
+        )
         assert s.local_score("y", ("x",)) > s.local_score("y", ())
 
     def test_bic_lower_than_aic(self, linear_gaussian_data):
         """BIC penalises more than AIC for n > e^2 ≈ 7.4."""
-        s_aic = FlexibleStructureScore(linear_gaussian_data, LinearRegression(),
-                                       penalty="aic")
-        s_bic = FlexibleStructureScore(linear_gaussian_data, LinearRegression(),
-                                       penalty="bic")
+        s_aic = FlexibleStructureScore(
+            linear_gaussian_data, LinearRegression(), penalty="aic"
+        )
+        s_bic = FlexibleStructureScore(
+            linear_gaussian_data, LinearRegression(), penalty="bic"
+        )
         assert s_bic.local_score("y", ("x",)) < s_aic.local_score("y", ("x",))
 
     def test_no_penalty_highest(self, linear_gaussian_data):
         """No penalty should always return higher score than penalised variants."""
-        s_none = FlexibleStructureScore(linear_gaussian_data, LinearRegression(),
-                                        penalty=None)
-        s_aic = FlexibleStructureScore(linear_gaussian_data, LinearRegression(),
-                                       penalty="aic")
+        s_none = FlexibleStructureScore(
+            linear_gaussian_data, LinearRegression(), penalty=None
+        )
+        s_aic = FlexibleStructureScore(
+            linear_gaussian_data, LinearRegression(), penalty="aic"
+        )
         assert s_none.local_score("y", ("x",)) > s_aic.local_score("y", ("x",))
 
     def test_laplace_noise(self, linear_gaussian_data):
         """LiNGAM-flavoured: Laplace noise should run without error."""
-        s = FlexibleStructureScore(linear_gaussian_data, LinearRegression(),
-                                   noise_dist=stats.laplace, penalty="bic")
+        s = FlexibleStructureScore(
+            linear_gaussian_data,
+            LinearRegression(),
+            noise_dist=stats.laplace,
+            penalty="bic",
+        )
         assert np.isfinite(s.local_score("y", ("x",)))
 
     def test_callable_penalty(self, linear_gaussian_data):
         """Custom penalty callable should run and return finite score."""
-        s = FlexibleStructureScore(linear_gaussian_data, LinearRegression(),
-                                   penalty=lambda k, n: k * 3.0)
+        s = FlexibleStructureScore(
+            linear_gaussian_data, LinearRegression(), penalty=lambda k, n: k * 3.0
+        )
         assert np.isfinite(s.local_score("y", ("x",)))
 
     def test_invalid_penalty_raises_on_call(self, linear_gaussian_data):
         """Invalid penalty string should raise ValueError when scoring."""
-        s = FlexibleStructureScore(linear_gaussian_data, LinearRegression(),
-                                   penalty="invalid")
+        s = FlexibleStructureScore(
+            linear_gaussian_data, LinearRegression(), penalty="invalid"
+        )
         with pytest.raises(ValueError, match="Unknown penalty"):
             s.local_score("y", ("x",))
 
@@ -241,6 +274,7 @@ class TestLocalScore:
 # End-to-end: CAM direction recovery
 # ---------------------------------------------------------------------------
 
+
 class TestCAMRecovery:
     """
     CAM-style scoring should prefer the true causal direction over the reverse
@@ -254,13 +288,15 @@ class TestCAMRecovery:
         rng = np.random.default_rng(0)
         n = 500
         x = rng.standard_normal(n)
-        y = x ** 2 + 0.3 * rng.standard_normal(n)
+        y = x**2 + 0.3 * rng.standard_normal(n)
         data = pd.DataFrame({"x": x, "y": y})
 
-        spline_lr = Pipeline([
-            ("spline", SplineTransformer(degree=3, n_knots=5)),
-            ("lr", LinearRegression()),
-        ])
+        spline_lr = Pipeline(
+            [
+                ("spline", SplineTransformer(degree=3, n_knots=5)),
+                ("lr", LinearRegression()),
+            ]
+        )
         s = FlexibleStructureScore(data, spline_lr, penalty=None)
 
         # True DAG: x -> y
@@ -282,8 +318,9 @@ class TestCAMRecovery:
         y = 2 * x + rng.laplace(scale=0.5, size=n)
         data = pd.DataFrame({"x": x, "y": y})
 
-        s = FlexibleStructureScore(data, LinearRegression(),
-                                   noise_dist=stats.laplace, penalty="bic")
+        s = FlexibleStructureScore(
+            data, LinearRegression(), noise_dist=stats.laplace, penalty="bic"
+        )
         score_true = s.local_score("y", ("x",)) + s.local_score("x", ())
         score_reverse = s.local_score("x", ("y",)) + s.local_score("y", ())
 
@@ -294,6 +331,7 @@ class TestCAMRecovery:
 # ---------------------------------------------------------------------------
 # Edge cases
 # ---------------------------------------------------------------------------
+
 
 class TestEdgeCases:
     def test_single_parent(self, linear_gaussian_data):
@@ -306,7 +344,9 @@ class TestEdgeCases:
 
     def test_score_decreases_with_stronger_bic_penalty(self, linear_gaussian_data):
         """Stronger penalty → lower score."""
-        s_bic = FlexibleStructureScore(linear_gaussian_data, LinearRegression(), penalty="bic")
+        s_bic = FlexibleStructureScore(
+            linear_gaussian_data, LinearRegression(), penalty="bic"
+        )
         s_strong = FlexibleStructureScore(
             linear_gaussian_data,
             LinearRegression(),
