@@ -16,7 +16,7 @@ from .StructureScore import (
     StructureScore,
 )
 from .ExhaustiveSearch import ExhaustiveSearch
-from ..causal_discovery import ExpertKnowledge
+from .ExpertKnowledge import ExpertKnowledge
 from .HillClimbSearch import HillClimbSearch
 from .TreeSearch import TreeSearch
 from .SEMEstimator import IVEstimator, SEMEstimator
