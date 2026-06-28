@@ -114,7 +114,6 @@ def test_lmc_violations(model_helper, data_helper, perm_test):
     ci_test_chosen = get_ci_test("chi_square", data=data_helper)
     n_lmc_violations, n_tpa_violations, triples = perm_test._get_violations(
         ci_test_chosen,
-        data_helper,
         model_helper,
     )
     assert isinstance(n_lmc_violations, int)
@@ -132,7 +131,6 @@ def test_lmc_violations(model_helper, data_helper, perm_test):
         permuted_dag.add_edges_from(nx_permuted_dag.edges())
         n_violations_perm, _, _ = perm_test._get_violations(
             ci_test_chosen,
-            data_helper,
             permuted_dag,
         )
         assert n_violations_perm >= n_lmc_violations or n_violations_perm >= 0
