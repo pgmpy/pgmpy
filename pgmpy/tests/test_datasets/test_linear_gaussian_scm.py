@@ -34,3 +34,29 @@ def test_load_linear_gaussian_dataset():
 
     # The dataset appears in list_datasets with the is_simulated tag.
     assert "linear_gaussian" in list_datasets(is_simulated=True)
+
+
+def test_linear_gaussian_dataset_tags():
+    # load_dataset attaches the simulator's class tags to the returned Dataset,
+    # with n_variables and n_samples populated from the generated data.
+    ds = load_dataset("linear_gaussian", seed=42)
+    assert ds.tags == {
+        "name": "linear_gaussian",
+        "n_variables": 5,
+        "n_samples": 1000,
+        "has_ground_truth": True,
+        "has_expert_knowledge": False,
+        "has_missing_data": False,
+        "has_index_col": False,
+        "is_simulated": True,
+        "is_interventional": False,
+        "is_discrete": False,
+        "is_continuous": True,
+        "is_mixed": False,
+        "is_ordinal": False,
+    }
+
+    # n_variables and n_samples track the requested dimensions.
+    ds_custom = load_dataset("linear_gaussian", n_samples=200, seed=7, n_nodes=8, edge_prob=0.3)
+    assert ds_custom.tags["n_variables"] == 8
+    assert ds_custom.tags["n_samples"] == 200

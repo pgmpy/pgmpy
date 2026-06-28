@@ -374,12 +374,15 @@ def load_dataset(
     if issubclass(target_cls, BaseSimulatedDataset):
         # Build the model once and reuse it for both the data and the ground-truth graph.
         simulator = target_cls(seed=seed, **sim_kwargs)
+        df = simulator.load_dataframe(n_samples=n_samples)
+        tags = target_cls.get_class_tags()
+        tags["n_samples"], tags["n_variables"] = df.shape
         return Dataset(
             name=name,
-            data=simulator.load_dataframe(n_samples=n_samples),
+            data=df,
             expert_knowledge=None,
             ground_truth=simulator.load_ground_truth(),
-            tags=target_cls.get_class_tags(),
+            tags=tags,
         )
 
     return Dataset(
