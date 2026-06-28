@@ -306,8 +306,10 @@ class TestEdgeCases:
 
     def test_score_decreases_with_stronger_bic_penalty(self, linear_gaussian_data):
         """Stronger penalty → lower score."""
-        s_bic = FlexibleStructureScore(linear_gaussian_data, LinearRegression(),
-                                       penalty="bic")
-        s_strong = FlexibleStructureScore(linear_gaussian_data, LinearRegression(),
-                                          penalty=lambda k, n: k * np.log(n) * 10)
+        s_bic = FlexibleStructureScore(linear_gaussian_data, LinearRegression(), penalty="bic")
+        s_strong = FlexibleStructureScore(
+            linear_gaussian_data,
+            LinearRegression(),
+            penalty=lambda k, n: k * np.log(n) * 10,
+        )
         assert s_strong.local_score("y", ("x",)) < s_bic.local_score("y", ("x",))
