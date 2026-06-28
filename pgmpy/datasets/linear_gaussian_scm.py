@@ -9,12 +9,15 @@ class LinearGaussianSCM(BaseSimulatedDataset):
     """
     Simulates a dataset from a random Linear Gaussian SCM.
 
-    Delegates graph and parameter generation to
-    ``LinearGaussianBayesianNetwork.get_random`` and data sampling
-    to ``LinearGaussianBayesianNetwork.simulate``.
+    The random graph and its Gaussian parameters are generated once in
+    ``__init__`` via ``LinearGaussianBayesianNetwork.get_random`` and stored
+    on the instance. ``load_dataframe`` samples from that model and
+    ``load_ground_truth`` returns its DAG, so both share a single model.
 
     Parameters
     ----------
+    seed : int, optional
+        Random seed for reproducible graph, parameter, and data generation.
     n_nodes : int, default 5
         Number of variables in the generated DAG.
     edge_prob : float, default 0.5
@@ -47,70 +50,28 @@ class LinearGaussianSCM(BaseSimulatedDataset):
         )
         self.seed = seed
 
-    @classmethod
-    def load_dataframe(
-        cls,
-        n_samples: int | None = None,
-        seed: int | None = None,
-        n_nodes: int = 5,
-        edge_prob: float = 0.5,
-        scale: float = 1.0,
-    ) -> pd.DataFrame:
-        """Generate data from a random Linear Gaussian SCM.
+    def load_dataframe(self, n_samples: int | None = None) -> pd.DataFrame:
+        """Sample data from the generated Linear Gaussian SCM.
 
         Parameters
         ----------
         n_samples : int, optional
             Number of samples to generate. Defaults to 1000.
-        seed : int, optional
-            Random seed for reproducible graph and data generation.
-        n_nodes : int, default 5
-            Number of variables in the generated DAG.
-        edge_prob : float, default 0.5
-            Probability of an edge between any two topologically ordered
-            nodes.
-        scale : float, default 1.0
-            Scale parameter for coefficient and noise sampling in
-            ``LinearGaussianBayesianNetwork.get_random``.
 
         Returns
         -------
         pd.DataFrame
         """
-        scm = cls(seed=seed, n_nodes=n_nodes, edge_prob=edge_prob, scale=scale)
-        return scm.model.simulate(
+        return self.model.simulate(
             n_samples=n_samples if n_samples is not None else 1000,
-            seed=seed,
+            seed=self.seed,
         )
 
-    @classmethod
-    def load_ground_truth(
-        cls,
-        seed: int | None = None,
-        n_nodes: int = 5,
-        edge_prob: float = 0.5,
-        scale: float = 1.0,
-    ) -> DAG:
+    def load_ground_truth(self) -> DAG:
         """Return the ground-truth DAG of the generated SCM.
-
-        Parameters
-        ----------
-        seed : int, optional
-            Must match the seed used in ``load_dataframe`` to get the
-            corresponding graph.
-        n_nodes : int, default 5
-            Number of variables in the generated DAG.
-        edge_prob : float, default 0.5
-            Probability of an edge between any two topologically ordered
-            nodes.
-        scale : float, default 1.0
-            Accepted for call-signature compatibility with
-            ``load_dataset``. The graph structure is independent of
-            this value.
 
         Returns
         -------
         DAG
         """
-        scm = cls(seed=seed, n_nodes=n_nodes, edge_prob=edge_prob)
-        return DAG(scm.model)
+        return DAG(self.model)
