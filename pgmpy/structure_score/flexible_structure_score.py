@@ -165,39 +165,15 @@ class FlexibleStructureScore(BaseStructureScore):
         if len(parents) == 0:
             # No parents: score the marginal distribution of y directly.
             # This is log p(y) under noise_dist — the correct baseline.
-            try:
-                params = self.noise_dist.fit(y)
-            except Exception as exc:
-                raise RuntimeError(
-                    f"noise_dist.fit() failed on marginal of '{variable}'. "
-                    f"Ensure noise_dist is a scipy.stats continuous distribution. "
-                    f"Original error: {exc}"
-                ) from exc
+            params = self.noise_dist.fit(y)
             log_L = float(self.noise_dist.logpdf(y, *params).sum())
             k = len(params)
             return log_L - self._penalty_value(k, n) / 2
 
         X = data[list(parents)].to_numpy()
-
-        try:
-            est = clone(self.estimator).fit(X, y)
-        except Exception as exc:
-            raise RuntimeError(
-                f"estimator.fit() failed for '{variable}' ~ {list(parents)}. "
-                f"Ensure the estimator is sklearn-compatible (fit/predict). "
-                f"Original error: {exc}"
-            ) from exc
-
+        est = clone(self.estimator).fit(X, y)
         residuals = y - est.predict(X)
-
-        try:
-            params = self.noise_dist.fit(residuals)
-        except Exception as exc:
-            raise RuntimeError(
-                f"noise_dist.fit() failed on residuals for '{variable}'. "
-                f"Original error: {exc}"
-            ) from exc
-
+        params = self.noise_dist.fit(residuals)
         log_L = float(self.noise_dist.logpdf(residuals, *params).sum())
         k = self._n_params(est, X) + len(params)
         return log_L - self._penalty_value(k, n) / 2
@@ -297,7 +273,4 @@ class FlexibleStructureScore(BaseStructureScore):
             return float(k) * np.log(n)
         if callable(self.penalty):
             return float(self.penalty(k, n))
-        raise ValueError(
-            f"Unknown penalty: {self.penalty!r}. "
-            "Use None, 'aic', 'bic', or a callable(k, n) -> float."
-        )
+        raise ValueError(f"Unknown penalty: {self.penalty!r}. Use None, 'aic', 'bic', or a callable(k, n) -> float.")

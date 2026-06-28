@@ -7,15 +7,16 @@ from .bds import BDs
 from .bic import BIC
 from .bic_cond_gauss import BICCondGauss
 from .bic_gauss import BICGauss
+from .flexible_structure_score import FlexibleStructureScore
 from .k2 import K2
 from .log_likelihood import LogLikelihood
 from .log_likelihood_cond_gauss import LogLikelihoodCondGauss
 from .log_likelihood_gauss import LogLikelihoodGauss
-from pgmpy.structure_score.flexible_structure_score import FlexibleStructureScore
 
 __all__ = [
     "BaseStructureScore",
     "get_scoring_method",
+    "FlexibleStructureScore",
     "K2",
     "BDeu",
     "BDs",
