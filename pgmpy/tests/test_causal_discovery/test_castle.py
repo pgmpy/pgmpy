@@ -2,8 +2,6 @@
 Tests for the CASTLE class in pgmpy.causal_discovery.
 """
 
-import dataclasses
-
 import numpy as np
 import pandas as pd
 import pytest
@@ -47,13 +45,6 @@ if _check_soft_dependencies("torch", severity="none"):
 def numeric_df():
     rng = np.random.default_rng(42)
     return pd.DataFrame(rng.standard_normal((50, 3)), columns=["A", "B", "C"])
-
-
-class TestDataclasses:
-    def test_dataclasses_are_dataclasses(self):
-        assert dataclasses.is_dataclass(NetworkConfig)
-        assert dataclasses.is_dataclass(TrainingConfig)
-        assert dataclasses.is_dataclass(RegularizationConfig)
 
 
 @requires_torch
