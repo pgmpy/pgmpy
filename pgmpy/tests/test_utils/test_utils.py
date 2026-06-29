@@ -222,3 +222,21 @@ class TestGetExampleModel(unittest.TestCase):
 
         cont_model = get_example_model("magic-irri")
         self.assertIsInstance(cont_model, LinearGaussianBayesianNetwork)
+
+
+class TestSampleDiscrete(unittest.TestCase):
+    def test_sample_discrete_with_and_without_seed(self):
+        from pgmpy.utils.mathext import sample_discrete
+
+        values = np.array(["a", "b", "c"])
+        weights = np.array([0.2, 0.5, 0.3])
+
+        # With seed: uses isolated default_rng, output is deterministic.
+        result1 = sample_discrete(values, weights, 50, seed=0)
+        result2 = sample_discrete(values, weights, 50, seed=0)
+        np.testing.assert_array_equal(result1, result2)
+
+        # Without seed: falls back to np.random global state.
+        result3 = sample_discrete(values, weights, 50)
+        self.assertEqual(len(result3), 50)
+        self.assertTrue(set(result3.tolist()).issubset({"a", "b", "c"}))
