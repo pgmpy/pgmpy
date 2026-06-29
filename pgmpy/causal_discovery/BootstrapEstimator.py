@@ -145,6 +145,11 @@ class BootstrapEstimator(BaseCausalDiscovery):
         bootstrap_sample_size = int(len(X) * self.sample_size)
 
         if self.warm_start and hasattr(self, "bootstrap_samples_"):
+            if bootstrap_sample_size != self.bootstrap_samples_.shape[1]:
+                raise ValueError("Cannot warm_start with a different dataset size.")
+            if list(X.columns) != list(self.adjacency_matrix_.columns):
+                raise ValueError("Cannot warm_start with a different dataset features.")
+
             n_existing = len(self.bootstrap_samples_)
 
             # Generate all required bootstrap sample index arrays
