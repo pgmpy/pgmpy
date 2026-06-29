@@ -124,7 +124,7 @@ class TestCASTLEFit:
         [
             (lambda df: df[["A"]], {}, "at least 2 columns"),
             (lambda df: df, {"target_col": "Z"}, "target_col"),
-            (lambda df: df, {"target_col": 99}, "target_col"),
+            (lambda df: df, {"target_col": 0}, "target_col must be a string column name or None"),
         ],
     )
     def test_invalid_input_raises(self, numeric_df, df_fn, kwargs, match):
@@ -160,7 +160,7 @@ class TestCASTLEFit:
 
     @pytest.mark.parametrize(
         "target_col",
-        ["A", 0, None],
+        ["A", None],
     )
     def test_target_col_variants_same_cols(self, numeric_df, target_col):
         est = CASTLE(max_epochs=5, seed=0, target_col=target_col)

@@ -1,3 +1,4 @@
+import itertools
 from dataclasses import dataclass
 
 import pandas as pd
@@ -6,6 +7,7 @@ from sklearn.preprocessing import StandardScaler
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
+from pgmpy.global_vars import config
 
 torch = _safe_import("torch")
 nn = _safe_import("torch.nn")
@@ -15,7 +17,7 @@ nn = _safe_import("torch.nn")
 class NetworkConfig:
     hidden_dim: int
     scaler: object
-    target_col: int | str | None
+    target_col: str | None
 
 
 @dataclass
@@ -51,8 +53,9 @@ def _validate_optimizer(optimizer: str, optimizer_kwargs: dict) -> None:
         raise ValueError(f"optimizer must be a string, got {type(optimizer)}")
     name = optimizer.lower()
     if name not in _OPTIMIZER_VALID_KWARGS:
-        valid = ", ".join(f"'{k}'" for k in sorted(_OPTIMIZER_VALID_KWARGS))
-        raise ValueError(f"Unknown optimizer '{optimizer}'. Supported optimizers are: {valid}.")
+        raise ValueError(
+            f"Unknown optimizer '{optimizer}'. Supported optimizers are: {list(_OPTIMIZER_VALID_KWARGS.keys())}."
+        )
     if "params" in optimizer_kwargs:
         raise ValueError("'params' cannot be passed as an optimizer kwarg. CASTLE manages model parameters internally.")
     valid_keys = _OPTIMIZER_VALID_KWARGS[name]
@@ -199,26 +202,26 @@ class CASTLE(BaseCausalDiscovery):
     Parameters
     ----------
     dag_weight : float, default 1.0
-        Weight (λ) on the entire DAG regularization term (reconstruction loss +
-        acyclicity penalty + sparsity penalty).
+        Weight :math:`\\lambda` on the entire DAG regularization term
+        (reconstruction loss + acyclicity penalty + sparsity penalty).
     sparsity_weight : float, default 5.0
-        Weight (β) on the group-lasso sparsity term applied to the input-layer
-        weights. Controls edge sparsity in the learned DAG. This is independent
-        of any ``weight_decay`` passed via ``optimizer_kwargs``.
+        Weight :math:`\beta` on the group-lasso sparsity term applied to the
+        input-layer weights. Controls edge sparsity in the learned DAG. This is
+        independent of any ``weight_decay`` passed via ``optimizer_kwargs``.
     dag_penalty : float, default 1.0
-        Initial augmented Lagrangian penalty coefficient (ρ) for the acyclicity
-        constraint. Doubled automatically when the constraint does not decrease
-        sufficiently between epochs.
+        Initial augmented Lagrangian penalty coefficient :math:`\rho` for the
+        acyclicity constraint. Doubled automatically when the constraint does
+        not decrease sufficiently between epochs.
     optimizer : str, default 'adam'
         Name of the optimizer to use. Case-insensitive. Supported values:
 
-        - ``'adam'``  — :class:`torch.optim.Adam`
+        - ``'adam'``  -- :class:`torch.optim.Adam`
           accepted kwargs: ``lr``, ``betas``, ``eps``, ``weight_decay``,
           ``amsgrad``, ``maximize``
-        - ``'sgd'``   — :class:`torch.optim.SGD`
+        - ``'sgd'``   -- :class:`torch.optim.SGD`
           accepted kwargs: ``lr``, ``weight_decay``, ``momentum``,
           ``dampening``, ``nesterov``, ``maximize``
-        - ``'adamw'`` — :class:`torch.optim.AdamW`
+        - ``'adamw'`` -- :class:`torch.optim.AdamW`
           accepted kwargs: ``lr``, ``betas``, ``eps``, ``weight_decay``,
           ``amsgrad``, ``maximize``
 
@@ -230,17 +233,17 @@ class CASTLE(BaseCausalDiscovery):
 
     **optimizer_kwargs
         Additional keyword arguments forwarded to the optimizer constructor.
-        ``params`` cannot be passed here — CASTLE always manages model
+        ``params`` cannot be passed here -- CASTLE always manages model
         parameters internally.
     batch_size : int, default 32
         Mini-batch size used during training.
     hidden_dim : int, default 32
-        Width (h) of each sub-network's hidden layers.
+        Width :math:`h` of each sub-network's hidden layers.
     edge_threshold : float, default 0.3
         Edges with weight below this value are zeroed out in the final DAG.
-    target_col : str, int, or None, default None
-        Column to treat as the supervised target. Accepts a column name, an
-        integer index, or ``None`` (defaults to the first column).
+    target_col : str or None, default None
+        Column name to treat as the supervised target. If ``None``, defaults
+        to the first column.
     max_epochs : int, default 200
         Maximum number of training epochs.
     min_loss_improvement : float, default 1e-4
@@ -265,7 +268,7 @@ class CASTLE(BaseCausalDiscovery):
         batch_size: int = 32,
         hidden_dim: int = 32,
         edge_threshold: float = 0.3,
-        target_col: int | str | None = None,
+        target_col: str | None = None,
         max_epochs: int = 200,
         min_loss_improvement: float = 1e-4,
         early_stop_patience: int = 10,
@@ -299,6 +302,7 @@ class CASTLE(BaseCausalDiscovery):
 
     def _fit(self, X: pd.DataFrame):
         """Fit the CASTLE model and construct the causal DAG."""
+        # Step 0: Validate inputs and preprocess data
         _validate_optimizer(self.optimizer, self.optimizer_kwargs or {})
 
         if X.shape[1] == 1:
@@ -311,12 +315,16 @@ class CASTLE(BaseCausalDiscovery):
                 raise ValueError(f"target_col '{self.target_col}' not found in DataFrame columns {list(X.columns)}.")
             target_col = self.target_col
         else:
-            if not (0 <= self.target_col < X.shape[1]):
-                raise ValueError(
-                    f"target_col index {self.target_col} is out of range for DataFrame with {X.shape[1]} columns."
-                )
-            target_col = X.columns[self.target_col]
+            raise ValueError(f"target_col must be a string column name or None, got {type(self.target_col).__name__}.")
 
+        self.cols_ = [target_col] + [c for c in X.columns if c != target_col]
+        self.predictor_names_ = self.cols_[1:]
+        X = X[self.cols_]
+
+        self.scaler_ = self.scaler if self.scaler is not None else StandardScaler()
+        X_scaled = self.scaler_.fit_transform(X)
+
+        # Step 1: Build configuration objects
         self.network_config_ = NetworkConfig(
             hidden_dim=self.hidden_dim,
             scaler=self.scaler,
@@ -339,25 +347,20 @@ class CASTLE(BaseCausalDiscovery):
             edge_threshold=self.edge_threshold,
         )
 
-        self.cols_ = [target_col] + [c for c in X.columns if c != target_col]
-        self.predictor_names_ = self.cols_[1:]
-        X = X[self.cols_]
+        # Step 2: Create tensor and train the CASTLE network
+        dtype = config.DTYPE if config.BACKEND == "torch" else torch.float32
+        X_tensor = torch.tensor(X_scaled, dtype=dtype, device=config.DEVICE)
 
-        self.scaler_ = self.scaler if self.scaler is not None else StandardScaler()
-        X_scaled = self.scaler_.fit_transform(X.to_numpy())
-
-        X_tensor = torch.tensor(X_scaled, dtype=torch.float32)
-
-        self.model_ = _CASTLEModel(len(self.cols_), self.network_config_, self.train_config_, self.reg_config_)
+        self.model_ = _CASTLEModel(self.n_features_in_, self.network_config_, self.train_config_, self.reg_config_)
         W_final = self.model_.train(X_tensor)
 
+        # Step 3: Build adjacency matrix and causal DAG from learned weights
         self.adjacency_matrix_ = pd.DataFrame(W_final.cpu().numpy(), index=self.cols_, columns=self.cols_)
 
         self.causal_graph_ = DAG()
         self.causal_graph_.add_nodes_from(self.cols_)
-        for src in self.cols_:
-            for dst in self.cols_:
-                if self.adjacency_matrix_.loc[src, dst] > 0:
-                    self.causal_graph_.add_edge(src, dst)
+        for src, dst in itertools.permutations(self.cols_, 2):
+            if self.adjacency_matrix_.loc[src, dst] > 0:
+                self.causal_graph_.add_edge(src, dst)
 
         return self
