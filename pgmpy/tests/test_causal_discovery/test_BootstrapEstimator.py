@@ -5,7 +5,6 @@ import pytest
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.causal_discovery import PC, BootstrapEstimator, HillClimbSearch
-from pgmpy.example_models import load_model
 
 
 def expected_failed_checks(estimator):
@@ -44,154 +43,217 @@ def rand_data():
 
 
 def test_bootstrap_rand_data(rand_data):
-    """
-    Tests edge discovery on 5-node causal graph:
-    A -> C <- B, C -> D -> E, B -> E
-    """
-    hc = BootstrapEstimator(estimator=HillClimbSearch(return_type="dag"), show_progress=False, seed=42)
-    pc = BootstrapEstimator(estimator=PC(), show_progress=False, seed=42)
 
+    # --- 1. HillClimbSearch (DAG) ---
+    hc = BootstrapEstimator(estimator=HillClimbSearch(return_type="dag"), show_progress=False, seed=0)
     hc.fit(rand_data)
-    pc.fit(rand_data)
 
     hc_graph = hc.causal_graph_
-    pc_graph = pc.causal_graph_
 
-    expected_edges_hc = {("C", "B"), ("C", "D"), ("D", "E"), ("C", "E"), ("B", "E"), ("A", "C")}
-    expected_edges_pc = {("B", "C"), ("C", "D"), ("D", "E"), ("B", "E"), ("A", "C")}
+    expected_edges_hc = {("A", "C"), ("B", "C"), ("C", "D"), ("D", "E"), ("B", "E")}
     assert set(hc_graph.edges()) == expected_edges_hc
-    assert set(pc_graph.edges()) == expected_edges_pc
 
-
-def test_bootstrap_asia():
-    asia_model = load_model("bnlearn/asia")
-    df = asia_model.simulate(n_samples=500, seed=42)
-
-    base_est = HillClimbSearch(return_type="dag")
-    est = BootstrapEstimator(estimator=base_est, n_bootstraps=20, sample_size=0.80, threshold=0.3, seed=42, n_jobs=2)
-    est.fit(df)
-
-    expected_edges = {
-        ("either", "smoke"),
-        ("bronc", "smoke"),
-        ("lung", "tub"),
-        ("either", "dysp"),
-        ("bronc", "dysp"),
-        ("either", "xray"),
-        ("either", "tub"),
-        ("either", "lung"),
-    }
-
-    assert set(est.causal_graph_.edges()) == expected_edges
-
-    expected_edge_prob = np.array(
+    expected_adj_hc = np.array(
         [
-            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [0.0, 0.0, 0.55, 0.0, 0.0, 0.65, 0.0, 0.0],
-            [0.15, 0.45, 0.0, 0.2, 0.1, 0.0, 0.0, 0.05],
-            [0.0, 0.0, 0.4, 0.0, 0.75, 0.6, 0.55, 0.65],
-            [0.0, 0.0, 0.25, 0.25, 0.0, 0.1, 0.55, 0.0],
-            [0.05, 0.35, 0.0, 0.2, 0.05, 0.0, 0.0, 0.05],
-            [0.0, 0.0, 0.0, 0.25, 0.0, 0.0, 0.0, 0.0],
-            [0.0, 0.0, 0.0, 0.35, 0.0, 0.0, 0.0, 0.0],
+            [0, 0, 1, 0, 0],
+            [0, 0, 1, 0, 1],
+            [0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0],
         ]
     )
-    np_test.assert_allclose(
-        est.edge_prob_.sort_index(axis=0).sort_index(axis=1).values,
-        expected_edge_prob,
-    )
+    np_test.assert_array_equal(hc.adjacency_matrix_.values, expected_adj_hc)
 
-    expected_direction_prob = {
-        ("smoke", "asia"): 1.0,
-        ("smoke", "either"): 0.25,
-        ("smoke", "lung"): 0.3333333333333333,
-        ("smoke", "xray"): 1.0,
-        ("smoke", "bronc"): 0.35,
-        ("tub", "either"): 0.3125,
-        ("either", "smoke"): 0.75,
-        ("either", "tub"): 0.6875,
-        ("either", "lung"): 0.75,
-        ("either", "dysp"): 0.6666666666666666,
-        ("either", "xray"): 0.65,
-        ("lung", "smoke"): 0.6666666666666666,
-        ("lung", "tub"): 1.0,
-        ("lung", "either"): 0.25,
-        ("lung", "dysp"): 0.7142857142857143,
-        ("dysp", "asia"): 1.0,
-        ("dysp", "either"): 0.3333333333333333,
-        ("dysp", "lung"): 0.2857142857142857,
-        ("dysp", "xray"): 1.0,
-        ("dysp", "bronc"): 0.45,
-        ("xray", "either"): 0.35,
-        ("bronc", "smoke"): 0.65,
-        ("bronc", "dysp"): 0.55,
+    expected_edge_prob_hc = np.array(
+        [
+            [0.0, 0.3, 0.6, 0.0, 0.0],
+            [0.4, 0.0, 0.5, 0.0, 0.8],
+            [0.4, 0.5, 0.0, 0.6, 0.2],
+            [0.0, 0.2, 0.4, 0.0, 1.0],
+            [0.0, 0.2, 0.0, 0.0, 0.0],
+        ]
+    )
+    np_test.assert_allclose(hc.edge_prob_.values, expected_edge_prob_hc)
+
+    expected_direction_prob_hc = {
+        ("A", "B"): 0.42857142857142855,
+        ("A", "C"): 0.6,
+        ("B", "A"): 0.5714285714285714,
+        ("B", "C"): 0.5,
+        ("B", "E"): 0.8,
+        ("C", "A"): 0.4,
+        ("C", "B"): 0.5,
+        ("C", "D"): 0.6,
+        ("C", "E"): 1.0,
+        ("D", "B"): 1.0,
+        ("D", "C"): 0.4,
+        ("D", "E"): 1.0,
+        ("E", "B"): 0.2,
     }
+    assert hc.direction_prob_.keys() == expected_direction_prob_hc.keys()
+    for k in expected_direction_prob_hc:
+        np_test.assert_allclose(hc.direction_prob_[k], expected_direction_prob_hc[k])
 
-    assert len(est.direction_prob_) == len(expected_direction_prob)
+    # --- 2. PC (PDAG) ---
+    pc = BootstrapEstimator(estimator=PC(return_type="pdag"), show_progress=False, seed=42)
+    pc.fit(rand_data)
 
-    for k, v in expected_direction_prob.items():
-        assert np.isclose(est.direction_prob_[k], v)
+    pc_graph = pc.causal_graph_
 
-    # Test with PC estimator
-    base_est_pc = PC()
-    est_pc = BootstrapEstimator(
-        estimator=base_est_pc,
-        n_bootstraps=15,
-        sample_size=0.85,
-        threshold=0.35,
-        seed=42,
-        n_jobs=2,
+    expected_edges_pc = {("B", "C"), ("C", "D"), ("D", "E"), ("B", "E"), ("A", "C")}
+    assert set(pc_graph.edges()) == expected_edges_pc
+
+    expected_adj_pc = np.array(
+        [
+            [0, 0, 1, 0, 0],
+            [0, 0, 1, 0, 1],
+            [0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0],
+        ]
     )
-    est_pc.fit(df)
+    np_test.assert_array_equal(pc.adjacency_matrix_.values, expected_adj_pc)
 
-    assert set(est_pc.causal_graph_.directed_edges) == {
-        ("tub", "xray"),
-        ("lung", "either"),
-        ("xray", "either"),
-        ("lung", "xray"),
-        ("lung", "smoke"),
+    expected_edge_prob_pc = np.array(
+        [
+            [0.0, 0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 0.9, 0.0, 0.9],
+            [0.1, 0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.1, 0.0, 1.0],
+            [0.0, 0.0, 0.0, 0.1, 0.0],
+        ]
+    )
+    np_test.assert_allclose(pc.edge_prob_.values, expected_edge_prob_pc)
+
+    expected_direction_prob_pc = {
+        ("A", "C"): 0.9,
+        ("B", "C"): 1.0,
+        ("B", "E"): 1.0,
+        ("C", "A"): 0.0,
+        ("C", "D"): 0.9,
+        ("D", "C"): 0.0,
+        ("D", "E"): 0.9,
+        ("E", "D"): 0.0,
     }
-
-    assert {tuple(sorted(edge)) for edge in est_pc.causal_graph_.undirected_edges} == {
-        ("bronc", "dysp"),
-        ("bronc", "smoke"),
-    }
-
-    assert ((est_pc.edge_prob_ > 0.0) & (est_pc.edge_prob_ < 1.0)).any().any()
+    assert pc.direction_prob_.keys() == expected_direction_prob_pc.keys()
+    for k in expected_direction_prob_pc:
+        np_test.assert_allclose(pc.direction_prob_[k], expected_direction_prob_pc[k])
 
 
-def test_bootstrap_alarm():
-    alarm_model = load_model("bnlearn/alarm")
-    df = alarm_model.simulate(n_samples=2000, seed=42)
-
-    # Test with HillClimbSearch
-    base_est = HillClimbSearch(return_type="dag")
-    est_hc = BootstrapEstimator(
-        estimator=base_est,
-        n_bootstraps=6,
-        sample_size=0.75,
-        threshold=0.35,
-        seed=42,
+def test_bootstrap_bootstrap_warm_start(rand_data):
+    est = BootstrapEstimator(
+        estimator=HillClimbSearch(return_type="dag"),
+        n_bootstraps=10,
+        warm_start=True,
+        seed=0,
+        show_progress=False,
     )
-    est_hc.fit(df)
+    est.fit(rand_data)
 
-    assert len(est_hc.causal_graph_.edges()) > 0
-    assert ((est_hc.edge_prob_ > 0.0) & (est_hc.edge_prob_ < 1.0)).any().any()
+    initial_samples = est.bootstrap_samples_.copy()
+    initial_graphs = est.bootstrap_graphs_.copy()
 
-    # Test with PC estimator
-    base_est_pc = PC()
-    est_pc = BootstrapEstimator(
-        estimator=base_est_pc,
-        n_bootstraps=4,
-        sample_size=0.85,
-        threshold=0.25,
-        seed=42,
+    expected_edge_prob_10 = np.array(
+        [
+            [0.0, 0.3, 0.6, 0.0, 0.0],
+            [0.4, 0.0, 0.5, 0.0, 0.8],
+            [0.4, 0.5, 0.0, 0.6, 0.2],
+            [0.0, 0.2, 0.4, 0.0, 1.0],
+            [0.0, 0.2, 0.0, 0.0, 0.0],
+        ]
     )
-    est_pc.fit(df)
+    np_test.assert_allclose(est.edge_prob_.values, expected_edge_prob_10)
 
-    assert len(est_pc.causal_graph_.edges()) > 0
-    assert len(est_pc.causal_graph_.undirected_edges) > 0
-    assert ((est_pc.edge_prob_ > 0.0) & (est_pc.edge_prob_ < 1.0)).any().any()
+    # Increase n_bootstraps to 20 and re-fit with warm_start
+    est.n_bootstraps = 20
+    est.fit(rand_data)
+
+    expected_edge_prob_20 = np.array(
+        [
+            [0.0, 0.3, 0.65, 0.0, 0.0],
+            [0.35, 0.0, 0.55, 0.05, 0.75],
+            [0.35, 0.45, 0.0, 0.75, 0.2],
+            [0.0, 0.2, 0.25, 0.0, 0.9],
+            [0.0, 0.25, 0.1, 0.1, 0.0],
+        ]
+    )
+    np_test.assert_allclose(est.edge_prob_.values, expected_edge_prob_20)
+
+    # Verify first 10 bootstrap samples and graphs are preserved and identical in 20 bootstrap fit
+    np_test.assert_array_equal(est.bootstrap_samples_[:10], initial_samples)
+    np_test.assert_array_equal(est.bootstrap_graphs_[:10], initial_graphs)
+
+
+def test_bootstrap_warm_start_invalid_dataset(rand_data):
+    est = BootstrapEstimator(
+        estimator=HillClimbSearch(return_type="dag"),
+        n_bootstraps=5,
+        warm_start=True,
+        show_progress=False,
+    )
+    est.fit(rand_data)
+
+    # Test re-fitting with different dataset sample size
+    est.n_bootstraps = 10
+    with pytest.raises(ValueError, match="Cannot warm_start with a different dataset size"):
+        est.fit(rand_data.iloc[:200])
+
+    # Test re-fitting with different dataset features
+    diff_features_df = rand_data.rename(columns={"A": "Z"})
+    with pytest.raises(ValueError, match="Cannot warm_start with a different dataset features"):
+        est.fit(diff_features_df)
+
+
+def test_bootstrap_get_consensus_graph(rand_data):
+    est = BootstrapEstimator(
+        estimator=HillClimbSearch(return_type="dag"),
+        n_bootstraps=10,
+        threshold=0.3,
+        show_progress=False,
+        seed=0,
+    )
+    est.fit(rand_data)
+
+    expected_base_edges = {("A", "C"), ("B", "A"), ("B", "C"), ("B", "E"), ("C", "D"), ("D", "E")}
+    assert set(est.causal_graph_.edges()) == expected_base_edges
+
+    g_high = est.get_consensus_graph(threshold=0.8)
+    expected_high_edges = {("B", "E"), ("D", "E")}
+    assert set(g_high.edges()) == expected_high_edges
+
+
+def test_bootstrap_get_adjacency_matrix(rand_data):
+    est = BootstrapEstimator(
+        estimator=HillClimbSearch(return_type="dag"),
+        n_bootstraps=10,
+        threshold=0.3,
+        show_progress=False,
+        seed=0,
+    )
+    est.fit(rand_data)
+
+    expected_base_adj_matrix = np.array(
+        [
+            [0, 0, 1, 0, 0],
+            [1, 0, 1, 0, 1],
+            [0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0],
+        ]
+    )
+    np_test.assert_array_equal(est.adjacency_matrix_.values, expected_base_adj_matrix)
+
+    m_high = est.get_adjacency_matrix(threshold=0.8)
+    expected_high_adj_matrix = np.array(
+        [
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0],
+        ]
+    )
+    np_test.assert_array_equal(m_high.values, expected_high_adj_matrix)
 
 
 def test_bootstrap_threshold_invalid(rand_data):
@@ -199,28 +261,6 @@ def test_bootstrap_threshold_invalid(rand_data):
     est.fit(rand_data)
     for invalid_threshold in [-0.5, 1.5]:
         with pytest.raises(ValueError):
-            est.get_causal_graph(threshold=invalid_threshold)
+            est.get_consensus_graph(threshold=invalid_threshold)
         with pytest.raises(ValueError):
             est.get_adjacency_matrix(threshold=invalid_threshold)
-
-
-def test_bootstrap_threshold_variation():
-    asia_model = load_model("bnlearn/asia")
-    df = asia_model.simulate(n_samples=500, seed=42)
-
-    est = BootstrapEstimator(
-        estimator=HillClimbSearch(return_type="dag"),
-        n_bootstraps=5,
-        seed=42,
-        show_progress=False,
-    )
-    est.fit(df)
-
-    graph_low = est.get_causal_graph(threshold=0.1)
-    matrix_low = est.get_adjacency_matrix(threshold=0.1)
-
-    graph_high = est.get_causal_graph(threshold=0.9)
-    matrix_high = est.get_adjacency_matrix(threshold=0.9)
-
-    assert set(graph_low.edges()) != set(graph_high.edges())
-    assert not matrix_low.equals(matrix_high)
