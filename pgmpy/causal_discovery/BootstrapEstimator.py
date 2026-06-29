@@ -105,19 +105,11 @@ class BootstrapEstimator(BaseCausalDiscovery):
     Examples
     --------
     # Simulate dataset and fit BootstrapEstimator with HillClimbSearch:
-    >>> from pgmpy.causal_discovery import (
-    ...     BootstrapEstimator,
-    ...     HillClimbSearch,
-    ... )
+    >>> from pgmpy.causal_discovery import BootstrapEstimator, HillClimbSearch
     >>> from pgmpy.example_models import load_model
     >>> data = load_model("bnlearn/asia").simulate(n_samples=500, seed=42)
-    >>> base_est = HillClimbSearch(return_type="dag")
-    >>> est = BootstrapEstimator(
-    ...     estimator=base_est,
-    ...     n_bootstraps=10,
-    ...     seed=42,
-    ...     show_progress=False,
-    ... )
+    >>> hc = HillClimbSearch(return_type="dag")
+    >>> est = BootstrapEstimator(hc, seed=42, show_progress=False)
     >>> est = est.fit(data)
     >>> isinstance(est.causal_graph_, DAG)
     True
@@ -449,19 +441,11 @@ class BootstrapEstimator(BaseCausalDiscovery):
         Examples
         --------
         # Fit BootstrapEstimator on dataset:
-        >>> from pgmpy.causal_discovery import (
-        ...     BootstrapEstimator,
-        ...     HillClimbSearch,
-        ... )
+        >>> from pgmpy.causal_discovery import BootstrapEstimator, HillClimbSearch
         >>> from pgmpy.example_models import load_model
         >>> data = load_model("bnlearn/asia").simulate(n_samples=500, seed=42)
-        >>> base_est = HillClimbSearch(return_type="dag")
-        >>> est = BootstrapEstimator(
-        ...     estimator=base_est,
-        ...     n_bootstraps=10,
-        ...     seed=42,
-        ...     show_progress=False,
-        ... )
+        >>> hc = HillClimbSearch(return_type="dag")
+        >>> est = BootstrapEstimator(hc, seed=42, show_progress=False)
         >>> est = est.fit(data)
 
         # Extract consensus graph with threshold 0.4:
@@ -498,19 +482,11 @@ class BootstrapEstimator(BaseCausalDiscovery):
         Examples
         --------
         # Fit BootstrapEstimator on dataset:
-        >>> from pgmpy.causal_discovery import (
-        ...     BootstrapEstimator,
-        ...     HillClimbSearch,
-        ... )
+        >>> from pgmpy.causal_discovery import BootstrapEstimator, HillClimbSearch
         >>> from pgmpy.example_models import load_model
         >>> data = load_model("bnlearn/asia").simulate(n_samples=500, seed=42)
-        >>> base_est = HillClimbSearch(return_type="dag")
-        >>> est = BootstrapEstimator(
-        ...     estimator=base_est,
-        ...     n_bootstraps=10,
-        ...     seed=42,
-        ...     show_progress=False,
-        ... )
+        >>> hc = HillClimbSearch(return_type="dag")
+        >>> est = BootstrapEstimator(hc, seed=42, show_progress=False)
         >>> est = est.fit(data)
 
         # Extract adjacency matrix with threshold 0.4:
