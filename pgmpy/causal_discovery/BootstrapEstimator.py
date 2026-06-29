@@ -16,76 +16,111 @@ class BootstrapEstimator(BaseCausalDiscovery):
     """
     Bootstrap meta-estimator for causal discovery.
 
-    This class wraps any causal discovery estimator to assess the stability and reliability of the learned causal
-    structure. It repeatedly samples the input dataset with replacement, runs the base estimator on each bootstrap
-    sample, and aggregates the resulting graphs to compute edge strengths and construct a robust consensus graph.
-    This class implements the Non-Parametic Bootstrap technique which only work with provided sample data.
+    This class wraps any causal discovery estimator to assess the stability
+    and reliability of the learned causal structure. It repeatedly samples the
+    input dataset with replacement, runs the base estimator on each bootstrap
+    sample, and aggregates the resulting graphs to compute edge presence
+    probabilities, direction probabilities, and construct a consensus graph.
+
+    The non-parametric bootstrap procedure operates as follows:
+    1. Resamples the input dataset with replacement `n_bootstraps` times.
+    2. Fits an independent clone of the base estimator on each resampled data.
+    3. Aggregates graph adjacency matrices to calculate edge presence
+       probabilities (`edge_prob_`) and conditional direction probabilities
+       (`direction_prob_`).
+    4. Constructs a final consensus DAG or PDAG based on the specified
+       probability `threshold`.
 
     Parameters
     ----------
     estimator : BaseCausalDiscovery instance
-        The base causal discovery estimator to be wrapped (e.g., PC, HillClimbSearch, GES).
+        The base causal discovery estimator to be wrapped (e.g., PC, GES,
+        HillClimbSearch).
 
     n_bootstraps : int, default=10
         The number of bootstrap samples to generate and fit.
 
     sample_size : float, default=1.0
-        The number of samples to draw from the input data for each bootstrap sample. Take a float from 0 to 1 as
-        percentage.
+        The fraction of samples to draw from the input data for each bootstrap
+        sample (between 0.0 and 1.0).
 
     threshold : float, default=0.5
-        The threshold for edge presence probability. Only edges that appear in at least this fraction of the bootstrap
-        graphs are included in the final consensus graph. Must be between 0 and 1.
+        The probability threshold for edge inclusion. Only edges appearing in
+        at least this fraction of bootstrap graphs are included in the final
+        consensus graph. Must be between 0.0 and 1.0.
 
     warm_start : bool, default=False
-        When set to True, reuse the solution of the previous call to fit and add more
-        bootstraps to the estimator.
+        When set to True, reuses existing fitted bootstrap graphs and adds new
+        bootstrap samples upon subsequent calls to fit.
 
     n_jobs : int, default=-1
-        The number of jobs to run in parallel. -1 means using all processors.
+        The number of jobs to run in parallel. -1 uses all available processors.
 
     show_progress : bool, default=True
-        If True, shows a progress bar while fitting the bootstrap estimators.
+        If True, displays a progress bar during fitting.
 
-    seed : int, default=None
+    seed : int or None, default=None
         Seed for the random number generator to ensure reproducibility.
 
     Attributes
     ----------
     causal_graph_ : DAG or PDAG
-        The learned robust consensus causal graph. The return type will be of
-        type provided by the base estimator.
+        The learned optimal consensus causal graph matching the return type
+        of the base estimator.
 
     adjacency_matrix_ : pd.DataFrame
-        Adjacency matrix representation of the learned consensus causal graph.
+        Adjacency matrix representation of the consensus causal graph.
 
     edge_prob_ : pd.DataFrame
-        DataFrame containing the estimated probabilities of edges across all bootstrap samples. Value of the cell
-        indicates the frequency of the edge in the corresponding bootstrap sample.
+        DataFrame containing estimated edge presence probabilities across all
+        bootstrap samples. Values represent the empirical frequency (between
+        0.0 and 1.0) of each edge across bootstrap iterations. Users can inspect
+        this matrix to evaluate edge stability and choose confidence thresholds.
 
     direction_prob_ : dict
-        Dictionary mapping edge tuples (u, v) to the conditional probability of direction u -> v,
-        given that an edge exists between u and v.
+        Dictionary mapping edge tuples (u, v) to the conditional probability of
+        direction u -> v, given that an edge exists between u and v.
 
         Calculated as n1 / (n1 + n2 + n3), where:
-        - n1: Number of bootstraps where u -> v is directed (only u -> v exists).
-        - n2: Number of bootstraps where v -> u is directed (only v -> u exists).
-        - n3: Number of bootstraps where u -- v is undirected (both u -> v and v -> u exist).
+        - n1: Number of bootstraps where u -> v is directed (only u -> v).
+        - n2: Number of bootstraps where v -> u is directed (only v -> u).
+        - n3: Number of bootstraps where u -- v is undirected (both exist).
 
-        Both keys (u, v) and (v, u) are present for any connected pair. The probability of the
-        undirected edge u - v is 1 - direction_prob_[(u, v)] - direction_prob_[(v, u)].
+        Both keys (u, v) and (v, u) are present for any connected pair. The
+        probability of the undirected edge u - v is
+        1 - direction_prob_[(u, v)] - direction_prob_[(v, u)].
 
     bootstrap_samples_ : np.ndarray
-        2D numpy array containing the sample indices for each bootstrap.
+        2D array containing row indices used in each bootstrap sample.
 
     bootstrap_graphs_ : np.ndarray
-        3D numpy array containing the adjacency matrices of the graphs learned from each bootstrap sample.
+        3D array containing adjacency matrices learned from each bootstrap.
 
     n_features_in_ : int
-        The number of features in the data used to learn the causal graph.
+        The number of features in the input data.
 
     feature_names_in_ : np.ndarray
         Names of the features in the input data.
+
+    Examples
+    --------
+    # Simulate dataset and fit BootstrapEstimator with HillClimbSearch:
+    >>> from pgmpy.causal_discovery import (
+    ...     BootstrapEstimator,
+    ...     HillClimbSearch,
+    ... )
+    >>> from pgmpy.example_models import load_model
+    >>> data = load_model("bnlearn/asia").simulate(n_samples=500, seed=42)
+    >>> base_est = HillClimbSearch(return_type="dag")
+    >>> est = BootstrapEstimator(
+    ...     estimator=base_est,
+    ...     n_bootstraps=10,
+    ...     seed=42,
+    ...     show_progress=False,
+    ... )
+    >>> est = est.fit(data)
+    >>> isinstance(est.causal_graph_, DAG)
+    True
     """
 
     def __init__(
@@ -114,7 +149,27 @@ class BootstrapEstimator(BaseCausalDiscovery):
         base_estimator: BaseCausalDiscovery,
         bootstrap_sample: np.ndarray,
     ) -> BaseCausalDiscovery:
-        """Helper function to run a single bootstrap iteration."""
+        """
+        Runs a single bootstrap iteration on resampled data.
+
+        Selects rows from the dataset based on provided sample indices,
+        creates a clone of the base estimator, and fits it on the resampled
+        data.
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            The original input dataset.
+        base_estimator : BaseCausalDiscovery
+            The base causal discovery estimator to clone and fit.
+        bootstrap_sample : np.ndarray
+            Array of row indices defining the bootstrap resample.
+
+        Returns
+        -------
+        fitted_estimator : BaseCausalDiscovery
+            The fitted clone of the base estimator.
+        """
 
         # Create new sample by resampling
         sample = X.iloc[bootstrap_sample]
@@ -257,7 +312,26 @@ class BootstrapEstimator(BaseCausalDiscovery):
         return self
 
     def _estimate_consensus_graph(self, threshold: float) -> DAG | PDAG:
+        """
+        Helper method to estimate the consensus graph for a given probability
+        threshold.
 
+        Filters candidate edges whose presence probability (`edge_prob_`)
+        meets or exceeds the threshold. Candidates are processed in descending
+        order of empirical probability. Edges are added iteratively while
+        ensuring acyclicity for DAGs or resolving orientation and acyclic
+        extensions for PDAGs.
+
+        Parameters
+        ----------
+        threshold : float
+            Edge presence probability threshold (between 0.0 and 1.0).
+
+        Returns
+        -------
+        consensus_graph : DAG or PDAG
+            The constructed consensus causal graph.
+        """
         variables = self.feature_names_in_
 
         if hasattr(self.estimator, "return_type"):
@@ -307,15 +381,11 @@ class BootstrapEstimator(BaseCausalDiscovery):
                 else:
                     target = "directed"
 
-                # add the edge and check for cyclicity
+                # add the edge
                 if target == "undirected":
                     pdag.add_edge(u, v)
                     pdag.add_edge(v, u)
                     pdag.calibrate_directed_undirected_edges()
-                    if not pdag.has_acyclic_extension():
-                        pdag.remove_edge(u, v)
-                        pdag.remove_edge(v, u)
-                        pdag.calibrate_directed_undirected_edges()
                 else:
                     # determine which direction to try first by comparing edge probabilities
                     prob_utov = self.edge_prob_.loc[u, v]
@@ -355,61 +425,98 @@ class BootstrapEstimator(BaseCausalDiscovery):
 
     def get_consensus_graph(self, threshold: float) -> DAG | PDAG:
         """
-        Returns the consensus causal graph estimated using a specified edge probability threshold.
+        Returns the consensus causal graph estimated using a specified edge
+        probability threshold.
 
         Parameters
         ----------
         threshold : float
-            The threshold for edge presence probability. Only edges that appear in at least
-            this fraction of the bootstrap graphs are included. Must be between 0.0 and 1.0.
+            The threshold for edge presence probability. Only edges that
+            appear in at least this fraction of the bootstrap graphs are
+            included. Must be between 0.0 and 1.0.
 
         Returns
         -------
         consensus_graph : DAG or PDAG
-            The consensus causal graph (either a DAG or a PDAG/CPDAG depending on the return
-            type of the base estimator).
+            The consensus causal graph (either a DAG or a PDAG depending on
+            the return type of the base estimator).
+
+        Raises
+        ------
+        ValueError
+            If `threshold` is not between 0.0 and 1.0.
 
         Examples
         --------
-        >>> from pgmpy.causal_discovery import BootstrapEstimator, HillClimbSearch
+        # Fit BootstrapEstimator on dataset:
+        >>> from pgmpy.causal_discovery import (
+        ...     BootstrapEstimator,
+        ...     HillClimbSearch,
+        ... )
         >>> from pgmpy.example_models import load_model
-        >>> data = load_model("bnlearn/asia").simulate(n_samples=100)
-        >>> est = BootstrapEstimator(HillClimbSearch())
+        >>> data = load_model("bnlearn/asia").simulate(n_samples=500, seed=42)
+        >>> base_est = HillClimbSearch(return_type="dag")
+        >>> est = BootstrapEstimator(
+        ...     estimator=base_est,
+        ...     n_bootstraps=10,
+        ...     seed=42,
+        ...     show_progress=False,
+        ... )
         >>> est = est.fit(data)
-        >>> consensus_graph = est.get_consensus_graph(threshold=0.3)
+
+        # Extract consensus graph with threshold 0.4:
+        >>> consensus_graph = est.get_consensus_graph(threshold=0.4)
+        >>> _ = consensus_graph.edges()
         """
         if not (0.0 <= threshold <= 1.0):
             raise ValueError(f"Threshold must be between 0.0 and 1.0. Got {threshold} instead.")
 
         return self._estimate_consensus_graph(threshold)
 
-    def get_causal_graph(self, threshold: float) -> DAG | PDAG:
-        """
-        Deprecated alias for get_consensus_graph.
-        """
-        import warnings
-
-        warnings.warn(
-            "get_causal_graph is deprecated, please use get_consensus_graph instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.get_consensus_graph(threshold)
-
     def get_adjacency_matrix(self, threshold: float) -> pd.DataFrame:
         """
-        Returns the adjacency matrix of the consensus causal graph estimated using a specified threshold.
+        Returns the adjacency matrix of the consensus causal graph estimated
+        using a specified threshold.
 
         Parameters
         ----------
         threshold : float
-            The threshold for edge presence probability. Only edges that appear in at least
-            this fraction of the bootstrap graphs are included. Must be between 0.0 and 1.0.
+            The threshold for edge presence probability. Only edges that
+            appear in at least this fraction of the bootstrap graphs are
+            included. Must be between 0.0 and 1.0.
 
         Returns
         -------
         adjacency_matrix : pandas.DataFrame
             The adjacency matrix representation of the consensus causal graph.
+
+        Raises
+        ------
+        ValueError
+            If `threshold` is not between 0.0 and 1.0.
+
+        Examples
+        --------
+        # Fit BootstrapEstimator on dataset:
+        >>> from pgmpy.causal_discovery import (
+        ...     BootstrapEstimator,
+        ...     HillClimbSearch,
+        ... )
+        >>> from pgmpy.example_models import load_model
+        >>> data = load_model("bnlearn/asia").simulate(n_samples=500, seed=42)
+        >>> base_est = HillClimbSearch(return_type="dag")
+        >>> est = BootstrapEstimator(
+        ...     estimator=base_est,
+        ...     n_bootstraps=10,
+        ...     seed=42,
+        ...     show_progress=False,
+        ... )
+        >>> est = est.fit(data)
+
+        # Extract adjacency matrix with threshold 0.4:
+        >>> adj_matrix = est.get_adjacency_matrix(threshold=0.4)
+        >>> adj_matrix.shape
+        (8, 8)
         """
         if not (0.0 <= threshold <= 1.0):
             raise ValueError(f"Threshold must be between 0.0 and 1.0. Got {threshold} instead.")
