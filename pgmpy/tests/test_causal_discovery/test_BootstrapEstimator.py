@@ -184,7 +184,7 @@ def test_bootstrap_bootstrap_warm_start(rand_data):
     np_test.assert_array_equal(est.bootstrap_graphs_[:10], initial_graphs)
 
 
-def test_bootstrap_warm_start_invalid_dataset(rand_data):
+def test_bootstrap_warm_start_validation(rand_data):
     est = BootstrapEstimator(
         estimator=HillClimbSearch(return_type="dag"),
         n_bootstraps=5,
@@ -202,6 +202,11 @@ def test_bootstrap_warm_start_invalid_dataset(rand_data):
     diff_features_df = rand_data.rename(columns={"A": "Z"})
     with pytest.raises(ValueError, match="Cannot warm_start with a different dataset features"):
         est.fit(diff_features_df)
+
+    # Test re-fitting with decreased n_bootstraps
+    est.n_bootstraps = 3
+    with pytest.raises(ValueError, match="must be larger or equal to"):
+        est.fit(rand_data)
 
 
 def test_bootstrap_get_consensus_graph(rand_data):

@@ -198,6 +198,13 @@ class BootstrapEstimator(BaseCausalDiscovery):
         rng = np.random.default_rng(self.seed)
         bootstrap_sample_size = int(len(X) * self.sample_size)
 
+        # Generate all required bootstrap sample index arrays
+        sample_indices = []
+        for _ in range(self.n_bootstraps):
+            sample_idx = rng.choice(len(X), size=bootstrap_sample_size, replace=True)
+            sample_indices.append(sample_idx)
+        all_samples = np.array(sample_indices)
+
         if self.warm_start and hasattr(self, "bootstrap_samples_"):
             if bootstrap_sample_size != self.bootstrap_samples_.shape[1]:
                 raise ValueError("Cannot warm_start with a different dataset size.")
@@ -206,68 +213,46 @@ class BootstrapEstimator(BaseCausalDiscovery):
 
             n_existing = len(self.bootstrap_samples_)
 
-            # Generate all required bootstrap sample index arrays
-            sample_indices = []
-            for _ in range(self.n_bootstraps):
-                sample_idx = rng.choice(len(X), size=bootstrap_sample_size, replace=True)
-                sample_indices.append(sample_idx)
-            all_samples = np.array(sample_indices)
-
-            if self.n_bootstraps > n_existing:
-                # Select only the new bootstrap samples needed beyond existing ones
-                new_samples = all_samples[n_existing:]
-                new_results = cast(
-                    list[BaseCausalDiscovery],
-                    Parallel(n_jobs=self.n_jobs)(
-                        delayed(self._bootstrap_iteration)(X, self.estimator, new_samples[i])
-                        for i in trange(
-                            len(new_samples),
-                            desc="Bootstrapping",
-                            disable=not (self.show_progress and config.SHOW_PROGRESS),
-                        )
-                    ),
+            if self.n_bootstraps < n_existing:
+                raise ValueError(
+                    f"n_bootstraps={self.n_bootstraps} must be larger or equal to "
+                    f"n_existing={n_existing} when warm_start==True. "
+                    "To run with fewer bootstraps, set warm_start=False."
                 )
-
-                # Extract and align adjacency matrices for each newly fitted estimator
-                new_graph_matrices = []
-                for est in new_results:
-                    adj_df = est.adjacency_matrix_.reindex(index=variables, columns=variables, fill_value=0)
-                    new_graph_matrices.append(adj_df.values)
-                new_graphs = np.array(new_graph_matrices)
-
-                # Append new samples and graphs onto existing warm start arrays
-                self.bootstrap_samples_ = np.concatenate([self.bootstrap_samples_, new_samples], axis=0)
-                self.bootstrap_graphs_ = np.concatenate([self.bootstrap_graphs_, new_graphs], axis=0)
-            else:
-                # Trim arrays if requested n_bootstraps is less than existing count
-                self.bootstrap_samples_ = self.bootstrap_samples_[: self.n_bootstraps]
-                self.bootstrap_graphs_ = self.bootstrap_graphs_[: self.n_bootstraps]
+            samples_to_fit = all_samples[n_existing:]
         else:
-            # Generate bootstrap sample index arrays from scratch
-            sample_indices = []
-            for _ in range(self.n_bootstraps):
-                sample_idx = rng.choice(len(X), size=bootstrap_sample_size, replace=True)
-                sample_indices.append(sample_idx)
-            self.bootstrap_samples_ = np.array(sample_indices)
+            n_existing = 0
+            samples_to_fit = all_samples
 
+        # Only fit new bootstrap samples if needed. We skip this if warm_start is True
+        # and n_bootstraps has not changed, but still run aggregation below in case
+        # class parameters (like threshold) were modified.
+        if len(samples_to_fit) > 0:
             results = cast(
                 list[BaseCausalDiscovery],
                 Parallel(n_jobs=self.n_jobs)(
-                    delayed(self._bootstrap_iteration)(X, self.estimator, self.bootstrap_samples_[i])
+                    delayed(self._bootstrap_iteration)(X, self.estimator, samples_to_fit[i])
                     for i in trange(
-                        self.n_bootstraps,
+                        len(samples_to_fit),
                         desc="Bootstrapping",
                         disable=not (self.show_progress and config.SHOW_PROGRESS),
                     )
                 ),
             )
 
-            # Extract and align adjacency matrices for all fitted estimators
+            # Extract and align adjacency matrices
             graph_matrices = []
             for est in results:
                 adj_df = est.adjacency_matrix_.reindex(index=variables, columns=variables, fill_value=0)
                 graph_matrices.append(adj_df.values)
-            self.bootstrap_graphs_ = np.array(graph_matrices)
+            new_graphs = np.array(graph_matrices)
+
+            if n_existing > 0:
+                self.bootstrap_samples_ = np.concatenate([self.bootstrap_samples_, samples_to_fit], axis=0)
+                self.bootstrap_graphs_ = np.concatenate([self.bootstrap_graphs_, new_graphs], axis=0)
+            else:
+                self.bootstrap_samples_ = samples_to_fit
+                self.bootstrap_graphs_ = new_graphs
 
         # Step 2: Aggregating the bootstrap results.
         edge_presence_mat = self.bootstrap_graphs_.sum(axis=0)
