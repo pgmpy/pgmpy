@@ -3,7 +3,6 @@ import pandas as pd
 import pytest
 
 from pgmpy.base import DAG
-from pgmpy.example_models import load_model
 from pgmpy.metrics import VarSortability
 
 
@@ -25,13 +24,6 @@ def causal_chain_decreasing_variance():
     y = 0.1 * x + np.random.normal(0, 0.5, n)
     z = 0.1 * y + np.random.normal(0, 0.3, n)
     return pd.DataFrame({"X": x, "Y": y, "Z": z})
-
-
-@pytest.fixture
-def cancer_model_and_data():
-    model = load_model("bnlearn/cancer")
-    data = model.simulate(1000, seed=42, show_progress=False)
-    return model, data
 
 
 def test_varsortability_high_score_for_increasing_variance(causal_chain_increasing_variance):

@@ -90,9 +90,6 @@ class VarSortability(BaseUnsupervisedMetric):
         if isinstance(X, pd.DataFrame):
             nodes = list(X.columns)
             x_mat = X.values
-        else:
-            nodes = list(range(X.shape[1]))
-            x_mat = X
 
         d = len(nodes)
         node_to_idx = {node: idx for idx, node in enumerate(nodes)}
