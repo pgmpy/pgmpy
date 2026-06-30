@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import cast
 
 import networkx as nx
@@ -178,7 +180,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
         est = base_estimator.fit(sample)
         return est
 
-    def _fit(self, X: pd.DataFrame):
+    def _fit(self, X: pd.DataFrame) -> BootstrapEstimator:
         """
         Fit the bootstrap meta-estimator on the input data.
 
