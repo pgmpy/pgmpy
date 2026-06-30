@@ -85,13 +85,13 @@ class SortnRegress(BaseCausalDiscovery):
     >>> import pandas as pd
     >>> import numpy as np
     >>> from pgmpy.causal_discovery import SortnRegress
+    >>> np.random.seed(42)
     >>> data = pd.DataFrame(np.random.randn(1000, 3), columns=['X', 'Y', 'Z'])
-    >>> data['Y'] += 2 * data['X']
-    >>> data['Z'] += 3 * data['Y']
+    >>> data['Z'] += 2.5 * data['X'] + 2.5 * data['Y']
     >>> model = SortnRegress(threshold=0.3)
-    >>> model.fit(data)
-    >>> model.causal_graph_.edges()
-    [('X', 'Y'), ('Y', 'Z')]
+    >>> _ = model.fit(data)
+    >>> list(model.causal_graph_.edges())
+    [('X', 'Z'), ('Y', 'Z')]
 
     References
     ----------
