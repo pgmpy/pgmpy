@@ -20,35 +20,27 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
 
         X_j = \\sum_{i \\in \\text{Pa}(X_j)} w_i \\cdot f_i(X_i) + N_j
 
-    where :math:`\\text{Pa}(X_j)` denotes the set of parent nodes of
-    :math:`X_j` in the DAG, :math:`f_i` are functions randomly chosen
-    from *function_type*, :math:`w_i` are edge coefficients uniformly
-    sampled from *weight_range*, and :math:`N_j` are independent
-    additive noise terms :cite:p:`hoyer_2008`.
+    where :math:`\\text{Pa}(X_j)` denotes the set of parent nodes of :math:`X_j` in the DAG, :math:`f_i` are
+    functions randomly chosen from *function_type* (one per parent edge), :math:`w_i` are edge coefficients
+    determined by *weight*, and :math:`N_j` are independent additive noise terms :cite:p:`hoyer_2008`.
 
     Parameters
     ----------
     dag : DAG, optional
-        A user-provided DAG.  When given, ``n_nodes`` and
-        ``edge_prob`` are ignored with a warning.
+        A user-provided DAG.  When given, ``n_nodes`` and ``edge_prob`` are ignored with a warning.
     n_nodes : int, default 5
         Number of variables in the random DAG.
     edge_prob : float, default 0.5
-        Probability of an edge between any two topologically
-        ordered nodes in the random DAG.
+        Probability of an edge between any two topologically ordered nodes in the random DAG.
     noise : distribution object, optional
-        Any object with a ``.sample(n_samples=...)`` or
-        ``.rvs(size=...)`` method (e.g., ``scipy.stats`` or
-        ``skpro`` distributions).  When ``None``, standard
-        normal :math:`\\mathcal{N}(0, 1)` noise is used.
+        Any object with a ``.sample(n_samples=...)`` or ``.rvs(size=...)`` method (e.g., ``scipy.stats`` or
+        ``skpro`` distributions).  When ``None``, standard normal :math:`\\mathcal{N}(0, 1)` noise is used.
     function_type : tuple or list of callable, optional
-        Functions to randomly apply to each parent column.
-        Each callable must accept a 1-D numpy array and return
-        a 1-D numpy array of the same shape.  Default is
-        ``(np.sin, np.cos, np.tanh)``.
-    weight_range : tuple of float, default ``(-1, 1)``
-        Range ``(low, high)`` for randomly sampled edge
-        coefficients.
+        Functions to randomly apply to each parent column. Each callable must accept a 1-D numpy array and
+        return a 1-D numpy array of the same shape.  Default is ``(np.sin, np.cos, np.tanh)``.
+    weight : float or tuple of float, default ``(-1, 1)``
+        Edge coefficients.  If a single float, every edge uses that fixed weight.  If a ``(low, high)`` tuple,
+        each edge weight is sampled uniformly from the range.
     seed : int, optional
         Random seed for reproducible graph and data generation.
 
@@ -70,7 +62,7 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
         edge_prob: float = 0.5,
         noise: Any = None,
         function_type: tuple | list = (np.sin, np.cos, np.tanh),
-        weight_range: tuple[float, float] = (-1, 1),
+        weight: float | tuple[float, float] = (-1, 1),
         seed: int | None = None,
     ):
         if dag is not None:
@@ -88,16 +80,15 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
 
         self.noise = noise
         self.function_type = function_type
-        self.weight_range = weight_range
+        self.weight = weight
         self.seed = seed
 
     def load_dataframe(self, n_samples: int | None = None) -> pd.DataFrame:
         """Sample data from the generated Additive Noise Model.
 
-        For each child node :math:`X_j`, a function is randomly chosen
-        from *function_type* per parent edge, applied element-wise,
-        multiplied by a random weight from *weight_range*, summed,
-        and combined with additive noise.
+        For each child node :math:`X_j`, every parent edge is independently assigned a random function from
+        *function_type* and a weight from *weight*.  The weighted function outputs are summed and combined
+        with additive noise.
 
         Parameters
         ----------
@@ -120,10 +111,10 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
 
             if self.noise is None:
                 noise_vals = rng.normal(0, 1, size=n)
+            elif hasattr(self.noise, "rvs"):
+                noise_vals = np.asarray(self.noise.rvs(size=n, random_state=rng)).flatten()
             elif hasattr(self.noise, "sample"):
                 noise_vals = np.asarray(self.noise.sample(n_samples=n)).flatten()
-            elif hasattr(self.noise, "rvs"):
-                noise_vals = np.asarray(self.noise.rvs(size=n)).flatten()
             else:
                 raise TypeError(f"noise must have a .sample() or .rvs() method, got {type(self.noise).__name__}.")
 
@@ -133,7 +124,7 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
                 parent_data = data[parents].values
                 signal = np.zeros(n)
                 for i, parent_col in enumerate(parents):
-                    w = rng.uniform(*self.weight_range)
+                    w = self.weight if isinstance(self.weight, (int, float)) else rng.uniform(*self.weight)
                     fn = rng.choice(funcs)
                     signal += w * fn(parent_data[:, i])
                 data[node] = signal + noise_vals
@@ -147,4 +138,4 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
         -------
         DAG
         """
-        return DAG(self.dag)
+        return self.dag

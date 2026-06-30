@@ -12,9 +12,16 @@ def test_load_anm_dataset():
     ds = load_dataset("anm", seed=42)
     assert ds.data.shape == (1000, 5)
     assert isinstance(ds.ground_truth, DAG)
+    assert ds.tags["n_variables"] == 5
+    assert ds.tags["n_samples"] == 1000
+    assert ds.tags["is_simulated"] is True
+    assert ds.tags["has_ground_truth"] is True
+    assert ds.tags["is_continuous"] is True
 
     ds2 = load_dataset("anm", seed=42, n_nodes=8, n_samples=200)
     assert ds2.data.shape == (200, 8)
+    assert ds2.tags["n_variables"] == 8
+    assert ds2.tags["n_samples"] == 200
 
     # Reproducibility: same seed produces identical data and edges.
     ds_a = load_dataset("anm", seed=99)
@@ -48,26 +55,16 @@ def test_load_anm_dataset():
         ds_dag = load_dataset("anm", seed=42, dag=custom_dag, n_nodes=10)
     assert set(ds_dag.data.columns) == {"A", "B", "C"}
 
-    # weight_range affects data magnitude.
-    ds_narrow = load_dataset("anm", seed=42, weight_range=(-0.01, 0.01))
-    ds_wide = load_dataset("anm", seed=42, weight_range=(-10, 10))
+    # Fixed weight uses the same coefficient for every edge.
+    ds_fixed = load_dataset("anm", seed=42, weight=1.0)
+    assert ds_fixed.data.shape == (1000, 5)
+
+    # Sampled weight range affects data magnitude.
+    ds_narrow = load_dataset("anm", seed=42, weight=(-0.01, 0.01))
+    ds_wide = load_dataset("anm", seed=42, weight=(-10, 10))
     assert ds_narrow.data.std().mean() < ds_wide.data.std().mean()
 
     assert "anm" in list_datasets(is_simulated=True)
-
-
-def test_anm_dataset_tags():
-    # load_dataset populates n_variables and n_samples from data.
-    ds = load_dataset("anm", seed=42)
-    assert ds.tags["n_variables"] == 5
-    assert ds.tags["n_samples"] == 1000
-    assert ds.tags["is_simulated"] is True
-    assert ds.tags["has_ground_truth"] is True
-    assert ds.tags["is_continuous"] is True
-
-    ds_custom = load_dataset("anm", n_samples=200, seed=7, n_nodes=8, edge_prob=0.3)
-    assert ds_custom.tags["n_variables"] == 8
-    assert ds_custom.tags["n_samples"] == 200
 
 
 def test_anm_validation():
@@ -79,11 +76,13 @@ def test_anm_validation():
 
 
 def test_anm_scipy_noise():
-    # scipy.stats distributions (have .rvs method) should work.
     from scipy.stats import laplace
 
-    ds = load_dataset("anm", seed=42, noise=laplace(loc=0, scale=1))
-    assert ds.data.shape == (1000, 5)
+    # Scipy noise is reproducible with the same seed.
+    ds1 = load_dataset("anm", seed=42, noise=laplace(loc=0, scale=1))
+    ds2 = load_dataset("anm", seed=42, noise=laplace(loc=0, scale=1))
+    assert ds1.data.shape == (1000, 5)
+    assert np.allclose(ds1.data.values, ds2.data.values)
 
 
 @pytest.mark.skipif(
