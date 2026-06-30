@@ -80,6 +80,17 @@ class TestSortnRegressCore:
         assert est.n_features_in_ == 3
         assert list(est.feature_names_in_) == ["X", "Y", "Z"]
 
+    def test_zero_variance_column(self):
+        np.random.seed(0)
+        data = pd.DataFrame(np.random.randn(100, 2), columns=["X", "Y"])
+        data["C"] = 0.0
+
+        est = SortnRegress(threshold=0.3)
+        est.fit(data)
+
+        edges = list(est.causal_graph_.edges())
+        assert all("C" not in edge for edge in edges)
+
 
 class TestSortnRegressScoring:
     def test_score(self, causal_chain_data):
