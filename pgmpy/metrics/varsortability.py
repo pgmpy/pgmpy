@@ -71,7 +71,7 @@ class VarSortability(BaseUnsupervisedMetric):
         "requires_data": True,
         "lower_is_better": False,
         "is_symmetric": False,
-        "supported_gragh_types": (DAG, PDAG),
+        "supported_graph_types": (DAG, PDAG),
     }
 
     def __init__(self, tol=1e-9):
@@ -130,6 +130,6 @@ class VarSortability(BaseUnsupervisedMetric):
             Ek = Ek.dot(E)
 
         if n_paths == 0:
-            return 1.0
+            return {"varsortability": 1.0}  # Returns dict
 
-        return n_ordered_path / n_paths
+        return {"varsortability": float(n_ordered_path / n_paths)}  # Returns dict
