@@ -49,12 +49,6 @@ class VarSortability(BaseUnsupervisedMetric):
     >>> result['varsortability'] > 0.7
     True
 
-    Notes
-    -----
-    Var-sortability is particularly useful for evaluating causal discovery methods
-    in linear models. High varsortability suggests that the discovered causal
-    structure aligns with variance properties in the data.
-
     References
     ----------
     .. [1] Reisach, A. G., Seiler, C., & Weichwald, S. (2021).
