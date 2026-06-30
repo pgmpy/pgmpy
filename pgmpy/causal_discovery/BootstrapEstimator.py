@@ -91,10 +91,17 @@ class BootstrapEstimator(BaseCausalDiscovery):
         1 - direction_prob_[(u, v)] - direction_prob_[(v, u)].
 
     bootstrap_samples_ : np.ndarray
-        2D array containing row indices used in each bootstrap sample.
+        2D array of shape `(n_bootstraps, bootstrap_sample_size)` containing row
+        indices used in each bootstrap sample.
+        - Axis 0 (first axis): Represents each individual bootstrap sample.
+        - Axis 1 (second axis): Represents the sampled row indices for that bootstrap sample.
 
     bootstrap_graphs_ : np.ndarray
-        3D array containing adjacency matrices learned from each bootstrap.
+        3D array of shape `(n_bootstraps, n_variables, n_variables)` containing
+        adjacency matrices estimated from each bootstrap.
+        - Axis 0 (first axis): Represents each individual bootstrap estimate (graph).
+        - Axis 1 (second axis): Represents the source (from) nodes in the adjacency matrix.
+        - Axis 2 (third axis): Represents the target (to) nodes in the adjacency matrix.
 
     n_features_in_ : int
         The number of features in the input data.
