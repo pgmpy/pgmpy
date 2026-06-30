@@ -34,23 +34,20 @@ class VarSortability(BaseUnsupervisedMetric):
 
     Examples
     --------
-    >>> import pandas as pd
-    >>> import numpy as np
-    >>> from pgmpy.base import DAG
-    >>> from pgmpy.metrics import VarSortability
-
-    >>> # Data where variance grows along causal paths
     >>> np.random.seed(42)
-    >>> n = 1000
-    >>> x = np.random.normal(0, 1, n)
-    >>> y = x + np.random.normal(0, 0.5, n)  # Child has higher variance
-    >>> z = y + np.random.normal(0, 0.5, n)
-    >>> X = pd.DataFrame({'X': x, 'Y': y, 'Z': z})
+    >>> n = 500
+    >>> x = np.random.normal(0, 1.0, n)
+    >>> y = 2.0 * x + np.random.normal(0, 0.5, n)
+    >>> z = 2.0 * y + np.random.normal(0, 0.5, n)
+    >>> data = pd.DataFrame({'X': x, 'Y': y, 'Z': z})
 
     >>> true_dag = DAG([('X', 'Y'), ('Y', 'Z')])
     >>> scorer = VarSortability()
-    >>> result = scorer.evaluate(X, true_dag)
-    >>> result['varsortability']  # Should be high (> 0.8)
+    >>> result = scorer.evaluate(data, true_dag)
+    >>> 'varsortability' in result
+    True
+    >>> result['varsortability'] > 0.7
+    True
 
     Notes
     -----
