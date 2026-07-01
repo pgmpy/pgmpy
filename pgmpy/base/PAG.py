@@ -1,5 +1,5 @@
+from collections.abc import Hashable, Iterable
 from itertools import combinations, product
-from typing import Hashable, Iterable, Optional
 
 import networkx as nx
 
@@ -16,7 +16,7 @@ class PAG(AncestralBase):
 
     def __init__(
         self,
-        ebunch: Optional[Iterable[tuple[Hashable, Hashable]]] = None,
+        ebunch: Iterable[tuple[Hashable, Hashable]] | None = None,
         latents: set[Hashable] = set(),
         exposures: set[Hashable] = set(),
         outcomes: set[Hashable] = set(),
@@ -132,7 +132,7 @@ class PAG(AncestralBase):
         set
             Set of possible ancestor nodes including the node itself.
         """
-        possible_ancestors = set([node])
+        possible_ancestors = {node}
         for other in self.nodes:
             if other == node:
                 continue
@@ -287,19 +287,11 @@ class PAG(AncestralBase):
             v,
             x,
         ) in combinations(forks, 2):
-            pd_uv = [
-                p
-                for p in self.get_potentially_directed_paths(u, v)
-                if self.is_uncovered(p)
-            ]
+            pd_uv = [p for p in self.get_potentially_directed_paths(u, v) if self.is_uncovered(p)]
             if not pd_uv:
                 continue
 
-            pd_ux = [
-                p
-                for p in self.get_potentially_directed_paths(u, x)
-                if self.is_uncovered(p)
-            ]
+            pd_ux = [p for p in self.get_potentially_directed_paths(u, x) if self.is_uncovered(p)]
             if not pd_ux:
                 continue
 
@@ -651,12 +643,10 @@ class PAG(AncestralBase):
         separating_sets = kwargs["separating_sets"]
 
         for c in pag.nodes:
-
             # Find all d such that edge (c, d) has a circle on c's side
             neighbors = pag.get_neighbors(c, u_type="o", v_type=None)
 
             for d in neighbors:
-
                 # Try each possible a (start node)
                 for a in pag.nodes:
                     if a == c or a == d:
@@ -733,15 +723,11 @@ class PAG(AncestralBase):
                 paths = pag.get_paths(u, v, {("o", "o")})
                 for path in paths:
                     if len(path) >= 4 and pag.is_uncovered(path):
-                        if not pag.has_edge(path[0], path[-2]) and not pag.has_edge(
-                            path[1], path[-1]
-                        ):
+                        if not pag.has_edge(path[0], path[-2]) and not pag.has_edge(path[1], path[-1]):
                             pag.modify_edge(u, v, mark_u="-", mark_v="-")
 
                             for i in range(1, len(path) - 1):
-                                pag.modify_edge(
-                                    path[i], path[i + 1], mark_u="-", mark_v="-"
-                                )
+                                pag.modify_edge(path[i], path[i + 1], mark_u="-", mark_v="-")
 
         if not inplace:
             return pag
@@ -832,7 +818,6 @@ class PAG(AncestralBase):
 
         for u in pag.nodes:
             for v in pag.neighbors(u):
-
                 marks_uv = pag.get_edge_marks(u, v)
 
                 # Check u -> v   OR   u --o v
@@ -931,11 +916,7 @@ class PAG(AncestralBase):
         pag = self if inplace else self.copy()
 
         for u, w in list(pag.edges):
-            if not (
-                pag.has_edge(u, w)
-                and self.get_edge_marks(u, w)[u] == "o"
-                and self.get_edge_marks(u, w)[w] == ">"
-            ):
+            if not (pag.has_edge(u, w) and self.get_edge_marks(u, w)[u] == "o" and self.get_edge_marks(u, w)[w] == ">"):
                 continue
 
             forks = pag.get_neighbors(w, u_type="-", v_type=">")
@@ -994,5 +975,4 @@ class PAG(AncestralBase):
                 func(separating_sets=separating_sets, inplace=inplace)
             else:
                 pag = func(separating_sets=separating_sets, inplace=inplace)
-
         return pag
