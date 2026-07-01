@@ -6,9 +6,9 @@ import networkx as nx
 import pandas as pd
 
 from pgmpy.base import DAG, PDAG, UndirectedGraph
-from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.estimators.BaseConstraintEstimator import BaseConstraintEstimator
 from pgmpy.estimators.CITests import ci_registry
+from pgmpy.estimators.ExpertKnowledge import ExpertKnowledge
 from pgmpy.independencies import Independencies
 
 
@@ -69,10 +69,8 @@ class PC(BaseConstraintEstimator):
 
     References
     ----------
-    [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques,
-        2009, Section 18.2
-    [2] Neapolitan, Learning Bayesian Networks, Section 10.1.2 for the PC algorithm (page 550),
-      http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
+    - :cite:p:`koller_friedman_2009` (Section 18.2).
+    - :cite:p:`neapolitan_2009` (Section 10.1.2, page 550).
     """
 
     def __init__(
@@ -82,7 +80,7 @@ class PC(BaseConstraintEstimator):
         **kwargs,
     ) -> None:
         warnings.warn(
-            "PC is deprecated. Please use pgmpy.causal_discovery.PC instead.",
+            "PC is deprecated and will be removed in v1.3.0. Please use pgmpy.causal_discovery.PC instead.",
             FutureWarning,
             stacklevel=2,
         )
@@ -201,16 +199,10 @@ class PC(BaseConstraintEstimator):
 
         References
         ----------
-        [1] Original PC: P. Spirtes, C. Glymour, and R. Scheines, Causation,
-                    Prediction, and Search, 2nd ed. Cambridge, MA: MIT Press, 2000.
-        [2] Stable PC:  D. Colombo and M. H. Maathuis, “A modification of the PC algorithm
-                    yielding order-independent skeletons,” ArXiv e-prints, Nov. 2012.
-        [3] Parallel PC: Le, Thuc, et al. "A fast PC algorithm for high dimensional causal
-                    discovery with multi-core PCs." IEEE/ACM transactions on computational
-                    biology and bioinformatics (2016).
-        [4] Expert Knowledge: Meek, Christopher. "Causal inference and causal
-                explanation with background knowledge." arXiv preprint arXiv:1302.4972
-                (2013).
+        - Original PC: :cite:p:`spirtes_glymour_scheines_2001`
+        - Stable PC: :cite:p:`colombo_maathuis_2014`
+        - Parallel PC: :cite:p:`le_2019`
+        - Expert knowledge: :cite:p:`meek_1995`
 
         Examples
         --------
@@ -223,7 +215,7 @@ class PC(BaseConstraintEstimator):
         >>> model_chi  # doctest: +ELLIPSIS
         <pgmpy.base.PDAG.PDAG object at 0x...>
         >>> print(len(model_chi.edges()))
-        38
+        30
         >>> model_gsq, _ = est.estimate(ci_test="g_sq", return_type="skeleton")
         >>> model_gsq  # doctest: +ELLIPSIS
         <networkx.classes.graph.Graph object at 0x...>
@@ -240,7 +232,7 @@ class PC(BaseConstraintEstimator):
             expert_knowledge = ExpertKnowledge()
 
         if expert_knowledge.search_space:
-            expert_knowledge.limit_search_space(self.data.columns)
+            expert_knowledge.limit_search_space(self.data)
 
         # Step 1: Run the PC algorithm to build the skeleton and get the separating sets.
         skel, separating_sets = self.build_skeleton(
@@ -315,9 +307,7 @@ class PC(BaseConstraintEstimator):
 
         References
         ----------
-        [1] Neapolitan, Learning Bayesian Networks, Section 10.1.2, Algorithm
-                10.2 (page 550)
-        [2] http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
+        - :cite:p:`neapolitan_2009` (Section 10.1.2, Algorithm 10.2, page 550).
 
         Examples
         --------
@@ -331,8 +321,10 @@ class PC(BaseConstraintEstimator):
         >>> c = PC(data)
         >>> skel, sep_sets = c.estimate(return_type="skeleton")
         >>> pdag = PC.orient_colliders(skel, sep_sets)
-        >>> sorted(pdag.edges())
-        [('A', 'C'), ('A', 'D'), ('B', 'C'), ('D', 'A'), ('D', 'C')]
+        >>> sorted(pdag.directed_edges)  # oriented colliders (canonical, stable across runs)
+        [('A', 'C'), ('B', 'C'), ('D', 'C')]
+        >>> sorted(pdag.undirected_edges)
+        [('A', 'D')]
         """
 
         pdag = skeleton.to_directed()
@@ -358,7 +350,8 @@ class PC(BaseConstraintEstimator):
             else:
                 directed_edges.add((u, v))
 
-        pdag_oriented = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
+        ebunch = [(u, v, "->") for u, v in directed_edges] + [(u, v, "--") for u, v in undirected_edges]
+        pdag_oriented = PDAG(edge_list=ebunch)
         pdag_oriented.add_nodes_from(pdag.nodes())
 
         return pdag_oriented

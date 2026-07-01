@@ -2,10 +2,10 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from ._base import _BaseCITest
+from ._base import BaseCITest, _CITestResult
 
 
-class Pearsonr(_BaseCITest):
+class Pearsonr(BaseCITest):
     r"""
     Partial Correlation test for conditional independence.
 
@@ -22,6 +22,8 @@ class Pearsonr(_BaseCITest):
     hypothesis :math:`X \perp Y \mid Z`, this statistic is Student's t distribution with :math:`n - |Z| - 2` degrees of
     freedom.
 
+    The effect size is the absolute partial correlation :math:`|\rho_{XY \mid Z}|`.
+
     Parameters
     ----------
     data : pandas.DataFrame
@@ -33,14 +35,16 @@ class Pearsonr(_BaseCITest):
     >>> import pandas as pd
     >>> from pgmpy.ci_tests import Pearsonr
     >>> rng = np.random.default_rng(seed=42)
-    >>> data = pd.DataFrame(rng.standard_normal((1000, 3)), columns=["X", "Y", "Z"])
+    >>> data = pd.DataFrame(data=rng.standard_normal(size=(1000, 3)), columns=["X", "Y", "Z"])
     >>> test = Pearsonr(data=data)
-    >>> test("X", "Y", ["Z"], significance_level=0.05)
+    >>> test(X="X", Y="Y", Z=["Z"], significance_level=0.05)
     np.True_
     >>> round(test.statistic_, 2)
     np.float64(0.01)
     >>> round(test.p_value_, 2)
-    np.float(0.87)
+    np.float64(0.87)
+    >>> test.dof_
+    997
 
     Attributes
     ----------
@@ -49,11 +53,13 @@ class Pearsonr(_BaseCITest):
         ranging from -1 to 1. Set after calling the test.
     p_value_ : float
         The p-value for the test. Set after calling the test.
+    effect_size_ : float
+        Absolute partial correlation. Set after calling the test.
 
     References
     ----------
-    .. [1] https://en.wikipedia.org/wiki/Pearson_correlation_coefficient
-    .. [2] https://en.wikipedia.org/wiki/Partial_correlation#Using_linear_regression
+    - :cite:p:`peerj_blue_driver`
+    - :cite:p:`wikipedia_partial_correlation`
     """
 
     _tags = {
@@ -63,11 +69,11 @@ class Pearsonr(_BaseCITest):
         "requires_data": True,
     }
 
-    def __init__(self, data: pd.DataFrame):
+    def __init__(self, data: pd.DataFrame, use_cache: bool = True):
         self.data = data
-        super().__init__()
+        super().__init__(use_cache=use_cache)
 
-    def run_test(
+    def _compute_result(
         self,
         X: str,
         Y: str,
@@ -76,12 +82,13 @@ class Pearsonr(_BaseCITest):
         """
         Compute Pearson correlation coefficient and p-value.
 
-        Sets ``self.statistic_`` (Pearson's r) and ``self.p_value_``.
+        Returns Pearson's r, p-value, and optional degrees of freedom metadata.
         """
         data = self.data
         n_samples = data.shape[0]
 
         # Step 1: If Z is empty compute a non-conditional test.
+        attributes = {}
         if len(Z) == 0:
             coef, p_value = stats.pearsonr(data.loc[:, X], data.loc[:, Y])
 
@@ -95,11 +102,9 @@ class Pearsonr(_BaseCITest):
             residual_Y = data.loc[:, Y] - design_matrix @ Y_coef
 
             coef = np.corrcoef(residual_X, residual_Y)[0, 1]
-            self.dof_ = n_samples - len(Z) - 2
-            t_statistic = coef * np.sqrt(self.dof_ / (1 - coef**2))
-            p_value = 2 * stats.t.sf(np.abs(t_statistic), df=self.dof_)
+            dof = n_samples - len(Z) - 2
+            t_statistic = coef * np.sqrt(dof / (1 - coef**2))
+            p_value = 2 * stats.t.sf(np.abs(t_statistic), df=dof)
+            attributes["dof_"] = dof
 
-        self.statistic_ = coef
-        self.p_value_ = p_value
-
-        return self.statistic_, self.p_value_
+        return _CITestResult(statistic=coef, p_value=p_value, effect_size=abs(coef), attributes=attributes)

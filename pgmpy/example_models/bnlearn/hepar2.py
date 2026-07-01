@@ -1,13 +1,11 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Hepar2(DiscreteMixin, _BaseExampleModel):
+class Hepar2(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    ..[1] A. Onisko. Probabilistic Causal Models in Medicine: Application to Diagnosis of Liver Disorders. Ph.D.
-    Dissertation, Institute of Biocybernetics and Biomedical Engineering, Polish Academy of Science, Warsaw, March
-    2003.
+    - :cite:p:`onisko_thesis`
     """
 
     _tags = {

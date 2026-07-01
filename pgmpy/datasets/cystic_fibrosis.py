@@ -1,7 +1,7 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class CysticFibrosis(_BaseDataset):
+class CysticFibrosis(BaseDataset):
     _tags = {
         "name": "cystic_fibrosis",
         "n_variables": 44,
@@ -18,9 +18,9 @@ class CysticFibrosis(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/cystic-fibrosis/"
+    base_url = "real/cystic-fibrosis"
 
-    data_url = base_url + "data/cystic-fibrosis-20180726-simplified.continuous.txt"
+    data_url = "data/cystic-fibrosis-20180726-simplified.continuous.txt"
     ground_truth_url = None
     expert_knowledge_url = None
     missing_values_marker = "*"

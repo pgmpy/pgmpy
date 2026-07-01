@@ -1,13 +1,11 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Child(DiscreteMixin, _BaseExampleModel):
+class Child(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    ..[1] D. J. Spiegelhalter, R. G. Cowell (1992). Learning in probabilistic expert systems. In Bayesian
-    Statistics 4 (J. M. Bernardo, J. O. Berger, A. P. Dawid and A. F. M. Smith, eds.), 447-466. Clarendon Press,
-    Oxford.
+    - :cite:p:`spiegelhalter_cowell_1992`
     """
 
     _tags = {

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from math import lgamma, log
 
 import numpy as np
@@ -10,6 +11,13 @@ from scipy.stats import multivariate_normal
 
 from pgmpy.estimators import BaseEstimator
 from pgmpy.utils import get_dataset_type
+
+warnings.warn(
+    "`pgmpy.estimators.StructureScore` is deprecated and will be removed in v1.3.0. "
+    "Use `pgmpy.structure_score` instead.",
+    FutureWarning,
+    stacklevel=2,
+)
 
 
 def get_scoring_method(
@@ -290,10 +298,8 @@ class K2(StructureScore):
 
     References
     ----------
-    [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009,
-        Section 18.3.4–18.3.6 (esp. page 806).
-    [2] AM Carvalho, Scoring functions for learning Bayesian networks,
-        http://www.lx.it.pt/~asmc/pub/talks/09-TA/ta_pres.pdf
+    - :cite:p:`koller_friedman_2009` (Section 18.3.4--18.3.6, esp. page 806).
+    - :cite:p:`liao_2022`
     """
 
     def __init__(self, data, **kwargs):
@@ -336,8 +342,7 @@ class K2(StructureScore):
 
         References
         ----------
-        [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009,
-            Section 18.3.4–18.3.6 (esp. page 806).
+        - :cite:p:`koller_friedman_2009` (Section 18.3.4--18.3.6, esp. page 806).
         """
 
         var_states = self.state_names[variable]
@@ -416,10 +421,8 @@ class BDeu(StructureScore):
 
     References
     ----------
-    [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009,
-        Section 18.3.4–18.3.6 (esp. page 806).
-    [2] AM Carvalho, Scoring functions for learning Bayesian networks,
-        http://www.lx.it.pt/~asmc/pub/talks/09-TA/ta_pres.pdf
+    - :cite:p:`koller_friedman_2009` (Section 18.3.4--18.3.6, esp. page 806).
+    - :cite:p:`liao_2022`
     """
 
     def __init__(self, data, equivalent_sample_size=10, **kwargs):
@@ -526,8 +529,7 @@ class BDs(BDeu):
 
     References
     ----------
-    [1] Scutari, Marco. An Empirical-Bayes Score for Discrete Bayesian Networks.
-        Journal of Machine Learning Research, 2016, pp. 438–48
+    - :cite:p:`scutari_2016a`
     """
 
     def __init__(self, data, equivalent_sample_size=10, **kwargs):
@@ -755,10 +757,8 @@ class BIC(LogLikeliHood):
 
     References
     ----------
-    [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009,
-        Section 18.3.4–18.3.6 (esp. page 802).
-    [2] AM Carvalho, Scoring functions for learning Bayesian networks,
-        http://www.lx.it.pt/~asmc/pub/talks/09-TA/ta_pres.pdf
+    - :cite:p:`koller_friedman_2009` (Section 18.3.4--18.3.6, esp. page 802).
+    - :cite:p:`liao_2022`
     """
 
     def __init__(self, data, **kwargs):
@@ -846,10 +846,8 @@ class AIC(LogLikeliHood):
 
     References
     ----------
-    [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009,
-        Section 18.3.4–18.3.6 (esp. page 802).
-    [2] AM Carvalho, Scoring functions for learning Bayesian networks,
-        http://www.lx.it.pt/~asmc/pub/talks/09-TA/ta_pres.pdf
+    - :cite:p:`koller_friedman_2009` (Section 18.3.4--18.3.6, esp. page 802).
+    - :cite:p:`liao_2022`
     """
 
     def __init__(self, data, **kwargs):
@@ -1208,9 +1206,7 @@ class LogLikelihoodCondGauss(StructureScore):
 
     References
     ----------
-    [1] Andrews, B., Ramsey, J., & Cooper, G. F. (2018). Scoring Bayesian
-        Networks of Mixed Variables. International journal of data science and
-        analytics, 6(1), 3–18. https://doi.org/10.1007/s41060-017-0085-7
+    - :cite:p:`andrews_ramsey_cooper_2018`
     """
 
     def __init__(self, data, **kwargs):
@@ -1368,9 +1364,7 @@ class LogLikelihoodCondGauss(StructureScore):
 
         References
         ----------
-        [1] Andrews, B., Ramsey, J., & Cooper, G. F. (2018). Scoring Bayesian
-            Networks of Mixed Variables. International journal of data science and
-            analytics, 6(1), 3–18. https://doi.org/10.1007/s41060-017-0085-7
+        - :cite:p:`andrews_ramsey_cooper_2018`
         """
         df = self.data.loc[:, [variable] + parents]
 
@@ -1574,9 +1568,7 @@ class BICCondGauss(LogLikelihoodCondGauss):
 
     References
     ----------
-    [1] Andrews, B., Ramsey, J., & Cooper, G. F. (2018). Scoring Bayesian
-        Networks of Mixed Variables. International journal of data science and
-        analytics, 6(1), 3–18. https://doi.org/10.1007/s41060-017-0085-7
+    - :cite:p:`andrews_ramsey_cooper_2018`
     """
 
     def __init__(self, data, **kwargs):
@@ -1659,9 +1651,7 @@ class AICCondGauss(LogLikelihoodCondGauss):
 
     References
     ----------
-    [1] Andrews, B., Ramsey, J., & Cooper, G. F. (2018). Scoring Bayesian
-        Networks of Mixed Variables. International journal of data science and
-        analytics, 6(1), 3–18. https://doi.org/10.1007/s41060-017-0085-7
+    - :cite:p:`andrews_ramsey_cooper_2018`
     """
 
     def __init__(self, data, **kwargs):

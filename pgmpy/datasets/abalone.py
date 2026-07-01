@@ -1,13 +1,12 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class AbaloneContinuous(_BaseDataset):
+class AbaloneContinuous(BaseDataset):
     """
     References
     ----------
-    .. [1] Lopez-Paz, D., Muandet, K., Schölkopf, B., & Tolstikhin, I. (2015, June). Towards a learning theory of
-           cause-effect inference. In International Conference on Machine Learning (pp. 1452-1461). PMLR.
-    .. [2] https://archive.ics.uci.edu/ml/datasets/abalone
+    - :cite:p:`lopezpaz_2015`
+    - :cite:p:`uci_abalone`
     """
 
     _tags = {
@@ -26,23 +25,22 @@ class AbaloneContinuous(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/abalone/"
+    base_url = "real/abalone"
 
-    data_url = base_url + "data/abalone.continuous.txt"
+    data_url = "data/abalone.continuous.txt"
     ground_truth_url = None
-    expert_knowledge_url = base_url + "ground.truth/abalone.knowledge.txt"
+    expert_knowledge_url = "ground.truth/abalone.knowledge.txt"
 
     categorical_variables = []
     ordinal_variables = dict()
 
 
-class AbaloneMixed(_BaseDataset):
+class AbaloneMixed(BaseDataset):
     """
     References
     ----------
-    .. [1] Lopez-Paz, D., Muandet, K., Schölkopf, B., & Tolstikhin, I. (2015, June). Towards a learning theory of
-           cause-effect inference. In International Conference on Machine Learning (pp. 1452-1461). PMLR.
-    .. [2] https://archive.ics.uci.edu/ml/datasets/abalone
+    - :cite:p:`lopezpaz_2015`
+    - :cite:p:`uci_abalone`
     """
 
     _tags = {
@@ -61,11 +59,11 @@ class AbaloneMixed(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/abalone/"
+    base_url = "real/abalone"
 
-    data_url = base_url + "data/abalone.mixed.maximum.3.txt"
+    data_url = "data/abalone.mixed.maximum.3.txt"
     ground_truth_url = None
-    expert_knowledge_url = base_url + "ground.truth/abalone.knowledge.txt"
+    expert_knowledge_url = "ground.truth/abalone.knowledge.txt"
 
     categorical_variables = [
         "Sex",

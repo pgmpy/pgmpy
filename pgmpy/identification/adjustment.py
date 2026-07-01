@@ -3,17 +3,17 @@ import itertools
 import networkx as nx
 
 from pgmpy.base import ADMG, DAG, MAG, PDAG
-from pgmpy.identification import _BaseIdentification
+from pgmpy.identification import BaseIdentification
 from pgmpy.utils.sets import _powerset
 
 
-class Adjustment(_BaseIdentification):
+class Adjustment(BaseIdentification):
     """
     Given a causal graph, finds the adjustment set.
 
     This class implements a few variants for computing adjustment sets for
-    identifying the total causal effect of the `exposure` variables on
-    `outcome` variables. Additionally, it provides methods to check if the
+    identifying the total causal effect of the variables in the `exposures`
+    role on the variables in the `outcomes` role. Additionally, it provides methods to check if the
     current set of variables with role `adjustment` satisfy the backdoor
     criterion and to compute the backdoor adjustment formula.
 
@@ -50,11 +50,8 @@ class Adjustment(_BaseIdentification):
 
     References
     ----------
-    [1] Perkovi, Emilija, et al. "Complete graphical characterization and
-        construction of adjustment sets in Markov equivalence classes of ancestral
-        graphs." Journal of Machine Learning Research.
-    [2] Witte, Janine, et al. "On efficient adjustment in causal graphs."
-        Journal of Machine Learning Research.
+    - :cite:p:`perkovic_2018`
+    - :cite:p:`witte_2022`
     """
 
     def __init__(self, variant="minimal"):
@@ -68,10 +65,10 @@ class Adjustment(_BaseIdentification):
         """
         Returns a proper backdoor graph of the `causal_graph`.
 
-        For a `causal_graph` with variable roles `exposure` and `outcome`
+        For a `causal_graph` with variable roles `exposures` and `outcomes`
         defined, returns it's proper backdoor graph. A proper backdoor graph is
         a graph which removes the first edge of every proper causal path from
-        `exposure` to `outcome`.
+        `exposures` to `outcomes`.
 
         Parameters
         ----------
@@ -102,9 +99,7 @@ class Adjustment(_BaseIdentification):
 
         References
         ----------
-        [1] Perkovic, Emilija, et al. "Complete graphical characterization and
-            construction of adjustment sets in Markov equivalence classes of
-            ancestral graphs." The Journal of Machine Learning Research.
+        - :cite:p:`perkovic_2018`
         """
         # TODO: Make this work for all graph types.
         model = causal_graph if inplace else causal_graph.copy()
@@ -184,7 +179,7 @@ class Adjustment(_BaseIdentification):
         """
         Validate the causal graph for backdoor identification.
 
-        Given a `causal_graph` with variable roles `exposure`, `outcome`, and
+        Given a `causal_graph` with variable roles `exposures`, `outcomes`, and
         `adjustment` defined, this method checks if the given `adjustment` set
         is valid.
 
@@ -204,15 +199,20 @@ class Adjustment(_BaseIdentification):
 
         conditional_vars = exposure + adjustment_vars
 
-        predecessors = set()
-        for exposure_var in exposure:
-            predecessors.update(causal_graph.predecessors(exposure_var))
+        # Parents of the exposure(s) that are themselves conditioned on are trivially separated.
+        parents = causal_graph.get_parents(exposure) - set(conditional_vars)
 
-        parents_d_sep = []
-        for pred_var in predecessors:
-            outcome_d_seps = []
-            for outcome_var in outcome:
-                outcome_d_seps.append(causal_graph.is_dconnected(pred_var, outcome_var, observed=conditional_vars))
-            parents_d_sep.append(not any(outcome_d_seps))
+        # DAG has not migrated onto _CoreGraph yet and exposes d-separation as `is_dconnected`;
+        # this branch collapses into the `is_mseparated` call once it does.
+        if isinstance(causal_graph, DAG):
+            return all(
+                not causal_graph.is_dconnected(parent, outcome_var, observed=conditional_vars)
+                for parent in parents
+                for outcome_var in outcome
+            )
 
-        return all(parents_d_sep)
+        return all(
+            causal_graph.is_mseparated(parent, outcome_var, conditioning_set=conditional_vars)
+            for parent in parents
+            for outcome_var in outcome
+        )

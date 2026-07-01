@@ -1,17 +1,17 @@
 import networkx as nx
 
 from pgmpy.base import DAG
-from pgmpy.identification import Adjustment, _BaseIdentification
+from pgmpy.identification import Adjustment, BaseIdentification
 from pgmpy.utils.sets import _powerset
 
 
-class Frontdoor(_BaseIdentification):
+class Frontdoor(BaseIdentification):
     """
     Given a causal graph, finds the set of variables satisfying frontdoor criterion.
 
-    Given a causal graph with `exposure` and `outcome` roles specified, the
+    Given a causal graph with `exposures` and `outcomes` roles specified, the
     `FrontdoorIdentification` class provides methods to find the set of variables
-    satisfying the frontdoor criterion with respect to `exposure` and `outcome` in
+    satisfying the frontdoor criterion with respect to `exposures` and `outcomes` in
     the causal graph.
 
     Parameters
@@ -33,8 +33,8 @@ class Frontdoor(_BaseIdentification):
     ...     roles={"exposures": "X", "outcomes": "Y"},
     ... )
     >>> dag_with_adj, is_identified = Frontdoor().identify(dag)
-    >>> dag_with_adj.roles
-    {'exposure': 'x1', 'outcome': 'y1', 'frontdoor': ['M']}
+    >>> dict(sorted(dag_with_adj.get_role_dict().items()))
+    {'exposures': ['X'], 'frontdoor': ['M'], 'outcomes': ['Y']}
     >>> Frontdoor().validate(dag_with_adj)
     True
     """

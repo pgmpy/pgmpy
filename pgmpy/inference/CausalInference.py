@@ -1,6 +1,6 @@
 import warnings
 from collections.abc import Iterable
-from itertools import chain, product
+from itertools import chain, pairwise, product
 
 import networkx as nx
 import numpy as np
@@ -48,7 +48,7 @@ class CausalInference:
 
     References
     ----------
-    'Causality: Models, Reasoning, and Inference' - Judea Pearl (2000)
+    - :cite:p:`pearl_2009`
     """
 
     def __init__(self, model):
@@ -123,7 +123,8 @@ class CausalInference:
         True
         """
         warnings.warn(
-            "`is_valid_backdoor_adjustment_set` is deprecated. Please use pgmpy.identification.Adjustment instead.",
+            """`is_valid_backdoor_adjustment_set` is deprecated and will be removed in v1.3.0. Please use
+            pgmpy.identification.Adjustment instead.""",
             FutureWarning,
             stacklevel=2,
         )
@@ -168,7 +169,8 @@ class CausalInference:
         frozenset()
         """
         warnings.warn(
-            "`get_all_backdoor_adjustment_sets` is deprecated. Please use pgmpy.identification.Adjustment instead.",
+            """`get_all_backdoor_adjustment_sets` is deprecated and will be removed in v1.3.0. Please use
+            pgmpy.identification.Adjustment instead.""",
             FutureWarning,
             stacklevel=2,
         )
@@ -221,7 +223,8 @@ class CausalInference:
             True if Z is a valid frontdoor adjustment set.
         """
         warnings.warn(
-            "`is_valid_frontdoor_adjustment_set` is deprecated. Please use pgmpy.identification.Frontdoor instead.",
+            """`is_valid_frontdoor_adjustment_set` is deprecated and will be removed in v1.3.0. Please use
+            pgmpy.identification.Frontdoor instead.""",
             FutureWarning,
             stacklevel=2,
         )
@@ -276,7 +279,8 @@ class CausalInference:
         frozenset: a frozenset of frozensets
         """
         warnings.warn(
-            "`get_all_frontdoor_adjustment_sets` is deprecated. Please use pgmpy.identification.Frontdoor instead.",
+            """`get_all_frontdoor_adjustment_sets` is deprecated and will be removed in v1.3.0. Please use
+            pgmpy.identification.Frontdoor instead.""",
             FutureWarning,
             stacklevel=2,
         )
@@ -340,7 +344,7 @@ class CausalInference:
         Parameters
         ----------
         X: node
-            The explantory variable.
+            The explanatory variable.
 
         Y: node
             The dependent variable.
@@ -462,7 +466,7 @@ class CausalInference:
             The observed variable's name
 
         Y: node
-            The oberved variable's name
+            The observed variable's name
 
         scaling_indicators: dict (optional)
             A dict representing which observed variable to use as scaling indicator for
@@ -476,9 +480,7 @@ class CausalInference:
 
         References
         ----------
-        .. [1] Van Der Zander, B., Textor, J., & Liskiewicz, M. (2015, June). Efficiently finding
-               conditional instruments for causal inference. In Twenty-Fourth International Joint
-               Conference on Artificial Intelligence.
+        - :cite:p:`vanderzander_2015`
 
         Examples
         --------
@@ -500,9 +502,8 @@ class CausalInference:
 
         transformed_graph, dependent_var = self._iv_transformations(X, Y, scaling_indicators=scaling_indicators)
         if (X, Y) in transformed_graph.edges:
-            G_c = transformed_graph.remove_edge(X, Y)
-        else:
-            G_c = transformed_graph
+            transformed_graph.remove_edge(X, Y)
+        G_c = transformed_graph
 
         instruments = []
         for Z in self.observed_variables - {X, Y}:
@@ -750,7 +751,7 @@ class CausalInference:
         all_path_effects = []
         for path in all_simple_paths:
             causal_effect = []
-            for x1, x2 in zip(path, path[1:]):
+            for x1, x2 in pairwise(path):
                 if isinstance(estimand_strategy, frozenset):
                     adjustment_set = frozenset({estimand_strategy})
                     assert self.is_valid_backdoor_adjustment_set(x1, x2, Z=adjustment_set)
@@ -798,10 +799,7 @@ class CausalInference:
 
         References
         ----------
-        [1] Perkovic, Emilija, et al.
-         "Complete graphical characterization and construction of
-         adjustment sets in Markov equivalence classes of ancestral graphs."
-           The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
+        - :cite:p:`perkovic_2018`
         """
         if isinstance(X, str):
             X = [X]
@@ -859,10 +857,7 @@ class CausalInference:
 
         References
         ----------
-        [1] Perkovic, Emilija, et al.
-          "Complete graphical characterization and construction of
-            adjustment sets in Markov equivalence classes of ancestral graphs."
-              The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
+        - :cite:p:`perkovic_2018`
         """
         if isinstance(X, str):
             X = [X]
@@ -905,10 +900,7 @@ class CausalInference:
 
         References
         ----------
-        [1] Perkovic, Emilija, et al.
-          "Complete graphical characterization and construction of
-            adjustment sets in Markov equivalence classes of ancestral graphs."
-              The Journal of Machine Learning Research 18.1 (2017): 8132-8193.
+        - :cite:p:`perkovic_2018`
         """
         backdoor_graph = self.get_proper_backdoor_graph([X], [Y], inplace=False)
         return backdoor_graph.minimal_dseparator(X, Y)
@@ -938,7 +930,7 @@ class CausalInference:
             :math:`P(X | do(Y), Z)`.
 
         evidence: dict (default: None)
-            Dictionary of the form {variable_name: variable_state} repesenting
+            Dictionary of the form {variable_name: variable_state} representing
             the conditional variables in the query i.e. `Z` in :math:`P(X |
             do(Y), Z)`.
 
@@ -952,7 +944,7 @@ class CausalInference:
             Propagation.
 
         kwargs: Any
-            Additional paramters which needs to be passed to inference
+            Additional parameters which needs to be passed to inference
             algorithms.  Please refer to the pgmpy.inference.Inference for
             details.
 
@@ -1015,7 +1007,7 @@ class CausalInference:
         # Step 2: Check if adjustment set is provided, otherwise try calculating it.
         if adjustment_set is None:
             do_vars = [var for var, state in do.items()]
-            adjustment_set = set(chain(*[self.model.predecessors(var) for var in do_vars]))
+            adjustment_set = self.model.get_parents(do_vars)
             if len(adjustment_set.intersection(self.model.latents)) != 0:
                 raise ValueError("Not all parents of do variables are observed. Please specify an adjustment set.")
 

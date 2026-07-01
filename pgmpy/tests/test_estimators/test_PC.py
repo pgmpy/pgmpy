@@ -4,7 +4,6 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import pytest
-from joblib.externals.loky import get_reusable_executor
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.estimators import PC, ExpertKnowledge
@@ -12,12 +11,6 @@ from pgmpy.example_models import load_model
 from pgmpy.independencies import Independencies
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.sampling import BayesianModelSampling
-
-
-@pytest.fixture(autouse=True)
-def shutdown_executor():
-    yield
-    get_reusable_executor().shutdown(wait=True)
 
 
 @pytest.fixture
@@ -84,7 +77,7 @@ def test_build_skeleton_from_ind(variant):
         variant=variant,
         ci_test="independence_match",
         return_type="skeleton",
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
 
@@ -108,7 +101,7 @@ def test_build_skeleton_from_model_ind(variant):
         variant=variant,
         ci_test="independence_match",
         return_type="skeleton",
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
 
@@ -144,17 +137,17 @@ def test_build_skeleton_from_model_ind(variant):
                 frozenset({"A", "B"}): tuple(),
                 frozenset({"D", "B"}): ("A",),
             },
-            {("B", "C"), ("A", "D"), ("A", "C"), ("D", "A")},
+            {("A", "C", "->"), ("A", "D", "--"), ("B", "C", "->")},
         ),
         (
             nx.Graph([("A", "B"), ("A", "C")]),
             {frozenset({"B", "C"}): ()},
-            {("B", "A"), ("C", "A")},
+            {("B", "A", "->"), ("C", "A", "->")},
         ),
         (
             nx.Graph([("A", "B"), ("A", "C")]),
             {frozenset({"B", "C"}): ("A",)},
-            {("A", "B"), ("B", "A"), ("A", "C"), ("C", "A")},
+            {("A", "B", "--"), ("A", "C", "--")},
         ),
         (
             nx.Graph([("A", "C"), ("B", "C"), ("C", "D")]),
@@ -163,24 +156,22 @@ def test_build_skeleton_from_model_ind(variant):
                 frozenset({"A", "D"}): ("C",),
                 frozenset({"B", "D"}): ("C",),
             },
-            {("A", "C"), ("B", "C"), ("C", "D")},
+            {("A", "C", "->"), ("B", "C", "->"), ("C", "D", "->")},
         ),
         (
             nx.Graph([("A", "B"), ("A", "C"), ("B", "C"), ("B", "D")]),
             {frozenset({"A", "D"}): tuple(), frozenset({"C", "D"}): ("A", "B")},
-            {("A", "B"), ("B", "C"), ("A", "C"), ("D", "B")},
+            {("A", "B", "->"), ("A", "C", "->"), ("B", "C", "->"), ("D", "B", "->")},
         ),
         (
             nx.Graph([("A", "B"), ("B", "C"), ("A", "D"), ("B", "D"), ("C", "D")]),
             {frozenset({"A", "C"}): ("B",)},
             {
-                ("A", "B"),
-                ("B", "A"),
-                ("B", "C"),
-                ("C", "B"),
-                ("A", "D"),
-                ("B", "D"),
-                ("C", "D"),
+                ("A", "B", "--"),
+                ("A", "D", "->"),
+                ("B", "D", "->"),
+                ("C", "B", "--"),
+                ("C", "D", "->"),
             },
         ),
     ],
@@ -188,7 +179,7 @@ def test_build_skeleton_from_model_ind(variant):
 def test_skeleton_to_pdag(skel, sep_sets, expected_edges):
     pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
     pdag = pdag.apply_meeks_rules(apply_r4=False)
-    assert set(pdag.edges()) == expected_edges
+    assert set(pdag.get_edges(data=True)) == expected_edges
 
 
 @pytest.mark.parametrize("variant", ["orig", "stable", "parallel"])
@@ -200,7 +191,7 @@ def test_estimate_dag(variant):
         variant=variant,
         ci_test="independence_match",
         return_type="dag",
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
     assert model.edges() == {("B", "D"), ("A", "D"), ("C", "D")}
@@ -214,7 +205,7 @@ def test_estimate_dag_from_model(variant):
         variant=variant,
         ci_test="independence_match",
         return_type="dag",
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
     expected_edges_1 = set(model.edges())
@@ -300,7 +291,7 @@ def test_build_skeleton_ci_tests(discrete_data, variant, ci_test):
         ci_test=ci_test,
         return_type="skeleton",
         significance_level=0.005,
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
 
@@ -316,7 +307,7 @@ def test_build_dag_discrete(variant):
         ci_test="chi_square",
         return_type="dag",
         significance_level=0.001,
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
 
@@ -366,7 +357,7 @@ def test_build_skeleton_continuous(ci_test, variant):
         variant=variant,
         ci_test=ci_test,
         return_type="skeleton",
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
     expected_edges_stable = {("A", "F"), ("B", "C"), ("B", "F"), ("C", "F")}
@@ -411,7 +402,7 @@ def test_build_skeleton_continuous_fake_ci(ci_test, variant):
         variant=variant,
         ci_test=fake_ci,
         return_type="skeleton",
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
     expected_edges = {("X", "Z"), ("Y", "Z")}
@@ -434,7 +425,7 @@ def test_build_dag_continuous(ci_test, variant):
         variant=variant,
         ci_test=ci_test,
         return_type="dag",
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
 
@@ -445,7 +436,7 @@ def test_pc_alarm():
     alarm_model = load_model("bnlearn/alarm")
     data = BayesianModelSampling(alarm_model).forward_sample(size=int(1e4), seed=42)
     est = PC(data)
-    est.estimate(variant="stable", max_cond_vars=5, n_jobs=2, show_progress=False)
+    est.estimate(variant="stable", max_cond_vars=5, n_jobs=1, show_progress=False)
 
 
 def test_pc_asia(caplog):
@@ -460,7 +451,7 @@ def test_pc_asia(caplog):
                 variant="stable",
                 max_cond_vars=4,
                 expert_knowledge=ExpertKnowledge(required_edges=[("xray", "either")]),
-                n_jobs=2,
+                n_jobs=1,
                 show_progress=False,
             )
     finally:
@@ -484,7 +475,7 @@ def test_pc_asia_expert():
                 ("bronc", "dysp"),
             ]
         ),
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
     edges = set(pdag.edges())
@@ -508,15 +499,15 @@ def test_temporal_pc_cancer():
     pdag = est.estimate(
         variant="stable",
         expert_knowledge=background,
-        n_jobs=2,
+        n_jobs=1,
         show_progress=False,
     )
 
-    assert set(pdag.edges()) == {
-        ("Cancer", "Xray"),
-        ("Cancer", "Dyspnoea"),
-        ("Smoker", "Cancer"),
-        ("Pollution", "Cancer"),
+    assert set(pdag.get_edges(data=True)) == {
+        ("Cancer", "Xray", "->"),
+        ("Cancer", "Dyspnoea", "->"),
+        ("Smoker", "Cancer", "->"),
+        ("Pollution", "Cancer", "->"),
     }
 
 
@@ -561,4 +552,9 @@ def test_temporal_pc_sachs():
     expert = ExpertKnowledge(temporal_order=temporal_order)
     pdag = PC(df).estimate(ci_test="chi_square", expert_knowledge=expert)
 
-    assert temporal_forbidden_edges.isdisjoint(set(pdag.edges()))
+    learned_edges = set()
+    for u, v, edge_type in pdag.get_edges(data=True):
+        learned_edges.add((u, v))
+        if edge_type == "--":
+            learned_edges.add((v, u))
+    assert temporal_forbidden_edges.isdisjoint(learned_edges)

@@ -1,11 +1,11 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class ResidentialBuilding(_BaseDataset):
+class ResidentialBuilding(BaseDataset):
     """
     References
     ----------
-    .. [1] https://archive.ics.uci.edu/ml/datasets/Residential+Building+Data+Set
+    - :cite:p:`uci_residential_building`
     """
 
     _tags = {
@@ -24,9 +24,9 @@ class ResidentialBuilding(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/residential-building/"
+    base_url = "real/residential-building"
 
-    data_url = base_url + "data/residential-building.continuous.txt"
+    data_url = "data/residential-building.continuous.txt"
     ground_truth_url = None
     expert_knowledge_url = None
 

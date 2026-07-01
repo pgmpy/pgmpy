@@ -4,7 +4,7 @@ from pgmpy.example_models import load_model
 from pgmpy.metrics import StructureScore
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def alarm_and_data():
     alarm = load_model("bnlearn/alarm")
     data = alarm.simulate(int(1e4), show_progress=False)
@@ -27,7 +27,7 @@ class TestStructureScore:
 
             for scoring_method in ("bdeu", "bds"):
                 scorer = StructureScore(scoring_method=scoring_method)
-                metric = scorer(X=data, causal_graph=model, equivalent_sample_size=10)
+                metric = scorer(X=data, causal_graph=model)
                 assert isinstance(metric, float)
 
     def test_input(self, alarm_and_data):

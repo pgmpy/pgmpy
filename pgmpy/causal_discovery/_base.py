@@ -1,27 +1,29 @@
 from collections import deque
-from collections.abc import Callable, Collection, Generator, Hashable
-from itertools import chain, combinations, permutations
-from typing import (
-    Any,
-)
+from collections.abc import Callable, Generator, Hashable
+from itertools import combinations, permutations
 
 import networkx as nx
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from sklearn.base import BaseEstimator
+from sklearn.metrics import (
+    adjusted_mutual_info_score,
+    mutual_info_score,
+    normalized_mutual_info_score,
+)
 from sklearn.utils.validation import check_is_fitted, validate_data
 from tqdm.auto import tqdm
 
 from pgmpy import config, logger
 from pgmpy.base import DAG, UndirectedGraph
-from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.ci_tests import IndependenceMatch, get_ci_test
 from pgmpy.independencies import Independencies
 from pgmpy.metrics import get_metrics
+from pgmpy.structure_score import BaseStructureScore
 
 
-class _BaseCausalDiscovery(BaseEstimator):
+class BaseCausalDiscovery(BaseEstimator):
     """
     Base class for all causal discovery estimators in pgmpy.
 
@@ -104,8 +106,8 @@ class _BaseCausalDiscovery(BaseEstimator):
             `pgmpy.metrics.get_metrics(requires_true_graph=True)`
 
         metric : str or pgmpy.metrics._Base.*Metric instance, optional
-            Method to be used for calculating the score. If ``None``, a default metric appropriate for the provided
-            argument (`X` or `true_graph`) will be selected internally.
+            Method to be used for calculating the score. If ``None``, a default metric appropriate for the
+            provided argument (`X` or `true_graph`) will be selected internally.
 
         Returns
         -------
@@ -119,7 +121,8 @@ class _BaseCausalDiscovery(BaseEstimator):
         >>> from pgmpy.causal_discovery import PC
         >>> from pgmpy.metrics import get_metrics
         >>> from pgmpy.datasets import load_dataset
-        >>> data = load_dataset("lead")
+        >>> dataset = load_dataset("lead")
+        >>> data = dataset.data
         >>> dag = PC(return_type="dag").fit(data)
         >>> score = dag.score(X=data, metric="correlation_score")
         """
@@ -194,8 +197,7 @@ class _ConstraintMixin:
         ci_test: str | Callable | None = None,
         significance_level: float = 0.01,
         max_cond_vars: int = 5,
-        expert_knowledge: ExpertKnowledge | None = None,
-        enforce_expert_knowledge: bool = False,
+        expert_knowledge=None,
         n_jobs: int = -1,
         show_progress: bool = True,
         **kwargs,
@@ -256,30 +258,8 @@ class _ConstraintMixin:
             The maximum number of variables to condition on while testing
             independence.
 
-        expert_knowledge: pgmpy.estimators.ExpertKnowledge instance
-            Expert knowledge to be used with the algorithm. Expert knowledge
-            includes required/forbidden edges in the final graph, temporal
-            information about the variables etc. Please refer
-            pgmpy.estimators.ExpertKnowledge class for more details.
-
-        enforce_expert_knowledge: boolean (default: False)
-            If True, the algorithm modifies the search space according to the
-            edges specified in expert knowledge object. This implies the following:
-                1. For every edge (u, v) specified in `forbidden_edges`, there will
-                    be no edge between u and v.
-                2. For every edge (u, v) specified in `required_edges`, one of the
-                    following would be present in the final model: u -> v, u <-
-                    v, or u - v (if CPDAG is returned).
-
-            If False, the algorithm attempts to make the edge orientations as
-            specified by expert knowledge after learning the skeleton. This
-            implies the following:
-                1. For every edge (u, v) specified in `forbidden_edges`, the final
-                    graph would have either v <- u or no edge except if u -> v is part
-                    of a collider structure in the learned skeleton.
-                2. For every edge (u, v) specified in `required_edges`, the final graph
-                    would either have u -> v or no edge except if v <- u is part of a
-                    collider structure in the learned skeleton.
+        expert_knowledge: pgmpy.causal_discovery.ExpertKnowledge instance
+            Expert knowledge to be used with the algorithm.
 
         n_jobs: int (default: -1)
             The number of jobs to run in parallel.
@@ -300,10 +280,8 @@ class _ConstraintMixin:
 
         References
         ----------
-        [1] Neapolitan, Learning Bayesian Networks, Section 10.1.2, Algorithm 10.2 (page 550)
-            http://www.cs.technion.ac.il/~dang/books/Learning%20Bayesian%20Networks(Neapolitan,%20Richard).pdf
-        [2] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009
-            Section 3.4.2.1 (page 85), Algorithm 3.3
+        - :cite:p:`neapolitan_2009` (Section 10.1.2, Algorithm 10.2, page 550).
+        - :cite:p:`koller_friedman_2009` (Section 3.4.2.1, page 85, Algorithm 3.3).
         """
         # Initialize initial values and structures.
         lim_neighbors = 0
@@ -313,23 +291,27 @@ class _ConstraintMixin:
         else:
             ci_test = get_ci_test(test=ci_test, data=data)
 
-        if expert_knowledge is None:
-            expert_knowledge = ExpertKnowledge()
-
-        if expert_knowledge.search_space:
-            expert_knowledge.limit_search_space(data.columns)
-
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=max_cond_vars)
             pbar.set_description("Working for n conditional variables: 0")
+
+        if variant == "parallel":
+            parallel_pool = Parallel(n_jobs=n_jobs, prefer="threads")
 
         variables = list(data.columns.values)
 
         # Step 1: Initialize a fully connected undirected graph
         graph = nx.complete_graph(n=variables, create_using=nx.Graph)
-        temporal_ordering = expert_knowledge.temporal_ordering
-        if enforce_expert_knowledge:
-            graph.remove_edges_from(expert_knowledge.forbidden_edges)
+        if expert_knowledge is None:
+            temporal_ordering, required_edges, forbidden_edges = {}, set(), set()
+        else:
+            temporal_ordering = expert_knowledge.temporal_ordering_
+            required_edges = expert_knowledge.required_edges_
+            forbidden_edges = expert_knowledge.forbidden_edges_
+
+        # Remove edges that are forbidden in both directions. Directed forbidden are enforced as orientations after the
+        # skeleton is learned.
+        graph.remove_edges_from([(u, v) for (u, v) in forbidden_edges if (v, u) in forbidden_edges])
 
         # Exit condition: 1. If all the nodes in graph has less than `lim_neighbors` neighbors.
         #             or  2. `lim_neighbors` is greater than `max_conditional_variables`.
@@ -338,7 +320,7 @@ class _ConstraintMixin:
             # size `lim_neighbors` which makes u and v independent.
             if variant == "orig":
                 for u, v in graph.edges():
-                    if (enforce_expert_knowledge is False) or ((u, v) not in expert_knowledge.required_edges):
+                    if (u, v) not in required_edges:
                         for separating_set in self._get_potential_sepsets(
                             u, v, temporal_ordering, graph, lim_neighbors
                         ):
@@ -355,27 +337,34 @@ class _ConstraintMixin:
                                 break
 
             elif variant == "stable":
+                neighbors = {node: set(graph.neighbors(node)) for node in variables}
+                edges_to_remove = []
                 # In case of stable, precompute neighbors as this is the stable algorithm.
                 for u, v in graph.edges():
-                    if (enforce_expert_knowledge is False) or ((u, v) not in expert_knowledge.required_edges):
+                    if (u, v) not in required_edges:
+                        sep_vars = set()
+                        found_independence = False
                         for separating_set in self._get_potential_sepsets(
-                            u, v, temporal_ordering, graph, lim_neighbors
+                            u, v, temporal_ordering, graph, lim_neighbors, neighbors=neighbors
                         ):
-                            # If a conditioning set exists remove the edge, store the
-                            # separating set and move on to finding conditioning set for next edge.
                             if ci_test(
                                 u,
                                 v,
                                 separating_set,
                                 significance_level=significance_level,
                             ):
-                                separating_sets[frozenset((u, v))] = separating_set
-                                graph.remove_edge(u, v)
-                                break
+                                found_independence = True
+                                sep_vars.update(separating_set)
+                        if found_independence:
+                            separating_sets[frozenset((u, v))] = tuple(sorted(sep_vars, key=repr))
+                            edges_to_remove.append((u, v))
+                graph.remove_edges_from(edges_to_remove)
 
             elif variant == "parallel":
 
                 def _parallel_fun(u, v):
+                    sep_vars = set()
+                    found_independence = False
                     for separating_set in self._get_potential_sepsets(u, v, temporal_ordering, graph, lim_neighbors):
                         if ci_test(
                             u,
@@ -383,12 +372,13 @@ class _ConstraintMixin:
                             separating_set,
                             significance_level=significance_level,
                         ):
-                            return (u, v), separating_set
+                            found_independence = True
+                            sep_vars.update(separating_set)
+                    if found_independence:
+                        return (u, v), tuple(sorted(sep_vars, key=repr))
 
-                results = Parallel(n_jobs=n_jobs)(
-                    delayed(_parallel_fun)(u, v)
-                    for (u, v) in graph.edges()
-                    if (enforce_expert_knowledge is False) or ((u, v) not in expert_knowledge.required_edges)
+                results = parallel_pool(
+                    delayed(_parallel_fun)(u, v) for (u, v) in graph.edges() if (u, v) not in required_edges
                 )
                 for result in results:
                     if result is not None:
@@ -423,13 +413,15 @@ class _ConstraintMixin:
         temporal_ordering: dict[Hashable, int],
         graph: UndirectedGraph,
         lim_neighbors: int,
-    ) -> Collection[tuple]:
+        neighbors: dict[Hashable, set[Hashable]] = None,
+    ) -> set[tuple]:
         """
-        Return the temporally consistent superset of separating set of `u`, `v`.
+        Return the temporally consistent candidate separating sets of `u`, `v`.
 
-        The temporal order (if specified) of the superset can only be smaller
-        ("earlier") than a particular node. The neighbors of `u` satisfying
-        this condition are returned.
+        Each candidate is a sorted tuple of size ``lim_neighbors`` drawn from
+        the (temporally filtered) neighbors of ``u`` or ``v``. Sorting both
+        input sets makes ``combinations`` yield lex-sorted tuples, so the
+        union of the two halves deduplicates directly via set semantics.
 
         Parameters
         ----------
@@ -449,12 +441,17 @@ class _ConstraintMixin:
             The maximum number of neighbours (conditioning variables) for u, v.
 
         Returns
-        --------
-        separating_set: set
-            Set containing the superset of separating set of u, v.
+        -------
+        sepsets: set[tuple]
+            Unique candidate separating sets of size ``lim_neighbors``.
         """
-        separating_set_u = set(graph.neighbors(u))
-        separating_set_v = set(graph.neighbors(v))
+
+        if neighbors is not None:
+            separating_set_u = neighbors[u].copy()
+            separating_set_v = neighbors[v].copy()
+        else:
+            separating_set_u = set(graph.neighbors(u)).copy()
+            separating_set_v = set(graph.neighbors(v)).copy()
         separating_set_u.discard(v)
         separating_set_v.discard(u)
 
@@ -468,10 +465,9 @@ class _ConstraintMixin:
                 if temporal_ordering[neigh] > max_order:
                     separating_set_v.discard(neigh)
 
-        return chain(
-            combinations(separating_set_u, lim_neighbors),
-            combinations(separating_set_v, lim_neighbors),
-        )
+        sorted_u = sorted(separating_set_u, key=repr)
+        sorted_v = sorted(separating_set_v, key=repr)
+        return set(combinations(sorted_u, lim_neighbors)) | set(combinations(sorted_v, lim_neighbors))
 
 
 class _ScoreMixin:
@@ -486,8 +482,7 @@ class _ScoreMixin:
     def _legal_operations_dag(
         self,
         model: DAG,
-        score: Callable[[Any, list[Any]], float],
-        structure_score: Callable[[str], float],
+        scoring_method: BaseStructureScore,
         tabu_list: deque[tuple[str, tuple[Hashable, Hashable]]],
         max_indegree: int,
         forbidden_edges: list[tuple[Hashable, Hashable]],
@@ -503,55 +498,176 @@ class _ScoreMixin:
         edges or to force them to be present in the model, respectively.
         """
 
+        # Step 0: Pre-compute structures that are constant
         tabu_list = set(tabu_list)
+        descendants = {v: nx.descendants(model, v) for v in model.nodes()}
+        edges = list(model.edges())
+        edge_set = set(edges)
+        reverse_edge_set = {(Y, X) for (X, Y) in edges}
 
-        # Step 1: Get all legal operations for adding edges.
-        potential_new_edges = (
-            set(permutations(self.variables_, 2)) - set(model.edges()) - {(Y, X) for (X, Y) in model.edges()}
-        )
+        parents_cache = {v: tuple(model.get_parents(v)) for v in model.nodes()}
+        current_score = {v: scoring_method.local_score(v, parents_cache[v]) for v in model.nodes()}
+
+        prior_add = scoring_method.structure_prior_ratio("+")
+        prior_remove = scoring_method.structure_prior_ratio("-")
+        prior_flip = scoring_method.structure_prior_ratio("flip")
+
+        # Step 1: Get all legal operations for adding edges. Sort the iteration order for reproducible runs.
+        potential_new_edges = sorted(set(permutations(self.variables_, 2)) - edge_set - reverse_edge_set)
 
         for X, Y in potential_new_edges:
-            # Check if adding (X, Y) will create a cycle.
-            if not nx.has_path(model, Y, X):
-                operation = ("+", (X, Y))
-                if (operation not in tabu_list) and ((X, Y) not in forbidden_edges):
-                    old_parents = model.get_parents(Y)
-                    new_parents = old_parents + [X]
-                    if len(new_parents) <= max_indegree:
-                        score_delta = score(Y, new_parents) - score(Y, old_parents)
-                        score_delta += structure_score("+")
-                        yield (operation, score_delta)
+            # Adding X->Y creates a cycle iff Y already reaches X.
+            if X in descendants[Y]:
+                continue
+            operation = ("+", (X, Y))
+            if (operation not in tabu_list) and ((X, Y) not in forbidden_edges):
+                old_parents = parents_cache[Y]
+                new_parents = old_parents + (X,)
+                if len(new_parents) <= max_indegree:
+                    score_delta = scoring_method.local_score(Y, new_parents) - current_score[Y] + prior_add
+                    yield (operation, score_delta)
 
         # Step 2: Get all legal operations for removing edges
-        for X, Y in model.edges():
+        for X, Y in edges:
             operation = ("-", (X, Y))
             if (operation not in tabu_list) and ((X, Y) not in required_edges):
-                old_parents = model.get_parents(Y)
-                new_parents = [var for var in old_parents if var != X]
-                score_delta = score(Y, new_parents) - score(Y, old_parents)
-                score_delta += structure_score("-")
+                old_parents = parents_cache[Y]
+                new_parents = tuple(var for var in old_parents if var != X)
+                score_delta = scoring_method.local_score(Y, new_parents) - current_score[Y] + prior_remove
                 yield (operation, score_delta)
 
         # Step 3: Get all legal operations for flipping edges
-        for X, Y in model.edges():
-            # Check if flipping creates any cycles
-            if not any(map(lambda path: len(path) > 2, nx.all_simple_paths(model, X, Y))):
-                operation = ("flip", (X, Y))
-                if (
-                    ((operation not in tabu_list) and ("flip", (Y, X)) not in tabu_list)
-                    and ((X, Y) not in required_edges)
-                    and ((Y, X) not in forbidden_edges)
-                ):
-                    old_X_parents = model.get_parents(X)
-                    old_Y_parents = model.get_parents(Y)
-                    new_X_parents = old_X_parents + [Y]
-                    new_Y_parents = [var for var in old_Y_parents if var != X]
-                    if len(new_X_parents) <= max_indegree:
-                        score_delta = (
-                            score(X, new_X_parents)
-                            + score(Y, new_Y_parents)
-                            - score(X, old_X_parents)
-                            - score(Y, old_Y_parents)
-                        )
-                        score_delta += structure_score("flip")
-                        yield (operation, score_delta)
+        for X, Y in edges:
+            # Flipping X->Y to Y->X creates a cycle iff some other child of X
+            # already reaches Y (a path X -> C -> ... -> Y with C != Y).
+            if any(Y in descendants[c] for c in model.successors(X) if c != Y):
+                continue
+            operation = ("flip", (X, Y))
+            if (
+                ((operation not in tabu_list) and ("flip", (Y, X)) not in tabu_list)
+                and ((X, Y) not in required_edges)
+                and ((Y, X) not in forbidden_edges)
+            ):
+                new_X_parents = parents_cache[X] + (Y,)
+                new_Y_parents = tuple(var for var in parents_cache[Y] if var != X)
+                if len(new_X_parents) <= max_indegree:
+                    score_delta = (
+                        scoring_method.local_score(X, new_X_parents)
+                        + scoring_method.local_score(Y, new_Y_parents)
+                        - current_score[X]
+                        - current_score[Y]
+                        + prior_flip
+                    )
+                    yield (operation, score_delta)
+
+
+class _TreeSearchMixin:
+    """
+    Mixin class providing shared functionality for tree-based causal discovery
+    algorithms (Chow-Liu and TAN).
+
+    Provides static helpers for resolving the ``edge_weights_fn`` argument,
+    computing pairwise edge weights, and constructing a directed spanning tree
+    (DAG) from a weight matrix.  Both :class:`ChowLiu` and :class:`TAN` inherit
+    from this mixin so that the shared logic lives in exactly one place.
+    """
+
+    _EDGE_WEIGHT_FNS = {
+        "mutual_info": mutual_info_score,
+        "adjusted_mutual_info": adjusted_mutual_info_score,
+        "normalized_mutual_info": normalized_mutual_info_score,
+    }
+
+    @staticmethod
+    def _resolve_edge_weights_fn(edge_weights_fn):
+        """
+        Resolve ``edge_weights_fn`` to a callable of the form ``fn(array, array)``.
+
+        Accepts either one of the string shorthands in
+        :attr:`_EDGE_WEIGHT_FNS` or a callable (returned unchanged). Anything
+        else raises ``ValueError``.
+        """
+        if callable(edge_weights_fn):
+            return edge_weights_fn
+        try:
+            return _TreeSearchMixin._EDGE_WEIGHT_FNS[edge_weights_fn]
+        except (KeyError, TypeError):
+            raise ValueError(
+                f"edge_weights_fn should be one of {list(_TreeSearchMixin._EDGE_WEIGHT_FNS)}, "
+                f"or a callable of the form fn(array, array). Got: {edge_weights_fn!r}"
+            )
+
+    @staticmethod
+    def _get_weights(data, edge_weights_fn="mutual_info", n_jobs=-1, show_progress=True):
+        """
+        Compute the pairwise edge weight matrix.
+
+        Parameters
+        ----------
+        data : pd.DataFrame
+            Dataframe where each column represents one variable.
+
+        edge_weights_fn : str or callable, default="mutual_info"
+            Method to use for computing edge weights. Options are:
+
+            - ``"mutual_info"``: Mutual Information Score.
+            - ``"adjusted_mutual_info"``: Adjusted Mutual Information Score.
+            - ``"normalized_mutual_info"``: Normalized Mutual Information Score.
+            - A callable of the form ``fn(array, array) -> float``.
+
+        n_jobs : int, default=-1
+            Number of jobs to run in parallel. ``-1`` means use all processors.
+
+        show_progress : bool, default=True
+            If ``True``, shows a progress bar.
+
+        Returns
+        -------
+        weights : np.ndarray, shape (n_columns, n_columns)
+            Symmetric matrix where ``weights[i, j]`` is the edge weight between
+            variable *i* and variable *j*.
+        """
+        edge_weights_fn = _TreeSearchMixin._resolve_edge_weights_fn(edge_weights_fn)
+
+        n_vars = len(data.columns)
+        pbar = combinations(data.columns, 2)
+        if show_progress and config.SHOW_PROGRESS:
+            pbar = tqdm(pbar, total=(n_vars * (n_vars - 1) / 2), desc="Building tree")
+
+        vals = Parallel(n_jobs=n_jobs)(delayed(edge_weights_fn)(data.loc[:, u], data.loc[:, v]) for u, v in pbar)
+        weights = np.zeros((n_vars, n_vars))
+        indices = np.triu_indices(n_vars, k=1)
+        weights[indices] = vals
+        weights.T[indices] = vals
+        return weights
+
+    @staticmethod
+    def _create_tree_and_dag(weights, columns, root_node):
+        """
+        Build a DAG by computing the maximum spanning tree from a weight matrix
+        and directing all edges away from ``root_node`` via BFS.
+
+        Parameters
+        ----------
+        weights : np.ndarray, shape (n_columns, n_columns)
+            Symmetric matrix where each element represents an edge weight.
+
+        columns : list or array-like
+            Names of the columns (and rows) of the weight matrix.
+
+        root_node : str, int, or any hashable python object
+            The root node of the tree structure.
+
+        Returns
+        -------
+        model : pgmpy.base.DAG
+            The estimated DAG rooted at ``root_node``.
+        """
+        T = nx.maximum_spanning_tree(
+            nx.from_pandas_adjacency(
+                pd.DataFrame(weights, index=columns, columns=columns),
+                create_using=nx.Graph,
+            )
+        )
+        D = nx.bfs_tree(T, root_node)
+        return DAG(D)

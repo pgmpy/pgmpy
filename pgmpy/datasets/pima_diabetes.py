@@ -1,11 +1,11 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class PimaDiabetes(_BaseDataset):
+class PimaDiabetes(BaseDataset):
     """
     References
     ----------
-    .. [1] https://www.kaggle.com/uciml/pima-indians-diabetes-database
+    - :cite:p:`lella_2022`
     """
 
     _tags = {
@@ -24,11 +24,11 @@ class PimaDiabetes(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/pima-diabetes/"
+    base_url = "real/pima-diabetes"
 
-    data_url = base_url + "data/pima-diabetes.mixed.maximum.2.txt"
+    data_url = "data/pima-diabetes.mixed.maximum.2.txt"
     ground_truth_url = None
-    expert_knowledge_url = base_url + "ground.truth/pima-diabetes.knowledge.txt"
+    expert_knowledge_url = "ground.truth/pima-diabetes.knowledge.txt"
 
     categorical_variables = ["Outcome"]
     ordinal_variables = dict()

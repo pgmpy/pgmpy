@@ -1,11 +1,11 @@
-from .._base import DAGMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DAGMixin
 
 
-class Thoemmes2013(DAGMixin, _BaseExampleModel):
+class Thoemmes2013(DAGMixin, BaseExampleModel):
     """
     References
     ----------
-    ..[1] Thoemmes, F. (2013). Mediation analysis with latent variables.
+    - :cite:p:`thoemmes_2013`
     """
 
     _tags = {

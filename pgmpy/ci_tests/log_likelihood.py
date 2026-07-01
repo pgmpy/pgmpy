@@ -10,7 +10,8 @@ class LogLikelihood(PowerDivergence):
     This class is a thin specialization of :class:`PowerDivergence` with
     ``lambda_="log-likelihood"``. In this implementation it is equivalent to
     :class:`GSq`. For the contingency-table construction, conditional-case aggregation,
-    and p-value computation, see :class:`PowerDivergence`.
+    and p-value computation, see :class:`PowerDivergence`. The effect size is Cramér's V
+    (see :class:`PowerDivergence`).
 
     Parameters
     ----------
@@ -25,10 +26,12 @@ class LogLikelihood(PowerDivergence):
         The p-value for the test. Set after calling the test.
     dof_ : int
         Degrees of freedom for the test. Set after calling the test.
+    effect_size_ : float
+        Cramér's V. See :class:`PowerDivergence` for details. Set after calling the test.
 
     References
     ----------
-    .. [1] https://en.wikipedia.org/wiki/G-test
+    - :cite:p:`wikipedia_gtest`
 
     Examples
     --------
@@ -36,16 +39,22 @@ class LogLikelihood(PowerDivergence):
     >>> import numpy as np
     >>> np.random.seed(42)
     >>> data = pd.DataFrame(
-    ...     np.random.randint(0, 2, size=(50000, 4)), columns=list("ABCD")
+    ...     data=np.random.randint(low=0, high=2, size=(50000, 4)), columns=list("ABCD")
     ... )
     >>> data["E"] = data["A"] + data["B"] + data["C"]
-    >>> test = LogLikelihood(data)
-    >>> test("A", "C", [], significance_level=0.05)
-    True
-    >>> test("A", "B", ["D"], significance_level=0.05)
-    True
-    >>> test("A", "B", ["D", "E"], significance_level=0.05)
-    False
+    >>> test = LogLikelihood(data=data)
+    >>> test(X="A", Y="C", Z=[], significance_level=0.05)
+    np.True_
+    >>> round(test.statistic_, 2)
+    np.float64(0.03)
+    >>> round(test.p_value_, 2)
+    np.float64(0.86)
+    >>> test.dof_
+    1
+    >>> test(X="A", Y="B", Z=["D"], significance_level=0.05)
+    np.True_
+    >>> test(X="A", Y="B", Z=["D", "E"], significance_level=0.05)
+    np.False_
     """
 
     _tags = {
@@ -55,5 +64,5 @@ class LogLikelihood(PowerDivergence):
         "requires_data": True,
     }
 
-    def __init__(self, data: pd.DataFrame):
-        super().__init__(data=data, lambda_="log-likelihood")
+    def __init__(self, data: pd.DataFrame, use_cache: bool = True):
+        super().__init__(data=data, lambda_="log-likelihood", use_cache=use_cache)

@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Chds(BIFMixin, _BaseExampleModel):
+class Chds(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/chds",
         "n_nodes": 4,

@@ -1,13 +1,11 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Diabetes(DiscreteMixin, _BaseExampleModel):
+class Diabetes(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    ..[1] S. Andreassen, R. Hovorka, J. Benn, K. G. Olesen, and E. R. Carson. A Model-based Approach to Insulin
-    Adjustment. In Proceedings of the 3rd Conference on Artificial Intelligence in Medicine, pages 239-248.
-    Springer-Verlag, 1991.
+    - :cite:p:`andreassen_1991`
     """
 
     _tags = {

@@ -7,10 +7,10 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold
 from sklearn.utils.validation import check_is_fitted, validate_data
 
-from pgmpy.prediction._base import _BaseCausalPrediction
+from pgmpy.prediction._base import BaseCausalPrediction
 
 
-class DoubleMLRegressor(_BaseCausalPrediction):
+class DoubleMLRegressor(BaseCausalPrediction):
     """
     Implements the Double Machine Learning Regressor[1] (DML2) with cross-fitting.
 
@@ -133,7 +133,7 @@ class DoubleMLRegressor(_BaseCausalPrediction):
     ...     effect_estimator=LinearRegression(),
     ...     n_folds=3,
     ... )
-    >>> dml.fit(X, y)
+    >>> dml = dml.fit(X, y)
     >>> dml.effect_est_
     LinearRegression()
     >>> dml.effect_est_.coef_.round(1)

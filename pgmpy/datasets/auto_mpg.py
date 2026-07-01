@@ -1,13 +1,12 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class AutoMpg(_BaseDataset):
+class AutoMpg(BaseDataset):
     """
     References
     ----------
-    .. [1] Lopez-Paz, D., Muandet, K., Schölkopf, B., & Tolstikhin, I. (2015, June). Towards a learning theory of
-           cause-effect inference. In International Conference on Machine Learning (pp. 1452-1461). PMLR.
-    .. [2] https://archive.ics.uci.edu/ml/datasets/auto+mpg
+    - :cite:p:`lopezpaz_2015`
+    - :cite:p:`uci_auto_mpg`
     """
 
     _tags = {
@@ -25,11 +24,11 @@ class AutoMpg(_BaseDataset):
         "is_ordinal": False,
     }
 
-    base_url = "https://raw.githubusercontent.com/pgmpy/example_datasets/refs/heads/main/real/auto-mpg/"
+    base_url = "real/auto-mpg"
 
-    data_url = base_url + "data/auto-mpg.data.mixed.max.3.categories.txt"
+    data_url = "data/auto-mpg.data.mixed.max.3.categories.txt"
     ground_truth_url = None
-    expert_knowledge_url = base_url + "ground.truth/auto-mpg.knowledge.txt"
+    expert_knowledge_url = "ground.truth/auto-mpg.knowledge.txt"
 
     categorical_variables = ["cylinders", "modelyear", "origin"]
     ordinal_variables = dict()
