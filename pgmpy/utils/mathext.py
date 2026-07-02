@@ -66,7 +66,7 @@ def cartesian(arrays: list[Any], out: np.ndarray | None = None) -> np.ndarray:
 def _adjusted_weights(weights: np.ndarray):
     """
     Adjusts the weights such that it sums to 1. When the total weights is less
-    than or greater than 1 by 1e-3, add/substracts the difference from the last
+    than or greater than 1 by 1e-3, add/subtracts the difference from the last
     element of weights. If the difference is greater than 1e-3, throws an error.
 
     Parameters

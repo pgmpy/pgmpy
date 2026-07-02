@@ -7,9 +7,9 @@ from tqdm.auto import tqdm
 
 from pgmpy import config, logger
 from pgmpy.base import UndirectedGraph
-from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.estimators import StructureEstimator
 from pgmpy.estimators.CITests import ci_registry
+from pgmpy.estimators.ExpertKnowledge import ExpertKnowledge
 
 
 class BaseConstraintEstimator(StructureEstimator):
@@ -167,7 +167,7 @@ class BaseConstraintEstimator(StructureEstimator):
             expert_knowledge = ExpertKnowledge()
 
         if expert_knowledge.search_space:
-            expert_knowledge.limit_search_space(self.data.columns)
+            expert_knowledge.limit_search_space(self.data)
 
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=max_cond_vars)

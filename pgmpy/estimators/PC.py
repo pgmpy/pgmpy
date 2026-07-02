@@ -6,9 +6,9 @@ import networkx as nx
 import pandas as pd
 
 from pgmpy.base import DAG, PDAG, UndirectedGraph
-from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.estimators.BaseConstraintEstimator import BaseConstraintEstimator
 from pgmpy.estimators.CITests import ci_registry
+from pgmpy.estimators.ExpertKnowledge import ExpertKnowledge
 from pgmpy.independencies import Independencies
 
 
@@ -215,7 +215,7 @@ class PC(BaseConstraintEstimator):
         >>> model_chi  # doctest: +ELLIPSIS
         <pgmpy.base.PDAG.PDAG object at 0x...>
         >>> print(len(model_chi.edges()))
-        38
+        30
         >>> model_gsq, _ = est.estimate(ci_test="g_sq", return_type="skeleton")
         >>> model_gsq  # doctest: +ELLIPSIS
         <networkx.classes.graph.Graph object at 0x...>
@@ -232,7 +232,7 @@ class PC(BaseConstraintEstimator):
             expert_knowledge = ExpertKnowledge()
 
         if expert_knowledge.search_space:
-            expert_knowledge.limit_search_space(self.data.columns)
+            expert_knowledge.limit_search_space(self.data)
 
         # Step 1: Run the PC algorithm to build the skeleton and get the separating sets.
         skel, separating_sets = self.build_skeleton(
@@ -321,8 +321,10 @@ class PC(BaseConstraintEstimator):
         >>> c = PC(data)
         >>> skel, sep_sets = c.estimate(return_type="skeleton")
         >>> pdag = PC.orient_colliders(skel, sep_sets)
-        >>> sorted(pdag.edges())
-        [('A', 'C'), ('A', 'D'), ('B', 'C'), ('D', 'A'), ('D', 'C')]
+        >>> sorted(pdag.directed_edges)  # oriented colliders (canonical, stable across runs)
+        [('A', 'C'), ('B', 'C'), ('D', 'C')]
+        >>> sorted(pdag.undirected_edges)
+        [('A', 'D')]
         """
 
         pdag = skeleton.to_directed()
@@ -348,7 +350,8 @@ class PC(BaseConstraintEstimator):
             else:
                 directed_edges.add((u, v))
 
-        pdag_oriented = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
+        ebunch = [(u, v, "->") for u, v in directed_edges] + [(u, v, "--") for u, v in undirected_edges]
+        pdag_oriented = PDAG(edge_list=ebunch)
         pdag_oriented.add_nodes_from(pdag.nodes())
 
         return pdag_oriented

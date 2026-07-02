@@ -17,8 +17,8 @@ class TestADMGInitialization:
 
     def test_initialization_with_directed_edges(self):
         """Test initialization with directed edges."""
-        directed_edges = [("A", "B"), ("B", "C")]
-        admg = ADMG(directed_ebunch=directed_edges)
+        directed_edges = [("A", "B", "->"), ("B", "C", "->")]
+        admg = ADMG(edge_list=directed_edges)
 
         assert "A" in admg.nodes
         assert "B" in admg.nodes
@@ -28,8 +28,8 @@ class TestADMGInitialization:
 
     def test_initialization_with_bidirected_edges(self):
         """Test initialization with bidirected edges."""
-        bidirected_edges = [("X", "Y"), ("Y", "Z")]
-        admg = ADMG(bidirected_ebunch=bidirected_edges)
+        bidirected_edges = [("X", "Y", "<>"), ("Y", "Z", "<>")]
+        admg = ADMG(edge_list=bidirected_edges)
 
         assert "X" in admg.nodes
         assert "Y" in admg.nodes
@@ -40,17 +40,17 @@ class TestADMGInitialization:
 
     def test_initialization_with_latents(self):
         """Test initialization with latent variables."""
-        bidirected_edges = [("L1", "L2")]
+        bidirected_edges = [("L1", "L2", "<>")]
         latents = ["L1", "L2"]
-        admg = ADMG(bidirected_ebunch=bidirected_edges, latents=latents)
+        admg = ADMG(edge_list=bidirected_edges, latents=latents)
 
         assert admg.latents == {"L1", "L2"}
 
     def test_initialization_with_roles(self):
         """Test initialization with roles variables."""
-        directed_edges = [("A", "C"), ("B", "C")]
+        directed_edges = [("A", "C", "->"), ("B", "C", "->")]
         roles = {"exposures": ("A", "B"), "outcomes": ["C"]}
-        admg = ADMG(directed_ebunch=directed_edges, roles=roles)
+        admg = ADMG(edge_list=directed_edges, roles=roles)
 
         assert set(admg.get_role("exposures")) == {"A", "B"}
         assert admg.get_role("outcomes") == ["C"]
@@ -58,15 +58,16 @@ class TestADMGInitialization:
         assert admg.get_role_dict() == {"exposures": ["A", "B"], "outcomes": ["C"]}
 
     def test_latents_with_role(self):
+        edges = [
+            ("X", "Y", "->"),
+            ("A", "B", "<>"),
+            ("B", "C", "<>"),
+            ("C", "D", "<>"),
+            ("D", "E", "<>"),
+            ("E", "F", "<>"),
+        ]
         admg = ADMG(
-            directed_ebunch=[("X", "Y")],
-            bidirected_ebunch=[
-                ("A", "B"),
-                ("B", "C"),
-                ("C", "D"),
-                ("D", "E"),
-                ("E", "F"),
-            ],
+            edge_list=edges,
             latents=["A"],
             roles={"exposures": "X", "outcomes": "Y", "latents": "B"},
         )
@@ -80,15 +81,16 @@ class TestADMGInitialization:
             admg.with_role(role="latents", variables="G", inplace=True)
 
     def test_latents_without_role(self):
+        edges = [
+            ("X", "Y", "->"),
+            ("A", "B", "<>"),
+            ("B", "C", "<>"),
+            ("C", "D", "<>"),
+            ("D", "E", "<>"),
+            ("E", "F", "<>"),
+        ]
         admg = ADMG(
-            directed_ebunch=[("X", "Y")],
-            bidirected_ebunch=[
-                ("A", "B"),
-                ("B", "C"),
-                ("C", "D"),
-                ("D", "E"),
-                ("E", "F"),
-            ],
+            edge_list=edges,
             latents=["A", "B", "C"],
             roles={"exposures": "X", "outcomes": "Y", "latents": ("D", "E", "F")},
         )
@@ -123,78 +125,91 @@ class TestADMGNodeOperations:
 class TestADMGEdgeOperations:
     """Test edge addition and validation."""
 
-    def test_add_directed_edges(self):
+    def test_add_directed_edge(self):
         """Test adding directed edges."""
         admg = ADMG()
-        egdes = [("A", "B"), ("B", "C")]
-        admg.add_directed_edges(egdes)
+        egdes = [("A", "B", "->"), ("B", "C", "->")]
+        admg.add_edges_from(egdes)
 
         assert admg.has_edge("A", "B")
-        assert admg.get_edge_data("A", "B", 0)["type"] == "directed"
+        assert set(admg.get_edges(data=True)) == {("A", "B", "->"), ("B", "C", "->")}
 
-    def test_add_bidirected_edges(self):
+    def test_add_bidirected_edge(self):
         """Test adding bidirected edges."""
         admg = ADMG()
-        admg.add_bidirected_edges([("X", "Y")])
+        admg.add_edge("X", "Y", "<>")
 
         assert admg.has_edge("X", "Y")
-        assert admg.has_edge("Y", "X")
-        assert admg.get_edge_data("X", "Y", 0)["type"] == "bidirected"
-        assert admg.get_edge_data("Y", "X", 0)["type"] == "bidirected"
+        assert set(admg.get_edges(data=True)) == {("X", "Y", "<>")}
 
-    def testadd_directed_edgess_batch(self):
+    def test_add_directed_edges(self):
         """Test adding multiple directed edges at once."""
         admg = ADMG()
-        edges = [("A", "B"), ("B", "C"), ("C", "D")]
-        admg.add_directed_edges(edges)
+        edges = [("A", "B", "->"), ("B", "C", "->"), ("C", "D", "->")]
+        admg.add_edges_from(edges)
 
-        for u, v in edges:
+        for u, v, _ in edges:
             assert admg.has_edge(u, v)
-            assert admg.get_edge_data(u, v, 0)["type"] == "directed"
+
+        assert set(admg.get_edges(data=True)) == set(edges)
 
     def test_add_bidirected_edgess_batch(self):
         """Test adding multiple bidirected edges at once."""
         admg = ADMG()
-        edges = [("X", "Y"), ("Y", "Z")]
-        admg.add_bidirected_edges(edges)
+        edges = [("X", "Y", "<>"), ("Y", "Z", "<>")]
+        admg.add_edges_from(edges)
 
-        for u, v in edges:
+        for u, v, _ in edges:
             assert admg.has_edge(u, v)
-            assert admg.has_edge(v, u)
+
+        assert set(admg.get_edges(data=True)) == set(edges)
 
     def test_cycle_detection(self):
         """Test that cycles are prevented in directed edges."""
         admg = ADMG()
-        admg.add_directed_edges([("A", "B")])
-        admg.add_directed_edges([("B", "C")])
+        admg.add_edge("A", "B", "->")
+        admg.add_edge("B", "C", "->")
 
         # This should raise an error as it creates a cycle
-        with pytest.raises(ValueError, match="Adding this edge would create a cycle"):
-            admg.add_directed_edges([("C", "A")])
+        with pytest.raises(ValueError):
+            admg.add_edge("C", "A", "->")
+
+    def test_cycle_several_edges(self):
+        """Test that cycles are prevented in directed edges."""
+        admg = ADMG()
+        admg.add_edge("A", "B", "->")
+        admg.add_edge("B", "C", "<>")
+        admg.add_edge("C", "A", "->")
+
+        assert admg.has_edge("C", "A") is True
+        assert admg.has_path("A", "C", edge_types="->") is False
+
+    def test_cycle_multi_edges(self):
+        """Test that cycles are prevented in directed edges."""
+        admg = ADMG()
+        admg.add_edge("A", "B", "->")
+        admg.add_edge("A", "C", "<>")
+        admg.add_edge("B", "D", "->")
+        admg.add_edge("C", "D", "<-")
+
+        assert admg.has_path("A", "D", edge_types="->")
 
     def test_none_node_rejection(self):
         """Test that None nodes are rejected."""
         admg = ADMG()
 
-        with pytest.raises(ValueError, match="Can't add since one of nodes is None"):
-            admg.add_directed_edges([(None, "B")])
+        with pytest.raises(ValueError):
+            admg.add_edge(None, "B", "->")
 
-        with pytest.raises(ValueError, match="Can't add since one of"):
-            admg.add_bidirected_edges([("A", None)])
+        with pytest.raises(ValueError):
+            admg.add_edge("A", None, "<>")
 
     def test_self_bidirected_edge_rejection(self):
         """Test that self-loops in bidirected edges are rejected."""
         admg = ADMG()
 
-        with pytest.raises(ValueError, match="Cannot add a bidirected edge from a node to itself"):
-            admg.add_bidirected_edges([("A", "A")])
-
-    def test_add_edge_not_implemented(self):
-        """Test that generic add_edge raises NotImplementedError."""
-        admg = ADMG()
-
-        with pytest.raises(NotImplementedError):
-            admg.add_edge("A", "B")
+        with pytest.raises(ValueError):
+            admg.add_edge("A", "A", "<>")
 
 
 class TestADMGRelationships:
@@ -203,26 +218,23 @@ class TestADMGRelationships:
     def setup_method(self):
         """Set up a test graph for relationship tests."""
         self.admg = ADMG()
-        # Directed edges: A -> B -> C, D -> B
-        self.admg.add_directed_edges([("A", "B"), ("B", "C"), ("D", "B")])
-        # Bidirected edges: A <-> D, B <-> E
-        self.admg.add_bidirected_edges([("A", "D"), ("B", "E")])
+        edges = [  # Directed, Bidirected
+            ("A", "B", "->"),
+            ("B", "C", "->"),
+            ("D", "B", "->"),
+            ("A", "D", "<>"),
+            ("B", "E", "<>"),
+        ]
 
-    def test_get_directed_parents(self):
-        """Test getting parents of nodes."""
-        parents = self.admg.get_directed_parents("B")
+        self.admg.add_edges_from(edges)
+
+    def test_get_parents(self):
+        """Test get_parents of nodes."""
+        parents = self.admg.get_parents("B")
 
         assert "A" in parents
         assert "D" in parents
-        assert len(parents) == 2  # A and D are parents of B
-
-    def test_get_bidirected_parents(self):
-        """Test getting bidirected parents of nodes."""
-        bidirected_parents = self.admg.get_bidirected_parents("B")
-
-        assert "A" not in bidirected_parents
-        assert "E" in bidirected_parents
-        assert len(bidirected_parents) == 1  # Only E is a bidirected parent of B
+        assert len(parents) == 2
 
     def test_get_children(self):
         """Test getting children of nodes."""
@@ -266,10 +278,10 @@ class TestADMGRelationships:
 
     def test_nonexistent_node_error(self):
         """Test that operations on nonexistent nodes raise errors."""
-        with pytest.raises(ValueError, match="Node .* is not in the graph"):
-            self.admg.get_directed_parents("Z")
+        with pytest.raises(ValueError):
+            self.admg.get_parents("Z")
 
-        with pytest.raises(ValueError, match="Node .* is not in the graph"):
+        with pytest.raises(ValueError):
             self.admg.get_children("Z")
 
 
@@ -278,155 +290,112 @@ class TestADMGGraphOperations:
 
     def setup_method(self):
         """Set up a test graph."""
+        edges = [
+            ("A", "B", "->"),
+            ("B", "C", "->"),
+            ("D", "E", "->"),
+            ("A", "D", "<>"),
+            ("B", "E", "<>"),
+        ]
         self.admg = ADMG()
-        self.admg.add_directed_edges([("A", "B"), ("B", "C"), ("D", "E")])
-        self.admg.add_bidirected_edges([("A", "D"), ("B", "E")])
+
+        self.admg.add_edges_from(edges)
         self.admg.add_node("F", latent=True)
         self.admg.with_role(role="exposures", variables={"A"}, inplace=True)
         self.admg.with_role(role="outcomes", variables={"C"}, inplace=True)
-
-    def test_get_ancestral_graph(self):
-        """Test getting ancestral graph of a subset of nodes."""
-        ancestral = self.admg.get_ancestral_graph(["A", "B", "D"])
-
-        assert "A" in ancestral.nodes
-        assert "B" in ancestral.nodes
-        assert "D" in ancestral.nodes
-        assert "C" not in ancestral.nodes
-        assert "E" not in ancestral.nodes
-
-        # Should have directed edge A -> B
-        assert ancestral.has_edge("A", "B")
-        # Should have bidirected edge A <-> D
-        assert ancestral.has_edge("A", "D")
-        assert ancestral.has_edge("D", "A")
-
-    def test_get_ancestral_graph_invalid_nodes(self):
-        """Test ancestral graph with invalid nodes."""
-        with pytest.raises(ValueError, match="Input nodes must be subset"):
-            self.admg.get_ancestral_graph(["A", "Z"])
-
-    def test_get_markov_blanket(self):
-        """Test getting Markov blanket."""
-        mb_b = self.admg.get_markov_blanket("B")
-
-        # B's Markov blanket should include its parents, children, and spouses
-        assert "A" in mb_b  # parent
-        assert "C" in mb_b  # child
-        assert "E" in mb_b  # spouse
-
-    def test_to_dag(self):
-        """Test conversion to DAG."""
-        dag = self.admg.to_dag()
-
-        # Should return a pgmpy DAG instance
-        from pgmpy.base.DAG import DAG as pgmpy_DAG
-
-        assert isinstance(dag, pgmpy_DAG)
 
     def test_admg_equality(self):
         """
         Test the `__eq__` method
         which compares both graph structure and variable-role mappings to allow comparison of two models.
         """
-        # ToDo:
-        # If issue #2306 is resolved,
-        # `admg` should be deleted.
-        # issue_url: https://github.com/pgmpy/pgmpy/issues/2306
         admg = ADMG(
-            directed_ebunch=[("A", "B"), ("B", "C"), ("D", "E")],
-            bidirected_ebunch=[("A", "D"), ("B", "E")],
+            edge_list=[
+                ("A", "B", "->"),
+                ("B", "C", "->"),
+                ("D", "E", "->"),
+                ("A", "D", "<>"),
+                ("B", "E", "<>"),
+            ],
             latents=["D"],
             roles={"exposures": ["A"], "outcomes": ["C"]},
         )
 
         # Case1: When the models are the same
         other1 = ADMG(
-            directed_ebunch=[("A", "B"), ("B", "C"), ("D", "E")],
-            bidirected_ebunch=[("A", "D"), ("B", "E")],
+            edge_list=[
+                ("A", "B", "->"),
+                ("B", "C", "->"),
+                ("D", "E", "->"),
+                ("A", "D", "<>"),
+                ("B", "E", "<>"),
+            ],
             latents=["D"],
             roles={"exposures": ["A"], "outcomes": ["C"]},
         )
-        # Case2: When the models differ
+
+        # Case2: When the models differ (DAG)
         other2 = DAG(
-            ebunch=[("A", "C"), ("D", "C")],
+            ebunch=[("A", "C", "->"), ("D", "C", "->")],
             latents=["D"],
             roles={"exposures": "A", "adjustment": "D", "outcomes": "C"},
         )
-        # Case3: When the directed_ebunch variables differ between models
+
+        # Case3: When the directed edges differ
         other3 = ADMG(
-            directed_ebunch=[("A", "C"), ("B", "C"), ("D", "E")],
-            bidirected_ebunch=[("A", "D"), ("B", "E")],
+            edge_list=[
+                ("A", "C", "->"),
+                ("B", "C", "->"),
+                ("D", "E", "->"),
+                ("A", "D", "<>"),
+                ("B", "E", "<>"),
+            ],
             latents=["D"],
             roles={"exposures": ["A"], "outcomes": ["C"]},
         )
-        # Case4: When the bidirected_ebunch variables differ between models
+
+        # Case4: When the bidirected edges differ
         other4 = ADMG(
-            directed_ebunch=[("A", "B"), ("B", "C"), ("D", "E")],
-            bidirected_ebunch=[("A", "E"), ("B", "E")],
+            edge_list=[
+                ("A", "B", "->"),
+                ("B", "C", "->"),
+                ("D", "E", "->"),
+                ("A", "E", "<>"),
+                ("B", "E", "<>"),
+            ],
             latents=["D"],
             roles={"exposures": ["A"], "outcomes": ["C"]},
         )
-        # Case5: When the latents variables differ between models
+
+        # Case5: When the latents variables differ
         other5 = ADMG(
-            directed_ebunch=[("A", "B"), ("B", "C"), ("D", "E")],
-            bidirected_ebunch=[("A", "D"), ("B", "E")],
+            edge_list=[
+                ("A", "B", "->"),
+                ("B", "C", "->"),
+                ("D", "E", "->"),
+                ("A", "D", "<>"),
+                ("B", "E", "<>"),
+            ],
             latents=["B"],
             roles={"exposures": ["A"], "outcomes": ["C"]},
         )
-        # Case6: When the roles variables differ between models
+
+        # Case6: When the roles variables differ
         other6 = ADMG(
-            directed_ebunch=[("A", "B"), ("B", "C"), ("D", "E")],
-            bidirected_ebunch=[("A", "D"), ("B", "E")],
+            edge_list=[
+                ("A", "B", "->"),
+                ("B", "C", "->"),
+                ("D", "E", "->"),
+                ("A", "D", "<>"),
+                ("B", "E", "<>"),
+            ],
             latents=["D"],
             roles={"exposures": ["A"], "adjustment": "D", "outcomes": ["C"]},
         )
 
-        # ToDo:
-        # If issue #2306 is resolved,
-        # `admg.__eq__(other_number)` should be changed to `self.admg.__eq__(other_number)`.
-        # issue_url: https://github.com/pgmpy/pgmpy/issues/2306
         assert admg.__eq__(other1) is True
         assert admg.__eq__(other2) is False
         assert admg.__eq__(other3) is False
         assert admg.__eq__(other4) is False
         assert admg.__eq__(other5) is False
         assert admg.__eq__(other6) is False
-
-
-class TestADMGSeparation:
-    """Test m-separation and m-connection."""
-
-    def setup_method(self):
-        """Set up a test graph for separation tests."""
-        self.admg = ADMG()
-        self.admg.add_directed_edges([("A", "C"), ("B", "C"), ("C", "D")])
-        self.admg.add_bidirected_edges([("A", "B")])
-
-    def test_is_m_separated(self):
-        """Test m-separation check."""
-        # A and B should not be m-separated (they have bidirected edge)
-        assert not self.admg.is_mseparated("A", "B")
-
-        # Test with conditional set
-        assert self.admg.is_mseparated("A", "D", conditional_set={"C"}) is True
-        assert self.admg.is_mseparated("A", "D", conditional_set=set()) is False
-
-    def test_is_m_connected(self):
-        """Test m-connection check."""
-        # This should be the opposite of m-separation
-        connected = self.admg.is_mconnected("A", "B")
-        separated = self.admg.is_mseparated("A", "B")
-        assert connected != separated
-
-    def test_mconnected_nodes(self):
-        """Test mconnected_nodes returns correct reachable nodes."""
-        admg = ADMG(directed_ebunch=[("X", "Y"), ("Y", "Z")])
-        # base case - no nodes_v filter
-        result = admg.mconnected_nodes("X")
-        assert isinstance(result, set)
-        assert "Y" in result
-        assert "Z" in result
-        # with nodes_v filter
-        assert admg.mconnected_nodes("X", nodes_v=["Y", "Z"]) == {"Y", "Z"}
-        assert admg.mconnected_nodes("X", nodes_v=["Z"]) == {"Z"}

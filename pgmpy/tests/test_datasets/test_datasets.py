@@ -2,8 +2,8 @@ import pandas as pd
 import pytest
 
 from pgmpy.base import DAG
+from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.datasets import list_datasets, load_dataset
-from pgmpy.estimators import ExpertKnowledge
 
 ALL_DATASETS = [
     "abalone_continuous",
@@ -104,9 +104,17 @@ def test_load_covariance_dataset():
         assert isinstance(dataset.data, pd.DataFrame)
         assert isinstance(dataset.tags, dict)
 
+    # n_samples controls generated covariance dataset size.
+    dataset = load_dataset("goldberg", n_samples=25, seed=42)
+    assert dataset.data.shape[0] == 25
+
+    # The same seed produces identical generated data.
+    ds1 = load_dataset("goldberg", seed=42)
+    ds2 = load_dataset("goldberg", seed=42)
+    pd.testing.assert_frame_equal(ds1.data, ds2.data)
+
 
 def test_load_tubingen_dataset():
-
     for i in [1, 47, 108]:
         dataset = load_dataset(f"tubingen/{i}")
 
@@ -115,6 +123,19 @@ def test_load_tubingen_dataset():
         assert list(dataset.data.columns) == ["x", "y"]
 
         assert isinstance(dataset.ground_truth, DAG)
+
+    # Tubingen supports n_samples by subsampling the selected pair.
+    expected = load_dataset("tubingen/1")
+    dataset = load_dataset("tubingen/1", n_samples=10, seed=42)
+    assert dataset.data.shape == (10, expected.data.shape[1])
+    assert list(dataset.data.columns) == list(expected.data.columns)
+    assert set(dataset.ground_truth.edges()) == set(expected.ground_truth.edges())
+
+    # Simulator-specific kwargs are ignored with a warning.
+    with pytest.warns(UserWarning, match="ignore"):
+        actual = load_dataset("tubingen/1", edge_prob=0.3)
+    pd.testing.assert_frame_equal(actual.data, expected.data)
+    assert set(actual.ground_truth.edges()) == set(expected.ground_truth.edges())
 
 
 def test_tubingen_missing_data_tag():
@@ -145,7 +166,26 @@ def test_invalid_input():
 
 def test_invalid_tag():
     with pytest.raises(ValueError, match="Unrecognized filter argument"):
-        list_datasets(is_paraterized=True)  # typo
+        list_datasets(is_paraterized=True)
 
     with pytest.raises(ValueError, match="Unrecognized filter argument"):
-        list_datasets(num_samples=100)  # wrong key name entirely
+        list_datasets(num_samples=100)
+
+
+def test_static_dataset_n_samples():
+    full = load_dataset("sachs_discrete")
+
+    # n_samples controls the number of returned rows.
+    sampled = load_dataset("sachs_discrete", n_samples=100, seed=42)
+    assert sampled.data.shape == (100, full.data.shape[1])
+    assert list(sampled.data.columns) == list(full.data.columns)
+
+    # Oversized n_samples is capped at the full dataset size and warns.
+    with pytest.warns(UserWarning, match="Requested"):
+        oversized = load_dataset("sachs_discrete", n_samples=999999)
+    assert oversized.data.shape[0] == full.data.shape[0]
+
+    # The same seed gives the same subsample.
+    ds1 = load_dataset("sachs_discrete", n_samples=50, seed=42)
+    ds2 = load_dataset("sachs_discrete", n_samples=50, seed=42)
+    pd.testing.assert_frame_equal(ds1.data, ds2.data)
