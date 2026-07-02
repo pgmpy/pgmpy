@@ -75,24 +75,14 @@ def test_bootstrap_rand_data(rand_data):
     )
     np_test.assert_allclose(hc.edge_prob_.values, expected_edge_prob_hc)
 
-    expected_direction_prob_hc = {
-        ("A", "B"): 0.42857142857142855,
-        ("A", "C"): 0.6,
-        ("B", "A"): 0.5714285714285714,
-        ("B", "C"): 0.5,
-        ("B", "E"): 0.8,
-        ("C", "A"): 0.4,
-        ("C", "B"): 0.5,
-        ("C", "D"): 0.6,
-        ("C", "E"): 1.0,
-        ("D", "B"): 1.0,
-        ("D", "C"): 0.4,
-        ("D", "E"): 1.0,
-        ("E", "B"): 0.2,
-    }
-    assert hc.direction_prob_.keys() == expected_direction_prob_hc.keys()
-    for k in expected_direction_prob_hc:
-        np_test.assert_allclose(hc.direction_prob_[k], expected_direction_prob_hc[k])
+    expected_direction_prob_hc = [
+        [(0.0,), (0.429,), (0.6,), (0.0,), (0.0,)],
+        [(0.571,), (0.0,), (0.5,), (0.0,), (0.8,)],
+        [(0.4,), (0.5,), (0.0,), (0.6,), (1.0,)],
+        [(0.0,), (1.0,), (0.4,), (0.0,), (1.0,)],
+        [(0.0,), (0.2,), (0.0,), (0.0,), (0.0,)],
+    ]
+    np_test.assert_equal(hc.direction_prob_.values.tolist(), expected_direction_prob_hc)
 
     # --- 2. PC (PDAG) ---
     pc = BootstrapEstimator(estimator=PC(return_type="pdag"), show_progress=False, seed=42)
@@ -125,19 +115,14 @@ def test_bootstrap_rand_data(rand_data):
     )
     np_test.assert_allclose(pc.edge_prob_.values, expected_edge_prob_pc)
 
-    expected_direction_prob_pc = {
-        ("A", "C"): 0.9,
-        ("B", "C"): 1.0,
-        ("B", "E"): 1.0,
-        ("C", "A"): 0.0,
-        ("C", "D"): 0.9,
-        ("D", "C"): 0.0,
-        ("D", "E"): 0.9,
-        ("E", "D"): 0.0,
-    }
-    assert pc.direction_prob_.keys() == expected_direction_prob_pc.keys()
-    for k in expected_direction_prob_pc:
-        np_test.assert_allclose(pc.direction_prob_[k], expected_direction_prob_pc[k])
+    expected_direction_prob_pc = [
+        [(0.0, 0.0), (0.0, 0.0), (0.9, 0.1), (0.0, 0.0), (0.0, 0.0)],
+        [(0.0, 0.0), (0.0, 0.0), (1.0, 0.0), (0.0, 0.0), (1.0, 0.0)],
+        [(0.0, 0.1), (0.0, 0.0), (0.0, 0.0), (0.9, 0.1), (0.0, 0.0)],
+        [(0.0, 0.0), (0.0, 0.0), (0.0, 0.1), (0.0, 0.0), (0.9, 0.1)],
+        [(0.0, 0.0), (0.0, 0.0), (0.0, 0.0), (0.0, 0.1), (0.0, 0.0)],
+    ]
+    np_test.assert_equal(pc.direction_prob_.values.tolist(), expected_direction_prob_pc)
 
 
 def test_bootstrap_bootstrap_warm_start(rand_data):

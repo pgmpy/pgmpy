@@ -79,18 +79,20 @@ class BootstrapEstimator(BaseCausalDiscovery):
         0.0 and 1.0) of each edge across bootstrap iterations. Users can inspect
         this matrix to evaluate edge stability and choose confidence thresholds.
 
-    direction_prob_ : dict
-        Dictionary mapping edge tuples (u, v) to the conditional probability of
-        direction u -> v, given that an edge exists between u and v.
+    direction_prob_ : pd.DataFrame
+        DataFrame containing the conditional probabilities of different edge orientations
+        (e.g., directed, undirected) between variable pairs (u, v), given that an edge exists.
 
-        Calculated as n1 / (n1 + n2 + n3), where:
-        - n1: Number of bootstraps where u -> v is directed (only u -> v).
-        - n2: Number of bootstraps where v -> u is directed (only v -> u).
-        - n3: Number of bootstraps where u -- v is undirected (both exist).
+        Specifically:
+        - For DAG estimators, each cell (u, v) contains a 1-tuple (p_directed,).
+        - For PDAG estimators, each cell (u, v) contains a 2-tuple (p_directed, p_undirected).
 
-        Both keys (u, v) and (v, u) are present for any connected pair. The
-        probability of the undirected edge u - v is
-        1 - direction_prob_[(u, v)] - direction_prob_[(v, u)].
+        Where:
+        - p_directed = n_directed / n_total
+        - p_undirected = n_undirected / n_total
+        - n_directed: Number of bootstraps with the directed edge u -> v.
+        - n_undirected: Number of bootstraps with the undirected edge u - v.
+        - n_total: Total number of bootstraps where any edge exists between u and v.
 
     bootstrap_samples_ : np.ndarray
         2D array of shape `(n_bootstraps, bootstrap_sample_size)` containing row
@@ -116,12 +118,46 @@ class BootstrapEstimator(BaseCausalDiscovery):
     # Simulate dataset and fit BootstrapEstimator with HillClimbSearch:
     >>> from pgmpy.causal_discovery import BootstrapEstimator, HillClimbSearch
     >>> from pgmpy.example_models import load_model
-    >>> data = load_model("bnlearn/asia").simulate(n_samples=500, seed=42)
+    >>> data = load_model("bnlearn/cancer").simulate(n_samples=2000, seed=42)
+    >>> data = data[sorted(data.columns)]
     >>> hc = HillClimbSearch(return_type="dag")
     >>> est = BootstrapEstimator(hc, seed=42, show_progress=False)
     >>> est = est.fit(data)
-    >>> isinstance(est.causal_graph_, DAG)
-    True
+
+    # Show the estimated edge presence probabilities:
+    >>> est.edge_prob_
+               Cancer  Dyspnoea  Pollution  Smoker  Xray
+    Cancer        0.0       0.9        0.9     0.8   0.1
+    Dyspnoea      0.0       0.0        0.0     0.0   0.0
+    Pollution     0.0       0.1        0.0     0.1   0.0
+    Smoker        0.1       0.0        0.0     0.0   0.0
+    Xray          0.9       0.0        0.0     0.0   0.0
+
+    # Show the adjacency matrix of the consensus graph:
+    >>> est.adjacency_matrix_
+               Cancer  Dyspnoea  Pollution  Smoker  Xray
+    Cancer          0         1          1       1     0
+    Dyspnoea        0         0          0       0     0
+    Pollution       0         0          0       0     0
+    Smoker          0         0          0       0     0
+    Xray            1         0          0       0     0
+
+    # Show the direction probabilities:
+    >>> import pandas as pd
+    >>> with pd.option_context("display.max_columns", None, "display.width", 1000):
+    ...     print(est.direction_prob_)
+                 Cancer Dyspnoea Pollution    Smoker    Xray
+    Cancer       (0.0,)   (1.0,)    (1.0,)  (0.889,)  (0.1,)
+    Dyspnoea     (0.0,)   (0.0,)    (0.0,)    (0.0,)  (0.0,)
+    Pollution    (0.0,)   (1.0,)    (0.0,)    (1.0,)  (0.0,)
+    Smoker     (0.111,)   (0.0,)    (0.0,)    (0.0,)  (0.0,)
+    Xray         (0.9,)   (0.0,)    (0.0,)    (0.0,)  (0.0,)
+
+    # Show the shapes of the bootstrap samples and bootstrap graphs:
+    >>> est.bootstrap_samples_.shape
+    (10, 2000)
+    >>> est.bootstrap_graphs_.shape
+    (10, 5, 5)
     """
 
     def __init__(
@@ -273,10 +309,31 @@ class BootstrapEstimator(BaseCausalDiscovery):
         )
 
         # Step 2.1: Calculate the direction probabilities
+        if hasattr(self.estimator, "return_type"):
+            return_type = self.estimator.return_type.lower()
+        else:
+            return_type = "dag"
+
+        is_pdag = return_type in ("pdag", "cpdag")
+
+        if is_pdag:
+            self.direction_prob_ = pd.DataFrame(
+                [[(0.0, 0.0) for _ in variables] for _ in variables],
+                index=variables,
+                columns=variables,
+                dtype=object,
+            )
+        else:
+            self.direction_prob_ = pd.DataFrame(
+                [[(0.0,) for _ in variables] for _ in variables],
+                index=variables,
+                columns=variables,
+                dtype=object,
+            )
+
         rows, cols = np.where(edge_presence_mat > 0)
         edges = zip(variables[rows], variables[cols])
 
-        self.direction_prob_ = {}
         for edge in edges:
             u, v = edge
 
@@ -285,7 +342,13 @@ class BootstrapEstimator(BaseCausalDiscovery):
             f_vtou = edge_presence.loc[v, u] - f_uv
 
             presence = f_uv + f_utov + f_vtou
-            self.direction_prob_[edge] = f_utov / presence
+            p_directed = round(f_utov / presence, 3)
+            p_undirected = round(f_uv / presence, 3)
+
+            if is_pdag:
+                self.direction_prob_.at[u, v] = (p_directed, p_undirected)
+            else:
+                self.direction_prob_.at[u, v] = (p_directed,)
 
         # Step 2.2: Calculate the edge probabilities
         self.edge_prob_ = edge_presence / self.n_bootstraps
@@ -356,9 +419,9 @@ class BootstrapEstimator(BaseCausalDiscovery):
 
                 # check if reverse orientation is present in candidate_edges
                 if (v, u) in candidate_set:
-                    p_utov = self.direction_prob_.get((u, v), 0.0)
-                    p_vtou = self.direction_prob_.get((v, u), 0.0)
-                    p_undirected = 1.0 - p_utov - p_vtou
+                    p_utov = self.direction_prob_.at[u, v][0]
+                    p_vtou = self.direction_prob_.at[v, u][0]
+                    p_undirected = self.direction_prob_.at[u, v][1]
 
                     if p_undirected >= p_utov and p_undirected >= p_vtou:
                         target = "undirected"
@@ -437,14 +500,16 @@ class BootstrapEstimator(BaseCausalDiscovery):
         # Fit BootstrapEstimator on dataset:
         >>> from pgmpy.causal_discovery import BootstrapEstimator, HillClimbSearch
         >>> from pgmpy.example_models import load_model
-        >>> data = load_model("bnlearn/asia").simulate(n_samples=500, seed=42)
+        >>> data = load_model("bnlearn/cancer").simulate(n_samples=2000, seed=42)
+        >>> data = data[sorted(data.columns)]
         >>> hc = HillClimbSearch(return_type="dag")
         >>> est = BootstrapEstimator(hc, seed=42, show_progress=False)
         >>> est = est.fit(data)
 
         # Extract consensus graph with threshold 0.4:
         >>> consensus_graph = est.get_consensus_graph(threshold=0.4)
-        >>> _ = consensus_graph.edges()
+        >>> sorted(consensus_graph.edges())
+        [('Cancer', 'Dyspnoea'), ('Cancer', 'Pollution'), ('Cancer', 'Smoker'), ('Xray', 'Cancer')]
         """
         if not (0.0 <= threshold <= 1.0):
             raise ValueError(f"Threshold must be between 0.0 and 1.0. Got {threshold} instead.")
@@ -478,15 +543,21 @@ class BootstrapEstimator(BaseCausalDiscovery):
         # Fit BootstrapEstimator on dataset:
         >>> from pgmpy.causal_discovery import BootstrapEstimator, HillClimbSearch
         >>> from pgmpy.example_models import load_model
-        >>> data = load_model("bnlearn/asia").simulate(n_samples=500, seed=42)
+        >>> data = load_model("bnlearn/cancer").simulate(n_samples=2000, seed=42)
+        >>> data = data[sorted(data.columns)]
         >>> hc = HillClimbSearch(return_type="dag")
         >>> est = BootstrapEstimator(hc, seed=42, show_progress=False)
         >>> est = est.fit(data)
 
         # Extract adjacency matrix with threshold 0.4:
         >>> adj_matrix = est.get_adjacency_matrix(threshold=0.4)
-        >>> adj_matrix.shape
-        (8, 8)
+        >>> adj_matrix
+                   Cancer  Dyspnoea  Pollution  Smoker  Xray
+        Cancer          0         1          1       1     0
+        Dyspnoea        0         0          0       0     0
+        Pollution       0         0          0       0     0
+        Smoker          0         0          0       0     0
+        Xray            1         0          0       0     0
         """
         if not (0.0 <= threshold <= 1.0):
             raise ValueError(f"Threshold must be between 0.0 and 1.0. Got {threshold} instead.")
