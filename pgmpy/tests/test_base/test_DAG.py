@@ -175,16 +175,13 @@ class TestDAGCreation(unittest.TestCase):
 
         # Expected edges in the PDAG
         expected_edges = {
-            ("Y", "U"),
-            ("U", "Y"),  # Undirected edge between Y and U
-            ("Z", "W"),
-            ("W", "Z"),  # Undirected edge between Z and W
-            ("X", "Z"),
-            ("Z", "X"),  # Undirected edge between X and Z
+            ("Y", "U", "--"),
+            ("Z", "W", "--"),
+            ("X", "Z", "--"),
         }
 
         # Check that all expected edges are present
-        self.assertEqual(set(pdag.edges()), expected_edges)
+        self.assertEqual(set(pdag.get_edges(data=True)), expected_edges)
 
         # Check that the PDAG has the correct number of nodes
         self.assertEqual(set(pdag.nodes()), {"X", "Y", "Z", "W", "U"})
@@ -197,9 +194,9 @@ class TestDAGCreation(unittest.TestCase):
         pdag = dag.to_pdag()
 
         # Expected edges in the PDAG
-        expected_edges = {("X", "Y"), ("Y", "X")}
+        expected_edges = {("X", "Y", "--")}
         # Check that all expected edges are present
-        self.assertEqual(set(pdag.edges()), expected_edges)
+        self.assertEqual(set(pdag.get_edges(data=True)), expected_edges)
         # Check that the PDAG has the correct number of nodes
         self.assertEqual(set(pdag.nodes()), {"X", "Y"})
         # Check that there are no latent variables
@@ -210,9 +207,9 @@ class TestDAGCreation(unittest.TestCase):
         pdag = dag.to_pdag()
 
         # Expected edges in the PDAG
-        expected_edges = {("X", "Y"), ("Z", "Y")}
+        expected_edges = {("X", "Y", "->"), ("Z", "Y", "->")}
         # Check that all expected edges are present
-        self.assertEqual(set(pdag.edges()), expected_edges)
+        self.assertEqual(set(pdag.get_edges(data=True)), expected_edges)
         # Check that the PDAG has the correct number of nodes
         self.assertEqual(set(pdag.nodes()), {"X", "Y", "Z"})
         # Check that there are no latent variables
@@ -235,18 +232,18 @@ class TestDAGCreation(unittest.TestCase):
 
         # Expected edges in the PDAG
         expected_edges = {
-            ("Z1", "Z3"),
-            ("Z1", "X"),
-            ("Z3", "X"),
-            ("Z3", "Y"),
-            ("Z2", "Z3"),
-            ("Z2", "Y"),
-            ("X", "W"),
-            ("W", "Y"),
+            ("W", "Y", "->"),
+            ("X", "W", "->"),
+            ("Z3", "X", "->"),
+            ("Z2", "Y", "->"),
+            ("Z1", "X", "->"),
+            ("Z1", "Z3", "->"),
+            ("Z3", "Y", "->"),
+            ("Z2", "Z3", "->"),
         }
 
         # Check that all expected edges are present
-        self.assertEqual(set(pdag.edges()), expected_edges)
+        self.assertEqual(set(pdag.get_edges(data=True)), expected_edges)
         # Check that the PDAG has the correct number of nodes
         self.assertEqual(set(pdag.nodes()), {"Z1", "Z2", "X", "Y", "Z3", "W"})
         # Check that there are no latent variables
@@ -258,15 +255,12 @@ class TestDAGCreation(unittest.TestCase):
 
         # Expected edges in the PDAG
         expected_edges = {
-            ("X", "Y"),
-            ("Y", "X"),
-            ("Z", "Y"),
-            ("Y", "Z"),
-            ("Z", "X"),
-            ("X", "Z"),
+            ("X", "Y", "--"),
+            ("Y", "Z", "--"),
+            ("X", "Z", "--"),
         }
         # Check that all expected edges are present
-        self.assertEqual(set(pdag.edges()), expected_edges)
+        self.assertEqual(set(pdag.get_edges(data=True)), expected_edges)
         # Check that the PDAG has the correct number of nodes
         self.assertEqual(set(pdag.nodes()), {"X", "Y", "Z"})
         # Check that there are no latent variables
@@ -832,6 +826,27 @@ class TestDAGMoralization(unittest.TestCase):
 
     def test_get_children(self):
         self.assertListEqual(sorted(self.graph.get_children("diff")), ["grade"])
+
+    def test_get_spouses(self):
+        # Spouses in a DAG are co-parents: the other parents of one's children.
+        dag = DAG([("x", "y"), ("z", "y"), ("y", "w"), ("y", "v"), ("u", "w"), ("s", "v")])
+        self.assertEqual(dag.get_spouses("x"), {"z"})  # x and z co-parent y
+        self.assertEqual(dag.get_spouses("y"), {"u", "s"})  # via children w (parent u) and v (parent s)
+        self.assertEqual(dag.get_spouses("u"), {"y"})  # u and y co-parent w
+        self.assertEqual(dag.get_spouses("w"), set())  # w has no children -> no co-parents
+
+    def test_get_parents_children_iterable(self):
+        dag = DAG([("A", "C"), ("B", "C"), ("C", "D")])
+        # single node -> list (backward-compatible)
+        self.assertIsInstance(dag.get_parents("C"), list)
+        self.assertListEqual(sorted(dag.get_parents("C")), ["A", "B"])
+        self.assertListEqual(sorted(dag.get_children("C")), ["D"])
+        # an iterable of nodes -> union (set)
+        self.assertEqual(dag.get_parents(["C", "D"]), {"A", "B", "C"})
+        self.assertEqual(dag.get_children({"A", "B"}), {"C"})  # set input is a collection
+        # a tuple is a single node (DBN-style nodes), not a collection
+        tdag = DAG([(("A", 0), ("B", 1))])
+        self.assertListEqual(tdag.get_parents(("B", 1)), [("A", 0)])
 
     def tearDown(self):
         del self.graph

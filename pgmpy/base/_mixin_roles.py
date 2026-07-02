@@ -35,7 +35,7 @@ class _GraphRolesMixin:
         return list(roles)
 
     def get_role_dict(self):
-        """Get dict of lists of roles preset in the graph.
+        """Get dict of lists of roles present in the graph.
 
         Returns
         -------

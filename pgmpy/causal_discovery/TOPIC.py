@@ -1,6 +1,5 @@
 __authors__ = ["srhmm", "Nimish-4", "ankurankan"]
 
-import networkx as nx
 import numpy as np
 import pandas as pd
 from tqdm.auto import tqdm
@@ -181,7 +180,9 @@ class TOPIC(BaseCausalDiscovery):
         else:
             raise ValueError(f"return_type must be one of: dag, pdag, got {self.return_type}")
 
-        self.adjacency_matrix_ = nx.to_pandas_adjacency(self.causal_graph_)
+        self.adjacency_matrix_ = self.causal_graph_.to_adjacency(
+            encoding="binary", nodelist=list(self.causal_graph_.nodes())
+        )
         self.topological_order_ = topological_order_
 
         return self

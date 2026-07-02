@@ -97,9 +97,15 @@ class GES(StructureEstimator):
         current_model: PDAG,
     ) -> list[tuple[Hashable, Hashable]]:
         """
-        Return all edges that can be considered for deletion.
+        Return all edges that can be considered for deletion. An undirected edge yields both orders
+        ``(u, v)`` and ``(v, u)`` (deletion is order-dependent via the conditioning set).
         """
-        return sorted(current_model.edges())
+        legal_edges = []
+        for u, v, edge_type in current_model.get_edges(data=True):
+            legal_edges.append((u, v))
+            if edge_type == "--":
+                legal_edges.append((v, u))
+        return sorted(legal_edges)
 
     def _legal_edge_turns(
         self,
@@ -110,8 +116,10 @@ class GES(StructureEstimator):
         """
         legal_turns: list[tuple[Hashable, Hashable]] = []
 
-        for u, v in sorted(current_model.edges()):
+        for u, v, edge_type in current_model.get_edges(data=True):
             legal_turns.append((v, u))
+            if edge_type == "--":
+                legal_turns.append((u, v))
 
         return legal_turns
 
@@ -132,22 +140,20 @@ class GES(StructureEstimator):
             raise ValueError(f"Nodes u={u} and v={v} are already connected.")
 
         if T:
-            if not T.issubset(current_model.undirected_neighbors(v)):
+            if not T.issubset(current_model.get_neighbors(v, "--")):
                 raise ValueError(f"Not all nodes in T={T} are undirected neighbors of v={v}.")
 
-            if current_model.all_neighbors(u) & T:
+            if current_model.get_neighbors(u) & T:
                 raise ValueError(f"Some nodes in T={T} are adjacent to u={u}.")
 
         new_model = current_model.copy()
-
-        # Add directed edge u -> v
-        new_model.add_edge(u, v)
+        if not new_model.has_edge(u, v, "->"):
+            new_model.add_edge(u, v, "->")
 
         # Orient v - t as t -> v for all t in T
-        remove_edges = [(v, t) for t in T]
-        new_model.remove_edges_from(remove_edges)
+        for t in T:
+            new_model.replace_edge(t, v, "--", "->")
 
-        new_model.calibrate_directed_undirected_edges()
         return new_model
 
     def delete(
@@ -160,27 +166,29 @@ class GES(StructureEstimator):
         """
         Perform delete(u - v) or delete(u -> v) with conditioning set H.
         """
-        na_vu = current_model.undirected_neighbors(v) & current_model.all_neighbors(u)
+        na_vu = current_model.get_neighbors(v, "--") & current_model.get_neighbors(u)
 
         if not H.issubset(na_vu):
             raise ValueError(f"H={H} is not a subset of NA_vu={na_vu}.")
 
         new_model = current_model.copy()
-
-        # Remove edge between u and v (both directions if present)
-        new_model.remove_edges_from([(u, v), (v, u)])
+        if new_model.has_edge(u, v, "--"):
+            new_model.remove_edge(u, v, "--")
+        if new_model.has_edge(u, v, "->"):
+            new_model.remove_edge(u, v, "->")
+        if new_model.has_edge(v, u, "->"):
+            new_model.remove_edge(v, u, "->")
 
         # Orient v - h as v -> h for all h in H
         for h in H:
-            if new_model.has_undirected_edge(v, h):
-                new_model.remove_edge(h, v)
+            if new_model.has_edge(v, h, "--"):
+                new_model.replace_edge(v, h, "--", "->")
 
         # For h in H ∩ Ne(u), orient u - h as u -> h
-        u_neighbors = set(new_model.undirected_neighbors(u))
+        u_neighbors = set(new_model.get_neighbors(u, "--"))
         for h in H & u_neighbors:
-            new_model.remove_edge(h, u)
+            new_model.replace_edge(u, h, "--", "->")
 
-        new_model.calibrate_directed_undirected_edges()
         return new_model
 
     def turn(
@@ -195,27 +203,27 @@ class GES(StructureEstimator):
         """
         C = set(C)
 
-        # Validity check (as per your current logic)
-        if current_model.has_edge(u, v) and not current_model.has_edge(v, u):
+        if current_model.has_edge(u, v, "->"):
             raise ValueError(f"The edge {u} -> {v} already exists.")
 
         new_model = current_model.copy()
 
-        # Remove v -> u if present
-        if new_model.has_edge(v, u):
-            new_model.remove_edge(v, u)
-
-        # Ensure u -> v exists
-        if not new_model.has_edge(u, v):
-            new_model.add_edge(u, v)
+        if new_model.has_edge(v, u, "--"):
+            new_model.remove_edge(v, u, "--")
+        if new_model.has_edge(v, u, "->"):
+            new_model.remove_edge(v, u, "->")
+        if not new_model.has_edge(u, v, "->"):
+            new_model.add_edge(u, v, "->")
 
         # For each c in C: orient v - c as c -> v
         for c in C:
-            if new_model.has_edge(v, c):
-                new_model.remove_edge(v, c)
-            new_model.add_edge(c, v)
+            if new_model.has_edge(c, v, "--"):
+                new_model.replace_edge(c, v, "--", "->")
+            elif not new_model.has_edge(c, v, "->"):
+                if new_model.has_edge(v, c, "->"):
+                    new_model.remove_edge(v, c, "->")
+                new_model.add_edge(c, v, "->")
 
-        new_model.calibrate_directed_undirected_edges()
         return new_model
 
     def _score_valid_insertions(
@@ -228,7 +236,7 @@ class GES(StructureEstimator):
         """
         Score all valid insert(u -> v) operations.
         """
-        T0 = current_model.undirected_neighbors(v) - current_model.all_neighbors(u)
+        T0 = current_model.get_neighbors(v, "--") - current_model.get_neighbors(u)
 
         power_set = powerset(list(T0))
         subsets = [[*T, False] for T in power_set]  # [elements..., passed_cond_2]
@@ -238,7 +246,7 @@ class GES(StructureEstimator):
             entry = subsets.pop(0)
             T, passed_cond_2 = set(entry[:-1]), entry[-1]
 
-            na_vu = current_model.undirected_neighbors(v) & current_model.all_neighbors(u)
+            na_vu = current_model.get_neighbors(v, "--") & current_model.get_neighbors(u)
             na_vuT = na_vu.union(T)
 
             # Condition 1: NA_vu ∪ T is a clique
@@ -261,7 +269,7 @@ class GES(StructureEstimator):
                             s[-1] = True
 
             if cond_1 and cond_2:
-                parents_v = current_model.directed_parents(v)
+                parents_v = current_model.get_parents(v)
 
                 score_delta = score_fn(v, list(na_vuT | parents_v | {u})) - score_fn(v, list(na_vuT | parents_v))
                 new_model = self.insert(u, v, T, current_model)
@@ -283,7 +291,7 @@ class GES(StructureEstimator):
         if not current_model.has_edge(u, v):
             raise ValueError(f"No edge exists between nodes {u, v} to delete.")
 
-        na_vu = current_model.undirected_neighbors(v) & current_model.all_neighbors(u)
+        na_vu = current_model.get_neighbors(v, "--") & current_model.get_neighbors(u)
         H0 = na_vu
 
         power_set = powerset(list(H0))
@@ -304,7 +312,7 @@ class GES(StructureEstimator):
                         s[-1] = True
 
             if cond_1:
-                aux = (na_vu - H) | current_model.directed_parents(v) | {u}
+                aux = (na_vu - H) | current_model.get_parents(v) | {u}
 
                 score_delta = score_fn(v, list(aux - {u})) - score_fn(v, list(aux))
 
@@ -322,7 +330,7 @@ class GES(StructureEstimator):
         """
         Dispatch turn operator depending on edge type.
         """
-        if current_model.has_edge(u, v) and current_model.has_edge(v, u):
+        if current_model.has_edge(u, v, "--"):
             return self._score_valid_turns_undirected(u, v, current_model, score_fn)
         else:
             return self._score_valid_turns_directed(u, v, current_model, score_fn)
@@ -337,7 +345,7 @@ class GES(StructureEstimator):
         """
         Score all valid turn(u -> v) operations.
         """
-        T0 = current_model.undirected_neighbors(v) - current_model.all_neighbors(u)
+        T0 = current_model.get_neighbors(v, "--") - current_model.get_neighbors(u)
 
         power_set = powerset(list(T0))
         subsets = [[*T, False] for T in power_set]  # [elements..., passed_cond_2]
@@ -347,7 +355,7 @@ class GES(StructureEstimator):
             entry = subsets.pop(0)
             T, passed_cond_2 = set(entry[:-1]), entry[-1]
 
-            na_vu = current_model.undirected_neighbors(v) & current_model.all_neighbors(u)
+            na_vu = current_model.get_neighbors(v, "--") & current_model.get_neighbors(u)
             C = na_vu.union(T)
 
             # Condition 1: NA_vu ∪ T is a clique
@@ -363,7 +371,7 @@ class GES(StructureEstimator):
                 cond_2 = not current_model.has_semidirected_path(
                     v,
                     u,
-                    blocked_nodes=C | current_model.undirected_neighbors(u),
+                    blocked_nodes=C | current_model.get_neighbors(u, "--"),
                     ignore_direct_edge=True,
                 )
 
@@ -373,8 +381,8 @@ class GES(StructureEstimator):
                             s[-1] = True
 
             if cond_1 and cond_2:
-                parents_v = current_model.directed_parents(v)
-                parents_u = current_model.directed_parents(u)
+                parents_v = current_model.get_parents(v)
+                parents_u = current_model.get_parents(u)
 
                 new_score = score_fn(v, list(C | parents_v | {u})) + score_fn(u, list(parents_u - {v}))
 
@@ -397,12 +405,12 @@ class GES(StructureEstimator):
         """
         Score all valid turn(u - v) operations.
         """
-        non_adjacents = current_model.undirected_neighbors(v) - current_model.all_neighbors(u) - {u}
+        non_adjacents = current_model.get_neighbors(v, "--") - current_model.get_neighbors(u) - {u}
 
         if len(non_adjacents) == 0:
             return []
 
-        C0 = current_model.undirected_neighbors(v) - {u}
+        C0 = current_model.get_neighbors(v, "--") - {u}
         power_set = powerset(list(C0))
 
         # Only subsets containing at least one non-adjacent node
@@ -422,14 +430,14 @@ class GES(StructureEstimator):
 
             subgraph = nx.DiGraph(current_model.subgraph(current_model.chain_component(v)))
 
-            na_vu = current_model.undirected_neighbors(v) & current_model.all_neighbors(u)
+            na_vu = current_model.get_neighbors(v, "--") & current_model.get_neighbors(u)
 
             # Separation condition
             if not self._separates({u, v}, C, na_vu - C, subgraph):
                 continue
 
-            parents_v = current_model.directed_parents(v)
-            parents_u = current_model.directed_parents(u)
+            parents_v = current_model.get_parents(v)
+            parents_u = current_model.get_parents(u)
 
             new_score = score_fn(v, list(parents_v | C | {u})) + score_fn(u, list(parents_u | (C & na_vu)))
 

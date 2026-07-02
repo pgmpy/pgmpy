@@ -1,4 +1,5 @@
 import importlib
+import os
 import types
 from unittest.mock import MagicMock
 
@@ -12,6 +13,19 @@ from pgmpy.causal_discovery import LLMPairwise
 @pytest.fixture
 def data():
     return pd.DataFrame({"Smoker": [0, 1, 1, 0], "Cancer": [0, 1, 0, 0]})
+
+
+@pytest.mark.skipif("GEMINI_API_KEY" not in os.environ, reason="Gemini API key is not set")
+def test_llm_api():
+    """Integration test that actually queries the LLM (requires GEMINI_API_KEY)."""
+    descriptions = {
+        "Age": "The age of a person",
+        "Income": "The income i.e. amount of money the person makes",
+    }
+    df = pd.DataFrame({"Age": [0, 1, 1, 0], "Income": [0, 1, 0, 1]})
+
+    assert ("Age", "Income") in LLMPairwise(descriptions=descriptions).fit(df).causal_graph_.edges()
+    assert ("Age", "Income") in LLMPairwise(descriptions=descriptions).fit(df[["Income", "Age"]]).causal_graph_.edges()
 
 
 def expected_failed_checks(estimator):
@@ -69,6 +83,30 @@ def test_fit(monkeypatch, data):
             LLMPairwise().fit(frame)
 
 
+def test_use_cache(monkeypatch, data):
+    calls = {"n": 0}
+
+    def fake_query(self, messages):
+        calls["n"] += 1
+        return "1"
+
+    monkeypatch.setattr(LLMPairwise, "_query_llm", fake_query)
+
+    # With caching, re-fitting the same pair reuses the result (no second query).
+    est = LLMPairwise(use_cache=True)
+    est.fit(data)
+    est.fit(data)
+    assert calls["n"] == 1
+    assert ("Smoker", "Cancer") in est.causal_graph_.edges()
+
+    # Without caching, every fit queries the LLM again.
+    calls["n"] = 0
+    est = LLMPairwise(use_cache=False)
+    est.fit(data)
+    est.fit(data)
+    assert calls["n"] == 2
+
+
 def test_build_prompt():
     est = LLMPairwise(
         descriptions={"Smoker": "Whether a person smokes"},
@@ -95,7 +133,7 @@ def test_query_llm(monkeypatch):
     response = LLMPairwise(llm_kwargs={"temperature": 0})._query_llm(messages)
 
     assert response == "1"
-    assert calls == {"model": "gemini/gemini-1.5-flash", "messages": messages, "temperature": 0}
+    assert calls == {"model": "gemini/gemini-2.5-flash", "messages": messages, "temperature": 0}
 
 
 def test_parse_response():

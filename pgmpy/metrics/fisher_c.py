@@ -86,7 +86,7 @@ class FisherC(BaseUnsupervisedMetric):
 
         for u, v in comb_iter:
             if not ((u in causal_graph[v]) or (v in causal_graph[u])):
-                Z = set(causal_graph.predecessors(u)).union(causal_graph.predecessors(v))
+                Z = causal_graph.get_parents([u, v])
                 ci_test.is_independent(X=u, Y=v, Z=list(Z))
                 cis.append([u, v, Z, ci_test.p_value_])
         cis = pd.DataFrame(cis, columns=["u", "v", "cond_vars", "p_value"])

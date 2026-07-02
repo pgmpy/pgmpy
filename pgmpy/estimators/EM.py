@@ -320,7 +320,7 @@ class ExpectationMaximization(ParameterEstimator):
         fixed_cpd_vars = (
             set(self.model.nodes())
             - self.model.latents
-            - set(chain(*[self.model.get_children(var) for var in self.model.latents]))
+            - self.model.get_children(self.model.latents)
             - set(init_cpds.keys())
         )
 
