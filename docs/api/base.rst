@@ -12,6 +12,5 @@ causal workflows.
    ~pgmpy.base.PDAG
    ~pgmpy.base.ADMG
    ~pgmpy.base.MAG
-   ~pgmpy.base.AncestralBase
    ~pgmpy.base.SimpleCausalModel
    ~pgmpy.base.UndirectedGraph

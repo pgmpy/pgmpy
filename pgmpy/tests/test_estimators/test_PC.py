@@ -137,17 +137,17 @@ def test_build_skeleton_from_model_ind(variant):
                 frozenset({"A", "B"}): tuple(),
                 frozenset({"D", "B"}): ("A",),
             },
-            {("B", "C"), ("A", "D"), ("A", "C"), ("D", "A")},
+            {("A", "C", "->"), ("A", "D", "--"), ("B", "C", "->")},
         ),
         (
             nx.Graph([("A", "B"), ("A", "C")]),
             {frozenset({"B", "C"}): ()},
-            {("B", "A"), ("C", "A")},
+            {("B", "A", "->"), ("C", "A", "->")},
         ),
         (
             nx.Graph([("A", "B"), ("A", "C")]),
             {frozenset({"B", "C"}): ("A",)},
-            {("A", "B"), ("B", "A"), ("A", "C"), ("C", "A")},
+            {("A", "B", "--"), ("A", "C", "--")},
         ),
         (
             nx.Graph([("A", "C"), ("B", "C"), ("C", "D")]),
@@ -156,24 +156,22 @@ def test_build_skeleton_from_model_ind(variant):
                 frozenset({"A", "D"}): ("C",),
                 frozenset({"B", "D"}): ("C",),
             },
-            {("A", "C"), ("B", "C"), ("C", "D")},
+            {("A", "C", "->"), ("B", "C", "->"), ("C", "D", "->")},
         ),
         (
             nx.Graph([("A", "B"), ("A", "C"), ("B", "C"), ("B", "D")]),
             {frozenset({"A", "D"}): tuple(), frozenset({"C", "D"}): ("A", "B")},
-            {("A", "B"), ("B", "C"), ("A", "C"), ("D", "B")},
+            {("A", "B", "->"), ("A", "C", "->"), ("B", "C", "->"), ("D", "B", "->")},
         ),
         (
             nx.Graph([("A", "B"), ("B", "C"), ("A", "D"), ("B", "D"), ("C", "D")]),
             {frozenset({"A", "C"}): ("B",)},
             {
-                ("A", "B"),
-                ("B", "A"),
-                ("B", "C"),
-                ("C", "B"),
-                ("A", "D"),
-                ("B", "D"),
-                ("C", "D"),
+                ("A", "B", "--"),
+                ("A", "D", "->"),
+                ("B", "D", "->"),
+                ("C", "B", "--"),
+                ("C", "D", "->"),
             },
         ),
     ],
@@ -181,7 +179,7 @@ def test_build_skeleton_from_model_ind(variant):
 def test_skeleton_to_pdag(skel, sep_sets, expected_edges):
     pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
     pdag = pdag.apply_meeks_rules(apply_r4=False)
-    assert set(pdag.edges()) == expected_edges
+    assert set(pdag.get_edges(data=True)) == expected_edges
 
 
 @pytest.mark.parametrize("variant", ["orig", "stable", "parallel"])
@@ -505,11 +503,11 @@ def test_temporal_pc_cancer():
         show_progress=False,
     )
 
-    assert set(pdag.edges()) == {
-        ("Cancer", "Xray"),
-        ("Cancer", "Dyspnoea"),
-        ("Smoker", "Cancer"),
-        ("Pollution", "Cancer"),
+    assert set(pdag.get_edges(data=True)) == {
+        ("Cancer", "Xray", "->"),
+        ("Cancer", "Dyspnoea", "->"),
+        ("Smoker", "Cancer", "->"),
+        ("Pollution", "Cancer", "->"),
     }
 
 
@@ -554,4 +552,9 @@ def test_temporal_pc_sachs():
     expert = ExpertKnowledge(temporal_order=temporal_order)
     pdag = PC(df).estimate(ci_test="chi_square", expert_knowledge=expert)
 
-    assert temporal_forbidden_edges.isdisjoint(set(pdag.edges()))
+    learned_edges = set()
+    for u, v, edge_type in pdag.get_edges(data=True):
+        learned_edges.add((u, v))
+        if edge_type == "--":
+            learned_edges.add((v, u))
+    assert temporal_forbidden_edges.isdisjoint(learned_edges)

@@ -313,18 +313,18 @@ class ExpertKnowledge(BaseEstimator):
         - :cite:p:`ankan_textor_2023`
         """
         for u, v in self.forbidden_edges_:
-            if graph.has_undirected_edge(u, v):
+            if graph.has_edge(u, v, "--"):
                 graph.orient_undirected_edge(v, u, inplace=True)
-            elif graph.has_edge(u, v):
+            elif graph.has_edge(u, v, "->"):
                 logger.warning(
                     f"Specified expert knowledge conflicts with learned structure. "
                     f"Ignoring edge {u}->{v} from forbidden edges."
                 )
 
         for u, v in self.required_edges_:
-            if graph.has_undirected_edge(u, v):
+            if graph.has_edge(u, v, "--"):
                 graph.orient_undirected_edge(u, v, inplace=True)
-            elif graph.has_edge(u, v) is False:
+            elif graph.has_edge(u, v, "->") is False:
                 logger.warning(
                     f"Specified expert knowledge conflicts with learned structure. "
                     f"Ignoring edge {u}->{v} from required edges"

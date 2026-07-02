@@ -1,6 +1,6 @@
 import warnings
 from collections.abc import Iterable
-from itertools import chain, product
+from itertools import chain, pairwise, product
 
 import networkx as nx
 import numpy as np
@@ -502,9 +502,8 @@ class CausalInference:
 
         transformed_graph, dependent_var = self._iv_transformations(X, Y, scaling_indicators=scaling_indicators)
         if (X, Y) in transformed_graph.edges:
-            G_c = transformed_graph.remove_edge(X, Y)
-        else:
-            G_c = transformed_graph
+            transformed_graph.remove_edge(X, Y)
+        G_c = transformed_graph
 
         instruments = []
         for Z in self.observed_variables - {X, Y}:
@@ -752,7 +751,7 @@ class CausalInference:
         all_path_effects = []
         for path in all_simple_paths:
             causal_effect = []
-            for x1, x2 in zip(path, path[1:]):
+            for x1, x2 in pairwise(path):
                 if isinstance(estimand_strategy, frozenset):
                     adjustment_set = frozenset({estimand_strategy})
                     assert self.is_valid_backdoor_adjustment_set(x1, x2, Z=adjustment_set)
@@ -1008,7 +1007,7 @@ class CausalInference:
         # Step 2: Check if adjustment set is provided, otherwise try calculating it.
         if adjustment_set is None:
             do_vars = [var for var, state in do.items()]
-            adjustment_set = set(chain(*[self.model.predecessors(var) for var in do_vars]))
+            adjustment_set = self.model.get_parents(do_vars)
             if len(adjustment_set.intersection(self.model.latents)) != 0:
                 raise ValueError("Not all parents of do variables are observed. Please specify an adjustment set.")
 

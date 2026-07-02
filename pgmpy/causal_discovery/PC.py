@@ -1,7 +1,6 @@
 from collections.abc import Callable, Hashable
 from itertools import combinations
 
-import networkx as nx
 import pandas as pd
 from sklearn.base import clone
 
@@ -229,7 +228,9 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
         else:
             raise ValueError(f"return_type must be one of: dag, pdag, or cpdag. Got: {self.return_type}")
 
-        self.adjacency_matrix_ = nx.to_pandas_adjacency(self.causal_graph_, weight=1, dtype="int")
+        self.adjacency_matrix_ = self.causal_graph_.to_adjacency(
+            encoding="binary", nodelist=list(self.causal_graph_.nodes())
+        )
 
         return self
 
@@ -275,7 +276,7 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
         >>> df = load_model("bnlearn/cancer").simulate(int(1e3), seed=42)
         >>> est = PC(ci_test='chi_square').fit(df)
         >>> pdag = est._orient_colliders()
-        >>> sorted(pdag.edges())
+        >>> sorted(pdag.get_edges(data=False))
         [('Pollution', 'Cancer'), ('Xray', 'Cancer')]
         """
 
@@ -361,7 +362,8 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
             else:
                 directed_edges.add((u, v))
 
-        pdag_oriented = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
+        ebunch = [(u, v, "->") for u, v in directed_edges] + [(u, v, "--") for u, v in undirected_edges]
+        pdag_oriented = PDAG(edge_list=ebunch)
         pdag_oriented.add_nodes_from(pdag.nodes())
 
         return pdag_oriented

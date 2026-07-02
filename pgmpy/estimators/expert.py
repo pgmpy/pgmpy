@@ -1,6 +1,6 @@
 import warnings
 from collections.abc import Callable, Hashable
-from itertools import combinations
+from itertools import combinations, pairwise
 
 import networkx as nx
 import pandas as pd
@@ -421,7 +421,7 @@ class ExpertInLoop(StructureEstimator):
         temp_dag = dag.copy()
         temp_dag.add_edges_from([(u, v)])
         for cycle in nx.simple_cycles(temp_dag):
-            for x, y in zip(cycle, cycle[1:]):
+            for x, y in pairwise(cycle):
                 if not ((x == u) and (y == v)):
                     Z = set(cycle) - {x, y}
                     effect, pvalue = ci_test(x, y, Z=Z, data=self.data, boolean=False)

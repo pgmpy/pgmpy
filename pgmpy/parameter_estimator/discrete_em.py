@@ -304,7 +304,7 @@ class DiscreteEM(DiscreteParameterEstimator):
         # Step 3.1: Partition nodes.
         #           `fixed_cpd_vars` = nodes with no latent involvement; their CPDs are the EM fixed point and
         #           can be estimated once from observed data. `updatable_vars` are refit every EM iteration.
-        children_of_latents = set(chain.from_iterable(self._model.get_children(var) for var in self._model.latents))
+        children_of_latents = self._model.get_children(self._model.latents)
         fixed_cpd_vars = [
             var
             for var in self._model.nodes()

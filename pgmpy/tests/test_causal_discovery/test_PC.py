@@ -172,21 +172,21 @@ def test_skeleton_to_pdag():
     }
     pdag = pc._orient_colliders()
     pdag = pdag.apply_meeks_rules(apply_r4=False)
-    assert set(pdag.edges()) == {("B", "C"), ("A", "D"), ("A", "C"), ("D", "A")}
+    assert set(pdag.get_edges(data=True)) == {("A", "C", "->"), ("A", "D", "--"), ("B", "C", "->")}
 
     # C - A - B  ==> C -> A <- B
     pc.skeleton_ = nx.Graph([("A", "B"), ("A", "C")])
     pc.separating_sets_ = {frozenset({"B", "C"}): ()}
     pdag = pc._orient_colliders()
     pdag = pdag.apply_meeks_rules(apply_r4=False)
-    assert set(pdag.edges()) == {("B", "A"), ("C", "A")}
+    assert set(pdag.get_edges(data=True)) == {("B", "A", "->"), ("C", "A", "->")}
 
     # C - A - B ==> C - A - B
     pc.skeleton_ = nx.Graph([("A", "B"), ("A", "C")])
     pc.separating_sets_ = {frozenset({"B", "C"}): ("A",)}
     pdag = pc._orient_colliders()
     pdag = pdag.apply_meeks_rules(apply_r4=False)
-    assert set(pdag.edges()) == {("A", "B"), ("B", "A"), ("A", "C"), ("C", "A")}
+    assert set(pdag.get_edges(data=True)) == {("A", "B", "--"), ("A", "C", "--")}
 
     # {A, B} - C - D ==> {A, B} -> C -> D
     pc.skeleton_ = nx.Graph([("A", "C"), ("B", "C"), ("C", "D")])
@@ -197,27 +197,25 @@ def test_skeleton_to_pdag():
     }
     pdag = pc._orient_colliders()
     pdag = pdag.apply_meeks_rules(apply_r4=False)
-    assert set(pdag.edges()) == {("A", "C"), ("B", "C"), ("C", "D")}
+    assert set(pdag.get_edges(data=True)) == {("A", "C", "->"), ("B", "C", "->"), ("C", "D", "->")}
 
     # C - A - B - {C, D} ==> C <- A -> B <- D; B -> C
     pc.skeleton_ = nx.Graph([("A", "B"), ("A", "C"), ("B", "C"), ("B", "D")])
     pc.separating_sets_ = {frozenset({"A", "D"}): tuple(), frozenset({"C", "D"}): ("A", "B")}
     pdag = pc._orient_colliders()
     pdag = pdag.apply_meeks_rules(apply_r4=False)
-    assert set(pdag.edges()) == {("A", "B"), ("B", "C"), ("A", "C"), ("D", "B")}
+    assert set(pdag.get_edges(data=True)) == {("A", "B", "->"), ("A", "C", "->"), ("B", "C", "->"), ("D", "B", "->")}
 
     pc.skeleton_ = nx.Graph([("A", "B"), ("B", "C"), ("A", "D"), ("B", "D"), ("C", "D")])
     pc.separating_sets_ = {frozenset({"A", "C"}): ("B",)}
     pdag = pc._orient_colliders()
     pdag = pdag.apply_meeks_rules(apply_r4=False)
-    assert set(pdag.edges()) == {
-        ("A", "B"),
-        ("B", "A"),
-        ("B", "C"),
-        ("C", "B"),
-        ("A", "D"),
-        ("B", "D"),
-        ("C", "D"),
+    assert set(pdag.get_edges(data=True)) == {
+        ("A", "B", "--"),
+        ("A", "D", "->"),
+        ("B", "D", "->"),
+        ("C", "B", "--"),
+        ("C", "D", "->"),
     }
 
     # A - B - C - D: two conflicting colliders at B and C.
@@ -230,7 +228,7 @@ def test_skeleton_to_pdag():
         frozenset({"B", "D"}): tuple(),
     }
     pdag = pc._orient_colliders()
-    assert set(pdag.edges()) == {("A", "B"), ("C", "B"), ("C", "D"), ("D", "C")}
+    assert set(pdag.get_edges(data=True)) == {("A", "B", "->"), ("C", "B", "->"), ("C", "D", "--")}
 
 
 @pytest.mark.parametrize("variant", ["orig", "stable", "parallel"])
@@ -589,11 +587,11 @@ def test_temporal_pc_cancer():
     )
     est.fit(X=data)
     pdag = est.causal_graph_
-    assert set(pdag.edges()) == {
-        ("Cancer", "Xray"),
-        ("Cancer", "Dyspnoea"),
-        ("Smoker", "Cancer"),
-        ("Pollution", "Cancer"),
+    assert set(pdag.get_edges(data=True)) == {
+        ("Cancer", "Xray", "->"),
+        ("Cancer", "Dyspnoea", "->"),
+        ("Smoker", "Cancer", "->"),
+        ("Pollution", "Cancer", "->"),
     }
 
 
@@ -646,7 +644,12 @@ def test_temporal_pc_sachs():
 
     expert = ExpertKnowledge(temporal_order=temporal_order)
     pdag = PC(ci_test="chi_square", expert_knowledge=expert).fit(X=df).causal_graph_
-    assert temporal_forbidden_edges.isdisjoint(set(pdag.edges()))
+    learned_edges = set()
+    for u, v, edge_type in pdag.get_edges(data=True):
+        learned_edges.add((u, v))
+        if edge_type == "--":
+            learned_edges.add((v, u))
+    assert temporal_forbidden_edges.isdisjoint(learned_edges)
 
 
 def _fake_ci_temporal(X, Y, Z=[], **kwargs):

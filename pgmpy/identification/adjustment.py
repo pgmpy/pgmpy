@@ -199,15 +199,20 @@ class Adjustment(BaseIdentification):
 
         conditional_vars = exposure + adjustment_vars
 
-        predecessors = set()
-        for exposure_var in exposure:
-            predecessors.update(causal_graph.predecessors(exposure_var))
+        # Parents of the exposure(s) that are themselves conditioned on are trivially separated.
+        parents = causal_graph.get_parents(exposure) - set(conditional_vars)
 
-        parents_d_sep = []
-        for pred_var in predecessors:
-            outcome_d_seps = []
-            for outcome_var in outcome:
-                outcome_d_seps.append(causal_graph.is_dconnected(pred_var, outcome_var, observed=conditional_vars))
-            parents_d_sep.append(not any(outcome_d_seps))
+        # DAG has not migrated onto _CoreGraph yet and exposes d-separation as `is_dconnected`;
+        # this branch collapses into the `is_mseparated` call once it does.
+        if isinstance(causal_graph, DAG):
+            return all(
+                not causal_graph.is_dconnected(parent, outcome_var, observed=conditional_vars)
+                for parent in parents
+                for outcome_var in outcome
+            )
 
-        return all(parents_d_sep)
+        return all(
+            causal_graph.is_mseparated(parent, outcome_var, conditioning_set=conditional_vars)
+            for parent in parents
+            for outcome_var in outcome
+        )
