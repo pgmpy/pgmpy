@@ -1,3 +1,5 @@
+from collections.abc import Hashable
+
 import pandas as pd
 import pytest
 
@@ -16,7 +18,7 @@ class CountingScore(BaseStructureScore):
         self.call_count = 0
         super().__init__(data)
 
-    def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
+    def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         self.call_count += 1
         return float(len(parents))
 
@@ -30,6 +32,14 @@ class TestBaseStructureScore:
 
         with pytest.raises(TypeError, match=r"unexpected keyword argument 'foo'"):
             K2(data, foo=1)
+
+    def test_score_with_hashable_variables(self):
+        # Dataframe with integer column names
+        data = pd.DataFrame({1: [0, 1, 1, 0], 2: [1, 0, 1, 0]})
+        score = K2(data.astype("category"))
+        # Call with integer variables/parents
+        val = score.local_score(1, (2,))
+        assert isinstance(val, float)
 
 
 class TestGetScoringMethod:
