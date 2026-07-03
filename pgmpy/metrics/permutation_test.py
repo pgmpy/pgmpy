@@ -299,6 +299,3 @@ class PermutationTest(BaseUnsupervisedMetric):
             }
 
         return result
-
-
-# rename tpa, triples, add definitions in docstring, describe falisiable and falsified,
