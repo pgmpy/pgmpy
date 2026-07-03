@@ -9,10 +9,10 @@ from tqdm import tqdm
 from pgmpy.base import DAG
 from pgmpy.ci_tests import get_ci_test
 from pgmpy.global_vars import config
-from pgmpy.metrics import _BaseUnsupervisedMetric
+from pgmpy.metrics import BaseUnsupervisedMetric
 
 
-class FisherC(_BaseUnsupervisedMetric):
+class FisherC(BaseUnsupervisedMetric):
     """
     Returns a p-value for testing whether the given data is faithful to the
     model structure's constraints.
@@ -49,10 +49,10 @@ class FisherC(_BaseUnsupervisedMetric):
     --------
     >>> from pgmpy.example_models import load_model
     >>> model = load_model("bnlearn/cancer")
-    >>> df = model.simulate(int(1e3))
+    >>> df = model.simulate(int(1e3), seed=42)
     >>> fisher_c = FisherC(ci_test="chi_square", compute_rmsea=False)
     >>> fisher_c(X=df, causal_graph=model)
-    0.7504
+    np.float64(0.9967454665123895)
     """
 
     _tags = {
@@ -86,7 +86,7 @@ class FisherC(_BaseUnsupervisedMetric):
 
         for u, v in comb_iter:
             if not ((u in causal_graph[v]) or (v in causal_graph[u])):
-                Z = set(causal_graph.predecessors(u)).union(causal_graph.predecessors(v))
+                Z = causal_graph.get_parents([u, v])
                 ci_test.is_independent(X=u, Y=v, Z=list(Z))
                 cis.append([u, v, Z, ci_test.p_value_])
         cis = pd.DataFrame(cis, columns=["u", "v", "cond_vars", "p_value"])

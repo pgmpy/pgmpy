@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+import warnings
 from itertools import combinations
 
 import networkx as nx
@@ -48,6 +48,11 @@ class TreeSearch(StructureEstimator):
     """
 
     def __init__(self, data, root_node=None, n_jobs=-1, **kwargs):
+        warnings.warn(
+            "TreeSearch is deprecated. Please use pgmpy.causal_discovery.TreeSearch instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
         if root_node is not None and root_node not in data.columns:
             raise ValueError(f"Root node: {root_node} not found in data columns.")
 
@@ -119,7 +124,7 @@ class TreeSearch(StructureEstimator):
         ... )
         >>> plt.show()
         >>> est = TreeSearch(values)
-        >>> model = est.estimate(estimator_type="tan")
+        >>> model = est.estimate(estimator_type="tan", class_node="A")
         >>> nx.draw_circular(
         ...     model, with_labels=True, arrowsize=20, arrowstyle="fancy", alpha=0.3
         ... )
@@ -287,7 +292,7 @@ class TreeSearch(StructureEstimator):
         ...     columns=["A", "B", "C", "D", "E"],
         ... )
         >>> est = TreeSearch(values, root_node="B")
-        >>> model = est.estimate(estimator_type="tan")
+        >>> model = est.estimate(estimator_type="tan", class_node="A")
         """
         # Step 0: Check for edge weight computation method
         if edge_weights_fn == "mutual_info":

@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Moodstate(BIFMixin, _BaseExampleModel):
+class Moodstate(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/moodstate",
         "n_nodes": 7,

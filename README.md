@@ -25,7 +25,7 @@ Algorithms for each task follow a unified composable API, making them modular an
 | [**Causal Validation**](https://pgmpy.org/guides/metrics.html) | Assess how compatible the causal structure is with the data. |
 | [**Parameter Learning**](https://pgmpy.org/guides/parameter_estimation.html) | Estimate model parameters (e.g., conditional probability distributions) from observed data. |
 | [**Probabilistic Inference**](https://pgmpy.org/guides/probabilistic_inference.html) | Compute posterior distributions conditioned on observed evidence. |
-| [**Causal Inference**](https://pgmpy.org/api/causal_inference.html) | Compute interventional and counterfactual distributions using do-calculus. |
+| [**Causal Inference**](https://pgmpy.org/api/causal_inference.html) | Compute interventional distributions. |
 | [**Simulations**](https://pgmpy.org/guides/simulations.html) | Generate synthetic data under specified evidence or interventions. |
 | **Example** [**Datasets**](https://pgmpy.org/guides/datasets.html) **and** [**Models**](https://pgmpy.org/guides/example_models.html) | Collection of datasets and models from various sources. |
 | [**Plotting**](https://pgmpy.org/guides/plotting.html) | Flexible plotting functionality. |

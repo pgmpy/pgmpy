@@ -1,4 +1,4 @@
-from ._base import _BaseCITest, get_ci_test
+from ._base import BaseCITest, get_ci_test
 from .chi_square import ChiSquare
 from .fisher_z import FisherZ
 from .g_sq import GSq
@@ -16,7 +16,7 @@ from .roys_largest_root import RoysLargestRoot
 from .wilks_lambda import WilksLambda
 
 __all__ = [
-    "_BaseCITest",
+    "BaseCITest",
     "get_ci_test",
     "ChiSquare",
     "FisherZ",

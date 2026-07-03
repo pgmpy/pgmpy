@@ -1,7 +1,7 @@
-from .._base import ContinuousMixin, _BaseExampleModel
+from .._base import BaseExampleModel, ContinuousMixin
 
 
-class MagicNIAB(ContinuousMixin, _BaseExampleModel):
+class MagicNIAB(ContinuousMixin, BaseExampleModel):
     """
     References
     ----------

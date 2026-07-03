@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Fingermarks1(BIFMixin, _BaseExampleModel):
+class Fingermarks1(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/fingermarks1",
         "n_nodes": 12,

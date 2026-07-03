@@ -1,7 +1,7 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Earthquake(DiscreteMixin, _BaseExampleModel):
+class Earthquake(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------

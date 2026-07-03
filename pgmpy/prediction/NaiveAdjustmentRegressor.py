@@ -10,10 +10,10 @@ from sklearn.utils.validation import (
     validate_data,
 )
 
-from pgmpy.prediction._base import _BaseCausalPrediction
+from pgmpy.prediction._base import BaseCausalPrediction
 
 
-class NaiveAdjustmentRegressor(_BaseCausalPrediction):
+class NaiveAdjustmentRegressor(BaseCausalPrediction):
     """
     Naive adjustment regressor using causal graph roles for feature selection.
 

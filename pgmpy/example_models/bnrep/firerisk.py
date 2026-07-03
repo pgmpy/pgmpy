@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Firerisk(BIFMixin, _BaseExampleModel):
+class Firerisk(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/firerisk",
         "n_nodes": 23,

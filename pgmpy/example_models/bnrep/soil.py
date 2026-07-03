@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Soil(BIFMixin, _BaseExampleModel):
+class Soil(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/soil",
         "n_nodes": 6,
