@@ -7,15 +7,14 @@ import unittest
 import networkx as nx
 import numpy as np
 import pandas as pd
-from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
+import pytest
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
-from pgmpy.base import DAG
+# Skip the whole test module if the optional 'torch' dependency isn't installed.
+torch = pytest.importorskip("torch", reason="DiBS tests require the optional dependency 'torch'.")
 
-torch = _safe_import("torch")
-
-if _check_soft_dependencies("torch", severity="none"):
-    from pgmpy.causal_discovery import DiBS
+from pgmpy.base import DAG  # noqa: E402
+from pgmpy.causal_discovery import DiBS  # noqa: E402
 
 
 def expected_failed_checks(estimator):
@@ -48,10 +47,6 @@ def tiny_data():
     return pd.DataFrame(x, columns=["X1", "X2", "X3"])
 
 
-@unittest.skipUnless(
-    _check_soft_dependencies("torch", severity="none"),
-    reason="execute only if required dependency present",
-)
 class TestDiBSCore(unittest.TestCase):
     def test_fit_sets_attributes(self):
         est = DiBS(
@@ -118,7 +113,7 @@ class TestDiBSCore(unittest.TestCase):
     def test_custom_log_likelihood_callable(self):
         calls = {"count": 0}
 
-        def custom_ll(data: torch.Tensor, graph: torch.Tensor) -> torch.Tensor:
+        def custom_ll(data, graph):
             calls["count"] += 1
             out_shape = graph.shape[:-2]
             if len(out_shape) == 0:
@@ -137,10 +132,6 @@ class TestDiBSCore(unittest.TestCase):
         self.assertGreater(calls["count"], 0)
 
 
-@unittest.skipUnless(
-    _check_soft_dependencies("torch", severity="none"),
-    reason="execute only if required dependency present",
-)
 class TestDiBSLikelihoodValidation(unittest.TestCase):
     def test_unknown_grad_estimator_raises(self):
         est = DiBS(grad_estimator_z="Nonsense estimator")
