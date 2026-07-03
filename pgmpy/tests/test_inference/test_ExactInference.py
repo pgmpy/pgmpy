@@ -17,6 +17,7 @@ from pgmpy.models import (
     FunctionalBayesianNetwork,
     JunctionTree,
 )
+from pgmpy.utils import compat_fns
 
 
 class TestVariableElimination(unittest.TestCase):
@@ -1005,29 +1006,35 @@ class TestBeliefPropagationWithMessagePassing(unittest.TestCase):
 
     def test_query_single_variable(self):
         res = self.belief_propagation.query(["C"])
-        assert np.allclose(res["C"].values, np.array([0.217, 0.783]), atol=1e-20)
+        assert np.allclose(compat_fns.to_numpy(res["C"].values), np.array([0.217, 0.783]), atol=1e-20)
 
     def test_query_multiple_variable(self):
         res = self.belief_propagation.query(["A", "B", "C", "D"])
-        assert np.allclose(res["A"].values, np.array([0.4, 0.6]), atol=1e-20)
-        assert np.allclose(res["B"].values, np.array([0.11, 0.21, 0.68]), atol=1e-20)
-        assert np.allclose(res["C"].values, np.array([0.217, 0.783]), atol=1e-20)
-        assert np.allclose(res["D"].values, np.array([0.168, 0.143, 0.689]), atol=1e-20)
+        assert np.allclose(compat_fns.to_numpy(res["A"].values), np.array([0.4, 0.6]), atol=1e-20)
+        assert np.allclose(compat_fns.to_numpy(res["B"].values), np.array([0.11, 0.21, 0.68]), atol=1e-20)
+        assert np.allclose(compat_fns.to_numpy(res["C"].values), np.array([0.217, 0.783]), atol=1e-20)
+        assert np.allclose(compat_fns.to_numpy(res["D"].values), np.array([0.168, 0.143, 0.689]), atol=1e-20)
 
     def test_query_single_variable_with_evidence(self):
         res = self.belief_propagation.query(["B", "C"], {"A": 1, "D": 0})
-        assert np.allclose(res["B"].values, np.array([0.02777778, 0.08333333, 0.88888889]), atol=1e-20)
-        assert np.allclose(res["C"].values, np.array([0.14166667, 0.85833333]), atol=1e-20)
+        assert np.allclose(
+            compat_fns.to_numpy(res["B"].values), np.array([0.02777778, 0.08333333, 0.88888889]), atol=1e-20
+        )
+        assert np.allclose(compat_fns.to_numpy(res["C"].values), np.array([0.14166667, 0.85833333]), atol=1e-20)
 
     def test_query_multiple_variable_with_evidence(self):
         res = self.belief_propagation.query(["B", "C"], {"A": 1, "D": 0})
-        assert np.allclose(res["B"].values, np.array([0.02777778, 0.08333333, 0.88888889]), atol=1e-20)
-        assert np.allclose(res["C"].values, np.array([0.14166667, 0.85833333]), atol=1e-20)
+        assert np.allclose(
+            compat_fns.to_numpy(res["B"].values), np.array([0.02777778, 0.08333333, 0.88888889]), atol=1e-20
+        )
+        assert np.allclose(compat_fns.to_numpy(res["C"].values), np.array([0.14166667, 0.85833333]), atol=1e-20)
 
     def test_query_single_variable_with_virtual_evidence(self):
         ve = [TabularCPD("A", 2, [[0.1], [0.9]])]
         res = self.belief_propagation.query(["B"], virtual_evidence=ve)
-        assert np.allclose(res["B"].values, np.array([0.06034483, 0.16034483, 0.77931034]), atol=1e-20)
+        assert np.allclose(
+            compat_fns.to_numpy(res["B"].values), np.array([0.06034483, 0.16034483, 0.77931034]), atol=1e-20
+        )
 
     def test_query_multiple_variable_with_multiple_evidence_and_virtual_evidence(self):
         ve = [
@@ -1035,8 +1042,10 @@ class TestBeliefPropagationWithMessagePassing(unittest.TestCase):
             TabularCPD("B", 3, [[0.3], [0.6], [0.1]]),
         ]
         res = self.belief_propagation.query(["B", "C"], evidence={"D": 0}, virtual_evidence=ve)
-        assert np.allclose(res["B"].values, np.array([0.05938567, 0.3440273, 0.59658703]), atol=1e-20)
-        assert np.allclose(res["C"].values, np.array([0.25542662, 0.74457338]), atol=1e-20)
+        assert np.allclose(
+            compat_fns.to_numpy(res["B"].values), np.array([0.05938567, 0.3440273, 0.59658703]), atol=1e-20
+        )
+        assert np.allclose(compat_fns.to_numpy(res["C"].values), np.array([0.25542662, 0.74457338]), atol=1e-20)
 
     def test_query_allows_multiple_virtual_evidence_per_variable(self):
         ve1 = [
@@ -1047,8 +1056,10 @@ class TestBeliefPropagationWithMessagePassing(unittest.TestCase):
         cpd = TabularCPD("A", 2, [[0.1 * 0.3], [0.9 * 0.7]])
         cpd.normalize()
         res2 = self.belief_propagation.query(["B"], virtual_evidence=[cpd])
-        assert np.allclose(res1["B"].values, res2["B"].values, atol=1e-20)
-        assert np.allclose(res2["B"].values, np.array([0.05461538, 0.15461538, 0.79076923]), atol=1e-20)
+        assert np.allclose(compat_fns.to_numpy(res1["B"].values), compat_fns.to_numpy(res2["B"].values), atol=1e-20)
+        assert np.allclose(
+            compat_fns.to_numpy(res2["B"].values), np.array([0.05461538, 0.15461538, 0.79076923]), atol=1e-20
+        )
 
     def test_query_error_obs_var_has_evidence(self):
         with self.assertRaises(
@@ -1059,44 +1070,57 @@ class TestBeliefPropagationWithMessagePassing(unittest.TestCase):
 
     def test_query_single_variable_can_return_all_computed_messages(self):
         res, messages = self.belief_propagation.query(["B"], get_messages=True)
-        assert np.allclose(res["B"].values, np.array([0.11, 0.21, 0.68]), atol=1e-20)
+        assert np.allclose(compat_fns.to_numpy(res["B"].values), np.array([0.11, 0.21, 0.68]), atol=1e-20)
         # Assert on messages values
-        assert np.allclose(messages["['A'] -> A"], np.array([0.4, 0.6]), atol=1e-20)
-        assert np.allclose(messages["['B', 'A'] -> B"], np.array([0.11, 0.21, 0.68]), atol=1e-20)
+        assert np.allclose(compat_fns.to_numpy(messages["['A'] -> A"]), np.array([0.4, 0.6]), atol=1e-20)
+        assert np.allclose(compat_fns.to_numpy(messages["['B', 'A'] -> B"]), np.array([0.11, 0.21, 0.68]), atol=1e-20)
         assert np.allclose(
-            messages["['C', 'B'] -> B"],
+            compat_fns.to_numpy(messages["['C', 'B'] -> B"]),
             np.array([0.33333333, 0.33333333, 0.33333333]),
             atol=1e-20,
         )
         assert np.allclose(
-            messages["['D', 'B'] -> B"],
+            compat_fns.to_numpy(messages["['D', 'B'] -> B"]),
             np.array([0.33333333, 0.33333333, 0.33333333]),
             atol=1e-20,
         )
 
     def test_query_multiple_variable_returns_each_message_once(self):
         res, messages = self.belief_propagation.query(["C", "B"], get_messages=True)
-        assert np.allclose(res["B"].values, np.array([0.11, 0.21, 0.68]), atol=1e-20)
-        assert np.allclose(res["C"].values, np.array([0.217, 0.783]), atol=1e-20)
+        assert np.allclose(compat_fns.to_numpy(res["B"].values), np.array([0.11, 0.21, 0.68]), atol=1e-20)
+        assert np.allclose(compat_fns.to_numpy(res["C"].values), np.array([0.217, 0.783]), atol=1e-20)
 
         # Message common to both B and C
-        assert np.allclose(messages["['A'] -> A"], np.array([0.4, 0.6]), atol=1e-20)
-        assert np.allclose(messages["['B', 'A'] -> B"], np.array([0.11, 0.21, 0.68]), atol=1e-20)
+        assert np.allclose(compat_fns.to_numpy(messages["['A'] -> A"]), np.array([0.4, 0.6]), atol=1e-20)
+        assert np.allclose(compat_fns.to_numpy(messages["['B', 'A'] -> B"]), np.array([0.11, 0.21, 0.68]), atol=1e-20)
 
         # Message specific to B
         assert np.allclose(
-            messages["['C', 'B'] -> B"],
+            compat_fns.to_numpy(messages["['C', 'B'] -> B"]),
             np.array([0.33333333, 0.33333333, 0.33333333]),
             atol=1e-20,
         )
         assert np.allclose(
-            messages["['D', 'B'] -> B"],
+            compat_fns.to_numpy(messages["['D', 'B'] -> B"]),
             np.array([0.33333333, 0.33333333, 0.33333333]),
             atol=1e-20,
         )
 
         # Messages specific to C
-        assert np.allclose(messages["['C', 'B'] -> C"], np.array([0.217, 0.783]), atol=1e-20)
+        assert np.allclose(compat_fns.to_numpy(messages["['C', 'B'] -> C"]), np.array([0.217, 0.783]), atol=1e-20)
+
+
+@unittest.skipUnless(
+    _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
+class TestBeliefPropagationWithMessagePassingTorch(TestBeliefPropagationWithMessagePassing):
+    def setUp(self):
+        config.set_backend("torch")
+        super().setUp()
+
+    def tearDown(self):
+        config.set_backend("numpy")
 
 
 @unittest.skipUnless(

@@ -8,6 +8,7 @@ from pgmpy import config, logger
 from pgmpy.extern import tabulate
 from pgmpy.factors.base import BaseFactor
 from pgmpy.utils import StateNameMixin, compat_fns
+from pgmpy.utils.mathext import sample_discrete
 
 State = namedtuple("State", ["var", "state"])
 
@@ -96,7 +97,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         else:
             import torch
 
-            values = torch.Tensor(values).type(config.get_dtype()).to(config.get_device())
+            values = torch.as_tensor(values, dtype=config.get_dtype(), device=config.get_device())
 
         if len(cardinality) != len(variables):
             raise ValueError("Number of elements in cardinality must be equal to number of variables")
@@ -209,7 +210,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
                 except KeyError:
                     logger.info(f"Using {var} state as number instead of name.")
                     index.append(kwargs[var])
-        return self.values[tuple(index)]
+        return compat_fns.to_numpy(self.values[tuple(index)]).item()
 
     def set_value(self, value, **kwargs):
         """
@@ -867,12 +868,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         """
         phi = self.normalize(inplace=False)
         p = phi.values.ravel()
-
-        # TODO: Fix this to make it work natively in torch.
-        p = compat_fns.to_numpy(p)
-
-        rng = np.random.default_rng(seed=seed)
-        indexes = rng.choice(range(len(p)), size=n, p=p)
+        indexes = sample_discrete(range(len(p)), p, size=n, seed=seed)
         samples = []
         index_to_state = {}
         for index in indexes:

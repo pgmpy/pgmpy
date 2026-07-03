@@ -6,10 +6,12 @@ from collections import defaultdict
 import numpy as np
 from networkx.algorithms import bipartite
 
+from pgmpy import config
 from pgmpy.base import UndirectedGraph
 from pgmpy.factors import factor_product
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.models.DiscreteMarkovNetwork import DiscreteMarkovNetwork
+from pgmpy.utils import compat_fns
 
 
 class FactorGraph(UndirectedGraph):
@@ -484,7 +486,12 @@ class FactorGraph(UndirectedGraph):
         """
         card = self.get_cardinality(variable)
         # Create an array with 1 at the index of the evidence and 0 elsewhere
-        message = np.zeros(card)
+        if config.get_backend() == "numpy":
+            message = np.zeros(card, dtype=config.get_dtype())
+        else:
+            import torch
+
+            message = torch.zeros(card, dtype=config.get_dtype(), device=config.get_device())
         message[observation] = 1
         return message
 
@@ -509,4 +516,4 @@ class FactorGraph(UndirectedGraph):
         array([0.25, 0.25, 0.25, 0.25])
         """
         card = self.get_cardinality(variable)
-        return np.ones(card) / card
+        return compat_fns.ones(card) / card

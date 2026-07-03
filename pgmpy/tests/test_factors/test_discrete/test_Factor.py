@@ -856,6 +856,20 @@ class TestFactorMethods:
             decimal=2,
         )
 
+    def test_sample_torch_does_not_use_numpy_default_rng(self, backend, monkeypatch):
+        if backend != "torch":
+            pytest.skip("torch backend only")
+
+        def _raise_if_called(*args, **kwargs):
+            raise AssertionError("numpy.default_rng should not be used in torch backend factor sampling")
+
+        monkeypatch.setattr(np.random, "default_rng", _raise_if_called)
+
+        phi = DiscreteFactor(["x1", "x2"], [2, 2], [1, 2, 3, 4])
+        samples = phi.sample(16, seed=3)
+
+        assert samples.shape == (16, 2)
+
         phi1 = DiscreteFactor(
             ["x1", "x2"],
             [2, 2],

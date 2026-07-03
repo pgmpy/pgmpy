@@ -126,6 +126,7 @@ class BayesianModelInference(Inference):
             [BayesianModelInference._reduce_marg(variable_cpd, reduce_index, sc) for sc in state_combinations]
         )
         unique_weights, weights_indices = compat_fns.unique(weights_list, axis=0, return_inverse=True)
+        weights_indices = compat_fns.to_numpy(weights_indices).astype(int)
 
         # convert weights to index; make mapping of state to index
         state_to_index = dict(zip(state_combinations, weights_indices))

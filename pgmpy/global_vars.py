@@ -45,8 +45,9 @@ class Config:
             if not device.startswith(("cuda", "cpu")):
                 raise ValueError(f"device must be either 'cuda', 'cuda:x' or 'cpu'. Got: {device}")
             elif device.startswith("cuda"):
-                if torch.cuda.is_available():
-                    self.DEVICE = torch.device(device)
+                if not torch.cuda.is_available():
+                    raise ValueError("CUDA device requested but torch.cuda.is_available() is False")
+                self.DEVICE = torch.device(device)
             else:
                 self.DEVICE = torch.device(device)
 
@@ -85,6 +86,8 @@ class Config:
             self.BACKEND = "numpy"
             self.DEVICE = None
         else:
+            prev_backend = self.BACKEND
+            prev_device = self.DEVICE
             msg = (
                 "Error in pgmpy Config.set_backend: setting the pgmpy backend to torch "
                 "requires torch to be installed in the python environment, but "
@@ -93,7 +96,12 @@ class Config:
             )
             _check_soft_dependencies("torch", msg=msg)
             self.BACKEND = "torch"
-            self.set_device(device)
+            try:
+                self.set_device(device)
+            except Exception:
+                self.BACKEND = prev_backend
+                self.DEVICE = prev_device
+                raise
         self.set_dtype(dtype=dtype)
 
     def get_backend(self):
