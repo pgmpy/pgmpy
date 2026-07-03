@@ -133,7 +133,7 @@ class DiBS(BaseCausalDiscovery):
 
     The learned graph is available as a NetworkX directed graph:
 
-    >>> dibs.causal_graph_.edges()
+    >>> graph = dibs.causal_graph_.edges()
 
     References
     ----------
