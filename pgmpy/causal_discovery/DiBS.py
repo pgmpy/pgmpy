@@ -7,12 +7,12 @@ import torch
 from torch.func import grad
 from torch.nn.functional import logsigmoid
 
-from pgmpy.causal_discovery._base import _BaseCausalDiscovery
-from pgmpy.global_vars import config
 from pgmpy.base import DAG
+from pgmpy.causal_discovery._base import BaseCausalDiscovery
+from pgmpy.global_vars import config
 
 
-class DiBS(_BaseCausalDiscovery):
+class DiBS(BaseCausalDiscovery):
     """
     Causal discovery using Differentiable Bayesian Structure Learning (DiBS).
 
@@ -239,7 +239,6 @@ class DiBS(_BaseCausalDiscovery):
 
         scores = torch.stack(scores).reshape(batch_shape)
         return scores[0] if single_graph else scores
-
 
     def _grad_z_likelihood_score_function(
         self,
@@ -629,7 +628,6 @@ class DiBS(_BaseCausalDiscovery):
 
         return (driving_term + repulsive_term) / M
 
-
     def _fit(self, X: pd.DataFrame):
         """
         Fit the DiBS causal discovery model to observational data.
@@ -656,11 +654,10 @@ class DiBS(_BaseCausalDiscovery):
         self.device_ = config.get_device()
         #################################################################################
 
-        if not self.grad_estimator_z in ["score", "reparam"]:
+        if self.grad_estimator_z not in ["score", "reparam"]:
             raise ValueError(f"Unknown grad estimator: {self.grad_estimator_z}. Must be one of ['score', 'reparam'].")
 
-
-        #Run SVGD inference over latent graph particles.
+        # Run SVGD inference over latent graph particles.
         # The input data are converted to a torch tensor, latent particles are
         # initialized, and the particles are updated for ``n_steps`` iterations. After
         # optimization, each particle is converted into a hard adjacency matrix using

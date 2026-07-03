@@ -9,12 +9,14 @@ import numpy as np
 import pandas as pd
 from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 from sklearn.utils.estimator_checks import parametrize_with_checks
+
 from pgmpy.base import DAG
 
 torch = _safe_import("torch")
 
 if _check_soft_dependencies("torch", severity="none"):
     from pgmpy.causal_discovery import DiBS
+
 
 def expected_failed_checks(estimator):
     return {
