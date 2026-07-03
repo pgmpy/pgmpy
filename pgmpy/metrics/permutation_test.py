@@ -30,20 +30,14 @@ class PermutationTest(BaseUnsupervisedMetric):
 
     Parameters
     ----------
-    dag : pgmpy.base.DAG
-        The causal graph to test.
-
-    data : pandas.DataFrame
-        Data to test the graph against. The column names of the DataFrame must match the variable names in the `model`.
-
-    significance_level : float, default=0.05
-        Significance level for conditional independence tests. Lower values make
-        the test more conservative for accepting the null hypothesis.
-
     n_permutations : int or None
         Number of random node permutations to generate for the baseline.
         If None, uses max(20, int(1/significance_level)).
         If -1, uses all possible permutations (factorial of number of nodes)
+
+    significance_level : float, default=0.05
+        Significance level for conditional independence tests. Lower values make
+        the test more conservative for accepting the null hypothesis.
 
     ci_test : str, Instance of BaseCITest
         The statistical conditional independence test to use for evaluating the Local Markov Conditions in data.
@@ -66,20 +60,30 @@ class PermutationTest(BaseUnsupervisedMetric):
 
         - 'falsifiable' : bool
             Whether the graph is informative enough to be falsifiable.
-            True if < significance_level fraction of permutations lie in same MEC.
+            True if < significance_level fraction of permutations lie in same Markov Equivalence Class.
 
         - 'falsified' : bool
             Whether the graph is falsified by the test.
-            True if the graph is falsifiable AND performs significantly better than random.
+            True if the graph is falsifiable AND > significance_level fraction of permutations have lesser or
+            equivalent Markov condition violations.
 
         - 'p_value_falsifiable' : float
             P-value for the falsifiability test (fraction of permutations in same MEC).
 
         - 'p_value_falsified' : float
-            P-value for the falsification test (fraction of permutations performing worse).
+            P-value for the falsification test (fraction of permutations having lesser Markov violations).
 
-        - 'lmc_violations' : int
+        - 'n_markov_violations' : int
             Number of Local Markov Condition violations in the given graph.
+
+        - 'n_permutations_within_markov_class' : int
+            Number of permutations with the same Markov Equivalence Class.
+
+        - 'ci_lower_falsified' : float
+            Lower bound of confidence interval for falsification test.
+
+        - 'ci_upper_falsified' : float
+            Upper bound of confidence intervak for falsification test.
 
         - 'summary' : dict (if return_summary=True)
             Detailed results including permutation violations and test statistics.
@@ -150,42 +154,35 @@ class PermutationTest(BaseUnsupervisedMetric):
         self.n_jobs = n_jobs
         super().__init__()
 
-    def _get_parental_triples(self, dag: DAG):
-        """
-        Returns a list of (node, non_descendant, parents) triples for LMC/TPA validation.
-        """
-        triples = []
-        for node in dag.nodes():
-            parents = list(dag.predecessors(node))
-            non_descendants = dag._get_non_descendants(node, exclude_parents=True)
-            for nd in non_descendants:
-                triples.append((node, nd, parents))
-        return triples
-
-    def _permute_triple(self, triple: tuple, perm_mapping: dict = None):
-        node, nd, parents = triple
-        if perm_mapping is None:
-            return node, nd, parents
-        return (
-            perm_mapping[node],
-            perm_mapping[nd],
-            [perm_mapping[p] for p in parents],
-        )
-
     def _get_violations(
         self,
         ci_test: BaseCITest,
         causal_graph: DAG,
-        triples: list[tuple] = None,
-        perm_mapping: dict = None,
+        ci_statements: list[tuple] | None = None,
+        perm_mapping: dict | None = None,
     ):
         """Calculate LMC and TPA violations for a given permutation."""
-        if triples is None:
-            triples = self._get_parental_triples(causal_graph)
-        n_lmc_violations = 0
-        n_tpa_violations = 0
-        for triple in triples:
-            p_node, p_nd, p_parents = self._permute_triple(triple, perm_mapping)
+        if ci_statements is None:
+            ci_statements = []
+            for node in causal_graph.nodes():
+                parents = list(causal_graph.predecessors(node))
+                non_descendants = causal_graph._get_non_descendants(node, exclude_parents=True)
+                for nd in non_descendants:
+                    ci_statements.append((node, nd, parents))
+
+        markov_violations = 0
+        parental_dsep_violations = 0
+        for triple in ci_statements:
+            node, nd, parents = triple
+            if perm_mapping is None:
+                p_node, p_nd, p_parents = node, nd, parents
+            else:
+                p_node, p_nd, p_parents = (
+                    perm_mapping[node],
+                    perm_mapping[nd],
+                    [perm_mapping[p] for p in parents],
+                )
+
             ci_test(
                 X=p_node,
                 Y=p_nd,
@@ -194,28 +191,13 @@ class PermutationTest(BaseUnsupervisedMetric):
             )
             pval = ci_test.p_value_
             if pval <= self.significance_level:
-                n_lmc_violations += 1
-            # TPA: check d-separation in original DAG
-            if perm_mapping is not None and causal_graph.is_dconnected(p_node, p_nd, observed=p_parents):
-                n_tpa_violations += 1
-        return n_lmc_violations, n_tpa_violations, triples
+                markov_violations += 1
 
-    def _get_permutation_list(self, nodes: list, n_permutations: int, exclude_original_order: bool = False):
-        if self.seed is not None:
-            np.random.seed(self.seed)
-        if n_permutations == -1 or n_permutations >= math.factorial(len(nodes)):
-            perms = list(permutations(nodes))
-            if exclude_original_order:
-                perms = [perm for perm in perms if list(perm) != list(nodes)]
-            return perms
-        else:
-            perms = set()
-            while len(perms) < n_permutations:
-                perm = tuple(np.random.permutation(nodes))
-                if exclude_original_order and perm == tuple(nodes):
-                    continue
-                perms.add(perm)
-            return list(perms)
+            # check d-separation in original DAG
+            if perm_mapping is not None and causal_graph.is_dconnected(p_node, p_nd, observed=p_parents):
+                parental_dsep_violations += 1
+
+        return markov_violations, parental_dsep_violations, ci_statements
 
     def _evaluate(
         self,
@@ -225,6 +207,7 @@ class PermutationTest(BaseUnsupervisedMetric):
         # Step 0: Initialize variables and validate inputs.
         nodes = list(causal_graph.nodes())
         data_columns = set(X.columns)
+        rng = np.random.default_rng(self.seed)
 
         if not set(nodes).issubset(data_columns):
             missing_vars = set(nodes) - data_columns
@@ -232,21 +215,30 @@ class PermutationTest(BaseUnsupervisedMetric):
 
         if self.n_permutations is None:
             n_permutations = max(20, int(1 / self.significance_level))
-        elif self.n_permutations == -1:
-            n_permutations = math.factorial(len(nodes))
         else:
             n_permutations = self.n_permutations
 
         ci_test = get_ci_test(test=self.ci_test, data=X)
-        permutation_violations = []
-        tpa_violations = []
-        n_within_mec = 0
+        markov_violation_counts = []
+        parental_dsep_violation_counts = []
+        n_permutations_within_mec = 0
 
         # Step 1: Compute LMC violations for the given DAG.
-        n_lmc_violations, _, triples = self._get_violations(ci_test, causal_graph)
+        n_markov_violations, _, ci_statements = self._get_violations(ci_test, causal_graph)
 
         # Step 2: Generate permutations and compute LMC violations for each to construct null distribution.
-        perm_list = self._get_permutation_list(nodes, n_permutations)
+        if n_permutations >= math.factorial(len(nodes)) - 1:
+            # Exclude default ordering
+            perm_list = list(permutations(nodes))[1:]
+        else:
+            perms = set()
+            while len(perms) < n_permutations:
+                perm = tuple(rng.permutation(nodes))
+                if perm == tuple(nodes):
+                    continue
+                perms.add(perm)
+            perm_list = list(perms)
+
         if self.show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(perm_list, desc="Constructing Null Distribution")
         else:
@@ -256,51 +248,57 @@ class PermutationTest(BaseUnsupervisedMetric):
             delayed(self._get_violations)(
                 ci_test,
                 causal_graph,
-                triples,
+                ci_statements,
                 dict(zip(nodes, permuted_nodes)),
             )
             for permuted_nodes in pbar
         )
-        permutation_violations = [x[0] for x in results]
-        tpa_violations = [x[1] for x in results]
-        n_within_mec = sum(x[1] == 0 for x in results)
+
+        markov_violation_counts = [x[0] for x in results]
+        parental_dsep_violation_counts = [x[1] for x in results]
+        n_permutations_within_mec = sum(x[1] == 0 for x in results)
 
         # Step 3: Compute test statistics and p-values.
 
         # Step 3.1: Falsifiability test
-        p_value_falsifiable = n_within_mec / n_permutations
+        p_value_falsifiable = round(n_permutations_within_mec / len(perm_list), 5)
 
         # Step 3.2: Falsification test
-        count_less_violations = sum(1 for v in permutation_violations if v <= n_lmc_violations)
-        p_value_falsified = count_less_violations / n_permutations
+        count_lesser_violations = sum(1 for v in markov_violation_counts if v <= n_markov_violations)
+        p_value_falsified = round(count_lesser_violations / len(perm_list), 5)
 
         # Step 3.3: Confidence intervals for the falsification p-value
         ci_lower, ci_upper = proportion_confint(
-            count_less_violations,
+            count_lesser_violations,
             n_permutations,
             alpha=self.significance_level,
             method="wilson",
         )
 
+        ci_lower, ci_upper = round(ci_lower, 5), round(ci_upper, 5)
+
         # Step 4: Compile results and return
         result = {
-            "p_value_falsifiable": p_value_falsifiable,
-            "p_value_falsified": p_value_falsified,
-            "n_lmc_violations": n_lmc_violations,
-            "n_within_mec": n_within_mec,
-            "ci_lower_falsified": ci_lower,
-            "ci_upper_falsified": ci_upper,
             "falsifiable": p_value_falsifiable <= self.significance_level,
             "falsified": (p_value_falsifiable <= self.significance_level)
-            and (p_value_falsified >= self.significance_level),
+            and (p_value_falsified > self.significance_level),
+            "p_value_falsifiable": p_value_falsifiable,
+            "p_value_falsified": p_value_falsified,
+            "n_markov_violations": n_markov_violations,
+            "n_permutations_within_markov_class": n_permutations_within_mec,
+            "ci_lower_falsified": ci_lower,
+            "ci_upper_falsified": ci_upper,
         }
 
         if self.return_summary:
             result["summary"] = {
-                "lmc_permutation_violations": permutation_violations,
-                "tpa_permutation_violations": tpa_violations,
+                "permutation_markov_violations": markov_violation_counts,
+                "permutation_parental_dsep_violations": parental_dsep_violation_counts,
                 "significance_level": self.significance_level,
                 "ci_test": ci_test,
             }
 
         return result
+
+
+# rename tpa, triples, add definitions in docstring, describe falisiable and falsified,
