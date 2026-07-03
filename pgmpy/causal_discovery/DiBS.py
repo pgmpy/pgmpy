@@ -125,7 +125,7 @@ class DiBS(BaseCausalDiscovery):
     >>> C = -1.5 * B + rng.normal(scale=0.1, size=n)
     >>> X = pd.DataFrame({"A": A, "B": B, "C": C})
     >>> dibs = DiBS(n_particles=20, n_steps=50, edge_prob_threshold=0.5)
-    >>> dibs.fit(X)
+    >>> _ = dibs.fit(X)
     >>> dibs.adjacency_matrix_
     >>> dibs.edge_probs_
 
