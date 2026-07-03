@@ -630,60 +630,6 @@ class DiBS(_BaseCausalDiscovery):
         return (driving_term + repulsive_term) / M
 
 
-    def _summarize_graphs(self, graph_samples):
-        """
-        Aggregate sampled graphs into edge marginal probabilities and summarize them
-        into a final DAG.
-
-        Parameters
-        ----------
-        graph_samples : list[nx.DiGraph]
-            Posterior graph samples.
-
-        Returns
-        -------
-        tuple
-            ``(summary_graph, edge_probs, adjacency_matrix)``.
-        """
-        nodes = self.feature_names_in_
-        adjs = np.stack(
-            [nx.to_numpy_array(graph, nodelist=nodes, dtype=float) for graph in graph_samples],
-            axis=0,
-        )
-
-        edge_probs_np = adjs.mean(axis=0)
-        np.fill_diagonal(edge_probs_np, 0.0)
-
-        summary_graph = nx.DiGraph()
-        summary_graph.add_nodes_from(nodes)
-
-        candidate_edges = sorted(
-            [
-                (nodes[i], nodes[j], edge_probs_np[i, j])
-                for i in range(len(nodes))
-                for j in range(len(nodes))
-                if i != j and edge_probs_np[i, j] >= self.edge_prob_threshold
-            ],
-            key=lambda x: x[2],
-            reverse=True,
-        )
-
-        for u, v, prob in candidate_edges:
-            if not nx.has_path(summary_graph, v, u):
-                summary_graph.add_edge(u, v, weight=float(prob))
-
-        edge_probs = pd.DataFrame(edge_probs_np, index=nodes, columns=nodes)
-        adjacency_matrix = pd.DataFrame(
-            nx.to_numpy_array(summary_graph, nodelist=nodes, dtype=int, weight=None),
-            index=nodes,
-            columns=nodes,
-        )
-
-        summary_graph_dag = DAG()
-        summary_graph_dag.add_nodes_from(summary_graph.nodes())
-        summary_graph_dag.add_edges_from(summary_graph.edges())
-        return summary_graph_dag, edge_probs, adjacency_matrix
-
     def _fit(self, X: pd.DataFrame):
         """
         Fit the DiBS causal discovery model to observational data.
@@ -757,11 +703,28 @@ class DiBS(_BaseCausalDiscovery):
             graph.add_edges_from((nodes[i], nodes[j]) for i, j in zip(src_idx, dst_idx) if i != j)
             sampled_graphs.append(graph)
 
-        # Summarize posterior samples into one final DAG
-        summary_graph, edge_probs, adjacency_matrix = self._summarize_graphs(sampled_graphs)
+        self.graph_samples_ = sampled_graphs
 
-        self.causal_graph_ = summary_graph
-        self.edge_probs_ = edge_probs
-        self.adjacency_matrix_ = adjacency_matrix
+        # Pick one sampled graph (temporary behavior), then coerce to a DAG.
+        chosen_graph = self.graph_samples_[0] if len(self.graph_samples_) else nx.DiGraph()
+        chosen_graph.add_nodes_from(nodes)
+
+        # Greedy cycle removal by edge deletion order (simple temporary fallback).
+        dag_graph = nx.DiGraph()
+        dag_graph.add_nodes_from(chosen_graph.nodes())
+        for u, v in chosen_graph.edges():
+            if not nx.has_path(dag_graph, v, u):
+                dag_graph.add_edge(u, v)
+
+        self.causal_graph_ = DAG()
+        self.causal_graph_.add_nodes_from(dag_graph.nodes())
+        self.causal_graph_.add_edges_from(dag_graph.edges())
+
+        self.adjacency_matrix_ = pd.DataFrame(
+            nx.to_numpy_array(self.causal_graph_, nodelist=nodes, dtype=int, weight=None),
+            index=nodes,
+            columns=nodes,
+        )
+        self.edge_probs_ = self.adjacency_matrix_.astype(float)
 
         return self
