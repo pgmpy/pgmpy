@@ -128,8 +128,8 @@ class DiBS(BaseCausalDiscovery):
     >>> X = pd.DataFrame({"A": A, "B": B, "C": C})
     >>> dibs = DiBS(n_particles=20, n_steps=50, edge_prob_threshold=0.5)
     >>> _ = dibs.fit(X)
-    >>> dibs.adjacency_matrix_
-    >>> dibs.edge_probs_
+    >>> adj = dibs.adjacency_matrix_
+    >>> edg_pr = dibs.edge_probs_
 
     The learned graph is available as a NetworkX directed graph:
 
