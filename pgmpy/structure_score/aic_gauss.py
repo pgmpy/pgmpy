@@ -1,3 +1,5 @@
+from collections.abc import Hashable
+
 from pgmpy.structure_score.log_likelihood_gauss import LogLikelihoodGauss
 
 
@@ -58,7 +60,7 @@ class AICGauss(LogLikelihoodGauss):
     def __init__(self, data, state_names=None):
         super().__init__(data, state_names=state_names)
 
-    def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
+    def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         ll, df_model = self._log_likelihood(variable=variable, parents=parents)
 
         return ll - (df_model + 2)
