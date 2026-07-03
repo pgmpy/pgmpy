@@ -3,9 +3,18 @@ from collections.abc import Callable
 import networkx as nx
 import numpy as np
 import pandas as pd
-import torch
-from torch.func import grad
-from torch.nn.functional import logsigmoid
+
+try:
+    import torch
+    from torch.func import grad
+    from torch.nn.functional import logsigmoid
+
+    _HAS_TORCH = True
+except ImportError:
+    torch = None
+    grad = None
+    logsigmoid = None
+    _HAS_TORCH = False
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
@@ -646,6 +655,12 @@ class DiBS(BaseCausalDiscovery):
         self : DiBS
             Fitted estimator.
         """
+
+        if not _HAS_TORCH:
+            raise ImportError(
+                "DiBS requires the optional dependency 'torch'. "
+                "Install with `pip install pgmpy[torch]` or `pip install torch`."
+            )
 
         # Extended part of the __init__ to ensure sklearn backwards compatibility:
         self._log_likelihood_fn = self._lgbn_log_likelihood if self.log_likelihood is None else self.log_likelihood
