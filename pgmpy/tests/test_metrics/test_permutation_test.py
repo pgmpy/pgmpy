@@ -7,8 +7,8 @@ import pytest
 
 from pgmpy.base import DAG
 from pgmpy.ci_tests import get_ci_test
+from pgmpy.example_models import load_model
 from pgmpy.metrics import PermutationTest
-from pgmpy.utils import get_example_model
 
 
 @pytest.fixture
@@ -69,7 +69,7 @@ def data_helper():
 
 @pytest.fixture
 def child_model():
-    model = get_example_model("child")
+    model = load_model("bnlearn/child")
     data = model.simulate(n_samples=1000)
 
     return (model, data)
@@ -77,15 +77,7 @@ def child_model():
 
 @pytest.fixture
 def insurance_model():
-    model = get_example_model("insurance")
-    data = model.simulate(n_samples=1000)
-
-    return (model, data)
-
-
-@pytest.fixture
-def sachs_model():
-    model = get_example_model("sachs")
+    model = load_model("bnlearn/insurance")
     data = model.simulate(n_samples=1000)
 
     return (model, data)

@@ -101,7 +101,7 @@ class PermutationTest(BaseUnsupervisedMetric):
 
     >>> model = load_model("bnlearn/earthquake")
     >>> data = model.simulate(2000)
-    >>> permutation_test = PermutationTest(ci_test="pillai", n_permutations=-1)
+    >>> permutation_test = PermutationTest(ci_test="pillai", n_permutations=500)
     >>> result_true = permutation_test.evaluate(
     ...     data, model
     ... )
