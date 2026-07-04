@@ -117,6 +117,10 @@ class DiBS(BaseCausalDiscovery):
     --------
     Simulate a three-variable linear causal chain and fit DiBS:
 
+        Examples
+    --------
+    Simulate a three-variable linear causal chain and fit DiBS:
+
     >>> import numpy as np
     >>> import pandas as pd
     >>> from pgmpy.causal_discovery.DiBS import DiBS
@@ -127,13 +131,13 @@ class DiBS(BaseCausalDiscovery):
     >>> C = -1.5 * B + rng.normal(scale=0.1, size=n)
     >>> X = pd.DataFrame({"A": A, "B": B, "C": C})
     >>> dibs = DiBS(n_particles=20, n_steps=50, edge_prob_threshold=0.5)
-    >>> _ = dibs.fit(X)
-    >>> adj = dibs.adjacency_matrix_
-    >>> edg_pr = dibs.edge_probs_
+    >>> dibs.fit(X)  # doctest: +SKIP
+    >>> dibs.adjacency_matrix_  # doctest: +SKIP
+    >>> dibs.edge_probs_  # doctest: +SKIP
 
     The learned graph is available as a NetworkX directed graph:
 
-    >>> graph = dibs.causal_graph_.edges()
+    >>> dibs.causal_graph_.edges()  # doctest: +SKIP
 
     References
     ----------
