@@ -1167,3 +1167,25 @@ class TestEstimator(unittest.TestCase):
 
         infer = CausalInference(model=model)
         self.assertAlmostEqual(infer.estimate_ate("X", "Y", data), ((0.8 * 0.9) + (0.9 * 0.1)), places=1)
+
+
+class TestIdentificationMethod(unittest.TestCase):
+    def test_identification_method_backdoor_fallthrough(self):
+        """Test that identification_method correctly finds backdoor sets via fallthrough."""
+        # Simple confounded graph: Z -> X -> Y, Z -> Y
+        # Z is a valid backdoor adjustment set for X -> Y
+        model = DiscreteBayesianNetwork([("Z", "X"), ("X", "Y"), ("Z", "Y")])
+        infer = CausalInference(model)
+        result = infer.identification_method("X", "Y")
+        self.assertIn("backdoor set", result)
+
+    def test_identification_method_non_value_error_propagates(self):
+        """Test that non-ValueError exceptions are not silently swallowed."""
+        model = DiscreteBayesianNetwork([("Z", "X"), ("X", "Y"), ("Z", "Y")])
+        infer = CausalInference(model)
+        # Passing a non-existent node should raise an error (e.g., KeyError
+        # from networkx) rather than being silently caught.
+        with self.assertRaises(Exception) as ctx:
+            infer.identification_method("nonexistent", "Y")
+        # Verify it's NOT a ValueError (those are the only ones we catch)
+        self.assertNotIsInstance(ctx.exception, ValueError)
