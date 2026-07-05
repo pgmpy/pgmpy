@@ -95,10 +95,7 @@ class SortnRegress(BaseCausalDiscovery):
 
     References
     ----------
-    .. [1] Reisach, A. G., Tami, M., Chambaz, A., Seiler, C., & Weichwald, S. (2023).
-       A Scale-Invariant Sorting Criterion to Find a Causal Order in Additive Noise Models.
-       Advances in Neural Information Processing Systems, 36.
-       https://arxiv.org/abs/2303.18211
+    - :cite:p:`Reisach2023`
     """
 
     def __init__(self, threshold=0.3, estimator=None):
@@ -107,28 +104,24 @@ class SortnRegress(BaseCausalDiscovery):
         self.estimator = estimator
 
     def _fit(self, X):
-        """
-        The fitting procedure for the SortnRegress algorithm.
-
-        Parameters
-        ----------
-        X : pd.DataFrame
-            The data to learn the causal structure from.
-        Returns
-        -------
-        self : pgmpy.causal_discovery.SortnRegress
-            Returns the instance with the fitted attributes.
-        """
-        feature_name_list = list(X.columns)
+        if any(X.std() == 0):
+            constant_cols = X.columns[X.std() == 0].tolist()
+            raise ValueError(
+                f"The following column(s) have zero variance (constant values): "
+                f"{constant_cols}. Please drop these columns before fitting."
+            )
+        self.feature_names_in_ = list(X.columns)
         # clone the estimator or use default LinearRegression
         model_reg = clone(self.estimator) if self.estimator else LinearRegression()
 
-        r2_values = {}
-        for target in feature_name_list:
-            other_nodes = [node for node in feature_name_list if node != target]
+        all_nodes_set = set(self.feature_names_in_)
 
-            y = X[target].values.astype(float)
-            predictors = X[other_nodes].values.astype(float)
+        r2_values = {}
+        for target in self.feature_names_in_:
+            other_nodes = list(all_nodes_set - {target})
+
+            y = X[target]
+            predictors = X[other_nodes]
 
             model_reg.fit(predictors, y)
             predictions = model_reg.predict(predictors)
@@ -136,10 +129,7 @@ class SortnRegress(BaseCausalDiscovery):
             residuals_variance = np.var(y - predictions)
             total_variance = np.var(y)
 
-            if total_variance == 0:
-                r2_values[target] = 0.0
-            else:
-                r2_values[target] = 1 - (residuals_variance / total_variance)
+            r2_values[target] = 1 - (residuals_variance / total_variance)
 
         sorted_nodes = sorted(r2_values, key=r2_values.get)
 
@@ -150,8 +140,8 @@ class SortnRegress(BaseCausalDiscovery):
             target = sorted_nodes[i]
             potential_parents = sorted_nodes[:i]
 
-            y = X[target].values.astype(float)
-            predictors = X[potential_parents].values.astype(float)
+            y = X[target]
+            predictors = X[potential_parents]
 
             model_reg.fit(predictors, y)
             coefs = model_reg.coef_
@@ -162,7 +152,99 @@ class SortnRegress(BaseCausalDiscovery):
 
         self.causal_graph_ = model
         self.adjacency_matrix_ = nx.to_pandas_adjacency(
-            self.causal_graph_, nodelist=feature_name_list, weight=1, dtype="int"
+            self.causal_graph_, nodelist=self.feature_names_in_, weight=1, dtype="int"
         )
 
         return self
+
+    def varsortability(self, X, tol=1e-9):
+        r"""
+        Compute the var-sortability of the input data relative to the graph
+        discovered by this estimator.
+
+        Var-sortability measures how well marginal variances reflect the causal
+        structure. For each directed path in the true DAG, this metric checks whether
+        variance increases monotonically along the path (or remains approximately equal).
+        A score of 1.0 indicates perfect alignment: variances are non-decreasing along
+        all causal paths.
+
+        The metric is based on the observation that under linear additive noise
+        models, the variance of a variable is influenced by the variances of its
+        ancestors and the noise variance. If causal structure holds, we expect
+        variance to accumulate downstream in the causal graph.
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            The observed data matrix (same data used for fitting).
+
+        tol : float, default=1e-9
+            Tolerance for checking near-equality of variances. When comparing
+            ``Var(target) / Var(source)``, values in the range ``[1-tol, 1+tol]``
+            are treated as "approximately equal" and weighted as 0.5.
+
+        Returns
+        -------
+        Dict[str, float]
+            Dictionary with key ``'varsortability'`` containing the score in [0, 1].
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> from pgmpy.causal_discovery import SortnRegress
+        >>> np.random.seed(42)
+        >>> n = 500
+        >>> x = np.random.normal(0, 1.0, n)
+        >>> y = 2.0 * x + np.random.normal(0, 0.5, n)
+        >>> z = 2.0 * y + np.random.normal(0, 0.5, n)
+        >>> data = pd.DataFrame({'X': x, 'Y': y, 'Z': z})
+
+        >>> sr = SortnRegress()
+        >>> sr.fit(data)
+        >>> result = sr.varsortability(data)
+        >>> 'varsortability' in result
+        True
+        >>> result['varsortability'] > 0.7
+        True
+
+        References
+        ----------
+        - :cite:p:`Reisach2023`
+        """
+        if not hasattr(self, "causal_graph_"):
+            raise ValueError("Call .fit(X) before computing varsortability.")
+
+        nodes = self.feature_names_in_
+        x_mat = X[nodes].values
+
+        d = len(nodes)
+        node_to_idx = {node: idx for idx, node in enumerate(nodes)}
+
+        W = np.zeros((d, d))
+        for u, v in self.causal_graph_.edges():
+            if u in node_to_idx and v in node_to_idx:
+                W[node_to_idx[u], node_to_idx[v]] = 1
+        E = W != 0
+
+        # compute marginal variances
+        var = np.var(x_mat, axis=0, keepdims=True)
+
+        n_paths = 0
+        n_ordered_path = 0
+        Ek = E.copy()
+
+        for _ in range(E.shape[0] - 1):
+            n_paths += Ek.sum()
+            variance_ratio = Ek * (var / var.T)
+
+            n_ordered_path += (variance_ratio > 1 + tol).sum()
+
+            n_ordered_path += 0.5 * ((variance_ratio <= 1 + tol) * (variance_ratio > 1 - tol)).sum()
+
+            Ek = Ek.dot(E)
+
+        if n_paths == 0:
+            return {"varsortability": 1.0}  # Returns dict
+
+        return {"varsortability": float(n_ordered_path / n_paths)}  # Returns di

@@ -86,10 +86,8 @@ class TestSortnRegressCore:
         data["C"] = 0.0
 
         est = SortnRegress(threshold=0.3)
-        est.fit(data)
-
-        edges = list(est.causal_graph_.edges())
-        assert all("C" not in edge for edge in edges)
+        with pytest.raises(ValueError, match="zero variance"):
+            est.fit(data)
 
 
 class TestSortnRegressScoring:
@@ -103,3 +101,61 @@ class TestSortnRegressScoring:
         true_dag = DAG([("X", "Y"), ("Y", "Z")])
         shd_score = est.score(true_graph=true_dag)
         assert isinstance(shd_score, (int, float, np.integer))
+
+
+class TestSortnRegressVarsortability:
+    def test_high_score_for_increasing_variance(self):
+        np.random.seed(42)
+        n = 1000
+        data = pd.DataFrame(
+            {
+                "X": np.random.normal(0, 0.1, n),
+                "Y": np.random.normal(0, 1.0, n),
+                "Z": np.random.normal(0, 10.0, n),
+            }
+        )
+
+        est = SortnRegress(threshold=0.3)
+        est.fit(data)
+        est.causal_graph_ = DAG([("X", "Y"), ("Y", "Z")])  # low -> high variance
+
+        result = est.varsortability(data)
+        assert isinstance(result, dict)
+        assert "varsortability" in result
+        assert isinstance(result["varsortability"], float)
+        assert 0.7 < result["varsortability"] <= 1.0
+
+    def test_low_score_for_decreasing_variance(self):
+        np.random.seed(42)
+        n = 1000
+        data = pd.DataFrame(
+            {
+                "X": np.random.normal(0, 10.0, n),
+                "Y": np.random.normal(0, 1.0, n),
+                "Z": np.random.normal(0, 0.1, n),
+            }
+        )
+
+        est = SortnRegress(threshold=0.3)
+        est.fit(data)
+        est.causal_graph_ = DAG([("X", "Y"), ("Y", "Z")])
+
+        result = est.varsortability(data)
+        assert result["varsortability"] < 0.3
+
+    def test_vacuously_true_for_empty_graph(self):
+        np.random.seed(42)
+        data = pd.DataFrame(np.random.randn(100, 3), columns=["X", "Y", "Z"])
+
+        est = SortnRegress(threshold=100.0)
+        est.fit(data)
+        result = est.varsortability(data)
+
+        assert result["varsortability"] == 1.0
+
+    def test_raises_before_fit(self):
+        data = pd.DataFrame(np.random.randn(50, 3), columns=["X", "Y", "Z"])
+        est = SortnRegress()
+
+        with pytest.raises(ValueError):
+            est.varsortability(data)
