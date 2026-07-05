@@ -201,7 +201,7 @@ class SortnRegress(BaseCausalDiscovery):
         >>> data = pd.DataFrame({'X': x, 'Y': y, 'Z': z})
 
         >>> sr = SortnRegress()
-        >>> sr.fit(data)
+        >>> _ = sr.fit(data)
         >>> result = sr.varsortability(data)
         >>> 'varsortability' in result
         True
