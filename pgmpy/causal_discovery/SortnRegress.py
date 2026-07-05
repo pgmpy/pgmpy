@@ -245,6 +245,6 @@ class SortnRegress(BaseCausalDiscovery):
             Ek = Ek.dot(E)
 
         if n_paths == 0:
-            return {"varsortability": 1.0}  # Returns dict
+            return {"varsortability": 1.0}
 
-        return {"varsortability": float(n_ordered_path / n_paths)}  # Returns di
+        return {"varsortability": float(n_ordered_path / n_paths)}
