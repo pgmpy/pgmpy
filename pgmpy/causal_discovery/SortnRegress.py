@@ -168,11 +168,6 @@ class SortnRegress(BaseCausalDiscovery):
         A score of 1.0 indicates perfect alignment: variances are non-decreasing along
         all causal paths.
 
-        The metric is based on the observation that under linear additive noise
-        models, the variance of a variable is influenced by the variances of its
-        ancestors and the noise variance. If causal structure holds, we expect
-        variance to accumulate downstream in the causal graph.
-
         Parameters
         ----------
         X : pd.DataFrame
