@@ -82,3 +82,10 @@ def test_score_cache():
         call("key2", ["key3"]),
     ]
     base_scorer.local_score.assert_has_calls(expected_function_calls, any_order=False)
+
+
+def test_score_cache_deprecation_warning():
+    data = pd.DataFrame({"key1": [1, 2], "key2": [1, 2]})
+    base_scorer = MagicMock(spec=BIC)
+    with pytest.warns(FutureWarning, match="deprecated"):
+        ScoreCache(base_scorer, data)
