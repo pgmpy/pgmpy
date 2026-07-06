@@ -83,16 +83,12 @@ class BootstrapEstimator(BaseCausalDiscovery):
         DataFrame containing the conditional probabilities of different edge orientations
         (e.g., directed, undirected) between variable pairs (u, v), given that an edge exists.
 
-        Specifically:
         - For DAG estimators, each cell (u, v) contains a 1-tuple (p_directed,).
         - For PDAG estimators, each cell (u, v) contains a 2-tuple (p_directed, p_undirected).
 
         Where:
-        - p_directed = n_directed / n_total
-        - p_undirected = n_undirected / n_total
-        - n_directed: Number of bootstraps with the directed edge u -> v.
-        - n_undirected: Number of bootstraps with the undirected edge u - v.
-        - n_total: Total number of bootstraps where any edge exists between u and v.
+        - p_directed: Fraction of bootstraps containing u -> v among those with any edge between u and v.
+        - p_undirected: Fraction of bootstraps containing u - v among those with any edge between u and v.
 
     bootstrap_samples_ : np.ndarray
         2D array of shape `(n_bootstraps, bootstrap_sample_size)` containing row
@@ -171,6 +167,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
         show_progress: bool = True,
         seed: int | None = None,
     ):
+
         self.estimator = estimator
         self.n_bootstraps = n_bootstraps
         self.sample_size = sample_size
@@ -230,6 +227,11 @@ class BootstrapEstimator(BaseCausalDiscovery):
         if not isinstance(self.estimator, BaseCausalDiscovery):
             raise ValueError("estimator must be an instance of BaseCausalDiscovery Class.")
 
+        if hasattr(self.estimator, "return_type"):
+            self.return_type_ = self.estimator.return_type.lower()
+        else:
+            self.return_type_ = "dag"
+
         variables = self.feature_names_in_
 
         # Step 1: Resample dataset and fit base estimators
@@ -254,17 +256,15 @@ class BootstrapEstimator(BaseCausalDiscovery):
             if self.n_bootstraps < n_existing:
                 raise ValueError(
                     f"n_bootstraps={self.n_bootstraps} must be larger or equal to "
-                    f"n_existing={n_existing} when warm_start==True. "
-                    "To run with fewer bootstraps, set warm_start=False."
+                    f"len(bootstrap_samples_)={n_existing} when warm_start==True."
                 )
             samples_to_fit = all_samples[n_existing:]
         else:
             n_existing = 0
             samples_to_fit = all_samples
 
-        # Only fit new bootstrap samples if needed. We skip this if warm_start is True
-        # and n_bootstraps has not changed, but still run aggregation below in case
-        # class parameters (like threshold) were modified.
+        # Only fit new bootstrap samples if needed. We skip this if warm_start is True and n_bootstraps has not
+        # changed, but still run aggregation below in case class parameters (like threshold) were modified.
         if len(samples_to_fit) > 0:
             results = cast(
                 list[BaseCausalDiscovery],
@@ -309,12 +309,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
         )
 
         # Step 2.1: Calculate the direction probabilities
-        if hasattr(self.estimator, "return_type"):
-            return_type = self.estimator.return_type.lower()
-        else:
-            return_type = "dag"
-
-        is_pdag = return_type in ("pdag", "cpdag")
+        is_pdag = self.return_type_ in ("pdag", "cpdag")
 
         if is_pdag:
             self.direction_prob_ = pd.DataFrame(
@@ -356,7 +351,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
         # Step 3: Form a consensus graph.
         self.causal_graph_ = self._estimate_consensus_graph(self.threshold)
 
-        self.adjacency_matrix_ = nx.to_pandas_adjacency(self.causal_graph_, weight=1, dtype="int")
+        self.adjacency_matrix_ = self.causal_graph_.to_adjacency(encoding="binary", nodelist=variables)
 
         return self
 
@@ -383,28 +378,18 @@ class BootstrapEstimator(BaseCausalDiscovery):
         """
         variables = self.feature_names_in_
 
-        if hasattr(self.estimator, "return_type"):
-            return_type = self.estimator.return_type.lower()
-        else:
-            return_type = "dag"
-
         # Determine candidate edges based on edge probability and threshold
         rows, cols = np.where(self.edge_prob_ >= threshold)
-        candidate_edges = [
-            (
-                variables[r],
-                variables[c],
-                self.edge_prob_.values[r, c],
-            )
-            for r, c in zip(rows, cols)
-            if r != c
-        ]
+        candidate_edges = []
+        for r, c in zip(rows, cols):
+            if r != c:
+                candidate_edges.append((variables[r], variables[c], self.edge_prob_.values[r, c]))
 
         # sort by descending probability, then alphabetical tie-breaker
         candidate_edges.sort(key=lambda x: (-x[2], x[0], x[1]))
         candidate_set = {(u, v) for u, v, _ in candidate_edges}
 
-        if return_type in ("pdag", "cpdag"):
+        if self.return_type_ in ("pdag", "cpdag"):
             # initialize consensus pdag
             pdag = PDAG()
             pdag.add_nodes_from(variables)
@@ -432,9 +417,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
 
                 # add the edge
                 if target == "undirected":
-                    pdag.add_edge(u, v)
-                    pdag.add_edge(v, u)
-                    pdag.calibrate_directed_undirected_edges()
+                    pdag.add_edge(u, v, "--")
                 else:
                     # determine which direction to try first by comparing edge probabilities
                     prob_utov = self.edge_prob_.loc[u, v]
@@ -446,19 +429,15 @@ class BootstrapEstimator(BaseCausalDiscovery):
                         first = (v, u)
 
                     x, y = first
-                    pdag.add_edge(x, y)
-                    pdag.calibrate_directed_undirected_edges()
+                    pdag.add_edge(x, y, "->")
                     if not pdag.has_acyclic_extension():
-                        pdag.remove_edge(x, y)
-                        pdag.calibrate_directed_undirected_edges()
+                        pdag.remove_edge(x, y, "->")
 
                         # try opposite direction as backup only if it has support
                         if self.edge_prob_.loc[y, x] > 0:
-                            pdag.add_edge(y, x)
-                            pdag.calibrate_directed_undirected_edges()
+                            pdag.add_edge(y, x, "->")
                             if not pdag.has_acyclic_extension():
-                                pdag.remove_edge(y, x)
-                                pdag.calibrate_directed_undirected_edges()
+                                pdag.remove_edge(y, x, "->")
 
             return pdag
 
@@ -563,4 +542,4 @@ class BootstrapEstimator(BaseCausalDiscovery):
             raise ValueError(f"Threshold must be between 0.0 and 1.0. Got {threshold} instead.")
 
         graph = self._estimate_consensus_graph(threshold)
-        return nx.to_pandas_adjacency(graph, weight=1, dtype="int")
+        return graph.to_adjacency(encoding="binary", nodelist=self.feature_names_in_)
