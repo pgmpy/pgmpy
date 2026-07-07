@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
 
+from pgmpy.base import PDAG
 from pgmpy.estimators import PC, ExpertKnowledge
 from pgmpy.example_models import load_model
 from pgmpy.independencies import Independencies
@@ -119,7 +120,7 @@ def test_build_skeleton_max_cond_vars_0(estimator, variant):
 def test_skeleton_to_pdag(skel, sep_sets, expected_edges):
     pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
     pdag = pdag.apply_meeks_rules(apply_r4=False)
-    assert set(pdag.get_edges(data=True)) == expected_edges
+    assert pdag == PDAG(edge_list=list(expected_edges))
 
 
 @pytest.fixture
