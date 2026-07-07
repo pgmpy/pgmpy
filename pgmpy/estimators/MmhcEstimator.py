@@ -78,8 +78,7 @@ class MmhcEstimator(StructureEstimator):
         >>> est = MmhcEstimator(data)
         >>> model = est.estimate()
         >>> print(model.edges())  # doctest: +NORMALIZE_WHITESPACE
-        [('Y', 'X'), ('Z', 'Y'), ('Z', 'X'), ('W', 'Y'), ('W', 'X'), ('W', 'Z'),
-        ('sum', 'X'), ('sum', 'W'), ('sum', 'Z'), ('sum', 'Y')]
+        [('X', 'sum'), ('Y', 'sum'), ('Z', 'sum'), ('W', 'sum')]
         """
         if scoring_method is None:
             scoring_method = BDeu(self.data, equivalent_sample_size=10)
