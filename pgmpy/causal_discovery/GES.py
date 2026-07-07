@@ -84,7 +84,7 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
 
     References
     ----------
-    - :cite:p:`chickering_2002b`
+    - :footcite:t:`chickering_2002b`
     - https://github.com/juangamella/ges
     """
 

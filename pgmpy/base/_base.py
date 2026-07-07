@@ -147,8 +147,8 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
 
     References
     ----------
-    - :cite:p:`ali_2009`
-    - :cite:p:`zhang_2008`
+    - :footcite:t:`ali_2009`
+    - :footcite:t:`zhang_2008`
     """
 
     SUPPORTED_EDGE_TYPES = frozenset(["--", "-o", "o-", "->", "<-", "o>", "<o", "<>", "oo"])
@@ -863,7 +863,7 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
 
         References
         ----------
-        - :cite:p:`pearl_2009` (page 70).
+        - :footcite:t:`pearl_2009` (page 70).
 
         Examples
         --------

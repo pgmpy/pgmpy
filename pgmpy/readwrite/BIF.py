@@ -57,7 +57,7 @@ class BIFReader:
 
     References
     ----------
-    - :cite:p:`hulten_domingos_bif`
+    - :footcite:t:`hulten_domingos_bif`
     """
 
     def __init__(self, path=None, string=None, include_properties=False):

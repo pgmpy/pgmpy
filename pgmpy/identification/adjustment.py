@@ -50,8 +50,8 @@ class Adjustment(BaseIdentification):
 
     References
     ----------
-    - :cite:p:`perkovic_2018`
-    - :cite:p:`witte_2022`
+    - :footcite:t:`perkovic_2018`
+    - :footcite:t:`witte_2022`
     """
 
     def __init__(self, variant="minimal"):
@@ -99,7 +99,7 @@ class Adjustment(BaseIdentification):
 
         References
         ----------
-        - :cite:p:`perkovic_2018`
+        - :footcite:t:`perkovic_2018`
         """
         # TODO: Make this work for all graph types.
         model = causal_graph if inplace else causal_graph.copy()

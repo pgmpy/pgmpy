@@ -73,7 +73,7 @@ class PearsonrEquivalence(Pearsonr):
 
     References
     ----------
-    - :cite:p:`malinsky_2024`
+    - :footcite:t:`malinsky_2024`
     """
 
     _tags = {

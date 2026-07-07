@@ -755,10 +755,54 @@ def on_build_finished(app: Any, exception: Exception | None) -> None:
     )
 
 
+def append_footbibliography(app: Any, what: str, name: str, obj: Any, options: Any, lines: list[str]) -> None:
+    """Insert a ``.. footbibliography::`` into a docstring's "References" section.
+
+    Docstrings cite works in their numpydoc "References" section with ``:footcite:t:``
+    roles, which render only a short ``[1]`` footnote link. This directive expands into
+    the full citation text (from ``references.bib``) so each object's References section
+    shows the complete references, not just labels.
+
+    Runs before numpydoc (lower ``priority``) and operates on the raw numpydoc docstring:
+    the directive is placed at the END of the ``References`` section (before any following
+    section such as ``Examples``) so the footnotes render under References, not at the very
+    bottom of the object. Falls back to appending at the end when there is no References
+    heading (e.g. a citation used inline in the summary/notes).
+    """
+    if not any(":footcite:" in line for line in lines):
+        return
+    if any("footbibliography" in line for line in lines):
+        return
+
+    def is_section_header(i: int) -> bool:
+        # numpydoc section header: a non-empty line underlined by matching '-' chars
+        return (
+            i + 1 < len(lines)
+            and lines[i].strip() != ""
+            and lines[i + 1].strip() != ""
+            and set(lines[i + 1].strip()) == {"-"}
+            and len(lines[i + 1].strip()) >= len(lines[i].strip())
+        )
+
+    block = ["", ".. footbibliography::", ""]
+    ref_start = next(
+        (i for i, ln in enumerate(lines) if ln.strip() == "References" and is_section_header(i)),
+        None,
+    )
+    if ref_start is None:
+        lines += block
+        return
+    # end of the References section = next section header, else end of docstring
+    end = next((j for j in range(ref_start + 2, len(lines)) if is_section_header(j)), len(lines))
+    lines[end:end] = block
+
+
 def setup(app: Any) -> dict[str, Any]:
     app.connect("builder-inited", on_builder_inited)
     app.connect("html-page-context", on_html_page_context)
     app.connect("build-finished", on_build_finished)
+    # priority < numpydoc's default (500) so we edit the raw numpydoc docstring
+    app.connect("autodoc-process-docstring", append_footbibliography, priority=400)
     return {
         "parallel_read_safe": True,
         "parallel_write_safe": True,

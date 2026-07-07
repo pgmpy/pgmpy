@@ -310,7 +310,7 @@ class ExpertKnowledge(BaseEstimator):
 
         References
         ----------
-        - :cite:p:`ankan_textor_2023`
+        - :footcite:t:`ankan_textor_2023`
         """
         for u, v in self.forbidden_edges_:
             if graph.has_edge(u, v, "--"):

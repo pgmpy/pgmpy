@@ -48,7 +48,7 @@ class CausalInference:
 
     References
     ----------
-    - :cite:p:`pearl_2009`
+    - :footcite:t:`pearl_2009`
     """
 
     def __init__(self, model):
@@ -480,7 +480,7 @@ class CausalInference:
 
         References
         ----------
-        - :cite:p:`vanderzander_2015`
+        - :footcite:t:`vanderzander_2015`
 
         Examples
         --------
@@ -799,7 +799,7 @@ class CausalInference:
 
         References
         ----------
-        - :cite:p:`perkovic_2018`
+        - :footcite:t:`perkovic_2018`
         """
         if isinstance(X, str):
             X = [X]
@@ -857,7 +857,7 @@ class CausalInference:
 
         References
         ----------
-        - :cite:p:`perkovic_2018`
+        - :footcite:t:`perkovic_2018`
         """
         if isinstance(X, str):
             X = [X]
@@ -900,7 +900,7 @@ class CausalInference:
 
         References
         ----------
-        - :cite:p:`perkovic_2018`
+        - :footcite:t:`perkovic_2018`
         """
         backdoor_graph = self.get_proper_backdoor_graph([X], [Y], inplace=False)
         return backdoor_graph.minimal_dseparator(X, Y)

@@ -157,10 +157,7 @@ class DoubleMLRegressor(BaseCausalPrediction):
 
     References
     ----------
-    .. [1] Chernozhukov, V., Chetverikov, D., Demirer, M., Duflo, E., Hansen,
-           C., Newey, W., & Robins, J. (2018). Double/debiased machine learning for
-           treatment and structural parameters. The Econometrics Journal, 21(1),
-           C1-C68.
+    - :footcite:t:`chernozhukov_2018`
 
     """
 
