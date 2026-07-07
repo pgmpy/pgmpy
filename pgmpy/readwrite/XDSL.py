@@ -427,7 +427,7 @@ class XDSLWriter:
 
     def write_xdsl(self, filename):
         warnings.warn(
-            """`XDSLWriter.write_xdsl` is deprecated and will be removed in v1.3.0. Please use `XDSLWriter.write`
+            """`XDSLWriter.write_xdsl` is deprecated and will be removed in v2.0. Please use `XDSLWriter.write`
             instead.""",
             FutureWarning,
             stacklevel=2,

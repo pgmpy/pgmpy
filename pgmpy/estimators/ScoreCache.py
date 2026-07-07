@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-from pgmpy.estimators import (
-    StructureScore,
-)
+import warnings
+
+from pgmpy.structure_score import BaseStructureScore
 
 
-class ScoreCache(StructureScore):
+class ScoreCache(BaseStructureScore):
     """
     A wrapper class for StructureScore instances, which implement a decomposable score,
     that caches local scores.
@@ -30,7 +30,14 @@ class ScoreCache(StructureScore):
     """
 
     def __init__(self, base_scorer, data, max_size=10000, **kwargs):
-        assert isinstance(base_scorer, StructureScore), "Base scorer has to be of type StructureScore."
+        warnings.warn(
+            "`pgmpy.estimators.ScoreCache` is deprecated and will be removed in v2.0. "
+            "Structure scores in `pgmpy.structure_score` cache local scores internally; "
+            "use their `max_cache_size` parameter instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        assert isinstance(base_scorer, BaseStructureScore), "Base scorer has to be of type StructureScore."
 
         self.base_scorer = base_scorer
         self.cache = LRUCache(original_function=self._wrapped_original, max_size=int(max_size))

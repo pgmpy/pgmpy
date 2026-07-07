@@ -107,7 +107,7 @@ class PearsonrEquivalence(Pearsonr):
         """
         self.run_test(X=X, Y=Y, Z=list(Z))
 
-        return self.p_value_ < significance_level
+        return bool(self.p_value_ < significance_level)
 
     def _compute_result(
         self,

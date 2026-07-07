@@ -209,8 +209,11 @@ class TestExpertInLoop:
         not _check_soft_dependencies("xgboost", severity="none"),
         reason="execute only if required dependency present",
     )
-    def test_combined_expert_knowledge(self, estimator):
+    def test_combined_expert_knowledge(self, adult_df):
         """Test combination of forbidden edges, required edges, and temporal order."""
+        # The canonical ExpertKnowledge requires the temporal order to cover
+        # every column of the data.
+        estimator = ExpertInLoop(data=adult_df[["Age", "Race", "Education", "Income", "HoursPerWeek"]])
         expert_knowledge = ExpertKnowledge(
             forbidden_edges=[("Age", "Income")],
             required_edges=[("Education", "Income")],
@@ -237,8 +240,11 @@ class TestExpertInLoop:
         not _check_soft_dependencies("xgboost", severity="none"),
         reason="execute only if required dependency present",
     )
-    def test_edge_orientation_priority(self, estimator):
+    def test_edge_orientation_priority(self, adult_df):
         """Test that edge orientation follows the correct priority order."""
+        # The canonical ExpertKnowledge requires the temporal order to cover
+        # every column of the data.
+        estimator = ExpertInLoop(data=adult_df[["Age", "Race", "Education", "Income", "HoursPerWeek"]])
         expert_knowledge = ExpertKnowledge(temporal_order=[["Age", "Race"], ["Education"], ["Income", "HoursPerWeek"]])
 
         # Define orientations that should take precedence over temporal order

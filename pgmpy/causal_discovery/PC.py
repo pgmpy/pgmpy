@@ -284,86 +284,86 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
         separating_sets = self.separating_sets_
         orient_rule = self.orient_rule
 
-        pdag = skeleton.to_directed()
-
+        colliders = []
         if orient_rule is None:
-            for X, Y in combinations(sorted(pdag.nodes()), 2):
-                if not skeleton.has_edge(X, Y):
-                    sepset = separating_sets.get(frozenset((X, Y)))
-                    if sepset is None:
-                        # This edge was removed by expert knowledge. Ignore.
-                        continue
-                    for Z in set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y)):
-                        if Z not in sepset:
-                            if (temporal_ordering == dict()) or (
-                                (temporal_ordering[Z] >= temporal_ordering[X])
-                                and (temporal_ordering[Z] >= temporal_ordering[Y])
-                            ):
-                                if pdag.has_edge(X, Z) and pdag.has_edge(Y, Z):
-                                    pdag.remove_edges_from([(Z, X), (Z, Y)])
+            for X, Y in combinations(sorted(skeleton.nodes()), 2):
+                if skeleton.has_edge(X, Y):
+                    continue
+                sepset = separating_sets.get(frozenset((X, Y)))
+                if sepset is None:
+                    # This edge was removed by expert knowledge. Ignore.
+                    continue
+                for Z in sorted(set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y))):
+                    if Z not in sepset:
+                        colliders.append((X, Y, Z))
         else:
             ci_test = self.ci_test_
             significance_level = self.significance_level
             max_cond_vars = self.max_cond_vars
 
             candidates = []
-            for X, Y in combinations(sorted(pdag.nodes()), 2):
-                if not skeleton.has_edge(X, Y):
-                    if frozenset((X, Y)) not in separating_sets:
-                        # This edge was removed by expert knowledge. Ignore.
-                        continue
-                    common_neighbors = set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y))
-                    if not common_neighbors:
-                        continue
+            for X, Y in combinations(sorted(skeleton.nodes()), 2):
+                if skeleton.has_edge(X, Y):
+                    continue
+                if frozenset((X, Y)) not in separating_sets:
+                    # This edge was removed by expert knowledge. Ignore.
+                    continue
+                common_neighbors = set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y))
+                if not common_neighbors:
+                    continue
 
-                    potential = sorted(
-                        (set(skeleton.neighbors(X)) - {Y}) | (set(skeleton.neighbors(Y)) - {X}),
-                        key=repr,
-                    )
+                potential = sorted(
+                    (set(skeleton.neighbors(X)) - {Y}) | (set(skeleton.neighbors(Y)) - {X}),
+                    key=repr,
+                )
 
-                    results = []
-                    for size in range(min(len(potential), max_cond_vars) + 1):
-                        for subset in combinations(potential, size):
-                            ci_test(X, Y, list(subset), significance_level=significance_level)
-                            results.append((subset, ci_test.p_value_, ci_test.effect_size_))
+                results = []
+                for size in range(min(len(potential), max_cond_vars) + 1):
+                    for subset in combinations(potential, size):
+                        ci_test(X, Y, list(subset), significance_level=significance_level)
+                        results.append((subset, ci_test.p_value_, ci_test.effect_size_))
 
-                    for Z in common_neighbors:
-                        if (temporal_ordering != dict()) and not (
-                            temporal_ordering[Z] >= temporal_ordering[X]
-                            and temporal_ordering[Z] >= temporal_ordering[Y]
-                        ):
-                            continue
+                for Z in common_neighbors:
+                    if orient_rule == "pvalue":
+                        max_p_with = max((p for s, p, _ in results if Z in s), default=-1.0)
+                        max_p_without = max((p for s, p, _ in results if Z not in s), default=-1.0)
+                        is_collider = max_p_without > max_p_with
+                        priority = max_p_with
+                    else:
+                        min_eff_with = min((e for s, _, e in results if Z in s), default=float("inf"))
+                        min_eff_without = min((e for s, _, e in results if Z not in s), default=float("inf"))
+                        is_collider = min_eff_without < min_eff_with
+                        priority = -min_eff_with
 
-                        if orient_rule == "pvalue":
-                            max_p_with = max((p for s, p, _ in results if Z in s), default=-1.0)
-                            max_p_without = max((p for s, p, _ in results if Z not in s), default=-1.0)
-                            is_collider = max_p_without > max_p_with
-                            priority = max_p_with
-                        else:
-                            min_eff_with = min((e for s, _, e in results if Z in s), default=float("inf"))
-                            min_eff_without = min((e for s, _, e in results if Z not in s), default=float("inf"))
-                            is_collider = min_eff_without < min_eff_with
-                            priority = -min_eff_with
-
-                        if is_collider:
-                            candidates.append((priority, X, Y, Z))
+                    if is_collider:
+                        candidates.append((priority, X, Y, Z))
 
             candidates.sort(key=lambda c: c[0])
-            for _, X, Y, Z in candidates:
-                if pdag.has_edge(X, Z) and pdag.has_edge(Y, Z):
-                    pdag.remove_edges_from([(Z, X), (Z, Y)])
+            colliders = [(X, Y, Z) for _, X, Y, Z in candidates]
 
-        edges = set(pdag.edges())
-        undirected_edges = set()
-        directed_edges = set()
-        for u, v in edges:
-            if (v, u) in edges:
-                undirected_edges.add(tuple(sorted((u, v))))
-            else:
-                directed_edges.add((u, v))
+        pdag = PDAG(edge_list=[(u, v, "--") for u, v in skeleton.edges()])
+        pdag.add_nodes_from(skeleton.nodes())
 
-        ebunch = [(u, v, "->") for u, v in directed_edges] + [(u, v, "--") for u, v in undirected_edges]
-        pdag_oriented = PDAG(edge_list=ebunch)
-        pdag_oriented.add_nodes_from(pdag.nodes())
+        # Orient the edges fixed by the temporal ordering first: an edge between two tiers must
+        # point from the earlier tier to the later one. The collider guard below then skips any
+        # v-structure that conflicts with these, so temporal order needs no separate check.
+        if temporal_ordering:
+            for u, v in skeleton.edges():
+                if temporal_ordering[u] < temporal_ordering[v]:
+                    pdag.orient_undirected_edge(u, v, inplace=True)
+                elif temporal_ordering[v] < temporal_ordering[u]:
+                    pdag.orient_undirected_edge(v, u, inplace=True)
 
-        return pdag_oriented
+        for X, Y, Z in colliders:
+            # If Z already reaches X or Y through directed edges, orienting X -> Z <- Y would
+            # conflict with a committed orientation (including one fixed by the temporal
+            # ordering) or close a directed cycle; keep the first orientation and leave these
+            # edges for the Meek rules.
+            if pdag.has_path(Z, X, edge_types="->") or pdag.has_path(Z, Y, edge_types="->"):
+                continue
+            if pdag.has_edge(X, Z, "--"):
+                pdag.orient_undirected_edge(X, Z, inplace=True)
+            if pdag.has_edge(Y, Z, "--"):
+                pdag.orient_undirected_edge(Y, Z, inplace=True)
+
+        return pdag

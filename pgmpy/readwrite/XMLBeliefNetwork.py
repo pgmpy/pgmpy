@@ -514,7 +514,7 @@ class XBNWriter:
 
     def write_xbn(self, filename):
         warnings.warn(
-            "`XBNWriter.write_xbn` is deprecated and will be removed in v1.3.0. Please use `XBNWriter.write` instead.",
+            "`XBNWriter.write_xbn` is deprecated and will be removed in v2.0. Please use `XBNWriter.write` instead.",
             FutureWarning,
             stacklevel=2,
         )

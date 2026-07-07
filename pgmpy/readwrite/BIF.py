@@ -609,7 +609,7 @@ $values
 
     def write_bif(self, filename):
         warnings.warn(
-            "`BIFWriter.write_bif` is deprecated and will be removed in v1.3.0. Please use `BIFWriter.write` instead.",
+            "`BIFWriter.write_bif` is deprecated and will be removed in v2.0. Please use `BIFWriter.write` instead.",
             FutureWarning,
             stacklevel=2,
         )

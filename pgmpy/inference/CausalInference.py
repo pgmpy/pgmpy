@@ -123,7 +123,7 @@ class CausalInference:
         True
         """
         warnings.warn(
-            """`is_valid_backdoor_adjustment_set` is deprecated and will be removed in v1.3.0. Please use
+            """`is_valid_backdoor_adjustment_set` is deprecated and will be removed in v2.0. Please use
             pgmpy.identification.Adjustment instead.""",
             FutureWarning,
             stacklevel=2,
@@ -169,7 +169,7 @@ class CausalInference:
         frozenset()
         """
         warnings.warn(
-            """`get_all_backdoor_adjustment_sets` is deprecated and will be removed in v1.3.0. Please use
+            """`get_all_backdoor_adjustment_sets` is deprecated and will be removed in v2.0. Please use
             pgmpy.identification.Adjustment instead.""",
             FutureWarning,
             stacklevel=2,
@@ -223,7 +223,7 @@ class CausalInference:
             True if Z is a valid frontdoor adjustment set.
         """
         warnings.warn(
-            """`is_valid_frontdoor_adjustment_set` is deprecated and will be removed in v1.3.0. Please use
+            """`is_valid_frontdoor_adjustment_set` is deprecated and will be removed in v2.0. Please use
             pgmpy.identification.Frontdoor instead.""",
             FutureWarning,
             stacklevel=2,
@@ -279,7 +279,7 @@ class CausalInference:
         frozenset: a frozenset of frozensets
         """
         warnings.warn(
-            """`get_all_frontdoor_adjustment_sets` is deprecated and will be removed in v1.3.0. Please use
+            """`get_all_frontdoor_adjustment_sets` is deprecated and will be removed in v2.0. Please use
             pgmpy.identification.Frontdoor instead.""",
             FutureWarning,
             stacklevel=2,
