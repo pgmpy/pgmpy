@@ -9,12 +9,22 @@ from pgmpy.causal_discovery._base import BaseCausalDiscovery
 
 class SortnRegress(BaseCausalDiscovery):
     r"""
-    Implementation of the R²-SortnRegress algorithm for causal discovery.
+    Implementation of SortnRegress, a scale-invariant causal discovery method
+    based on sorting variables by an ordering criterion and iteratively
+    regressing each variable on its predecessors in that order. Two ordering
+    criteria are supported via the ``criterion`` parameter:
 
-    R²-SortnRegress is a scale-invariant causal discovery method based on the
-    phenomenon that the explainable fraction of a variable's variance, captured
-    by the coefficient of determination (R²), tends to increase along the
-    causal order in linear additive noise.
+    - ``criterion='r2'`` (default): orders variables by ascending global R²,
+      based on the phenomenon that the explainable fraction of a variable's
+      variance, captured by the coefficient of determination (R²), tends to
+      increase along the causal order in linear additive noise models
+      :cite:p:`Reisach2023`.
+    - ``criterion='varsortability'``: orders variables by ascending marginal
+      variance, based on the var-sortability phenomenon whereby variance
+      tends to increase along the causal order :cite:p:`Reisach2021`.
+
+    Only the ordering step (Step 2 below) differs between the two criteria;
+    the edge-selection procedure (Steps 3-4) is identical for both.
 
     Given an :math:`n \times d` dataset :math:`\mathbf{X}` with columns
     :math:`X_1, \dots, X_d`, the algorithm proceeds as follows:
@@ -66,6 +76,18 @@ class SortnRegress(BaseCausalDiscovery):
         The regression estimator instance to use for edge selection.
         If None, defaults to sklearn.linear_model.LinearRegression().
 
+    criterion : {'r2', 'varsortability'}, default='r2'
+        The criterion used to compute the candidate causal ordering in Step 2.
+
+        - ``'r2'``: order variables by ascending global R² (the original
+          R²-SortnRegress algorithm).
+        - ``'varsortability'``: order variables by ascending marginal
+          variance, per the var-sortability phenomenon described in
+          Reisach et al. (2021).
+
+        The edge-selection procedure (Steps 3-4) is identical for both
+        criteria; only the ordering step differs.
+
     Attributes
     ----------
     causal_graph_ : pgmpy.base.DAG
@@ -96,42 +118,47 @@ class SortnRegress(BaseCausalDiscovery):
     References
     ----------
     - :cite:p:`Reisach2023`
+    - :cite:p:`Reisach2021`
     """
 
-    def __init__(self, threshold=0.3, estimator=None):
+    def __init__(self, threshold=0.3, estimator=None, criterion="r2"):
         super().__init__()
         self.threshold = threshold
         self.estimator = estimator
+        self.criterion = criterion
 
     def _fit(self, X):
+        if self.criterion not in ("r2", "varsortability"):
+            raise ValueError(f"criterion must be one of 'r2' or 'varsortability', got {self.criterion!r}.")
         if any(X.std() == 0):
             constant_cols = X.columns[X.std() == 0].tolist()
             raise ValueError(
                 f"The following column(s) have zero variance (constant values): "
                 f"{constant_cols}. Please drop these columns before fitting."
             )
-        self.feature_names_in_ = list(X.columns)
+        feature_names_in_ = list(X.columns)
         # clone the estimator or use default LinearRegression
         model_reg = clone(self.estimator) if self.estimator else LinearRegression()
 
-        all_nodes_set = set(self.feature_names_in_)
+        all_nodes_set = set(feature_names_in_)
+        if self.criterion == "r2":
+            order_values = {}
+            for target in feature_names_in_:
+                other_nodes = list(all_nodes_set - {target})
 
-        r2_values = {}
-        for target in self.feature_names_in_:
-            other_nodes = list(all_nodes_set - {target})
+                y = X[target]
+                predictors = X[other_nodes]
 
-            y = X[target]
-            predictors = X[other_nodes]
+                model_reg.fit(predictors, y)
+                predictions = model_reg.predict(predictors)
 
-            model_reg.fit(predictors, y)
-            predictions = model_reg.predict(predictors)
+                residuals_variance = np.var(y - predictions)
+                total_variance = np.var(y)
 
-            residuals_variance = np.var(y - predictions)
-            total_variance = np.var(y)
-
-            r2_values[target] = 1 - (residuals_variance / total_variance)
-
-        sorted_nodes = sorted(r2_values, key=r2_values.get)
+                order_values[target] = 1 - (residuals_variance / total_variance)
+        else:  # "varsortability"
+            order_values = X.var().to_dict()
+        sorted_nodes = sorted(order_values, key=order_values.get)
 
         model = DAG()
         model.add_nodes_from(sorted_nodes)
@@ -152,94 +179,7 @@ class SortnRegress(BaseCausalDiscovery):
 
         self.causal_graph_ = model
         self.adjacency_matrix_ = nx.to_pandas_adjacency(
-            self.causal_graph_, nodelist=self.feature_names_in_, weight=1, dtype="int"
+            self.causal_graph_, nodelist=feature_names_in_, weight=1, dtype="int"
         )
 
         return self
-
-    def varsortability(self, X, tol=1e-9):
-        r"""
-        Compute the var-sortability of the input data relative to the graph
-        discovered by this estimator.
-
-        Var-sortability measures how well marginal variances reflect the causal
-        structure. For each directed path in the true DAG, this metric checks whether
-        variance increases monotonically along the path (or remains approximately equal).
-        A score of 1.0 indicates perfect alignment: variances are non-decreasing along
-        all causal paths.
-
-        Parameters
-        ----------
-        X : pd.DataFrame
-            The observed data matrix (same data used for fitting).
-
-        tol : float, default=1e-9
-            Tolerance for checking near-equality of variances. When comparing
-            ``Var(target) / Var(source)``, values in the range ``[1-tol, 1+tol]``
-            are treated as "approximately equal" and weighted as 0.5.
-
-        Returns
-        -------
-        Dict[str, float]
-            Dictionary with key ``'varsortability'`` containing the score in [0, 1].
-
-        Examples
-        --------
-        >>> import numpy as np
-        >>> import pandas as pd
-        >>> from pgmpy.causal_discovery import SortnRegress
-        >>> np.random.seed(42)
-        >>> n = 500
-        >>> x = np.random.normal(0, 1.0, n)
-        >>> y = 2.0 * x + np.random.normal(0, 0.5, n)
-        >>> z = 2.0 * y + np.random.normal(0, 0.5, n)
-        >>> data = pd.DataFrame({'X': x, 'Y': y, 'Z': z})
-
-        >>> sr = SortnRegress()
-        >>> _ = sr.fit(data)
-        >>> result = sr.varsortability(data)
-        >>> 'varsortability' in result
-        True
-        >>> result['varsortability'] > 0.7
-        True
-
-        References
-        ----------
-        - :cite:p:`Reisach2023`
-        """
-        if not hasattr(self, "causal_graph_"):
-            raise ValueError("Call .fit(X) before computing varsortability.")
-
-        nodes = self.feature_names_in_
-        x_mat = X[nodes].values
-
-        d = len(nodes)
-        node_to_idx = {node: idx for idx, node in enumerate(nodes)}
-
-        W = np.zeros((d, d))
-        for u, v in self.causal_graph_.edges():
-            if u in node_to_idx and v in node_to_idx:
-                W[node_to_idx[u], node_to_idx[v]] = 1
-        E = W != 0
-
-        # compute marginal variances
-        var = np.var(x_mat, axis=0, keepdims=True)
-
-        n_paths = 0
-        n_ordered_path = 0
-        Ek = E.copy()
-
-        for _ in range(E.shape[0] - 1):
-            n_paths += Ek.sum()
-            variance_ratio = Ek * (var / var.T)
-
-            n_ordered_path += (variance_ratio > 1 + tol).sum()
-
-            n_ordered_path += 0.5 * ((variance_ratio <= 1 + tol) * (variance_ratio > 1 - tol)).sum()
-
-            Ek = Ek.dot(E)
-
-        if n_paths == 0:
-            return {"varsortability": 1.0}
-
-        return {"varsortability": float(n_ordered_path / n_paths)}

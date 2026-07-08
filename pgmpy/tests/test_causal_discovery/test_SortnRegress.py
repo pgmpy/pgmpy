@@ -103,59 +103,19 @@ class TestSortnRegressScoring:
         assert isinstance(shd_score, (int, float, np.integer))
 
 
-class TestSortnRegressVarsortability:
-    def test_high_score_for_increasing_variance(self):
-        np.random.seed(42)
-        n = 1000
-        data = pd.DataFrame(
-            {
-                "X": np.random.normal(0, 0.1, n),
-                "Y": np.random.normal(0, 1.0, n),
-                "Z": np.random.normal(0, 10.0, n),
-            }
-        )
+class TestSortnRegressCriterion:
+    def test_default_criterion_is_r2(self, causal_chain_data):
+        est = SortnRegress(threshold=0.3)  # default criterion is r2
+        assert est.criterion == "r2"
+        est.fit(causal_chain_data)
+        assert len(est.causal_graph_.edges()) > 0
 
-        est = SortnRegress(threshold=0.3)
-        est.fit(data)
-        est.causal_graph_ = DAG([("X", "Y"), ("Y", "Z")])  # low -> high variance
+    def test_varsortability_criterion_fits(self, causal_chain_data):
+        est = SortnRegress(threshold=0.3, criterion="varsortability")
+        est.fit(causal_chain_data)
+        assert len(est.causal_graph_.edges()) > 0
 
-        result = est.varsortability(data)
-        assert isinstance(result, dict)
-        assert "varsortability" in result
-        assert isinstance(result["varsortability"], float)
-        assert 0.7 < result["varsortability"] <= 1.0
-
-    def test_low_score_for_decreasing_variance(self):
-        np.random.seed(42)
-        n = 1000
-        data = pd.DataFrame(
-            {
-                "X": np.random.normal(0, 10.0, n),
-                "Y": np.random.normal(0, 1.0, n),
-                "Z": np.random.normal(0, 0.1, n),
-            }
-        )
-
-        est = SortnRegress(threshold=0.3)
-        est.fit(data)
-        est.causal_graph_ = DAG([("X", "Y"), ("Y", "Z")])
-
-        result = est.varsortability(data)
-        assert result["varsortability"] < 0.3
-
-    def test_vacuously_true_for_empty_graph(self):
-        np.random.seed(42)
-        data = pd.DataFrame(np.random.randn(100, 3), columns=["X", "Y", "Z"])
-
-        est = SortnRegress(threshold=100.0)
-        est.fit(data)
-        result = est.varsortability(data)
-
-        assert result["varsortability"] == 1.0
-
-    def test_raises_before_fit(self):
-        data = pd.DataFrame(np.random.randn(50, 3), columns=["X", "Y", "Z"])
-        est = SortnRegress()
-
-        with pytest.raises(ValueError):
-            est.varsortability(data)
+    def test_invalid_criterion_raises(self, causal_chain_data):
+        est = SortnRegress(threshold=0.3, criterion="not_a_real_criterion")
+        with pytest.raises(ValueError, match="criterion must be one of"):
+            est.fit(causal_chain_data)
