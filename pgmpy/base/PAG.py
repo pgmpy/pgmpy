@@ -3,10 +3,10 @@ from itertools import combinations, product
 
 import networkx as nx
 
-from pgmpy.base.AncestralBase import AncestralBase
+from pgmpy.base import _CoreGraph
 
 
-class PAG(AncestralBase):
+class PAG(_CoreGraph):
     """
     Partial Ancestral Graph (PAG).
 
