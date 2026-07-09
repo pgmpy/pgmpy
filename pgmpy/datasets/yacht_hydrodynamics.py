@@ -5,7 +5,7 @@ class YachtHydrodynamics(BaseDataset):
     """
     References
     ----------
-    - :cite:p:`uci_yacht_hydrodynamics`
+    - :footcite:t:`uci_yacht_hydrodynamics`
     """
 
     _tags = {

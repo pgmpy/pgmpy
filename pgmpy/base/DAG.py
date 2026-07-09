@@ -810,7 +810,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         References
         ----------
-        - :cite:p:`tian_paz_pearl_1998` (Algorithm 4, page 10).
+        - :footcite:t:`tian_paz_pearl_1998` (Algorithm 4, page 10).
         """
         if (end in self.neighbors(start)) or (start in self.neighbors(end)):
             raise ValueError("No possible separators because start and end are adjacent")
@@ -918,7 +918,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         References
         ----------
-        - :cite:p:`koller_friedman_2009` (page 75, Algorithm 3.1).
+        - :footcite:t:`koller_friedman_2009` (page 75, Algorithm 3.1).
         """
         observed_list: list[Hashable] | tuple[Hashable, Hashable]
         if observed:
@@ -1018,7 +1018,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         References
         ----------
-        - :cite:p:`chickering_2002a` (Figures 4 and 5).
+        - :footcite:t:`chickering_2002a` (Figures 4 and 5).
         """
         # Perform a topological sort on the nodes
         topo_order = list(nx.topological_sort(self))
@@ -1180,7 +1180,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         References
         ----------
-        - :cite:p:`pearl_2009` (page 70).
+        - :footcite:t:`pearl_2009` (page 70).
         """
         dag = self if inplace else self.copy()
 
@@ -1773,7 +1773,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         References
         ----------
-        - :cite:p:`ankan_textor_2023`
+        - :footcite:t:`ankan_textor_2023`
         """
 
         # If edges is None, compute for all edges in the DAG

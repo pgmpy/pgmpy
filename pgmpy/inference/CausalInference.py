@@ -48,7 +48,7 @@ class CausalInference:
 
     References
     ----------
-    - :cite:p:`pearl_2009`
+    - :footcite:t:`pearl_2009`
     """
 
     def __init__(self, model):
@@ -123,7 +123,7 @@ class CausalInference:
         True
         """
         warnings.warn(
-            """`is_valid_backdoor_adjustment_set` is deprecated and will be removed in v1.3.0. Please use
+            """`is_valid_backdoor_adjustment_set` is deprecated and will be removed in v2.0. Please use
             pgmpy.identification.Adjustment instead.""",
             FutureWarning,
             stacklevel=2,
@@ -169,7 +169,7 @@ class CausalInference:
         frozenset()
         """
         warnings.warn(
-            """`get_all_backdoor_adjustment_sets` is deprecated and will be removed in v1.3.0. Please use
+            """`get_all_backdoor_adjustment_sets` is deprecated and will be removed in v2.0. Please use
             pgmpy.identification.Adjustment instead.""",
             FutureWarning,
             stacklevel=2,
@@ -223,7 +223,7 @@ class CausalInference:
             True if Z is a valid frontdoor adjustment set.
         """
         warnings.warn(
-            """`is_valid_frontdoor_adjustment_set` is deprecated and will be removed in v1.3.0. Please use
+            """`is_valid_frontdoor_adjustment_set` is deprecated and will be removed in v2.0. Please use
             pgmpy.identification.Frontdoor instead.""",
             FutureWarning,
             stacklevel=2,
@@ -279,7 +279,7 @@ class CausalInference:
         frozenset: a frozenset of frozensets
         """
         warnings.warn(
-            """`get_all_frontdoor_adjustment_sets` is deprecated and will be removed in v1.3.0. Please use
+            """`get_all_frontdoor_adjustment_sets` is deprecated and will be removed in v2.0. Please use
             pgmpy.identification.Frontdoor instead.""",
             FutureWarning,
             stacklevel=2,
@@ -480,7 +480,7 @@ class CausalInference:
 
         References
         ----------
-        - :cite:p:`vanderzander_2015`
+        - :footcite:t:`vanderzander_2015`
 
         Examples
         --------
@@ -799,7 +799,7 @@ class CausalInference:
 
         References
         ----------
-        - :cite:p:`perkovic_2018`
+        - :footcite:t:`perkovic_2018`
         """
         if isinstance(X, str):
             X = [X]
@@ -857,7 +857,7 @@ class CausalInference:
 
         References
         ----------
-        - :cite:p:`perkovic_2018`
+        - :footcite:t:`perkovic_2018`
         """
         if isinstance(X, str):
             X = [X]
@@ -900,7 +900,7 @@ class CausalInference:
 
         References
         ----------
-        - :cite:p:`perkovic_2018`
+        - :footcite:t:`perkovic_2018`
         """
         backdoor_graph = self.get_proper_backdoor_graph([X], [Y], inplace=False)
         return backdoor_graph.minimal_dseparator(X, Y)

@@ -244,7 +244,7 @@ class PDAG(_CoreGraph):
 
         References
         ----------
-        - :cite:p:`dor_tarsi_1992`
+        - :footcite:t:`dor_tarsi_1992`
         """
         from pgmpy.base import DAG
 

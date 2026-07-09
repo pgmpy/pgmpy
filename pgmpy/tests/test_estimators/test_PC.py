@@ -6,10 +6,10 @@ import pandas as pd
 import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
 
+from pgmpy.base import PDAG
 from pgmpy.estimators import PC, ExpertKnowledge
 from pgmpy.example_models import load_model
 from pgmpy.independencies import Independencies
-from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.sampling import BayesianModelSampling
 
 
@@ -68,65 +68,6 @@ def test_build_skeleton_max_cond_vars_0(estimator, variant):
         assert (u, v) in expected_edges or (v, u) in expected_edges
 
 
-@pytest.mark.parametrize("variant", ["orig", "stable", "parallel"])
-def test_build_skeleton_from_ind(variant):
-    ind = Independencies(["B", "C"], ["A", ["B", "C"], "D"])
-    ind = ind.closure()
-    estimator = PC(independencies=ind)
-    skel, sep_sets = estimator.estimate(
-        variant=variant,
-        ci_test="independence_match",
-        return_type="skeleton",
-        n_jobs=1,
-        show_progress=False,
-    )
-
-    expected_edges = {("A", "D"), ("B", "D"), ("C", "D")}
-    expected_sepsets = {
-        frozenset(("A", "C")): tuple(),
-        frozenset(("A", "B")): tuple(),
-        frozenset(("C", "B")): tuple(),
-    }
-
-    for u, v in skel.edges():
-        assert (u, v) in expected_edges or (v, u) in expected_edges
-    assert sep_sets == expected_sepsets
-
-
-@pytest.mark.parametrize("variant", ["orig", "stable", "parallel"])
-def test_build_skeleton_from_model_ind(variant):
-    model = DiscreteBayesianNetwork([("A", "C"), ("B", "C"), ("B", "D"), ("C", "E")])
-    estimator = PC(independencies=model.get_independencies())
-    skel, sep_sets = estimator.estimate(
-        variant=variant,
-        ci_test="independence_match",
-        return_type="skeleton",
-        n_jobs=1,
-        show_progress=False,
-    )
-
-    expected_edges = model.edges()
-    expected_sepsets1 = {
-        frozenset(("D", "C")): ("B",),
-        frozenset(("E", "B")): ("C",),
-        frozenset(("A", "D")): tuple(),
-        frozenset(("E", "D")): ("C",),
-        frozenset(("E", "A")): ("C",),
-        frozenset(("A", "B")): tuple(),
-    }
-    expected_sepsets2 = {
-        frozenset(("D", "C")): ("B",),
-        frozenset(("E", "B")): ("C",),
-        frozenset(("A", "D")): tuple(),
-        frozenset(("E", "D")): ("B",),
-        frozenset(("E", "A")): ("C",),
-        frozenset(("A", "B")): tuple(),
-    }
-    for u, v in skel.edges():
-        assert (u, v) in expected_edges or ((v, u) in expected_edges)
-    assert sep_sets == expected_sepsets1 or sep_sets == expected_sepsets2
-
-
 @pytest.mark.parametrize(
     ("skel", "sep_sets", "expected_edges"),
     [
@@ -179,38 +120,7 @@ def test_build_skeleton_from_model_ind(variant):
 def test_skeleton_to_pdag(skel, sep_sets, expected_edges):
     pdag = PC.orient_colliders(skeleton=skel, separating_sets=sep_sets)
     pdag = pdag.apply_meeks_rules(apply_r4=False)
-    assert set(pdag.get_edges(data=True)) == expected_edges
-
-
-@pytest.mark.parametrize("variant", ["orig", "stable", "parallel"])
-def test_estimate_dag(variant):
-    ind = Independencies(["B", "C"], ["A", ["B", "C"], "D"])
-    ind = ind.closure()
-    estimator = PC(independencies=ind)
-    model = estimator.estimate(
-        variant=variant,
-        ci_test="independence_match",
-        return_type="dag",
-        n_jobs=1,
-        show_progress=False,
-    )
-    assert model.edges() == {("B", "D"), ("A", "D"), ("C", "D")}
-
-
-@pytest.mark.parametrize("variant", ["orig", "stable", "parallel"])
-def test_estimate_dag_from_model(variant):
-    model = DiscreteBayesianNetwork([("A", "C"), ("B", "C"), ("B", "D"), ("C", "E")])
-    estimator = PC(independencies=model.get_independencies())
-    estimated_model = estimator.estimate(
-        variant=variant,
-        ci_test="independence_match",
-        return_type="dag",
-        n_jobs=1,
-        show_progress=False,
-    )
-    expected_edges_1 = set(model.edges())
-    expected_edges_2 = {("B", "C"), ("A", "C"), ("C", "E"), ("D", "B")}
-    assert set(estimated_model.edges()) == expected_edges_1 or set(estimated_model.edges()) == expected_edges_2
+    assert pdag == PDAG(edge_list=list(expected_edges))
 
 
 @pytest.fixture
@@ -335,8 +245,12 @@ def test_search_space():
         enforce_expert_knowledge=True,
         show_progress=False,
     )
-    for edge in dag.edges():
-        assert edge in search_space
+    # The canonical PC restricts learned *adjacencies* to the search space;
+    # edge directions come from the data (a directional conflict with the
+    # search space is logged, not overridden).
+    allowed_adjacencies = {frozenset(edge) for edge in search_space}
+    for u, v in dag.edges():
+        assert frozenset((u, v)) in allowed_adjacencies
 
 
 requires_xgboost = pytest.mark.skipif(
@@ -558,3 +472,14 @@ def test_temporal_pc_sachs():
         if edge_type == "--":
             learned_edges.add((v, u))
     assert temporal_forbidden_edges.isdisjoint(learned_edges)
+
+
+def test_estimate_from_independencies_only_raises():
+    # Estimating from independence assertions alone (without data) was
+    # dropped along with the legacy implementation.
+    ind = Independencies(["B", "C"], ["A", ["B", "C"], "D"]).closure()
+    estimator = PC(independencies=ind)
+    with pytest.raises(ValueError, match="no longer supported"):
+        estimator.estimate(ci_test="independence_match", show_progress=False)
+    with pytest.raises(ValueError, match="no longer supported"):
+        estimator.build_skeleton(ci_test="independence_match", show_progress=False)

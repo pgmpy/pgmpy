@@ -68,7 +68,7 @@ class BDs(BDeu):
 
     References
     ----------
-    - :cite:p:`scutari_2016a`
+    - :footcite:t:`scutari_2016a`
     """
 
     _tags = {
