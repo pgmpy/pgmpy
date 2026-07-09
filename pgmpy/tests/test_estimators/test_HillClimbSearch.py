@@ -30,7 +30,9 @@ class TestHillClimbEstimatorDiscrete(unittest.TestCase):
 
         # link to dataset: "https://www.kaggle.com/c/titanic/download/train.csv"
         self.titanic_data = pd.read_csv("pgmpy/tests/test_estimators/testdata/titanic_train.csv")
-        self.titanic_data1 = self.titanic_data[["Survived", "Sex", "Pclass", "Age", "Embarked"]]
+        # dropna needed because Age and Embarked columns have missing values; the
+        # canonical causal_discovery estimators require complete data.
+        self.titanic_data1 = self.titanic_data[["Survived", "Sex", "Pclass", "Age", "Embarked"]].dropna()
         self.est_titanic1 = HillClimbSearch(self.titanic_data1)
         self.score_titanic1 = K2(self.titanic_data1).local_score
 

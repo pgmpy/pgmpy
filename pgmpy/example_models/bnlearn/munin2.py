@@ -5,7 +5,7 @@ class Munin2(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`andreassen_munin`
+    - :footcite:t:`andreassen_munin`
     """
 
     _tags = {

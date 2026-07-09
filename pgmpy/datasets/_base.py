@@ -269,21 +269,20 @@ class BaseSimulatedDataset(BaseDataset):
     """
     Base class for simulated datasets.
 
-    Concrete subclasses generate data and the corresponding ground-truth graph programmatically instead of
-    loading static files, and must implement ``load_dataframe()`` and ``load_ground_truth()``.
+    Concrete subclasses build the model and its ground-truth graph once in ``__init__`` and expose them through the
+    instance methods ``load_dataframe()`` and ``load_ground_truth()``, so a single ``load_dataset`` call reuses one
+    model for both the data and the graph.
     """
 
     _tags = {"is_simulated": True}
 
-    @classmethod
-    def load_dataframe(cls, n_samples=None, seed=None, **sim_kwargs) -> pd.DataFrame:
+    def load_dataframe(self, n_samples=None) -> pd.DataFrame:
         """Generate and return simulated data. Must be implemented by each simulator."""
-        raise NotImplementedError(f"{cls.__name__} must implement load_dataframe().")
+        raise NotImplementedError(f"{type(self).__name__} must implement load_dataframe().")
 
-    @classmethod
-    def load_ground_truth(cls, **sim_kwargs) -> DAG | PDAG | ADMG | MAG:
+    def load_ground_truth(self) -> DAG | PDAG | ADMG | MAG:
         """Construct and return the ground-truth graph. Must be implemented by each simulator."""
-        raise NotImplementedError(f"{cls.__name__} must implement load_ground_truth().")
+        raise NotImplementedError(f"{type(self).__name__} must implement load_ground_truth().")
 
 
 def load_dataset(
@@ -371,6 +370,20 @@ def load_dataset(
             break
     if target_cls is None:
         raise ValueError(f"Dataset with name '{name}' not found. Please use list_datasets() to see available datasets.")
+
+    if issubclass(target_cls, BaseSimulatedDataset):
+        # Build the model once and reuse it for both the data and the ground-truth graph.
+        simulator = target_cls(seed=seed, **sim_kwargs)
+        df = simulator.load_dataframe(n_samples=n_samples)
+        tags = target_cls.get_class_tags()
+        tags["n_samples"], tags["n_variables"] = df.shape
+        return Dataset(
+            name=name,
+            data=df,
+            expert_knowledge=None,
+            ground_truth=simulator.load_ground_truth(),
+            tags=tags,
+        )
 
     return Dataset(
         name=name,

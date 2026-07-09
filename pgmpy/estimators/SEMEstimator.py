@@ -168,7 +168,7 @@ class SEMEstimator:
 
         References
         ----------
-        - :cite:p:`bollen_2014` (Table 4C.1).
+        - :footcite:t:`bollen_2014` (Table 4C.1).
 
         """
         # Initialize all the values even if the edge doesn't exist, masks would take care of that.
@@ -249,7 +249,7 @@ class SEMEstimator:
 
         References
         ----------
-        - :cite:p:`thoemmes_2013`
+        - :footcite:t:`thoemmes_2013`
         """
         # Check if given arguments are valid
         if not isinstance(data, pd.DataFrame):
