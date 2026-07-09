@@ -14,7 +14,7 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
     """
     The PC algorithm for causal discovery / structure learning.
 
-    This class implements the PC algorithm [1]_ for causal discovery. Given a
+    This class implements the PC algorithm [1] for causal discovery. Given a
     tabular dataset, the PC algorithm estimates the causal structure among the
     variables in the data in a Directed Acyclic Graph (DAG) or Partially
     Directed Acyclic Graph (PDAG). The algorithm works by identifying

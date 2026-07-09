@@ -438,7 +438,7 @@ class _GraphAlgorithms:
         Return a topological ordering of the nodes consistent with the directed edges.
 
         A topological order is an ordering of the nodes in which every directed edge ``u -> v`` has
-        ``u`` before ``v``. Following the standard definition for mixed graphs [1]_, bidirected
+        ``u`` before ``v``. Following the standard definition for mixed graphs [1], bidirected
         (``"<>"``) and undirected (``"--"``) edges impose *no* ordering constraint: a bidirected
         edge encodes latent confounding (no ancestral relation), and undirected edges form chain
         components that are ordered only through their directed edges. The order is therefore well
