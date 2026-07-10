@@ -141,7 +141,6 @@ class TestCASTLEFit:
         assert est.model_ is not None
         assert est.scaler_ is not None
         assert est.predictor_names_ is not None
-        assert est.cols_ is not None
 
     def test_causal_graph_creation(self, numeric_df):
         from pgmpy.base import DAG
@@ -155,7 +154,7 @@ class TestCASTLEFit:
 
         # Test resulting DAG graph
         assert isinstance(est.causal_graph_, DAG)
-        assert set(est.causal_graph_.nodes()) == set(est.cols_)
+        assert set(est.causal_graph_.nodes()) == set(est.feature_names_in_)
         assert not any(u == v for u, v in est.causal_graph_.edges())
 
     @pytest.mark.parametrize(
@@ -165,7 +164,7 @@ class TestCASTLEFit:
     def test_target_col_variants_same_cols(self, numeric_df, target_col):
         est = CASTLE(max_epochs=5, seed=0, target_col=target_col)
         est.fit(numeric_df)
-        assert est.cols_[0] == "A"
+        assert est.feature_names_in_[0] == "A"
 
     def test_custom_scaler_used(self, numeric_df):
         from sklearn.preprocessing import MinMaxScaler
@@ -307,32 +306,3 @@ class TestCASTLEModel:
         Out, out_0 = model(torch.randn(1, num_inputs))
         assert Out.shape == (1, num_inputs)
         assert out_0.shape == (1, 1)
-
-    # --- train ---
-
-    @pytest.fixture
-    def small_tensor(self):
-        import torch
-
-        return torch.randn(20, 4, generator=torch.Generator().manual_seed(0))
-
-    @requires_torch
-    def test_train_output_correctness(self, small_tensor):
-        import torch
-
-        edge_threshold = 0.3
-        # Use max_epochs=5 and seed=0 to replicate the old behavior of TestCASTLEModelTraining
-        W_final = self._make_model(edge_threshold=edge_threshold, max_epochs=5, seed=0).train(small_tensor)
-
-        assert isinstance(W_final, torch.Tensor)
-        assert W_final.shape == (4, 4)
-        assert torch.all(W_final.diagonal() == 0.0)
-        assert not ((W_final > 0.0) & (W_final < edge_threshold)).any()
-
-    @requires_torch
-    def test_train_reproducibility(self, small_tensor):
-        import torch
-
-        W1 = self._make_model(seed=42, max_epochs=5).train(small_tensor)
-        W2 = self._make_model(seed=42, max_epochs=5).train(small_tensor)
-        assert torch.equal(W1, W2)

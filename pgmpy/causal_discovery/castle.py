@@ -179,11 +179,6 @@ class _CASTLEModel(nn.Module):
                 if patience_counter >= self.train_cfg.early_stop_patience:
                     break
 
-        self.eval()
-        W_final = self.get_W().detach().clone()
-        W_final[W_final < self.reg_cfg.edge_threshold] = 0.0
-        return W_final
-
     def get_W(self):
         """Compute the weighted adjacency matrix from input-layer weights."""
         return torch.stack(
@@ -317,9 +312,10 @@ class CASTLE(BaseCausalDiscovery):
         else:
             raise ValueError(f"target_col must be a string column name or None, got {type(self.target_col).__name__}.")
 
-        self.cols_ = [target_col] + [c for c in X.columns if c != target_col]
-        self.predictor_names_ = self.cols_[1:]
-        X = X[self.cols_]
+        ordered_cols = [target_col] + [c for c in X.columns if c != target_col]
+        self.feature_names_in_ = pd.Index(ordered_cols)
+        self.predictor_names_ = ordered_cols[1:]
+        X = X[ordered_cols]
 
         self.scaler_ = self.scaler if self.scaler is not None else StandardScaler()
         X_scaled = self.scaler_.fit_transform(X)
@@ -352,14 +348,20 @@ class CASTLE(BaseCausalDiscovery):
         X_tensor = torch.tensor(X_scaled, dtype=dtype, device=config.DEVICE)
 
         self.model_ = _CASTLEModel(self.n_features_in_, self.network_config_, self.train_config_, self.reg_config_)
-        W_final = self.model_.train(X_tensor)
+        self.model_.train(X_tensor)
 
-        # Step 3: Build adjacency matrix and causal DAG from learned weights
-        self.adjacency_matrix_ = pd.DataFrame(W_final.cpu().numpy(), index=self.cols_, columns=self.cols_)
+        # Step 3: Extract learned weights and build adjacency matrix and causal DAG
+        self.model_.eval()
+        W_final = self.model_.get_W().detach().clone()
+        W_final[W_final < self.reg_config_.edge_threshold] = 0.0
+
+        self.adjacency_matrix_ = pd.DataFrame(
+            W_final.cpu().numpy(), index=self.feature_names_in_, columns=self.feature_names_in_
+        )
 
         self.causal_graph_ = DAG()
-        self.causal_graph_.add_nodes_from(self.cols_)
-        for src, dst in itertools.permutations(self.cols_, 2):
+        self.causal_graph_.add_nodes_from(self.feature_names_in_)
+        for src, dst in itertools.permutations(self.feature_names_in_, 2):
             if self.adjacency_matrix_.loc[src, dst] > 0:
                 self.causal_graph_.add_edge(src, dst)
 
