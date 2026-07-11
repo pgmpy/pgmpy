@@ -3,7 +3,7 @@ from itertools import combinations, product
 
 import networkx as nx
 
-from pgmpy.base import _CoreGraph
+from pgmpy.base.ADMG import _CoreGraph
 
 
 class PAG(_CoreGraph):
@@ -14,9 +14,26 @@ class PAG(_CoreGraph):
     to represent uncertainty about whether an endpoint is an arrow ('>') or a tail ('-').
     """
 
+    @staticmethod
+    def _normalize_edge_type(edge_type: str) -> str:
+        if not isinstance(edge_type, str):
+            return edge_type
+
+        normalization_map = {
+            "o->": "o>",
+            "-o>": "->",
+            "o-<": "<o",
+            "o-o": "oo",
+            ">-": "<-",
+            "-<": "->",
+            ">o": "<o",
+            "o<": "o>",
+        }
+        return normalization_map.get(edge_type, edge_type)
+
     def __init__(
         self,
-        ebunch: Iterable[tuple[Hashable, Hashable]] | None = None,
+        edge_list: Iterable[tuple[Hashable, Hashable, str]] | None = None,
         latents: set[Hashable] = set(),
         exposures: set[Hashable] = set(),
         outcomes: set[Hashable] = set(),
@@ -29,7 +46,7 @@ class PAG(_CoreGraph):
 
         Parameters
         ----------
-        ebunch : Iterable[tuple], optional
+        edge_list : Iterable[tuple], optional
             An iterable of edges of the form (u, v, u_mark, v_mark) used to
             initialize the graph. Each mark must be one of {">", "-", "o"}.
             Default is None, which initializes an empty graph.
@@ -60,7 +77,7 @@ class PAG(_CoreGraph):
 
         At construction:
         >>> g = AncestralBase(
-        ...     ebunch=[("L", "A", "-", ">"), ("B", "C", "-", ">")],
+        ...     edge_list=[("L", "A", "-", ">"), ("B", "C", "-", ">")],
         ...     latents={"L"},
         ...     roles={"exposure": "A", "outcome": "B"},
         ... )
@@ -76,13 +93,130 @@ class PAG(_CoreGraph):
         >>> g.get_role("adjustment")
         ["L", "C"]
         """
+        # `_CoreGraph` expects edges as (u, v, edge_type). Accept the legacy
+        # four-tuple form (u, v, u_mark, v_mark) here and convert it into the
+        # canonical three-tuple using `_to_edge_type` so construction works with
+        # either format.
+        converted_edges = None
+        if edge_list is not None:
+            converted_edges = []
+            for edge in edge_list:
+                if len(edge) == 3:
+                    u, v, edge_type = edge
+                    converted_edges.append((u, v, self._normalize_edge_type(edge_type)))
+                elif len(edge) == 4:
+                    u, v, mu, mv = edge
+                    markers = {u: mu, v: mv}
+                    edge_type = self._to_edge_type(u, v, markers)
+                    converted_edges.append((u, v, edge_type))
+                else:
+                    raise ValueError(f"Edge tuple must have 3 or 4 elements. Edge {edge} is of length {len(edge)}.")
+
         super().__init__(
-            ebunch=ebunch,
+            edge_list=converted_edges,
             latents=latents,
             roles=roles,
             exposures=exposures,
             outcomes=outcomes,
         )
+
+    # utility function for getting edge marks
+    def get_edge_marks(self, u, v):
+        """
+        Get the marks on the edge between two nodes.
+
+        Parameters
+        ----------
+        u, v : Hashable
+            The two nodes connected by the edge.
+
+        Returns
+        -------
+        dict
+            A dictionary with keys as the nodes and values as their corresponding marks.
+            For example, {u: '-', v: '>'} indicates a tail at u and an arrowhead at v.
+        """
+        if not self.has_edge(u, v):
+            raise ValueError(f"No edge exists between {u} and {v}.")
+
+        data = self.get_edge_data(u, v)
+        if not data:
+            raise ValueError(f"No edge exists between {u} and {v}.")
+
+        # If there are parallel edges, the caller should use get_edge_type/get_marker
+        if len(data) > 1:
+            raise ValueError(f"Multiple parallel edges between {u} and {v}; use get_edge_type/get_marker instead.")
+
+        # Return a copy of the stored marker dict (keys are node ids).
+        return list(data.values())[0].copy()
+
+    def get_neighbors(
+        self,
+        node: Hashable,
+        edge_types: str | Iterable[str] | None = None,
+    ) -> set[Hashable]:
+        """
+        Get the neighbors of a given node.
+
+        Parameters
+        ----------
+        node : Hashable
+            The node whose neighbors are being queried.
+        edge_types : str | Iterable[str] | None, optional
+            Restrict neighbors to edges of the specified type(s). If None,
+            all neighboring nodes are returned regardless of edge mark.
+
+        Returns
+        -------
+        set[Hashable]
+            Set of neighboring nodes.
+        """
+        return super().get_neighbors(node, edge_types=edge_types)
+
+    def _neighbors_by_mark(
+        self,
+        node: Hashable,
+        u_type: str | None = None,
+        v_type: str | None = None,
+    ) -> set[Hashable]:
+        """
+        Get the neighbors of `node`, filtered by the edge mark at `node` itself
+        and/or the edge mark at the neighboring node.
+
+        This is a small helper built on top of the public, `_CoreGraph`-compatible
+        ``get_neighbors`` method. It restores the old "u_type"/"v_type" filtering
+        behaviour used throughout the orientation rules without changing the
+        public ``get_neighbors`` signature.
+
+        Parameters
+        ----------
+        node : Hashable
+            The node whose neighbors are being queried. This corresponds to the
+            "u" side of the pair for the purposes of `u_type`.
+
+        u_type : str or None, default None
+            Required mark on the edge at `node` (allowed values: '-', '>', 'o').
+            If None, the mark at `node` is unconstrained.
+
+        v_type : str or None, default None
+            Required mark on the edge at the neighboring node (allowed values:
+            '-', '>', 'o'). If None, the mark at the neighbor is unconstrained.
+
+        Returns
+        -------
+        set[Hashable]
+            Neighbors of `node` whose incident edge matches the given mark
+            constraints.
+        """
+        matches = set()
+        for neighbor in self.get_neighbors(node):
+            marks = self.get_edge_marks(node, neighbor)
+            if u_type is not None and marks.get(node) != u_type:
+                continue
+            if v_type is not None and marks.get(neighbor) != v_type:
+                continue
+            matches.add(neighbor)
+        return matches
 
     def is_definite_non_collider(self, vertex, adj_u, adj_v):
         """
@@ -108,12 +242,19 @@ class PAG(_CoreGraph):
         bool
             True if the vertex is a definite non-collider, False otherwise.
         """
-        u_mark = self.edges[adj_u, vertex]["marks"].get(vertex)
-        v_mark = self.edges[vertex, adj_v]["marks"].get(vertex)
-        if u_mark == "-" or v_mark == "-":
+        edge_uv = self.get_edge_marks(adj_u, vertex)
+        edge_vw = self.get_edge_marks(vertex, adj_v)
+
+        # Check for tail at vertex on either edge
+        if edge_uv.get(vertex) == "-" or edge_vw.get(vertex) == "-":
             return True
-        if u_mark == "o" and v_mark == "o" and not self.has_edge(adj_u, adj_v):
-            return True
+
+        # Check for circle marks at vertex on both edges
+        if edge_uv.get(vertex) == "o" and edge_vw.get(vertex) == "o":
+            # If both adjacent vertices are not adjacent to each other, it's a definite non-collider
+            if not self.has_edge(adj_u, adj_v):
+                return True
+
         return False
 
     def get_possible_ancestors(self, node):
@@ -158,15 +299,15 @@ class PAG(_CoreGraph):
 
         Returns
         -------
-        boolOther smaller issues I noticed (optional fixes)
+        bool
             True if the edge is definitely visible, False otherwise.
         """
         if not self.has_edge(u, v):
             return False
-        if self.edges[u, v]["marks"][u] != "-" or self.edges[u, v]["marks"][v] != ">":
+        if self.get_edge_marks(u, v).get(u) != "-" or self.get_edge_marks(u, v).get(v) != ">":
             return False
 
-        for neighbor in self.get_neighbors(u, v_type=">"):
+        for neighbor in self._neighbors_by_mark(u, v_type=">"):
             if neighbor not in self.get_neighbors(v):
                 return True
 
@@ -176,15 +317,15 @@ class PAG(_CoreGraph):
         while stack:
             current = stack.pop()
 
-            for pred in self.get_neighbors(current, u_type=None, v_type=">"):
+            for pred in self._neighbors_by_mark(current, u_type="-", v_type=">"):
                 if pred in visited or pred == u:
                     continue
                 visited.add(pred)
 
-                if pred not in self.get_neighbors(v, u_type=None, v_type=None):
+                if pred not in self.get_neighbors(v):
                     return True
 
-                if pred in self.get_neighbors(v, u_type="-", v_type=">"):
+                if pred in self._neighbors_by_mark(v, u_type="-", v_type=">"):
                     stack.append(pred)
 
         return False
@@ -341,8 +482,9 @@ class PAG(_CoreGraph):
         for path in nx.all_simple_paths(self, source=u, target=v):
             ok = True
             for a, b in zip(path, path[1:]):
-                mark_a = self.edges[a, b]["marks"].get(a)
-                mark_b = self.edges[a, b]["marks"].get(b)
+                marks = self.get_edge_marks(a, b)
+                mark_a = marks.get(a)
+                mark_b = marks.get(b)
                 if u_type is not None and mark_a != u_type:
                     ok = False
                     break
@@ -383,21 +525,17 @@ class PAG(_CoreGraph):
             If no edge exists between `u` and `v`.
         """
 
-        if self.has_edge(u, v):
-            edge_u = u
-            edge_v = v
-        elif self.has_edge(v, u):
-            edge_u = v
-            edge_v = u
-        else:
+        if not self.has_edge(u, v):
             raise ValueError(f"No edge between {u} and {v}")
 
-        # Now apply marks to the correct stored orientation
-        if mark_u is not None:
-            self.edges[edge_u, edge_v]["marks"][u] = mark_u
-
+        # Use _CoreGraph.set_marker which handles multigraph safety, validation and
+        # directed-cycle checks. Note that set_marker(u, v, m) sets the marker at v's
+        # endpoint for the edge between u and v.
         if mark_v is not None:
-            self.edges[edge_u, edge_v]["marks"][v] = mark_v
+            self.set_marker(u, v, mark_v)
+        if mark_u is not None:
+            # To set the marker at `u` we call set_marker with reversed endpoints.
+            self.set_marker(v, u, mark_u)
 
     def get_discriminating_path(self, x, y, v):
         r"""
@@ -437,14 +575,22 @@ class PAG(_CoreGraph):
 
         for edge_path in nx.all_simple_edge_paths(self, x, v):
             # Convert edge path to node path
-            node_path = [edge_path[0][0]]  # Start with first node of first edge
-            for u, node in edge_path:
+            node_path = [x]
+            path_nodes = []
+            for edge in edge_path:
+                if len(edge) == 2:
+                    u, node = edge
+                elif len(edge) == 3:
+                    u, node = edge[0], edge[1]
+                else:
+                    raise ValueError(f"Unexpected edge tuple length: {len(edge)}")
                 node_path.append(node)
+                path_nodes.append((u, node))
 
             valid = True
             # All edges in the path should have arrowheads at their endpoints (colliders)
             # except possibly the first edge from x
-            for i, (u, v_node) in enumerate(edge_path):
+            for u, v_node in path_nodes:
                 edge_marks = self.get_edge_marks(u, v_node)
                 # All edges should have arrowhead at the next node
                 if edge_marks.get(v_node) != ">":
@@ -465,6 +611,8 @@ class PAG(_CoreGraph):
             if valid:
                 # Append the full path including y at the end
                 discriminating_paths.append(node_path + [y])
+
+        return discriminating_paths
 
         return discriminating_paths
 
@@ -492,9 +640,9 @@ class PAG(_CoreGraph):
         pag = self if inplace else self.copy()
 
         for node in list(pag.nodes):
-            u_candidates = pag.get_neighbors(node, u_type=">", v_type=None)
+            u_candidates = pag._neighbors_by_mark(node, u_type=">", v_type=None)
 
-            w_candidates = pag.get_neighbors(node, u_type="o", v_type=None)
+            w_candidates = pag._neighbors_by_mark(node, u_type="o", v_type=None)
 
             for u, w in product(u_candidates, w_candidates):
                 if pag.get_edge_marks(node, w)[node] != "o":
@@ -524,22 +672,24 @@ class PAG(_CoreGraph):
         pag = self if inplace else self.copy()
 
         for node in list(pag.nodes):
-            u_candidates = pag.get_neighbors(node, u_type=">", v_type="-")
-            w_candidates = pag.get_neighbors(node, u_type=None, v_type=">")
+            u_candidates = pag._neighbors_by_mark(node, u_type=">", v_type="-")
+            w_candidates = pag._neighbors_by_mark(node, u_type=None, v_type=">")
 
             for u, w in product(u_candidates, w_candidates):
-                if self.has_edge(u, w):
-                    if self.get_edge_marks(u, w)[w] == "o":
-                        pag.modify_edge(u, w, mark_u=None, mark_v=">")
+                if pag.has_edge(u, w):
+                    edge_marks = pag.get_edge_marks(u, w)
+                    if edge_marks.get(u) == "o" and edge_marks.get(w) == ">":
+                        pag.modify_edge(u, w, mark_u="-", mark_v=">")
 
         for node in pag.nodes:
-            u_candidates = pag.get_neighbors(node, u_type=">", v_type=None)
-            w_candidates = pag.get_neighbors(node, u_type="-", v_type=">")
+            u_candidates = pag._neighbors_by_mark(node, u_type=">", v_type=None)
+            w_candidates = pag._neighbors_by_mark(node, u_type="-", v_type=">")
 
             for u, w in product(u_candidates, w_candidates):
-                if self.has_edge(u, w):
-                    if self.get_edge_marks(u, w)[w] == "o":
-                        pag.modify_edge(u, w, mark_u=None, mark_v=">")
+                if pag.has_edge(u, w):
+                    edge_marks = pag.get_edge_marks(u, w)
+                    if edge_marks.get(u) == "o" and edge_marks.get(w) == ">":
+                        pag.modify_edge(u, w, mark_u="-", mark_v=">")
 
         if not inplace:
             return pag
@@ -573,14 +723,14 @@ class PAG(_CoreGraph):
         pag = self if inplace else self.copy()
 
         for v in list(pag.nodes):
-            potential_uw_cond1 = pag.get_neighbors(v, u_type=">", v_type=None)
+            potential_uw_cond1 = pag._neighbors_by_mark(v, u_type=">", v_type=None)
 
             if len(potential_uw_cond1) < 2:
                 continue
 
-            potential_z = pag.get_neighbors(v, u_type="o", v_type=None)
+            potential_z = pag._neighbors_by_mark(v, u_type="o", v_type=None)
             for z in potential_z:
-                potential_uw_cond2 = pag.get_neighbors(z, u_type="o", v_type=None)
+                potential_uw_cond2 = pag._neighbors_by_mark(z, u_type="o", v_type=None)
 
                 common_uw = potential_uw_cond2.intersection(potential_uw_cond1)
                 for u, w in combinations(common_uw, 2):
@@ -644,7 +794,7 @@ class PAG(_CoreGraph):
 
         for c in pag.nodes:
             # Find all d such that edge (c, d) has a circle on c's side
-            neighbors = pag.get_neighbors(c, u_type="o", v_type=None)
+            neighbors = pag._neighbors_by_mark(c, u_type="o", v_type=None)
 
             for d in neighbors:
                 # Try each possible a (start node)
@@ -717,14 +867,17 @@ class PAG(_CoreGraph):
         """
         pag = self if inplace else self.copy()
 
-        for u, v in list(pag.edges):
+        for u, v in list(pag.edges(keys=False)):
             edge_marks = pag.get_edge_marks(u, v)
-            if edge_marks[u] == "o" and edge_marks[v] == "o":
-                paths = pag.get_paths(u, v, {("o", "o")})
+            if edge_marks[u] == "o" and edge_marks[v] == ">":
+                paths = pag.get_paths_with_marks(u, v, u_type="o", v_type=None)
                 for path in paths:
                     if len(path) >= 4 and pag.is_uncovered(path):
                         if not pag.has_edge(path[0], path[-2]) and not pag.has_edge(path[1], path[-1]):
                             pag.modify_edge(u, v, mark_u="-", mark_v="-")
+
+                            if len(path) >= 2:
+                                pag.modify_edge(path[0], path[1], mark_u=None, mark_v="-")
 
                             for i in range(1, len(path) - 1):
                                 pag.modify_edge(path[i], path[i + 1], mark_u="-", mark_v="-")
@@ -751,9 +904,9 @@ class PAG(_CoreGraph):
         pag = self if inplace else self.copy()
 
         for v in list(pag.nodes):
-            u_candidates = pag.get_neighbors(v, u_type="-", v_type="-")
+            u_candidates = pag._neighbors_by_mark(v, u_type="-", v_type="-")
 
-            w_candidates = pag.get_neighbors(v, u_type="o", v_type=None)
+            w_candidates = pag._neighbors_by_mark(v, u_type="o", v_type=None)
 
             if len(u_candidates) > 0:
                 for w in w_candidates:
@@ -783,8 +936,8 @@ class PAG(_CoreGraph):
         pag = self if inplace else self.copy()
 
         for v in list(pag.nodes):
-            u_candidates = pag.get_neighbors(v, u_type="o", v_type="-")
-            w_candidates = pag.get_neighbors(v, u_type="o", v_type=None)
+            u_candidates = pag._neighbors_by_mark(v, u_type="o", v_type="-")
+            w_candidates = pag._neighbors_by_mark(v, u_type="o", v_type=None)
             for u in u_candidates:
                 for w in w_candidates:
                     if u == w or pag.has_edge(u, w):
@@ -871,7 +1024,7 @@ class PAG(_CoreGraph):
         """
         pag = self if inplace else self.copy()
 
-        for u, w in list(pag.edges):
+        for u, w in list(pag.edges(keys=False)):
             marks = pag.get_edge_marks(u, w)
             if marks.get(u) == "o" and marks.get(w) == ">":
                 pd_paths = pag.get_potentially_directed_paths(start=u, end=w)
@@ -915,11 +1068,11 @@ class PAG(_CoreGraph):
         """
         pag = self if inplace else self.copy()
 
-        for u, w in list(pag.edges):
+        for u, w in list(pag.edges(keys=False)):
             if not (pag.has_edge(u, w) and self.get_edge_marks(u, w)[u] == "o" and self.get_edge_marks(u, w)[w] == ">"):
                 continue
 
-            forks = pag.get_neighbors(w, u_type="-", v_type=">")
+            forks = pag._neighbors_by_mark(w, u_type="-", v_type=">")
 
             if len(forks) < 2:
                 continue

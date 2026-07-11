@@ -6,44 +6,62 @@ from pgmpy.base import PAG
 @pytest.fixture
 def pag_core():
     edges = [
-        ("A", "B", "o", ">"),
-        ("C", "B", "o", ">"),
-        ("A", "D", "o", "o"),
-        ("C", "D", "o", "o"),
-        ("D", "E", "-", ">"),
+        ("A", "B", "o>"),
+        ("C", "B", "o>"),
+        ("A", "D", "oo"),
+        ("C", "D", "oo"),
+        ("D", "E", "-o>"),
     ]
-    return PAG(ebunch=edges)
+    return PAG(edge_list=edges)
 
 
 @pytest.fixture
 def pag_simple():
     edges = [
-        ("A", "B", "-", ">"),
-        ("B", "C", "-", ">"),
-        ("C", "D", "-", ">"),
+        ("A", "B", "->"),
+        ("B", "C", "->"),
+        ("C", "D", "->"),
     ]
-    return PAG(ebunch=edges)
+    return PAG(edge_list=edges)
 
 
 @pytest.fixture
 def pag_complex():
-    edges = [
-        ("A", "B", "-", ">"),
-        ("B", "C", "-", ">"),
-        ("C", "D", "-", ">"),
-        ("E", "C", ">", "-"),
-        ("F", "C", ">", "-"),
-        ("A", "E", "o", "o"),
-        ("A", "F", "o", "o"),
-        ("G", "H", "o", "o"),
-        ("H", "I", "o", "o"),
-        ("I", "J", "o", "o"),
-        ("J", "G", "o", "o"),
-        ("H", "C", "o", ">"),
-        ("I", "D", "-", ">"),
-        ("J", "B", "o", "-"),
+    # edges = [
+    #     ("A", "B", "-", ">"),
+    #     ("B", "C", "-", ">"),
+    #     ("C", "D", "-", ">"),
+    #     ("E", "C", ">", "-"),
+    #     ("F", "C", ">", "-"),
+    #     ("A", "E", "o", "o"),
+    #     ("A", "F", "o", "o"),
+    #     ("G", "H", "o", "o"),
+    #     ("H", "I", "o", "o"),
+    #     ("I", "J", "o", "o"),
+    #     ("J", "G", "o", "o"),
+    #     ("H", "C", "o", ">"),
+    #     ("I", "D", "-", ">"),
+    #     ("J", "B", "o", "-"),
+    # ]
+
+    # updated edge list
+    edge_list = [
+        ("A", "B", "->"),
+        ("B", "C", "->"),
+        ("C", "D", "->"),
+        ("E", "C", "<-"),
+        ("F", "C", "<-"),
+        ("A", "E", "o-o"),
+        ("A", "F", "o-o"),
+        ("G", "H", "o-o"),
+        ("H", "I", "o-o"),
+        ("I", "J", "o-o"),
+        ("J", "G", "o-o"),
+        ("H", "C", "o->"),
+        ("I", "D", "-o>"),
+        ("J", "B", "o-<"),
     ]
-    return PAG(ebunch=edges)
+    return PAG(edge_list=edge_list)
 
 
 class TestPAG:
@@ -53,11 +71,11 @@ class TestPAG:
         assert len(graph.edges) == 0
 
     def test_init_with_edges(self):
-        edges = [("A", "B", "-", ">"), ("B", "C", ">", "-")]
-        graph = PAG(ebunch=edges)
+        edges = [("A", "B", "->"), ("B", "C", "->")]
+        graph = PAG(edge_list=edges)
         assert set(graph.nodes) == {"A", "B", "C"}
-        assert graph["A"]["B"]["marks"] == {"A": "-", "B": ">"}
-        assert graph["B"]["C"]["marks"] == {"B": ">", "C": "-"}
+        assert graph.get_edge_marks("A", "B") == {"A": "-", "B": ">"}
+        assert graph.get_edge_marks("B", "C") == {"B": "-", "C": ">"}
 
     def test_is_definite_non_collider(self, pag_core, pag_complex):
         assert pag_core.is_definite_non_collider("D", "A", "C") is True
@@ -100,10 +118,10 @@ class TestPAG:
 
     def test_modify_edge(self, pag_core, pag_complex):
         pag_core.modify_edge("A", "B", mark_u="-")
-        assert pag_core["A"]["B"]["marks"]["A"] == "-"
+        assert pag_core.get_edge_marks("A", "B")["A"] == "-"
 
         pag_complex.modify_edge("A", "E", mark_u="-")
-        assert pag_complex["A"]["E"]["marks"]["A"] == "-"
+        assert pag_complex.get_edge_marks("A", "E")["A"] == "-"
 
 
 class TestPAGRules:
@@ -111,17 +129,17 @@ class TestPAGRules:
 
     def test_rule_1(self):
         pag = PAG(
-            ebunch=[
-                ("a", "b", "-", ">"),
-                ("a", "d", "-", "-"),
-                ("b", "c", "o", "-"),
+            edge_list=[
+                ("a", "b", "->"),
+                ("a", "d", "->"),
+                ("b", "c", "o->"),
             ]
         )
         expected_pag = PAG(
-            ebunch=[
-                ("a", "b", "-", ">"),
-                ("a", "d", "-", "-"),
-                ("b", "c", "-", ">"),
+            edge_list=[
+                ("a", "b", "->"),
+                ("a", "d", "->"),
+                ("b", "c", "->"),
             ]
         )
 
@@ -134,17 +152,17 @@ class TestPAGRules:
 
     def test_rule_2(self):
         pag = PAG(
-            ebunch=[
-                ("a", "b", "-", ">"),
-                ("b", "c", "-", ">"),
-                ("a", "c", "-", "o"),
+            edge_list=[
+                ("a", "b", "->"),
+                ("b", "c", "->"),
+                ("a", "c", "o->"),
             ]
         )
         expected_pag = PAG(
-            ebunch=[
-                ("a", "b", "-", ">"),
-                ("b", "c", "-", ">"),
-                ("a", "c", "-", ">"),
+            edge_list=[
+                ("a", "b", "->"),
+                ("b", "c", "->"),
+                ("a", "c", "->"),
             ]
         )
 
@@ -157,21 +175,21 @@ class TestPAGRules:
 
     def test_rule_3(self):
         pag = PAG(
-            ebunch=[
-                ("A", "B", "-", ">"),
-                ("C", "B", "-", ">"),
-                ("A", "T", "-", "o"),
-                ("C", "T", "-", "o"),
-                ("T", "B", "-", "o"),
+            edge_list=[
+                ("A", "B", "->"),
+                ("C", "B", "->"),
+                ("A", "T", "o->"),
+                ("C", "T", "o->"),
+                ("T", "B", "o->"),
             ]
         )
         expected_pag = PAG(
-            ebunch=[
-                ("A", "B", "-", ">"),
-                ("C", "B", "-", ">"),
-                ("A", "T", "-", "o"),
-                ("C", "T", "-", "o"),
-                ("T", "B", "-", ">"),  # after orientation
+            edge_list=[
+                ("A", "B", "->"),
+                ("C", "B", "->"),
+                ("A", "T", "o->"),
+                ("C", "T", "o->"),
+                ("T", "B", "o->"),  # after orientation
             ]
         )
 
@@ -184,10 +202,10 @@ class TestPAGRules:
 
     def test_rule_4_case_1(self):
         pag = PAG(
-            ebunch=[
-                ("a", "b", "-", ">"),  # a → b
-                ("b", "c", ">", "-"),  # b ◦— c (circle at b)
-                ("c", "d", "o", "-"),  # c ◦— d   (circle at c)
+            edge_list=[
+                ("a", "b", "->"),  # a → b
+                ("b", "c", "->"),  # b → c
+                ("c", "d", "o->"),  # c ◦— d   (circle at c)
             ]
         )
 
@@ -198,10 +216,10 @@ class TestPAGRules:
         # no discriminating path can exist, so rule_4 doesn't fire
         # Expected: no change
         expected_pag = PAG(
-            ebunch=[
-                ("a", "b", "-", ">"),
-                ("b", "c", ">", "-"),  # unchanged, no discriminating path
-                ("c", "d", "o", "-"),  # unchanged
+            edge_list=[
+                ("a", "b", "->"),
+                ("b", "c", "->"),  # unchanged, no discriminating path
+                ("c", "d", "o->"),  # unchanged
             ]
         )
 
@@ -214,10 +232,10 @@ class TestPAGRules:
 
     def test_rule_4_case_2(self):
         pag = PAG(
-            ebunch=[
-                ("a", "b", "-", ">"),  # a → b
-                ("b", "c", "-", ">"),  # b → c
-                ("c", "d", "o", "-"),  # c ◦— d
+            edge_list=[
+                ("a", "b", "->"),  # a → b
+                ("b", "c", "->"),  # b → c
+                ("c", "d", "o->"),  # c ◦— d
             ]
         )
 
@@ -228,14 +246,13 @@ class TestPAGRules:
         # The simple chain a→b→c doesn't create colliders, so rule_4 doesn't fire
         # Expected: no change
         expected_pag = PAG(
-            ebunch=[
-                ("a", "b", "-", ">"),
-                ("b", "c", "-", ">"),
+            edge_list=[
+                ("a", "b", "->"),
+                ("b", "c", "->"),
                 (
                     "c",
                     "d",
-                    "o",
-                    "-",
+                    "o->",
                 ),  # unchanged, as discriminating path conditions aren't met
             ]
         )
@@ -249,24 +266,24 @@ class TestPAGRules:
 
     def test_rule_5(self):
         pag = PAG(
-            ebunch=[
-                ("a", "b", "o", "o"),
-                ("a", "c", "o", "o"),
-                ("c", "d", "o", "o"),
-                ("d", "e", "o", "o"),
-                ("e", "b", "o", "o"),
+            edge_list=[
+                ("a", "b", "o->"),
+                ("a", "c", "o->"),
+                ("c", "d", "o->"),
+                ("d", "e", "o->"),
+                ("e", "b", "o->"),
             ]
         )
         # Rule 5 orients edges on uncovered circle paths with specific conditions
         # In a cycle where a-b is directly connected, rule_5 applies to paths a-c-d-e-b
         # Some but not all edges get oriented based on uncovered path conditions
         expected_pag = PAG(
-            ebunch=[
-                ("a", "b", "-", "-"),  # a-b edge gets oriented
-                ("a", "c", "o", "o"),  # a-c remains unchanged
-                ("c", "d", "-", "-"),  # c-d edge gets oriented
-                ("d", "e", "-", "-"),  # d-e edge gets oriented
-                ("e", "b", "-", "-"),  # e-b edge gets oriented
+            edge_list=[
+                ("a", "b", "--"),  # a-b edge gets oriented
+                ("a", "c", "o-"),  # a-c remains unchanged
+                ("c", "d", "--"),  # c-d edge gets oriented
+                ("d", "e", "--"),  # d-e edge gets oriented
+                ("e", "b", "--"),  # e-b edge gets oriented
             ]
         )
 
@@ -279,15 +296,15 @@ class TestPAGRules:
 
     def test_rule_6(self):
         pag = PAG(
-            ebunch=[
-                ("u", "v", "-", "-"),
-                ("v", "w", "o", "o"),
+            edge_list=[
+                ("u", "v", "--"),
+                ("v", "w", "oo"),
             ]
         )
         expected_pag = PAG(
-            ebunch=[
-                ("u", "v", "-", "-"),
-                ("v", "w", "-", "o"),
+            edge_list=[
+                ("u", "v", "--"),
+                ("v", "w", "-o"),
             ]
         )
 
@@ -301,15 +318,15 @@ class TestPAGRules:
 
     def test_rule_7(self):
         pag = PAG(
-            ebunch=[
-                ("u", "v", "-", "o"),
-                ("v", "w", "o", "o"),
+            edge_list=[
+                ("u", "v", "-o"),
+                ("v", "w", "oo"),
             ]
         )
         expected_pag = PAG(
-            ebunch=[
-                ("u", "v", "-", "o"),
-                ("v", "w", "-", "o"),
+            edge_list=[
+                ("u", "v", "-o"),
+                ("v", "w", "-o"),
             ]
         )
 
@@ -322,17 +339,17 @@ class TestPAGRules:
 
     def test_rule_8(self):
         pag = PAG(
-            ebunch=[
-                ("a", "b", "-", ">"),
-                ("b", "c", "-", ">"),
-                ("a", "c", "o", ">"),
+            edge_list=[
+                ("a", "b", "->"),
+                ("b", "c", "->"),
+                ("a", "c", "o>"),
             ]
         )
         expected_pag = PAG(
-            ebunch=[
-                ("a", "b", "-", ">"),
-                ("b", "c", "-", ">"),
-                ("a", "c", "-", ">"),
+            edge_list=[
+                ("a", "b", "->"),
+                ("b", "c", "->"),
+                ("a", "c", "->"),
             ]
         )
 
@@ -346,21 +363,21 @@ class TestPAGRules:
 
     def test_rule_9(self):
         pag = PAG(
-            ebunch=[
-                ("a", "b", "o", "o"),
-                ("a", "c", "o", "o"),
-                ("b", "d", "o", "o"),
-                ("c", "d", "o", "o"),
+            edge_list=[
+                ("a", "b", "oo"),
+                ("a", "c", "oo"),
+                ("b", "d", "oo"),
+                ("c", "d", "oo"),
             ]
         )
         # Rule 9 requires edges with circle at one end and arrow at other
         # Our test only has o--o edges, so rule 9 doesn't fire
         expected_pag = PAG(
-            ebunch=[
-                ("a", "b", "o", "o"),
-                ("a", "c", "o", "o"),
-                ("b", "d", "o", "o"),
-                ("c", "d", "o", "o"),
+            edge_list=[
+                ("a", "b", "oo"),
+                ("a", "c", "oo"),
+                ("b", "d", "oo"),
+                ("c", "d", "oo"),
             ]
         )
 
@@ -373,14 +390,14 @@ class TestPAGRules:
 
     def test_rule_10(self):
         pag = PAG(
-            ebunch=[
-                ("u", "w", "o", ">"),
-                ("v", "w", ">", "-"),
-                ("x", "w", ">", "-"),
-                ("u", "m", "-", "-"),
-                ("m", "v", "-", "-"),
-                ("u", "n", "-", "-"),
-                ("n", "x", "-", "-"),
+            edge_list=[
+                ("u", "w", "o>"),
+                ("v", "w", ">-"),
+                ("x", "w", ">-"),
+                ("u", "m", "--"),
+                ("m", "v", "--"),
+                ("u", "n", "--"),
+                ("n", "x", "--"),
             ]
         )
 
@@ -389,14 +406,14 @@ class TestPAGRules:
         # In this graph, the only paths are u-w-v and u-w-x, so both first neighbors
         # are w, which are the same node. Therefore, rule 10 does not apply.
         expected_pag = PAG(
-            ebunch=[
-                ("u", "w", "o", ">"),  # unchanged (rule 10 doesn't apply)
-                ("v", "w", ">", "-"),  # unchanged
-                ("x", "w", ">", "-"),  # unchanged
-                ("u", "m", "-", "-"),
-                ("m", "v", "-", "-"),
-                ("u", "n", "-", "-"),
-                ("n", "x", "-", "-"),
+            edge_list=[
+                ("u", "w", "o>"),  # unchanged (rule 10 doesn't apply)
+                ("v", "w", ">-"),  # unchanged
+                ("x", "w", ">-"),  # unchanged
+                ("u", "m", "--"),
+                ("m", "v", "--"),
+                ("u", "n", "--"),
+                ("n", "x", "--"),
             ]
         )
 
