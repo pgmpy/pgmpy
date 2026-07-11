@@ -570,35 +570,35 @@ class CausalInference:
             backdoor_sets = self.get_all_backdoor_adjustment_sets(X, Y)
             if len(backdoor_sets) > 0:
                 result["backdoor set"] = backdoor_sets
-        except Exception:
+        except ValueError:
             pass
 
         try:
             frontdoor_sets = self.get_all_frontdoor_adjustment_sets(X, Y)
             if len(frontdoor_sets) > 0:
                 result["frontdoor set"] = frontdoor_sets
-        except Exception:
+        except ValueError:
             pass
 
         try:
             instruments = self.get_ivs(X, Y)
             if len(instruments) > 0:
                 result["instrumental variables"] = instruments
-        except Exception:
+        except ValueError:
             pass
 
         try:
             conditional_ivs = self.get_conditional_ivs(X, Y)
             if len(conditional_ivs) > 0:
                 result["conditional instrumental variables"] = conditional_ivs
-        except Exception:
+        except ValueError:
             pass
 
         try:
             total_conditional_ivs = self.get_total_conditional_ivs(X, Y)
             if len(total_conditional_ivs) > 0:
                 result["total conditional instrumental variables"] = total_conditional_ivs
-        except Exception:
+        except ValueError:
             pass
 
         return result
