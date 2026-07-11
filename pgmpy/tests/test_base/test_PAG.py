@@ -111,9 +111,7 @@ class TestPAG:
         with pytest.raises(ValueError):
             pag_simple.get_paths_with_marks("A", "A")
 
-        paths_complex = pag_complex.get_paths_with_marks(
-            "A", "C", u_type="-", v_type=">"
-        )
+        paths_complex = pag_complex.get_paths_with_marks("A", "C", u_type="-", v_type=">")
         assert ["A", "B", "C"] in paths_complex
 
     def test_modify_edge(self, pag_core, pag_complex):
@@ -313,7 +311,6 @@ class TestPAGRules:
                 pag_new = pag.rule_6(separating_sets=None)
                 assert pag_new == expected_pag
             else:
-
                 assert pag == pag
 
     def test_rule_7(self):
@@ -358,7 +355,6 @@ class TestPAGRules:
                 pag_new = pag.rule_8(separating_sets=None)
                 assert pag_new == expected_pag
             else:
-
                 assert pag == pag
 
     def test_rule_9(self):
