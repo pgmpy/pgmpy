@@ -1,12 +1,12 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class AutoMpg(_BaseDataset):
+class AutoMpg(BaseDataset):
     """
     References
     ----------
-    - :cite:p:`lopezpaz_2015`
-    - :cite:p:`uci_auto_mpg`
+    - :footcite:t:`lopezpaz_2015`
+    - :footcite:t:`uci_auto_mpg`
     """
 
     _tags = {

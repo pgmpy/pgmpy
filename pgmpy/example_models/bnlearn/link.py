@@ -1,11 +1,11 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Link(DiscreteMixin, _BaseExampleModel):
+class Link(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`jensen_kong`
+    - :footcite:t:`jensen_kong`
     """
 
     _tags = {

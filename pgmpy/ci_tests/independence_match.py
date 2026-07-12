@@ -1,9 +1,9 @@
 from pgmpy.independencies import IndependenceAssertion
 
-from ._base import _BaseCITest, _CITestResult
+from ._base import BaseCITest, _CITestResult
 
 
-class IndependenceMatch(_BaseCITest):
+class IndependenceMatch(BaseCITest):
     """
     Check if `X ⊥⊥ Y | Z` is in `independences`.
 

@@ -1,11 +1,11 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class Superconductivity(_BaseDataset):
+class Superconductivity(BaseDataset):
     """
     References
     ----------
-    - :cite:p:`uci_superconductivity`
+    - :footcite:t:`uci_superconductivity`
     """
 
     _tags = {

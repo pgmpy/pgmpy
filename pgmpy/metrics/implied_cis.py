@@ -7,10 +7,10 @@ from tqdm import tqdm
 from pgmpy.base import DAG
 from pgmpy.ci_tests import get_ci_test
 from pgmpy.global_vars import config
-from pgmpy.metrics import _BaseUnsupervisedMetric
+from pgmpy.metrics import BaseUnsupervisedMetric
 
 
-class ImpliedCIs(_BaseUnsupervisedMetric):
+class ImpliedCIs(BaseUnsupervisedMetric):
     """
     Tests the implied Conditional Independences (CI) of the DAG in the given data.
 

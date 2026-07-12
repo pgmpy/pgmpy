@@ -1,9 +1,9 @@
 from pgmpy.base import DAG
-from pgmpy.metrics import _BaseUnsupervisedMetric
+from pgmpy.metrics import BaseUnsupervisedMetric
 from pgmpy.structure_score import get_scoring_method
 
 
-class StructureScore(_BaseUnsupervisedMetric):
+class StructureScore(BaseUnsupervisedMetric):
     """
     Uses the standard model scoring methods to give a score for each structure.
     The score doesn't have very straight forward interpretability but can be

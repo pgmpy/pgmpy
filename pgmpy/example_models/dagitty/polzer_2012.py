@@ -1,11 +1,11 @@
-from .._base import DAGMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DAGMixin
 
 
-class Polzer2012(DAGMixin, _BaseExampleModel):
+class Polzer2012(DAGMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`polzer_2012`
+    - :footcite:t:`polzer_2012`
     """
 
     _tags = {

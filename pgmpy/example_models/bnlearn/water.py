@@ -1,11 +1,11 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Water(DiscreteMixin, _BaseExampleModel):
+class Water(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`jensen_water_1989`
+    - :footcite:t:`jensen_water_1989`
     """
 
     _tags = {

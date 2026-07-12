@@ -1,11 +1,11 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class Hitters(_BaseDataset):
+class Hitters(BaseDataset):
     """
     References
     ----------
-    - :cite:p:`islr_hitters`
+    - :footcite:t:`islr_hitters`
     """
 
     _tags = {

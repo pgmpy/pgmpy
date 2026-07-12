@@ -3,10 +3,10 @@ import pandas as pd
 
 from pgmpy.utils import preprocess_data
 
-from ._base import _BaseCITest, _CITestResult, _ResidualMixin
+from ._base import BaseCITest, _CITestResult, _ResidualMixin
 
 
-class GeneralizedCov(_ResidualMixin, _BaseCITest):
+class GeneralizedCov(_ResidualMixin, BaseCITest):
     r"""
     Residual cross-covariance determinant CI test with permutation-based p-values [1].
 
@@ -67,12 +67,8 @@ class GeneralizedCov(_ResidualMixin, _BaseCITest):
 
     References
     ----------
-    .. [1] Ankan, Ankur, and Johannes Textor. "A simple unified approach to testing
-           high-dimensional conditional independences for categorical and ordinal data."
-           Proceedings of the AAAI Conference on Artificial Intelligence.
-    .. [2] Phipson, B. and Smyth, G. K. (2010). Permutation p-values should never be zero:
-           calculating exact p-values when permutations are randomly drawn. Statistical
-           Applications in Genetics and Molecular Biology, 9(1).
+    - :footcite:t:`ankan_textor_2023`
+    - :footcite:t:`phipson_smyth_2010`
     """
 
     _tags = {

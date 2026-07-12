@@ -1,11 +1,11 @@
-from .._base import DAGMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DAGMixin
 
 
-class Acid1996(DAGMixin, _BaseExampleModel):
+class Acid1996(DAGMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`acid_decampos_1996`
+    - :footcite:t:`acid_decampos_1996`
     """
 
     _tags = {

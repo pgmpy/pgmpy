@@ -3,10 +3,10 @@ import numpy as np
 import pandas as pd
 
 from pgmpy.base import DAG, PDAG
-from pgmpy.metrics import _BaseSupervisedMetric
+from pgmpy.metrics import BaseSupervisedMetric
 
 
-class AdjacencyConfusionMatrix(_BaseSupervisedMetric):
+class AdjacencyConfusionMatrix(BaseSupervisedMetric):
     """
     Computes confusion matrix based metrics for comparing causal graph skeletons.
 
@@ -66,7 +66,7 @@ class AdjacencyConfusionMatrix(_BaseSupervisedMetric):
 
     References
     ----------
-    - :cite:p:`petersen_2025`
+    - :footcite:t:`petersen_2025`
 
     """
 

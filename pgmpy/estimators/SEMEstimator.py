@@ -3,7 +3,6 @@ import pandas as pd
 import statsmodels.api as sm
 
 from pgmpy import config
-from pgmpy.inference import CausalInference
 from pgmpy.models import SEM, SEMAlg, SEMGraph
 from pgmpy.utils import compat_fns, optimize, pinverse
 
@@ -169,7 +168,7 @@ class SEMEstimator:
 
         References
         ----------
-        - :cite:p:`bollen_2014` (Table 4C.1).
+        - :footcite:t:`bollen_2014` (Table 4C.1).
 
         """
         # Initialize all the values even if the edge doesn't exist, masks would take care of that.
@@ -250,7 +249,7 @@ class SEMEstimator:
 
         References
         ----------
-        - :cite:p:`thoemmes_2013`
+        - :footcite:t:`thoemmes_2013`
         """
         # Check if given arguments are valid
         if not isinstance(data, pd.DataFrame):
@@ -454,6 +453,8 @@ class IVEstimator:
         >>> estimator = IVEstimator(model)
         >>> param, results = estimator.fit(X="X", Y="Y", data=data)
         """
+        from pgmpy.inference import CausalInference
+
         if (ivs is None) and (civs is None):
             inference = CausalInference(self.model)
             ivs = inference.get_ivs(X, Y)
