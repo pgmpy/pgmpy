@@ -1,7 +1,7 @@
 import networkx as nx
-import numpy as np
 from sklearn.base import clone
 from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
@@ -9,56 +9,47 @@ from pgmpy.causal_discovery._base import BaseCausalDiscovery
 
 class SortnRegress(BaseCausalDiscovery):
     r"""
-    Implementation of SortnRegress, a scale-invariant causal discovery method
-    based on sorting variables by an ordering criterion and iteratively
-    regressing each variable on its predecessors in that order. Two ordering
-    criteria are supported via the ``criterion`` parameter:
+    Implementation of SortnRegress, a scale-invariant causal discovery method based on sorting variables by an ordering
+    variant and iteratively regressing each variable on its predecessors in that order. Two ordering criteria are
+    supported via the ``variant`` parameter:
 
-    - ``criterion='r2'`` (default): orders variables by ascending global R²,
-      based on the phenomenon that the explainable fraction of a variable's
-      variance, captured by the coefficient of determination (R²), tends to
-      increase along the causal order in linear additive noise models
-      :cite:p:`Reisach2023`.
-    - ``criterion='varsortability'``: orders variables by ascending marginal
-      variance, based on the var-sortability phenomenon whereby variance
-      tends to increase along the causal order :cite:p:`Reisach2021`.
+    - ``variant='r2'`` (default): orders variables by ascending global R², based on the phenomenon that the
+      explainable fraction of a variable's variance, captured by the coefficient of determination (R²), tends to
+      increase along the causal order in linear additive noise models :cite:p:`Reisach2023`.
+    - ``variant='varsortability'``: orders variables by ascending marginal variance, based on the var-sortability
+      phenomenon whereby variance tends to increase along the causal order :cite:p:`Reisach2021`.
 
-    Only the ordering step (Step 2 below) differs between the two criteria;
-    the edge-selection procedure (Steps 3-4) is identical for both.
+    Only the ordering step (Step 2 below) differs between the two criteria; the edge-selection procedure (Steps 3-4) is
+    identical for both.
 
-    Given an :math:`n \times d` dataset :math:`\mathbf{X}` with columns
-    :math:`X_1, \dots, X_d`, the algorithm proceeds as follows:
+    Given an :math:`n \times d` dataset :math:`\mathbf{X}` with columns :math:`X_1, \dots, X_d`, the algorithm proceeds
+    as follows:
 
-    1. **Global R² Estimation**: For each variable :math:`X_t`, fit a linear
-       regression using all remaining variables :math:`\mathbf{X}_{\setminus \{t\}}`
-       as predictors to calculate its global R² value:
+    1. **Global R² Estimation**: For each variable :math:`X_t`, fit a linear regression using all remaining variables
+    :math:`\mathbf{X}_{ - \{t\}}` as predictors to calculate its global R² value:
 
        .. math::
 
            R^2(X_t) = 1 - \frac{\text{Var}(X_t - \widehat{X}_t)}{\text{Var}(X_t)}
 
-    2. **Candidate Causal Ordering**: Sort the variables in ascending order
-       of their estimated global R² values to form a candidate topological
-       ordering :math:`\pi`:
+    2. **Candidate Causal Ordering**: Sort the variables in ascending order of their estimated global R² values to form
+    a candidate topological ordering :math:`\pi`:
 
        .. math::
 
            R^2(X_{\pi(1)}) \leq R^2(X_{\pi(2)}) \leq \dots \leq R^2(X_{\pi(d)})
 
-    3. Iterative Regression: For each target node :math:`X_{\pi(i)}`
-       (for :math:`i = 2, \dots, d`), fit a linear regression on all preceding
-       variables (potential parents :math:`X_{\pi(1)}, \dots, X_{\pi(i-1)}`):
+    3. Iterative Regression: For each target node :math:`X_{\pi(i)}` (for :math:`i = 2, \dots, d`), fit a linear
+    regression on all preceding variables (potential parents :math:`X_{\pi(1)}, \dots, X_{\pi(i-1)}`):
 
        .. math::
 
-           X_{\pi(i)} = \sum_{j=1}^{i-1} \beta_{j,\pi(i)} X_{\pi(j)}
-                        + \varepsilon_{\pi(i)}
+           X_{\pi(i)} = \sum_{j=1}^{i-1} \beta_{j,\pi(i)} X_{\pi(j)} + \varepsilon_{\pi(i)}
 
-       where :math:`\varepsilon_{\pi(i)}` is the noise term and
-       :math:`\beta_{j,\pi(i)}` are the regression coefficients.
+       where :math:`\varepsilon_{\pi(i)}` is the noise term and :math:`\beta_{j,\pi(i)}` are the regression
+       coefficients.
 
-    4. Edge Selection: Add a directed edge :math:`X_{\pi(j)} \to X_{\pi(i)}`
-       if:
+    4. Edge Selection: Add a directed edge :math:`X_{\pi(j)} \to X_{\pi(i)}` if:
 
        .. math::
 
@@ -67,26 +58,19 @@ class SortnRegress(BaseCausalDiscovery):
     Parameters
     ----------
     threshold : float, default=0.3
-        The absolute value threshold for regression coefficients. Edges with
-        coefficients below this value are pruned to sparsify the graph.
-        A default of 0.3 is chosen to align with the benchmarking settings
-        described in Reisach et al. (2023).
+        The absolute value threshold for regression coefficients. Edges with coefficients below this value are pruned to
+        sparsify the graph. Default value of 0.3 is taken from :cite:p:`Reisach2023`.
 
     estimator : sklearn-style regression estimator, default=None
-        The regression estimator instance to use for edge selection.
-        If None, defaults to sklearn.linear_model.LinearRegression().
+        The regression estimator instance to use for edge selection. If None, defaults to
+        sklearn.linear_model.LinearRegression().
 
-    criterion : {'r2', 'varsortability'}, default='r2'
-        The criterion used to compute the candidate causal ordering in Step 2.
+    variant : {'r2', 'varsortability'}, default='r2'
+        The variant used to compute the candidate causal ordering in Step 2.
 
-        - ``'r2'``: order variables by ascending global R² (the original
-          R²-SortnRegress algorithm).
-        - ``'varsortability'``: order variables by ascending marginal
-          variance, per the var-sortability phenomenon described in
-          Reisach et al. (2021).
-
-        The edge-selection procedure (Steps 3-4) is identical for both
-        criteria; only the ordering step differs.
+        - ``'r2'``: order variables by ascending global R² (the original R²-SortnRegress algorithm).
+        - ``'varsortability'``: order variables by ascending marginal variance, per the var-sortability phenomenon
+          described in :cite:p:`Reisach2021`
 
     Attributes
     ----------
@@ -117,33 +101,37 @@ class SortnRegress(BaseCausalDiscovery):
 
     References
     ----------
-    - :cite:p:`Reisach2023`
-    - :cite:p:`Reisach2021`
+    - :footcite:t:`Reisach2023`
+    - :footcite:t:`Reisach2021`
     """
 
-    def __init__(self, threshold=0.3, estimator=None, criterion="r2"):
+    def __init__(self, variant="r2", threshold=0.3, estimator=None):
         super().__init__()
         self.threshold = threshold
         self.estimator = estimator
-        self.criterion = criterion
+        self.variant = variant
 
     def _fit(self, X):
-        if self.criterion not in ("r2", "varsortability"):
-            raise ValueError(f"criterion must be one of 'r2' or 'varsortability', got {self.criterion!r}.")
+        # Step 0: Validate the input arguments and initialize regressor.
+        if self.variant not in ("r2", "varsortability"):
+            raise ValueError(f"variant must be one of 'r2' or 'varsortability', got {self.variant!r}.")
         if any(X.std() == 0):
             constant_cols = X.columns[X.std() == 0].tolist()
             raise ValueError(
                 f"The following column(s) have zero variance (constant values): "
                 f"{constant_cols}. Please drop these columns before fitting."
             )
-        feature_names_in_ = list(X.columns)
+
         # clone the estimator or use default LinearRegression
         model_reg = clone(self.estimator) if self.estimator else LinearRegression()
 
-        all_nodes_set = set(feature_names_in_)
-        if self.criterion == "r2":
+        # Step 1: Generate the topological order.
+
+        # Step 1.1: Iterate over nodes and compute the metric R^2 or variance.
+        all_nodes_set = set(self.feature_names_in_)
+        if self.variant == "r2":
             order_values = {}
-            for target in feature_names_in_:
+            for target in self.feature_names_in_:
                 other_nodes = list(all_nodes_set - {target})
 
                 y = X[target]
@@ -152,17 +140,18 @@ class SortnRegress(BaseCausalDiscovery):
                 model_reg.fit(predictors, y)
                 predictions = model_reg.predict(predictors)
 
-                residuals_variance = np.var(y - predictions)
-                total_variance = np.var(y)
-
-                order_values[target] = 1 - (residuals_variance / total_variance)
-        else:  # "varsortability"
+                order_values[target] = r2_score(y, predictions)
+        else:
             order_values = X.var().to_dict()
+
+        # Step 1.2: Use metrics to get the topological order.
         sorted_nodes = sorted(order_values, key=order_values.get)
 
+        # Step 2: Construct the DAG using the computed metrics.
         model = DAG()
         model.add_nodes_from(sorted_nodes)
 
+        # Step 2.1: Use regression with threshold to remove edges.
         for i in range(1, len(sorted_nodes)):
             target = sorted_nodes[i]
             potential_parents = sorted_nodes[:i]
@@ -179,7 +168,7 @@ class SortnRegress(BaseCausalDiscovery):
 
         self.causal_graph_ = model
         self.adjacency_matrix_ = nx.to_pandas_adjacency(
-            self.causal_graph_, nodelist=feature_names_in_, weight=1, dtype="int"
+            self.causal_graph_, nodelist=self.feature_names_in_, weight=1, dtype="int"
         )
 
         return self
