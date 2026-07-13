@@ -66,7 +66,7 @@ def cartesian(arrays: list[Any], out: np.ndarray | None = None) -> np.ndarray:
 def _adjusted_weights(weights: np.ndarray):
     """
     Adjusts the weights such that it sums to 1. When the total weights is less
-    than or greater than 1 by 1e-3, add/substracts the difference from the last
+    than or greater than 1 by 1e-3, add/subtracts the difference from the last
     element of weights. If the difference is greater than 1e-3, throws an error.
 
     Parameters
@@ -109,7 +109,7 @@ def sample_discrete(values, weights: np.ndarray | list[np.ndarray], size=1, seed
         Size of the sample to be generated.
 
     seed: int (default: None)
-        If a value is provided, sets the seed for numpy.random.
+        If a value is provided, sets the seed for the random number generator.
 
     Returns
     -------
@@ -123,18 +123,17 @@ def sample_discrete(values, weights: np.ndarray | list[np.ndarray], size=1, seed
     >>> values = np.array(["v_0", "v_1", "v_2"])
     >>> probabilities = np.array([0.2, 0.5, 0.3])
     >>> sample_discrete(values, probabilities, 10, seed=0).tolist()
-    ['v_1', 'v_2', 'v_1', 'v_1', 'v_1', 'v_1', 'v_1', 'v_2', 'v_2', 'v_1']
+    ['v_1', 'v_1', 'v_0', 'v_0', 'v_2', 'v_2', 'v_1', 'v_2', 'v_1', 'v_2']
     """
-    if seed is not None:
-        np.random.seed(seed)
+    rng = np.random.default_rng(seed) if seed is not None else np.random
     weights = compat_fns.to_numpy(weights)
     if weights.ndim == 1:
-        return np.random.choice(compat_fns.to_numpy(values), size=size, p=_adjusted_weights(weights))
+        return rng.choice(compat_fns.to_numpy(values), size=size, p=_adjusted_weights(weights))
     else:
         samples = np.zeros(size, dtype=int)
         unique_weights, counts = np.unique(weights, axis=0, return_counts=True)
         for index, size in enumerate(counts):
-            samples[(weights == unique_weights[index]).all(axis=1)] = np.random.choice(
+            samples[(weights == unique_weights[index]).all(axis=1)] = rng.choice(
                 compat_fns.to_numpy(values),
                 size=size,
                 p=_adjusted_weights(unique_weights[index]),
@@ -167,7 +166,7 @@ def sample_discrete_maps(
         Size of the sample to be generated.
 
     seed: int (default: None)
-        If a value is provided, sets the seed for numpy.random.
+        If a value is provided, sets the seed for the random number generator.
 
     Returns
     -------
@@ -181,10 +180,9 @@ def sample_discrete_maps(
     >>> values = np.array(["v_0", "v_1", "v_2"])
     >>> probabilities = np.array([0.2, 0.5, 0.3])
     >>> sample_discrete(values, probabilities, 10, seed=0).tolist()
-    ['v_1', 'v_2', 'v_1', 'v_1', 'v_1', 'v_1', 'v_1', 'v_2', 'v_2', 'v_1']
+    ['v_1', 'v_1', 'v_0', 'v_0', 'v_2', 'v_2', 'v_1', 'v_2', 'v_1', 'v_2']
     """
-    if seed is not None:
-        np.random.seed(seed)
+    rng = np.random.default_rng(seed) if seed is not None else np.random
 
     # TODO: Remove this conversion and find a way to do this natively in torch.
     states = np.array(states)
@@ -196,7 +194,7 @@ def sample_discrete_maps(
     unique_weight_indices, counts = np.unique(weight_indices, return_counts=True)
 
     for weight_size, weight_index in zip(counts, unique_weight_indices):
-        samples[(weight_indices == weight_index)] = np.random.choice(
+        samples[(weight_indices == weight_index)] = rng.choice(
             states, size=weight_size, p=_adjusted_weights(index_to_weight[weight_index])
         )
     return samples

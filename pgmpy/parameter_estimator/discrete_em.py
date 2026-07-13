@@ -223,13 +223,13 @@ class DiscreteEM(DiscreteParameterEstimator):
         original_cols = set(data.columns)
         data = data.dropna(axis=1, how="all")
         dropped_cols = original_cols - set(data.columns)
-        new_latents = [col for col in dropped_cols if col not in model.latents]
+        new_latents = [col for col in dropped_cols if col in model.nodes() and col not in model.latents]
         if new_latents:
             logger.warning(
                 f"Columns {new_latents} have all missing values and are not marked as latent. "
                 "Treating them as latent variables."
             )
-            model.latents.update(new_latents)
+            model.latents = set(model.latents) | set(new_latents)
 
         original_rows_count = data.shape[0]
         data = data.dropna()
@@ -304,7 +304,7 @@ class DiscreteEM(DiscreteParameterEstimator):
         # Step 3.1: Partition nodes.
         #           `fixed_cpd_vars` = nodes with no latent involvement; their CPDs are the EM fixed point and
         #           can be estimated once from observed data. `updatable_vars` are refit every EM iteration.
-        children_of_latents = set(chain.from_iterable(self._model.get_children(var) for var in self._model.latents))
+        children_of_latents = self._model.get_children(self._model.latents)
         fixed_cpd_vars = [
             var
             for var in self._model.nodes()

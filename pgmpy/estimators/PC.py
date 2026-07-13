@@ -1,76 +1,34 @@
+"""Deprecated compatibility shim for :class:`pgmpy.causal_discovery.PC`."""
+
 import warnings
 from collections.abc import Callable, Hashable
-from itertools import permutations
 
 import networkx as nx
 import pandas as pd
 
 from pgmpy.base import DAG, PDAG, UndirectedGraph
-from pgmpy.causal_discovery import ExpertKnowledge
+from pgmpy.causal_discovery import PC as _PC
 from pgmpy.estimators.BaseConstraintEstimator import BaseConstraintEstimator
-from pgmpy.estimators.CITests import ci_registry
+from pgmpy.estimators.ExpertKnowledge import ExpertKnowledge
 from pgmpy.independencies import Independencies
 
 
 class PC(BaseConstraintEstimator):
     """
-    Class for constraint-based estimation of DAGs using the PC algorithm
-    from a given data set.  Identifies (conditional) dependencies in data
-    set using statistical independence tests and estimates a DAG pattern
-    that satisfies the identified dependencies. The DAG pattern can then be
-    completed to a faithful DAG, if possible.
+    Deprecated: use :class:`pgmpy.causal_discovery.PC` instead.
 
-    When used with expert knowledge, the following flowchart can help you figure
-    out the expected results based on different choices of parameters and the
-    structure learned from the data.
-
-                                        ┌──────────────────┐    No      ┌─────────────┐
-                                        │ Expert Knowledge ├──────────► │  Normal PC  │
-                                        │    specified?    │            │    run      │
-                                        └────────┬─────────┘            └─────────────┘
-                                                 │
-                                            Yes  │
-                                                 │
-                                                 ▼
-                                        ┌──────────────────┐
-                                        │  Enforce expert  │
-                                        │    knowledge?    │
-                                        └────────┬─────────┘
-                                                 │
-                                                 │
-                                Yes              │                No
-                       ┌─────────────────────────┴───────────────────────┐
-                       │                                                 │
-                       ▼                                                 ▼
-        ┌──────────────────────────────┐                     ┌─────────────────────────┐
-        │                              │                     │                         │
-        │ 1) Forbidden edges are       │                     │ Conflicts with learned  │
-        │    removed from the skeleton │                     │   structure (opposite   │
-        │                              │                     │  edge orientations)?    │
-        │ 2) Required edges will be    │                     │                         │
-        │    present in the final      │                     └───────────┬─────────────┘
-        │    model (but direction is   │                                 │
-        │    not guaranteed)           │                ┌────────────────┴──────────────────┐
-        │                              │            Yes │                                   │ No
-        └──────────────────────────────┘                │                                   │
-                                                        ▼                                   ▼
-                                            ┌───────────────────┐                ┌──────────────────┐
-                                            │ Conflicting edges │                │ Expert knowledge │
-                                            │    are ignored    │                │  applied fully   │
-                                            └───────────────────┘                └──────────────────┘
+    Class for constraint-based estimation of DAGs using the PC algorithm.
+    This class delegates to the canonical implementation in
+    `pgmpy.causal_discovery`; refer to its documentation for details.
 
     Parameters
     ----------
-    data: pandas DataFrame object
-        dataframe object where each column represents one variable.  (If some
-        values in the data are missing the data cells should be set to
-        `numpy.nan`.  Note that pandas converts each column containing
-        `numpy.nan`s to dtype `float`.)
+    data: pandas DataFrame object, optional
+        dataframe object where each column represents one variable.
 
-    References
-    ----------
-    - :cite:p:`koller_friedman_2009` (Section 18.2).
-    - :cite:p:`neapolitan_2009` (Section 10.1.2, page 550).
+    independencies: pgmpy.independencies.Independencies, optional
+        Known independence assertions to estimate the structure from instead
+        of (or in addition to) data.
     """
 
     def __init__(
@@ -80,11 +38,27 @@ class PC(BaseConstraintEstimator):
         **kwargs,
     ) -> None:
         warnings.warn(
-            "PC is deprecated and will be removed in v1.3.0. Please use pgmpy.causal_discovery.PC instead.",
+            "PC is deprecated and will be removed in v2.0. Please use pgmpy.causal_discovery.PC instead.",
             FutureWarning,
             stacklevel=2,
         )
         super().__init__(data=data, independencies=independencies, **kwargs)
+
+    @staticmethod
+    def orient_colliders(
+        skeleton: UndirectedGraph,
+        separating_sets: dict[frozenset, set],
+        temporal_ordering: dict[Hashable, int] = dict(),
+    ) -> PDAG:
+        """
+        Orients the edges that form v-structures in a graph skeleton based on
+        information from `separating_sets` to form a DAG pattern (PDAG).
+        Delegates to :meth:`pgmpy.causal_discovery.PC._orient_colliders`.
+        """
+        est = _PC()
+        est.skeleton_ = skeleton
+        est.separating_sets_ = separating_sets
+        return est._orient_colliders(temporal_ordering=temporal_ordering)
 
     def estimate(
         self,
@@ -100,255 +74,49 @@ class PC(BaseConstraintEstimator):
         **kwargs,
     ) -> DAG | PDAG | tuple[nx.Graph, dict[tuple[str, str], set[str]]]:
         """
-        Estimates a DAG/PDAG from the given dataset using the PC algorithm which
-        is a constraint-based structure learning algorithm[1]. The independencies
-        in the dataset are identified by doing statistical independence test. This
-        method returns a DAG/PDAG structure which is faithful to the independencies
-        implied by the dataset.
+        Estimates a DAG/PDAG from the data or independencies by delegating to
+        :class:`pgmpy.causal_discovery.PC`; refer to its documentation for
+        parameter details.
 
-        Parameters
-        ----------
-        variant: str (one of "orig", "stable", "parallel")
-            The variant of PC algorithm to run.
-                "orig": The original PC algorithm. Might not give the same
-                        results in different runs but does less independence
-                        tests compared to stable.
-                "stable": Gives the same result in every run but does needs to
-                        do more statistical independence tests.
-                "parallel": Parallel version of PC Stable. Can run on multiple
-                        cores with the same result on each run.
-
-        ci_test: str or fun
-            The statistical test to use for testing conditional independence in
-            the dataset. If `str` values should be one of:
-                "independence_match": If using this option, an additional parameter
-                        `independencies` must be specified.
-                "chi_square": Uses the Chi-Square independence test. This works
-                        only for discrete datasets.
-                "pearsonr": Uses the partial correlation based on pearson
-                        correlation coefficient to test independence. This works
-                        only for continuous datasets.
-                "g_sq": G-test. Works only for discrete datasets.
-                "log_likelihood": Log-likelihood test. Works only for discrete dataset.
-                "freeman_tuckey": Freeman Tuckey test. Works only for discrete dataset.
-                "modified_log_likelihood": Modified Log Likelihood test. Works only for discrete variables.
-                "neyman": Neyman test. Works only for discrete variables.
-                "cressie_read": Cressie Read test. Works only for discrete variables.
-
-        return_type: str (one of "dag", "cpdag", "pdag", "skeleton")
-            The type of structure to return.
-
-            If `return_type=pdag` or `return_type=cpdag`: a partially directed structure
-                is returned.
-            If `return_type=dag`, a fully directed structure is returned if it
-                is possible to orient all the edges.
-            If `return_type="skeleton", returns an undirected graph along
-                with the separating sets.
-
-        significance_level: float (default: 0.01)
-            The statistical tests use this value to compare with the p-value of
-            the test to decide whether the tested variables are independent or
-            not. Different tests can treat this parameter differently:
-                1. Chi-Square: If p-value > significance_level, it assumes that the
-                    independence condition satisfied in the data.
-                2. pearsonr: If p-value > significance_level, it assumes that the
-                    independence condition satisfied in the data.
-
-        max_cond_vars: int (default: 5)
-            The maximum number of variables to condition on while testing
-            independence.
-
-        expert_knowledge: pgmpy.estimators.ExpertKnowledge instance
-            Expert knowledge to be used with the algorithm. Expert knowledge
-            includes required/forbidden edges in the final graph, temporal
-            information about the variables etc. Please refer
-            pgmpy.estimators.ExpertKnowledge class for more details.
-
-        enforce_expert_knowledge: boolean (default: False)
-            If True, the algorithm modifies the search space according to the
-            edges specified in expert knowledge object. This implies the following:
-                1. For every edge (u, v) specified in `forbidden_edges`, there will
-                    be no edge between u and v.
-                2. For every edge (u, v) specified in `required_edges`, one of the
-                    following would be present in the final model: u -> v, u <-
-                    v, or u - v (if CPDAG is returned).
-
-            If False, the algorithm attempts to make the edge orientations as
-            specified by expert knowledge after learning the skeleton. This
-            implies the following:
-                1. For every edge (u, v) specified in `forbidden_edges`, the final
-                    graph would have either v <- u or no edge except if u -> v is part
-                    of a collider structure in the learned skeleton.
-                2. For every edge (u, v) specified in `required_edges`, the final graph
-                    would either have u -> v or no edge except if v <- u is part of a
-                    collider structure in the learned skeleton.
-
-        n_jobs: int (default: -1)
-            The number of jobs to run in parallel.
-
-        show_progress: bool (default: True)
-            If True, shows a progress bar while running the algorithm.
+        Notes
+        -----
+        `enforce_expert_knowledge` is retained for backwards compatibility but
+        no longer changes behavior: the canonical implementation always
+        enforces expert knowledge (required/forbidden edges restrict the
+        skeleton search and orientations are applied as hard constraints).
 
         Returns
         -------
         Estimated model: pgmpy.base.DAG, pgmpy.base.PDAG, or tuple(networkx.UndirectedGraph, dict)
-            The estimated model structure:
-                1. Partially Directed Graph (PDAG) if `return_type='pdag'` or `return_type='cpdag'`.
-                2. Directed Acyclic Graph (DAG) if `return_type='dag'`.
-                3. (nx.Graph, separating sets) if `return_type='skeleton'`.
-
-        References
-        ----------
-        - Original PC: :cite:p:`spirtes_glymour_scheines_2001`
-        - Stable PC: :cite:p:`colombo_maathuis_2014`
-        - Parallel PC: :cite:p:`le_2019`
-        - Expert knowledge: :cite:p:`meek_1995`
-
-        Examples
-        --------
-        >>> from pgmpy.example_models import load_model
-        >>> from pgmpy.estimators import PC
-        >>> model = load_model("bnlearn/alarm")
-        >>> data = model.simulate(n_samples=1000, seed=42)
-        >>> est = PC(data)
-        >>> model_chi = est.estimate(ci_test="chi_square")
-        >>> model_chi  # doctest: +ELLIPSIS
-        <pgmpy.base.PDAG.PDAG object at 0x...>
-        >>> print(len(model_chi.edges()))
-        38
-        >>> model_gsq, _ = est.estimate(ci_test="g_sq", return_type="skeleton")
-        >>> model_gsq  # doctest: +ELLIPSIS
-        <networkx.classes.graph.Graph object at 0x...>
-        >>> print(len(model_gsq.edges()))
-        28
+            The estimated model structure. For `return_type="skeleton"`,
+            returns a tuple of the skeleton and the separating sets.
         """
-        # Step 0: Do checks that the specified parameters are correct, else throw meaningful error.
-        if variant not in ("orig", "stable", "parallel"):
-            raise ValueError(f"variant must be one of: orig, stable, or parallel. Got: {variant}")
+        if self.data is None:
+            raise ValueError(
+                "Estimating the structure from independencies alone (without `data`) is no "
+                "longer supported. Please provide `data` to the constructor."
+            )
 
-        ci_test = ci_registry.get_test(ci_test, data=self.data)
+        if return_type.lower() == "skeleton":
+            return self.build_skeleton(
+                variant=variant,
+                ci_test=ci_test,
+                significance_level=significance_level,
+                max_cond_vars=max_cond_vars,
+                expert_knowledge=expert_knowledge,
+                n_jobs=n_jobs,
+                show_progress=show_progress,
+                **kwargs,
+            )
 
-        if expert_knowledge is None:
-            expert_knowledge = ExpertKnowledge()
-
-        if expert_knowledge.search_space:
-            expert_knowledge.limit_search_space(self.data.columns)
-
-        # Step 1: Run the PC algorithm to build the skeleton and get the separating sets.
-        skel, separating_sets = self.build_skeleton(
+        est = _PC(
             variant=variant,
             ci_test=ci_test,
+            return_type=return_type.lower(),
             significance_level=significance_level,
             max_cond_vars=max_cond_vars,
             expert_knowledge=expert_knowledge,
-            enforce_expert_knowledge=enforce_expert_knowledge,
             n_jobs=n_jobs,
             show_progress=show_progress,
-            **kwargs,
         )
-
-        if return_type.lower() == "skeleton":
-            return skel, separating_sets
-
-        # Step 2: Orient the edges based on collider structures.
-        pdag = self.orient_colliders(skel, separating_sets, expert_knowledge.temporal_ordering)
-
-        # Step 3: Either return the CPDAG, integrate expert knowledge or fully orient the edges to build a DAG.
-        if expert_knowledge.temporal_order != [[]]:
-            pdag = expert_knowledge.apply_expert_knowledge(pdag)
-            pdag = pdag.apply_meeks_rules(apply_r4=True)
-
-        elif not enforce_expert_knowledge:
-            pdag = pdag.apply_meeks_rules(apply_r4=False)
-            pdag = expert_knowledge.apply_expert_knowledge(pdag)
-            pdag = pdag.apply_meeks_rules(apply_r4=True)
-
-        else:
-            pdag = pdag.apply_meeks_rules(apply_r4=False)
-
-        if self.data is not None:
-            pdag.add_nodes_from(set(self.data.columns) - set(pdag.nodes()))
-
-        if return_type.lower() in ("pdag", "cpdag"):
-            return pdag
-        elif return_type.lower() == "dag":
-            return pdag.to_dag()
-        else:
-            raise ValueError(f"return_type must be one of: dag, pdag, cpdag, or skeleton. Got: {return_type}")
-
-    @staticmethod
-    def orient_colliders(
-        skeleton: UndirectedGraph,
-        separating_sets: dict[frozenset, set],
-        temporal_ordering: dict[Hashable, int] = dict(),
-    ) -> PDAG:
-        """
-        Orients the edges that form v-structures in a graph skeleton
-        based on information from `separating_sets` to form a DAG pattern (PDAG).
-
-        Parameters
-        ----------
-        skeleton: nx.Graph
-            An undirected graph skeleton as e.g. produced by the
-            estimate_skeleton method.
-
-        separating_sets: dict
-            A dict containing for each pair of not directly connected nodes a
-            separating set ("witnessing set") of variables that makes them
-            conditionally independent.
-
-        Returns
-        -------
-        Model after edge orientation: pgmpy.base.PDAG
-            An estimate for the DAG pattern of the BN underlying the data. The
-            graph might contain some nodes with both-way edges (X->Y and Y->X).
-            Any completion by (removing one of the both-way edges for each such
-            pair) results in a I-equivalent Bayesian network DAG.
-
-        References
-        ----------
-        - :cite:p:`neapolitan_2009` (Section 10.1.2, Algorithm 10.2, page 550).
-
-        Examples
-        --------
-        >>> import pandas as pd
-        >>> import numpy as np
-        >>> from pgmpy.estimators import PC
-        >>> rng = np.random.default_rng(42)
-        >>> data = pd.DataFrame(rng.integers(0, 4, size=(5000, 3)), columns=list("ABD"))
-        >>> data["C"] = data["A"] - data["B"]
-        >>> data["D"] += data["A"]
-        >>> c = PC(data)
-        >>> skel, sep_sets = c.estimate(return_type="skeleton")
-        >>> pdag = PC.orient_colliders(skel, sep_sets)
-        >>> sorted(pdag.edges())
-        [('A', 'C'), ('A', 'D'), ('B', 'C'), ('D', 'A'), ('D', 'C')]
-        """
-
-        pdag = skeleton.to_directed()
-
-        # 1) for each X-Z-Y, if Z not in the separating set of X,Y, then orient edges
-        # as X->Z<-Y (Algorithm 3.4 in Koller & Friedman PGM, page 86)
-        for X, Y in permutations(sorted(pdag.nodes()), 2):
-            if not skeleton.has_edge(X, Y):
-                for Z in set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y)):
-                    if Z not in separating_sets[frozenset((X, Y))]:
-                        if (temporal_ordering == dict()) or (
-                            (temporal_ordering[Z] >= temporal_ordering[X])
-                            and (temporal_ordering[Z] >= temporal_ordering[Y])
-                        ):
-                            pdag.remove_edges_from([(Z, X), (Z, Y)])
-
-        edges = set(pdag.edges())
-        undirected_edges = set()
-        directed_edges = set()
-        for u, v in edges:
-            if (v, u) in edges:
-                undirected_edges.add(tuple(sorted((u, v))))
-            else:
-                directed_edges.add((u, v))
-
-        pdag_oriented = PDAG(directed_ebunch=directed_edges, undirected_ebunch=undirected_edges)
-        pdag_oriented.add_nodes_from(pdag.nodes())
-
-        return pdag_oriented
+        return est.fit(self.data, independencies=self.independencies).causal_graph_

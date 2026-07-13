@@ -72,7 +72,7 @@ def test_shd_invalid_edge_reverse_penalty():
 
 
 def test_shd_pdag_directed_vs_undirected_edge(shd_scorer, shd_scorer_double):
-    pdag = PDAG(directed_ebunch=[(1, 2)], undirected_ebunch=[(2, 3)])
+    pdag = PDAG(edge_list=[(1, 2, "->"), (2, 3, "--")])
     dag = DAG([(1, 2), (2, 3)])
 
     assert shd_scorer(pdag, dag) == 1
@@ -82,7 +82,7 @@ def test_shd_pdag_directed_vs_undirected_edge(shd_scorer, shd_scorer_double):
 
 
 def test_shd_pdag_undirected_edge_vs_missing_edge(shd_scorer, shd_scorer_double):
-    pdag = PDAG(undirected_ebunch=[(1, 2)])
+    pdag = PDAG(edge_list=[(1, 2, "--")])
     pdag.add_node(3)
     dag = DAG()
     dag.add_nodes_from([1, 2, 3])
@@ -94,8 +94,8 @@ def test_shd_pdag_undirected_edge_vs_missing_edge(shd_scorer, shd_scorer_double)
 
 
 def test_shd_pdag_reversed_directed_edge(shd_scorer, shd_scorer_double):
-    pdag1 = PDAG(directed_ebunch=[(1, 2)])
-    pdag2 = PDAG(directed_ebunch=[(2, 1)])
+    pdag1 = PDAG(edge_list=[(1, 2, "->")])
+    pdag2 = PDAG(edge_list=[(2, 1, "->")])
 
     assert shd_scorer(pdag1, pdag2) == 1
     assert shd_scorer(pdag2, pdag1) == 1

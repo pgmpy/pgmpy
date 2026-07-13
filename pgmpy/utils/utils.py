@@ -49,7 +49,7 @@ def get_example_model(model: str):
                            depending on the type of dataset.
     """
     warnings.warn(
-        """`get_example_model` is deprecated and will be removed in v1.3.0. Please use `pgmpy.example_models.load_model`
+        """`get_example_model` is deprecated and will be removed in v2.0. Please use `pgmpy.example_models.load_model`
         instead.""",
         FutureWarning,
         stacklevel=2,
@@ -257,81 +257,6 @@ def discretize(data, cardinality, labels=dict(), method="rounding"):
             df_copy[column] = pd.qcut(df_copy[column], q=cardinality[column], labels=labels.get(column))
 
     return df_copy
-
-
-def llm_pairwise_orient(
-    x,
-    y,
-    descriptions,
-    system_prompt=None,
-    llm_model="gemini/gemini-1.5-flash",
-    **kwargs,
-):
-    """
-    Asks a Large Language Model (LLM) for the
-     orientation of an edge between `x` and `y`.
-
-    Parameters
-    ----------
-    x: str
-        The first variable's name
-
-    y: str
-        The second variable's name
-
-    descriptions: dict
-        A dict of the form {variable: description}
-          containing text description of the variables.
-
-    system_prompt: str
-        A system prompt to give the LLM.
-
-    llm_model: str (default: gemini/gemini-pro)
-        The LLM model to use. Please refer to litellm
-          documentation (https://docs.litellm.ai/docs/providers)
-        for available model options. Default is gemini-pro.
-
-    kwargs: kwargs
-        Any additional parameters to pass to litellm.completion method.
-
-    Returns
-    -------
-    tuple:
-        Returns a tuple (source, target) representing the edge direction.
-    """
-    try:
-        from litellm import completion
-    except ImportError as e:
-        raise ImportError(
-            f"{e}. litellm is required for using"
-            " LLM based pairwise orientation. "
-            "Please install using: pip install litellm"
-        ) from None
-
-    if system_prompt is None:
-        system_prompt = "You are an expert in Causal Inference"
-
-    prompt = f""" {system_prompt}. You are
-      given two variables with the following descriptions:
-        <A>: {descriptions[x]}
-        <B>: {descriptions[y]}
-
-        Which of the following two options is the most likely causal direction between them:
-        1. <A> causes <B>
-        2. <B> causes <A>
-
-        Return a single number (1 or 2) as your answer. I do not need the reasoning behind it.
-        Do not add any formatting in the answer.
-        """
-    response = completion(model=llm_model, messages=[{"role": "user", "content": prompt}])
-    response = response.choices[0].message.content
-    response_txt = response.strip().lower().replace("*", "")
-    if response_txt in ("a", "1"):
-        return (x, y)
-    elif response_txt in ("b", "2"):
-        return (y, x)
-    else:
-        raise ValueError("Results from the LLM are unclear. Try calling the function again.")
 
 
 def manual_pairwise_orient(x, y):

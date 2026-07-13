@@ -46,8 +46,8 @@ class AIC(LogLikelihood):
 
     References
     ----------
-    - :cite:p:`koller_friedman_2009`
-    - :cite:p:`liao_2022`
+    - :footcite:t:`koller_friedman_2009`
+    - :footcite:t:`liao_2022`
     """
 
     _tags = {
