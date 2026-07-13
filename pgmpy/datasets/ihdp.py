@@ -79,43 +79,15 @@ class IHDPDataset(BaseSimulatedDataset):
         "is_mixed": True,
     }
 
-    def __init__(
-        self,
+    @classmethod
+    def load_dataframe(
+        cls,
+        n_samples: int | None = None,
+        seed: int | None = None,
         setting: str = "B",
         omega: float = 4.0,
         noise: Any = None,
-        seed: int | None = None,
-    ):
-        if setting not in ("A", "B"):
-            raise ValueError(f"Unknown setting '{setting}'. Supported: 'A', 'B'.")
-
-        self.setting = setting
-        self.omega = omega
-        self.noise = noise
-        self.seed = seed
-
-        # Load real covariates + treatment (fixed across replications).
-        self._covariates, self._treatment = self._load_covariates()
-
-        # Sample coefficients (varies per seed = one "replication").
-        # Distribution depends on setting — see _sample_coefficients.
-        rng = np.random.default_rng(seed)
-        self._beta = self._sample_coefficients(self._covariates.shape[1], rng, setting)
-        self._rng = rng
-
-        # Compute response surfaces (deterministic given X and beta).
-        if setting == "A":
-            self._mu0, self._mu1 = self._response_surface_a(self._covariates, self._beta, omega)
-        else:
-            mu0, raw_mu1 = self._response_surface_b(self._covariates, self._beta)
-            # Solve for the additive shift so the realized ATT among
-            # treated units equals `omega` exactly — this is the
-            # calibration step from Hill (2011) / NPCI / EconML's
-            # ihdp_surface_B.
-            shift = (raw_mu1 - mu0)[self._treatment == 1].mean() - omega
-            self._mu0, self._mu1 = mu0, raw_mu1 - shift
-
-    def load_dataframe(self, n_samples: int | None = None) -> pd.DataFrame:
+    ) -> pd.DataFrame:
         """Generate one replication of the IHDP semi-synthetic dataset.
 
         Parameters
@@ -123,6 +95,14 @@ class IHDPDataset(BaseSimulatedDataset):
         n_samples : int, optional
             Ignored for IHDP. Sample size is fixed at 747 (real
             covariates). A warning is issued if provided.
+        seed : int, optional
+            Random seed for reproducible coefficient sampling and noise.
+        setting : str, default ``"B"``
+            Response surface setting. See class docstring.
+        omega : float, default 4.0
+            Target ATT. See class docstring.
+        noise : distribution object, optional
+            Custom noise distribution. See class docstring.
 
         Returns
         -------
@@ -130,6 +110,9 @@ class IHDPDataset(BaseSimulatedDataset):
             DataFrame with columns: ``treatment``, ``y_factual``,
             ``y_cfactual``, ``mu0``, ``mu1``, ``x1`` through ``x25``.
         """
+        if setting not in ("A", "B"):
+            raise ValueError(f"Unknown setting '{setting}'. Supported: 'A', 'B'.")
+
         if n_samples is not None:
             warnings.warn(
                 "n_samples is ignored for IHDP; sample size is fixed at 747.",
@@ -137,37 +120,57 @@ class IHDPDataset(BaseSimulatedDataset):
                 stacklevel=2,
             )
 
-        n = len(self._treatment)
+        # Load real covariates + treatment (fixed across replications).
+        covariates, treatment = cls._load_covariates()
+        n = len(treatment)
 
-        if self.noise is None:
-            noise_0 = self._rng.normal(0, 1, size=n)
-            noise_1 = self._rng.normal(0, 1, size=n)
-        elif hasattr(self.noise, "sample"):
-            noise_0 = np.asarray(self.noise.sample(n_samples=n)).flatten()
-            noise_1 = np.asarray(self.noise.sample(n_samples=n)).flatten()
-        elif hasattr(self.noise, "rvs"):
-            noise_0 = np.asarray(self.noise.rvs(size=n)).flatten()
-            noise_1 = np.asarray(self.noise.rvs(size=n)).flatten()
+        # Sample coefficients (varies per seed = one "replication").
+        rng = np.random.default_rng(seed)
+        beta = cls._sample_coefficients(covariates.shape[1], rng, setting)
+
+        # Compute response surfaces (deterministic given X and beta).
+        if setting == "A":
+            mu0, mu1 = cls._response_surface_a(covariates, beta, omega)
         else:
-            raise TypeError(f"noise must have a .sample() or .rvs() method, got {type(self.noise).__name__}.")
+            mu0, raw_mu1 = cls._response_surface_b(covariates, beta)
+            # Solve for the additive shift so the realized ATT among
+            # treated units equals `omega` exactly — this is the
+            # calibration step from Hill (2011) / NPCI / EconML's
+            # ihdp_surface_B.
+            shift = (raw_mu1 - mu0)[treatment == 1].mean() - omega
+            mu1 = raw_mu1 - shift
 
-        y0 = self._mu0 + noise_0
-        y1 = self._mu1 + noise_1
+        # Sample noise (duck-typed: skpro .sample() → scipy .rvs() → default).
+        if noise is None:
+            noise_0 = rng.normal(0, 1, size=n)
+            noise_1 = rng.normal(0, 1, size=n)
+        elif hasattr(noise, "sample"):
+            noise_0 = np.asarray(noise.sample(n_samples=n)).flatten()
+            noise_1 = np.asarray(noise.sample(n_samples=n)).flatten()
+        elif hasattr(noise, "rvs"):
+            noise_0 = np.asarray(noise.rvs(size=n)).flatten()
+            noise_1 = np.asarray(noise.rvs(size=n)).flatten()
+        else:
+            raise TypeError(f"noise must have a .sample() or .rvs() method, got {type(noise).__name__}.")
 
-        t = self._treatment
+        y0 = mu0 + noise_0
+        y1 = mu1 + noise_1
+
+        t = treatment
         y_factual = np.where(t == 1, y1, y0)
         y_cfactual = np.where(t == 1, y0, y1)
 
-        result = pd.DataFrame(self._covariates, columns=[f"x{i}" for i in range(1, 26)])
+        result = pd.DataFrame(covariates, columns=[f"x{i}" for i in range(1, 26)])
         result.insert(0, "treatment", t)
         result.insert(1, "y_factual", y_factual)
         result.insert(2, "y_cfactual", y_cfactual)
-        result.insert(3, "mu0", self._mu0)
-        result.insert(4, "mu1", self._mu1)
+        result.insert(3, "mu0", mu0)
+        result.insert(4, "mu1", mu1)
 
         return result
 
-    def load_ground_truth(self) -> DAG:
+    @classmethod
+    def load_ground_truth(cls, **sim_kwargs) -> DAG:
         """Return the ground-truth causal DAG with roles.
 
         The returned DAG has roles set for direct use with pgmpy's
@@ -296,7 +299,7 @@ class IHDPDataset(BaseSimulatedDataset):
 
         Returns the **uncalibrated** ``mu1`` — the omega shift depends
         on the treatment assignment, so calibration happens in
-        ``__init__`` instead.
+        ``load_dataframe`` instead.
 
         .. math::
 
