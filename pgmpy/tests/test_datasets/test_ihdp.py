@@ -68,6 +68,8 @@ def test_load_ihdp_dataset():
 
 def test_ihdp_dataset_tags():
     ds = load_dataset("ihdp", seed=42)
+    assert ds.tags["n_variables"] == 30
+    assert ds.tags["n_samples"] == 747
     assert ds.tags["is_simulated"] is True
     assert ds.tags["has_ground_truth"] is True
     assert ds.tags["is_continuous"] is True
