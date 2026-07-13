@@ -52,7 +52,7 @@ class TestComputeVarsortability:
         assert 0.0 <= score < 0.3
 
     def test_vacuously_true_for_empty_graph(self):
-        """A graph with no edges has no causal paths to violate, so the score is 1.0."""
+        # A graph with no edges has no causal paths to violate, so the score is 1.0.
         np.random.seed(42)
         data = pd.DataFrame(np.random.randn(100, 3), columns=["X", "Y", "Z"])
         dag = DAG()
@@ -70,11 +70,6 @@ class TestComputeVarsortability:
         assert compute_varsortability(data, dag) == 1.0
 
     def test_near_equal_variance_weighted_as_half(self):
-        """
-        A single edge between two variables with exactly equal marginal
-        variance should count as neither ordered nor disordered, and be
-        weighted 0.5 per the tolerance band around a ratio of 1.
-        """
         np.random.seed(42)
         x = np.random.normal(0, 1, 1000)
         data = pd.DataFrame({"X": x, "Y": x.copy()})
@@ -84,7 +79,6 @@ class TestComputeVarsortability:
         assert score == pytest.approx(0.5)
 
     def test_tol_widens_near_equal_band(self):
-        """A looser tol should classify more near-equal ratios as 0.5 rather than ordered."""
         np.random.seed(42)
         n = 1000
         x = np.random.normal(0, 1.0, n)
@@ -99,7 +93,6 @@ class TestComputeVarsortability:
         assert tight_score != loose_score
 
     def test_diamond_graph_multiple_paths(self):
-        """Score aggregates correctly across multiple directed paths (X->Y->W, X->Z->W)."""
         np.random.seed(1)
         n = 2000
         x = np.random.normal(0, 0.5, n)
@@ -113,7 +106,6 @@ class TestComputeVarsortability:
         assert score == 1.0
 
     def test_disconnected_node_does_not_affect_score(self):
-        """A node with no edges contributes no paths and shouldn't drag the score down."""
         np.random.seed(42)
         n = 1000
         data = pd.DataFrame(
@@ -153,7 +145,6 @@ class TestVarSortabilityClass:
         assert DAG in VarSortability._tags["supported_graph_types"]
 
     def test_evaluate_matches_compute_varsortability(self, increasing_variance_chain):
-        """The class is a thin wrapper: evaluate() must delegate to compute_varsortability()."""
         data, dag = increasing_variance_chain
         metric = VarSortability()
 
