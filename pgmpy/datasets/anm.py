@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import numbers
 import warnings
 from typing import Any
 
@@ -78,6 +79,12 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
         else:
             self.dag = DAG.get_random(n_nodes=n_nodes, edge_prob=edge_prob, seed=seed)
 
+        if isinstance(weight, (tuple, list)):
+            if len(weight) != 2:
+                raise ValueError(f"weight range must be a (low, high) tuple of length 2, got length {len(weight)}.")
+        elif not isinstance(weight, numbers.Real) or isinstance(weight, bool):
+            raise TypeError(f"weight must be a float or a (low, high) tuple, got {type(weight).__name__}.")
+
         self.noise = noise
         self.function_type = function_type
         self.weight = weight
@@ -114,7 +121,14 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
             elif hasattr(self.noise, "rvs"):
                 noise_vals = np.asarray(self.noise.rvs(size=n, random_state=rng)).flatten()
             elif hasattr(self.noise, "sample"):
-                noise_vals = np.asarray(self.noise.sample(n_samples=n)).flatten()
+                # skpro's .sample() has no random_state arg and draws from numpy's legacy global RNG.
+                skpro_seed = int(rng.integers(0, 2**32 - 1))
+                global_state = np.random.get_state()
+                try:
+                    np.random.seed(skpro_seed)
+                    noise_vals = np.asarray(self.noise.sample(n_samples=n)).flatten()
+                finally:
+                    np.random.set_state(global_state)
             else:
                 raise TypeError(f"noise must have a .sample() or .rvs() method, got {type(self.noise).__name__}.")
 
@@ -124,7 +138,7 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
                 parent_data = data[parents].values
                 signal = np.zeros(n)
                 for i, parent_col in enumerate(parents):
-                    w = self.weight if isinstance(self.weight, (int, float)) else rng.uniform(*self.weight)
+                    w = rng.uniform(*self.weight) if isinstance(self.weight, (tuple, list)) else self.weight
                     fn = rng.choice(funcs)
                     signal += w * fn(parent_data[:, i])
                 data[node] = signal + noise_vals

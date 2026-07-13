@@ -95,6 +95,11 @@ def test_anm_skpro_noise():
     ds = load_dataset("anm", seed=42, noise=Laplace(mu=0, scale=1))
     assert ds.data.shape == (1000, 5)
 
+    # skpro noise is reproducible with the same seed despite skpro's lack of a random_state argument.
+    ds_a = load_dataset("anm", seed=42, noise=Laplace(mu=0, scale=1))
+    ds_b = load_dataset("anm", seed=42, noise=Laplace(mu=0, scale=1))
+    assert np.allclose(ds_a.data.values, ds_b.data.values)
+
     # Isolated nodes must get independent noise draws from skpro.
     iso_dag = DAG()
     iso_dag.add_node("A")
