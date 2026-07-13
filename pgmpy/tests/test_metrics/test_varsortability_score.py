@@ -9,7 +9,7 @@ from pgmpy.metrics.varsortability_score import compute_varsortability
 
 @pytest.fixture
 def increasing_variance_chain():
-    """X -> Y -> Z with variance strictly increasing along the path."""
+    # X -> Y -> Z with variance strictly increasing along the path.
     np.random.seed(42)
     n = 1000
     data = pd.DataFrame(
@@ -25,7 +25,7 @@ def increasing_variance_chain():
 
 @pytest.fixture
 def decreasing_variance_chain():
-    """X -> Y -> Z with variance strictly decreasing along the path."""
+    # X -> Y -> Z with variance strictly decreasing along the path.
     np.random.seed(42)
     n = 1000
     data = pd.DataFrame(
