@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import math
 from collections import deque
 from collections.abc import Callable, Generator, Hashable
@@ -185,7 +187,11 @@ class _BaseDAGMAMixin:
         """
         Queries the global pgmpy configurations to resolve the PyTorch device and tensor float precision (mapping
         string representations to torch.dtype objects).
+
+        If the global backend is ``"numpy"``, it is automatically switched to ``"torch"`` (DAGMA requires PyTorch).
         """
+        if config.get_backend() == "numpy":
+            config.set_backend("torch")
         device = config.get_device()
         dtype_str = config.get_dtype()
         if isinstance(dtype_str, str):
@@ -222,15 +228,25 @@ class _BaseDAGMAMixin:
         Thresholds the estimated weight matrix and converts it into a pgmpy DAG or CPDAG.
         """
         W_thresh = np.where(np.abs(W) > w_threshold, W, 0)
-        dag = nx.DiGraph()
-        dag.add_nodes_from(feature_names)
+        # Zero out diagonal entries — self-loops are never part of a DAG
+        np.fill_diagonal(W_thresh, 0)
+        dag = nx.from_pandas_adjacency(
+            pd.DataFrame(W_thresh, index=feature_names, columns=feature_names),
+            create_using=nx.DiGraph,
+        )
 
-        edges = []
-        for i in range(W.shape[0]):
-            for j in range(W.shape[1]):
-                if W_thresh[i, j] != 0:
-                    edges.append((feature_names[i], feature_names[j]))
-        dag.add_edges_from(edges)
+        # Break any residual cycles by removing the smallest-|weight| edge in each cycle.
+        # DAGMANonlinear can produce small numerical cycles at low iteration counts;
+        # DAGMALinear with proper convergence should not trigger this path. The guard
+        # is kept here (shared mixin) because both variants call _convert_to_dag.
+        while True:
+            try:
+                cycle = nx.find_cycle(dag)
+            except nx.NetworkXNoCycle:
+                break
+            # Remove the edge with the smallest absolute weight in the cycle
+            min_edge = min(cycle, key=lambda e: abs(W_thresh[feature_names.index(e[0]), feature_names.index(e[1])]))
+            dag.remove_edge(*min_edge)
 
         if return_type == "dag":
             return DAG(dag)
@@ -263,11 +279,11 @@ class _BaseDAGMAMixin:
         to match the official DAGMA implementation.
         """
         mu = mu_init
-        W_est = W_tensor.detach().cpu().numpy()
+        W_tensor_current = W_tensor.detach().clone()
 
         for _ in range(max_iter):
             # Create a fresh PyTorch parameter for the current outer iteration
-            W_tensor_iter = torch.nn.Parameter(torch.from_numpy(W_est).to(device=W_tensor.device, dtype=W_tensor.dtype))
+            W_tensor_iter = torch.nn.Parameter(W_tensor_current.clone().requires_grad_(True))
 
             # Initialize optimizer
             optimizer = optimizer_cls([W_tensor_iter], **optimizer_kwargs)
@@ -283,10 +299,10 @@ class _BaseDAGMAMixin:
                 optimizer.step(closure)
 
             # Extract updated W for the next iteration
-            W_est = W_tensor_iter.detach().cpu().numpy()
+            W_tensor_current = W_tensor_iter.detach().clone()
             mu *= mu_factor
 
-        return W_est
+        return W_tensor_current.cpu().numpy()
 
 
 class _ConstraintMixin:
