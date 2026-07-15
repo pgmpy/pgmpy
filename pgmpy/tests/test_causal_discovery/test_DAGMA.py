@@ -136,9 +136,9 @@ class TestDagmaLinearCore:
 
         # 4. Both should recover the true DAG edges
         true_edges = set(zip(*np.where(W_true != 0)))  # pragma: no cover
-        pgmpy_edges = set(  # pragma: no cover
+        pgmpy_edges = {  # pragma: no cover
             (col_names.index(u), col_names.index(v)) for u, v in est.causal_graph_.edges()
-        )
+        }
 
         # True positive rate: pgmpy should recover most true edges
         tp = len(pgmpy_edges & true_edges)  # pragma: no cover
@@ -154,6 +154,7 @@ class TestDagmaLinearCore:
 
         # 5. SHD between pgmpy and official should be small
         import networkx as nx  # pragma: no cover
+
         from pgmpy.metrics import SHD  # pragma: no cover
 
         df_off = pd.DataFrame(W_est_official != 0, index=col_names, columns=col_names)  # pragma: no cover
