@@ -38,6 +38,9 @@ class ExpertKnowledge(BaseEstimator):
             the form: [(variables at the root / 1st temporal order), (variables at 2nd temporal order), ... (leaf nodes
             / last temporal order)].
 
+    root_nodes: iterator (default: None)
+        The set of root nodes in the causal graph. Root nodes can not have an incoming edge to them.
+
     ci_test: str | BaseCITest | callable (default: None)
             Conditional independence test used when ``search_space`` is a screening strategy. If ``None``, the default
             test for the data type is auto-detected (e.g. chi-square for discrete, Pearson for continuous). Ignored when
@@ -45,6 +48,22 @@ class ExpertKnowledge(BaseEstimator):
 
     significance_level: float (default: 0.05)
             Significance threshold for the screening test. Used only when ``search_space`` is a screening strategy.
+
+
+    Attributes
+    ----------
+    forbidden_edges_ : set
+        Directed edges that must be absent: the union of the user-specified forbidden edges, the temporal-order
+        complement (any edge from a later tier to an earlier tier), and the complement of the search space.
+
+    required_edges_ : set
+        Directed edges that must be present.
+
+    search_space_ : set
+        The resolved search space: the explicit whitelist, or the screened marginally-dependent pairs.
+
+    temporal_ordering_ : dict
+        Mapping from each variable to its temporal tier.
 
     Notes
     -----
@@ -104,9 +123,7 @@ class ExpertKnowledge(BaseEstimator):
     ):
         self.forbidden_edges = forbidden_edges if forbidden_edges is not None else set()
         self.required_edges = required_edges if required_edges is not None else set()
-
-        self.root_nodes = root_nodes if root_nodes is not None else []
-
+        self.root_nodes = root_nodes if root_nodes is not None else set()
         self.search_space = search_space if search_space is not None else set()
         self.ci_test = ci_test
         self.significance_level = significance_level
@@ -115,7 +132,6 @@ class ExpertKnowledge(BaseEstimator):
             raise ValueError("significance_level must be between 0 and 1.")
 
         self.temporal_order = temporal_order
-        self.temporal_ordering = self._get_temporal_ordering(self.temporal_order)
 
     def __repr__(self):
         # Calculate total number of nodes in temporal order
@@ -230,25 +246,20 @@ class ExpertKnowledge(BaseEstimator):
         -------
         self : ExpertKnowledge
             The instance with the fitted attributes set.
-
-        Attributes
-        ----------
-        forbidden_edges_ : set
-            Directed edges that must be absent: the union of the user-specified forbidden edges, the temporal-order
-            complement (any edge from a later tier to an earlier tier), and the complement of the search space.
-
-        required_edges_ : set
-            Directed edges that must be present.
-
-        search_space_ : set
-            The resolved search space: the explicit whitelist, or the screened marginally-dependent pairs.
-
-        temporal_ordering_ : dict
-            Mapping from each variable to its temporal tier.
         """
         # Step 1: `data` is required only for the resolutions that depend on it (screening, search-space complement).
-        if data is None and self.search_space:
-            raise ValueError("`data` is required to fit when `search_space` is specified.")
+        if data is None:
+            if self.search_space:
+                raise ValueError("`data` is required to fit when `search_space` is specified.")
+            elif self.root_nodes:
+                raise ValueError("`data` is required to fit when `root_nodes` is specified.")
+        else:
+            data_columns = set(data.columns)
+            if not isinstance(self.search_space, str):
+                if not set(chain(*self.search_space)).issubset(data_columns):
+                    raise ValueError("Some of the variables specified in `search_space` are not present in the `data`")
+            if not set(self.root_nodes).issubset(data_columns):
+                raise ValueError("Some of the variables specified in `root_nodes` are not present in the `data`")
 
         # Step 2: Validate the temporal order (if given) covers exactly the data's variables.
         if self.temporal_order is not None:
@@ -259,7 +270,7 @@ class ExpertKnowledge(BaseEstimator):
                 raise ValueError(f"Missing nodes in temporal order - {missing}")
 
         # Step 3: Resolve the attributes taken directly from the declared knowledge.
-        self.temporal_ordering_ = dict(self.temporal_ordering)
+        self.temporal_ordering_ = self._get_temporal_ordering(self.temporal_order)
         self.required_edges_ = set(self.required_edges)
 
         # Step 4: Resolve the search space (explicit whitelist or screening strategy) without mutating the inputs.
@@ -292,9 +303,6 @@ class ExpertKnowledge(BaseEstimator):
         #         so that root nodes cannot have parents in the learned graph.
         if data is not None and self.root_nodes:
             for root in self.root_nodes:
-                if root not in data.columns:
-                    raise ValueError(f"Root node {root} not present in data.")
-
                 for node in data.columns:
                     if node != root:
                         forbidden.add((node, root))
