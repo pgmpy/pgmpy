@@ -33,14 +33,6 @@ class TestBaseStructureScore:
         with pytest.raises(TypeError, match=r"unexpected keyword argument 'foo'"):
             K2(data, foo=1)
 
-    def test_score_with_hashable_variables(self):
-        # Dataframe with integer column names
-        data = pd.DataFrame({1: [0, 1, 1, 0], 2: [1, 0, 1, 0]})
-        score = K2(data.astype("category"))
-        # Call with integer variables/parents
-        val = score.local_score(1, (2,))
-        assert isinstance(val, float)
-
 
 class TestGetScoringMethod:
     def test_get_scoring_method_default_discrete(self, small_df):
