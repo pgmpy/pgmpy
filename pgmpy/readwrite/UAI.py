@@ -39,8 +39,8 @@ class UAIReader:
 
     References
     ----------
-    - :cite:p:`uai_2022_format`
-    - :cite:p:`uai_2008_format`
+    - :footcite:t:`uai_2022_format`
+    - :footcite:t:`uai_2008_format`
     """
 
     def __init__(self, path=None, string=None):
@@ -515,7 +515,7 @@ class UAIWriter:
 
     def write_uai(self, filename):
         warnings.warn(
-            "`UAIWriter.write_uai` is deprecated and will be removed in v1.3.0. Please use `UAIWriter.write` instead.",
+            "`UAIWriter.write_uai` is deprecated and will be removed in v2.0. Please use `UAIWriter.write` instead.",
             FutureWarning,
             stacklevel=2,
         )

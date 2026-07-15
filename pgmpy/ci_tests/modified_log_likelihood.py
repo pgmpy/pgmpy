@@ -39,7 +39,7 @@ class ModifiedLogLikelihood(PowerDivergence):
     >>> data["E"] = data["A"] + data["B"] + data["C"]
     >>> test = ModifiedLogLikelihood(data=data)
     >>> test(X="A", Y="C", Z=[], significance_level=0.05)
-    np.True_
+    True
     >>> round(test.statistic_, 2)
     np.float64(0.03)
     >>> round(test.p_value_, 2)
@@ -47,9 +47,9 @@ class ModifiedLogLikelihood(PowerDivergence):
     >>> test.dof_
     1
     >>> test(X="A", Y="B", Z=["D"], significance_level=0.05)
-    np.True_
+    True
     >>> test(X="A", Y="B", Z=["D", "E"], significance_level=0.05)
-    np.False_
+    False
     """
 
     _tags = {

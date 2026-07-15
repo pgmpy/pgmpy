@@ -51,8 +51,12 @@ class BaseStructureScore(BaseObject):
         self._cached_local_score = lru_cache(maxsize=max_cache_size)(self._local_score)
 
     def local_score(self, variable: str, parents: tuple[str, ...]) -> float:
-        """Compute the cached local score for `variable` given `parents`."""
-        return self._cached_local_score(variable, parents)
+        """Compute the cached local score for `variable` given `parents`.
+
+        `parents` may be any iterable of variable names; it is normalized to a
+        tuple so the memoization cache always receives a hashable key.
+        """
+        return self._cached_local_score(variable, tuple(parents))
 
     def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
         """Compute the uncached local score for `variable` given `parents`."""

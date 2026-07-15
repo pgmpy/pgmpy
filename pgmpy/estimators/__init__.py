@@ -24,7 +24,7 @@ from .MmhcEstimator import MmhcEstimator
 from .EM import ExpectationMaximization
 from .PC import PC
 from .MirrorDescentEstimator import MirrorDescentEstimator
-from .expert import ExpertInLoop
+from .expert import ExpertInLoop, llm_pairwise_orient
 from .GES import GES
 
 __all__ = [
@@ -50,6 +50,7 @@ __all__ = [
     "MmhcEstimator",
     "PC",
     "ExpertInLoop",
+    "llm_pairwise_orient",
     "ExpectationMaximization",
     "MarginalEstimator",
     "MirrorDescentEstimator",

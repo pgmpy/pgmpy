@@ -782,7 +782,7 @@ class BeliefPropagation(Inference):
 
         References
         ----------
-        - :cite:p:`koller_friedman_2009` (Algorithm 10.3, calibration via belief propagation in clique trees).
+        - :footcite:t:`koller_friedman_2009` (Algorithm 10.3, calibration via belief propagation in clique trees).
         """
         # Initialize clique beliefs as well as sepset beliefs
         self.clique_beliefs = {clique: self.junction_tree.get_factors(clique) for clique in self.junction_tree.nodes()}

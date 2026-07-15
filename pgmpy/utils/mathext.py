@@ -109,7 +109,7 @@ def sample_discrete(values, weights: np.ndarray | list[np.ndarray], size=1, seed
         Size of the sample to be generated.
 
     seed: int (default: None)
-        If a value is provided, sets the seed for numpy.random.
+        If a value is provided, sets the seed for the random number generator.
 
     Returns
     -------
@@ -166,7 +166,7 @@ def sample_discrete_maps(
         Size of the sample to be generated.
 
     seed: int (default: None)
-        If a value is provided, sets the seed for numpy.random.
+        If a value is provided, sets the seed for the random number generator.
 
     Returns
     -------
