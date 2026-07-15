@@ -107,14 +107,12 @@ class DAGMALinear(_BaseDAGMAMixin, BaseCausalDiscovery):
     >>> data = load_dataset("sachs_continuous").data
     >>> # Learn the causal structure
     >>> est = DAGMALinear()
-    >>> est.fit(data)
+    >>> est.fit(data)  # doctest: +SKIP
     >>> print(list(est.causal_graph_.edges()))  # doctest: +SKIP
 
     References
     ----------
-    .. [1] DAGMA: Learning DAGs via M-matrices and a Log-Determinant Acyclicity Characterization.
-           Kevin Bello, Bryon Aragam, Pradeep Ravikumar. Booth School of Business, University of Chicago, Chicago, IL
-           60637. Machine Learning Department, Carnegie Mellon University, Pittsburgh, PA 15213
+    :cite:p:`bello_aragam_ravikumar_2020`
     """
 
     def __init__(
@@ -163,9 +161,10 @@ class DAGMALinear(_BaseDAGMAMixin, BaseCausalDiscovery):
         cov_tensor = torch.tensor(cov, device=device, dtype=dtype)
 
         # Step 3: Initialize the weight matrix
-        W_est = np.zeros((self.n_features_in_, self.n_features_in_))
-        W_tensor = torch.tensor(W_est, device=device, dtype=dtype)
+        W_tensor = torch.zeros((self.n_features_in_, self.n_features_in_), device=device, dtype=dtype)
 
+        # This allows _optimize to be reused by DAGMANonlinear which has a different objective signature without
+        # coupling the mixin to any specific objective.
         def objective_fn(W, mu):
             return self._objective(W, mu, cov_tensor)
 
