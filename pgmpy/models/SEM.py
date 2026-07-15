@@ -76,8 +76,8 @@ class SEMGraph:
 
     References
     ----------
-    - :cite:p:`mcdonald_clelland_1984`
-    - :cite:p:`wikipedia_sem`
+    - :footcite:t:`mcdonald_clelland_1984`
+    - :footcite:t:`wikipedia_sem`
 
     Attributes
     ----------
@@ -987,8 +987,8 @@ class SEM(SEMGraph):
 
         References
         ----------
-        - :cite:p:`mcdonald_clelland_1984`
-        - :cite:p:`wikipedia_sem`
+        - :footcite:t:`mcdonald_clelland_1984`
+        - :footcite:t:`wikipedia_sem`
         """
         return cls(
             syntax="graph",

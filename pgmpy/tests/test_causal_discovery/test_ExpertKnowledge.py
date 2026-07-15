@@ -112,8 +112,7 @@ class TestExpertKnowledge:
         ek.fit(data)
 
         pdag = PDAG(
-            directed_ebunch=[("F", "E")],
-            undirected_ebunch=[("A", "B"), ("C", "D")],
+            edge_list=[("F", "E", "->"), ("A", "B", "--"), ("C", "D", "--")],
         )
 
         pgmpy_logger = logging.getLogger("pgmpy")

@@ -17,7 +17,7 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
     """
     Score-based causal discovery using hill climbing optimization.
 
-    This class implements the HillClimbSearch algorithm [1]_ for causal discovery.
+    This class implements the HillClimbSearch algorithm [1] for causal discovery.
     Given a tabular dataset, the algorithm estimates the causal structure among
     the variables in the data as a Directed Acyclic Graph (DAG). The algorithm
     works by iteratively making local modifications to the graph structure
@@ -125,7 +125,7 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
 
     References
     ----------
-    - :cite:p:`koller_friedman_2009`
+    - :footcite:t:`koller_friedman_2009`
     """
 
     def __init__(
@@ -250,6 +250,8 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
         else:
             raise ValueError(f"return_type must be one of: dag, pdag, or cpdag. Got: {self.return_type}")
 
-        self.adjacency_matrix_ = nx.to_pandas_adjacency(self.causal_graph_, weight=1, dtype="int")
+        self.adjacency_matrix_ = self.causal_graph_.to_adjacency(
+            encoding="binary", nodelist=list(self.causal_graph_.nodes())
+        )
 
         return self

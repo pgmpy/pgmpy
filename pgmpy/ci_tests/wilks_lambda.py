@@ -72,11 +72,8 @@ class WilksLambda(_ResidualMixin, BaseCITest):
 
     References
     ----------
-    .. [1] Muller, K. E. and Peterson B. L. (1984) Practical Methods for computing power in
-           testing the multivariate general linear hypothesis. Computational Statistics &
-           Data Analysis.
-    .. [2] Rao, C. R. (1973). Linear Statistical Inference and Its Applications (2nd ed.).
-           John Wiley and Sons, New York.
+    - :footcite:t:`muller_peterson_1984`
+    - :footcite:t:`rao_1973`
     """
 
     _tags = {

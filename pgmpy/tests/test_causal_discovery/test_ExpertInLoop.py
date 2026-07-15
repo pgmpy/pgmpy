@@ -10,17 +10,49 @@ from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery import ExpertInLoop, ExpertKnowledge
+from pgmpy.causal_discovery._base import BaseCausalDiscovery
 from pgmpy.ci_tests._base import BaseCITest
 
 
-def simple_orient(var1, var2, **kwargs):
-    """Simple orientation function (module-level for pickling support)."""
-    return (var1, var2) if var1 < var2 else (var2, var1)
+class AlphabeticalPairwise(BaseCausalDiscovery):
+    """Offline pairwise estimator that orients each edge alphabetically.
+
+    With ``reverse=True`` the edge is oriented from the alphabetically higher
+    variable to the lower one.
+    """
+
+    def __init__(self, reverse=False):
+        self.reverse = reverse
+
+    def _fit(self, X: pd.DataFrame):
+        u, v = list(X.columns)
+        first, second = (u, v) if str(u) < str(v) else (v, u)
+        source, target = (second, first) if self.reverse else (first, second)
+        self.causal_graph_ = DAG([(source, target)])
+        return self
+
+
+class OraclePairwise(BaseCausalDiscovery):
+    """Pairwise estimator that orients edges using a known set of true edges."""
+
+    def __init__(self, true_edges=None):
+        self.true_edges = true_edges
+
+    def _fit(self, X: pd.DataFrame):
+        true_dag = nx.DiGraph(self.true_edges)
+        u, v = list(X.columns)
+        self.causal_graph_ = DAG()
+        self.causal_graph_.add_nodes_from([u, v])
+        if true_dag.has_edge(u, v):
+            self.causal_graph_.add_edge(u, v)
+        elif true_dag.has_edge(v, u):
+            self.causal_graph_.add_edge(v, u)
+        return self
 
 
 def make_estimator():
-    """Create an ExpertInLoop estimator with a simple orientation function."""
-    return ExpertInLoop(orientation_fn=simple_orient, show_progress=False)
+    """Create an ExpertInLoop estimator with a simple pairwise estimator."""
+    return ExpertInLoop(pairwise_estimator=AlphabeticalPairwise(), show_progress=False)
 
 
 def expected_failed_checks(estimator):
@@ -109,16 +141,6 @@ def descriptions():
 
 
 @pytest.fixture
-def orientations_small():
-    """Pre-defined orientations for small dataset tests."""
-    return {
-        ("Education", "Income"),
-        ("Race", "Education"),
-        ("Age", "Education"),
-    }
-
-
-@pytest.fixture
 def true_dag_edges():
     """True edges for adult dataset."""
     return [
@@ -158,21 +180,12 @@ def true_dag_edges():
 
 
 def test_estimate(adult_data, true_dag_edges):
-    """Test basic estimation with oracle orientation function."""
+    """Test basic estimation with an oracle pairwise estimator."""
     true_dag = nx.DiGraph(true_dag_edges)
     true_dag.add_nodes_from(adult_data.columns)
 
-    def oracle_orient(var1, var2, **kwargs):
-        """Orientation function that knows the 'true' structure."""
-        if true_dag.has_edge(var1, var2):
-            return (var1, var2)
-        elif true_dag.has_edge(var2, var1):
-            return (var2, var1)
-        else:
-            return None
-
     estimator = ExpertInLoop(
-        orientation_fn=oracle_orient,
+        pairwise_estimator=OraclePairwise(true_edges=true_dag_edges),
         pval_threshold=0.05,
         effect_size_threshold=0.05,
         show_progress=False,
@@ -185,54 +198,28 @@ def test_estimate(adult_data, true_dag_edges):
     assert nx.is_directed_acyclic_graph(estimator.causal_graph_)
 
 
-def test_estimate_with_orientations(adult_data_small, orientations_small):
-    """Test estimation with pre-specified orientations."""
+def test_forbidden_edge_forces_orientation(adult_data_small):
+    """Forbidding the reverse edge forces the desired orientation (replaces `orientations`)."""
+    desired = {("Education", "Income"), ("Race", "Education"), ("Age", "Education")}
+    expert_knowledge = ExpertKnowledge(forbidden_edges={(v, u) for (u, v) in desired})
     estimator = ExpertInLoop(
-        orientation_fn=simple_orient,
-        orientations=orientations_small,
+        pairwise_estimator=AlphabeticalPairwise(),
+        expert_knowledge=expert_knowledge,
         pval_threshold=0.1,
         effect_size_threshold=0.1,
         show_progress=False,
     )
     estimator.fit(adult_data_small)
 
-    # Check that pre-specified orientations are present in the graph
-    for edge in orientations_small:
-        assert edge in estimator.causal_graph_.edges(), f"Pre-specified orientation {edge} not found in learned graph"
+    # Each desired orientation is present (its reverse was forbidden).
+    for edge in desired:
+        assert edge in estimator.causal_graph_.edges(), f"Forced orientation {edge} not found in learned graph"
 
 
-def test_estimate_with_cache(adult_data_small, orientations_small):
-    """Test estimation with cached orientations."""
-    # Create estimator and set the orientation cache
+def test_estimate_with_custom_pairwise(adult_data_small):
+    """Test estimation with a custom pairwise estimator."""
     estimator = ExpertInLoop(
-        orientation_fn=simple_orient,
-        use_cache=True,
-        pval_threshold=0.1,
-        effect_size_threshold=0.1,
-        show_progress=False,
-    )
-    # Pre-populate the orientation cache
-    estimator.orientation_cache_ = orientations_small
-
-    estimator.fit(adult_data_small)
-
-    assert orientations_small == set(estimator.causal_graph_.edges())
-    # Cache should still contain the orientations
-    assert estimator.orientation_cache_ == orientations_small
-
-
-def test_estimate_with_custom_orient_fn(adult_data_small):
-    """Test estimation with custom orientation function."""
-
-    def custom_orient(var1, var2, **kwargs):
-        # Always orient edges from alphabetically first to second
-        if var1 < var2:
-            return (var1, var2)
-        else:
-            return (var2, var1)
-
-    estimator = ExpertInLoop(
-        orientation_fn=custom_orient,
+        pairwise_estimator=AlphabeticalPairwise(),
         pval_threshold=0.1,
         effect_size_threshold=0.1,
         show_progress=False,
@@ -243,36 +230,11 @@ def test_estimate_with_custom_orient_fn(adult_data_small):
     for edge in estimator.causal_graph_.edges():
         assert edge[0] < edge[1]
 
-    # Check that orientations were cached
-    assert len(estimator.orientation_cache_) > 0
-    for edge in estimator.orientation_cache_:
-        assert edge[0] < edge[1]
 
-
-def test_estimate_with_orient_fn_kwargs(adult_data_small):
-    """Test that orientation function works with different configurations."""
-
-    def make_orient_fn(reverse_alphabetical=False):
-        """Create an orientation function with specific configuration."""
-
-        def orient_fn(var1, var2):
-            # Use the captured reverse_alphabetical parameter
-            if reverse_alphabetical:
-                if var1 > var2:
-                    return (var1, var2)
-                else:
-                    return (var2, var1)
-            else:
-                if var1 < var2:
-                    return (var1, var2)
-                else:
-                    return (var2, var1)
-
-        return orient_fn
-
-    # Test with reverse_alphabetical=True
+def test_estimate_with_reverse_pairwise(adult_data_small):
+    """Test that a configurable pairwise estimator controls orientation."""
     estimator = ExpertInLoop(
-        orientation_fn=make_orient_fn(reverse_alphabetical=True),
+        pairwise_estimator=AlphabeticalPairwise(reverse=True),
         pval_threshold=0.1,
         effect_size_threshold=0.1,
         show_progress=False,
@@ -284,49 +246,76 @@ def test_estimate_with_orient_fn_kwargs(adult_data_small):
         assert edge[0] > edge[1]
 
 
-def test_combined_expert_knowledge(adult_data):
-    """Test combination of forbidden edges, required edges, and temporal order."""
+def test_missing_pairwise_estimator_raises(adult_data_small):
+    """ExpertInLoop fails fast when no pairwise estimator is provided."""
+    estimator = ExpertInLoop(effect_size_threshold=0.1, show_progress=False)
+    with pytest.raises(ValueError, match="pairwise_estimator"):
+        estimator.fit(adult_data_small)
+
+
+def test_same_tier_uses_pairwise_estimator():
+    """Variables sharing a temporal tier are oriented by the pairwise estimator
+    rather than being silently dropped."""
+    rng = np.random.default_rng(42)
+    n = 500
+    a = rng.integers(0, 2, n)
+    b = a ^ (rng.random(n) < 0.1).astype(int)
+    c = b ^ (rng.random(n) < 0.1).astype(int)
+    data = pd.DataFrame({"A": a, "B": b, "C": c}, dtype="category")
+
+    # A and B share tier 0, so the temporal order cannot orient the A-B edge;
+    # the pairwise estimator must orient it (and AlphabeticalPairwise gives A->B).
+    expert_knowledge = ExpertKnowledge(temporal_order=[["A", "B"], ["C"]])
+    estimator = ExpertInLoop(
+        pairwise_estimator=AlphabeticalPairwise(),
+        expert_knowledge=expert_knowledge,
+        effect_size_threshold=0.01,
+        show_progress=False,
+    )
+    estimator.fit(data)
+
+    assert nx.is_directed_acyclic_graph(estimator.causal_graph_)
+    assert ("A", "B") in estimator.causal_graph_.edges()
+
+
+def test_incomplete_temporal_order_raises(adult_data_small):
+    """A temporal order that does not cover all variables now raises via
+    ExpertKnowledge.fit() instead of silently dropping edges."""
+    expert_knowledge = ExpertKnowledge(temporal_order=[["Age"], ["Education"]])
+    estimator = ExpertInLoop(
+        pairwise_estimator=AlphabeticalPairwise(),
+        expert_knowledge=expert_knowledge,
+        effect_size_threshold=0.1,
+        show_progress=False,
+    )
+    with pytest.raises(ValueError, match="Missing nodes"):
+        estimator.fit(adult_data_small)
+
+
+def test_combined_expert_knowledge(adult_data_small):
+    """Test combination of forbidden edges, required edges, and a complete temporal order."""
     expert_knowledge = ExpertKnowledge(
         forbidden_edges=[("Age", "Income")],
         required_edges=[("Education", "Income")],
-        temporal_order=[["Age", "Race"], ["Education"], ["Income", "HoursPerWeek"]],
+        temporal_order=[["Age", "Race", "Sex"], ["Education"], ["Income"]],
     )
 
     estimator = ExpertInLoop(
+        pairwise_estimator=AlphabeticalPairwise(),
         expert_knowledge=expert_knowledge,
         effect_size_threshold=0.0001,
         show_progress=False,
     )
-    estimator.fit(adult_data)
+    estimator.fit(adult_data_small)
 
-    # Check forbidden edges
+    # (Age, Income) is forbidden directly and (Income, Age) by the temporal order, so the pair is dropped.
     assert ("Age", "Income") not in estimator.causal_graph_.edges()
 
-    # Check temporal order
+    # Every edge respects the temporal order.
     for u, v in estimator.causal_graph_.edges():
         u_order = expert_knowledge.temporal_ordering[u]
         v_order = expert_knowledge.temporal_ordering[v]
         assert u_order <= v_order, f"Edge {u}->{v} violates temporal order"
-
-
-def test_edge_orientation_priority(adult_data):
-    """Test that edge orientation follows the correct priority order."""
-    expert_knowledge = ExpertKnowledge(temporal_order=[["Age", "Race"], ["Education"], ["Income", "HoursPerWeek"]])
-
-    # Define orientations that should take precedence over temporal order
-    orientations = {("Income", "Education")}  # Opposite of temporal order
-
-    estimator = ExpertInLoop(
-        expert_knowledge=expert_knowledge,
-        orientations=orientations,
-        effect_size_threshold=0.0001,
-        show_progress=False,
-    )
-    estimator.fit(adult_data)
-
-    # Check that specified orientations take precedence
-    if ("Income", "Education") in estimator.causal_graph_.edges():
-        assert ("Education", "Income") not in estimator.causal_graph_.edges()
 
 
 def test_fitted_attributes():
@@ -338,11 +327,8 @@ def test_fitted_attributes():
         dtype="category",
     )
 
-    def simple_orient(var1, var2, **kwargs):
-        return (var1, var2) if var1 < var2 else (var2, var1)
-
     estimator = ExpertInLoop(
-        orientation_fn=simple_orient,
+        pairwise_estimator=AlphabeticalPairwise(),
         effect_size_threshold=0.0001,
         show_progress=False,
     )
@@ -352,7 +338,6 @@ def test_fitted_attributes():
     assert hasattr(estimator, "causal_graph_")
     assert hasattr(estimator, "adjacency_matrix_")
     assert hasattr(estimator, "variables_")
-    assert hasattr(estimator, "orientation_cache_")
     assert hasattr(estimator, "n_features_in_")
     assert hasattr(estimator, "feature_names_in_")
 
@@ -372,11 +357,8 @@ def test_adjacency_matrix():
         dtype="category",
     )
 
-    def simple_orient(var1, var2, **kwargs):
-        return (var1, var2) if var1 < var2 else (var2, var1)
-
     estimator = ExpertInLoop(
-        orientation_fn=simple_orient,
+        pairwise_estimator=AlphabeticalPairwise(),
         effect_size_threshold=0.0001,
         show_progress=False,
     )
@@ -404,7 +386,7 @@ def test_empty_graph():
 
     # Use very high thresholds to ensure no edges are added
     estimator = ExpertInLoop(
-        orientation_fn=simple_orient,
+        pairwise_estimator=AlphabeticalPairwise(),
         effect_size_threshold=1.0,  # Very high threshold
         pval_threshold=0.0,  # Very low p-value threshold
         show_progress=False,
@@ -428,7 +410,7 @@ def fake_ci_estimator():
             "D": [4, 5, 6, 7, 8],
         }
     )
-    return ExpertInLoop(orientation_fn=simple_orient, show_progress=False), data
+    return ExpertInLoop(pairwise_estimator=AlphabeticalPairwise(), show_progress=False), data
 
 
 @pytest.fixture
@@ -606,3 +588,24 @@ class TestBreakCycle:
         existing_edges = {("A", "B"), ("B", "D"), ("A", "C"), ("C", "D")}
         for edge in result:
             assert edge in existing_edges
+
+
+# --- pairwise_estimator tests ---
+
+
+def test_pairwise_estimator():
+    """ExpertInLoop orients edges by fitting a pairwise estimator."""
+    rng = np.random.default_rng(42)
+    n = 500
+    a = rng.integers(0, 2, n)
+    b = a ^ (rng.random(n) < 0.1).astype(int)
+    c = b ^ (rng.random(n) < 0.1).astype(int)
+    data = pd.DataFrame({"A": a, "B": b, "C": c}, dtype="category")
+
+    est = ExpertInLoop(pairwise_estimator=AlphabeticalPairwise(), effect_size_threshold=0.01, show_progress=False)
+    est.fit(data)
+
+    assert nx.is_directed_acyclic_graph(est.causal_graph_)
+    assert est.causal_graph_.number_of_edges() > 0
+    for u, v in est.causal_graph_.edges():
+        assert str(u) < str(v)

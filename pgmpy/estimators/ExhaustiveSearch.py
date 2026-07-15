@@ -7,7 +7,7 @@ import networkx as nx
 from pgmpy import logger
 from pgmpy.base import DAG
 from pgmpy.estimators import StructureEstimator
-from pgmpy.estimators.StructureScore import get_scoring_method
+from pgmpy.structure_score import get_scoring_method
 from pgmpy.utils.mathext import powerset
 
 
@@ -40,7 +40,9 @@ class ExhaustiveSearch(StructureEstimator):
 
     def __init__(self, data, scoring_method=None, use_cache=True, **kwargs):
         super().__init__(data, **kwargs)
-        _, self.scoring_method = get_scoring_method(scoring_method, self.data, use_cache)
+        # Canonical structure scores cache local scores internally (see their
+        # `max_cache_size` parameter), so `use_cache` no longer needs a wrapper.
+        self.scoring_method = get_scoring_method(scoring_method, self.data)
 
     def all_dags(self, nodes=None):
         """
@@ -154,9 +156,9 @@ class ExhaustiveSearch(StructureEstimator):
         -24207.216720     [('A', 'B')]
         -24207.216720     [('A', 'C')]
         -24207.206196     [('B', 'A')]
+        -24207.206196     [('B', 'A'), ('C', 'A')]
         -24207.206196     [('C', 'A')]
         -24174.384977     []
-        -24143.645119     [('B', 'A'), ('C', 'A')]
         -16601.326068     [('A', 'B'), ('A', 'C'), ('B', 'C')]
         -16601.326068     [('A', 'B'), ('A', 'C'), ('C', 'B')]
         -16601.315544     [('A', 'B'), ('C', 'A'), ('C', 'B')]
@@ -166,13 +168,13 @@ class ExhaustiveSearch(StructureEstimator):
         -16272.269478     [('A', 'B'), ('B', 'C')]
         -16272.269478     [('A', 'C'), ('C', 'B')]
         -16272.258953     [('B', 'A'), ('B', 'C')]
+        -16272.258953     [('B', 'A'), ('B', 'C'), ('C', 'A')]
+        -16272.258953     [('B', 'A'), ('C', 'A'), ('C', 'B')]
         -16272.258953     [('B', 'A'), ('C', 'B')]
         -16272.258953     [('B', 'C'), ('C', 'A')]
         -16272.258953     [('C', 'A'), ('C', 'B')]
         -16239.437735     [('B', 'C')]
         -16239.437735     [('C', 'B')]
-        -16208.697877     [('B', 'A'), ('B', 'C'), ('C', 'A')]
-        -16208.697877     [('B', 'A'), ('C', 'A'), ('C', 'B')]
         """
 
         scored_dags = sorted(
@@ -198,6 +200,7 @@ class ExhaustiveSearch(StructureEstimator):
         >>> import numpy as np
         >>> from pgmpy.estimators import ExhaustiveSearch, K2
         >>> # create random data sample with 3 variables, where B and C are identical:
+        >>> np.random.seed(42)
         >>> data = pd.DataFrame(
         ...     np.random.randint(low=0, high=5, size=(5000, 2)), columns=list("AB")
         ... )
@@ -207,7 +210,7 @@ class ExhaustiveSearch(StructureEstimator):
         >>> best_model  # doctest: +ELLIPSIS
         <pgmpy.base.DAG.DAG object at 0x...>
         >>> sorted(best_model.edges())
-        [('B', 'A'), ('B', 'C'), ('C', 'A')]
+        [('B', 'C')]
         """
 
         best_dag = max(self.all_dags(), key=self.scoring_method.score)
