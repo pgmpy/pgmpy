@@ -1,11 +1,11 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Earthquake(DiscreteMixin, _BaseExampleModel):
+class Earthquake(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`korb_nicholson_2010`
+    - :footcite:t:`korb_nicholson_2010`
     """
 
     _tags = {

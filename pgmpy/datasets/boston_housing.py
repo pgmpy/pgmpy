@@ -1,12 +1,12 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class BostonHousing(_BaseDataset):
+class BostonHousing(BaseDataset):
     """
     References
     ----------
-    - :cite:p:`zhao_hastie_2019`
-    - :cite:p:`peerj_wine_quality`
+    - :footcite:t:`zhao_hastie_2019`
+    - :footcite:t:`peerj_wine_quality`
     """
 
     _tags = {

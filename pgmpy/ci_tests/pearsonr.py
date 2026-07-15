@@ -2,10 +2,10 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from ._base import _BaseCITest, _CITestResult
+from ._base import BaseCITest, _CITestResult
 
 
-class Pearsonr(_BaseCITest):
+class Pearsonr(BaseCITest):
     r"""
     Partial Correlation test for conditional independence.
 
@@ -38,7 +38,7 @@ class Pearsonr(_BaseCITest):
     >>> data = pd.DataFrame(data=rng.standard_normal(size=(1000, 3)), columns=["X", "Y", "Z"])
     >>> test = Pearsonr(data=data)
     >>> test(X="X", Y="Y", Z=["Z"], significance_level=0.05)
-    np.True_
+    True
     >>> round(test.statistic_, 2)
     np.float64(0.01)
     >>> round(test.p_value_, 2)
@@ -58,8 +58,8 @@ class Pearsonr(_BaseCITest):
 
     References
     ----------
-    - :cite:p:`peerj_blue_driver`
-    - :cite:p:`wikipedia_partial_correlation`
+    - :footcite:t:`peerj_blue_driver`
+    - :footcite:t:`wikipedia_partial_correlation`
     """
 
     _tags = {

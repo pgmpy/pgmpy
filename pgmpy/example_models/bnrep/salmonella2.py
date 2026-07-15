@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Salmonella2(BIFMixin, _BaseExampleModel):
+class Salmonella2(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/salmonella2",
         "n_nodes": 10,

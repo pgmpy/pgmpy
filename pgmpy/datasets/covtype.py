@@ -1,7 +1,7 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class CoverType(_BaseDataset):
+class CoverType(BaseDataset):
     _tags = {
         "name": "cover_type",
         "n_variables": 11,

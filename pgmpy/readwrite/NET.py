@@ -52,7 +52,7 @@ class NETWriter:
 
     References
     ----------
-    - :cite:p:`hugin_format`
+    - :footcite:t:`hugin_format`
     """
 
     def __init__(self, model):
@@ -309,7 +309,7 @@ class NETWriter:
 
     def write_net(self, filename):
         warnings.warn(
-            "`NETWriter.write_net` is deprecated and will be removed in v1.3.0. Please use `NETWriter.write` instead.",
+            "`NETWriter.write_net` is deprecated and will be removed in v2.0. Please use `NETWriter.write` instead.",
             FutureWarning,
             stacklevel=2,
         )

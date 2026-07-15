@@ -2,7 +2,7 @@ name: Test Suite Full
 
 on:
   schedule:
-    - cron: "0 6 * * *"
+    - cron: "0 2 * * *"
   workflow_dispatch:
 
 jobs:
@@ -164,8 +164,9 @@ jobs:
           new = set(json.load(open('new_durations/.test_durations')).keys())
           added = new - old
           removed = old - new
-          if not added and not removed:
-              print('No test cases added or removed, skipping update')
+          total = len(added) + len(removed)
+          if total < 10:
+              print(f'Only {total} test(s) changed, need at least 10 to update')
               sys.exit(1)
           if added:
               print(f'Added {len(added)} test(s)')

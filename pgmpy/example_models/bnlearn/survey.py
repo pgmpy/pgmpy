@@ -1,11 +1,11 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Survey(DiscreteMixin, _BaseExampleModel):
+class Survey(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`scutari_denis_2021`
+    - :footcite:t:`scutari_denis_2021`
     """
 
     _tags = {

@@ -35,12 +35,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install .[all]
+          pip install pygraphviz
 
       - name: Run doctests
-        run: |
-          modules=$(grep -v '^\s*#' doctest_modules.txt | grep -v '^\s*$' | tr '\n' ' ')
-          if [ -n "$modules" ]; then
-            pytest --doctest-modules -o "addopts=" $modules -v
-          else
-            echo "No modules listed in doctest_modules.txt, skipping."
-          fi
+        run: pytest --doctest-modules --ignore=pgmpy/tests pgmpy/ -v

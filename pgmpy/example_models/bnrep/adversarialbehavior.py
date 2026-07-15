@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Adversarialbehavior(BIFMixin, _BaseExampleModel):
+class Adversarialbehavior(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/adversarialbehavior",
         "n_nodes": 4,

@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Criminal1(BIFMixin, _BaseExampleModel):
+class Criminal1(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/criminal1",
         "n_nodes": 12,

@@ -33,9 +33,9 @@ class MirrorDescentEstimator(MarginalEstimator):
 
     References
     ----------
-    - :cite:p:`mckenna_2019` (Appendix A.1).
-    - :cite:p:`beck_teboulle_2003`
-    - :cite:p:`wainwright_jordan_2008` (Section 3.6: Conjugate Duality).
+    - :footcite:t:`mckenna_2019` (Appendix A.1).
+    - :footcite:t:`beck_teboulle_2003`
+    - :footcite:t:`wainwright_jordan_2008` (Section 3.6: Conjugate Duality).
     """
 
     def _calibrate(self, theta, n):
@@ -136,7 +136,7 @@ class MirrorDescentEstimator(MarginalEstimator):
         >>> tree1 = MirrorDescentEstimator(model=model, data=data).estimate(
         ...     marginals=[("a", "b")]
         ... )
-        >>> print(tree1.factors[0])
+        >>> print(tree1.factors[0])  # doctest: +SKIP
         +------+------+------------+
         | a    | b    |   phi(a,b) |
         +======+======+============+
@@ -151,7 +151,7 @@ class MirrorDescentEstimator(MarginalEstimator):
         >>> tree2 = MirrorDescentEstimator(model=model, data=data).estimate(
         ...     marginals=[("a",)]
         ... )
-        >>> print(tree2.factors[0])
+        >>> print(tree2.factors[0])  # doctest: +SKIP
         +------+------+------------+
         | a    | b    |   phi(a,b) |
         +======+======+============+

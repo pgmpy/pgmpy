@@ -5,10 +5,10 @@ from sklearn.cross_decomposition import CCA
 
 from pgmpy.utils import preprocess_data
 
-from ._base import _BaseCITest, _CITestResult, _ResidualMixin
+from ._base import BaseCITest, _CITestResult, _ResidualMixin
 
 
-class PillaiTrace(_ResidualMixin, _BaseCITest):
+class PillaiTrace(_ResidualMixin, BaseCITest):
     r"""
     Pillai's trace test for conditional independence with mixed data [1].
 
@@ -71,9 +71,9 @@ class PillaiTrace(_ResidualMixin, _BaseCITest):
 
     References
     ----------
-    - :cite:p:`ankan_textor_2023`
-    - :cite:p:`li_shepherd_2010`
-    - :cite:p:`muller_peterson_1984`
+    - :footcite:t:`ankan_textor_2023`
+    - :footcite:t:`li_shepherd_2010`
+    - :footcite:t:`muller_peterson_1984`
     """
 
     _tags = {

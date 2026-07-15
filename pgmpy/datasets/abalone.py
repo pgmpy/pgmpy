@@ -1,12 +1,12 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class AbaloneContinuous(_BaseDataset):
+class AbaloneContinuous(BaseDataset):
     """
     References
     ----------
-    - :cite:p:`lopezpaz_2015`
-    - :cite:p:`uci_abalone`
+    - :footcite:t:`lopezpaz_2015`
+    - :footcite:t:`uci_abalone`
     """
 
     _tags = {
@@ -35,12 +35,12 @@ class AbaloneContinuous(_BaseDataset):
     ordinal_variables = dict()
 
 
-class AbaloneMixed(_BaseDataset):
+class AbaloneMixed(BaseDataset):
     """
     References
     ----------
-    - :cite:p:`lopezpaz_2015`
-    - :cite:p:`uci_abalone`
+    - :footcite:t:`lopezpaz_2015`
+    - :footcite:t:`uci_abalone`
     """
 
     _tags = {

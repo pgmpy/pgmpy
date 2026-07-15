@@ -1,11 +1,11 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Mildew(DiscreteMixin, _BaseExampleModel):
+class Mildew(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`jensen_jensen_midas`
+    - :footcite:t:`jensen_jensen_midas`
     """
 
     _tags = {

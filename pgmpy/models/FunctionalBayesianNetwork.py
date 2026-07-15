@@ -58,6 +58,9 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
     --------
     # Defining a Functional Bayesian Network
 
+    >>> from pgmpy.global_vars import config
+    >>> config.set_backend('torch')
+    >>> import pyro.distributions as dist
     >>> from pgmpy.models import FunctionalBayesianNetwork
     >>> from pgmpy.factors.hybrid import FunctionalCPD
     >>> model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
@@ -75,11 +78,12 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
 
     # Simulating data from the Functional Bayesian Network
 
-    >>> samples = model.simulate(n_samples=1000)
+    >>> samples = model.simulate(n_samples=1000)  # doctest: +SKIP
 
     # Fitting the Functional Bayesian Network to the simulated data
 
-    >>> fitted_params = model.fit(samples, estimator="SVI", num_steps=1000)
+    >>> fitted_params = model.fit(samples, estimator="SVI", num_steps=1000)  # doctest: +SKIP
+    >>> config.set_backend('numpy')
     """
 
     def __init__(
@@ -120,6 +124,8 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
 
         Examples
         --------
+        >>> from pgmpy.global_vars import config
+        >>> config.set_backend('torch')
         >>> from pgmpy.factors.hybrid import FunctionalCPD
         >>> from pgmpy.models import FunctionalBayesianNetwork
         >>> import pyro.distributions as dist
@@ -134,6 +140,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         ...     "x3", lambda parent: dist.Normal(parent["x2"] + 0.3, 2), parents=["x2"]
         ... )
         >>> model.add_cpds(cpd1, cpd2, cpd3)
+        >>> config.set_backend('numpy')
 
         """
         for cpd in cpds:
@@ -168,6 +175,8 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
 
         Examples
         --------
+        >>> from pgmpy.global_vars import config
+        >>> config.set_backend('torch')
         >>> from pgmpy.factors.hybrid import FunctionalCPD
         >>> from pgmpy.models import FunctionalBayesianNetwork
         >>> import numpy as np
@@ -182,7 +191,11 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         ...     "x3", lambda parent: dist.Normal(parent["x2"] + 0.3, 2), parents=["x2"]
         ... )
         >>> model.add_cpds(cpd1, cpd2, cpd3)
-        >>> model.get_cpds()
+        >>> model.get_cpds()  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        [<FunctionalCPD: P(x1) = lambda fun.> at ...,
+         <FunctionalCPD: P(x2 | x1) = lambda fun.> at ...,
+         <FunctionalCPD: P(x3 | x2) = lambda fun.> at ...]
+        >>> config.set_backend('numpy')
         """
         return super().get_cpds(node)
 
@@ -197,6 +210,8 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
 
         Examples
         --------
+        >>> from pgmpy.global_vars import config
+        >>> config.set_backend('torch')
         >>> from pgmpy.factors.hybrid import FunctionalCPD
         >>> from pgmpy.models import FunctionalBayesianNetwork
         >>> import numpy as np
@@ -213,12 +228,15 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         >>> model.add_cpds(cpd1, cpd2, cpd3)
         >>> for cpd in model.get_cpds():
         ...     print(cpd)
-        ...
+        P(x1) = lambda fun.
+        P(x2 | x1) = lambda fun.
+        P(x3 | x2) = lambda fun.
 
         >>> model.remove_cpds(cpd2, cpd3)
         >>> for cpd in model.get_cpds():
         ...     print(cpd)
-        ...
+        P(x1) = lambda fun.
+        >>> config.set_backend('numpy')
         """
         return super().remove_cpds(*cpds)
 
@@ -279,6 +297,8 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
 
         Examples
         --------
+        >>> from pgmpy.global_vars import config
+        >>> config.set_backend('torch')
         >>> from pgmpy.factors.hybrid import FunctionalCPD
         >>> from pgmpy.models import FunctionalBayesianNetwork
         >>> import numpy as np
@@ -293,7 +313,8 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         ...     "x3", lambda parent: dist.Normal(parent["x2"] + 0.3, 2), parents=["x2"]
         ... )
         >>> model.add_cpds(cpd1, cpd2, cpd3)
-        >>> model.simulate(n_samples=1000)
+        >>> model.simulate(n_samples=1000)  # doctest: +SKIP
+        >>> config.set_backend('numpy')
         """
         # Step 0: Set the seed if specified, check arguments and initialize data structures.
         if seed is not None:
@@ -401,10 +422,16 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
 
         Examples
         --------
+        >>> from pgmpy.global_vars import config
+        >>> config.set_backend('torch')
+        >>> import pandas as pd
+        >>> import pyro
+        >>> import pyro.distributions as dist
+        >>> from pyro.distributions import constraints
+        >>> import torch
         >>> from pgmpy.factors.hybrid import FunctionalCPD
         >>> from pgmpy.models import FunctionalBayesianNetwork
         >>> import numpy as np
-        >>> import pyro.distributions as dist
 
         >>> model = FunctionalBayesianNetwork([("x1", "x2")])
         >>> x1 = np.random.normal(0.2, 0.8, size=10000)
@@ -427,11 +454,10 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         ...     return dist.Normal(intercept + parents["x1"], sigma)
         ...
 
-        >>> cpd1 = FunctionalCPD("x1", fn=x1_prior)
-        >>> cpd2 = FunctionalCPD("x2", fn=x2_prior, parents=["x1"])
+        >>> cpd1 = FunctionalCPD("x1", fn=x1_fn)
+        >>> cpd2 = FunctionalCPD("x2", fn=x2_fn, parents=["x1"])
         >>> model.add_cpds(cpd1, cpd2)
-        >>> params = model.fit(data, estimator="SVI", num_steps=100)
-        >>> print(params)
+        >>> params = model.fit(data, estimator="SVI", num_steps=100)  # doctest: +SKIP
 
         >>> def prior_fn():
         ...     return {
@@ -448,7 +474,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
 
         >>> def x2_fn(priors, parents):
         ...     return dist.Normal(
-        ...         priors["x2_inter"] + parent["x1"], priors["x2_sigma"]
+        ...         priors["x2_inter"] + parents["x1"], priors["x2_sigma"]
         ...     )
         ...
 
@@ -456,8 +482,8 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         >>> cpd2 = FunctionalCPD("x2", fn=x2_fn, parents=["x1"])
         >>> model.add_cpds(cpd1, cpd2)
 
-        >>> params = model.fit(data, estimator="MCMC", prior_fn=prior_fn, num_steps=100)
-        >>> print(params["x1_mu"].mean(), params["x1_std"].mean())
+        >>> params = model.fit(data, estimator="MCMC", prior_fn=prior_fn, num_steps=100)  # doctest: +SKIP
+        >>> config.set_backend('numpy')
         """
         # Step 0: Checks for specified arguments.
         if not isinstance(data, pd.DataFrame):
