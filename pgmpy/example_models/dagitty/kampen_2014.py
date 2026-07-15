@@ -1,11 +1,11 @@
-from .._base import DAGMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DAGMixin
 
 
-class Kampen2014(DAGMixin, _BaseExampleModel):
+class Kampen2014(DAGMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`vankampen_2014`
+    - :footcite:t:`vankampen_2014`
     """
 
     _tags = {

@@ -1,14 +1,14 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 BASE_URL = "real/wine-quality"
 EXPERT_URL = "ground.truth/wine.quality.knowledge.txt"
 
 
-class WineQualityRed(_BaseDataset):
+class WineQualityRed(BaseDataset):
     """
     References
     ----------
-    - :cite:p:`peerj_blue_driver`
+    - :footcite:t:`peerj_blue_driver`
     """
 
     _tags = {
@@ -36,11 +36,11 @@ class WineQualityRed(_BaseDataset):
     ordinal_variables = dict()
 
 
-class WineQualityWhite(_BaseDataset):
+class WineQualityWhite(BaseDataset):
     """
     References
     ----------
-    - :cite:p:`peerj_blue_driver`
+    - :footcite:t:`peerj_blue_driver`
     """
 
     _tags = {
@@ -68,11 +68,11 @@ class WineQualityWhite(_BaseDataset):
     ordinal_variables = dict()
 
 
-class WineQualityRedWhiteMixed(_BaseDataset):
+class WineQualityRedWhiteMixed(BaseDataset):
     """
     References
     ----------
-    - :cite:p:`peerj_blue_driver`
+    - :footcite:t:`peerj_blue_driver`
     """
 
     _tags = {

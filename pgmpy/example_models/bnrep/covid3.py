@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Covid3(BIFMixin, _BaseExampleModel):
+class Covid3(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/covid3",
         "n_nodes": 12,

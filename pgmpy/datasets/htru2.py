@@ -1,11 +1,11 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class HTRU2(_BaseDataset):
+class HTRU2(BaseDataset):
     """
     References
     ----------
-    - :cite:p:`uci_htru2`
+    - :footcite:t:`uci_htru2`
     """
 
     _tags = {

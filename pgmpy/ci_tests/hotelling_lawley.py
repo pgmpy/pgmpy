@@ -5,10 +5,10 @@ from sklearn.cross_decomposition import CCA
 
 from pgmpy.utils import preprocess_data
 
-from ._base import _BaseCITest, _CITestResult, _ResidualMixin
+from ._base import BaseCITest, _CITestResult, _ResidualMixin
 
 
-class HotellingLawley(_ResidualMixin, _BaseCITest):
+class HotellingLawley(_ResidualMixin, BaseCITest):
     r"""
     Hotelling-Lawley trace CI test for mixed data [1].
 
@@ -61,9 +61,7 @@ class HotellingLawley(_ResidualMixin, _BaseCITest):
 
     References
     ----------
-    .. [1] Muller, K. E. and Peterson B. L. (1984) Practical Methods for computing power in
-           testing the multivariate general linear hypothesis. Computational Statistics &
-           Data Analysis.
+    - :footcite:t:`muller_peterson_1984`
     """
 
     _tags = {

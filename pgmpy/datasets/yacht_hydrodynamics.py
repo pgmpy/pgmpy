@@ -1,11 +1,11 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class YachtHydrodynamics(_BaseDataset):
+class YachtHydrodynamics(BaseDataset):
     """
     References
     ----------
-    - :cite:p:`uci_yacht_hydrodynamics`
+    - :footcite:t:`uci_yacht_hydrodynamics`
     """
 
     _tags = {
