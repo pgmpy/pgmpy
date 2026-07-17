@@ -210,8 +210,8 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
 
         References
         ----------
-        - :cite:p:`murphy_2012` (Algorithm 19.2 IPF; Section 19.5.7.4).
-        - :cite:p:`xing_2014_lectures`
+        - :footcite:t:`murphy_2012` (Algorithm 19.2 IPF; Section 19.5.7.4).
+        - :footcite:t:`xing_2014_lectures`
 
         Examples
         --------

@@ -1,3 +1,5 @@
+from collections.abc import Hashable
+
 from pgmpy.structure_score.log_likelihood import LogLikelihood
 
 
@@ -46,8 +48,8 @@ class AIC(LogLikelihood):
 
     References
     ----------
-    - :cite:p:`koller_friedman_2009`
-    - :cite:p:`liao_2022`
+    - :footcite:t:`koller_friedman_2009`
+    - :footcite:t:`liao_2022`
     """
 
     _tags = {
@@ -57,7 +59,7 @@ class AIC(LogLikelihood):
         "is_parameteric": False,
     }
 
-    def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
+    def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         ll, num_parents_states, var_cardinality = self._log_likelihood(variable=variable, parents=parents)
         score = ll - num_parents_states * (var_cardinality - 1)
 

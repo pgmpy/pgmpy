@@ -52,7 +52,7 @@ class NETWriter:
 
     References
     ----------
-    - :cite:p:`hugin_format`
+    - :footcite:t:`hugin_format`
     """
 
     def __init__(self, model):

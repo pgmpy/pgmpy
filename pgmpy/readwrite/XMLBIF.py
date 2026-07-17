@@ -47,7 +47,7 @@ class XMLBIFReader:
 
     References
     ----------
-    - :cite:p:`cozman_xmlbif`
+    - :footcite:t:`cozman_xmlbif`
     """
 
     def __init__(self, path=None, string=None):
@@ -304,7 +304,7 @@ class XMLBIFWriter:
 
     References
     ----------
-    - :cite:p:`cozman_xmlbif`
+    - :footcite:t:`cozman_xmlbif`
     """
 
     def __init__(self, model, encoding="utf-8", prettyprint=True):
