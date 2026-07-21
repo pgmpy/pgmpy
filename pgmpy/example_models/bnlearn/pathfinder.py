@@ -5,7 +5,7 @@ class Pathfinder(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`heckerman_1992`
+    - :footcite:t:`heckerman_1992`
     """
 
     _tags = {

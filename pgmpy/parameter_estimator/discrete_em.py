@@ -223,13 +223,13 @@ class DiscreteEM(DiscreteParameterEstimator):
         original_cols = set(data.columns)
         data = data.dropna(axis=1, how="all")
         dropped_cols = original_cols - set(data.columns)
-        new_latents = [col for col in dropped_cols if col not in model.latents]
+        new_latents = [col for col in dropped_cols if col in model.nodes() and col not in model.latents]
         if new_latents:
             logger.warning(
                 f"Columns {new_latents} have all missing values and are not marked as latent. "
                 "Treating them as latent variables."
             )
-            model.latents.update(new_latents)
+            model.latents = set(model.latents) | set(new_latents)
 
         original_rows_count = data.shape[0]
         data = data.dropna()

@@ -155,3 +155,38 @@ class TestExpertKnowledge:
         data = pd.DataFrame({c: [0, 1] for c in ["A", "B"]})
         with pytest.raises(ValueError, match="marginally_dependent"):
             ExpertKnowledge(search_space="bogus").fit(data)
+
+    def test_fit_variable_presence_validation(self):
+        data = pd.DataFrame({c: [0, 1] for c in ["A", "B"]})
+
+        with pytest.raises(ValueError, match="search_space"):
+            ExpertKnowledge(search_space=[("A", "Z")]).fit(data)
+
+        with pytest.raises(ValueError, match="root_nodes"):
+            ExpertKnowledge(root_nodes=["Z"]).fit(data)
+
+        # "marginally_dependent" is a strategy string, not a set of variable names, so it must
+        # not be checked against `data.columns`.
+        ek = ExpertKnowledge(search_space="marginally_dependent")
+        ek.fit(data)
+        assert ek.search_space_ == set()
+
+    def test_root_nodes_generate_forbidden_edges(self):
+        data = pd.DataFrame(
+            {
+                "Age": [0, 1],
+                "Income": [0, 1],
+                "Education": [0, 1],
+            }
+        )
+
+        ek = ExpertKnowledge(root_nodes=["Age", "Income"])
+        ek.fit(data)
+
+        # Incoming edges to root nodes should be forbidden
+        assert ("Education", "Age") in ek.forbidden_edges_
+        assert ("Education", "Income") in ek.forbidden_edges_
+
+        # Outgoing edges from root nodes should remain allowed
+        assert ("Age", "Education") not in ek.forbidden_edges_
+        assert ("Income", "Education") not in ek.forbidden_edges_

@@ -5,7 +5,7 @@ class AppleWatchFitbit(BaseDataset):
     """
     References
     ----------
-    - :cite:p:`khan_2025`
+    - :footcite:t:`khan_2025`
     """
 
     _tags = {

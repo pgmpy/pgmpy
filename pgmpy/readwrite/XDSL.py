@@ -37,8 +37,8 @@ class XDSLReader:
 
     References
     ----------
-    - :cite:p:`bayesfusion_xdsl`
-    - :cite:p:`bayesfusion_genie`
+    - :footcite:t:`bayesfusion_xdsl`
+    - :footcite:t:`bayesfusion_genie`
     """
 
     def __init__(self, path=None, string=None):
@@ -247,8 +247,8 @@ class XDSLWriter:
 
     References
     ----------
-    - :cite:p:`bayesfusion_xdsl`
-    - :cite:p:`bayesfusion_genie`
+    - :footcite:t:`bayesfusion_xdsl`
+    - :footcite:t:`bayesfusion_genie`
     """
 
     def __init__(
@@ -427,7 +427,7 @@ class XDSLWriter:
 
     def write_xdsl(self, filename):
         warnings.warn(
-            """`XDSLWriter.write_xdsl` is deprecated and will be removed in v1.3.0. Please use `XDSLWriter.write`
+            """`XDSLWriter.write_xdsl` is deprecated and will be removed in v2.0. Please use `XDSLWriter.write`
             instead.""",
             FutureWarning,
             stacklevel=2,

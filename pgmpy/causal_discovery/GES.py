@@ -16,7 +16,7 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
     """
     Score-based causal discovery using Greedy Equivalence Search (GES).
 
-    This class implements the GES algorithm [1]_ for causal discovery. Given a
+    This class implements the GES algorithm [1] for causal discovery. Given a
     tabular dataset, the algorithm estimates the causal structure among the
     variables in the data as a Directed Acyclic Graph (DAG) or Partially
     Directed Acyclic Graph (PDAG).
@@ -84,7 +84,7 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
 
     References
     ----------
-    - :cite:p:`chickering_2002b`
+    - :footcite:t:`chickering_2002b`
     - https://github.com/juangamella/ges
     """
 

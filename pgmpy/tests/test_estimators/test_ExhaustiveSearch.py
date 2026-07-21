@@ -78,7 +78,11 @@ def test_estimate_rand(setup_data):
     est_k2 = ExhaustiveSearch(data["rand_data"], scoring_method=K2(data["rand_data"]))
     est = est_k2.estimate()
     assert set(est.nodes()) == {"A", "B", "C"}
-    assert set(est.edges()) == {("B", "A"), ("B", "C"), ("C", "A")}
+    # The pre-refactor K2 implementation over-scored variables with redundant
+    # parents (e.g. A | {B, C} with C == B), which made the denser DAG
+    # {B->A, B->C, C->A} appear optimal. The canonical `pgmpy.structure_score.K2`
+    # matches the analytical K2 score, under which {B->C} is optimal.
+    assert set(est.edges()) == {("B", "C")}
 
     est_bdeu = data["est_rand_bdeu"].estimate()
     assert set(est_bdeu.edges()) == {("B", "C")}
