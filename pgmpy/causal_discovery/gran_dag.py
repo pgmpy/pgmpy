@@ -45,9 +45,9 @@ def _validate_optimizer(optimizer: str, optimizer_params: dict) -> None:
     raise NotImplementedError
 
 
-def _dag_constraint(W: "torch.Tensor") -> "torch.Tensor":
-    """Compute the acyclicity constraint h(W) = tr(exp(W)) - d."""
-    return torch.trace(torch.linalg.matrix_exp(W)) - W.shape[0]
+def _dag_constraint(U: "torch.Tensor") -> "torch.Tensor":
+    """Compute the acyclicity constraint h(U) = tr(exp(U)) - d."""
+    return torch.trace(torch.linalg.matrix_exp(U)) - U.shape[1]
 
 
 def _run_pns(X: np.ndarray, pns_threshold: float, seed: int, estimator=None) -> np.ndarray:
