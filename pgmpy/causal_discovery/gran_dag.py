@@ -24,9 +24,11 @@ class GraNDAGTrainingConfig:
     optimizer_params: dict
     batch_size: int
     val_size: float
+    max_epochs: int
     min_loss_improvement: float
     early_stop_patience: int
     max_subproblems: int | None
+    tensorboard_log_dir: str | None
     seed: int
 
 
@@ -101,6 +103,13 @@ class _GraNDAGModel(nn.Module):
         When called with a bool, delegates to ``nn.Module.train(mode)``.
         When called with a Tensor, runs the full training loop.
         """
+        # Delegate to nn.Module.train(mode) when called with a bool.
+        # Seed, then init lambda, mu and h_prev for the augmented Lagrangian.
+        # Outer loop over subproblems: capped by max_subproblems, exit when h <= dag_constraint_tol.
+        #   Inner loop over epochs (capped by max_epochs): minibatch NLL + lambda*h + (mu/2)*h**2.
+        #   Early stop on validation NLL when val_size > 0; reset patience each subproblem.
+        #   After each subproblem: update lambda/mu from h and h_prev.
+        # Return the thresholded adjacency matrix.
         raise NotImplementedError
 
     def get_A(self) -> "torch.Tensor":
@@ -163,10 +172,16 @@ class GraNDAG(BaseCausalDiscovery):
         Mini-batch size for the inner optimization loop.
     val_size : float, default 0.1
         Fraction of data held out for early stopping within each subproblem.
+    max_epochs : int, default 200
+        Maximum number of training epochs per subproblem. Acts as the sole
+        bound on the inner loop when ``val_size`` is ``0.0``, since early
+        stopping is disabled in that case.
     min_loss_improvement : float, default 1e-4
         Minimum decrease in validation NLL to count as an improvement.
     early_stop_patience : int, default 5
         Epochs without improvement before stopping a subproblem early.
+    tensorboard_log_dir : str or None, default None
+        Directory for TensorBoard logs. If ``None``, logging is disabled.
     seed : int, default 42
         Random seed for reproducibility.
     edge_threshold : float, default 1e-4
@@ -193,8 +208,10 @@ class GraNDAG(BaseCausalDiscovery):
         optimizer_params: dict | None = None,
         batch_size: int = 64,
         val_size: float = 0.1,
+        max_epochs: int = 200,
         min_loss_improvement: float = 1e-4,
         early_stop_patience: int = 5,
+        tensorboard_log_dir: str | None = None,
         seed: int = 42,
         edge_threshold: float = 1e-4,
         pns_threshold: float | None = None,
@@ -221,8 +238,10 @@ class GraNDAG(BaseCausalDiscovery):
         self.optimizer_params = optimizer_params
         self.batch_size = batch_size
         self.val_size = val_size
+        self.max_epochs = max_epochs
         self.min_loss_improvement = min_loss_improvement
         self.early_stop_patience = early_stop_patience
+        self.tensorboard_log_dir = tensorboard_log_dir
         self.seed = seed
         self.edge_threshold = edge_threshold
         self.pns_threshold = pns_threshold
@@ -230,4 +249,9 @@ class GraNDAG(BaseCausalDiscovery):
 
     def _fit(self, X: pd.DataFrame):
         """Fit the GraN-DAG model and construct the causal DAG."""
+        # Step 0: Validate optimizer, net template and scaler; reject d < 2; set cols_.
+        # Step 0b: Run PNS and set pns_mask_ when pns_threshold is not None.
+        # Step 1: Build the network, training and regularization configs.
+        # Step 2: Scale, split off val_size, move to tensors, train _GraNDAGModel.
+        # Step 3: Jacobian -> threshold -> optional CAM pruning -> adjacency_matrix_, causal_graph_.
         raise NotImplementedError
