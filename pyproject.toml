@@ -1,6 +1,6 @@
 [project]
 name = "pgmpy"
-version = "1.1.0"
+version = "1.1.2"
 description = "Python Toolkit for Causal and Probabilistic Reasoning"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -75,6 +75,7 @@ docs = [
   "sphinxext-opengraph",
   "sphinx_sitemap",
   "myst_parser",
+  "sphinxcontrib-bibtex",
 ]
 all = [
   "pgmpy[optional,tests,docs]",
@@ -104,7 +105,7 @@ pgmpy = [
 ]
 
 [tool.pytest.ini_options]
-addopts = "-p no:doctest"
+addopts = "--ignore=pgmpy/estimators/StructureScore.py --ignore=pgmpy/readwrite/PomdpX.py --ignore=pgmpy/extern/tabulate.py --ignore=pgmpy/models/SEM.py --ignore=pgmpy/sampling/base.py"
 norecursedirs = [".git", "ignore", "build", "__pycache__"]
 filterwarnings = ["default"]
 
@@ -113,7 +114,7 @@ line-length = 120
 exclude = [".git", "examples/*", "docs/conf.py", "pgmpy/estimators/__init__.py",
 	   "pgmpy/factors/discrete/__init__.py", "pgmpy/identification/__init__.py", "pgmpy/inference/__init__.py",
            "pgmpy/extern/*", "pgmpy/.github/*"]
-target-version = "py314"
+target-version = "py310"
 extend-include = ["*.ipynb"]
 
 [tool.ruff.lint]

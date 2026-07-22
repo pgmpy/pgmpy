@@ -1,3 +1,5 @@
+from collections.abc import Hashable
+
 from pgmpy.structure_score.log_likelihood import LogLikelihood
 
 
@@ -21,6 +23,8 @@ class AIC(LogLikelihood):
     state_names : dict, optional
         Dictionary mapping each variable to its discrete states. If not specified, the unique values observed in the
         data are used.
+    max_cache_size : int or None, default=10000
+        Maximum number of local scores to cache. If None, the cache is unlimited.
 
     Examples
     --------
@@ -44,9 +48,8 @@ class AIC(LogLikelihood):
 
     References
     ----------
-    .. [1] Koller & Friedman, Probabilistic Graphical Models - Principles and Techniques, 2009, Section 18.3.4-18.3.6.
-    .. [2] AM Carvalho, Scoring functions for learning Bayesian networks,
-        http://www.lx.it.pt/~asmc/pub/talks/09-TA/ta_pres.pdf
+    - :footcite:t:`koller_friedman_2009`
+    - :footcite:t:`liao_2022`
     """
 
     _tags = {
@@ -56,10 +59,7 @@ class AIC(LogLikelihood):
         "is_parameteric": False,
     }
 
-    def __init__(self, data, state_names=None):
-        super().__init__(data, state_names=state_names)
-
-    def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
+    def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         ll, num_parents_states, var_cardinality = self._log_likelihood(variable=variable, parents=parents)
         score = ll - num_parents_states * (var_cardinality - 1)
 

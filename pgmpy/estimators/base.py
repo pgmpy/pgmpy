@@ -95,12 +95,22 @@ class BaseEstimator:
         array([[1., 1., 0., 0.],
                [0., 0., 1., 0.]])
         """
+        if weighted:
+            if "_weight" not in self.data.columns:
+                raise ValueError("data must contain a `_weight` column if weighted=True")
+            return get_state_counts(
+                data=self.data.drop(columns="_weight"),
+                state_names=self.state_names,
+                variable=variable,
+                parents=parents,
+                sample_weight=self.data["_weight"].to_numpy(),
+                reindex=reindex,
+            )
         return get_state_counts(
             data=self.data,
             state_names=self.state_names,
             variable=variable,
             parents=parents,
-            weighted=weighted,
             reindex=reindex,
         )
 

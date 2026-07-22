@@ -239,7 +239,11 @@ class TestEM(unittest.TestCase):
     def test_get_parameters_ess_dict_vs_scalar(self):
         """Test that uniform ESS dict matches scalar ESS."""
         ess_value = 7
-        ess_dict = {"Smoker": ess_value, "Cancer": ess_value, "Xray": ess_value}
+        # The dict must cover every node for equivalence with the scalar form:
+        # nodes missing from the dict get no prior (alpha = 0). The pre-refactor
+        # EM ignored the smoothing arguments for fully observed variables, which
+        # made an incomplete dict appear equivalent to the scalar.
+        ess_dict = dict.fromkeys(["Pollution", "Smoker", "Cancer", "Xray", "Dyspnoea"], ess_value)
 
         est_scalar = EM(self.model1, self.data1)
         cpds_scalar = est_scalar.get_parameters(

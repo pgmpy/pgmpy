@@ -655,6 +655,10 @@ class TestFBNMethods(unittest.TestCase):
     reason="execute only if required dependency present",
 )
 class TestFBNSimulation(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        config.set_backend("torch")
+
     def test_simulate_linear_gaussian(self):
         lg_model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
         lg_cpd1 = LinearGaussianCPD(variable="x1", beta=[1], std=1)

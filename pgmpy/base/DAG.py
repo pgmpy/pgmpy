@@ -10,6 +10,7 @@ import pandas as pd
 
 from pgmpy import logger
 from pgmpy.base._mixin_roles import _GraphRolesMixin
+from pgmpy.ci_tests import get_ci_test
 from pgmpy.independencies import Independencies
 from pgmpy.utils.parser import parse_dagitty, parse_lavaan
 
@@ -440,25 +441,31 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
                 else:
                     self.add_edge(edge[0], edge[1], edge[2])
 
-    def get_parents(self, node: Hashable):
+    def get_parents(self, nodes: Hashable | Iterable[Hashable]):
         """
-        Returns a list of parents of node.
+        Returns the parents of a node, or the union of parents over an iterable of nodes.
 
-        Throws an error if the node is not present in the graph.
+        A single node (``str``/``int``/``tuple``) returns a ``list`` of its parents (backward
+        compatible); a list or set of nodes returns the ``set`` union of their parents. Throws an
+        error if the node is not present in the graph.
 
         Parameters
         ----------
-        node: string, int or any hashable python object.
-            The node whose parents would be returned.
+        nodes: hashable, or iterable of hashable
+            The node (or collection of nodes) whose parents would be returned.
 
         Examples
         --------
         >>> from pgmpy.base import DAG
         >>> G = DAG(ebunch=[("diff", "grade"), ("intel", "grade")])
-        >>> G.get_parents(node="grade")
+        >>> G.get_parents("grade")
         ['diff', 'intel']
+        >>> G.get_parents(["grade", "intel"]) == {"diff", "intel"}
+        True
         """
-        return list(self.predecessors(node))
+        if isinstance(nodes, (list, set, frozenset)):
+            return set().union(*(set(self.predecessors(n)) for n in nodes))
+        return list(self.predecessors(nodes))
 
     def moralize(self):
         """
@@ -519,15 +526,18 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         """
         return [node for node, in_degree in dict(self.in_degree()).items() if in_degree == 0]
 
-    def get_children(self, node: Hashable):
+    def get_children(self, nodes: Hashable | Iterable[Hashable]):
         """
-        Returns a list of children of node.
-        Throws an error if the node is not present in the graph.
+        Returns the children of a node, or the union of children over an iterable of nodes.
+
+        A single node (``str``/``int``/``tuple``) returns a ``list`` of its children (backward
+        compatible); a list or set of nodes returns the ``set`` union of their children. Throws an
+        error if the node is not present in the graph.
 
         Parameters
         ----------
-        node: string, int or any hashable python object.
-            The node whose children would be returned.
+        nodes: hashable, or iterable of hashable
+            The node (or collection of nodes) whose children would be returned.
 
         Examples
         --------
@@ -542,10 +552,49 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         ...         ("E", "G"),
         ...     ]
         ... )
-        >>> g.get_children(node="B")
+        >>> g.get_children("B")
         ['D', 'E', 'F']
+        >>> g.get_children(["B", "E"]) == {"D", "E", "F", "G"}
+        True
         """
-        return list(self.successors(node))
+        if isinstance(nodes, (list, set, frozenset)):
+            return set().union(*(set(self.successors(n)) for n in nodes))
+        return list(self.successors(nodes))
+
+    def get_spouses(self, node: Hashable) -> set[Hashable]:
+        """
+        Returns the set of spouses (co-parents) of `node`.
+
+        In a Bayesian network the spouses of a node are its children's *other* parents -- the nodes
+        that share a child with `node`. This is the directed-graph counterpart of
+        ``_CoreGraph.get_spouses`` (which returns bidirected-edge neighbours): a DAG has no bidirected
+        edges, so the co-parent definition is the meaningful one. Throws an error if the node is not
+        present in the graph.
+
+        Parameters
+        ----------
+        node: string, int or any hashable python object.
+            The node whose spouses (co-parents) would be returned.
+
+        Returns
+        -------
+        spouses: set
+            The co-parents of `node`, excluding `node` itself.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> g = DAG(ebunch=[("x", "y"), ("z", "y"), ("y", "w"), ("u", "w")])
+        >>> sorted(g.get_spouses(node="x"))
+        ['z']
+        >>> sorted(g.get_spouses(node="y"))
+        ['u']
+        """
+        spouses = set()
+        for child in self.get_children(node):
+            spouses.update(self.get_parents(child))
+        spouses.discard(node)
+        return spouses
 
     def get_independencies(self, latex=False, include_latents=False) -> Independencies | list[str]:
         """
@@ -761,14 +810,12 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         References
         ----------
-        [1] Algorithm 4, Page 10: Tian, Jin, Azaria Paz, and
-          Judea Pearl. Finding minimal d-separators. Computer Science Department,
-            University of California, 1998.
+        - :footcite:t:`tian_paz_pearl_1998` (Algorithm 4, page 10).
         """
         if (end in self.neighbors(start)) or (start in self.neighbors(end)):
             raise ValueError("No possible separators because start and end are adjacent")
         an_graph = self.get_ancestral_graph([start, end])
-        separator = set(itertools.chain(self.predecessors(start), self.predecessors(end)))
+        separator = self.get_parents([start, end])
 
         if not include_latents:
             # If any of the parents were latents, take the latent's parent
@@ -799,9 +846,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
     def get_markov_blanket(self, node: Hashable) -> list[Hashable]:
         """
-        Returns a markov blanket for a random variable. In the case
-        of Bayesian Networks, the markov blanket is the set of
-        node's parents, its children and its children's other parents.
+        Returns a markov blanket for a random variable. In the case of Bayesian Networks, the markov blanket is the set
+        of node's parents, its children and its children's other parents.
 
         Returns
         -------
@@ -834,13 +880,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> sorted(G.get_markov_blanket("y"))
         ['s', 'u', 'v', 'w', 'x', 'z']
         """
-        children = self.get_children(node)
-        parents = self.get_parents(node)
-        blanket_nodes = children + parents
-        for child_node in children:
-            blanket_nodes.extend(self.get_parents(child_node))
-        blanket_nodes = set(blanket_nodes)
-        blanket_nodes.discard(node)
+        blanket_nodes = set(self.get_parents(node)) | set(self.get_children(node)) | self.get_spouses(node)
         return list(blanket_nodes)
 
     def active_trail_nodes(
@@ -878,9 +918,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         References
         ----------
-        Details of the algorithm can be found in 'Probabilistic Graphical Model
-        Principles and Techniques' - Koller and Friedman
-        Page 75 Algorithm 3.1
+        - :footcite:t:`koller_friedman_2009` (page 75, Algorithm 3.1).
         """
         observed_list: list[Hashable] | tuple[Hashable, Hashable]
         if observed:
@@ -980,8 +1018,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         References
         ----------
-        [1] Chickering, David Maxwell. "Learning equivalence classes of Bayesian-network structures."
-          Journal of machine learning research 2.Feb (2002): 445-498. Figure 4 and 5.
+        - :footcite:t:`chickering_2002a` (Figures 4 and 5).
         """
         # Perform a topological sort on the nodes
         topo_order = list(nx.topological_sort(self))
@@ -1055,18 +1092,53 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
                             edge_labels[(z, y)] = "reversible"
 
         # Create PDAG with directed and undirected edges
-        directed_edges = [edge for edge, label in edge_labels.items() if label == "compelled"]
-        undirected_edges = [edge for edge, label in edge_labels.items() if label == "reversible"]
+        directed_edges = [(*edge, "->") for edge, label in edge_labels.items() if label == "compelled"]
+        undirected_edges = [(*edge, "--") for edge, label in edge_labels.items() if label == "reversible"]
 
         from pgmpy.base import PDAG
 
-        pdag = PDAG(
-            directed_ebunch=directed_edges,
-            undirected_ebunch=undirected_edges,
-            latents=self.latents,
-        )
+        pdag = PDAG()
+        pdag.add_edges_from(directed_edges)
+        pdag.add_edges_from(undirected_edges)
+        pdag.latents = self.latents
         pdag.add_nodes_from(self.nodes())
         return pdag
+
+    def to_adjacency(self, encoding: str = "edge_type", nodelist: list | None = None) -> pd.DataFrame:
+        """
+        Return the adjacency matrix of the DAG as a ``pandas.DataFrame``.
+
+        Temporary shim mirroring :meth:`pgmpy.base._base._CoreGraph.to_adjacency` until ``DAG`` itself
+        inherits ``_CoreGraph``. Every edge of a DAG is a directed ``u -> v`` edge, so only the
+        ``"edge_type"`` and ``"binary"`` (alias ``"bnlearn"``) encodings are supported.
+
+        Parameters
+        ----------
+        encoding : str (default="edge_type")
+            - ``"edge_type"`` : ``M.loc[u, v]`` is ``"->"`` and ``M.loc[v, u]`` is ``"<-"`` for an edge
+              ``u -> v`` (else ``0``).
+            - ``"binary"`` / ``"bnlearn"`` : ``M.loc[u, v] = 1`` iff ``u -> v`` (directed, asymmetric).
+
+        nodelist : list, optional (default=None)
+            Row/column ordering. If ``None``, the sorted node list is used.
+
+        Returns
+        -------
+        pandas.DataFrame
+        """
+        nodes = sorted(self.nodes()) if nodelist is None else list(nodelist)
+        if encoding in ("binary", "bnlearn"):
+            return nx.to_pandas_adjacency(self, nodelist=nodes, dtype=int, weight=None)
+        if encoding == "edge_type":
+            adj = pd.DataFrame(0, index=nodes, columns=nodes, dtype=object)
+            for u, v in self.edges():
+                adj.at[u, v] = "->"
+                adj.at[v, u] = "<-"
+            return adj
+        raise ValueError(
+            f"DAG.to_adjacency is a temporary shim supporting encoding in {{'edge_type', 'binary'}}; "
+            f"got {encoding!r}. Other encodings become available once DAG inherits _CoreGraph."
+        )
 
     def do(
         self,
@@ -1108,7 +1180,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         References
         ----------
-        Causality: Models, Reasoning, and Inference, Judea Pearl (2000). p.70.
+        - :footcite:t:`pearl_2009` (page 70).
         """
         dag = self if inplace else self.copy()
 
@@ -1634,7 +1706,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             and self.get_role_dict() == other.get_role_dict()
         )
 
-    def edge_strength(self, data, edges=None):
+    def edge_strength(self, data, edges=None, ci_test=None):
         """
         Computes the strength of each edge in `edges`. The strength is bounded
         between 0 and 1, with 1 signifying strong effect.
@@ -1662,6 +1734,9 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             - None: Compute for all DAG edges.
             - Tuple (X, Y): Compute for edge X → Y.
             - List of tuples: Compute for selected edges.
+
+        ci_test : str or instance of BaseCITest
+            The conditional independence test whose effect size to use as edge strength
 
         Returns
         -------
@@ -1698,12 +1773,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         References
         ----------
-        [1] Ankan, Ankur, and Johannes Textor. "A simple unified approach to testing high-dimensional
-        conditional independences for categorical and ordinal data." Proceedings of the AAAI Conference
-        on Artificial Intelligence.
+        - :footcite:t:`ankan_textor_2023`
         """
-
-        from pgmpy.estimators.CITests import pillai_trace
 
         # If edges is None, compute for all edges in the DAG
         if edges is None:
@@ -1718,6 +1789,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             raise ValueError(
                 "edges parameter must be either None, a 2-tuple (X, Y), or a list of 2-tuples [(X1, Y1), (X2, Y2), ...]"
             )
+
+        ci_test = get_ci_test(test=ci_test, data=data)
 
         strengths = {}
         skipped_edges = []
@@ -1737,13 +1810,13 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             conditioning_set = set(pa_Y) - {x, y}
 
             # Run CI test and get effect size
-            effect_size, _ = pillai_trace(X=x, Y=y, Z=list(conditioning_set), data=data, boolean=False)
+            ci_test.run_test(X=x, Y=y, Z=tuple(conditioning_set))
 
             # Store the edge strength
-            strengths[edge] = effect_size
+            strengths[edge] = ci_test.effect_size_
 
             # store the values in the graph as well
-            self.edges[edge]["strength"] = effect_size
+            self.edges[edge]["strength"] = ci_test.effect_size_
 
         if skipped_edges:
             logger.warning(

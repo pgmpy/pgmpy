@@ -1,7 +1,7 @@
+import warnings
 from collections.abc import Hashable
 from itertools import chain
 
-import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 
@@ -10,10 +10,13 @@ from pgmpy.estimators import ParameterEstimator
 from pgmpy.factors import FactorDict
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork, JunctionTree
+from pgmpy.parameter_estimator import DiscreteMLE
 
 
 class MaximumLikelihoodEstimator(ParameterEstimator):
     """
+    Deprecated: use :class:`pgmpy.parameter_estimator.DiscreteMLE` instead.
+
     Class used to compute parameters for a model using Maximum Likelihood Estimation.
 
     Parameters
@@ -52,6 +55,13 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         data: pd.DataFrame,
         **kwargs,
     ) -> None:
+        warnings.warn(
+            "`pgmpy.estimators.MaximumLikelihoodEstimator` is deprecated and will be removed in v2.0. "
+            "Please use `pgmpy.parameter_estimator.DiscreteMLE` instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
+
         if not isinstance(model, (DiscreteBayesianNetwork, JunctionTree, DAG)):
             raise NotImplementedError(
                 "Maximum Likelihood Estimate is only implemented for DiscreteBayesianNetwork, JunctionTree, and DAG"
@@ -131,6 +141,9 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
 
         return parameters
 
+    def _sample_weight(self, weighted: bool):
+        return self.data["_weight"] if weighted else None
+
     def estimate_cpd(self, node: Hashable, weighted: bool = False) -> TabularCPD:
         """
         Method to estimate the CPD for a given variable.
@@ -176,34 +189,13 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         | C(1) | 1.0  | 1.0  | 0.0  | 0.5  |
         +------+------+------+------+------+
         """
-
-        state_counts = self.state_counts(node, weighted=weighted)
-
-        # if a column contains only `0`s (no states observed for some configuration
-        # of parents' states) fill that column uniformly instead
-        state_counts.iloc[:, (state_counts.values == 0).all(axis=0)] = 1.0
-
-        parents = sorted(self.model.get_parents(node))
-        parents_cardinalities = [len(self.state_names[parent]) for parent in parents]
-        node_cardinality = len(self.state_names[node])
-
-        # Get the state names for the CPD
-        state_names = {node: list(state_counts.index)}
-        if parents:
-            state_names.update(
-                {state_counts.columns.names[i]: list(state_counts.columns.levels[i]) for i in range(len(parents))}
-            )
-
-        cpd = TabularCPD(
-            node,
-            node_cardinality,
-            np.array(state_counts),
-            evidence=parents,
-            evidence_card=parents_cardinalities,
-            state_names={var: self.state_names[var] for var in chain([node], parents)},
+        return DiscreteMLE._estimate_cpd(
+            model=self.model,
+            data=self.data,
+            state_names=self.state_names,
+            node=node,
+            sample_weight=self._sample_weight(weighted),
         )
-        cpd.normalize()
-        return cpd
 
     def estimate_potentials(self) -> FactorDict:
         """
@@ -217,12 +209,9 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
             Estimated potentials for the entire graphical model.
 
         References
-        ---------
-        [1] Kevin P. Murphy, ML Machine Learning - A Probabilistic Perspective
-            Algorithm 19.2 Iterative Proportional Fitting algorithm
-              for tabular MRFs & Section 19.5.7.4 IPF for decomposable graphical models.
-        [2] Eric P. Xing, Meng Song, Li Zhou, Probabilistic Graphical Models 10-708, Spring 2014.
-            https://www.cs.cmu.edu/~epxing/Class/10708-14/scribe_notes/scribe_note_lecture8.pdf.
+        ----------
+        - :footcite:t:`murphy_2012` (Algorithm 19.2 IPF; Section 19.5.7.4).
+        - :footcite:t:`xing_2014_lectures`
 
         Examples
         --------

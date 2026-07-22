@@ -25,6 +25,7 @@ Score-Based and Tree Search
    ~pgmpy.causal_discovery.GES
    ~pgmpy.estimators.TreeSearch
    ~pgmpy.estimators.ExhaustiveSearch
+   ~pgmpy.causal_discovery.TOPIC
 
 Expert-Guided Discovery
 -----------------------

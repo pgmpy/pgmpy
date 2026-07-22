@@ -45,9 +45,9 @@ class XMLBIFReader:
     >>> reader = XMLBIFReader("xmlbif_test.xml")
     >>> model = reader.get_model()
 
-    Reference
-    ---------
-    [1] https://www.cs.cmu.edu/afs/cs/user/fgcozman/www/Research/InterchangeFormat/
+    References
+    ----------
+    - :footcite:t:`cozman_xmlbif`
     """
 
     def __init__(self, path=None, string=None):
@@ -302,9 +302,9 @@ class XMLBIFWriter:
     >>> writer = XMLBIFWriter(model)
     >>> writer.write("asia.xml")
 
-    Reference
-    ---------
-    [1] https://www.cs.cmu.edu/afs/cs/user/fgcozman/www/Research/InterchangeFormat/
+    References
+    ----------
+    - :footcite:t:`cozman_xmlbif`
     """
 
     def __init__(self, model, encoding="utf-8", prettyprint=True):
@@ -580,7 +580,8 @@ class XMLBIFWriter:
 
     def write_xmlbif(self, filename):
         warnings.warn(
-            "`XMLBIFWriter.write_xmlbif` is deprecated. Please use `XMLBIFWriter.write` instead.",
+            """`XMLBIFWriter.write_xmlbif` is deprecated and will be removed in v2.0. Please use `XMLBIFWriter.write`
+            instead.""",
             FutureWarning,
             stacklevel=2,
         )

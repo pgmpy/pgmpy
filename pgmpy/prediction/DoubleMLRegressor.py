@@ -7,10 +7,10 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold
 from sklearn.utils.validation import check_is_fitted, validate_data
 
-from pgmpy.prediction._base import _BaseCausalPrediction
+from pgmpy.prediction._base import BaseCausalPrediction
 
 
-class DoubleMLRegressor(_BaseCausalPrediction):
+class DoubleMLRegressor(BaseCausalPrediction):
     """
     Implements the Double Machine Learning Regressor[1] (DML2) with cross-fitting.
 
@@ -157,10 +157,7 @@ class DoubleMLRegressor(_BaseCausalPrediction):
 
     References
     ----------
-    .. [1] Chernozhukov, V., Chetverikov, D., Demirer, M., Duflo, E., Hansen,
-           C., Newey, W., & Robins, J. (2018). Double/debiased machine learning for
-           treatment and structural parameters. The Econometrics Journal, 21(1),
-           C1-C68.
+    - :footcite:t:`chernozhukov_2018`
 
     """
 
