@@ -195,6 +195,8 @@ class SID(BaseSupervisedMetric):
     }
 
     def _evaluate(self, true_causal_graph: DAG, est_causal_graph: DAG) -> int:
+        if set(true_causal_graph.nodes()) != set(est_causal_graph.nodes()):
+            raise ValueError("true_causal_graph and est_causal_graph must have the exact same set of nodes.")
         nodes = list(true_causal_graph.nodes())
         true_adjacency = true_causal_graph.to_adjacency(encoding="binary", nodelist=nodes).to_numpy(dtype=bool)
         est_adjacency = est_causal_graph.to_adjacency(encoding="binary", nodelist=nodes).to_numpy(dtype=bool)
