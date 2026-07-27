@@ -890,10 +890,16 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
                 )
 
         # Step 2: Remove every incoming (arrowhead-at-`node`) edge.
+        # Collect all edges first to avoid double-removal when both endpoints
+        # of a bidirected edge (A <> B) are in `nodes`.
+        edges_to_remove = []
         for node in nodes:
             for edge_type in arrowhead_types:
                 for neighbor in self.get_neighbors(node, edge_type):
-                    graph.remove_edge(node, neighbor, edge_type)
+                    if graph.has_edge(node, neighbor, edge_type):
+                        edges_to_remove.append((node, neighbor, edge_type))
+        for u, v, et in edges_to_remove:
+            graph.remove_edge(u, v, et)
         return graph
 
     def get_roots(self) -> set[Hashable]:
