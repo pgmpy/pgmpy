@@ -1,3 +1,4 @@
+from .ANM import ANM
 from .ChowLiu import ChowLiu
 from .DiBS import DiBS
 from .ExpertInLoop import ExpertInLoop
@@ -10,6 +11,7 @@ from .TAN import TAN
 from .TOPIC import TOPIC
 
 __all__ = [
+    "ANM",
     "ChowLiu",
     "DiBS",
     "ExpertInLoop",
