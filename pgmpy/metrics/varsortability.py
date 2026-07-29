@@ -7,20 +7,24 @@ class VarSortability(BaseUnsupervisedMetric):
     r"""
     Metric to compare the learned graph with a baseline variance sorting algorithm.
 
-    Var-sortability measures how well marginal variances reflect the causal structure encoded in `causal_graph`. For
-    each directed path in the graph, this metric checks whether variance increases monotonically along the path (or
-    remains approximately equal). A score of 1.0 indicates perfect alignment: variances are non-decreasing along all
-    causal paths.
-
-    This metric is agnostic to how `causal_graph` was produced, so it can be used to evaluate the output of any causal
-    discovery algorithm, or a ground-truth graph, against a given dataset.
+    This metric quantifies how close a given `causal_graph` is to the graph that
+    :class:`~pgmpy.causal_discovery.SortnRegress` recovers from the same dataset. It fits `SortnRegress` on
+    `X` and then compares the resulting graph against `causal_graph` using a supervised graph-distance metric
+    (Structural Hamming Distance by default).
 
     Parameters
     ----------
-    metric: 'shd'
-    variant: "r2"
-    threshold: 0.3
-    estimator: None
+    metric : str, default='shd'
+        Name of the supervised metric used to compare `causal_graph` against the graph learned by
+        `SortnRegress`.
+    variant : {'r2', 'varsortability'}, default='r2'
+        Ordering criterion passed through to `SortnRegress`. See
+        :class:`~pgmpy.causal_discovery.SortnRegress` for details.
+    threshold: float, default=0.3
+        Threshold passed through to `SortnRegress`. See :class:`~pgmpy.causal_discovery.SortnRegress` for details.
+    estimator: sklearn-style regression estimator, default=None
+        Regression estimator passed through to `SortnRegress`. If None, `SortnRegress` defaults to
+        sklearn.linear_model.LinearRegression().
 
     Examples
     --------
@@ -28,17 +32,16 @@ class VarSortability(BaseUnsupervisedMetric):
     >>> import pandas as pd
     >>> from pgmpy.base import DAG
     >>> from pgmpy.metrics import VarSortability
-    >>> np.random.seed(42)
+    >>> rng = np.random.default_rng(seed=42)
     >>> n = 500
-    >>> x = np.random.normal(0, 1.0, n)
-    >>> y = 2.0 * x + np.random.normal(0, 0.5, n)
-    >>> z = 2.0 * y + np.random.normal(0, 0.5, n)
+    >>> x = rng.normal(0, 1.0, n)
+    >>> y = 2.0 * x + rng.normal(0, 0.5, n)
+    >>> z = 2.0 * y + rng.normal(0, 0.5, n)
     >>> data = pd.DataFrame({'X': x, 'Y': y, 'Z': z})
     >>> dag = DAG([('X', 'Y'), ('Y', 'Z')])
     >>> metric = VarSortability()
     >>> score = metric.evaluate(X=data, causal_graph=dag)
-    >>> score > 0.7
-    True
+    0
 
     References
     ----------
@@ -46,7 +49,7 @@ class VarSortability(BaseUnsupervisedMetric):
     """
 
     _tags = {
-        "name": "sortability",
+        "name": "varsortability",
         "requires_true_graph": False,
         "requires_data": True,
         "lower_is_better": False,
@@ -67,9 +70,10 @@ class VarSortability(BaseUnsupervisedMetric):
         varsort_graph = est.fit(X).causal_graph_
 
         # Step 2: Use an supervised metric to compare the `causal_graph` with the one learned using sortnregress.
-        metric_class = get_metrics(self.metric)
-        if not isinstance(metric_class, BaseSupervisedMetric):
-            raise ValueError("Incorrect metric")
+        metric_class = get_metrics(name=self.metric)
+
+        if not isinstance(metric_class(), BaseSupervisedMetric):
+            raise ValueError(f"Metric '{self.metric}' is not a supported supervised metric.")
         else:
             metric_est = metric_class().evaluate(causal_graph, varsort_graph)
 

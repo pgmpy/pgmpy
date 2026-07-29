@@ -30,11 +30,11 @@ def test_sortnregress_compatibility(estimator, check):
 # fixtures and core tests for SortnRegress functionality and scoring
 @pytest.fixture
 def causal_chain_data():
-    np.random.seed(42)
+    rng = np.random.default_rng(seed=42)
     n = 1000
-    x = np.random.normal(0, 1, n)
-    y = x + np.random.normal(0, 1.5, n)
-    z = y + np.random.normal(0, 2.0, n)
+    x = rng.normal(0, 1, n)
+    y = x + rng.normal(0, 1.5, n)
+    z = y + rng.normal(0, 2.0, n)
 
     return pd.DataFrame({"X": x, "Y": y, "Z": z})
 
@@ -81,8 +81,8 @@ class TestSortnRegressCore:
         assert list(est.feature_names_in_) == ["X", "Y", "Z"]
 
     def test_zero_variance_column(self):
-        np.random.seed(0)
-        data = pd.DataFrame(np.random.randn(100, 2), columns=["X", "Y"])
+        rng = np.random.default_rng(seed=0)
+        data = pd.DataFrame(rng.standard_normal((100, 2)), columns=["X", "Y"])
         data["C"] = 0.0
 
         est = SortnRegress(threshold=0.3)
@@ -103,19 +103,19 @@ class TestSortnRegressScoring:
         assert isinstance(shd_score, (int, float, np.integer))
 
 
-class TestSortnRegressCriterion:
-    def test_default_criterion_is_r2(self, causal_chain_data):
-        est = SortnRegress(threshold=0.3)  # default criterion is r2
-        assert est.criterion == "r2"
+class TestSortnRegressvariant:
+    def test_default_variant_is_r2(self, causal_chain_data):
+        est = SortnRegress(threshold=0.3)  # default variant is r2
+        assert est.variant == "r2"
         est.fit(causal_chain_data)
         assert len(est.causal_graph_.edges()) > 0
 
-    def test_varsortability_criterion_fits(self, causal_chain_data):
-        est = SortnRegress(threshold=0.3, criterion="varsortability")
+    def test_varsortability_variant_fits(self, causal_chain_data):
+        est = SortnRegress(threshold=0.3, variant="varsortability")
         est.fit(causal_chain_data)
         assert len(est.causal_graph_.edges()) > 0
 
-    def test_invalid_criterion_raises(self, causal_chain_data):
-        est = SortnRegress(threshold=0.3, criterion="not_a_real_criterion")
+    def test_invalid_variant_raises(self, causal_chain_data):
+        est = SortnRegress(threshold=0.3, variant="not_a_real_variant")
         with pytest.raises(ValueError, match="criterion must be one of"):
             est.fit(causal_chain_data)

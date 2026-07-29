@@ -91,8 +91,8 @@ class SortnRegress(BaseCausalDiscovery):
     >>> import pandas as pd
     >>> import numpy as np
     >>> from pgmpy.causal_discovery import SortnRegress
-    >>> np.random.seed(42)
-    >>> data = pd.DataFrame(np.random.randn(1000, 3), columns=['X', 'Y', 'Z'])
+    >>> rng = np.random.default_rng(seed=42)
+    >>> data = pd.DataFrame(rng.standard_normal(1000, 3), columns=['X', 'Y', 'Z'])
     >>> data['Z'] += 2.5 * data['X'] + 2.5 * data['Y']
     >>> model = SortnRegress(threshold=0.3)
     >>> _ = model.fit(data)
@@ -168,7 +168,7 @@ class SortnRegress(BaseCausalDiscovery):
 
         self.causal_graph_ = model
         self.adjacency_matrix_ = nx.to_pandas_adjacency(
-            self.causal_graph_, nodelist=self.feature_names_in_, weight=1, dtype="int"
+            self.causal_graph_, nodelist=self.feature_names_in_, weight=None, dtype="int"
         )
 
         return self

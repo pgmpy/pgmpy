@@ -6,7 +6,7 @@ from .implied_cis import ImpliedCIs
 from .orientation_cm import OrientationConfusionMatrix
 from .shd import SHD
 from .structure_score import StructureScore
-from .varsortability_score import VarSortability
+from .varsortability import VarSortability
 
 __all__ = [
     "BaseSupervisedMetric",
