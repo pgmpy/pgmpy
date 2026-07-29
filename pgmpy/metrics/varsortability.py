@@ -1,5 +1,4 @@
 from pgmpy.base import DAG, PDAG
-from pgmpy.causal_discovery import SortnRegress
 from pgmpy.metrics._base import BaseSupervisedMetric, BaseUnsupervisedMetric, get_metrics
 
 
@@ -65,6 +64,8 @@ class VarSortability(BaseUnsupervisedMetric):
         super().__init__()
 
     def _evaluate(self, X, causal_graph, **kwargs):
+        from pgmpy.causal_discovery import SortnRegress
+
         # Step 1: Use the sortnregress algorithm to estimate a causal graph.
         est = SortnRegress(variant=self.variant, threshold=self.threshold, estimator=self.estimator)
         varsort_graph = est.fit(X).causal_graph_
