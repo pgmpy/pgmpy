@@ -5,7 +5,7 @@ class CreditApproval(BaseDataset):
     """
     References
     ----------
-    - :cite:p:`ivandari_2022`
+    - :footcite:t:`ivandari_2022`
     """
 
     _tags = {

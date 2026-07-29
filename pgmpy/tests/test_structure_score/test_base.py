@@ -1,3 +1,5 @@
+from collections.abc import Hashable
+
 import pandas as pd
 import pytest
 
@@ -16,7 +18,7 @@ class CountingScore(BaseStructureScore):
         self.call_count = 0
         super().__init__(data)
 
-    def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
+    def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         self.call_count += 1
         return float(len(parents))
 

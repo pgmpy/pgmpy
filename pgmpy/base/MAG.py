@@ -42,7 +42,7 @@ class MAG(_CoreGraph):
 
     References
     ----------
-    - :cite:p:`zhang_2008`
+    - :footcite:t:`zhang_2008`
     """
 
     SUPPORTED_EDGE_TYPES = frozenset(["->", "<-", "<>", "--"])
@@ -54,7 +54,7 @@ class MAG(_CoreGraph):
         An ancestral graph is maximal when no edge can be added without changing the implied
         conditional-independence relations -- equivalently, when every pair of non-adjacent nodes
         can be m-separated by some subset of the remaining nodes. By the characterization of
-        :cite:p:`zhang_2008` this holds exactly when no *primitive* inducing path (an inducing
+        :footcite:t:`zhang_2008` this holds exactly when no *primitive* inducing path (an inducing
         path relative to the full vertex set: every intermediate node is a collider and an
         ancestor of an endpoint) joins a non-adjacent pair. The ``latents`` role is ignored:
         maximality is a property of the graph itself.

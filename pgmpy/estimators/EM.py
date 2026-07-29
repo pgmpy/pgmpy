@@ -1,26 +1,19 @@
 import warnings
-from itertools import chain, product
-from math import log
-from typing import Any
 
-import numpy as np
 import pandas as pd
-from joblib import Parallel, delayed
-from tqdm.auto import tqdm
 
-from pgmpy import config, logger
+from pgmpy import logger
 from pgmpy.base import DAG
-from pgmpy.estimators import (
-    BayesianEstimator,
-    MaximumLikelihoodEstimator,
-    ParameterEstimator,
-)
+from pgmpy.estimators import ParameterEstimator
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
+from pgmpy.parameter_estimator import DiscreteBayesianEstimator, DiscreteEM
 
 
 class ExpectationMaximization(ParameterEstimator):
     """
+    Deprecated: use :class:`pgmpy.parameter_estimator.DiscreteEM` instead.
+
     Class used to compute parameters for a model using Expectation
     Maximization (EM).
 
@@ -67,7 +60,7 @@ class ExpectationMaximization(ParameterEstimator):
         **kwargs,
     ):
         warnings.warn(
-            "`pgmpy.estimators.ExpectationMaximization` is deprecated and will be removed in v1.3.0. "
+            "`pgmpy.estimators.ExpectationMaximization` is deprecated and will be removed in v2.0. "
             "Please use `pgmpy.parameter_estimator.DiscreteEM` instead.",
             FutureWarning,
             stacklevel=2,
@@ -86,14 +79,17 @@ class ExpectationMaximization(ParameterEstimator):
         original_cols = set(data.columns)
         data = data.dropna(axis=1, how="all")
         dropped_cols = original_cols - set(data.columns)
-        new_latents = [col for col in dropped_cols if col not in model.latents]
+        new_latents = [col for col in dropped_cols if col in model.nodes() and col not in model.latents]
 
         if new_latents:
             logger.warning(
                 f"Columns {new_latents} have all missing values and are not marked as latent. "
                 "Treating them as latent variables."
             )
-            model.latents.update(new_latents)
+            # `latents` is a role-derived property whose getter returns a fresh
+            # set, so it must be assigned through the setter (mutating the
+            # returned set is a silent no-op).
+            model.latents = set(model.latents) | set(new_latents)
 
         # Drop rows with any missing values in partially observed columns
         original_rows_count = data.shape[0]
@@ -108,79 +104,6 @@ class ExpectationMaximization(ParameterEstimator):
 
         super().__init__(model, data, **kwargs)
         self.model_copy = self.model.copy()
-
-    def _get_log_likelihood(self, datapoint: dict[str, Any]) -> float:
-        """
-        Computes the likelihood of a given datapoint. Goes through each
-        CPD matching the combination of states to get the value and multiplying
-        them together.
-        """
-        likelihood = 0
-        for cpd in self.model_copy.cpds:
-            scope = set(cpd.scope())
-            likelihood += log(
-                max(
-                    cpd.get_value(**{key: value for key, value in datapoint.items() if key in scope}),
-                    1e-10,
-                )
-            )
-        return likelihood
-
-    def _parallel_compute_weights(
-        self,
-        data_unique: pd.DataFrame,
-        latent_card: dict[str, int],
-        n_counts: dict[tuple, int],
-        offset: int,
-        batch_size: int,
-    ) -> pd.DataFrame:
-        cache: list[pd.DataFrame] = []
-        for i in range(offset, min(offset + batch_size, data_unique.shape[0])):
-            v = list(product(*[range(card) for card in latent_card.values()]))
-            latent_combinations = np.array(v, dtype=int)
-            df = data_unique.iloc[[i] * latent_combinations.shape[0]].reset_index(drop=True)
-            for index, latent_var in enumerate(latent_card.keys()):
-                df[latent_var] = latent_combinations[:, index]
-            weights = np.e ** (df.apply(lambda t: self._get_log_likelihood(dict(t)), axis=1))
-            df["_weight"] = (weights / weights.sum()) * n_counts[tuple(data_unique.iloc[i])]
-            cache.append(df)
-
-        return pd.concat(cache)
-
-    def _compute_weights(
-        self,
-        n_jobs: int,
-        latent_card: dict[str, int],
-        batch_size: int,
-    ) -> pd.DataFrame:
-        """
-        For each data point, create extra data points for each possible combination
-        of states of latent variables and assigns weights to each of them.
-        """
-
-        data_unique = self.data.drop_duplicates()
-        n_counts = self.data.groupby(list(self.data.columns), observed=True).size().to_dict()
-
-        cache = Parallel(n_jobs=n_jobs)(
-            delayed(self._parallel_compute_weights)(data_unique, latent_card, n_counts, i, batch_size)
-            for i in range(0, data_unique.shape[0], batch_size)
-        )
-
-        return pd.concat(cache)
-
-    def _is_converged(
-        self,
-        new_cpds: list[TabularCPD],
-        atol: float = 1e-08,
-    ) -> bool:
-        """
-        Checks if the values of `new_cpds` are within the tolerance limits of the current
-        model cpds.
-        """
-        for cpd in new_cpds:
-            if not cpd.__eq__(self.model_copy.get_cpds(node=cpd.scope()[0]), atol=atol):
-                return False
-        return True
 
     def get_parameters(
         self,
@@ -206,10 +129,9 @@ class ExpectationMaximization(ParameterEstimator):
             assumes `2` states for each latent variable.
 
         apply_smoothing: bool (default: False)
-            If True, `prior_type` and any additional arguments related to it
-            needs to be specified. Please refer
-            `BayesianEstimator.get_parameters` method for more details on which
-            arguments need to be specified.
+            If True, the M-step uses Bayesian estimation (with priors as per
+            `pgmpy.parameter_estimator.DiscreteBayesianEstimator`, configurable
+            via additional keyword arguments) instead of Maximum Likelihood.
 
         max_iter: int (default: 100)
             The maximum number of iterations the algorithm is allowed to run for.
@@ -272,113 +194,18 @@ class ExpectationMaximization(ParameterEstimator):
         <TabularCPD representing P(C:2) at 0x...>,
         <TabularCPD representing P(D:2 | C:2) at 0x...>]
         """
-        # Step 1: Parameter checks
-        if latent_card is None:
-            latent_card = dict.fromkeys(self.model_copy.latents, 2)
+        m_step_estimator = DiscreteBayesianEstimator(**kwargs) if apply_smoothing else None
 
-        # Step 2: Create structures/variables to be used later.
-        n_states_dict = {key: len(value) for key, value in self.state_names.items()}
-        n_states_dict.update(latent_card)
-        for var in self.model_copy.latents:
-            self.state_names[var] = list(range(n_states_dict[var]))
-
-        # Step 3: Initialize CPDs.
-        # Step 3.0: Check if init_cpds is a string and if so, initialize the CPDs.
-        if isinstance(init_cpds, str):
-            parents_dict = {var: self.model.get_parents(var) for var in self.model.nodes()}
-            if init_cpds == "random":
-                init_cpds = {
-                    var: TabularCPD.get_random(
-                        variable=var,
-                        evidence=parents_dict[var],
-                        cardinality={v: n_states_dict[v] for v in ([var] + parents_dict[var])},
-                        state_names={v: self.state_names[v] for v in ([var] + parents_dict[var])},
-                        seed=seed,
-                    )
-                    for var in self.model.nodes()
-                }
-            elif init_cpds == "uniform":
-                init_cpds = {
-                    var: TabularCPD.get_uniform(
-                        variable=var,
-                        evidence=parents_dict[var],
-                        cardinality={v: n_states_dict[v] for v in ([var] + parents_dict[var])},
-                        state_names={v: self.state_names[v] for v in ([var] + parents_dict[var])},
-                        seed=seed,
-                    )
-                    for var in self.model.nodes()
-                }
-            else:
-                raise ValueError(
-                    f"If `init_cpds` is a string, it must be either 'random' or 'uniform'. Got: {init_cpds}"
-                )
-
-        # Step 3.1: Learn the CPDs of variables which don't involve
-        #           latent variables using MLE if their init_cpd is
-        #           not specified.
-        fixed_cpds = []
-        fixed_cpd_vars = (
-            set(self.model.nodes())
-            - self.model.latents
-            - self.model.get_children(self.model.latents)
-            - set(init_cpds.keys())
+        estimator = DiscreteEM(
+            state_names=self.state_names,
+            latent_card=latent_card,
+            m_step_estimator=m_step_estimator,
+            max_iter=max_iter,
+            atol=atol,
+            n_jobs=n_jobs,
+            batch_size=batch_size,
+            seed=seed,
+            init_cpds=init_cpds if init_cpds else None,
+            show_progress=show_progress,
         )
-
-        if apply_smoothing:
-            estimator = BayesianEstimator.__new__(BayesianEstimator)
-            estimator.model = self.model
-            estimator.data = self.data
-            estimator.state_names = self.state_names
-        else:
-            estimator = MaximumLikelihoodEstimator.__new__(MaximumLikelihoodEstimator)
-            estimator.model = self.model
-            estimator.data = self.data
-            estimator.state_names = self.state_names
-
-        for var in fixed_cpd_vars:
-            fixed_cpds.append(estimator.estimate_cpd(var))
-
-        # Step 3.2: Randomly initialize the CPDs involving latent variables if init_cpds is not specified.
-        latent_cpds = []
-        vars_with_latents = set(self.model_copy.nodes()) - fixed_cpd_vars - set(init_cpds.keys())
-        for node in vars_with_latents:
-            parents = list(self.model_copy.predecessors(node))
-            latent_cpds.append(
-                TabularCPD.get_random(
-                    variable=node,
-                    evidence=parents,
-                    cardinality={var: n_states_dict[var] for var in chain([node], parents)},
-                    state_names={var: self.state_names[var] for var in chain([node], parents)},
-                    seed=seed,
-                )
-            )
-
-        self.model_copy.add_cpds(*list(chain(fixed_cpds, latent_cpds, list(init_cpds.values()))))
-
-        if show_progress and config.SHOW_PROGRESS:
-            pbar = tqdm(total=max_iter)
-
-        estimator.model = self.model_copy
-        # Step 4: Run the EM algorithm.
-        for _ in range(max_iter):
-            # Step 4.1: E-step: Expands the dataset and computes the likelihood of each
-            #           possible state of latent variables.
-            weighted_data = self._compute_weights(n_jobs, latent_card, batch_size)
-            # Step 4.2: M-step: Uses the weights of the dataset to do a weighted MLE.
-            new_cpds = fixed_cpds.copy()
-            estimator.data = weighted_data
-            for var in vars_with_latents.union(set(init_cpds.keys())):
-                new_cpds.append(estimator.estimate_cpd(var, weighted=True, **kwargs))
-
-            # Step 4.3: Check of convergence and max_iter
-            if self._is_converged(new_cpds, atol=atol):
-                if show_progress and config.SHOW_PROGRESS:
-                    pbar.close()
-                return new_cpds
-
-            else:
-                self.model_copy.cpds = new_cpds
-                if show_progress and config.SHOW_PROGRESS:
-                    pbar.update(1)
-
-        return new_cpds
+        return estimator.fit(self.model, self.data).parameters_

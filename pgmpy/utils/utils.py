@@ -49,7 +49,7 @@ def get_example_model(model: str):
                            depending on the type of dataset.
     """
     warnings.warn(
-        """`get_example_model` is deprecated and will be removed in v1.3.0. Please use `pgmpy.example_models.load_model`
+        """`get_example_model` is deprecated and will be removed in v2.0. Please use `pgmpy.example_models.load_model`
         instead.""",
         FutureWarning,
         stacklevel=2,
