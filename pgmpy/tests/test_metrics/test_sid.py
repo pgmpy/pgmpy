@@ -1,8 +1,10 @@
+import itertools
+
 import numpy as np
 import pytest
 
 from pgmpy.base import DAG, PDAG
-from pgmpy.metrics import SID
+from pgmpy.metrics import SID, get_metrics
 from pgmpy.metrics.sid import _compute_path_matrix, _sid_matrix
 from pgmpy.models import DiscreteBayesianNetwork
 
@@ -60,9 +62,11 @@ REFERENCE_GRAPHS = (
 )
 
 
-# These matrices are compacted from PR #1927. Cells (1, 0)[3, 7],
-# (2, 0)[4, 10], and (2, 0)[6, 10] use the canonical R implementation's
-# child propagation instead of the PR's parent-propagation values.
+# These matrices are compacted from PR #1927, which transcribed them from the reference R
+# implementation. Cells (1, 0)[3, 7], (2, 0)[4, 10], and (2, 0)[6, 10] differ from the values in
+# that PR: every cell below was re-derived by brute-force enumeration of all simple paths under the
+# generalized adjustment criterion, and the three cells disagree with the PR but agree with the
+# brute-force result, so the PR's values are the incorrect ones.
 REFERENCE_RESULTS = {
     (0, 1): (
         "01110111111",
@@ -206,9 +210,141 @@ def test_compute_path_matrix():
     np.testing.assert_array_equal(_compute_path_matrix(np.empty((0, 0))), np.empty((0, 0), dtype=bool))
 
 
+def test_sid_of_a_graph_with_itself_is_zero():
+    rng = np.random.default_rng(0)
+    sid = SID()
+
+    for _ in range(25):
+        n_nodes = int(rng.integers(2, 9))
+        upper_triangle = np.triu(rng.random((n_nodes, n_nodes)) < 0.4, 1)
+        graph = DAG()
+        graph.add_nodes_from(range(n_nodes))
+        graph.add_edges_from(zip(*np.nonzero(upper_triangle), strict=True))
+
+        assert sid(graph, graph) == 0
+
+
+def test_sid_handles_graphs_without_edges():
+    isolated = DAG()
+    isolated.add_nodes_from(["A", "B", "C"])
+    sid = SID()
+
+    assert sid(isolated, isolated) == 0
+    # A missing edge only costs the ordered pairs whose intervention distribution it changes.
+    assert sid(DAG([("A", "B"), ("B", "C")]), isolated) == 3
+
+
+def test_sid_counts_adjusting_for_a_mediator_as_incorrect():
+    # Adjusting for a mediator biases the effect even though no back-door path is left open, so
+    # this is the smallest graph exercising part (a) of the adjustment criterion on its own.
+    true_graph = DAG([("A", "M"), ("M", "B")])
+    est_graph = DAG([("M", "A")])
+    est_graph.add_node("B")
+
+    assert SID()(true_graph, est_graph) == 5
+
+
+def test_sid_is_not_the_default_supervised_metric():
+    # `CausalDiscovery.score` picks `get_metrics(requires_true_graph=True, is_default=True)[0]`,
+    # so a second default would make the choice depend on class-name ordering.
+    defaults = get_metrics(requires_true_graph=True, is_default=True)
+
+    assert [metric.__name__ for metric in defaults] == ["SHD"]
+
+
 @pytest.mark.parametrize(("true_index", "est_index"), REFERENCE_RESULTS)
 def test_sid_matrix_matches_r_reference(true_index, est_index):
     np.testing.assert_array_equal(
         _sid_matrix(REFERENCE_GRAPHS[true_index], REFERENCE_GRAPHS[est_index]),
+        _matrix(REFERENCE_RESULTS[(true_index, est_index)]),
+    )
+
+
+def _descendants(graph, node):
+    """Every node reachable from ``node`` along directed edges, including itself."""
+    seen, stack = {node}, [node]
+    while stack:
+        for successor in np.flatnonzero(graph[stack.pop()]):
+            if successor not in seen:
+                seen.add(successor)
+                stack.append(successor)
+    return seen
+
+
+def _path_is_blocked(graph, path, conditioned):
+    """Textbook d-separation test applied to one explicit path."""
+    for previous, current, following in zip(path, path[1:], path[2:], strict=False):
+        if graph[previous, current] and graph[following, current]:
+            if not _descendants(graph, current) & conditioned:
+                return True
+        elif current in conditioned:
+            return True
+    return False
+
+
+def _has_open_non_causal_path(graph, source, target, conditioned):
+    skeleton = graph | graph.T
+
+    def walk(path, visited):
+        if path[-1] == target:
+            is_causal = all(graph[a, b] for a, b in zip(path, path[1:], strict=False))
+            return not is_causal and not _path_is_blocked(graph, path, conditioned)
+        return any(
+            walk([*path, node], visited | {node}) for node in np.flatnonzero(skeleton[path[-1]]) if node not in visited
+        )
+
+    return walk([source], {source})
+
+
+def _sid_matrix_by_enumeration(true_graph, est_graph):
+    """Reference oracle: the adjustment criterion applied to every enumerated path.
+
+    Exponential and independent of the algorithm under test, so it pins down the
+    expected values without reusing any of :mod:`pgmpy.metrics.sid`.
+    """
+    n_nodes = true_graph.shape[0]
+    incorrect = np.zeros((n_nodes, n_nodes), dtype=bool)
+
+    for source, target in itertools.permutations(range(n_nodes), 2):
+        conditioned = set(np.flatnonzero(est_graph[:, source]).tolist())
+        if target in conditioned:
+            # The estimated intervention distribution collapses to p(x_target),
+            # which is right exactly when the source has no causal effect on it.
+            incorrect[source, target] = target in _descendants(true_graph, source) - {source}
+            continue
+
+        on_causal_path = {
+            node
+            for node in range(n_nodes)
+            if node != source and node in _descendants(true_graph, source) and target in _descendants(true_graph, node)
+        }
+        forbidden = set().union(*(_descendants(true_graph, node) for node in on_causal_path), set())
+        incorrect[source, target] = bool(conditioned & forbidden) or _has_open_non_causal_path(
+            true_graph, source, target, conditioned
+        )
+
+    return incorrect
+
+
+def test_sid_matrix_matches_brute_force_enumeration_on_random_dags():
+    rng = np.random.default_rng(0)
+
+    for _ in range(100):
+        n_nodes = int(rng.integers(3, 8))
+        order = rng.permutation(n_nodes)
+        true_graph = np.triu(rng.random((n_nodes, n_nodes)) < 0.45, 1)[order][:, order]
+        est_graph = np.triu(rng.random((n_nodes, n_nodes)) < 0.45, 1)[order][:, order]
+
+        np.testing.assert_array_equal(
+            _sid_matrix(true_graph, est_graph),
+            _sid_matrix_by_enumeration(true_graph, est_graph),
+        )
+
+
+@pytest.mark.parametrize(("true_index", "est_index"), REFERENCE_RESULTS)
+def test_reference_results_agree_with_brute_force_enumeration(true_index, est_index):
+    # Guards the three cells that were corrected against PR #1927's transcription.
+    np.testing.assert_array_equal(
+        _sid_matrix_by_enumeration(REFERENCE_GRAPHS[true_index], REFERENCE_GRAPHS[est_index]),
         _matrix(REFERENCE_RESULTS[(true_index, est_index)]),
     )

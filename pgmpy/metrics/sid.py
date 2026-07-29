@@ -168,6 +168,11 @@ class SID(BaseSupervisedMetric):
     Graphs are converted to aligned adjacency matrices once, and the path and
     state-doubled reachability computations use NumPy arrays.
 
+    As in the reference implementation, the transitive closure is recomputed for
+    each source node, so the cost grows roughly with the fourth power of the
+    number of nodes: a 100-node pair takes a few seconds and a 200-node pair
+    around a minute.
+
     Examples
     --------
     >>> from pgmpy.base import DAG
@@ -179,9 +184,8 @@ class SID(BaseSupervisedMetric):
 
     References
     ----------
-    Peters, J. and Buehlmann, P. (2015). Structural Intervention Distance (SID)
-    for Evaluating Causal Graphs. Neural Computation, 27(3), 771-799.
-    https://doi.org/10.1162/NECO_a_00708
+    - :footcite:t:`peters_buhlmann_2015`
+
     """
 
     _tags = {
@@ -191,12 +195,11 @@ class SID(BaseSupervisedMetric):
         "lower_is_better": True,
         "is_symmetric": False,
         "supported_graph_types": (DAG,),
-        "is_default": True,
+        "is_default": False,
     }
 
     def _evaluate(self, true_causal_graph: DAG, est_causal_graph: DAG) -> int:
-        if set(true_causal_graph.nodes()) != set(est_causal_graph.nodes()):
-            raise ValueError("true_causal_graph and est_causal_graph must have the exact same set of nodes.")
+        # `BaseSupervisedMetric.evaluate` has already checked the types and the shared node set.
         nodes = list(true_causal_graph.nodes())
         true_adjacency = true_causal_graph.to_adjacency(encoding="binary", nodelist=nodes).to_numpy(dtype=bool)
         est_adjacency = est_causal_graph.to_adjacency(encoding="binary", nodelist=nodes).to_numpy(dtype=bool)
