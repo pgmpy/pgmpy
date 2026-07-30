@@ -210,25 +210,13 @@ def test_compute_path_matrix():
     np.testing.assert_array_equal(_compute_path_matrix(np.empty((0, 0))), np.empty((0, 0), dtype=bool))
 
 
-def test_sid_of_a_graph_with_itself_is_zero():
-    rng = np.random.default_rng(0)
-    sid = SID()
-
-    for _ in range(25):
-        n_nodes = int(rng.integers(2, 9))
-        upper_triangle = np.triu(rng.random((n_nodes, n_nodes)) < 0.4, 1)
-        graph = DAG()
-        graph.add_nodes_from(range(n_nodes))
-        graph.add_edges_from(zip(*np.nonzero(upper_triangle), strict=True))
-
-        assert sid(graph, graph) == 0
-
-
 def test_sid_handles_graphs_without_edges():
     isolated = DAG()
     isolated.add_nodes_from(["A", "B", "C"])
     sid = SID()
 
+    # Also covers the identity case on the public API; the random-DAG check below exercises it on
+    # the matrix level.
     assert sid(isolated, isolated) == 0
     # A missing edge only costs the ordered pairs whose intervention distribution it changes.
     assert sid(DAG([("A", "B"), ("B", "C")]), isolated) == 3
@@ -250,14 +238,6 @@ def test_sid_is_not_the_default_supervised_metric():
     defaults = get_metrics(requires_true_graph=True, is_default=True)
 
     assert [metric.__name__ for metric in defaults] == ["SHD"]
-
-
-@pytest.mark.parametrize(("true_index", "est_index"), REFERENCE_RESULTS)
-def test_sid_matrix_matches_r_reference(true_index, est_index):
-    np.testing.assert_array_equal(
-        _sid_matrix(REFERENCE_GRAPHS[true_index], REFERENCE_GRAPHS[est_index]),
-        _matrix(REFERENCE_RESULTS[(true_index, est_index)]),
-    )
 
 
 def _descendants(graph, node):
@@ -339,12 +319,17 @@ def test_sid_matrix_matches_brute_force_enumeration_on_random_dags():
             _sid_matrix(true_graph, est_graph),
             _sid_matrix_by_enumeration(true_graph, est_graph),
         )
+        # A graph is always a perfect estimate of itself.
+        assert not _sid_matrix(true_graph, true_graph).any()
 
 
 @pytest.mark.parametrize(("true_index", "est_index"), REFERENCE_RESULTS)
-def test_reference_results_agree_with_brute_force_enumeration(true_index, est_index):
-    # Guards the three cells that were corrected against PR #1927's transcription.
-    np.testing.assert_array_equal(
-        _sid_matrix_by_enumeration(REFERENCE_GRAPHS[true_index], REFERENCE_GRAPHS[est_index]),
-        _matrix(REFERENCE_RESULTS[(true_index, est_index)]),
-    )
+def test_sid_matrix_matches_reference_and_brute_force(true_index, est_index):
+    # The reference values were transcribed from the R implementation in PR #1927; the enumeration
+    # re-derives them from the adjustment criterion. Asserting both against the same expectation is
+    # what settles the three cells where the two sources disagree.
+    expected = _matrix(REFERENCE_RESULTS[(true_index, est_index)])
+    true_graph, est_graph = REFERENCE_GRAPHS[true_index], REFERENCE_GRAPHS[est_index]
+
+    np.testing.assert_array_equal(_sid_matrix(true_graph, est_graph), expected)
+    np.testing.assert_array_equal(_sid_matrix_by_enumeration(true_graph, est_graph), expected)
