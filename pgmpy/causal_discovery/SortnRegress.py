@@ -92,7 +92,7 @@ class SortnRegress(BaseCausalDiscovery):
     >>> import numpy as np
     >>> from pgmpy.causal_discovery import SortnRegress
     >>> rng = np.random.default_rng(seed=42)
-    >>> data = pd.DataFrame(rng.standard_normal(1000, 3), columns=['X', 'Y', 'Z'])
+    >>> data = pd.DataFrame(rng.standard_normal((1000, 3)), columns=['X', 'Y', 'Z'])
     >>> data['Z'] += 2.5 * data['X'] + 2.5 * data['Y']
     >>> model = SortnRegress(threshold=0.3)
     >>> _ = model.fit(data)

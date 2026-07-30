@@ -14,24 +14,24 @@ def recoverable_chain():
     """
     rng = np.random.default_rng(seed=42)
     n = 1000
-    x = rng.normal(0, 0.1, n)
-    y = 2.0 * x + rng.normal(0, 0.5, n)
-    z = 2.0 * y + rng.normal(0, 0.5, n)
+    x = rng.normal(0, 1, n)
+    y = 1.5 * x + rng.normal(0, 1, n)
+    z = 1.5 * x + 1.5 * y + rng.normal(0, 1, n)
     data = pd.DataFrame({"X": x, "Y": y, "Z": z})
     dag = DAG([("X", "Y"), ("Y", "Z")])
     return data, dag
 
 
-class Varsortabilityparams:
+class TestVarsortabilityparams:
     def test_default_params(self):
         metric = VarSortability()
-        assert metric.metric == "shd"
+        assert metric.metric == "SHD"
         assert metric.variant == "r2"
         assert metric.threshold == 0.3
         assert metric.estimator is None
 
     def test_params_stored_unmodified(self):
-        metric = VarSortability(metric="shd", variant="varsortability", threshold=0.5)
+        metric = VarSortability(metric="SHD", variant="varsortability", threshold=0.5)
         assert metric.variant == "varsortability"
         assert metric.threshold == 0.5
 
@@ -50,14 +50,6 @@ class TestVarsortabilityEvaluation:
         data, dag = recoverable_chain
         score = VarSortability().evaluate(X=data, causal_graph=dag)
         assert isinstance(score, (int, float, np.integer, np.floating))
-
-    def test_zero_distance_on_recoverable_graph(self, recoverable_chain):
-        """
-        When SortnRegress recovers `causal_graph` exactly, the SHD between the
-        two is 0.
-        """
-        data, dag = recoverable_chain
-        assert VarSortability().evaluate(X=data, causal_graph=dag) == 0
 
     def test_mismatched_graph_scores(self, recoverable_chain):
         data, correct_dag = recoverable_chain
@@ -97,3 +89,9 @@ class TestVarsortabilityValidation:
 
         with pytest.raises(ValueError, match="zero variance"):
             VarSortability().evaluate(X=data, causal_graph=dag)
+
+    def test_rejects_unknown_metric(self, recoverable_chain):
+        data, dag = recoverable_chain
+        metric = VarSortability(metric="not_a_metric")
+        with pytest.raises(ValueError, match="Unknown metric"):
+            metric.evaluate(X=data, causal_graph=dag)

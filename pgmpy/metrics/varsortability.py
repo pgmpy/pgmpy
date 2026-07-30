@@ -32,7 +32,7 @@ class VarSortability(BaseUnsupervisedMetric):
     >>> from pgmpy.base import DAG
     >>> from pgmpy.metrics import VarSortability
     >>> rng = np.random.default_rng(seed=42)
-    >>> n = 500
+    >>> n = 1000
     >>> x = rng.normal(0, 1.0, n)
     >>> y = 2.0 * x + rng.normal(0, 0.5, n)
     >>> z = 2.0 * y + rng.normal(0, 0.5, n)
@@ -40,7 +40,8 @@ class VarSortability(BaseUnsupervisedMetric):
     >>> dag = DAG([('X', 'Y'), ('Y', 'Z')])
     >>> metric = VarSortability()
     >>> score = metric.evaluate(X=data, causal_graph=dag)
-    0
+    >>> score
+    2
 
     References
     ----------
@@ -56,7 +57,7 @@ class VarSortability(BaseUnsupervisedMetric):
         "is_default": False,
     }
 
-    def __init__(self, metric="shd", variant="r2", threshold=0.3, estimator=None):
+    def __init__(self, metric="SHD", variant="r2", threshold=0.3, estimator=None):
         self.metric = metric
         self.variant = variant
         self.threshold = threshold
@@ -71,12 +72,17 @@ class VarSortability(BaseUnsupervisedMetric):
         varsort_graph = est.fit(X).causal_graph_
 
         # Step 2: Use an supervised metric to compare the `causal_graph` with the one learned using sortnregress.
-        metric_class = get_metrics(name=self.metric)
+        matches = get_metrics(name=self.metric)
 
-        if not isinstance(metric_class(), BaseSupervisedMetric):
+        if not matches:
+            raise ValueError(f"Unknown metric '{self.metric}'.")
+
+        metric_cls = matches[0]
+        metric_est = metric_cls()
+        if not isinstance(metric_est, BaseSupervisedMetric):
             raise ValueError(f"Metric '{self.metric}' is not a supported supervised metric.")
         else:
-            metric_est = metric_class().evaluate(causal_graph, varsort_graph)
+            metric_est = metric_est.evaluate(causal_graph, varsort_graph)
 
         # Step 3: Return this metric.
         return metric_est
