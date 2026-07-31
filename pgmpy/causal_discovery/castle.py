@@ -121,10 +121,8 @@ class _CASTLEModel(nn.Module):
         out_0 = Out[:, 0:1]
         return Out, out_0
 
-    def train(self, X_tensor=True):
+    def fit_network(self, X_tensor):
         """Train the CASTLE model and return the adjacency matrix."""
-        if isinstance(X_tensor, bool):
-            return nn.Module.train(self, X_tensor)
         if self.train_cfg.seed is not None:
             torch.manual_seed(self.train_cfg.seed)
 
@@ -348,7 +346,7 @@ class CASTLE(BaseCausalDiscovery):
         X_tensor = torch.tensor(X_scaled, dtype=dtype, device=config.DEVICE)
 
         self.model_ = _CASTLEModel(self.n_features_in_, self.network_config_, self.train_config_, self.reg_config_)
-        self.model_.train(X_tensor)
+        self.model_.fit_network(X_tensor)
 
         # Step 3: Extract learned weights and build adjacency matrix and causal DAG
         self.model_.eval()
