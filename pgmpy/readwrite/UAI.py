@@ -39,8 +39,8 @@ class UAIReader:
 
     References
     ----------
-    - :cite:p:`uai_2022_format`
-    - :cite:p:`uai_2008_format`
+    - :footcite:t:`uai_2022_format`
+    - :footcite:t:`uai_2008_format`
     """
 
     def __init__(self, path=None, string=None):

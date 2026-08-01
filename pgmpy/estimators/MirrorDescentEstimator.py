@@ -33,9 +33,9 @@ class MirrorDescentEstimator(MarginalEstimator):
 
     References
     ----------
-    - :cite:p:`mckenna_2019` (Appendix A.1).
-    - :cite:p:`beck_teboulle_2003`
-    - :cite:p:`wainwright_jordan_2008` (Section 3.6: Conjugate Duality).
+    - :footcite:t:`mckenna_2019` (Appendix A.1).
+    - :footcite:t:`beck_teboulle_2003`
+    - :footcite:t:`wainwright_jordan_2008` (Section 3.6: Conjugate Duality).
     """
 
     def _calibrate(self, theta, n):

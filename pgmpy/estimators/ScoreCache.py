@@ -26,7 +26,7 @@ class ScoreCache(BaseStructureScore):
 
     References
     ----------
-    - :cite:p:`koller_friedman_2009` (Section 18.3).
+    - :footcite:t:`koller_friedman_2009` (Section 18.3).
     """
 
     def __init__(self, base_scorer, data, max_size=10000, **kwargs):

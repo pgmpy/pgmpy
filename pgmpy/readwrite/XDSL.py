@@ -37,8 +37,8 @@ class XDSLReader:
 
     References
     ----------
-    - :cite:p:`bayesfusion_xdsl`
-    - :cite:p:`bayesfusion_genie`
+    - :footcite:t:`bayesfusion_xdsl`
+    - :footcite:t:`bayesfusion_genie`
     """
 
     def __init__(self, path=None, string=None):
@@ -247,8 +247,8 @@ class XDSLWriter:
 
     References
     ----------
-    - :cite:p:`bayesfusion_xdsl`
-    - :cite:p:`bayesfusion_genie`
+    - :footcite:t:`bayesfusion_xdsl`
+    - :footcite:t:`bayesfusion_genie`
     """
 
     def __init__(
