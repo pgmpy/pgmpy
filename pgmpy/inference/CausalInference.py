@@ -977,6 +977,9 @@ class CausalInference:
             evidence = {}
         elif not isinstance(evidence, dict):
             raise ValueError("`evidence` must be a dict of the form: {variable_name: variable_state}")
+        common_vars = set(variables).intersection(evidence.keys())
+        if common_vars:
+            raise ValueError(f"The variables: {common_vars} are in both `variables` and `evidence`.")
 
         if do:
             for var, do_var in product(variables, do):
@@ -1022,17 +1025,34 @@ class CausalInference:
             evidence = {**evidence, **do}
             return infer.query(variables, evidence, show_progress=False)
 
-        # Step 4: For other cases, compute \sum_{z} p(variables | do, z) p(z)
+        # Step 4: For other cases, compute the interventional joint over
+        # `variables` and the post-intervention evidence as
+        # \sum_{z} p(variables, evidence_post | do, z, evidence_pre) p(z | evidence_pre),
+        # with z clamped to any evidence on the adjustment set, and then
+        # condition the sum on evidence_post. Evidence on non-descendants of
+        # the do variables (evidence_pre) is unaffected by the intervention, so
+        # it conditions the weights and the per-state queries directly;
+        # evidence on descendants (evidence_post) must not be conditioned into
+        # the weights and is applied to the summed joint at the end.
         values = []
 
-        # Step 4.1: Compute p_z and states of z to iterate over.
-        # For computing p_z, if evidence variables also in adjustment set,
-        # manually do reduce else inference will throw error.
-        evidence_adj_inter = {
-            var: state for var, state in evidence.items() if var in adjustment_set.intersection(evidence.keys())
-        }
+        # Step 4.1: Split the evidence into the part on the adjustment set
+        # (clamps the summation), the part on non-descendants of the do
+        # variables, and the part on descendants.
+        do_descendants = set()
+        for var in do:
+            do_descendants.update(nx.descendants(self.dag, var))
+        evidence_adj_inter = {var: state for var, state in evidence.items() if var in adjustment_set}
+        evidence_rest = {var: state for var, state in evidence.items() if var not in adjustment_set and var not in do}
+        evidence_pre = {var: state for var, state in evidence_rest.items() if var not in do_descendants}
+        evidence_post = {var: state for var, state in evidence_rest.items() if var in do_descendants}
+
+        # Step 4.2: Compute p_z and states of z to iterate over.
+        # If evidence variables are in the adjustment set, manually do reduce
+        # else inference will throw error.
+        p_z = infer.query(adjustment_set, evidence=evidence_pre, show_progress=False)
         if len(evidence_adj_inter) != 0:
-            p_z = infer.query(adjustment_set, show_progress=False).reduce(
+            p_z = p_z.reduce(
                 [(key, value) for key, value in evidence_adj_inter.items()],
                 inplace=False,
             )
@@ -1050,8 +1070,6 @@ class CausalInference:
                         **{var: [state] for var, state in evidence_adj_inter.items()},
                     },
                 )
-        else:
-            p_z = infer.query(adjustment_set, evidence=evidence, show_progress=False)
 
         adj_states = []
         for var in adjustment_set:
@@ -1060,18 +1078,25 @@ class CausalInference:
             else:
                 adj_states.append(self.model.get_cpds(var).state_names[var])
 
-        # Step 4.2: Iterate over states of adjustment set and compute values.
+        # Step 4.3: Iterate over states of adjustment set and compute the
+        # joint over `variables` and the post-intervention evidence variables.
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=np.prod([len(states) for states in adj_states]))
 
+        query_vars = variables + list(evidence_post.keys())
         for state_comb in product(*adj_states):
             adj_evidence = {var: state for var, state in zip(adjustment_set, state_comb)}
-            evidence = {**do, **adj_evidence}
+            query_evidence = {**do, **adj_evidence, **evidence_pre}
             values.append(
-                infer.query(variables, evidence=evidence, show_progress=False) * p_z.get_value(**adj_evidence)
+                infer.query(query_vars, evidence=query_evidence, show_progress=False) * p_z.get_value(**adj_evidence)
             )
 
             if show_progress and config.SHOW_PROGRESS:
                 pbar.update(1)
 
-        return sum(values).normalize(inplace=False)
+        # Step 4.4: Condition the interventional joint on the post-intervention
+        # evidence and normalize.
+        result = sum(values)
+        if evidence_post:
+            result = result.reduce([(var, state) for var, state in evidence_post.items()], inplace=False)
+        return result.normalize(inplace=False)
