@@ -80,19 +80,40 @@ def _reachable_on_non_directed_path(
             continue
         checked[current_node] = True
 
+        # The arrival state and the departure direction together fix which d-separation role
+        # ``current_node`` (written c below) plays, so each of the four combinations gets exactly one
+        # transition. Writing a for a parent and b, d for children:
+        #
+        #   from     to              walk           role at c    guarded by
+        #   c        child           a -> c -> d    chain        not conditioned[c]
+        #   n+c      child           b <- c -> d    FORK         not conditioned[c]
+        #   n+c      n+parent        b <- c <- a    chain        not conditioned[c]
+        #   c        n+parent        a -> c <- a'   collider     ancestors_of_conditioned[c]
+        #
+        # Chains and forks block under the same condition, which is why all three non-collider
+        # transitions share the single ``not conditioned`` guard rather than being cased apart.
+        #
+        # Every one of these transitions is recorded twice, once from each end of the edge: the
+        # parents block below writes them while visiting the child, the children block while
+        # visiting the parent. The duplication is harmless but total -- deleting either block
+        # wholesale leaves the results unchanged, because parents are always queued (a conditioned
+        # node is its own ancestor, so one of the two guards below always fires) and therefore a
+        # visited node's parents are visited too. Kept as-is to match Algorithm 2 as published.
+
         # --- Parents of the current node ---
         parents = graph[:, current_node]
         parent_indices = np.flatnonzero(parents)
         unconditioned_parents = np.flatnonzero(parents & ~conditioned)
 
-        # An unconditioned parent is a non-collider here, so the path passes through from either
-        # arrival state.
+        # Mirror of the two rows above, recorded from this end of the edge: these are the chain and
+        # fork transitions at the *parent*, which is why both arrival states are set and the guard is
+        # on the parent being unconditioned rather than on ``current_node``.
         reachability_matrix[unconditioned_parents, current_node] = True
         reachability_matrix[n_nodes + unconditioned_parents, current_node] = True
 
-        # Collider rule: traversal upwards into the parents is only unblocked when the current node
-        # is an ancestor of the conditioning set. Both the deferred bookkeeping and the queue push
-        # below belong inside this guard -- doing them unconditionally opens paths that are blocked.
+        # Collider at ``current_node``: traversal upwards into the parents is only unblocked when the
+        # node is an ancestor of the conditioning set. Both the deferred bookkeeping and the queue
+        # push below belong inside this guard -- doing them unconditionally opens blocked paths.
         if ancestors_of_conditioned[current_node]:
             reachability_matrix[current_node, n_nodes + parent_indices] = True
             # Reached from the source along a directed path that avoids conditioned tails, so the
@@ -101,7 +122,8 @@ def _reachable_on_non_directed_path(
                 reachable_later.extend((current_node, parent) for parent in parent_indices)
             nodes_to_check.extend(parent for parent in parent_indices if not checked[parent])
 
-        # Non-collider rule: conditioning on the current node blocks the path through it.
+        # Chain at ``current_node``, continuing upwards: b <- c <- a. The fork sharing this guard is
+        # in the children block below, since it departs towards a child instead.
         if not conditioned[current_node]:
             reachability_matrix[n_nodes + current_node, n_nodes + parent_indices] = True
             nodes_to_check.extend(parent for parent in parent_indices if not checked[parent])
@@ -110,10 +132,11 @@ def _reachable_on_non_directed_path(
         children = graph[current_node, :]
         child_indices = np.flatnonzero(children)
         unconditioned_children = np.flatnonzero(children & ~conditioned)
+        # Mirror of the chain-upwards row, recorded at the child end.
         reachability_matrix[n_nodes + unconditioned_children, n_nodes + current_node] = True
 
         # A child that is an ancestor of the conditioning set is an activated collider, so arriving
-        # at the current node from it keeps the path open.
+        # at the current node from it keeps the path open. Mirror of the collider row.
         relevant_children = children & ancestors_of_conditioned
         relevant_child_indices = np.flatnonzero(relevant_children)
         reachability_matrix[relevant_child_indices, n_nodes + current_node] = True
@@ -123,7 +146,10 @@ def _reachable_on_non_directed_path(
         )
 
         if not conditioned[current_node]:
+            # Chain continuing downwards: a -> c -> d.
             reachability_matrix[current_node, child_indices] = True
+            # Fork: b <- c -> d. This is the non-collider case that departs towards a child having
+            # arrived from another child, and it blocks on exactly the same condition as the chains.
             reachability_matrix[n_nodes + current_node, child_indices] = True
             nodes_to_check.extend(child for child in child_indices if not checked[child])
 
