@@ -28,3 +28,26 @@ def test_dag_constraint_behavior():
     U_cyclic[0, 1] = 1.0
     U_cyclic[1, 0] = 1.0
     assert _dag_constraint(U_cyclic).item() > 0.0
+
+
+class TestOptimizerValidation:
+    @requires_torch
+    def test_invalid_optimizer_string_raises(self):
+        from pgmpy.causal_discovery.gran_dag import _validate_optimizer
+
+        with pytest.raises(ValueError, match="Supported optimizers are"):
+            _validate_optimizer("invalid_optimizer", {})
+
+    @requires_torch
+    def test_invalid_optimizer_type_raises(self):
+        from pgmpy.causal_discovery.gran_dag import _validate_optimizer
+
+        with pytest.raises(ValueError, match="optimizer must be a string"):
+            _validate_optimizer(123, {})
+
+    @requires_torch
+    def test_invalid_params_raises(self):
+        from pgmpy.causal_discovery.gran_dag import _validate_optimizer
+
+        with pytest.raises(ValueError, match="'params' cannot be passed"):
+            _validate_optimizer("adam", {"params": [1, 2, 3]})

@@ -44,7 +44,30 @@ class GraNDAGRegularizationConfig:
 
 def _validate_optimizer(optimizer: str, optimizer_params: dict) -> None:
     """Validate that `optimizer` resolves to a torch.optim class and `optimizer_params` is a dict."""
-    raise NotImplementedError
+    if not isinstance(optimizer, str):
+        raise ValueError(f"optimizer must be a string, got {type(optimizer)}")
+
+    if optimizer_params is not None and not isinstance(optimizer_params, dict):
+        raise ValueError(f"optimizer_params must be a dictionary, got {type(optimizer_params)}")
+
+    import torch
+
+    valid_opts = [
+        name
+        for name in dir(torch.optim)
+        if isinstance(getattr(torch.optim, name), type)
+        and issubclass(getattr(torch.optim, name), torch.optim.Optimizer)
+        and name != "Optimizer"
+    ]
+    valid_opts_lower = {name.lower(): name for name in valid_opts}
+
+    if optimizer.lower() not in valid_opts_lower:
+        raise ValueError(f"Unknown optimizer '{optimizer}'. Supported optimizers are: {valid_opts}.")
+
+    if optimizer_params is not None and "params" in optimizer_params:
+        raise ValueError(
+            "'params' cannot be passed as an optimizer param. GraNDAG manages model parameters internally."
+        )
 
 
 def _dag_constraint(U: "torch.Tensor") -> "torch.Tensor":
@@ -58,6 +81,15 @@ def _run_pns(X: np.ndarray, pns_threshold: float, seed: int, estimator=None) -> 
     Returns a boolean mask of shape ``(d, d)`` where ``True`` indicates a
     surviving parent candidate.
     """
+    # Step 1: If `estimator` is None, instantiate the default `sklearn.ensemble.ExtraTreesRegressor(random_state=seed)`.
+    # Step 2: Initialize a boolean mask of shape (d, d) with False.
+    # Step 3: Loop over each variable `j` from 0 to d-1.
+    # Step 4: For variable `j`, prepare target y = X[:, j] and features X_rest = X without column `j`.
+    # Step 5: Fit the estimator on X_rest and y.
+    # Step 6: Verify the fitted estimator has a `feature_importances_` attribute; raise TypeError if not.
+    # Step 7: Calculate the importance threshold for variable `j` (pns_threshold * mean(feature_importances_)).
+    # Step 8: Set the mask for column `j` (excluding the diagonal) to True for features with importance >= threshold.
+    # Step 9: Return the boolean mask.
     raise NotImplementedError
 
 
@@ -66,6 +98,13 @@ def _run_cam_pruning(X: np.ndarray, adj: np.ndarray, pruning_cutoff: float) -> n
 
     Returns the pruned adjacency matrix.
     """
+    # Step 1: Initialize a copy of the adjacency matrix to store the pruned graph.
+    # Step 2: Loop over each node (variable) in the graph.
+    # Step 3: For each node, identify its current parents from the adjacency matrix.
+    # Step 4: Use pgmpy's CAM score implementation (or a fallback OLS implementation) to score each parent.
+    # Step 5: If the p-value of a parent's score exceeds `pruning_cutoff`,
+    # remove the edge (set to 0 in the pruned adj matrix).
+    # Step 6: Return the pruned adjacency matrix.
     raise NotImplementedError
 
 
@@ -74,6 +113,13 @@ def _threshold_to_dag(J: "torch.Tensor", edge_threshold: float) -> "torch.Tensor
 
     Returns a binary adjacency tensor.
     """
+    # Step 1: Create a copy of the expected absolute Jacobian J.
+    # Step 2: Zero out all entries in J that are strictly below `edge_threshold`.
+    # Step 3: Initialize a binary adjacency matrix representing the non-zero edges.
+    # Step 4: While the graph formed by the binary adjacency matrix contains cycles (not a DAG):
+    # Step 5:   Identify the edge that participates in a cycle and has the minimum weight in J among all cyclic edges.
+    # Step 6:   Remove this minimum-weight edge from the graph and set its weight to 0 in J.
+    # Step 7: Return the resulting binary adjacency matrix as a tensor.
     raise NotImplementedError
 
 
