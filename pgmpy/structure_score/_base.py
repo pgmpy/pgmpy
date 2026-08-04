@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Hashable
 from functools import lru_cache
 
 import pandas as pd
@@ -50,11 +51,11 @@ class BaseStructureScore(BaseObject):
 
         self._cached_local_score = lru_cache(maxsize=max_cache_size)(self._local_score)
 
-    def local_score(self, variable: str, parents: tuple[str, ...]) -> float:
+    def local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         """Compute the cached local score for `variable` given `parents`."""
-        return self._cached_local_score(variable, parents)
+        return self._cached_local_score(variable, tuple(parents))
 
-    def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
+    def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         """Compute the uncached local score for `variable` given `parents`."""
         raise NotImplementedError
 

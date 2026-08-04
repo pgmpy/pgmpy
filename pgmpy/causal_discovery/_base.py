@@ -280,8 +280,8 @@ class _ConstraintMixin:
 
         References
         ----------
-        - :cite:p:`neapolitan_2009` (Section 10.1.2, Algorithm 10.2, page 550).
-        - :cite:p:`koller_friedman_2009` (Section 3.4.2.1, page 85, Algorithm 3.3).
+        - :footcite:t:`neapolitan_2009` (Section 10.1.2, Algorithm 10.2, page 550).
+        - :footcite:t:`koller_friedman_2009` (Section 3.4.2.1, page 85, Algorithm 3.3).
         """
         # Initialize initial values and structures.
         lim_neighbors = 0

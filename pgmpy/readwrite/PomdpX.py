@@ -22,7 +22,7 @@ class PomdpXReader:
 
     References
     ----------
-    - :cite:p:`pomdpx_format`
+    - :footcite:t:`pomdpx_format`
     """
 
     def __init__(self, path=None, string=None):

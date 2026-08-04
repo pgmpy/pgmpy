@@ -1,401 +1,220 @@
-from collections.abc import Hashable, Iterable
+from itertools import combinations
 
-import networkx as nx
-
-from pgmpy.base import AncestralBase
+from pgmpy.base._base import _CoreGraph
 
 
-class MAG(AncestralBase):
+class MAG(_CoreGraph):
     """
     Class for representing Maximal Ancestral Graphs (MAGs).
 
-    A MAG is a type of graph used in causal inference to represent conditional
-    independence relations when some variables are latent (unobserved). Unlike
-    simple directed acyclic graphs (DAGs), MAGs allow for special edge types
-    (directed and bidirected) that capture the presence of latent confounding
-    and selection bias. Every pair of nodes in a MAG is connected in such a way
-    that the graph is "maximal," meaning no additional edges can be added
-    without changing the set of implied conditional independence relations.
+    A MAG is a graph used in causal inference to represent conditional independence relations when
+    some variables are latent (unobserved) or selection is present. MAGs allow directed (``"->"``),
+    bidirected (``"<>"``), and undirected (``"--"``) edges -- bidirected edges encode latent
+    confounding and undirected edges encode selection bias. A MAG is *maximal*: no edge can be added
+    without changing the implied conditional-independence relations.
 
+    Built on :class:`~pgmpy.base._base._CoreGraph`, restricted to the directed/bidirected/undirected
+    edge types via ``SUPPORTED_EDGE_TYPES`` (no circle endpoints -- those are for PAGs).
 
     Parameters
     ----------
-    ebunch : iterable of tuples, optional
-        A list or iterable of edges to add at initialization.
+    edge_list : iterable of tuples, optional
+        Edges of the form ``(u, v, edge_type)`` with ``edge_type`` one of ``"->"``, ``"<-"``,
+        ``"<>"``, ``"--"``.
 
     latents : set, default=set()
         Set of latent (unobserved) variables.
 
-    exposures : set, default=set()
-        Set of exposure variables in the graph. These are the variables
-        that represent the treatment or intervention being studied in a
-        causal analysis. Default is an empty set.
-
-    outcomes : set, default=set()
-        Set of outcome variables in the graph. These are the variables
-        that represent the response or dependent variables being studied
-        in a causal analysis. Default is an empty set.
+    exposures, outcomes : set, default=set()
+        Treatment / response variables (causal-analysis roles).
 
     roles : dict, optional (default: None)
-        A dictionary mapping roles to node names.
-        The keys are roles, and the values are role names (strings or iterables of str).
-        If provided, this will automatically assign roles to the nodes in the graph.
-        Passing a key-value pair via ``roles`` is equivalent to calling
-        ``with_role(role, variables)`` for each key-value pair in the dictionary.
+        A mapping of role name to node(s); equivalent to calling ``with_role`` for each entry.
 
     Examples
     --------
     >>> from pgmpy.base import MAG
-    >>> mag = MAG(ebunch=[("L", "A", "-", ">"), ("B", "C", "-", ">")], latents={"L"})
-    >>> sorted(mag.nodes())
-    ['A', 'B', 'C', 'L']
-
-    Roles can be assigned to nodes in the graph at construction or using methods.
-
-    At construction:
-
-    >>> mag = MAG(
-    ...     ebunch=[("L", "A", "-", ">"), ("B", "C", "-", ">")],
-    ...     latents={"L"},
-    ...     exposures={"A"},
-    ...     outcomes={"B"},
-    ... )
-
-    Roles can also be assigned after creation using ``with_role`` method.
-
-    >>> mag = mag.with_role("adjustment", {"L", "C"})
-
-    Vertices of a specific role can be retrieved using ``get_role`` method.
-
-    >>> mag.get_role("exposures")
-    ['A']
-    >>> mag.get_role("adjustment")
-    ['L', 'C']
+    >>> mag = MAG(edge_list=[("L", "A", "->"), ("A", "B", "<>")], latents={"L"})
+    >>> sorted(mag.get_edges(data=True))
+    [('A', 'B', '<>'), ('L', 'A', '->')]
+    >>> mag.latents
+    {'L'}
 
     References
     ----------
-    - :cite:p:`zhang_2008`
+    - :footcite:t:`zhang_2008`
     """
 
-    def __init__(
-        self,
-        ebunch: Iterable[tuple[Hashable, Hashable]] | None = None,
-        latents: set[Hashable] = set(),
-        exposures: set[Hashable] = set(),
-        outcomes: set[Hashable] = set(),
-        roles=None,
-    ):
-        if ebunch:
-            for _, _, u_mark, v_mark in ebunch:
-                if (u_mark, v_mark) not in {
-                    ("-", ">"),
-                    (">", "-"),
-                    (">", ">"),
-                    ("-", "-"),
-                }:
-                    raise ValueError(
-                        f"Invalid edge type ({u_mark}, {v_mark}). "
-                        "MAGs only allow directed ('-', '>'), reverse directed ('>', '-'), "
-                        "bidirected ('>', '>'), and undirected ('-', '-') edges."
-                    )
-        super().__init__(
-            ebunch=ebunch,
-            latents=latents,
-            exposures=exposures,
-            outcomes=outcomes,
-            roles=roles,
+    SUPPORTED_EDGE_TYPES = frozenset(["->", "<-", "<>", "--"])
+
+    def is_maximal(self) -> bool:
+        """
+        Check whether the graph is maximal.
+
+        An ancestral graph is maximal when no edge can be added without changing the implied
+        conditional-independence relations -- equivalently, when every pair of non-adjacent nodes
+        can be m-separated by some subset of the remaining nodes. By the characterization of
+        :footcite:t:`zhang_2008` this holds exactly when no *primitive* inducing path (an inducing
+        path relative to the full vertex set: every intermediate node is a collider and an
+        ancestor of an endpoint) joins a non-adjacent pair. The ``latents`` role is ignored:
+        maximality is a property of the graph itself.
+
+        Returns
+        -------
+        bool
+            True if the graph is maximal, False otherwise.
+
+        See Also
+        --------
+        has_inducing_path : The underlying inducing-path query.
+        is_mseparated : The m-separation query maximality is defined through.
+
+        Examples
+        --------
+        >>> from pgmpy.base import MAG
+        >>> edges = [("A", "B", "<>"), ("A", "C", "<>"), ("B", "D", "<>"), ("A", "D", "->"), ("B", "C", "->")]
+        >>> MAG(edge_list=edges).is_maximal()  # C ... D joined by an inducing path
+        False
+        >>> MAG(edge_list=[*edges, ("C", "D", "<>")]).is_maximal()
+        True
+
+        """
+        nodes = set(self.nodes())
+        return not any(
+            not self.has_edge(u, v) and self.has_inducing_path(u, v, w=nodes) for u, v in combinations(self.nodes(), 2)
         )
 
-    def _is_collider(self, u, c, v):
+    def is_visible_edge(self, u, v):
         """
-        Check if a node is a collider in a path u - c - v.
+        Whether the directed edge ``u -> v`` is visible in the MAG.
 
-        A collider is a node with incoming arrowheads on both sides:
-        u -> c <- v.
+        A directed edge ``u -> v`` is visible if there is a node ``c`` not adjacent to ``v`` such
+        that either ``c *-> u``, or there is a collider path from ``c`` into ``u`` on which every
+        intermediate node is a parent of ``v``.
 
         Parameters
         ----------
-        u : Hashable
-            The first endpoint in the triplet (u, c, v).
-
-        c : Hashable
-            The middle node, candidate collider.
-
-        v : Hashable
-            The second endpoint in the triplet.
+        u, v : Hashable
+            The tail and head of the directed edge.
 
         Returns
         -------
         bool
-            True if `c` is a collider on the path, False otherwise.
 
         Examples
         --------
         >>> from pgmpy.base import MAG
-        >>> mag = MAG()
-        >>> mag.add_edge("X", "Z", "-", ">")
-        >>> mag.add_edge("Y", "Z", "-", ">")
-        >>> mag._is_collider("X", "Z", "Y")
-        True
-        """
-        if not (self.has_edge(u, c) and self.has_edge(c, v)):
-            return False
-
-        mark_uc_at_c = self.edges[u, c]["marks"][c]
-        mark_cv_at_c = self.edges[c, v]["marks"][c]
-
-        return mark_uc_at_c == ">" and mark_cv_at_c == ">"
-
-    def has_inducing_path(self, u, v, W):
-        """
-        Check if there exists an inducing path between two nodes relative to W.
-
-        An inducing path between u and v is a path such that:
-        - The path has length > 2 (at least one intermediate node),
-        - Every intermediate node is a collider on the path,
-        - Every intermediate node is either:
-            * in W, or
-            * an ancestor of u or v.
-
-        Parameters
-        ----------
-        u : Hashable
-            Source node.
-
-        v : Hashable
-            Target node.
-
-        W : set
-            Subset of nodes to check inducing paths through (often latents).
-
-        Returns
-        -------
-        bool
-            True if there exists an inducing path, False otherwise.
-
-        Examples
-        --------
-        >>> from pgmpy.base import MAG
-        >>> mag = MAG()
-        >>> mag.add_edge("X", "L", "-", ">")
-        >>> mag.add_edge("Y", "L", "-", ">")
-        >>> mag.latents = {"L"}
-        >>> mag.has_inducing_path("X", "Y", mag.latents)
-        True
-        """
-
-        is_inducing = True
-        for path in nx.all_simple_paths(self, source=u, target=v):
-            if len(path) <= 2:
-                continue
-
-            for i in range(1, len(path) - 1):
-                prev_node, curr_node, next_node = path[i - 1], path[i], path[i + 1]
-
-                if not self._is_collider(prev_node, curr_node, next_node):
-                    is_inducing = False
-                    break
-
-                ancestors_uv_vu = self.get_ancestors(u).union(self.get_ancestors(v))
-                if curr_node not in W and curr_node not in ancestors_uv_vu:
-                    is_inducing = False
-                    break
-
-        return is_inducing
-
-    def is_visible_edge(self, u, v) -> bool:
-        """
-        Check if a directed edge u -> v is visible in the MAG.
-
-        A directed edge A → B in a MAG is considered visible if there exists a vertex C
-        not adjacent to B such that either:
-            1. C → A exists, or
-            2. There is a collider path from C to A that is into A, and every vertex
-            on that path is a parent of B.
-
-        Parameters
-        ----------
-        u : Hashable
-            Source node (tail of the edge).
-
-        v : Hashable
-            Target node (head of the edge).
-
-        Returns
-        -------
-        bool
-            True if the edge u -> v is visible, False otherwise.
-
-        Examples
-        --------
-        >>> edges = [
-        ...     ("A", "D", "-", ">"),
-        ...     ("B", "C", "-", ">"),
-        ...     ("X", "A", "-", ">"),
-        ... ]
-        >>> mag = MAG(ebunch=edges)
+        >>> mag = MAG(edge_list=[("A", "D", "->"), ("B", "C", "->"), ("X", "A", "->")])
         >>> mag.is_visible_edge("A", "D")
         True
         >>> mag.is_visible_edge("B", "C")
         False
         """
-        if not self.has_edge(u, v):
-            return False
-        marks = self.edges[u, v]["marks"]
-        if marks.get(u) != "-" or marks.get(v) != ">":
+        if v not in self.get_children(u):
             return False
 
-        neighbors_v = set(self.neighbors(v))
-
+        into_u = self.get_neighbors(u, {"<-", "<>"})
+        parents_v = self.get_parents(v)
+        neighbors_v = self.get_neighbors(v)
         for c in self.nodes:
             if c in {u, v} or c in neighbors_v:
                 continue
-
-            if self.has_edge(c, u):
-                cm = self.edges[c, u]["marks"]
-                if cm.get(u) == ">":
-                    return True
-
-            for path in nx.all_simple_paths(self, source=c, target=u):
-                if len(path) < 3:
+            # Condition 1: c *-> u directly.
+            if c in into_u:
+                return True
+            # Condition 2: a collider path from c into u whose intermediates are all parents of v.
+            for path in self.get_all_paths(c, u):
+                if len(path) < 3 or path[-2] not in into_u:
                     continue
-
-                last = path[-2]
-                if not self.has_edge(last, u):
-                    continue
-                if self.edges[last, u]["marks"][u] != ">":
-                    continue
-
                 valid = True
                 for i in range(1, len(path) - 1):
                     prev_node, curr_node, next_node = path[i - 1], path[i], path[i + 1]
-
-                    if not self._is_collider(prev_node, curr_node, next_node):
+                    if (not self.is_collider(prev_node, curr_node, next_node)) or (curr_node not in parents_v):
                         valid = False
                         break
-
-                    if not (
-                        self.has_edge(curr_node, v)
-                        and self.edges[curr_node, v]["marks"].get(curr_node) == "-"
-                        and self.edges[curr_node, v]["marks"].get(v) == ">"
-                    ):
-                        valid = False
-                        break
-
                 if valid:
                     return True
-
         return False
 
     def lower_manipulation(self, X, inplace=False):
         """
-        Performs lower manipulation.
+        Return the MAG after lower manipulation of `X`.
 
-        Removes all edges that are visible and originate from nodes in X.
-        For edges from X that are invisible, adds bidirected edges from the other
-        endpoint to its neighbors outside X to preserve conditional independencies.
-        All other edges remain unchanged.
+        Visible directed edges out of `X` are removed; invisible ones are removed and replaced by a
+        bidirected edge from the child to each of its other (non-`X`) neighbours, to preserve the
+        conditional independencies.
 
         Parameters
         ----------
         X : set
-            Set of nodes to perform manipulation on.
+            The nodes to manipulate.
 
-        inplace : bool, optional
-            If True, modifies the current graph in place. Defaults to False.
+        inplace : bool (default: False)
+            If True, modify and return this graph; otherwise return a modified copy.
 
         Returns
         -------
         MAG
-            A new MAG with outgoing edges from X removed.
 
         Examples
         --------
         >>> from pgmpy.base import MAG
-        >>> mag = MAG()
-        >>> mag.add_edge("A", "B", "-", ">")
-        >>> mag.add_edge("A", "C", "-", ">")
-        >>> mag.add_edge("C", "B", "-", ">")
-        >>> mag.add_edge("B", "C", ">", ">")
+        >>> mag = MAG(edge_list=[("A", "B", "->"), ("C", "B", "->")])
         >>> new_mag = mag.lower_manipulation({"A"})
-        >>> edges = list(new_mag.edges(data=True))
-        >>> len(edges)
-        1
-        >>> edges[0][0], edges[0][1]
-        ('B', 'C')
-        >>> edges[0][2]['marks']['B'], edges[0][2]['marks']['C']
-        ('>', '>')
+        >>> new_mag.has_edge("B", "C", "<>")
+        True
         """
-        if not inplace:
-            new_mag = self.copy()
-        else:
-            new_mag = self
+        new_mag = self if inplace else self.copy()
 
-        edges_to_remove = []
-        edges_to_change = []
-
+        visible, invisible = [], []
         for u in X:
-            neighbors = self.get_neighbors(u, u_type="-", v_type=">")
-            for v in neighbors:
-                if self.is_visible_edge(u, v):
-                    edges_to_remove.append((u, v))
-                else:
-                    edges_to_change.append((u, v))
+            for v in self.get_children(u):
+                (visible if self.is_visible_edge(u, v) else invisible).append((u, v))
 
-        new_mag.remove_edges_from(edges_to_change + edges_to_remove)
-        for u, v in edges_to_change:
+        for u, v in visible + invisible:
+            new_mag.remove_edge(u, v, "->")
+
+        for u, v in invisible:
             other = v if u in X else u
-            for neighbor in self.neighbors(v):
+            for neighbor in self.get_neighbors(v):
                 if neighbor != other and neighbor not in X:
-                    new_mag.add_edge(other, neighbor, ">", ">")
-
+                    # A MAG holds at most one edge per pair, so replace any existing edge with `<>`.
+                    if new_mag.has_edge(other, neighbor):
+                        for edge_type in new_mag.get_edge_type(other, neighbor):
+                            new_mag.remove_edge(other, neighbor, edge_type)
+                    new_mag.add_edge(other, neighbor, "<>")
         return new_mag
 
     def upper_manipulation(self, X, inplace=False):
         """
-        Performs upper manipulation.
+        Return the MAG after upper manipulation of `X`.
 
-        Deletes all edges (directed or bidirected) that have an arrowhead
-        pointing to any variable in X. The rest of the graph remains unchanged.
+        Every edge with an arrowhead into a node of `X` (a directed edge ``* -> X`` or a bidirected
+        edge ``* <> X``) is removed; all other edges are kept.
 
         Parameters
         ----------
         X : set
-            Set of nodes to perform manipulation on.
+            The nodes to manipulate.
 
-        inplace : bool, optional
-            If True, modifies the current graph in place. Defaults to False.
+        inplace : bool (default: False)
+            If True, modify and return this graph; otherwise return a modified copy.
 
         Returns
         -------
         MAG
-            A new MAG with incoming edges to X removed.
 
         Examples
         --------
         >>> from pgmpy.base import MAG
-        >>> mag = MAG()
-        >>> mag.add_edge("X", "Y", ">", "-")
-        >>> mag.add_edge("Z", "X", ">", "-")
-        >>> mag.add_edge("A", "X", "-", ">")
+        >>> mag = MAG(edge_list=[("Y", "X", "->"), ("X", "Z", "->"), ("A", "X", "->")])
         >>> new_mag = mag.upper_manipulation({"X"})
-        >>> new_mag.has_edge("Z", "X")
-        True
-        >>> new_mag.has_edge("A", "X")
-        False
-        >>> new_mag.has_edge("X", "Y")
-        False
+        >>> new_mag.has_edge("X", "Z"), new_mag.has_edge("A", "X"), new_mag.has_edge("X", "Y")
+        (True, False, False)
         """
-        if not inplace:
-            new_mag = self.copy()
-        else:
-            new_mag = self
-        edges_to_remove = []
-
+        new_mag = self if inplace else self.copy()
         for u in X:
-            neighbors = self.get_neighbors(u, u_type=">", v_type=None)
-            for v in neighbors:
-                edges_to_remove.append((u, v))
-
-        new_mag.remove_edges_from(edges_to_remove)
+            for edge_type in ("<-", "<>"):
+                for v in self.get_neighbors(u, edge_type):
+                    new_mag.remove_edge(u, v, edge_type)
         return new_mag
