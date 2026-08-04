@@ -165,8 +165,8 @@ class DAGMALinear(_BaseDAGMAMixin, BaseCausalDiscovery):
 
         # This allows _optimize to be reused by DAGMANonlinear which has a different objective signature without
         # coupling the mixin to any specific objective.
-        def objective_fn(W, mu):
-            return self._objective(W, mu, cov_tensor)
+        def objective_fn(W, mu, s):
+            return self._objective(W, mu, cov_tensor, s)
 
         # Resolve optimizer: None → Adam (matches official DAGMA package)
         optimizer_cls = self.optimizer if self.optimizer is not None else torch.optim.Adam
@@ -191,6 +191,16 @@ class DAGMALinear(_BaseDAGMAMixin, BaseCausalDiscovery):
             max_iter_val = 100 if max_iter_val is None else max_iter_val
             inner_iter_val = 1 if inner_iter_val is None else inner_iter_val
 
+        # Build s-schedule from scalar or list (Phase 3 support)
+        if isinstance(self.s, (int, float)):
+            s_schedule = [float(self.s)] * max_iter_val
+        elif isinstance(self.s, list):
+            s_schedule = list(self.s)
+            if len(s_schedule) < max_iter_val:
+                s_schedule += [s_schedule[-1]] * (max_iter_val - len(s_schedule))
+        else:
+            raise ValueError(f"s must be a float or list of floats, got {type(self.s)}")
+
         # Step 4: Central Path Optimization Loop (from mixin)
         W_est_final = self._optimize(
             W_tensor=W_tensor,
@@ -201,6 +211,7 @@ class DAGMALinear(_BaseDAGMAMixin, BaseCausalDiscovery):
             mu_factor=self.mu_factor,
             max_iter=max_iter_val,
             inner_iter=inner_iter_val,
+            s_schedule=s_schedule,
         )
 
         self.adjacency_matrix_ = W_est_final
@@ -212,7 +223,7 @@ class DAGMALinear(_BaseDAGMAMixin, BaseCausalDiscovery):
 
         return self
 
-    def _objective(self, W: torch.Tensor, mu: float, cov: torch.Tensor) -> torch.Tensor:
+    def _objective(self, W: torch.Tensor, mu: float, cov: torch.Tensor, s: float = None) -> torch.Tensor:
         r"""
         Compute the DAGMA objective function.
 
@@ -233,6 +244,8 @@ class DAGMALinear(_BaseDAGMAMixin, BaseCausalDiscovery):
             Central path parameter. Controls the strength of the acyclicity constraint relative to the data fit.
         cov : torch.Tensor
             Pre-computed covariance matrix as a PyTorch tensor.
+        s : float or None, optional (default=None)
+            M-matrix domain parameter. If None, uses ``self.s`` (backward compatible).
 
         Returns
         -------
@@ -241,9 +254,10 @@ class DAGMALinear(_BaseDAGMAMixin, BaseCausalDiscovery):
         """
         n = self.n_features_in_
         eye = torch.eye(n, dtype=W.dtype, device=W.device)
+        _s = s if s is not None else self.s
 
         # h(W) = -log det(sI - W ∘ W) + d·log(s)
-        is_cyclic, h = self._log_det_barrier(W, self.s)
+        is_cyclic, h = self._log_det_barrier(W, _s)
 
         # Barrier protection: return large finite loss to force backtracking
         if is_cyclic:

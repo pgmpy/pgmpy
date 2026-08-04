@@ -175,3 +175,23 @@ class TestDagmaLinearCore:
         )
         est.fit(continuous_data)
         assert isinstance(est.causal_graph_, DAG)
+
+    def test_domain_violation_recovery(self):
+        """
+        Test that optimization recovers gracefully from M-matrix domain violations.
+
+        Uses a strict s=0.5 (default is 1.0) which tightens the M-matrix domain and
+        makes domain violations more likely. The retry logic in _optimize() should
+        handle these by halving the learning rate and loosening s, producing a valid
+        DAG instead of getting stuck.
+        """
+        dagma_utils = pytest.importorskip("dagma.utils")
+        dagma_utils.set_random_seed(42)
+        d, n = 10, 200
+        B = dagma_utils.simulate_dag(d, 10, "ER")
+        W = dagma_utils.simulate_parameter(B)
+        X = dagma_utils.simulate_linear_sem(W, n, "gauss")
+
+        est = DAGMALinear(s=0.5, lambda1=0.02, w_threshold=0.1)
+        est.fit(pd.DataFrame(X, columns=[f"x{i}" for i in range(d)]))
+        assert isinstance(est.causal_graph_, DAG)
