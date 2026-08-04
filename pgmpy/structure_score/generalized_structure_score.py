@@ -7,7 +7,7 @@ from sklearn.base import clone
 from pgmpy.structure_score._base import BaseStructureScore
 
 
-class FlexibleStructureScore(BaseStructureScore):
+class GeneralizedStructureScore(BaseStructureScore):
     r"""
     A composable continuous structure score that decouples the regression model,
     residual noise distribution, and penalisation strategy.
@@ -76,11 +76,11 @@ class FlexibleStructureScore(BaseStructureScore):
     >>> from sklearn.preprocessing import SplineTransformer
     >>> from sklearn.linear_model import LinearRegression
     >>> from sklearn.pipeline import Pipeline
-    >>> from pgmpy.structure_score import FlexibleStructureScore
+    >>> from pgmpy.structure_score import GeneralizedStructureScore
     >>> rng = np.random.default_rng(0)
     >>> data = pd.DataFrame({"x": rng.standard_normal(200), "y": rng.standard_normal(200)})
     >>> spline_lr = Pipeline([("spline", SplineTransformer()), ("lr", LinearRegression())])
-    >>> score = FlexibleStructureScore(data, estimator=spline_lr, penalty=None)
+    >>> score = GeneralizedStructureScore(data, estimator=spline_lr, penalty=None)
     >>> isinstance(score.local_score("y", ("x",)), float)
     True
 
@@ -88,8 +88,8 @@ class FlexibleStructureScore(BaseStructureScore):
 
     >>> from scipy import stats
     >>> from sklearn.linear_model import LinearRegression
-    >>> score = FlexibleStructureScore(data, LinearRegression(),
-    ...                                noise_dist=stats.laplace, penalty="bic")
+    >>> score = GeneralizedStructureScore(data, LinearRegression(),
+    ...                                   noise_dist=stats.laplace, penalty="bic")
     >>> isinstance(score.local_score("y", ("x",)), float)
     True
 
@@ -113,12 +113,16 @@ class FlexibleStructureScore(BaseStructureScore):
     def __init__(
         self,
         data,
-        estimator,
+        estimator=None,
         noise_dist=stats.norm,
         penalty="bic",
         n_params=None,
         state_names=None,
     ):
+        if estimator is None:
+            from sklearn.linear_model import LinearRegression
+
+            estimator = LinearRegression()
         self.estimator = estimator
         self.noise_dist = noise_dist
         self.penalty = penalty
