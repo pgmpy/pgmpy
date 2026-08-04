@@ -195,3 +195,30 @@ class TestDagmaLinearCore:
         est = DAGMALinear(s=0.5, lambda1=0.02, w_threshold=0.1)
         est.fit(pd.DataFrame(X, columns=[f"x{i}" for i in range(d)]))
         assert isinstance(est.causal_graph_, DAG)
+
+    def test_analytical_gradient_matches_autograd(self):
+        """Verify analytical gradient matches autograd to machine precision."""
+        import torch
+
+        d = 10
+        torch.manual_seed(42)
+        W = torch.randn(d, d, dtype=torch.float64) * 0.1
+        cov = torch.eye(d, dtype=torch.float64)
+        eye = torch.eye(d, dtype=torch.float64)
+        mu, s, lambda1 = 1.0, 1.0, 0.05
+
+        est = DAGMALinear(lambda1=lambda1, s=s)
+        est.n_features_in_ = d
+
+        # Analytical gradient
+        grad_analytical, is_valid = est._gradient(W, mu, s, cov, eye)
+        assert is_valid
+
+        # Autograd gradient
+        W_auto = W.clone().requires_grad_(True)
+        loss = est._objective(W_auto, mu, cov, s)
+        loss.backward()
+        grad_autograd = W_auto.grad
+
+        # Should match to machine precision
+        torch.testing.assert_close(grad_analytical, grad_autograd, atol=1e-12, rtol=1e-12)
