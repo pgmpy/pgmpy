@@ -199,9 +199,46 @@ class _GraNDAGModel(nn.Module):
         """Compute weighted adjacency matrix from connectivity products."""
         raise NotImplementedError
 
-    def get_jacobian(self, X: "torch.Tensor") -> "torch.Tensor":
+    def get_jacobian(self, X: "torch.Tensor", chunk_size: int | None = None) -> "torch.Tensor":
         """Compute expected absolute Jacobian matrix over the dataset."""
-        raise NotImplementedError
+        import torch
+        from torch import autograd
+
+        N, d = X.shape
+        Jc = torch.zeros(d, d, device=X.device, dtype=X.dtype)
+
+        if chunk_size is None:
+            chunk_size = N
+
+        # Detach model parameters to save memory during multiple backward passes
+        original_req_grad = {p: p.requires_grad for p in self.parameters()}
+        for p in self.parameters():
+            p.requires_grad = False
+
+        try:
+            for i in range(0, N, chunk_size):
+                X_chunk = X[i : i + chunk_size].detach().clone().requires_grad_(True)
+                chunk_N = X_chunk.shape[0]
+
+                theta = self.forward(X_chunk)
+                logp = self.log_likelihood(X_chunk, theta)
+
+                ones = torch.ones(chunk_N, device=X_chunk.device, dtype=X_chunk.dtype)
+                for j in range(d):
+                    g = autograd.grad(
+                        logp[:, j],
+                        X_chunk,
+                        grad_outputs=ones,
+                        retain_graph=(j < d - 1),
+                    )[0]
+                    Jc[j, :] += g.abs().sum(dim=0)
+        finally:
+            for p in self.parameters():
+                p.requires_grad = original_req_grad[p]
+
+        Jc = Jc / N
+        J = Jc.t() * self.adjacency
+        return J.detach()
 
     def _update_lagrangian(self, h_val: float, h_prev: float) -> None:
         """Update Lagrangian coefficients after each subproblem."""
