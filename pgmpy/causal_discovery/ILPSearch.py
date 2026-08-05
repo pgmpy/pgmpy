@@ -78,9 +78,6 @@ class ILPSearch(BaseCausalDiscovery):
         (:class:`~pgmpy.causal_discovery.ExpertKnowledge` with ``search_space="marginally_dependent"``)
         is automatically used to screen candidate pairs.
 
-    solver : str, default="auto"
-        Solver backend name. Reserved for backend configuration compatibility.
-
     options : dict or None, default=None
         Dictionary of solver options passed directly to ``scipy.optimize.milp``.
         Recognized options for the underlying solver include:
@@ -132,14 +129,12 @@ class ILPSearch(BaseCausalDiscovery):
         l_penalty: float = 0.1,
         return_type: str = "dag",
         expert_knowledge: ExpertKnowledge | None = None,
-        solver: str = "auto",
         options: dict[str, Any] | None = None,
     ) -> None:
         self.penalty = penalty
         self.l_penalty = l_penalty
         self.return_type = return_type
         self.expert_knowledge = expert_knowledge
-        self.solver = solver
         self.options = options
 
     def _fit(self, X: pd.DataFrame) -> ILPSearch:
@@ -325,7 +320,7 @@ class ILPSearch(BaseCausalDiscovery):
                 cub.append(0.0)
 
         A_mat = csc_matrix(A_rows) if A_rows else csc_matrix((0, n_solver_vars))
-        linear_constraints = LinearConstraint(A_mat, clb, cub)  # type: ignore[arg-type]
+        linear_constraints = LinearConstraint(A_mat, cast(Any, clb), cast(Any, cub))
 
         # Step 6: Call SciPy MILP Solver
         res = milp(
@@ -356,5 +351,4 @@ class ILPSearch(BaseCausalDiscovery):
             self.causal_graph_ = dag
 
         self.adjacency_matrix_ = self.causal_graph_.to_adjacency(encoding="binary", nodelist=self.variables_)
-
         return self
