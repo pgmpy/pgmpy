@@ -172,7 +172,12 @@ class ILPSearch(BaseCausalDiscovery):
             ek.fit(X)
             required_edges = set(ek.required_edges_)
             forbidden_edges = set(ek.forbidden_edges_)
-            candidate_pairs = (set(ek.search_space_) | required_edges) - forbidden_edges
+            if self.expert_knowledge.search_space:
+                candidate_pairs = (set(ek.search_space_) | required_edges) - forbidden_edges
+            else:
+                ek_screen = ExpertKnowledge(search_space="marginally_dependent")
+                ek_screen.fit(X)
+                candidate_pairs = (set(ek_screen.search_space_) | required_edges) - forbidden_edges
 
         # Build candidate directed edge list
         directed_edges = [(variable_map[u], variable_map[v]) for u, v in candidate_pairs if u != v]
@@ -204,10 +209,17 @@ class ILPSearch(BaseCausalDiscovery):
 
         # Step 4: Objective Vector c
         c = np.zeros(n_solver_vars)
-        if self.penalty == "l0":
-            c[offset_g : offset_g + num_directed_edges] = self.l_penalty
-        elif self.penalty == "l1":
-            c[offset_z : offset_z + num_directed_edges] = self.l_penalty
+        n_samples = len(X_mat)
+        for idx, (j, k) in enumerate(directed_edges):
+            y = X_mat[:, k]
+            rss0 = float(np.sum(y**2))
+            X_j = X_mat[:, [j]]
+            beta_ols, _, _, _ = np.linalg.lstsq(X_j, y, rcond=None)
+            rss1 = float(np.sum((y - X_j @ beta_ols) ** 2))
+            delta_s = (rss0 - rss1) / float(n_samples) if n_samples > 0 else 0.0
+
+            act_idx = (offset_g + idx) if has_g else (offset_z + idx)
+            c[act_idx] = -delta_s + self.l_penalty
 
         # Integrality: 1 for z and g (binary), 0 for beta and psi (continuous)
         integrality = np.zeros(n_solver_vars)
@@ -329,13 +341,13 @@ class ILPSearch(BaseCausalDiscovery):
 
         # Step 7: Extract Graph
         sol_z = res.x[offset_z : offset_z + num_directed_edges]
-        sol_beta = res.x[offset_beta : offset_beta + num_directed_edges]
+        sol_act = res.x[offset_g : offset_g + num_directed_edges] if has_g else sol_z
 
         dag = DAG()
         dag.add_nodes_from(self.variables_)
 
         for idx, (j, k) in enumerate(directed_edges):
-            if sol_z[idx] > 0.5 and abs(sol_beta[idx]) > 1e-5:
+            if sol_act[idx] > 0.5:
                 dag.add_edge(self.variables_[j], self.variables_[k])
 
         if self.return_type in ("pdag", "cpdag"):
