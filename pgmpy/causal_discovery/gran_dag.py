@@ -108,6 +108,23 @@ def _run_cam_pruning(X: np.ndarray, adj: np.ndarray, pruning_cutoff: float) -> n
     raise NotImplementedError
 
 
+def _gaussian_log_likelihood(X: "torch.Tensor", theta: "torch.Tensor") -> "torch.Tensor":
+    """Default Gaussian log-likelihood batched over all variables."""
+    import math
+
+    if theta.shape[-1] != 2:
+        raise ValueError(
+            "Default Gaussian log-likelihood requires output_dim=2 "
+            f"(mean and log-variance); got output_dim={theta.shape[-1]}. Pass a custom "
+            "log_likelihood for other output_dim values."
+        )
+    mu = theta[..., 0]
+    log_var = theta[..., 1].clamp(-20.0, 20.0)
+    var = log_var.exp()
+    logp = -0.5 * math.log(2 * math.pi) - 0.5 * log_var - ((X - mu) ** 2) / (2 * var)
+    return logp
+
+
 def _is_acyclic(A: "torch.Tensor") -> bool:
     """Helper to check if a binary adjacency tensor forms a DAG."""
     import networkx as nx
@@ -171,33 +188,111 @@ class _GraNDAGModel(nn.Module):
         reg_cfg: GraNDAGRegularizationConfig,
     ):
         """Initialize the internal GraN-DAG network."""
-        raise NotImplementedError
+        import copy
+
+        import torch
+        from torch import nn
+
+        super().__init__()
+        self.num_vars = num_vars
+        self.network_cfg = network_cfg
+        self.train_cfg = train_cfg
+        self.reg_cfg = reg_cfg
+        self.log_likelihood = network_cfg.log_likelihood or _gaussian_log_likelihood
+
+        torch.manual_seed(train_cfg.seed)
+
+        d = num_vars
+        m = network_cfg.output_dim
+
+        template = network_cfg.net
+        if template is None:
+            template = nn.Sequential(
+                nn.Linear(d, 10),
+                nn.Sigmoid(),
+                nn.Linear(10, 10),
+                nn.Sigmoid(),
+                nn.Linear(10, m),
+            )
+
+        linears = []
+        for mod in template.modules():
+            has_params = any(True for _ in mod.parameters(recurse=False))
+            if has_params:
+                if not isinstance(mod, nn.Linear):
+                    raise ValueError("All learnable layers must be nn.Linear.")
+                linears.append(mod)
+
+        if not linears:
+            raise ValueError("All learnable layers must be nn.Linear.")
+        if linears[0].in_features != d:
+            raise ValueError(f"The first Linear layer must accept {d} inputs.")
+        if linears[-1].out_features != m:
+            raise ValueError(f"The last Linear layer must produce {m} outputs.")
+
+        self.subnets = nn.ModuleList([copy.deepcopy(template) for _ in range(d)])
+        for subnet in self.subnets:
+            for mod in subnet.modules():
+                if isinstance(mod, nn.Linear):
+                    nn.init.xavier_uniform_(mod.weight)
+                    if mod.bias is not None:
+                        nn.init.zeros_(mod.bias)
+
+        self._linears = []
+        for subnet in self.subnets:
+            subnet_linears = [mod for mod in subnet.modules() if isinstance(mod, nn.Linear)]
+            self._linears.append(subnet_linears)
+
+        mask = torch.ones(d, d) - torch.eye(d)
+        self.register_buffer("adjacency", mask)
+        self.register_buffer("_offdiag", mask.clone())
 
     def forward(self, X: "torch.Tensor") -> "torch.Tensor":
         """Apply self-masking per variable and run each sub-network.
 
         Returns distribution parameters of shape ``(N, d, output_dim)``.
         """
-        raise NotImplementedError
+        import torch
 
-    def train(self, X_tensor=True, val_tensor=None):
+        N, d = X.shape
+        outputs = []
+
+        for j in range(d):
+            mask_j = self.adjacency[:, j]
+            x_masked = X * mask_j
+            theta_j = self.subnets[j](x_masked)
+            outputs.append(theta_j)
+
+        theta = torch.stack(outputs, dim=1)
+        return theta
+
+    def fit_network(self, X_tensor: "torch.Tensor", val_tensor: "torch.Tensor | None" = None) -> None:
         """Train the GraN-DAG model via augmented Lagrangian optimization.
 
-        When called with a bool, delegates to ``nn.Module.train(mode)``.
-        When called with a Tensor, runs the full training loop.
+        Runs the full training loop consisting of augmented Lagrangian subproblems.
         """
-        # Delegate to nn.Module.train(mode) when called with a bool.
         # Seed, then init lambda, mu and h_prev for the augmented Lagrangian.
         # Outer loop over subproblems: capped by max_subproblems, exit when h <= dag_constraint_tol.
         #   Inner loop over epochs (capped by max_epochs): minibatch NLL + lambda*h + (mu/2)*h**2.
         #   Early stop on validation NLL when val_size > 0; reset patience each subproblem.
         #   After each subproblem: update lambda/mu from h and h_prev.
-        # Return the thresholded adjacency matrix.
         raise NotImplementedError
 
     def get_A(self) -> "torch.Tensor":
         """Compute weighted adjacency matrix from connectivity products."""
-        raise NotImplementedError
+        import torch
+
+        d = self.num_vars
+        cols = []
+        for j in range(d):
+            Ws = self._linears[j]
+            prod = Ws[0].weight.abs() * self.adjacency[:, j]
+            for W in Ws[1:]:
+                prod = W.weight.abs() @ prod
+            cols.append(prod.sum(dim=0))
+
+        A = torch.stack(cols, dim=1)
+        return A * self._offdiag
 
     def get_jacobian(self, X: "torch.Tensor", chunk_size: int | None = None) -> "torch.Tensor":
         """Compute expected absolute Jacobian matrix over the dataset."""
@@ -242,7 +337,11 @@ class _GraNDAGModel(nn.Module):
 
     def _update_lagrangian(self, h_val: float, h_prev: float) -> None:
         """Update Lagrangian coefficients after each subproblem."""
-        raise NotImplementedError
+        self.lamb = self.lamb + self.mu * h_val
+        # Note: On the very first subproblem, caller must pass h_prev = float("inf")
+        # so that this condition is false and mu does not grow.
+        if h_val > self.reg_cfg.dag_penalty_growth_threshold * h_prev:
+            self.mu = self.mu * self.reg_cfg.dag_penalty_growth_factor
 
 
 class GraNDAG(BaseCausalDiscovery):
@@ -264,7 +363,8 @@ class GraNDAG(BaseCausalDiscovery):
         Number of output neurons per sub-network (distribution parameters).
     log_likelihood : callable or None, default None
         Per-sample log-probability function with signature
-        ``fn(x_j, theta) -> Tensor``. Defaults to Gaussian log-likelihood.
+        ``fn(X, theta) -> Tensor`` batched over all variables at once.
+        Defaults to Gaussian log-likelihood.
     scaler : object or None, default None
         Optional scaler for input normalization (e.g.,
         :class:`sklearn.preprocessing.StandardScaler`). Must implement
