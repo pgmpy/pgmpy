@@ -3,7 +3,6 @@ import pandas as pd
 import pytest
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
-from pgmpy.base import DAG
 from pgmpy.causal_discovery import ExpertKnowledge, ILPSearch
 from pgmpy.example_models import load_model
 
@@ -26,7 +25,7 @@ def test_ilp_compatibility(estimator, check):
 @pytest.fixture
 def rand_data():
     """
-    Generate synthetic 5-node continuous linear SEM dataset and ground truth DAG.
+    Generate 5-node continuous linear SEM dataset.
 
     Ground Truth DAG Structure:
         X0 ----> X1 ----> X2
@@ -42,9 +41,7 @@ def rand_data():
     x3 = 0.8 * x0 + np.random.normal(scale=0.4, size=n)
     x4 = 0.5 * x2 + 0.7 * x3 + np.random.normal(scale=0.4, size=n)
 
-    df = pd.DataFrame({"X0": x0, "X1": x1, "X2": x2, "X3": x3, "X4": x4})
-    true_dag = DAG([("X0", "X1"), ("X1", "X2"), ("X0", "X3"), ("X2", "X4"), ("X3", "X4")])
-    return df, true_dag
+    return pd.DataFrame({"X0": x0, "X1": x1, "X2": x2, "X3": x3, "X4": x4})
 
 
 @pytest.fixture
@@ -55,9 +52,8 @@ def cancer_data():
 
 
 def test_rand_data(rand_data):
-    df, _ = rand_data
     est = ILPSearch(penalty="l0", l_penalty=0.01)
-    est.fit(df)
+    est.fit(rand_data)
 
     expected_edges = {
         ("X1", "X4"),
@@ -72,15 +68,14 @@ def test_rand_data(rand_data):
         ("X4", "X0"),
     }
     assert set(est.causal_graph_.edges()) == expected_edges
+    assert est.adjacency_matrix_.loc["X1", "X4"] == 1
 
 
 def test_rand_data_expert_knowledge(rand_data):
-    df, _ = rand_data
-
     # Test required and forbidden edge constraints with full edge verification
     ek1 = ExpertKnowledge(required_edges=[("X0", "X1")], forbidden_edges=[("X1", "X0")])
     est1 = ILPSearch(penalty="l0", l_penalty=0.01, expert_knowledge=ek1)
-    est1.fit(df)
+    est1.fit(rand_data)
 
     expected_edges_ek1 = {
         ("X0", "X1"),
@@ -100,7 +95,7 @@ def test_rand_data_expert_knowledge(rand_data):
     search_space = [("X0", "X1"), ("X1", "X2"), ("X0", "X3"), ("X2", "X4"), ("X3", "X4")]
     ek2 = ExpertKnowledge(search_space=search_space)
     est2 = ILPSearch(penalty="l0", l_penalty=0.01, expert_knowledge=ek2)
-    est2.fit(df)
+    est2.fit(rand_data)
 
     expected_edges_ek2 = {("X0", "X1"), ("X1", "X2"), ("X0", "X3"), ("X2", "X4"), ("X3", "X4")}
     assert set(est2.causal_graph_.edges()) == expected_edges_ek2
@@ -112,6 +107,3 @@ def test_cancer_data(cancer_data):
 
     expected_edges = {("Cancer", "Xray"), ("Cancer", "Smoker"), ("Cancer", "Dyspnoea")}
     assert set(est.causal_graph_.edges()) == expected_edges
-    assert est.adjacency_matrix_.loc["Cancer", "Xray"] == 1
-    assert est.adjacency_matrix_.loc["Cancer", "Smoker"] == 1
-    assert est.adjacency_matrix_.loc["Cancer", "Dyspnoea"] == 1
