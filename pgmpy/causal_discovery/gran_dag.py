@@ -108,19 +108,56 @@ def _run_cam_pruning(X: np.ndarray, adj: np.ndarray, pruning_cutoff: float) -> n
     raise NotImplementedError
 
 
-def _threshold_to_dag(J: "torch.Tensor", edge_threshold: float) -> "torch.Tensor":
-    """Threshold Jacobian entries and iteratively remove cyclic edges.
+def _is_acyclic(A: "torch.Tensor") -> bool:
+    """Helper to check if a binary adjacency tensor forms a DAG."""
+    import networkx as nx
 
-    Returns a binary adjacency tensor.
+    return nx.is_directed_acyclic_graph(nx.from_numpy_array(A.cpu().numpy(), create_using=nx.DiGraph))
+
+
+def _threshold_to_dag(J: "torch.Tensor", edge_threshold: float) -> "torch.Tensor":
+    """Threshold Jacobian entries and iteratively remove edges to form a DAG.
+
+    Follows the GraN-DAG post-training acyclicity step (Lachapelle et al.,
+    ICLR 2020, §3.4 + Appendix A.2). Removes edges starting from the lowest
+    Jacobian weight upward until the graph is completely acyclic.
+
+    Parameters
+    ----------
+    J : torch.Tensor
+        Expected absolute Jacobian matrix of shape (d, d).
+    edge_threshold : float
+        Entries in J below this value are zeroed before cycle removal.
+
+    Returns
+    -------
+    torch.Tensor
+        Binary (d, d) adjacency tensor with zero diagonal, guaranteed acyclic.
     """
-    # Step 1: Create a copy of the expected absolute Jacobian J.
-    # Step 2: Zero out all entries in J that are strictly below `edge_threshold`.
-    # Step 3: Initialize a binary adjacency matrix representing the non-zero edges.
-    # Step 4: While the graph formed by the binary adjacency matrix contains cycles (not a DAG):
-    # Step 5:   Identify the edge that participates in a cycle and has the minimum weight in J among all cyclic edges.
-    # Step 6:   Remove this minimum-weight edge from the graph and set its weight to 0 in J.
-    # Step 7: Return the resulting binary adjacency matrix as a tensor.
-    raise NotImplementedError
+    import torch
+
+    W = J.detach().clone().float()
+    W.fill_diagonal_(0)
+    W[W < edge_threshold] = 0
+
+    A = W > 0
+    if _is_acyclic(A):
+        return A.to(J.dtype)
+
+    ts = torch.unique(W[W > 0])  # ascending
+    lo, hi = 0, len(ts) - 1  # invariant: A(ts[hi]) is acyclic
+    EPS = 1e-8
+    if not _is_acyclic(W > ts[hi] + EPS):
+        return torch.zeros_like(W).to(J.dtype)
+
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if _is_acyclic(W > ts[mid] + EPS):
+            hi = mid
+        else:
+            lo = mid + 1
+
+    return (W > ts[lo] + EPS).to(J.dtype)
 
 
 class _GraNDAGModel(nn.Module):
