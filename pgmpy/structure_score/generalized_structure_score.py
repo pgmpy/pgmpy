@@ -95,12 +95,10 @@ class GeneralizedStructureScore(BaseStructureScore):
 
     References
     ----------
-    .. [1] Buhlmann, Peters, Ernest. *CAM: Causal Additive Models.*
-           Annals of Statistics, 2014. https://arxiv.org/abs/1310.1533
-    .. [2] Rolland et al. *SCORE.* ICML 2022. https://arxiv.org/abs/2203.04413
-    .. [3] Xu, Mameche, Vreeken. *TOPIC.* AISTATS 2025.
-    .. [4] Schultheiss & Buhlmann. *Pitfalls of Gaussian likelihood scoring.*
-           2022. https://arxiv.org/abs/2210.11104
+    - :cite:p:`buhlmann_peters_ernest_2014` (CAM)
+    - :cite:p:`rolland_2022` (SCORE)
+    - :cite:p:`xu_mameche_vreeken_2025` (TOPIC)
+    - :cite:p:`schultheiss_buhlmann_2023` (LiNGAM-flavoured Gaussian-likelihood pitfalls)
     """
 
     _tags = {
