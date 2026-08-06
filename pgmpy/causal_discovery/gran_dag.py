@@ -42,31 +42,41 @@ class GraNDAGRegularizationConfig:
     edge_threshold: float
 
 
+_OPTIMIZER_VALID_KWARGS = {
+    "adam": {"lr", "betas", "weight_decay", "amsgrad", "maximize", "eps"},
+    "sgd": {"lr", "weight_decay", "momentum", "dampening", "nesterov", "maximize"},
+    "adamw": {"lr", "betas", "weight_decay", "amsgrad", "maximize", "eps"},
+    "rmsprop": {"lr", "alpha", "eps", "weight_decay", "momentum", "centered", "maximize"},
+}
+
+
 def _validate_optimizer(optimizer: str, optimizer_params: dict) -> None:
-    """Validate that `optimizer` resolves to a torch.optim class and `optimizer_params` is a dict."""
+    """Validate that `optimizer` is one of the supported names and `optimizer_params` are valid for it."""
     if not isinstance(optimizer, str):
         raise ValueError(f"optimizer must be a string, got {type(optimizer)}")
 
     if optimizer_params is not None and not isinstance(optimizer_params, dict):
         raise ValueError(f"optimizer_params must be a dictionary, got {type(optimizer_params)}")
 
-    import torch
+    name = optimizer.lower()
+    if name not in _OPTIMIZER_VALID_KWARGS:
+        raise ValueError(
+            f"Unknown optimizer '{optimizer}'. Supported optimizers are: {list(_OPTIMIZER_VALID_KWARGS.keys())}."
+        )
 
-    valid_opts = [
-        name
-        for name in dir(torch.optim)
-        if isinstance(getattr(torch.optim, name), type)
-        and issubclass(getattr(torch.optim, name), torch.optim.Optimizer)
-        and name != "Optimizer"
-    ]
-    valid_opts_lower = {name.lower(): name for name in valid_opts}
-
-    if optimizer.lower() not in valid_opts_lower:
-        raise ValueError(f"Unknown optimizer '{optimizer}'. Supported optimizers are: {valid_opts}.")
-
-    if optimizer_params is not None and "params" in optimizer_params:
+    params = optimizer_params or {}
+    if "params" in params:
         raise ValueError(
             "'params' cannot be passed as an optimizer param. GraNDAG manages model parameters internally."
+        )
+
+    valid_keys = _OPTIMIZER_VALID_KWARGS[name]
+    unknown = set(params) - valid_keys
+    if unknown:
+        unknown_str = ", ".join(f"'{k}'" for k in sorted(unknown))
+        valid_str = ", ".join(f"'{k}'" for k in sorted(valid_keys))
+        raise ValueError(
+            f"Unknown optimizer_params for '{optimizer}': {unknown_str}. Accepted kwargs are: {valid_str}."
         )
 
 
@@ -384,10 +394,26 @@ class GraNDAG(BaseCausalDiscovery):
         Hard cap on augmented Lagrangian outer iterations. ``None`` means no
         cap.
     optimizer : str, default 'rmsprop'
-        Name of a ``torch.optim`` optimizer class (case-insensitive).
+        Name of the optimizer to use. Case-insensitive. Supported values:
+
+        - ``'rmsprop'`` -- :class:`torch.optim.RMSprop`
+          accepted kwargs: ``lr``, ``alpha``, ``eps``, ``weight_decay``,
+          ``momentum``, ``centered``, ``maximize``
+        - ``'adam'``    -- :class:`torch.optim.Adam`
+          accepted kwargs: ``lr``, ``betas``, ``eps``, ``weight_decay``,
+          ``amsgrad``, ``maximize``
+        - ``'sgd'``     -- :class:`torch.optim.SGD`
+          accepted kwargs: ``lr``, ``weight_decay``, ``momentum``,
+          ``dampening``, ``nesterov``, ``maximize``
+        - ``'adamw'``   -- :class:`torch.optim.AdamW`
+          accepted kwargs: ``lr``, ``betas``, ``eps``, ``weight_decay``,
+          ``amsgrad``, ``maximize``
     optimizer_params : dict or None, default None
         Keyword arguments forwarded to the optimizer constructor. Defaults to
-        ``{"lr": 1e-3}`` when ``None``.
+        ``{"lr": 1e-3}`` when ``None``. Note that unknown kwargs for the
+        chosen optimizer now raise ValueError at construction-adjacent
+        validation time rather than surfacing later as a TypeError from
+        the optimizer constructor.
     batch_size : int, default 64
         Mini-batch size for the inner optimization loop.
     val_size : float, default 0.1

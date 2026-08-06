@@ -31,23 +31,32 @@ def test_dag_constraint_behavior():
 
 
 class TestOptimizerValidation:
+    @pytest.fixture
+    def numeric_df(self):
+        import pandas as pd
+
+        return pd.DataFrame({"A": [1.0, 2.0, 3.0, 4.0, 5.0], "B": [2.0, 4.0, 6.0, 8.0, 10.0]})
+
     @requires_torch
-    def test_invalid_optimizer_string_raises(self):
-        from pgmpy.causal_discovery.gran_dag import _validate_optimizer
+    def test_invalid_optimizer_string_raises(self, numeric_df):
+        from pgmpy.causal_discovery.gran_dag import GraNDAG
 
         with pytest.raises(ValueError, match="Supported optimizers are"):
-            _validate_optimizer("invalid_optimizer", {})
+            GraNDAG(optimizer="invalid_optimizer", max_epochs=1).fit(numeric_df)
 
     @requires_torch
-    def test_invalid_optimizer_type_raises(self):
-        from pgmpy.causal_discovery.gran_dag import _validate_optimizer
+    @pytest.mark.parametrize(
+        ("optimizer", "bad_kwargs", "match"),
+        [
+            ("adam", {"momentum": 0.9}, "Unknown optimizer_params"),
+            ("sgd", {"betas": (0.9, 0.999)}, "Unknown optimizer_params"),
+            ("adamw", {"nesterov": True}, "Unknown optimizer_params"),
+            ("rmsprop", {"nesterov": True}, "Unknown optimizer_params"),
+            ("adam", {"params": [1, 2, 3]}, "params"),
+        ],
+    )
+    def test_invalid_kwargs_raises(self, numeric_df, optimizer, bad_kwargs, match):
+        from pgmpy.causal_discovery.gran_dag import GraNDAG
 
-        with pytest.raises(ValueError, match="optimizer must be a string"):
-            _validate_optimizer(123, {})
-
-    @requires_torch
-    def test_invalid_params_raises(self):
-        from pgmpy.causal_discovery.gran_dag import _validate_optimizer
-
-        with pytest.raises(ValueError, match="'params' cannot be passed"):
-            _validate_optimizer("adam", {"params": [1, 2, 3]})
+        with pytest.raises(ValueError, match=match):
+            GraNDAG(optimizer=optimizer, optimizer_params=bad_kwargs, max_epochs=1).fit(numeric_df)
