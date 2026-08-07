@@ -43,12 +43,12 @@ class ILPSearch(BaseCausalDiscovery):
          :class:`~pgmpy.causal_discovery.ExpertKnowledge` with ``search_space="marginally_dependent"``)
          is run automatically to identify candidate variable pairs.
     2. **Big-M Bound Estimation**:
-       - Computes unconstrained least-squares regression coefficients (:math:`\\text{OLS}`) for each variable
+       - Computes unconstrained least-squares regression coefficients (:math:`\text{OLS}`) for each variable
          given candidate parents to estimate global Big-M upper bounds :math:`M`.
     3. **MILP Formulation Assembly**:
-       - Constructs objective vector :math:`c`, integrality array, bounds vector, and sparse linear
-         constraint matrix :math:`A` enforcing tournament relations, Big-M constraints, and acyclicity
-         layer ordering.
+       - Constructs objective vector ``obj_coefficients``, integrality array, bounds vector, and sparse
+         linear constraint matrix ``constraint_matrix`` enforcing tournament relations, Big-M constraints, and
+         acyclicity layer ordering.
     4. **Global Exact Solution**:
        - Solves the resulting mixed-integer linear program globally via ``scipy.optimize.milp``.
     5. **Graph Extraction**:
@@ -102,9 +102,6 @@ class ILPSearch(BaseCausalDiscovery):
     adjacency_matrix_ : pd.DataFrame
         Binary adjacency matrix representation of ``causal_graph_``.
 
-    variables_ : list
-        The list of variable names in the dataset used to learn the causal graph.
-
     n_features_in_ : int
         The number of features (variables) in the dataset used for fitting.
 
@@ -121,6 +118,10 @@ class ILPSearch(BaseCausalDiscovery):
     >>> ilp = ilp.fit(df)
     >>> ("A", "B") in ilp.causal_graph_.edges()
     True
+
+    References
+    ----------
+    - :footcite:t:`manzour_2021`
     """
 
     def __init__(
@@ -151,28 +152,29 @@ class ILPSearch(BaseCausalDiscovery):
         self : ILPSearch
             Fitted estimator with attributes ``causal_graph_`` and ``adjacency_matrix_`` set.
         """
-        self.variables_ = list(X.columns)
-        m = len(self.variables_)
-        variable_map = {name: idx for idx, name in enumerate(self.variables_)}
+        # Step 0: Continuous Data Validation
+        try:
+            X.astype(float)
+        except (ValueError, TypeError):
+            raise ValueError("ILPSearch requires continuous (numeric) variables.")
+
+        variable_map = {name: idx for idx, name in enumerate(self.feature_names_in_)}
 
         # Step 1: Superstructure & Expert Knowledge Resolution via CI-test screening
-        if self.expert_knowledge is None:
-            ek = ExpertKnowledge(search_space="marginally_dependent")
-            ek.fit(X)
-            candidate_pairs = set(ek.search_space_)
-            required_edges = set()
-            forbidden_edges = set()
-        else:
-            ek = cast(ExpertKnowledge, clone(self.expert_knowledge))
-            ek.fit(X)
+        if self.expert_knowledge is not None:
+            ek = cast(ExpertKnowledge, clone(self.expert_knowledge)).fit(X)
             required_edges = set(ek.required_edges_)
             forbidden_edges = set(ek.forbidden_edges_)
-            if self.expert_knowledge.search_space:
-                candidate_pairs = (set(ek.search_space_) | required_edges) - forbidden_edges
-            else:
-                ek_screen = ExpertKnowledge(search_space="marginally_dependent")
-                ek_screen.fit(X)
-                candidate_pairs = (set(ek_screen.search_space_) | required_edges) - forbidden_edges
+        else:
+            required_edges = set()
+            forbidden_edges = set()
+
+        if self.expert_knowledge is not None and self.expert_knowledge.search_space:
+            search_space = set(ek.search_space_)
+        else:
+            search_space = set(ExpertKnowledge(search_space="marginally_dependent").fit(X).search_space_)
+
+        candidate_pairs = (search_space | required_edges) - forbidden_edges
 
         # Build candidate directed edge list
         directed_edges = [(variable_map[u], variable_map[v]) for u, v in candidate_pairs if u != v]
@@ -184,7 +186,7 @@ class ILPSearch(BaseCausalDiscovery):
         X_mat = X_mat_raw - X_mat_raw.mean(axis=0)
 
         max_beta = 0.0
-        for k in range(m):
+        for k in range(self.n_features_in_):
             parents = [j for (j, target) in directed_edges if target == k]
             if parents:
                 X_p = X_mat[:, parents]
@@ -194,16 +196,16 @@ class ILPSearch(BaseCausalDiscovery):
         M = max(2.0 * max_beta, 10.0)
 
         # Step 3: Decision Vector Assembly
-        # Layout: x = [z (num_directed_edges), beta (num_directed_edges), g (num_directed_edges if L0), psi (m)]
+        # Layout: x = [z (num_edges), beta (num_edges), g (num_edges if L0), psi (n_features_in_)]
         has_g = self.penalty == "l0"
         offset_z = 0
         offset_beta = offset_z + num_directed_edges
         offset_g = offset_beta + num_directed_edges if has_g else offset_beta
         offset_psi = (offset_g + num_directed_edges) if has_g else (offset_beta + num_directed_edges)
-        n_solver_vars = offset_psi + m
+        n_solver_vars = offset_psi + self.n_features_in_
 
-        # Step 4: Objective Vector c
-        c = np.zeros(n_solver_vars)
+        # Step 4: Objective Vector obj_coefficients
+        obj_coefficients = np.zeros(n_solver_vars)
         n_samples = len(X_mat)
         for idx, (j, k) in enumerate(directed_edges):
             y = X_mat[:, k]
@@ -214,7 +216,7 @@ class ILPSearch(BaseCausalDiscovery):
             delta_s = (rss0 - rss1) / float(n_samples) if n_samples > 0 else 0.0
 
             act_idx = (offset_g + idx) if has_g else (offset_z + idx)
-            c[act_idx] = -delta_s + self.l_penalty
+            obj_coefficients[act_idx] = -delta_s + self.l_penalty
 
         # Integrality: 1 for z and g (binary), 0 for beta and psi (continuous)
         integrality = np.zeros(n_solver_vars)
@@ -235,9 +237,9 @@ class ILPSearch(BaseCausalDiscovery):
         if has_g:
             lb[offset_g : offset_g + num_directed_edges] = 0
             ub[offset_g : offset_g + num_directed_edges] = 1
-        # psi in [1, m]
-        lb[offset_psi : offset_psi + m] = 1
-        ub[offset_psi : offset_psi + m] = m
+        # psi in [1, n_features_in_]
+        lb[offset_psi : offset_psi + self.n_features_in_] = 1
+        ub[offset_psi : offset_psi + self.n_features_in_] = self.n_features_in_
 
         # Enforce expert knowledge constraints by fixing decision variable bounds:
         # - Required edges: lower bound set to 1 (forces edge presence)
@@ -257,10 +259,10 @@ class ILPSearch(BaseCausalDiscovery):
 
         var_bounds = Bounds(cast(Any, lb), cast(Any, ub))
 
-        # Step 5: Build Constraints Sparse Matrix A
-        A_rows = []
-        clb = []
-        cub = []
+        # Step 5: Build Constraints Sparse Matrix constraint_matrix
+        constraint_rows = []
+        constraint_lb = []
+        constraint_ub = []
 
         # (A) Tournament: z_jk + z_kj = 1 (for pairs in directed_edges)
         seen_pairs = set()
@@ -271,9 +273,9 @@ class ILPSearch(BaseCausalDiscovery):
                 row = np.zeros(n_solver_vars)
                 row[offset_z + directed_edge_index[(j, k)]] = 1
                 row[offset_z + directed_edge_index[(k, j)]] = 1
-                A_rows.append(row)
-                clb.append(1.0)
-                cub.append(1.0)
+                constraint_rows.append(row)
+                constraint_lb.append(1.0)
+                constraint_ub.append(1.0)
 
         # (B) Big-M bounds: -M * active <= beta <= M * active
         # active = g_jk if L0 else z_jk
@@ -286,45 +288,45 @@ class ILPSearch(BaseCausalDiscovery):
             row1 = np.zeros(n_solver_vars)
             row1[beta_idx] = 1
             row1[act_idx] = -M
-            A_rows.append(row1)
-            clb.append(-np.inf)
-            cub.append(0.0)
+            constraint_rows.append(row1)
+            constraint_lb.append(-np.inf)
+            constraint_ub.append(0.0)
 
             # -beta - M * active <= 0
             row2 = np.zeros(n_solver_vars)
             row2[beta_idx] = -1
             row2[act_idx] = -M
-            A_rows.append(row2)
-            clb.append(-np.inf)
-            cub.append(0.0)
+            constraint_rows.append(row2)
+            constraint_lb.append(-np.inf)
+            constraint_ub.append(0.0)
 
             # Link g_jk <= z_jk if L0
             if has_g:
                 row_link = np.zeros(n_solver_vars)
                 row_link[offset_g + idx] = 1
                 row_link[offset_z + idx] = -1
-                A_rows.append(row_link)
-                clb.append(-np.inf)
-                cub.append(0.0)
+                constraint_rows.append(row_link)
+                constraint_lb.append(-np.inf)
+                constraint_ub.append(0.0)
 
         # (C) Layer Acyclicity: z_jk - (m-1)*z_kj - psi_k + psi_j <= 0
         for j, k in directed_edges:
             if (k, j) in directed_edge_index:
                 row = np.zeros(n_solver_vars)
                 row[offset_z + directed_edge_index[(j, k)]] = 1
-                row[offset_z + directed_edge_index[(k, j)]] = -(m - 1)
+                row[offset_z + directed_edge_index[(k, j)]] = -(self.n_features_in_ - 1)
                 row[offset_psi + j] = 1
                 row[offset_psi + k] = -1
-                A_rows.append(row)
-                clb.append(-np.inf)
-                cub.append(0.0)
+                constraint_rows.append(row)
+                constraint_lb.append(-np.inf)
+                constraint_ub.append(0.0)
 
-        A_mat = csc_matrix(A_rows) if A_rows else csc_matrix((0, n_solver_vars))
-        linear_constraints = LinearConstraint(A_mat, cast(Any, clb), cast(Any, cub))
+        constraint_matrix = csc_matrix(constraint_rows) if constraint_rows else csc_matrix((0, n_solver_vars))
+        linear_constraints = LinearConstraint(constraint_matrix, cast(Any, constraint_lb), cast(Any, constraint_ub))
 
         # Step 6: Call SciPy MILP Solver
         res = milp(
-            c=c,
+            c=obj_coefficients,
             integrality=integrality,
             bounds=var_bounds,
             constraints=linear_constraints,
@@ -339,16 +341,18 @@ class ILPSearch(BaseCausalDiscovery):
         sol_act = res.x[offset_g : offset_g + num_directed_edges] if has_g else sol_z
 
         dag = DAG()
-        dag.add_nodes_from(self.variables_)
+        dag.add_nodes_from(self.feature_names_in_)
 
         for idx, (j, k) in enumerate(directed_edges):
             if sol_act[idx] > 0.5:
-                dag.add_edge(self.variables_[j], self.variables_[k])
+                dag.add_edge(self.feature_names_in_[j], self.feature_names_in_[k])
 
         if self.return_type in ("pdag", "cpdag"):
             self.causal_graph_ = dag.to_pdag()
         else:
             self.causal_graph_ = dag
 
-        self.adjacency_matrix_ = self.causal_graph_.to_adjacency(encoding="binary", nodelist=self.variables_)
+        self.adjacency_matrix_ = self.causal_graph_.to_adjacency(
+            encoding="binary", nodelist=list(self.feature_names_in_)
+        )
         return self
