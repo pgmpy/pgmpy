@@ -1,5 +1,4 @@
 from .ChowLiu import ChowLiu
-from .DAGMA import DAGMALinear
 from .ExpertInLoop import ExpertInLoop
 from .ExpertKnowledge import ExpertKnowledge
 from .GES import GES
@@ -11,7 +10,6 @@ from .TOPIC import TOPIC
 
 __all__ = [
     "ChowLiu",
-    "DAGMALinear",
     "ExpertInLoop",
     "ExpertKnowledge",
     "GES",
