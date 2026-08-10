@@ -1,4 +1,6 @@
+from ._base import _BaseDAGMAMixin
 from .ChowLiu import ChowLiu
+from .DAGMA import DAGMALinear
 from .ExpertInLoop import ExpertInLoop
 from .ExpertKnowledge import ExpertKnowledge
 from .GES import GES
@@ -9,7 +11,9 @@ from .TAN import TAN
 from .TOPIC import TOPIC
 
 __all__ = [
+    "_BaseDAGMAMixin",
     "ChowLiu",
+    "DAGMALinear",
     "ExpertInLoop",
     "ExpertKnowledge",
     "GES",
