@@ -265,44 +265,189 @@ class _BaseDAGMAMixin:
         mu_factor: float,
         max_iter: int,
         inner_iter: int = 1,
+        gradient_fn=None,
+        s_schedule=None,
+        warm_iter=None,
+        lr=None,
+        tol=1e-6,
+        checkpoint=1000,
     ) -> np.ndarray:
         """
-        Unified optimization loop executing the dual-loop DAGMA optimization.
+        Unified optimization loop executing the dual-loop DAGMA optimization
+        with domain-violation recovery and optional analytical gradients.
 
-        - Outer loop (max_iter): Decays the penalty parameter mu (mu *= mu_factor).
-        - Inner loop (inner_iter): Runs multiple optimizer steps per mu level to
-          allow convergence before decaying mu further. Critical for first-order
-          optimizers (e.g., Adam) that need many steps per mu level.
+        When ``gradient_fn`` is provided, gradients are computed analytically and
+        injected into ``W_param.grad`` — eliminating autograd backward pass overhead.
+        Any ``torch.optim.Optimizer`` works because all optimizers read ``param.grad``
+        the same way.
 
-        For L-BFGS, inner_iter=1 is typical since each .step() performs ~10-20
-        internal line search evaluations. For Adam, inner_iter=3000+ is needed
-        to match the official DAGMA implementation.
+        When ``gradient_fn`` is None, falls back to autograd (``loss.backward()``).
+
+        Domain-violation recovery (two-level):
+        - **Inner level:** When a step violates the M-matrix domain, the bad step is
+          undone, learning rate is halved, and the step is re-applied with the smaller
+          lr. If lr drops too low, signals failure to the outer level.
+        - **Outer level:** When the inner loop fails, W is rolled back to the
+          pre-iteration checkpoint, lr is halved, and s is loosened (+0.1).
+          Retries until success or lr < 1e-16 (gives up gracefully).
+
+        Parameters
+        ----------
+        W_tensor : torch.Tensor
+            Initial weight matrix.
+        optimizer_cls : type
+            Uninstantiated PyTorch optimizer class.
+        optimizer_kwargs : dict
+            Keyword arguments for the optimizer constructor.
+        objective_fn : callable
+            ``fn(W, mu, s) -> loss`` — computes scalar loss (with or without graph).
+        mu_init : float
+            Initial central path parameter.
+        mu_factor : float
+            Decay factor for mu (mu *= mu_factor each outer iteration).
+        max_iter : int
+            Number of outer iterations (T).
+        inner_iter : int, optional (default=1)
+            Number of inner optimization steps per outer iteration.
+            When ``warm_iter`` is provided, this applies only to the final stage.
+        gradient_fn : callable or None, optional (default=None)
+            ``fn(W, mu, s) -> (grad, is_valid)`` — analytical gradient + domain check.
+            When None, autograd ``loss.backward()`` is used.
+        s_schedule : list of float or None, optional (default=None)
+            s values per outer iteration. If None, defaults to ``[1.0] * max_iter``.
+        warm_iter : int or None, optional (default=None)
+            Inner steps for non-final outer iterations. If None, ``inner_iter`` is
+            used for all stages (no warm/final split).
+        lr : float or None, optional (default=None)
+            Initial learning rate for retry halving. If None, extracted from
+            ``optimizer_kwargs['lr']`` or defaults to 0.0003.
+        tol : float, optional (default=1e-6)
+            Relative tolerance for convergence early-stop.
+        checkpoint : int, optional (default=1000)
+            Frequency (in inner steps) of convergence checks.
+
+        Returns
+        -------
+        np.ndarray
+            Optimized weight matrix.
         """
         mu = mu_init
-        W_tensor_current = W_tensor.detach().clone()
+        W_current = W_tensor.detach().clone()
+        use_analytical = gradient_fn is not None
 
-        for _ in range(max_iter):
-            # Create a fresh PyTorch parameter for the current outer iteration
-            W_tensor_iter = torch.nn.Parameter(W_tensor_current.clone().requires_grad_(True))
+        # Resolve learning rate for retry halving
+        if lr is None:
+            lr = optimizer_kwargs.get("lr", 0.0003)
+        lr_initial = lr
 
-            # Initialize optimizer
-            optimizer = optimizer_cls([W_tensor_iter], **optimizer_kwargs)
+        # Resolve s-schedule
+        if s_schedule is None:
+            s_schedule = [1.0] * max_iter
+        elif len(s_schedule) < max_iter:
+            s_schedule = list(s_schedule) + [s_schedule[-1]] * (max_iter - len(s_schedule))
 
-            def closure():
-                optimizer.zero_grad()
-                loss = objective_fn(W_tensor_iter, mu)
-                loss.backward()
-                return loss
+        # Resolve warm/final iteration split
+        _warm_iter = warm_iter if warm_iter is not None else inner_iter
+        _final_iter = inner_iter
 
-            # Inner optimization loop: run multiple steps at this mu level
-            for _ in range(inner_iter):
-                optimizer.step(closure)
+        # Detect L-BFGS — requires step(closure) API
+        is_lbfgs = optimizer_cls is torch.optim.LBFGS
 
-            # Extract updated W for the next iteration
-            W_tensor_current = W_tensor_iter.detach().clone()
+        for t in range(max_iter):
+            s = s_schedule[t]
+            inner_iters = _final_iter if t == max_iter - 1 else _warm_iter
+            lr_current = lr_initial
+            success = False
+
+            while not success:
+                # Checkpoint W before this attempt (for outer-level rollback)
+                W_checkpoint = W_current.clone()
+
+                W_param = torch.nn.Parameter(W_current.clone().requires_grad_(not use_analytical))
+                opt_kw = dict(optimizer_kwargs)
+                opt_kw["lr"] = lr_current
+                optimizer = optimizer_cls([W_param], **opt_kw)
+
+                obj_prev = 1e16
+                success = True  # assume success unless proven otherwise
+
+                for i in range(1, inner_iters + 1):
+                    if use_analytical:
+                        # --- Analytical gradient path ---
+                        with torch.no_grad():
+                            grad, is_valid = gradient_fn(W_param.data, mu, s)
+
+                        if not is_valid:
+                            # Domain violation: M-matrix has negative inv entries
+                            success = False
+                            break
+
+                        W_param.grad = grad
+                        optimizer.step()
+
+                        # Convergence check (loss computed without graph)
+                        if i % checkpoint == 0 or i == inner_iters:
+                            with torch.no_grad():
+                                obj_new = objective_fn(W_param.data, mu, s).item()
+                            if abs((obj_prev - obj_new) / (abs(obj_prev) + 1e-16)) <= tol:
+                                break
+                            obj_prev = obj_new
+
+                    elif is_lbfgs:
+                        # --- L-BFGS autograd path (step-with-closure API) ---
+                        def closure():
+                            optimizer.zero_grad()
+                            loss = objective_fn(W_param, mu, s)
+                            if loss.item() >= 1e9:  # barrier violation sentinel
+                                return loss
+                            loss.backward()
+                            return loss
+
+                        loss = optimizer.step(closure)
+                        if loss.item() >= 1e9:
+                            success = False
+                            break
+
+                        if i % checkpoint == 0 or i == inner_iters:
+                            obj_new = loss.item()
+                            if abs((obj_prev - obj_new) / (abs(obj_prev) + 1e-16)) <= tol:
+                                break
+                            obj_prev = obj_new
+
+                    else:
+                        # --- Standard autograd path (Adam, SGD, etc.) ---
+                        optimizer.zero_grad()
+                        loss = objective_fn(W_param, mu, s)
+
+                        if loss.item() >= 1e9:  # barrier violation sentinel
+                            success = False
+                            break
+
+                        loss.backward()
+                        optimizer.step()
+
+                        # Convergence check
+                        if i % checkpoint == 0 or i == inner_iters:
+                            obj_new = loss.item()
+                            if abs((obj_prev - obj_new) / (abs(obj_prev) + 1e-16)) <= tol:
+                                break
+                            obj_prev = obj_new
+
+                if not success:
+                    # Outer-level recovery: rollback W, halve lr, loosen s
+                    W_current = W_checkpoint
+                    lr_current *= 0.5
+                    s = s + 0.1
+                    s_schedule[t] = s
+                    if lr_current < 1e-16:
+                        # Give up gracefully — accept current checkpoint
+                        success = True
+                else:
+                    W_current = W_param.detach().clone()
+
             mu *= mu_factor
 
-        return W_tensor_current.cpu().numpy()
+        return W_current.cpu().numpy()
 
 
 class _ConstraintMixin:
@@ -332,7 +477,6 @@ class _ConstraintMixin:
         significance_level: float = 0.01,
         max_cond_vars: int = 5,
         expert_knowledge=None,
-        enforce_expert_knowledge: bool = False,
         n_jobs: int = -1,
         show_progress: bool = True,
         **kwargs,
@@ -393,30 +537,8 @@ class _ConstraintMixin:
             The maximum number of variables to condition on while testing
             independence.
 
-        expert_knowledge: pgmpy.estimators.ExpertKnowledge instance
-            Expert knowledge to be used with the algorithm. Expert knowledge
-            includes required/forbidden edges in the final graph, temporal
-            information about the variables etc. Please refer
-            pgmpy.estimators.ExpertKnowledge class for more details.
-
-        enforce_expert_knowledge: boolean (default: False)
-            If True, the algorithm modifies the search space according to the
-            edges specified in expert knowledge object. This implies the following:
-                1. For every edge (u, v) specified in `forbidden_edges`, there will
-                    be no edge between u and v.
-                2. For every edge (u, v) specified in `required_edges`, one of the
-                    following would be present in the final model: u -> v, u <-
-                    v, or u - v (if CPDAG is returned).
-
-            If False, the algorithm attempts to make the edge orientations as
-            specified by expert knowledge after learning the skeleton. This
-            implies the following:
-                1. For every edge (u, v) specified in `forbidden_edges`, the final
-                    graph would have either v <- u or no edge except if u -> v is part
-                    of a collider structure in the learned skeleton.
-                2. For every edge (u, v) specified in `required_edges`, the final graph
-                    would either have u -> v or no edge except if v <- u is part of a
-                    collider structure in the learned skeleton.
+        expert_knowledge: pgmpy.causal_discovery.ExpertKnowledge instance
+            Expert knowledge to be used with the algorithm.
 
         n_jobs: int (default: -1)
             The number of jobs to run in parallel.
@@ -437,8 +559,8 @@ class _ConstraintMixin:
 
         References
         ----------
-        - :cite:p:`neapolitan_2009` (Section 10.1.2, Algorithm 10.2, page 550).
-        - :cite:p:`koller_friedman_2009` (Section 3.4.2.1, page 85, Algorithm 3.3).
+        - :footcite:t:`neapolitan_2009` (Section 10.1.2, Algorithm 10.2, page 550).
+        - :footcite:t:`koller_friedman_2009` (Section 3.4.2.1, page 85, Algorithm 3.3).
         """
         # Initialize initial values and structures.
         lim_neighbors = 0
@@ -447,14 +569,6 @@ class _ConstraintMixin:
             ci_test = IndependenceMatch(independencies=independencies)
         else:
             ci_test = get_ci_test(test=ci_test, data=data)
-
-        if expert_knowledge is None:
-            from pgmpy.causal_discovery import ExpertKnowledge
-
-            expert_knowledge = ExpertKnowledge()
-
-        if expert_knowledge.search_space:
-            expert_knowledge.limit_search_space(data.columns)
 
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=max_cond_vars)
@@ -467,9 +581,16 @@ class _ConstraintMixin:
 
         # Step 1: Initialize a fully connected undirected graph
         graph = nx.complete_graph(n=variables, create_using=nx.Graph)
-        temporal_ordering = expert_knowledge.temporal_ordering
-        if enforce_expert_knowledge:
-            graph.remove_edges_from(expert_knowledge.forbidden_edges)
+        if expert_knowledge is None:
+            temporal_ordering, required_edges, forbidden_edges = {}, set(), set()
+        else:
+            temporal_ordering = expert_knowledge.temporal_ordering_
+            required_edges = expert_knowledge.required_edges_
+            forbidden_edges = expert_knowledge.forbidden_edges_
+
+        # Remove edges that are forbidden in both directions. Directed forbidden are enforced as orientations after the
+        # skeleton is learned.
+        graph.remove_edges_from([(u, v) for (u, v) in forbidden_edges if (v, u) in forbidden_edges])
 
         # Exit condition: 1. If all the nodes in graph has less than `lim_neighbors` neighbors.
         #             or  2. `lim_neighbors` is greater than `max_conditional_variables`.
@@ -478,7 +599,7 @@ class _ConstraintMixin:
             # size `lim_neighbors` which makes u and v independent.
             if variant == "orig":
                 for u, v in graph.edges():
-                    if (enforce_expert_knowledge is False) or ((u, v) not in expert_knowledge.required_edges):
+                    if (u, v) not in required_edges:
                         for separating_set in self._get_potential_sepsets(
                             u, v, temporal_ordering, graph, lim_neighbors
                         ):
@@ -499,7 +620,7 @@ class _ConstraintMixin:
                 edges_to_remove = []
                 # In case of stable, precompute neighbors as this is the stable algorithm.
                 for u, v in graph.edges():
-                    if (enforce_expert_knowledge is False) or ((u, v) not in expert_knowledge.required_edges):
+                    if (u, v) not in required_edges:
                         sep_vars = set()
                         found_independence = False
                         for separating_set in self._get_potential_sepsets(
@@ -536,9 +657,7 @@ class _ConstraintMixin:
                         return (u, v), tuple(sorted(sep_vars, key=repr))
 
                 results = parallel_pool(
-                    delayed(_parallel_fun)(u, v)
-                    for (u, v) in graph.edges()
-                    if (enforce_expert_knowledge is False) or ((u, v) not in expert_knowledge.required_edges)
+                    delayed(_parallel_fun)(u, v) for (u, v) in graph.edges() if (u, v) not in required_edges
                 )
                 for result in results:
                     if result is not None:
