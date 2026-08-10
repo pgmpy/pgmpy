@@ -5,7 +5,7 @@ class Mildew(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`jensen_jensen_midas`
+    - :footcite:t:`jensen_jensen_midas`
     """
 
     _tags = {

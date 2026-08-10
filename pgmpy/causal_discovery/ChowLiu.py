@@ -51,9 +51,7 @@ class ChowLiu(_TreeSearchMixin, BaseCausalDiscovery):
 
     References
     ----------
-    .. [1] Chow, C. K.; Liu, C.N. (1968), "Approximating discrete probability
-       distributions with dependence trees", IEEE Transactions on Information
-       Theory, IT-14 (3): 462–467
+    - :footcite:t:`chow_liu_1968`
 
     Examples
     --------

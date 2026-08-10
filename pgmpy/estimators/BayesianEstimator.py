@@ -1,22 +1,23 @@
 import numbers
 import warnings
 from collections.abc import Hashable
-from itertools import chain
 from typing import Any
 
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 
-from pgmpy import logger
 from pgmpy.base import DAG
 from pgmpy.estimators import ParameterEstimator
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
+from pgmpy.parameter_estimator import DiscreteBayesianEstimator
 
 
 class BayesianEstimator(ParameterEstimator):
     """
+    Deprecated: use :class:`pgmpy.parameter_estimator.DiscreteBayesianEstimator` instead.
+
     Class used to compute parameters for a model using Bayesian Parameter Estimation.
     See `MaximumLikelihoodEstimator` for constructor parameters.
     """
@@ -28,7 +29,7 @@ class BayesianEstimator(ParameterEstimator):
         **kwargs,
     ):
         warnings.warn(
-            "`pgmpy.estimators.BayesianEstimator` is deprecated and will be removed in v1.3.0. "
+            "`pgmpy.estimators.BayesianEstimator` is deprecated and will be removed in v2.0. "
             "Please use `pgmpy.parameter_estimator.DiscreteBayesianEstimator` instead.",
             FutureWarning,
             stacklevel=2,
@@ -126,22 +127,15 @@ class BayesianEstimator(ParameterEstimator):
         """
 
         def _get_node_param(node: Hashable) -> TabularCPD:
-            _equivalent_sample_size = (
-                equivalent_sample_size[node] if isinstance(equivalent_sample_size, dict) else equivalent_sample_size
-            )
-            if isinstance(pseudo_counts, numbers.Real):
-                _pseudo_counts = pseudo_counts
-            else:
-                _pseudo_counts = pseudo_counts[node] if pseudo_counts else None
-
-            cpd = self.estimate_cpd(
+            # Dict-valued `equivalent_sample_size`/`pseudo_counts` are resolved
+            # per-node by the canonical implementation.
+            return self.estimate_cpd(
                 node,
                 prior_type=prior_type,
-                equivalent_sample_size=_equivalent_sample_size,
-                pseudo_counts=_pseudo_counts,
+                equivalent_sample_size=equivalent_sample_size,
+                pseudo_counts=pseudo_counts,
                 weighted=weighted,
             )
-            return cpd
 
         parameters = Parallel(n_jobs=n_jobs)(delayed(_get_node_param)(node) for node in self.model.nodes())
         # TODO: A hacky solution to return correct value for the chosen backend. Ref #1675
@@ -216,55 +210,19 @@ class BayesianEstimator(ParameterEstimator):
         | C(1) | 0.75 | 0.75 | 0.5  | 0.6666666666666666 |
         +------+------+------+------+--------------------+
         """
-        node_cardinality = len(self.state_names[node])
-        parents = sorted(self.model.get_parents(node))
-        parents_cardinalities = [len(self.state_names[parent]) for parent in parents]
-        cpd_shape = (node_cardinality, np.prod(parents_cardinalities, dtype=int))
+        # Preserve the legacy convention where an empty list/array means "no
+        # pseudo counts provided".
+        if not isinstance(pseudo_counts, (numbers.Real, dict)) and np.array(pseudo_counts).size == 0:
+            pseudo_counts = None
 
-        prior_type = prior_type.lower()
-
-        # Throw a warning if pseudo_count is specified without prior_type=dirichlet
-        #     cast to np.array first to use the array.size attribute, which returns 0 also for [[],[]]
-        #     (where len([[],[]]) evaluates to 2)
-        if pseudo_counts is not None and np.array(pseudo_counts).size > 0 and (prior_type != "dirichlet"):
-            logger.warning(
-                f"pseudo count specified with {prior_type} prior. It will be ignored, "
-                "use dirichlet prior for specifying pseudo_counts"
-            )
-
-        if prior_type == "k2":
-            pseudo_counts = np.ones(cpd_shape, dtype=int)
-        elif prior_type == "bdeu":
-            equivalent_sample_size_val = (
-                equivalent_sample_size.get(node, 0)
-                if isinstance(equivalent_sample_size, dict)
-                else equivalent_sample_size
-            )
-            alpha = float(equivalent_sample_size_val) / (node_cardinality * np.prod(parents_cardinalities))
-            pseudo_counts = np.ones(cpd_shape, dtype=float) * alpha
-        elif prior_type == "dirichlet":
-            if isinstance(pseudo_counts, numbers.Real):
-                pseudo_counts = np.ones(cpd_shape, dtype=int) * pseudo_counts
-
-            else:
-                pseudo_counts = np.array(pseudo_counts)
-                if pseudo_counts.shape != cpd_shape:
-                    raise ValueError(
-                        f"The shape of pseudo_counts for the node: {node} must be of shape: {str(cpd_shape)}"
-                    )
-        else:
-            raise ValueError("'prior_type' not specified")
-
-        state_counts = self.state_counts(node, weighted=weighted)
-        bayesian_counts = state_counts + pseudo_counts
-
-        cpd = TabularCPD(
-            node,
-            node_cardinality,
-            np.array(bayesian_counts),
-            evidence=parents,
-            evidence_card=parents_cardinalities,
-            state_names={var: self.state_names[var] for var in chain([node], parents)},
+        cpd = DiscreteBayesianEstimator._estimate_cpd(
+            model=self.model,
+            data=self.data,
+            state_names=self.state_names,
+            node=node,
+            prior_type=prior_type,
+            equivalent_sample_size=equivalent_sample_size,
+            pseudo_counts=pseudo_counts,
+            sample_weight=self.data["_weight"] if weighted else None,
         )
-        cpd.normalize()
         return cpd

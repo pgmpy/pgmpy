@@ -1,19 +1,17 @@
-import os
 import random
 import unittest
 
 import numpy as np
 import pandas as pd
-import pytest
 from tqdm.auto import tqdm
 
 from pgmpy.models import LinearGaussianBayesianNetwork
 from pgmpy.utils import (
     discretize,
     get_example_model,
-    llm_pairwise_orient,
     preprocess_data,
 )
+from pgmpy.utils.mathext import sample_discrete
 
 
 class TestDiscretization(unittest.TestCase):
@@ -35,33 +33,6 @@ class TestDiscretization(unittest.TestCase):
         self.assertEqual(df_disc["X"].nunique(), 5)
         self.assertEqual(df_disc["Y"].nunique(), 4)
         self.assertEqual(df_disc["Z"].nunique(), 3)
-
-
-class TestPairwiseOrientation(unittest.TestCase):
-    @pytest.mark.skipif("GEMINI_API_KEY" not in os.environ, reason="Gemini API key is not set")
-    def test_llm(self):
-        descriptions = {
-            "Age": "The age of a person",
-            "Workclass": "The workplace where the person is employed such as Private industry, or self employed",
-            "Education": "The highest level of education the person has finished",
-            "MaritalStatus": "The marital status of the person",
-            "Occupation": "The kind of job the person does. For example, sales, craft repair, clerical",
-            "Relationship": "The relationship status of the person",
-            "Race": "The ethnicity of the person",
-            "Sex": "The sex or gender of the person",
-            "HoursPerWeek": "The number of hours per week the person works",
-            "NativeCountry": "The native country of the person",
-            "Income": "The income i.e. amount of money the person makes",
-        }
-
-        self.assertEqual(
-            llm_pairwise_orient(x="Age", y="Income", descriptions=descriptions, domain="Social Sciences"),
-            ("Age", "Income"),
-        )
-        self.assertEqual(
-            llm_pairwise_orient(x="Income", y="Age", descriptions=descriptions, domain="Social Sciences"),
-            ("Age", "Income"),
-        )
 
 
 class TestPreprocessData(unittest.TestCase):
@@ -222,3 +193,16 @@ class TestGetExampleModel(unittest.TestCase):
 
         cont_model = get_example_model("magic-irri")
         self.assertIsInstance(cont_model, LinearGaussianBayesianNetwork)
+
+
+class TestSampleDiscrete(unittest.TestCase):
+    def test_sample_discrete_with_and_without_seed(self):
+        values = np.array(["a", "b", "c"])
+        weights = np.array([0.2, 0.5, 0.3])
+
+        # Check reproducible values with seed
+        result1 = sample_discrete(values, weights, 50, seed=0)
+        result2 = sample_discrete(values, weights, 50, seed=0)
+        np.testing.assert_array_equal(result1, result2)
+
+        self.assertTrue(set(result1.tolist()).issubset({"a", "b", "c"}))

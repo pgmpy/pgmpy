@@ -44,7 +44,7 @@ class FisherZ(Pearsonr):
     >>> data = pd.DataFrame(data=rng.standard_normal(size=(1000, 3)), columns=["X", "Y", "Z"])
     >>> test = FisherZ(data=data)
     >>> test(X="X", Y="Y", Z=["Z"], significance_level=0.05)
-    np.True_
+    True
     >>> round(test.statistic_, 2)
     np.float64(0.17)
     >>> round(test.p_value_, 2)
