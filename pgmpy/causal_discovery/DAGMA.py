@@ -36,10 +36,14 @@ class DAGMALinear(_BaseDAGMAMixin, BaseCausalDiscovery):
 
     Parameters
     ----------
-    s : float, optional (default=1.0)
+    s : float or list of float, optional (default=[1.0, 0.9, 0.8, 0.7, 0.6])
         Controls the domain of the M-matrices for the log-det constraint.
+        If a float, the same value is used for all outer iterations.
+        If a list, each element corresponds to an outer iteration stage.
         Higher values (e.g., 2.0) make the acyclicity constraint more permissive, potentially allowing denser graphs.
         Lower values (e.g., 0.5) make it stricter, encouraging sparser solutions.
+        The default ``[1.0, 0.9, 0.8, 0.7, 0.6]`` matches the official DAGMA and progressively tightens the
+        acyclicity barrier across outer iterations.
 
     lambda1 : float, optional (default=0.05)
         L1 regularization coefficient to enforce sparsity in the estimated graph.
@@ -64,9 +68,16 @@ class DAGMALinear(_BaseDAGMAMixin, BaseCausalDiscovery):
         matching the official DAGMA implementation.
 
     inner_iter : int or None, optional (default=None)
-        Number of inner optimization steps to perform per outer iteration (mu level).
-        If ``None``, defaults to 3000 for Adam (which requires many steps to converge at
-        each mu level) and 1 for L-BFGS (which performs internal line search).
+        Number of inner optimization steps for the **final** outer iteration (mu level).
+        Non-final iterations use ``warm_iter`` steps (typically fewer). If ``None``,
+        defaults to 3000 for Adam and 1 for L-BFGS.
+
+    warm_iter : int or None, optional (default=None)
+        Number of inner optimization steps for non-final outer iterations (stages 0 to
+        T-2). The final stage uses ``inner_iter`` steps (typically 2× more). If
+        ``None``, defaults to the same value as ``inner_iter`` (no warm/final split).
+        Setting ``warm_iter < inner_iter`` allocates more optimization budget to the
+        final stage where the acyclicity barrier is tightest.
 
     w_threshold : float, optional (default=0.3)
         Threshold for pruning small edge weights in the final adjacency matrix. Edges with absolute weight less than
@@ -83,9 +94,9 @@ class DAGMALinear(_BaseDAGMAMixin, BaseCausalDiscovery):
 
     optimizer_kwargs : dict or None, optional (default=None)
         Keyword arguments passed to the optimizer constructor. If ``None``, sensible defaults
-        are used: ``{"lr": 0.0002}`` for Adam, or the optimizer's PyTorch defaults for other
-        optimizers. For ``torch.optim.LBFGS`` a recommended configuration is
-        ``{"max_iter": 10, "line_search_fn": "strong_wolfe"}``.
+        are used: ``{"lr": 0.0003, "betas": (0.99, 0.999)}`` for Adam (matching official DAGMA),
+        or the optimizer's PyTorch defaults for other optimizers. For ``torch.optim.LBFGS`` a
+        recommended configuration is ``{"max_iter": 10, "line_search_fn": "strong_wolfe"}``.
 
     Attributes
     ----------
@@ -119,12 +130,13 @@ class DAGMALinear(_BaseDAGMAMixin, BaseCausalDiscovery):
 
     def __init__(
         self,
-        s=1.0,
+        s=None,
         lambda1=0.05,
         mu_init=1.0,
         mu_factor=0.1,
         max_iter=None,
         inner_iter=None,
+        warm_iter=None,
         w_threshold=0.3,
         return_type: str = "dag",
         optimizer=None,
@@ -136,6 +148,7 @@ class DAGMALinear(_BaseDAGMAMixin, BaseCausalDiscovery):
         self.mu_factor = mu_factor
         self.max_iter = max_iter
         self.inner_iter = inner_iter
+        self.warm_iter = warm_iter
         self.w_threshold = w_threshold
         self.return_type = return_type
         self.optimizer = optimizer
@@ -185,7 +198,7 @@ class DAGMALinear(_BaseDAGMAMixin, BaseCausalDiscovery):
         if self.optimizer_kwargs is not None:
             opt_kwargs = self.optimizer_kwargs
         elif optimizer_cls is torch.optim.Adam:
-            opt_kwargs = {"lr": 0.0002}
+            opt_kwargs = {"lr": 0.0003, "betas": (0.99, 0.999)}
         else:
             opt_kwargs = {}
 
@@ -201,15 +214,21 @@ class DAGMALinear(_BaseDAGMAMixin, BaseCausalDiscovery):
             max_iter_val = 100 if max_iter_val is None else max_iter_val
             inner_iter_val = 1 if inner_iter_val is None else inner_iter_val
 
+        # Resolve warm_iter: None → use inner_iter for all stages (no split)
+        warm_iter_val = self.warm_iter if self.warm_iter is not None else inner_iter_val
+
+        # Resolve s: None → official default schedule
+        s_val = self.s if self.s is not None else [1.0, 0.9, 0.8, 0.7, 0.6]
+
         # Build s-schedule from scalar or list (Phase 3 support)
-        if isinstance(self.s, (int, float)):
-            s_schedule = [float(self.s)] * max_iter_val
-        elif isinstance(self.s, list):
-            s_schedule = list(self.s)
+        if isinstance(s_val, (int, float)):
+            s_schedule = [float(s_val)] * max_iter_val
+        elif isinstance(s_val, list):
+            s_schedule = list(s_val)
             if len(s_schedule) < max_iter_val:
                 s_schedule += [s_schedule[-1]] * (max_iter_val - len(s_schedule))
         else:
-            raise ValueError(f"s must be a float or list of floats, got {type(self.s)}")
+            raise ValueError(f"s must be a float or list of floats, got {type(s_val)}")
 
         # Analytical gradients are mathematically identical to autograd but
         # ~5× faster per step. L-BFGS requires step(closure) which is
@@ -228,6 +247,7 @@ class DAGMALinear(_BaseDAGMAMixin, BaseCausalDiscovery):
             inner_iter=inner_iter_val,
             gradient_fn=_gradient_fn,
             s_schedule=s_schedule,
+            warm_iter=warm_iter_val,
         )
 
         self.adjacency_matrix_ = W_est_final

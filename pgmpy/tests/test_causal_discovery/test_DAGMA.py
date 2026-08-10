@@ -131,7 +131,7 @@ class TestDagmaLinearCore:
         #    skbase's validate_data sets it only for string columns)
         col_names = [f"x{i}" for i in range(d)]  # pragma: no cover
         X_df = pd.DataFrame(X, columns=col_names)  # pragma: no cover
-        est = DAGMALinear(lambda1=0.02, w_threshold=0.1)  # pragma: no cover
+        est = DAGMALinear(lambda1=0.02, w_threshold=0.3)  # pragma: no cover
         est.fit(X_df)  # pragma: no cover
 
         # 4. Both should recover the true DAG edges
@@ -150,7 +150,7 @@ class TestDagmaLinearCore:
         # False discovery rate: pgmpy should not add many spurious edges
         fp = len(pgmpy_edges - true_edges)  # pragma: no cover
         fdr = fp / len(pgmpy_edges) if pgmpy_edges else 0  # pragma: no cover
-        assert fdr <= 0.15, f"FDR={fdr:.2f} — pgmpy added {fp} spurious edges"  # pragma: no cover
+        assert fdr <= 0.00, f"FDR={fdr:.2f} — pgmpy added {fp} spurious edges"  # pragma: no cover
 
         # 5. SHD between pgmpy and official should be small
         import networkx as nx  # pragma: no cover
@@ -162,7 +162,7 @@ class TestDagmaLinearCore:
         dag_off = DAG(nx_off)  # pragma: no cover
 
         shd_val = SHD()(true_causal_graph=dag_off, est_causal_graph=est.causal_graph_)  # pragma: no cover
-        assert shd_val <= 2, f"SHD={shd_val} — structures diverge more than expected"  # pragma: no cover
+        assert shd_val == 0, f"SHD={shd_val} — structures diverge more than expected"  # pragma: no cover
 
     def test_optimizer_kwargs(self, continuous_data):
         """
@@ -222,3 +222,15 @@ class TestDagmaLinearCore:
 
         # Should match to machine precision
         torch.testing.assert_close(grad_analytical, grad_autograd, atol=1e-12, rtol=1e-12)
+
+    def test_warm_iter_parameter(self, continuous_data):
+        """Test that warm_iter is respected and produces a valid DAG."""
+        est = DAGMALinear(warm_iter=500, inner_iter=1000)
+        est.fit(continuous_data)
+        assert isinstance(est.causal_graph_, DAG)
+
+    def test_s_schedule_list(self, continuous_data):
+        """Test that s accepts a list schedule and produces a valid DAG."""
+        est = DAGMALinear(s=[1.0, 0.95, 0.9, 0.85, 0.8])
+        est.fit(continuous_data)
+        assert isinstance(est.causal_graph_, DAG)
