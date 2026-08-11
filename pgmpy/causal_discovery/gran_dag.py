@@ -3,8 +3,11 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
+from pgmpy.global_vars import config
 
 torch = _safe_import("torch")
 nn = _safe_import("torch.nn")
@@ -118,75 +121,6 @@ def _run_cam_pruning(X: np.ndarray, adj: np.ndarray, pruning_cutoff: float) -> n
     raise NotImplementedError
 
 
-def _gaussian_log_likelihood(X: "torch.Tensor", theta: "torch.Tensor") -> "torch.Tensor":
-    """Default Gaussian log-likelihood batched over all variables."""
-    import math
-
-    if theta.shape[-1] != 2:
-        raise ValueError(
-            "Default Gaussian log-likelihood requires output_dim=2 "
-            f"(mean and log-variance); got output_dim={theta.shape[-1]}. Pass a custom "
-            "log_likelihood for other output_dim values."
-        )
-    mu = theta[..., 0]
-    log_var = theta[..., 1].clamp(-20.0, 20.0)
-    var = log_var.exp()
-    logp = -0.5 * math.log(2 * math.pi) - 0.5 * log_var - ((X - mu) ** 2) / (2 * var)
-    return logp
-
-
-def _is_acyclic(A: "torch.Tensor") -> bool:
-    """Helper to check if a binary adjacency tensor forms a DAG."""
-    import networkx as nx
-
-    return nx.is_directed_acyclic_graph(nx.from_numpy_array(A.cpu().numpy(), create_using=nx.DiGraph))
-
-
-def _threshold_to_dag(J: "torch.Tensor", edge_threshold: float) -> "torch.Tensor":
-    """Threshold Jacobian entries and iteratively remove edges to form a DAG.
-
-    Follows the GraN-DAG post-training acyclicity step (Lachapelle et al.,
-    ICLR 2020, §3.4 + Appendix A.2). Removes edges starting from the lowest
-    Jacobian weight upward until the graph is completely acyclic.
-
-    Parameters
-    ----------
-    J : torch.Tensor
-        Expected absolute Jacobian matrix of shape (d, d).
-    edge_threshold : float
-        Entries in J below this value are zeroed before cycle removal.
-
-    Returns
-    -------
-    torch.Tensor
-        Binary (d, d) adjacency tensor with zero diagonal, guaranteed acyclic.
-    """
-    import torch
-
-    W = J.detach().clone().float()
-    W.fill_diagonal_(0)
-    W[W < edge_threshold] = 0
-
-    A = W > 0
-    if _is_acyclic(A):
-        return A.to(J.dtype)
-
-    ts = torch.unique(W[W > 0])  # ascending
-    lo, hi = 0, len(ts) - 1  # invariant: A(ts[hi]) is acyclic
-    EPS = 1e-8
-    if not _is_acyclic(W > ts[hi] + EPS):
-        return torch.zeros_like(W).to(J.dtype)
-
-    while lo < hi:
-        mid = (lo + hi) // 2
-        if _is_acyclic(W > ts[mid] + EPS):
-            hi = mid
-        else:
-            lo = mid + 1
-
-    return (W > ts[lo] + EPS).to(J.dtype)
-
-
 class _GraNDAGModel(nn.Module):
     """PyTorch NN ensemble for per-variable conditional distribution learning and DAG structure recovery."""
 
@@ -208,8 +142,6 @@ class _GraNDAGModel(nn.Module):
         self.network_cfg = network_cfg
         self.train_cfg = train_cfg
         self.reg_cfg = reg_cfg
-        self.log_likelihood = network_cfg.log_likelihood or _gaussian_log_likelihood
-
         torch.manual_seed(train_cfg.seed)
 
         d = num_vars
@@ -276,6 +208,24 @@ class _GraNDAGModel(nn.Module):
         theta = torch.stack(outputs, dim=1)
         return theta
 
+    def _compute_log_likelihood(self, X: "torch.Tensor", theta: "torch.Tensor") -> "torch.Tensor":
+        """Compute the configured or default Gaussian log-likelihood."""
+        import math
+
+        if self.network_cfg.log_likelihood is not None:
+            return self.network_cfg.log_likelihood(X, theta)
+
+        if theta.shape[-1] != 2:
+            raise ValueError(
+                "Default Gaussian log-likelihood requires output_dim=2 "
+                f"(mean and log-variance); got output_dim={theta.shape[-1]}. Pass a custom "
+                "log_likelihood for other output_dim values."
+            )
+        mu = theta[..., 0]
+        log_var = theta[..., 1].clamp(-20.0, 20.0)
+        var = log_var.exp()
+        return -0.5 * math.log(2 * math.pi) - 0.5 * log_var - ((X - mu) ** 2) / (2 * var)
+
     def fit_network(self, X_tensor: "torch.Tensor", val_tensor: "torch.Tensor | None" = None) -> None:
         """Train the GraN-DAG model via augmented Lagrangian optimization.
 
@@ -325,7 +275,7 @@ class _GraNDAGModel(nn.Module):
             chunk_N = X_chunk.shape[0]
 
             theta = self.forward(X_chunk)
-            logp = self.log_likelihood(X_chunk, theta)
+            logp = self._compute_log_likelihood(X_chunk, theta)
 
             ones = torch.ones(chunk_N, device=X_chunk.device, dtype=X_chunk.dtype)
             for j in range(d):
@@ -345,13 +295,35 @@ class _GraNDAGModel(nn.Module):
         J = Jc.t() * self.adjacency
         return J.detach()
 
-    def _update_lagrangian(self, h_val: float, h_prev: float) -> None:
-        """Update Lagrangian coefficients after each subproblem."""
-        self.lamb = self.lamb + self.mu * h_val
-        # Note: On the very first subproblem, caller must pass h_prev = float("inf")
-        # so that this condition is false and mu does not grow.
-        if h_val > self.reg_cfg.dag_penalty_growth_threshold * h_prev:
-            self.mu = self.mu * self.reg_cfg.dag_penalty_growth_factor
+    def _threshold_to_dag(self, J: "torch.Tensor") -> "torch.Tensor":
+        """Threshold Jacobian entries and iteratively remove edges to form a DAG."""
+        import networkx as nx
+        import torch
+
+        W = J.detach().clone().float()
+        W.fill_diagonal_(0)
+        W[W < self.reg_cfg.edge_threshold] = 0
+
+        A = W > 0
+        if nx.is_directed_acyclic_graph(nx.from_numpy_array(A.cpu().numpy(), create_using=nx.DiGraph)):
+            return A.to(J.dtype)
+
+        ts = torch.unique(W[W > 0])
+        lo, hi = 0, len(ts) - 1
+        EPS = 1e-8
+        A = W > ts[hi] + EPS
+        if not nx.is_directed_acyclic_graph(nx.from_numpy_array(A.cpu().numpy(), create_using=nx.DiGraph)):
+            return torch.zeros_like(W).to(J.dtype)
+
+        while lo < hi:
+            mid = (lo + hi) // 2
+            A = W > ts[mid] + EPS
+            if nx.is_directed_acyclic_graph(nx.from_numpy_array(A.cpu().numpy(), create_using=nx.DiGraph)):
+                hi = mid
+            else:
+                lo = mid + 1
+
+        return (W > ts[lo] + EPS).to(J.dtype)
 
 
 class GraNDAG(BaseCausalDiscovery):
@@ -495,9 +467,74 @@ class GraNDAG(BaseCausalDiscovery):
 
     def _fit(self, X: pd.DataFrame):
         """Fit the GraN-DAG model and construct the causal DAG."""
-        # Step 0: Validate optimizer, net template and scaler; reject d < 2; set cols_.
-        # Step 0b: Run PNS and set pns_mask_ when pns_threshold is not None.
-        # Step 1: Build the network, training and regularization configs.
-        # Step 2: Scale, split off val_size, move to tensors, train _GraNDAGModel.
-        # Step 3: Jacobian -> threshold -> optional CAM pruning -> adjacency_matrix_, causal_graph_.
-        raise NotImplementedError
+        import torch
+
+        # Step 0: Validate inputs.
+        _validate_optimizer(self.optimizer, self.optimizer_params or {})
+
+        if self.scaler is not None and (not hasattr(self.scaler, "fit") or not hasattr(self.scaler, "transform")):
+            raise ValueError(
+                "scaler must implement fit(X) and transform(X); "
+                f"got {type(self.scaler)} which is missing one or both methods."
+            )
+
+        if X.shape[1] < 2:
+            raise ValueError("GraNDAG requires at least 2 variables; got X with only 1 column.")
+
+        if self.pns_threshold is not None:
+            raise NotImplementedError("PNS is not yet implemented; pass pns_threshold=None.")
+
+        self.feature_names_in_ = pd.Index(X.columns)
+        d = X.shape[1]
+
+        # Step 1: Scale.
+        self.scaler_ = self.scaler if self.scaler is not None else StandardScaler()
+        X_scaled = self.scaler_.fit_transform(X)
+
+        # Step 2: Train/val split.
+        if self.val_size and self.val_size > 0:
+            X_train, X_val = train_test_split(X_scaled, test_size=self.val_size, random_state=self.seed)
+        else:
+            X_train, X_val = X_scaled, None
+
+        # Step 3: Build tensors.
+        dtype = config.DTYPE if config.BACKEND == "torch" else torch.float32
+        X_train_tensor = torch.tensor(X_train, dtype=dtype, device=config.DEVICE)
+        X_val_tensor = torch.tensor(X_val, dtype=dtype, device=config.DEVICE) if X_val is not None else None
+
+        # Step 4: Build config dataclasses.
+        self.network_config_ = GraNDAGNetworkConfig(
+            net=self.net,
+            output_dim=self.output_dim,
+            log_likelihood=self.log_likelihood,
+            scaler=self.scaler,
+        )
+        self.train_config_ = GraNDAGTrainingConfig(
+            optimizer=self.optimizer,
+            optimizer_params=self.optimizer_params,
+            batch_size=self.batch_size,
+            val_size=self.val_size,
+            max_epochs=self.max_epochs,
+            min_loss_improvement=self.min_loss_improvement,
+            early_stop_patience=self.early_stop_patience,
+            max_subproblems=self.max_subproblems,
+            tensorboard_log_dir=self.tensorboard_log_dir,
+            seed=self.seed,
+        )
+        self.reg_config_ = GraNDAGRegularizationConfig(
+            dag_multiplier_init=self.dag_multiplier_init,
+            dag_penalty=self.dag_penalty,
+            dag_penalty_growth_factor=self.dag_penalty_growth_factor,
+            dag_penalty_growth_threshold=self.dag_penalty_growth_threshold,
+            dag_constraint_tol=self.dag_constraint_tol,
+            edge_threshold=self.edge_threshold,
+        )
+
+        # Step 5: Instantiate and train the internal model.
+        self.model_ = _GraNDAGModel(d, self.network_config_, self.train_config_, self.reg_config_)
+        self.model_.fit_network(X_train_tensor, X_val_tensor)
+
+        # Step 6 (not yet implemented): Jacobian -> threshold -> CAM pruning -> adjacency_matrix_, causal_graph_.
+        raise NotImplementedError(
+            "GraNDAG._fit: Jacobian extraction, thresholding, and CAM pruning are not yet implemented."
+        )
