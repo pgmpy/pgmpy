@@ -1,3 +1,4 @@
+import itertools
 from dataclasses import dataclass
 
 import numpy as np
@@ -6,6 +7,7 @@ from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
+from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
 from pgmpy.global_vars import config
 
@@ -151,10 +153,10 @@ class _GraNDAGModel(nn.Module):
         if template is None:
             template = nn.Sequential(
                 nn.Linear(d, 10),
-                nn.Sigmoid(),
+                nn.LeakyReLU(),
                 nn.Linear(10, 10),
-                nn.Sigmoid(),
-                nn.Linear(10, m),
+                nn.LeakyReLU(),
+                nn.Linear(10, 1),
             )
 
         linears = []
@@ -173,6 +175,7 @@ class _GraNDAGModel(nn.Module):
             raise ValueError(f"The last Linear layer must produce {m} outputs.")
 
         self.subnets = nn.ModuleList([copy.deepcopy(template) for _ in range(d)])
+        self.log_var = nn.Parameter(torch.zeros(d))
         for subnet in self.subnets:
             for mod in subnet.modules():
                 if isinstance(mod, nn.Linear):
@@ -215,14 +218,14 @@ class _GraNDAGModel(nn.Module):
         if self.network_cfg.log_likelihood is not None:
             return self.network_cfg.log_likelihood(X, theta)
 
-        if theta.shape[-1] != 2:
+        if theta.shape[-1] != 1:
             raise ValueError(
-                "Default Gaussian log-likelihood requires output_dim=2 "
-                f"(mean and log-variance); got output_dim={theta.shape[-1]}. Pass a custom "
+                "Default Gaussian log-likelihood requires output_dim=1 "
+                f"(conditional mean); got output_dim={theta.shape[-1]}. Pass a custom "
                 "log_likelihood for other output_dim values."
             )
         mu = theta[..., 0]
-        log_var = theta[..., 1].clamp(-20.0, 20.0)
+        log_var = self.log_var.clamp(-20.0, 20.0)
         var = log_var.exp()
         return -0.5 * math.log(2 * math.pi) - 0.5 * log_var - ((X - mu) ** 2) / (2 * var)
 
@@ -231,12 +234,78 @@ class _GraNDAGModel(nn.Module):
 
         Runs the full training loop consisting of augmented Lagrangian subproblems.
         """
-        # Seed, then init lambda, mu and h_prev for the augmented Lagrangian.
-        # Outer loop over subproblems: capped by max_subproblems, exit when h <= dag_constraint_tol.
-        #   Inner loop over epochs (capped by max_epochs): minibatch NLL + lambda*h + (mu/2)*h**2.
-        #   Early stop on validation NLL when val_size > 0; reset patience each subproblem.
-        #   After each subproblem: update lambda/mu from h and h_prev.
-        raise NotImplementedError
+        import torch
+
+        torch.manual_seed(self.train_cfg.seed)
+        optimizer_cls = {
+            "adam": torch.optim.Adam,
+            "sgd": torch.optim.SGD,
+            "adamw": torch.optim.AdamW,
+            "rmsprop": torch.optim.RMSprop,
+        }[self.train_cfg.optimizer.lower()]
+
+        self.lamb = self.reg_cfg.dag_multiplier_init
+        self.mu = self.reg_cfg.dag_penalty
+        h_prev = float("inf")
+        h_val = float("inf")
+        subproblem = 0
+        N = X_tensor.shape[0]
+
+        while h_val > self.reg_cfg.dag_constraint_tol and (
+            self.train_cfg.max_subproblems is None or subproblem < self.train_cfg.max_subproblems
+        ):
+            optimizer_params = dict(self.train_cfg.optimizer_params or {})
+            if "lr" not in optimizer_params:
+                optimizer_params["lr"] = 1e-2 if subproblem == 0 else 1e-4
+            optimizer = optimizer_cls(self.parameters(), **optimizer_params)
+
+            best_val_loss = float("inf")
+            patience_counter = 0
+
+            for _ in range(self.train_cfg.max_epochs):
+                self.train()
+                permutation = torch.randperm(N, device=X_tensor.device)
+
+                for start in range(0, N, self.train_cfg.batch_size):
+                    X_batch = X_tensor[permutation[start : start + self.train_cfg.batch_size]]
+                    theta = self(X_batch)
+                    negative_log_likelihood = -self._compute_log_likelihood(X_batch, theta).sum(dim=1).mean()
+                    A = self.get_A()
+                    h = _dag_constraint(A)
+                    loss = negative_log_likelihood + self.lamb * h + (self.mu / 2) * h**2
+
+                    optimizer.zero_grad()
+                    loss.backward()
+                    optimizer.step()
+
+                    with torch.no_grad():
+                        self.adjacency.mul_(self.get_A() >= self.reg_cfg.edge_threshold)
+
+                if val_tensor is not None:
+                    self.eval()
+                    with torch.no_grad():
+                        theta = self(val_tensor)
+                        negative_log_likelihood = -self._compute_log_likelihood(val_tensor, theta).sum(dim=1).mean()
+                        h = _dag_constraint(self.get_A())
+                        val_loss = negative_log_likelihood + self.lamb * h + (self.mu / 2) * h**2
+                        val_loss = val_loss.item()
+
+                    if best_val_loss - val_loss >= self.train_cfg.min_loss_improvement:
+                        best_val_loss = val_loss
+                        patience_counter = 0
+                    else:
+                        patience_counter += 1
+                        if patience_counter >= self.train_cfg.early_stop_patience:
+                            break
+
+            with torch.no_grad():
+                h_val = _dag_constraint(self.get_A()).item()
+
+            self.lamb = self.lamb + self.mu * h_val
+            if h_val > self.reg_cfg.dag_penalty_growth_threshold * h_prev:
+                self.mu = self.mu * self.reg_cfg.dag_penalty_growth_factor
+            h_prev = h_val
+            subproblem += 1
 
     def get_A(self) -> "torch.Tensor":
         """Compute weighted adjacency matrix from connectivity products."""
@@ -338,10 +407,10 @@ class GraNDAG(BaseCausalDiscovery):
     ----------
     net : nn.Module or None, default None
         Neural network template, cloned ``d`` times via ``copy.deepcopy``.
-        Defaults to a built-in 2-layer MLP with sigmoid activations. All
+        Defaults to a built-in 2-layer MLP with Leaky-ReLU activations. All
         learnable layers must be ``nn.Linear``, with the first layer accepting
         ``d`` inputs and the last layer producing ``output_dim`` outputs.
-    output_dim : int, default 2
+    output_dim : int, default 1
         Number of output neurons per sub-network (distribution parameters).
     log_likelihood : callable or None, default None
         Per-sample log-probability function with signature
@@ -381,11 +450,11 @@ class GraNDAG(BaseCausalDiscovery):
           accepted kwargs: ``lr``, ``betas``, ``eps``, ``weight_decay``,
           ``amsgrad``, ``maximize``
     optimizer_params : dict or None, default None
-        Keyword arguments forwarded to the optimizer constructor. Defaults to
-        ``{"lr": 1e-3}`` when ``None``. Note that unknown kwargs for the
-        chosen optimizer now raise ValueError at construction-adjacent
-        validation time rather than surfacing later as a TypeError from
-        the optimizer constructor.
+        Keyword arguments forwarded to the optimizer constructor. When no
+        learning rate is supplied, uses ``1e-2`` for the first augmented-
+        Lagrangian subproblem and ``1e-4`` thereafter. An explicitly supplied
+        learning rate is used for every subproblem. Unknown kwargs for the
+        chosen optimizer raise ``ValueError`` during validation.
     batch_size : int, default 64
         Mini-batch size for the inner optimization loop.
     val_size : float, default 0.1
@@ -395,7 +464,8 @@ class GraNDAG(BaseCausalDiscovery):
         bound on the inner loop when ``val_size`` is ``0.0``, since early
         stopping is disabled in that case.
     min_loss_improvement : float, default 1e-4
-        Minimum decrease in validation NLL to count as an improvement.
+        Minimum decrease in the validation augmented-Lagrangian objective to
+        count as an improvement.
     early_stop_patience : int, default 5
         Epochs without improvement before stopping a subproblem early.
     tensorboard_log_dir : str or None, default None
@@ -403,7 +473,8 @@ class GraNDAG(BaseCausalDiscovery):
     seed : int, default 42
         Random seed for reproducibility.
     edge_threshold : float, default 1e-4
-        Entries in the Jacobian matrix below this value are zeroed.
+        Connectivity values below this threshold are permanently masked during
+        training. It is also used for final Jacobian thresholding.
     pns_threshold : float or None, default None
         If set, run Preliminary Neighbourhood Selection before training.
     pruning_cutoff : float or None, default None
@@ -413,7 +484,7 @@ class GraNDAG(BaseCausalDiscovery):
     def __init__(
         self,
         net=None,
-        output_dim: int = 2,
+        output_dim: int = 1,
         log_likelihood=None,
         scaler=None,
         dag_multiplier_init: float = 0.0,
@@ -534,7 +605,22 @@ class GraNDAG(BaseCausalDiscovery):
         self.model_ = _GraNDAGModel(d, self.network_config_, self.train_config_, self.reg_config_)
         self.model_.fit_network(X_train_tensor, X_val_tensor)
 
-        # Step 6 (not yet implemented): Jacobian -> threshold -> CAM pruning -> adjacency_matrix_, causal_graph_.
-        raise NotImplementedError(
-            "GraNDAG._fit: Jacobian extraction, thresholding, and CAM pruning are not yet implemented."
+        # Step 6: Extract the final DAG from the expected absolute Jacobian.
+        self.model_.eval()
+        X_tensor = torch.tensor(X_scaled, dtype=dtype, device=config.DEVICE)
+        J = self.model_.get_jacobian(X_tensor)
+        adj = self.model_._threshold_to_dag(J)
+
+        self.adjacency_matrix_ = pd.DataFrame(
+            adj.detach().cpu().numpy(),
+            index=self.feature_names_in_,
+            columns=self.feature_names_in_,
         )
+
+        self.causal_graph_ = DAG()
+        self.causal_graph_.add_nodes_from(self.feature_names_in_)
+        for src, dst in itertools.permutations(self.feature_names_in_, 2):
+            if self.adjacency_matrix_.loc[src, dst] > 0:
+                self.causal_graph_.add_edge(src, dst)
+
+        return self
