@@ -13,6 +13,7 @@ Constraint and Hybrid Discovery
 
    ~pgmpy.causal_discovery.PC
    ~pgmpy.estimators.MmhcEstimator
+   ~pgmpy.causal_discovery.SP
 
 Score-Based and Tree Search
 ---------------------------
