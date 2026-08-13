@@ -27,7 +27,7 @@ class TabularCPD(DiscreteFactor):
         The variable whose CPD is defined.
 
     variable_card: integer
-        Cardinality/no. of states of `variable`
+        Cardinality/no. of states of ``variable``.
 
     values: 2D array, 2D list or 2D tuple
         Values for the CPD table. Please refer the example for the
@@ -37,7 +37,7 @@ class TabularCPD(DiscreteFactor):
         List of variables in evidences(if any) w.r.t. which CPD is defined.
 
     evidence_card: array-like
-        cardinality/no. of states of variables in `evidence`(if any)
+        Cardinality/no. of states of variables in ``evidence`` (if any).
 
     state_names: dict (default: dict())
         A dictionary of the form {variable: list of states} specifying the
@@ -62,10 +62,11 @@ class TabularCPD(DiscreteFactor):
     |gradeC   | 0.8  | 0.8    |   0.8   |  0.8 |  0.8   |   0.8  |
     +---------+------+--------+---------+------+--------+--------+
 
-    the values array should be
-    [[0.1,0.1,0.1,0.1,0.1,0.1],
-     [0.1,0.1,0.1,0.1,0.1,0.1],
-     [0.8,0.8,0.8,0.8,0.8,0.8]]
+    The values array should be::
+
+        [[0.1,0.1,0.1,0.1,0.1,0.1],
+         [0.1,0.1,0.1,0.1,0.1,0.1],
+         [0.8,0.8,0.8,0.8,0.8,0.8]]
 
     >>> cpd = TabularCPD(
     ...     variable="grade",

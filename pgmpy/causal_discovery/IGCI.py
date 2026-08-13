@@ -42,7 +42,7 @@ class IGCI(BaseCausalDiscovery):
         Learned graph with the single oriented edge.
 
     adjacency_matrix_ : pd.DataFrame
-        Adjacency matrix of causal_graph_.
+        Adjacency matrix of ``causal_graph_``.
 
     forward_score_ : float
         Score when the first column is treated as cause. Lower is better.

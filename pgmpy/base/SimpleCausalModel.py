@@ -10,12 +10,13 @@ class SimpleCausalModel(DAG):
     This class simplifies the creation of causal graphs commonly used in causal inference,
     where the structure consists of exposures, outcomes, confounders, mediators, and instruments.
     It automatically adds the standard edges:
-        - Exposures -> Outcomes (only if there are no mediators)
-        - confounders -> Exposures
-        - confounders -> Outcomes
-        - Instruments -> Exposures
-        - Exposures -> Mediators
-        - Mediators -> Outcomes
+
+    - Exposures -> Outcomes (only if there are no mediators)
+    - confounders -> Exposures
+    - confounders -> Outcomes
+    - Instruments -> Exposures
+    - Exposures -> Mediators
+    - Mediators -> Outcomes
 
     If you want more control over the model structure, use the DAG class directly.
 

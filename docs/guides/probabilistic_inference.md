@@ -1,7 +1,8 @@
 # Probabilistic Inference
 
-```{meta}
-:description: Query fitted pgmpy models using the unified probabilistic inference APIs.
+```{eval-rst}
+.. meta::
+   :description: Query fitted pgmpy models using the unified probabilistic inference APIs.
 ```
 
 Probabilistic inference computes the distribution over query variables given observed

@@ -1,7 +1,8 @@
 # Defining a Custom Model
 
-```{meta}
-:description: Build custom pgmpy models and attach the right CPD or factor types for your workflow.
+```{eval-rst}
+.. meta::
+   :description: Build custom pgmpy models and attach the right CPD or factor types for your workflow.
 ```
 
 When you already know the structure of a model, you can define the graph and its

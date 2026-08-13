@@ -731,68 +731,52 @@ class DiscreteBayesianNetwork(DAG):
 
         Parameters
         ----------
-        data: pandas DataFrame object
+        data : pandas.DataFrame
             A DataFrame object with column names same as the variables in the model.
 
-        algo: a subclass of pgmpy.inference.Inference or pgmpy.inference.ApproxInference
+        algo : type, optional
             An algorithm class from pgmpy Inference algorithms. Default is Variable Elimination.
 
-        stochastic: boolean
+        stochastic : bool
             If True, does prediction by sampling from the distribution of predicted variable(s).
             If False, returns the states with the highest probability value (i.e. MAP) for the
-                predicted variable(s).
+            predicted variable(s).
 
-        n_jobs: int (default: -1)
+        n_jobs : int, default=-1
             The number of CPU cores to use. If -1, uses all available cores.
 
-        seed: int (default: None)
-            When `stochastic=True`, the seed value to use for random number generators.
+        seed : int, optional
+            When ``stochastic=True``, the seed value to use for random number generators.
 
-        **kwargs
-            Optional keyword arguments specific to the selected algorithm.
-            - Variable Elimination:
-            - elimination_order: str or list (default='greedy')
-                Order in which to eliminate the variables in the algorithm. If list is provided,
-                should contain all variables in the model except the ones in `variables`. str options
-                are: `greedy`, `WeightedMinFill`, `MinNeighbors`, `MinWeight`, `MinFill`. Please
-                refer https://pgmpy.org/exact_infer/ve.html#module-pgmpy.inference.EliminationOrder
-                for details.
+        **kwargs : dict
+            Optional keyword arguments for the selected inference algorithm.
 
-            - joint: boolean (should only be used with stochastic=True i.e. when not calculating MAP)
-                If True, returns a Joint Distribution over `variables`.
-                If False, returns a dict of distributions over each of the `variables`.
-
-            - Belief Propagation:
-                - joint: boolean (should only be used with stochastic=True i.e. when not calculating MAP)
-                If True, returns a Joint Distribution over `variables`.
-                If False, returns a dict of distributions over each of the `variables`.
-
-            - Approx Inference:
-                - n_samples: int
-                    The number of samples to generate for computing the distributions. Higher `n_samples`
-                    results in more accurate results at the cost of more computation time.
-
-                - samples: pd.DataFrame (default: None)
-                    If provided, uses these samples to compute the distribution instead
-                    of generating samples. `samples` **must** conform with the
-                    `evidence` and `virtual_evidence`.
-
-                - state_names: dict (default: None)
-                    A dict of state names for each variable in `variables` in the form {variable_name: list of states}.
-                    If None, inferred from the data but is possible that the final distribution misses some states.
-
-                - seed: int (default: None)
-                    Sets the seed for the random generators.
-
-                - joint: boolean (should only be used with stochastic=True i.e. when not calculating MAP)
-                    If True, returns a Joint Distribution over `variables`.
-                    If False, returns a dict of distributions over each of the `variables`.
+            - ``elimination_order`` (str or list, default ``"greedy"``): Variable
+              elimination order. A list must contain all model variables except
+              those being predicted. String options are ``"greedy"``,
+              ``"WeightedMinFill"``, ``"MinNeighbors"``, ``"MinWeight"``, and
+              ``"MinFill"``.
+            - ``n_samples`` (int): Number of samples used by approximate
+              inference. Larger values improve accuracy at additional cost.
+            - ``samples`` (pandas.DataFrame, default ``None``): Existing samples
+              for approximate inference. They must conform to the evidence and
+              virtual evidence.
+            - ``state_names`` (dict, default ``None``): Possible states for each
+              variable. When inferred from samples, unobserved states can be
+              absent from the resulting distribution.
+            - ``seed`` (int, default ``None``): Random seed used by approximate
+              inference.
+            - ``joint`` (bool): Used only for stochastic prediction. If true,
+              return a joint distribution; otherwise, return one distribution
+              per variable. This option is supported by variable elimination,
+              belief propagation, and approximate inference.
 
         Returns
         -------
-        Inference results: Pandas DataFrame
-            If `stochastic` is True, returns state(s) by sampling from the distribution of predicted variables.
-            If `stochastic` is False, returns state(s) with the highest probability value.
+        results : pandas.DataFrame
+            If ``stochastic`` is True, returns states sampled from the
+            distribution of predicted variables. Otherwise, returns states
+            with the highest probability values.
 
         Examples
         --------
