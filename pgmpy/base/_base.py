@@ -1288,7 +1288,9 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
                 queue.extend(self.get_neighbors(current, edge_types))
         return reachable
 
-    def get_district(self, nodes: Hashable | Iterable[Hashable]) -> set[Hashable]:
+    def get_district(
+        self, nodes: Hashable | Iterable[Hashable] | None = None
+    ) -> set[Hashable] | set[frozenset[Hashable]]:
         """
         Returns the district of `nodes`: the maximal set of nodes connected to them through
         bidirected (``"<>"``) edges, including the input node(s) themselves.
@@ -1299,14 +1301,19 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
 
         Parameters
         ----------
-        nodes : Hashable or iterable of Hashable
-            A single node, or a list/set of nodes; districts are unioned over the collection. A
-            ``str``, ``int`` or ``tuple`` is one node; a list, set or frozenset is a collection.
+        nodes : Hashable, iterable of Hashable, or None (default=None)
+            - If ``None``: return all c-components in the graph as a set of frozensets.
+            - If a single node (``str``, ``int``, ``tuple``): return the c-component containing
+              that node as a set.
+            - If a collection (``list``, ``set``, ``frozenset``): return the c-components
+              containing those nodes as a set of frozensets.
 
         Returns
         -------
-        nodes : set
-            All nodes in the same bidirected-connected component(s) as `nodes`, including `nodes`.
+         nodes : set or set of frozensets
+            - When ``nodes`` is a single hashable: a set of all nodes in the same c-component.
+            - When ``nodes`` is ``None`` or a collection: a set of frozensets, each being a
+              distinct c-component.
 
         See Also
         --------
@@ -1321,10 +1328,26 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
         ['X', 'Z']
         >>> admg.get_district("Y")
         {'Y'}
+        >>> admg = ADMG(edge_list=[("A", "B", "<>"), ("C", "D", "<>")])
+        >>> sorted([sorted(list(c)) for c in admg.get_district()])
+        [['A', 'B'], ['C', 'D']]
+        >>> sorted([sorted(list(c)) for c in admg.get_district(nodes=["A", "C"])])
+        [['A', 'B'], ['C', 'D']]
 
         """
-        nodes = list(nodes) if isinstance(nodes, (list, set, frozenset)) else [nodes]
-        return set().union(*(self.get_reachable_nodes(node=n, edge_types="<>") for n in nodes))
+        if nodes is None or isinstance(nodes, (list, set, frozenset)):
+            visited = set()
+            components = set()
+            node_list = list(nodes) if nodes is not None else list(self.nodes())
+
+            for node in node_list:
+                if node not in visited:
+                    component = self.get_reachable_nodes(node=node, edge_types="<>")
+                    components.add(frozenset(component))
+                    visited.update(component)
+            return components
+        else:
+            return self.get_reachable_nodes(node=nodes, edge_types="<>")
 
     def to_adjacency(self, encoding: str = "edge_type", nodelist=None) -> pd.DataFrame:
         """
