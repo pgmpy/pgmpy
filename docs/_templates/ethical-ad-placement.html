@@ -1,7 +1,7 @@
 <div
-    id="{{ ethical_ad_id | default('ethical-ad-placement') | e }}"
+    id="ethical-ad-placement"
     class="flat adaptive-css"
     data-ea-publisher="pgmpyorg"
-    data-ea-type="{{ ethical_ad_type | default('image') | e }}"{% if ethical_ad_priority is defined %}
-    data-ea-priority="{{ ethical_ad_priority | e }}"{% endif %}>
+    data-ea-type="image"{% if ethical_ad_style %}
+    data-ea-style="{{ ethical_ad_style | e }}"{% endif %}>
 </div>

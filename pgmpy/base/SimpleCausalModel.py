@@ -22,22 +22,22 @@ class SimpleCausalModel(DAG):
 
     Notes
     -----
-    A standard causal diagram (with mediators):
+    A standard causal diagram (with mediators)::
 
         I ---> E ---> M ---> O
                ^             ^
                |             |
                X-------------+
 
-    Where:
-        I: Instrument
-        E: Exposure
-        M: Mediator
-        O: Outcome
-        X: Confounder (affects both E and O)
+        Where:
+            I: Instrument
+            E: Exposure
+            M: Mediator
+            O: Outcome
+            X: Confounder (affects both E and O)
 
+    If no mediators::
 
-    If no mediators:
         I ---> E ---> O
                ^      ^
                |      |
