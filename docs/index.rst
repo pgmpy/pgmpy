@@ -64,6 +64,14 @@
 
             API Reference
 
+.. raw:: html
+
+   <div
+       data-ea-publisher="pgmpyorg"
+       data-ea-type="image"
+       data-ea-style="stickybox">
+   </div>
+
 Key Features
 ------------
 

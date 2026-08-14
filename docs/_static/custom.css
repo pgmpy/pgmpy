@@ -282,22 +282,6 @@ body {
     width: 4.5rem;
 }
 
-.pgmpy-homepage-ad {
-    align-items: center;
-    border-top: 1px solid var(--pgmpy-divider);
-    display: flex;
-    justify-content: center;
-    margin: 2rem auto 0;
-    max-width: 79rem;
-    padding: 1.5rem 1rem 0;
-    width: 100%;
-}
-
-.pgmpy-homepage-ad > #ethical-ad-placement-standard,
-.pgmpy-homepage-ad > #ethical-ad-placement-large {
-    max-width: 100%;
-}
-
 .badge-container {
     align-items: center;
     display: flex;

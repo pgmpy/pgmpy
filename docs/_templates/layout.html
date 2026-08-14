@@ -18,17 +18,3 @@
   <!-- EthicalAds -->
   <script async src="https://media.ethicalads.io/media/client/ethicalads.min.js"></script>
 {% endblock %}
-
-{% block docs_main %}
-  {{ super() }}
-  {% if pagename == "index" %}
-    <aside class="pgmpy-homepage-ad d-print-none" aria-label="Advertisement">
-      {% with ethical_ad_id="ethical-ad-placement-standard", ethical_ad_type="image", ethical_ad_priority="1" %}
-        {% include "ethical-ad-placement.html" %}
-      {% endwith %}
-      {% with ethical_ad_id="ethical-ad-placement-large", ethical_ad_type="logo-large-v1", ethical_ad_priority="10" %}
-        {% include "ethical-ad-placement.html" %}
-      {% endwith %}
-    </aside>
-  {% endif %}
-{% endblock %}
