@@ -534,33 +534,35 @@ class Mplp(Inference):
 
         Parameters
         ----------
-        init_iter: integer
-                   Number of maximum iterations that we want MPLP to run for the first time.
+        init_iter : int
+            Maximum number of iterations for the first MPLP run.
 
-        later_iter: integer
-                    Number of maximum iterations that we want MPLP to run for later iterations
+        later_iter : int
+            Maximum number of iterations for later MPLP runs.
 
-        dual_threshold: double
-                        This sets the minimum width between the dual objective decrements. If the decrement is lesser
-                        than the threshold, then that means we have stuck on a local minima.
+        dual_threshold : float
+            Minimum width between dual objective decrements. A smaller
+            decrement indicates that the optimization is stuck at a local
+            minimum.
 
-        integrality_gap_threshold: double
-                                   This sets the threshold for the integrality gap below which we say that the solution
-                                   is satisfactory.
+        integrality_gap_threshold : float
+            Integrality-gap threshold below which the solution is considered
+            satisfactory.
 
-        tighten_triplet: bool
-                         set whether to use triplets as clusters or not.
+        tighten_triplet : bool
+            Whether to use triplets as clusters.
 
-        max_triplets: integer
-                      Set the maximum number of triplets that can be added at once.
+        max_triplets : int
+            Maximum number of triplets that can be added at once.
 
-        max_iterations: integer
-                        Maximum number of times we tighten the relaxation. Used only when tighten_triplet is set True.
+        max_iterations : int
+            Maximum number of times to tighten the relaxation. Used only when
+            ``tighten_triplet`` is ``True``.
 
-        prolong: bool
-                 If set False: The moment we exhaust of all the triplets the tightening stops.
-                 If set True: The tightening will be performed max_iterations
-                   number of times irrespective of the triplets.
+        prolong : bool
+            If ``False``, tightening stops when all triplets are exhausted. If
+            ``True``, tightening is performed ``max_iterations`` times
+            regardless of the available triplets.
 
         References
         ----------

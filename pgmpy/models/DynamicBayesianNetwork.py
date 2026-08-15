@@ -154,17 +154,6 @@ class DynamicBayesianNetwork(DAG):
     <DynamicNode(L, 1) at 0x...>,
     <DynamicNode(S, 0) at 0x...>))
 
-    Public Methods
-    --------------
-    add_node
-    add_nodes_from
-    add_edges
-    add_edges_from
-    add_cpds
-    initialize_initial_state
-    inter_slice
-    intra_slice
-    copy
     """
 
     def __init__(self, ebunch=None):

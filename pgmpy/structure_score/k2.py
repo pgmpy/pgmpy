@@ -1,3 +1,4 @@
+from collections.abc import Hashable
 from math import lgamma
 
 import numpy as np
@@ -69,7 +70,7 @@ class K2(BaseStructureScore):
         super().__init__(data, state_names=state_names, max_cache_size=max_cache_size)
         self._codes, self._cardinalities = encode_columns(self.data, self.state_names)
 
-    def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
+    def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         var_cardinality = self._cardinalities[variable]
         counts = get_state_counts_array(self._codes, self._cardinalities, variable, parents)
         num_parents_states = counts.shape[1]

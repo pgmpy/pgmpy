@@ -382,7 +382,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         will be automatically added. Node names can be any hashable python
         object.
 
-        **The behavior of adding weights is different than networkx.
+        **The behavior of adding weights is different than networkx.**
 
         Parameters
         ----------
@@ -682,7 +682,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         model : A DAG object, for which you want to check I-equivalence
 
         Returns
-        --------
+        -------
         I-equivalence: boolean
             True if both are I-equivalent, False otherwise
 
@@ -717,7 +717,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             A set of all the immoralities in the model
 
         Examples
-        ---------
+        --------
         >>> from pgmpy.base import DAG
         >>> student = DAG()
         >>> student.add_edges_from(
