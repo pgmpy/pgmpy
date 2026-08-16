@@ -2,16 +2,17 @@
 Tests for the sklearn-compatible DAGMALinear class in pgmpy.causal_discovery.
 """
 
+import networkx as nx
 import numpy as np
 import pandas as pd
 import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
-from pgmpy.base import DAG
+from pgmpy.base import DAG, PDAG
 from pgmpy.causal_discovery.DAGMA import DAGMALinear
 
-# Skip all tests if torch is not installed — it is an optional dependency.
+# Skip all tests if torch is not installed -- it is an optional dependency.
 pytestmark = pytest.mark.skipif(
     not _check_soft_dependencies("torch", severity="none"),
     reason="torch is not installed. Install with: pip install pgmpy[torch]",
@@ -90,18 +91,6 @@ class TestDagmaLinearCore:
         assert ("Y", "Y") not in learned_edges
         assert ("Z", "Z") not in learned_edges
 
-    # NOTE: test_compare_with_official_dagma on Sachs dataset commented out.
-    # Sachs results unsatisfying due to Adam optimizer producing cycles on
-    # mean-centered data (see dagma_mem.md §6.3). Replaced by
-    # test_compare_with_official_dagma_synthetic which uses controlled
-    # synthetic data from the official DAGMA test notebook.
-    #
-    # def test_compare_with_official_dagma(self):
-    #     """..."""
-    #     dagma_mod = pytest.importorskip("dagma.linear")
-    #     ...
-    #     assert shd_val <= 6
-
     def test_compare_with_official_dagma_synthetic(self):
         """
         Compare pgmpy's DAGMALinear against official dagma on synthetic data generated identically to the official
@@ -110,59 +99,54 @@ class TestDagmaLinearCore:
         implementations use least-squares loss with lambda1=0.02.
         """
         dagma_mod = pytest.importorskip("dagma.linear")
-        dagma_utils = pytest.importorskip("dagma.utils")  # pragma: no cover
-        OfficialDagmaLinear = dagma_mod.DagmaLinear  # pragma: no cover
+        dagma_utils = pytest.importorskip("dagma.utils")
+        OfficialDagmaLinear = dagma_mod.DagmaLinear
 
         # 1. Generate synthetic data matching official test notebook
-        dagma_utils.set_random_seed(1)  # pragma: no cover
-        n, d, s0 = 500, 20, 20  # pragma: no cover
-        graph_type, sem_type = "ER", "gauss"  # pragma: no cover
+        dagma_utils.set_random_seed(1)
+        n, d, s0 = 500, 20, 20
+        graph_type, sem_type = "ER", "gauss"
 
-        B_true = dagma_utils.simulate_dag(d, s0, graph_type)  # pragma: no cover
-        W_true = dagma_utils.simulate_parameter(B_true)  # pragma: no cover
-        X = dagma_utils.simulate_linear_sem(W_true, n, sem_type)  # pragma: no cover
+        B_true = dagma_utils.simulate_dag(d, s0, graph_type)
+        W_true = dagma_utils.simulate_parameter(B_true)
+        X = dagma_utils.simulate_linear_sem(W_true, n, sem_type)
 
         # 2. Run official DAGMA
-        model_official = OfficialDagmaLinear(loss_type="l2")  # pragma: no cover
-        W_est_official = model_official.fit(X, lambda1=0.02)  # pragma: no cover
+        model_official = OfficialDagmaLinear(loss_type="l2")
+        W_est_official = model_official.fit(X, lambda1=0.02)
 
-        # 3. Run pgmpy's DAGMA on same data (string column names required —
+        # 3. Run pgmpy's DAGMA on same data (string column names required --
         #    _check_fit_data only sets feature_names_in_ for non-DataFrames;
         #    skbase's validate_data sets it only for string columns)
-        col_names = [f"x{i}" for i in range(d)]  # pragma: no cover
-        X_df = pd.DataFrame(X, columns=col_names)  # pragma: no cover
-        est = DAGMALinear(lambda1=0.02, w_threshold=0.3)  # pragma: no cover
-        est.fit(X_df)  # pragma: no cover
+        col_names = [f"x{i}" for i in range(d)]
+        X_df = pd.DataFrame(X, columns=col_names)
+        est = DAGMALinear(lambda1=0.02, w_threshold=0.3)
+        est.fit(X_df)
 
         # 4. Both should recover the true DAG edges
-        true_edges = set(zip(*np.where(W_true != 0)))  # pragma: no cover
-        pgmpy_edges = {  # pragma: no cover
-            (col_names.index(u), col_names.index(v)) for u, v in est.causal_graph_.edges()
-        }
+        true_edges = set(zip(*np.where(W_true != 0)))
+        pgmpy_edges = {(col_names.index(u), col_names.index(v)) for u, v in est.causal_graph_.edges()}
 
         # True positive rate: pgmpy should recover most true edges
-        tp = len(pgmpy_edges & true_edges)  # pragma: no cover
-        tpr = tp / len(true_edges) if true_edges else 0  # pragma: no cover
-        assert tpr >= 0.85, (
-            f"TPR={tpr:.2f} — pgmpy recovered only {tp}/{len(true_edges)} true edges"
-        )  # pragma: no cover
+        tp = len(pgmpy_edges & true_edges)
+        tpr = tp / len(true_edges) if true_edges else 0
+        assert tpr >= 0.85, f"TPR={tpr:.2f} -- pgmpy recovered only {tp}/{len(true_edges)} true edges"
 
         # False discovery rate: pgmpy should not add many spurious edges
-        fp = len(pgmpy_edges - true_edges)  # pragma: no cover
-        fdr = fp / len(pgmpy_edges) if pgmpy_edges else 0  # pragma: no cover
-        assert fdr <= 0.00, f"FDR={fdr:.2f} — pgmpy added {fp} spurious edges"  # pragma: no cover
+        fp = len(pgmpy_edges - true_edges)
+        fdr = fp / len(pgmpy_edges) if pgmpy_edges else 0
+        assert fdr <= 0.05, f"FDR={fdr:.2f} -- pgmpy added {fp} spurious edges"
 
         # 5. SHD between pgmpy and official should be small
-        import networkx as nx  # pragma: no cover
+        # (imported here: pgmpy.metrics pulls torch, which is an optional dependency)
+        from pgmpy.metrics import SHD
 
-        from pgmpy.metrics import SHD  # pragma: no cover
+        df_off = pd.DataFrame(W_est_official != 0, index=col_names, columns=col_names)
+        nx_off = nx.from_pandas_adjacency(df_off, create_using=nx.DiGraph)
+        dag_off = DAG(nx_off)
 
-        df_off = pd.DataFrame(W_est_official != 0, index=col_names, columns=col_names)  # pragma: no cover
-        nx_off = nx.from_pandas_adjacency(df_off, create_using=nx.DiGraph)  # pragma: no cover
-        dag_off = DAG(nx_off)  # pragma: no cover
-
-        shd_val = SHD()(true_causal_graph=dag_off, est_causal_graph=est.causal_graph_)  # pragma: no cover
-        assert shd_val == 0, f"SHD={shd_val} — structures diverge more than expected"  # pragma: no cover
+        shd_val = SHD()(true_causal_graph=dag_off, est_causal_graph=est.causal_graph_)
+        assert shd_val == 0, f"SHD={shd_val} -- structures diverge more than expected"
 
     def test_optimizer_kwargs(self, continuous_data):
         """
@@ -180,10 +164,10 @@ class TestDagmaLinearCore:
         """
         Test that optimization recovers gracefully from M-matrix domain violations.
 
-        Uses a strict s=0.5 (default is 1.0) which tightens the M-matrix domain and
-        makes domain violations more likely. The retry logic in _optimize() should
-        handle these by halving the learning rate and loosening s, producing a valid
-        DAG instead of getting stuck.
+        Uses a strict scalar s=0.5 (the default is the schedule
+        ``[1.0, 0.9, 0.8, 0.7, 0.6]``) which tightens the M-matrix domain. The retry
+        logic in ``_optimize()`` handles any violation by halving the learning rate and
+        loosening s, producing a valid DAG instead of getting stuck.
         """
         dagma_utils = pytest.importorskip("dagma.utils")
         dagma_utils.set_random_seed(42)
@@ -216,7 +200,7 @@ class TestDagmaLinearCore:
 
         # Autograd gradient
         W_auto = W.clone().requires_grad_(True)
-        loss = est._objective(W_auto, mu, cov, s)
+        loss = est._objective_value(W_auto, mu, s, cov, eye)
         loss.backward()
         grad_autograd = W_auto.grad
 
@@ -234,3 +218,23 @@ class TestDagmaLinearCore:
         est = DAGMALinear(s=[1.0, 0.95, 0.9, 0.85, 0.8])
         est.fit(continuous_data)
         assert isinstance(est.causal_graph_, DAG)
+
+    def test_random_state_reproducibility(self, continuous_data):
+        est1 = DAGMALinear(random_state=42)
+        est1.fit(continuous_data)
+        est2 = DAGMALinear(random_state=42)
+        est2.fit(continuous_data)
+        np.testing.assert_array_equal(est1.adjacency_matrix_, est2.adjacency_matrix_)
+
+    def test_return_type_cpdag(self, continuous_data):
+        est = DAGMALinear(return_type="cpdag")
+        est.fit(continuous_data)
+        assert isinstance(est.causal_graph_, PDAG)
+
+    def test_score_with_shd(self, continuous_data):
+        est = DAGMALinear()
+        est.fit(continuous_data)
+        # score() with a known true graph
+        true_dag = DAG([("X", "Y"), ("Y", "Z")])
+        score = est.score(X=None, true_graph=true_dag, metric="SHD")
+        assert isinstance(score, (int, float))

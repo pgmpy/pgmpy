@@ -200,10 +200,22 @@ class _BaseDAGMAMixin:
             dtype = dtype_str
         return device, dtype
 
-    def _log_det_barrier(self, W, s: float):
-        """
+    def _log_det_barrier(self, W, s: float, squared: bool = False):
+        r"""
         Computes the log-determinant acyclicity barrier function:
-        h(W) = -log det(sI - W o W) + d log s
+
+        .. math::
+            h(W) = -\log \det(sI - W \circ W) + d \log s
+
+        Parameters
+        ----------
+        W : torch.Tensor
+            The (d, d) weight matrix (or pre-squared adjacency for nonlinear).
+        s : float
+            M-matrix domain parameter.
+        squared : bool, optional (default=False)
+            If True, ``W`` is treated as already element-wise squared (i.e., ``M = sI - W`` instead of
+            ``M = sI - W * W``). Used by the nonlinear dagma where ``A = W_squared`` is pre-computed.
 
         Returns
         -------
@@ -213,8 +225,8 @@ class _BaseDAGMAMixin:
             The computed barrier value if acyclic, otherwise None.
         """
         d = W.shape[0]
-        I = torch.eye(d, device=W.device, dtype=W.dtype)
-        M = s * I - W * W
+        eye = torch.eye(d, device=W.device, dtype=W.dtype)
+        M = s * eye - (W if squared else W * W)
 
         sign, logdet = torch.slogdet(M)
         if sign <= 0:
@@ -228,26 +240,22 @@ class _BaseDAGMAMixin:
         Thresholds the estimated weight matrix and converts it into a pgmpy DAG or CPDAG.
         """
         W_thresh = np.where(np.abs(W) > w_threshold, W, 0)
-        # Zero out diagonal entries — self-loops are never part of a DAG
+        # Zero out diagonal entries -- self-loops are never part of a DAG
         np.fill_diagonal(W_thresh, 0)
         dag = nx.from_pandas_adjacency(
             pd.DataFrame(W_thresh, index=feature_names, columns=feature_names),
             create_using=nx.DiGraph,
         )
 
-        # Break any residual cycles by removing the smallest-|weight| edge in each cycle.
-        # DAGMANonlinear can produce small numerical cycles at low iteration counts;
-        # DAGMALinear with proper convergence should not trigger this path. The guard
-        # is kept here (shared mixin) because both variants call _convert_to_dag.
-        while True:
-            try:
-                cycle = nx.find_cycle(dag)
-            except nx.NetworkXNoCycle:
-                break
-            # Remove the edge with the smallest absolute weight in the cycle
-            min_edge = min(cycle, key=lambda e: abs(W_thresh[feature_names.index(e[0]), feature_names.index(e[1])]))
-            dag.remove_edge(*min_edge)
-
+        # Check for residual cycles. The optimization should guarantee a DAG, but early stopping or loose thresholds
+        # might leave cycles.
+        if not nx.is_directed_acyclic_graph(dag):
+            cycle = nx.find_cycle(dag)
+            raise ValueError(
+                f"Estimated graph contains a cycle: {cycle}. "
+                "The optimization did not converge to a DAG. "
+                "Try increasing max_iter or adjusting w_threshold."
+            )
         if return_type == "dag":
             return DAG(dag)
         elif return_type == "cpdag":
@@ -273,23 +281,20 @@ class _BaseDAGMAMixin:
         checkpoint=1000,
     ) -> np.ndarray:
         """
-        Unified optimization loop executing the dual-loop DAGMA optimization
-        with domain-violation recovery and optional analytical gradients.
+        Unified optimization loop executing the dual-loop DAGMA optimization with domain-violation recovery and
+        optional analytical gradients.
 
-        When ``gradient_fn`` is provided, gradients are computed analytically and
-        injected into ``W_param.grad`` — eliminating autograd backward pass overhead.
-        Any ``torch.optim.Optimizer`` works because all optimizers read ``param.grad``
-        the same way.
+        When ``gradient_fn`` is provided, gradients are computed analytically and injected into ``W_param.grad``
+        -- eliminating autograd backward pass overhead. Any ``torch.optim.Optimizer`` works because all optimizers read
+        ``param.grad``the same way.
 
         When ``gradient_fn`` is None, falls back to autograd (``loss.backward()``).
 
-        Domain-violation recovery (two-level):
-        - **Inner level:** When a step violates the M-matrix domain, the bad step is
-          undone, learning rate is halved, and the step is re-applied with the smaller
-          lr. If lr drops too low, signals failure to the outer level.
-        - **Outer level:** When the inner loop fails, W is rolled back to the
-          pre-iteration checkpoint, lr is halved, and s is loosened (+0.1).
-          Retries until success or lr < 1e-16 (gives up gracefully).
+        Domain-violation recovery: when a step leaves the M-matrix domain, the whole
+        inner loop for the current outer iteration is restarted from the weights it
+        began with, using a halved learning rate and a loosened s (+0.1). Retries
+        until the inner loop completes or lr < 1e-16, at which point the last valid
+        weights are accepted.
 
         Parameters
         ----------
@@ -300,7 +305,7 @@ class _BaseDAGMAMixin:
         optimizer_kwargs : dict
             Keyword arguments for the optimizer constructor.
         objective_fn : callable
-            ``fn(W, mu, s) -> loss`` — computes scalar loss (with or without graph).
+            ``fn(W, mu, s) -> loss`` -- computes scalar loss (with or without graph).
         mu_init : float
             Initial central path parameter.
         mu_factor : float
@@ -311,7 +316,7 @@ class _BaseDAGMAMixin:
             Number of inner optimization steps per outer iteration.
             When ``warm_iter`` is provided, this applies only to the final stage.
         gradient_fn : callable or None, optional (default=None)
-            ``fn(W, mu, s) -> (grad, is_valid)`` — analytical gradient + domain check.
+            ``fn(W, mu, s) -> (grad, is_valid)`` -- analytical gradient + domain check.
             When None, autograd ``loss.backward()`` is used.
         s_schedule : list of float or None, optional (default=None)
             s values per outer iteration. If None, defaults to ``[1.0] * max_iter``.
@@ -343,35 +348,38 @@ class _BaseDAGMAMixin:
         # Resolve s-schedule
         if s_schedule is None:
             s_schedule = [1.0] * max_iter
-        elif len(s_schedule) < max_iter:
-            s_schedule = list(s_schedule) + [s_schedule[-1]] * (max_iter - len(s_schedule))
-
+        else:
+            s_schedule = list(s_schedule)
+            if len(s_schedule) < max_iter:
+                s_schedule += [s_schedule[-1]] * (max_iter - len(s_schedule))
         # Resolve warm/final iteration split
-        _warm_iter = warm_iter if warm_iter is not None else inner_iter
-        _final_iter = inner_iter
+        resolved_warm_iter = warm_iter if warm_iter is not None else inner_iter
+        resolved_final_iter = inner_iter
 
-        # Detect L-BFGS — requires step(closure) API
+        # Detect L-BFGS -- requires step(closure) API
         is_lbfgs = optimizer_cls is torch.optim.LBFGS
 
         for t in range(max_iter):
             s = s_schedule[t]
-            inner_iters = _final_iter if t == max_iter - 1 else _warm_iter
+            inner_iters = resolved_final_iter if t == max_iter - 1 else resolved_warm_iter
             lr_current = lr_initial
+
+            W_param = torch.nn.Parameter(W_current.clone().requires_grad_(not use_analytical))
+            opt_kw = dict(optimizer_kwargs)
+            opt_kw["lr"] = lr_current
+            optimizer = optimizer_cls([W_param], **opt_kw)
+
             success = False
 
             while not success:
-                # Checkpoint W before this attempt (for outer-level rollback)
-                W_checkpoint = W_current.clone()
+                obj_prev_val = 1e16
+                success = True
 
-                W_param = torch.nn.Parameter(W_current.clone().requires_grad_(not use_analytical))
-                opt_kw = dict(optimizer_kwargs)
-                opt_kw["lr"] = lr_current
-                optimizer = optimizer_cls([W_param], **opt_kw)
+                W_prev = W_param.data.clone()
+                grad_prev = None
 
-                obj_prev = 1e16
-                success = True  # assume success unless proven otherwise
-
-                for i in range(1, inner_iters + 1):
+                i = 1
+                while i <= inner_iters:
                     if use_analytical:
                         # --- Analytical gradient path ---
                         with torch.no_grad():
@@ -379,8 +387,25 @@ class _BaseDAGMAMixin:
 
                         if not is_valid:
                             # Domain violation: M-matrix has negative inv entries
-                            success = False
-                            break
+                            if i == 1 or s <= 0.9:
+                                success = False
+                                break
+
+                            # Inner recovery: undo step, halve lr, redo
+                            W_param.data.copy_(W_prev)
+                            lr_current *= 0.5
+                            for param_group in optimizer.param_groups:
+                                param_group["lr"] = lr_current
+
+                            if lr_current < 1e-16:
+                                break
+
+                            W_param.grad = grad_prev
+                            optimizer.step()
+                            continue
+
+                        W_prev = W_param.data.clone()
+                        grad_prev = grad.clone()
 
                         W_param.grad = grad
                         optimizer.step()
@@ -389,39 +414,58 @@ class _BaseDAGMAMixin:
                         if i % checkpoint == 0 or i == inner_iters:
                             with torch.no_grad():
                                 obj_new = objective_fn(W_param.data, mu, s).item()
-                            if abs((obj_prev - obj_new) / (abs(obj_prev) + 1e-16)) <= tol:
+                            if abs((obj_prev_val - obj_new) / max(abs(obj_prev_val), 1e-16)) <= tol:
                                 break
-                            obj_prev = obj_new
+                            obj_prev_val = obj_new
 
                     elif is_lbfgs:
                         # --- L-BFGS autograd path (step-with-closure API) ---
                         def closure():
                             optimizer.zero_grad()
                             loss = objective_fn(W_param, mu, s)
-                            if loss.item() >= 1e9:  # barrier violation sentinel
+                            if loss.item() >= 1e10:  # barrier violation sentinel
                                 return loss
                             loss.backward()
                             return loss
 
                         loss = optimizer.step(closure)
-                        if loss.item() >= 1e9:
+                        if loss.item() >= 1e10:
                             success = False
                             break
 
                         if i % checkpoint == 0 or i == inner_iters:
                             obj_new = loss.item()
-                            if abs((obj_prev - obj_new) / (abs(obj_prev) + 1e-16)) <= tol:
+                            if abs((obj_prev_val - obj_new) / max(abs(obj_prev_val), 1e-16)) <= tol:
                                 break
-                            obj_prev = obj_new
+                            obj_prev_val = obj_new
 
                     else:
                         # --- Standard autograd path (Adam, SGD, etc.) ---
                         optimizer.zero_grad()
                         loss = objective_fn(W_param, mu, s)
 
-                        if loss.item() >= 1e9:  # barrier violation sentinel
-                            success = False
-                            break
+                        if loss.item() >= 1e10:  # barrier violation sentinel
+                            if i == 1 or s <= 0.9:
+                                success = False
+                                break
+
+                            # Inner recovery
+                            with torch.no_grad():
+                                W_param.data.copy_(W_prev)
+                            lr_current *= 0.5
+                            for param_group in optimizer.param_groups:
+                                param_group["lr"] = lr_current
+
+                            if lr_current < 1e-16:
+                                break
+
+                            optimizer.zero_grad()
+                            loss = objective_fn(W_param, mu, s)
+                            loss.backward()
+                            optimizer.step()
+                            continue
+
+                        W_prev = W_param.data.clone()
 
                         loss.backward()
                         optimizer.step()
@@ -429,18 +473,23 @@ class _BaseDAGMAMixin:
                         # Convergence check
                         if i % checkpoint == 0 or i == inner_iters:
                             obj_new = loss.item()
-                            if abs((obj_prev - obj_new) / (abs(obj_prev) + 1e-16)) <= tol:
+                            if abs((obj_prev_val - obj_new) / max(abs(obj_prev_val), 1e-16)) <= tol:
                                 break
-                            obj_prev = obj_new
+                            obj_prev_val = obj_new
+
+                    i += 1
 
                 if not success:
-                    # Outer-level recovery: rollback W, halve lr, loosen s
-                    W_current = W_checkpoint
+                    # Outer Recovery: rollback W, halve lr, loosen s, retry inner loop
+                    with torch.no_grad():
+                        W_param.data.copy_(W_current)
                     lr_current *= 0.5
+                    for param_group in optimizer.param_groups:
+                        param_group["lr"] = lr_current
                     s = s + 0.1
                     s_schedule[t] = s
                     if lr_current < 1e-16:
-                        # Give up gracefully — accept current checkpoint
+                        # Give up gracefully -- accept current checkpoint
                         success = True
                 else:
                     W_current = W_param.detach().clone()

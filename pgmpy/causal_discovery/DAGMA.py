@@ -36,14 +36,15 @@ class DAGMALinear(_BaseDAGMAMixin, BaseCausalDiscovery):
 
     Parameters
     ----------
-    s : float or list of float, optional (default=[1.0, 0.9, 0.8, 0.7, 0.6])
+    s : float or list of float or None, optional (default=None)
         Controls the domain of the M-matrices for the log-det constraint.
+        If ``None``, the official DAGMA schedule ``[1.0, 0.9, 0.8, 0.7, 0.6]`` is used.
         If a float, the same value is used for all outer iterations.
         If a list, each element corresponds to an outer iteration stage.
         Higher values (e.g., 2.0) make the acyclicity constraint more permissive, potentially allowing denser graphs.
         Lower values (e.g., 0.5) make it stricter, encouraging sparser solutions.
-        The default ``[1.0, 0.9, 0.8, 0.7, 0.6]`` matches the official DAGMA and progressively tightens the
-        acyclicity barrier across outer iterations.
+        The default ``[1.0, 0.9, 0.8, 0.7, 0.6]`` progressively tightens the acyclicity barrier across outer
+        iterations.
 
     lambda1 : float, optional (default=0.05)
         L1 regularization coefficient to enforce sparsity in the estimated graph.
@@ -74,7 +75,7 @@ class DAGMALinear(_BaseDAGMAMixin, BaseCausalDiscovery):
 
     warm_iter : int or None, optional (default=None)
         Number of inner optimization steps for non-final outer iterations (stages 0 to
-        T-2). The final stage uses ``inner_iter`` steps (typically 2× more). If
+        T-2). The final stage uses ``inner_iter`` steps (typically 2x more). If
         ``None``, defaults to the same value as ``inner_iter`` (no warm/final split).
         Setting ``warm_iter < inner_iter`` allocates more optimization budget to the
         final stage where the acyclicity barrier is tightest.
@@ -93,10 +94,14 @@ class DAGMALinear(_BaseDAGMAMixin, BaseCausalDiscovery):
         Any ``torch.optim.Optimizer`` subclass is accepted.
 
     optimizer_kwargs : dict or None, optional (default=None)
-        Keyword arguments passed to the optimizer constructor. If ``None``, sensible defaults
-        are used: ``{"lr": 0.0003, "betas": (0.99, 0.999)}`` for Adam (matching official DAGMA),
-        or the optimizer's PyTorch defaults for other optimizers. For ``torch.optim.LBFGS`` a
-        recommended configuration is ``{"max_iter": 10, "line_search_fn": "strong_wolfe"}``.
+        Keyword arguments passed to the optimizer constructor. If ``None``, sensible defaults are used:
+        ``{"lr": 0.0003, "betas": (0.99, 0.999)}`` for Adam (matching official DAGMA), or the optimizer's PyTorch
+        defaults for other optimizers. For ``torch.optim.LBFGS`` a recommended configuration is
+        ``{"max_iter": 10, "line_search_fn": "strong_wolfe"}``.
+
+    random_state : int or None, optional (default=None)
+        Seed for reproducibility. When provided, seeds both ``torch.manual_seed()`` and ``np.random.seed()`` at the
+        start of ``fit()``. If ``None``, no seeding is performed.
 
     Attributes
     ----------
@@ -141,6 +146,7 @@ class DAGMALinear(_BaseDAGMAMixin, BaseCausalDiscovery):
         return_type: str = "dag",
         optimizer=None,
         optimizer_kwargs=None,
+        random_state=None,
     ) -> None:
         self.s = s
         self.lambda1 = lambda1
@@ -153,37 +159,39 @@ class DAGMALinear(_BaseDAGMAMixin, BaseCausalDiscovery):
         self.return_type = return_type
         self.optimizer = optimizer
         self.optimizer_kwargs = optimizer_kwargs
+        self.random_state = random_state
 
     def _fit(self, X: pd.DataFrame):
         r"""
         Core flow of the DAGMA continuous optimization algorithm.
 
-        The algorithm uses a central path method that optimizes a sequence of unconstrained problems. As
-        :math:`\mu` decays to zero, the solution converges to a DAG.
+        The algorithm uses a central path method that optimizes a sequence of unconstrained problems. As :math:`\mu`
+        decays to zero, the solution converges to a DAG.
 
         Parameters
         ----------
         X : pd.DataFrame
             The data to learn the causal structure from.
         """
-        # Step 1: Resolve device & dtype
         device, dtype = self._resolve_device_and_dtype()
 
-        # Step 2: Pre-compute covariance matrix
+        if self.random_state is not None:
+            torch.manual_seed(self.random_state)
+            np.random.seed(self.random_state)
+
+        # Biased MLE covariance (1/n) on mean-centered data.
         data_np = X.values
         data_np = data_np - np.mean(data_np, axis=0, keepdims=True)
         cov = (data_np.T @ data_np) / float(data_np.shape[0])
         cov_tensor = torch.tensor(cov, device=device, dtype=dtype)
 
-        # Step 3: Initialize the weight matrix
         W_tensor = torch.zeros((self.n_features_in_, self.n_features_in_), device=device, dtype=dtype)
 
         # Pre-compute identity matrix (avoid 15k+ allocations across inner loop)
         eye = torch.eye(self.n_features_in_, device=device, dtype=dtype)
 
-        # Closure for objective value — used for both autograd fallback (when W
-        # requires grad, the graph is built) and convergence checks (called on
-        # .data under no_grad).
+        # Closure for objective value -- used for both autograd fallback (when W requires grad, the graph is built) and
+        # convergence checks (called on .data under no_grad).
         def objective_fn(W, mu, s):
             return self._objective_value(W, mu, s, cov_tensor, eye)
 
@@ -191,14 +199,14 @@ class DAGMALinear(_BaseDAGMAMixin, BaseCausalDiscovery):
         def gradient_fn(W, mu, s):
             return self._gradient(W, mu, s, cov_tensor, eye)
 
-        # Resolve optimizer: None → Adam (matches official DAGMA package)
+        # Resolve optimizer: None -> Adam (matches official DAGMA package)
         optimizer_cls = self.optimizer if self.optimizer is not None else torch.optim.Adam
 
-        # Resolve kwargs: None → sensible defaults per optimizer
+        # Resolve kwargs: None -> sensible defaults per optimizer
         if self.optimizer_kwargs is not None:
             opt_kwargs = self.optimizer_kwargs
-        elif optimizer_cls is torch.optim.Adam:
-            opt_kwargs = {"lr": 0.0003, "betas": (0.99, 0.999)}
+        elif issubclass(optimizer_cls, torch.optim.Adam):
+            opt_kwargs = {"lr": 0.0003, "betas": (0.99, 0.999), "foreach": False}
         else:
             opt_kwargs = {}
 
@@ -206,36 +214,41 @@ class DAGMALinear(_BaseDAGMAMixin, BaseCausalDiscovery):
         max_iter_val = self.max_iter
         inner_iter_val = self.inner_iter
 
-        if optimizer_cls is torch.optim.Adam:
+        if issubclass(optimizer_cls, torch.optim.Adam):
             max_iter_val = 5 if max_iter_val is None else max_iter_val
-            inner_iter_val = 3000 if inner_iter_val is None else inner_iter_val
+            # Scale the final iteration budget based on the number of variables (d)
+            inner_iter_val = max(3000, 750 * self.n_features_in_) if inner_iter_val is None else inner_iter_val
         else:
             # Defaults for L-BFGS and others
             max_iter_val = 100 if max_iter_val is None else max_iter_val
             inner_iter_val = 1 if inner_iter_val is None else inner_iter_val
 
-        # Resolve warm_iter: None → use inner_iter for all stages (no split)
-        warm_iter_val = self.warm_iter if self.warm_iter is not None else inner_iter_val
+        # Resolve warm_iter
+        if self.warm_iter is not None:
+            warm_iter_val = self.warm_iter
+        elif issubclass(optimizer_cls, torch.optim.Adam):
+            # Official DAGMA uses half the budget for warm-up iterations
+            warm_iter_val = max(3000, inner_iter_val // 2)
+        else:
+            warm_iter_val = inner_iter_val
 
-        # Resolve s: None → official default schedule
+        # Resolve s: None -> official default schedule
         s_val = self.s if self.s is not None else [1.0, 0.9, 0.8, 0.7, 0.6]
 
-        # Build s-schedule from scalar or list (Phase 3 support)
+        # Build s-schedule from scalar or list
         if isinstance(s_val, (int, float)):
-            s_schedule = [float(s_val)] * max_iter_val
+            s_schedule = [float(s_val)]
         elif isinstance(s_val, list):
+            if len(s_val) == 0:
+                raise ValueError("s must be a non-empty list")
             s_schedule = list(s_val)
-            if len(s_schedule) < max_iter_val:
-                s_schedule += [s_schedule[-1]] * (max_iter_val - len(s_schedule))
         else:
             raise ValueError(f"s must be a float or list of floats, got {type(s_val)}")
 
-        # Analytical gradients are mathematically identical to autograd but
-        # ~5× faster per step. L-BFGS requires step(closure) which is
-        # incompatible with manual grad injection — fall back to autograd.
-        _gradient_fn = gradient_fn if optimizer_cls is not torch.optim.LBFGS else None
+        # Analytical gradients are mathematically identical to autograd but  ~5x faster per step.
+        # L-BFGS requires step(closure) which is incompatible with manual grad injection -- fall back to autograd.
+        effective_gradient_fn = gradient_fn if optimizer_cls is not torch.optim.LBFGS else None
 
-        # Step 4: Central Path Optimization Loop (from mixin)
         W_est_final = self._optimize(
             W_tensor=W_tensor,
             optimizer_cls=optimizer_cls,
@@ -245,76 +258,25 @@ class DAGMALinear(_BaseDAGMAMixin, BaseCausalDiscovery):
             mu_factor=self.mu_factor,
             max_iter=max_iter_val,
             inner_iter=inner_iter_val,
-            gradient_fn=_gradient_fn,
+            gradient_fn=effective_gradient_fn,
             s_schedule=s_schedule,
             warm_iter=warm_iter_val,
         )
 
         self.adjacency_matrix_ = W_est_final
 
-        # Step 5 & 6: Threshold and Convert to pgmpy DAG (from mixin)
         self.causal_graph_ = self._convert_to_dag(
             W_est_final, list(self.feature_names_in_), self.w_threshold, self.return_type
         )
 
         return self
 
-    def _objective(self, W: torch.Tensor, mu: float, cov: torch.Tensor, s: float = None) -> torch.Tensor:
-        r"""
-        Compute the DAGMA objective function.
-
-        .. math::
-            \text{obj}(W) = \mu \cdot (Q(W; X) + \lambda_1 \|W\|_1) + h(W)
-
-        The objective combines three components:
-
-        1. Least Squares loss: :math:`Q(W; X) = 0.5 \cdot \text{tr}((I - W)^T \hat{\Sigma} (I - W))`
-        2. L1 penalty: :math:`\lambda_1 \|W\|_1`
-        3. Log-Det barrier: :math:`h(W) = -\log \det(sI - W \circ W) + d \log s`
-
-        Parameters
-        ----------
-        W : torch.Tensor
-            The adjacency matrix as a PyTorch tensor.
-        mu : float
-            Central path parameter. Controls the strength of the acyclicity constraint relative to the data fit.
-        cov : torch.Tensor
-            Pre-computed covariance matrix as a PyTorch tensor.
-        s : float or None, optional (default=None)
-            M-matrix domain parameter. If None, uses ``self.s`` (backward compatible).
-
-        Returns
-        -------
-        torch.Tensor
-            The objective value.
-        """
-        n = self.n_features_in_
-        eye = torch.eye(n, dtype=W.dtype, device=W.device)
-        _s = s if s is not None else self.s
-
-        # h(W) = -log det(sI - W ∘ W) + d·log(s)
-        is_cyclic, h = self._log_det_barrier(W, _s)
-
-        # Barrier protection: return large finite loss to force backtracking
-        if is_cyclic:
-            return self.lambda1 * torch.abs(W).sum() + 1e10
-
-        # Q(W; X) = 0.5 · tr((I - W)^T Σ̂ (I - W))
-        score = 0.5 * torch.trace((eye - W).T @ cov @ (eye - W))
-
-        # obj = μ · (Q + λ₁‖W‖₁) + h(W)
-        obj = mu * (score + self.lambda1 * torch.abs(W).sum()) + h
-
-        return obj
-
     def _gradient(self, W: torch.Tensor, mu: float, s: float, cov: torch.Tensor, eye: torch.Tensor):
         r"""
         Compute the analytical gradient of the DAGMA objective function.
 
-        This avoids autograd overhead by computing the gradient directly from
-        the closed-form expressions. The gradient is mathematically identical
-        to ``torch.autograd.grad`` (verified to 5.6×10⁻¹⁷).
-
+        This avoids autograd overhead by computing the gradient directly from the closed-form expressions. The gradient
+        is mathematically identical to ``torch.autograd.grad`` (verified to :math:`5.6 \times 10^{-17}`).
         .. math::
             \nabla_W = -\mu \cdot \hat{\Sigma} \cdot (I - W)
                        + \mu \cdot \lambda_1 \cdot \text{sign}(W)
@@ -343,18 +305,14 @@ class DAGMALinear(_BaseDAGMAMixin, BaseCausalDiscovery):
         M = s * eye - W * W
         M_inv = torch.linalg.inv(M)
 
-        # Domain check: if inv(sI - W∘W) has any negative entry, W is outside
-        # the M-matrix domain. Signal failure to the optimizer loop.
-        if torch.any(M_inv < 0):
+        # Domain check: if inv(M) has any negative entry, W is outside the M-matrix
+        # domain. The -1e-12 tolerance prevents floating-point inversion noise from
+        # triggering false-positive failures.
+        if torch.any(M_inv < -1e-12):
             return None, False
 
-        # G_score = -μ · Σ̂ · (I - W)
         G_score = -mu * cov @ (eye - W)
-
-        # G_h = 2W · inv(M)ᵀ
         G_h = 2 * W * M_inv.T
-
-        # G_l1 = μ · λ₁ · sign(W)
         G_l1 = mu * self.lambda1 * torch.sign(W)
 
         grad = G_score + G_l1 + G_h
@@ -366,9 +324,8 @@ class DAGMALinear(_BaseDAGMAMixin, BaseCausalDiscovery):
         r"""
         Compute the DAGMA objective value WITHOUT building an autograd graph.
 
-        Used for convergence checking when analytical gradients are active.
-        Also serves as the objective function for the autograd fallback path
-        (when ``W`` requires grad, the computation graph is built automatically).
+        Used for convergence checking when analytical gradients are active. Also serves as the objective function for
+        the autograd fallback path (when ``W`` requires grad, the computation graph is built automatically).
 
         Parameters
         ----------
@@ -394,6 +351,7 @@ class DAGMALinear(_BaseDAGMAMixin, BaseCausalDiscovery):
             return torch.tensor(1e10, dtype=W.dtype, device=W.device)
 
         h = -logdet + self.n_features_in_ * math.log(s)
-        score = 0.5 * torch.trace((eye - W).T @ cov @ (eye - W))
+        dif = eye - W
+        score = 0.5 * (dif * (cov @ dif)).sum()
         obj = mu * (score + self.lambda1 * torch.abs(W).sum()) + h
         return obj
