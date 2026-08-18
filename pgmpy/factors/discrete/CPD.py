@@ -281,6 +281,7 @@ class TabularCPD(DiscreteFactor):
 
             cdf_str = "\n".join(new_cdf_str)
 
+        # Truncate rows if the table is too long for the terminal
         list_rows_str = cdf_str.split("\n")
         if len(list_rows_str) > terminal_height:
             half_height = terminal_height // 3
