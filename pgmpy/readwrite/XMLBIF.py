@@ -361,8 +361,8 @@ class XMLBIFWriter:
         """
         Add variables to XMLBIF
 
-        Return
-        ------
+        Returns
+        -------
         dict: dict of type {variable: variable tags}
 
         Examples
@@ -392,8 +392,8 @@ class XMLBIFWriter:
         """
         Add outcome to variables of XMLBIF
 
-        Return
-        ------
+        Returns
+        -------
         dict: dict of type {variable: outcome tags}
 
         Examples
@@ -460,8 +460,8 @@ class XMLBIFWriter:
         """
         Add property to variables in XMLBIF
 
-        Return
-        ------
+        Returns
+        -------
         dict: dict of type {variable: property tag}
 
         Examples
@@ -493,8 +493,8 @@ class XMLBIFWriter:
         """
         Add Definition to XMLBIF
 
-        Return
-        ------
+        Returns
+        -------
         dict: dict of type {variable: definition tag}
 
         Examples
@@ -528,12 +528,12 @@ class XMLBIFWriter:
         """
         Add Table to XMLBIF.
 
-        Return
-        ---------------
+        Returns
+        -------
         dict: dict of type {variable: table tag}
 
         Examples
-        -------
+        --------
         >>> from pgmpy.readwrite import XMLBIFWriter
         >>> from pgmpy.example_models import load_model
         >>> model = load_model("bnlearn/asia")

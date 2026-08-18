@@ -18,3 +18,10 @@
   <!-- EthicalAds -->
   <script async src="https://media.ethicalads.io/media/client/ethicalads.min.js"></script>
 {% endblock %}
+
+{% block docs_body %}
+  {{ super() }}
+  {% if pagename == "index" %}
+    {% with ethical_ad_style = "stickybox" %}{% include "ethical-ad-placement.html" %}{% endwith %}
+  {% endif %}
+{% endblock docs_body %}

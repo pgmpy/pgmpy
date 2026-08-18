@@ -1,7 +1,8 @@
 # Exporting / Importing Models
 
-```{meta}
-:description: Read and write pgmpy models using the model-level save/load helpers and readwrite classes.
+```{eval-rst}
+.. meta::
+   :description: Read and write pgmpy models using the model-level save/load helpers and readwrite classes.
 ```
 
 pgmpy supports importing and exporting models in several standard Bayesian network file
@@ -12,7 +13,7 @@ as persisting fitted models to disk for later use.
 
 - **[Unified API](#api)**: Model-level `save(...)` and `load(...)` methods for common workflows.
 - **[Multiple Formats](#supported-formats)**: BIF, NET, XMLBIF, XDSL, and more.
-- **[Reader/Writer Classes](#readerwriter-classes)**: Fine-grained control over format-specific behavior.
+- **[Reader/Writer Classes](#reader-writer-classes)**: Fine-grained control over format-specific behavior.
 
 ## API
 
