@@ -108,6 +108,10 @@ class ILPSearch(BaseCausalDiscovery):
     feature_names_in_ : np.ndarray
         The feature names in the dataset used for fitting.
 
+    milp_result_ : scipy.optimize.OptimizeResult
+        The raw optimization result returned by the underlying ``scipy.optimize.milp`` solver.
+        Contains solver status, objective value, and full decision variable array.
+
     Examples
     --------
     >>> import pandas as pd
