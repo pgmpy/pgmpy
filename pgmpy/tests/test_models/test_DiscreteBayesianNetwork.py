@@ -509,6 +509,65 @@ class TestBayesianNetworkMethods(unittest.TestCase):
                 np.array([[[0.3, 0.4], [0.7, 0.8]], [[0.7, 0.6], [0.3, 0.2]]]),
             )
 
+        # a tuple is a single (hashable) node, not a collection; the CPD is marginalized to the node itself
+        model = DiscreteBayesianNetwork([("X", ("A", 0)), (("A", 0), "Y")])
+        model.add_cpds(
+            TabularCPD("X", 2, [[0.4], [0.6]]),
+            TabularCPD(("A", 0), 2, [[0.2, 0.7], [0.8, 0.3]], evidence=["X"], evidence_card=[2]),
+            TabularCPD("Y", 2, [[0.1, 0.9], [0.9, 0.1]], evidence=[("A", 0)], evidence_card=[2]),
+        )
+        model_do = model.do(("A", 0))
+        self.assertEqual(sorted(model_do.edges()), [(("A", 0), "Y")])
+        self.assertEqual(model_do.get_cpds(("A", 0)).variables, [("A", 0)])
+        self.assertTrue(model_do.check_model())
+        # the original model is untouched
+        self.assertEqual(model.get_cpds(("A", 0)).variables, [("A", 0), "X"])
+
+        # without a value the intervened variable's distribution is unspecified: uniform, not the parent-average
+        model = DiscreteBayesianNetwork([("S", "T")])
+        model.add_cpds(
+            TabularCPD("S", 2, [[0.9], [0.1]], state_names={"S": ["m", "f"]}),
+            TabularCPD(
+                "T",
+                2,
+                [[0.9, 0.6], [0.1, 0.4]],
+                evidence=["S"],
+                evidence_card=[2],
+                state_names={"S": ["m", "f"], "T": ["no", "yes"]},
+            ),
+        )
+        cpd_t = model.do("T").get_cpds("T")
+        np_test.assert_array_equal(cpd_t.values, [0.5, 0.5])
+        self.assertEqual(cpd_t.state_names, {"T": ["no", "yes"]})
+
+        # hard intervention do(T = yes): point mass at the given state, edges into T removed
+        model_do = model.do({"T": "yes"})
+        np_test.assert_array_equal(model_do.get_cpds("T").values, [0.0, 1.0])
+        self.assertEqual(model_do.get_cpds("T").state_names, {"T": ["no", "yes"]})
+        self.assertEqual(list(model_do.edges()), [])
+        self.assertTrue(model_do.check_model())
+        self.assertEqual(model.get_cpds("T").variables, ["T", "S"])
+        with self.assertRaises(ValueError):
+            model.do({"T": "maybe"})
+
+        # soft intervention: the CPD of T is replaced by the given distribution; forms can be mixed
+        q_t = TabularCPD("T", 2, [[0.2], [0.8]], state_names={"T": ["no", "yes"]})
+        model_do = model.do({"S": "m", "T": q_t})
+        np_test.assert_array_equal(model_do.get_cpds("T").values, [0.2, 0.8])
+        np_test.assert_array_equal(model_do.get_cpds("S").values, [1.0, 0.0])
+        self.assertTrue(model_do.check_model())
+        # the intervention CPD must be over the variable alone and use the model's states
+        with self.assertRaises(ValueError):
+            model.do({"T": TabularCPD("T", 2, [[0.2, 0.3], [0.8, 0.7]], evidence=["S"], evidence_card=[2])})
+        with self.assertRaises(ValueError):
+            model.do({"T": TabularCPD("T", 2, [[0.2], [0.8]])})
+        with self.assertRaises(ValueError):
+            model.do({"T": TabularCPD("T", 3, [[0.2], [0.3], [0.5]], state_names={"T": ["no", "yes", "maybe"]})})
+        # None leaves the distribution unspecified; inplace=True modifies the model itself
+        self.assertIs(model.do({"T": None}, inplace=True), model)
+        np_test.assert_array_equal(model.get_cpds("T").values, [0.5, 0.5])
+        self.assertEqual(list(model.edges()), [])
+
     def test_simulate(self):
         asia = load_model("bnlearn/asia")
         n_samples = int(1e3)
@@ -1809,6 +1868,21 @@ class TestSimulation(unittest.TestCase):
             "ERRCAUTER": self.causal_infer_alarm.query(["ERRCAUTER"], do={"MINVOLSET": "NORMAL"}),
         }
         self._test_alarm_marginals_equal(alarm_samples, alarm_inference_marginals)
+
+        # A genuinely soft intervention: X is drawn from the given distribution and the downstream
+        # variables match exact inference on the intervened model; no helper columns leak into the output
+        from pgmpy.inference import VariableElimination
+
+        virt_inter = TabularCPD("X", 2, [[0.5], [0.5]])
+        con_model_samples = self.con_model.simulate(
+            n_samples=int(1e4), virtual_intervention=[virt_inter], show_progress=False, seed=42
+        )
+        self.assertEqual(set(con_model_samples.columns), set(self.con_model.nodes()))
+        x_marginal = con_model_samples["X"].value_counts(normalize=True)
+        self.assertTrue(np.isclose(x_marginal.loc[0], 0.5, atol=0.02))
+        soft_model = self.con_model.do({"X": virt_inter})
+        con_inference_marginals = VariableElimination(soft_model).query(["Y"], joint=False)
+        self._test_con_marginals_equal(con_model_samples, con_inference_marginals)
 
     def test_stimulate_missing_mcar(self):
         samples = self.con_model.simulate(n_samples=3000)

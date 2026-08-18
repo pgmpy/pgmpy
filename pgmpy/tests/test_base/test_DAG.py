@@ -865,6 +865,25 @@ class TestDoOperator(unittest.TestCase):
         dag_do_x = self.g2.do(["A", "Y"])
         self.assertEqual(set(dag_do_x.nodes()), set(self.g2.nodes()))
         self.assertEqual(sorted(list(dag_do_x.edges())), [("A", "B")])
+        # a set is a collection too; the original graph is left untouched
+        self.assertEqual(sorted(self.g2.do({"A", "Y"}).edges()), [("A", "B")])
+        self.assertEqual(sorted(self.g2.edges()), [("A", "B"), ("A", "Y"), ("X", "A"), ("Z", "Y")])
+
+        # inplace=True mutates and returns the same object
+        g = self.g1.copy()
+        self.assertIs(g.do("A", inplace=True), g)
+        self.assertEqual(sorted(g.edges()), [("A", "B"), ("A", "Y")])
+
+        # a tuple is a single (hashable) node, not a collection -- same convention as `get_parents`
+        tdag = DAG([("X", ("A", 0)), (("A", 0), "Y")])
+        self.assertEqual(sorted(tdag.do(("A", 0)).edges()), [(("A", 0), "Y")])
+        # any other hashable scalar is a single node as well
+        ndag = DAG([(np.int64(0), np.int64(1))])
+        self.assertEqual(list(ndag.do(np.int64(1)).edges()), [])
+
+        # a node not in the graph raises
+        with self.assertRaises(ValueError):
+            self.g1.do("Q")
 
 
 class TestDAGConversion(unittest.TestCase):

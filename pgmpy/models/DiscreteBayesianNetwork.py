@@ -1271,16 +1271,32 @@ class DiscreteBayesianNetwork(DAG):
         else:
             return cpds
 
-    def do(self, nodes: Hashable | list[Hashable], inplace: bool = False) -> DiscreteBayesianNetwork | None:
+    def do(
+        self,
+        nodes: Hashable | Iterable[Hashable] | dict[Hashable, Hashable | TabularCPD | None],
+        inplace: bool = False,
+    ) -> DiscreteBayesianNetwork:
         """
-        Applies the do operation. The do operation removes all incoming edges
-        to variables in `nodes` and marginalizes their CPDs to only contain the
-        variable itself.
+        Applies the do-operator: removes all incoming edges of the intervened
+        variables and replaces their CPDs with the intervention distribution.
+
+        Three kinds of interventions are supported, and can be mixed in one call:
+
+        - ``do("X")`` / ``do(["X", "Y"])`` / ``do({"X": None})``: the intervention
+          distribution is left unspecified and the CPD of ``X`` is set to the uniform
+          distribution over its states.
+        - ``do({"X": x})``: atomic (hard) intervention do(X = x). The CPD of ``X``
+          becomes a point mass at state ``x``.
+        - ``do({"X": cpd})`` with a ``TabularCPD`` defined on ``X`` alone: soft
+          (stochastic) intervention. The CPD of ``X`` is replaced by ``cpd``.
 
         Parameters
         ----------
-        nodes : list, array-like
-            The names of the nodes to apply the do-operator for.
+        nodes : Hashable, iterable of Hashable, or dict
+            The variable(s) to intervene on; all must be present in the model. A ``str``, ``int``
+            or ``tuple`` is one node; a list, set or frozenset is a collection. A dict maps each
+            variable to its intervention: a state, a ``TabularCPD`` over the variable alone (using
+            the model's state names), or None.
 
         inplace: boolean (default: False)
             If inplace=True, makes the changes to the current object,
@@ -1288,34 +1304,80 @@ class DiscreteBayesianNetwork(DAG):
 
         Returns
         -------
-        Modified network: pgmpy.models.DiscreteBayesianNetwork or None
-            If inplace=True, modifies the object itself else returns an instance of
-            DiscreteBayesianNetwork modified by the do operation.
+        Modified network: pgmpy.models.DiscreteBayesianNetwork
+            The post-intervention model: `self` if `inplace=True`, otherwise a modified copy.
+
+        Raises
+        ------
+        ValueError
+            If a variable is not present in the model, has no CPD to intervene on, the state is not
+            a state of the variable, or the intervention CPD is not over the variable alone with the
+            model's state names.
 
         Examples
         --------
         >>> from pgmpy.example_models import load_model
+        >>> from pgmpy.factors.discrete import TabularCPD
         >>> asia = load_model("bnlearn/asia")
         >>> asia.edges()  # doctest: +NORMALIZE_WHITESPACE
         OutEdgeView([('asia', 'tub'), ('tub', 'either'), ('smoke', 'lung'), ('smoke', 'bronc'),
                      ('lung', 'either'), ('bronc', 'dysp'), ('either', 'xray'), ('either', 'dysp')])
-        >>> do_bronc = asia.do(["bronc"])
+        >>> do_bronc = asia.do({"bronc": "yes"})
+        >>> do_bronc.get_parents("bronc")
+        []
+        >>> do_bronc.get_cpds("bronc").values
+        array([1., 0.])
+        >>> soft = asia.do({"bronc": TabularCPD("bronc", 2, [[0.3], [0.7]], state_names={"bronc": ["yes", "no"]})})
+        >>> soft.get_cpds("bronc").values
+        array([0.3, 0.7])
+        >>> asia.do(["bronc", "smoke"]).get_cpds("bronc").values
+        array([0.5, 0.5])
+
+        References
+        ----------
+        - :footcite:t:`pearl_2009` (page 70).
         """
-        if isinstance(nodes, (str, int)):
-            nodes = [nodes]
+        if isinstance(nodes, dict):
+            interventions = nodes
         else:
-            nodes = list(nodes)
+            interventions = dict.fromkeys(nodes if isinstance(nodes, (list, set, frozenset)) else [nodes])
 
-        if not set(nodes).issubset(set(self.nodes())):
-            raise ValueError(f"Nodes not found in the model: {set(nodes) - set(self.nodes)}")
+        adj_model = super().do(list(interventions), inplace=inplace)
 
-        model = self if inplace else self.copy()
-        adj_model = DAG.do(model, nodes, inplace=inplace)
+        for node, intervention in interventions.items():
+            old_cpd = adj_model.get_cpds(node)
+            if old_cpd is None:
+                if intervention is None:
+                    continue
+                raise ValueError(f"No CPD associated with {node!r}; add one before intervening on it.")
+            states = old_cpd.state_names[node]
 
-        if adj_model.cpds:
-            for node in nodes:
-                cpd = adj_model.get_cpds(node=node)
-                cpd.marginalize(cpd.variables[1:], inplace=True)
+            if isinstance(intervention, TabularCPD):
+                if intervention.variables != [node]:
+                    raise ValueError(
+                        f"The intervention CPD for {node!r} must be defined on {node!r} alone; "
+                        f"got scope {intervention.variables}."
+                    )
+                if intervention.state_names[node] != states:
+                    raise ValueError(
+                        f"The intervention CPD for {node!r} has states {intervention.state_names[node]}, "
+                        f"but the model has states {states}."
+                    )
+                new_cpd = intervention
+            elif intervention is None:
+                new_cpd = TabularCPD(node, len(states), [[1 / len(states)]] * len(states), state_names={node: states})
+            else:
+                if intervention not in states:
+                    raise ValueError(f"State {intervention!r} is not a state of {node!r}; valid states: {states}.")
+                new_cpd = TabularCPD(
+                    node,
+                    len(states),
+                    [[1.0 if state == intervention else 0.0] for state in states],
+                    state_names={node: states},
+                )
+
+            adj_model.remove_cpds(old_cpd)
+            adj_model.add_cpds(new_cpd)
         return adj_model
 
     def simulate(
@@ -1443,7 +1505,7 @@ class DiscreteBayesianNetwork(DAG):
         ...     )
         ... ]
         >>> model.simulate(n_samples=10, virtual_intervention=virt_intervention).shape
-        (10, 38)
+        (10, 37)
 
 
         Simulation with missing values:
@@ -1495,15 +1557,15 @@ class DiscreteBayesianNetwork(DAG):
         virtual_intervention = [] if virtual_intervention is None else virtual_intervention
         virtual_evidence = [] if virtual_evidence is None else virtual_evidence
 
+        virt_nodes = [cpd.variables[0] for cpd in virtual_intervention]
         if set(do.keys()).intersection(set(evidence.keys())):
             raise ValueError("Variable can't be in both do and evidence")
+        if set(do.keys()).intersection(virt_nodes):
+            raise ValueError("Variable can't be in both do and virtual_intervention")
 
-        # Step 1: If do or virtual_intervention is specified, modify the network structure.
-        if (do != {}) or (virtual_intervention != []):
-            virt_nodes = [cpd.variables[0] for cpd in virtual_intervention]
-            model = model.do(list(do.keys()) + virt_nodes)
-            evidence = {**evidence, **do}
-            virtual_evidence = [*virtual_evidence, *virtual_intervention]
+        # Step 1: If do or virtual_intervention is specified, apply the interventions to the model.
+        if do or virtual_intervention:
+            model.do({**do, **dict(zip(virt_nodes, virtual_intervention))}, inplace=True)
 
         # Step 2: If virtual_evidence; modify the network structure
         if virtual_evidence != []:
