@@ -79,15 +79,15 @@ def test_rand_data_expert_knowledge(rand_data):
 
     expected_edges_ek1 = {
         ("X0", "X1"),
+        ("X0", "X4"),
         ("X1", "X4"),
-        ("X1", "X3"),
-        ("X2", "X4"),
-        ("X2", "X3"),
         ("X2", "X0"),
         ("X2", "X1"),
-        ("X3", "X4"),
+        ("X2", "X3"),
+        ("X2", "X4"),
         ("X3", "X0"),
-        ("X4", "X0"),
+        ("X3", "X1"),
+        ("X3", "X4"),
     }
     assert set(est1.causal_graph_.edges()) == expected_edges_ek1
 
