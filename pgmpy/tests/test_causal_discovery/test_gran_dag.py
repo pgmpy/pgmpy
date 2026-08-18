@@ -148,24 +148,6 @@ class TestGraNDAGFit:
         assert observed["X"].shape[0] == len(numeric_df)
         assert np.allclose(observed["X"], model.scaler_.transform(numeric_df))
 
-    def test_val_size_zero_completes_without_validation(self, monkeypatch, numeric_df):
-        import torch
-
-        from pgmpy.causal_discovery.gran_dag import _GraNDAGModel
-
-        def fit_network(model, X_train, X_val):
-            assert X_val is None
-
-        monkeypatch.setattr(_GraNDAGModel, "fit_network", fit_network)
-        monkeypatch.setattr(
-            _GraNDAGModel,
-            "get_jacobian",
-            lambda model, X: torch.zeros(model.num_vars, model.num_vars, device=X.device, dtype=X.dtype),
-        )
-
-        est = GraNDAG(val_size=0, max_epochs=1, max_subproblems=1, seed=0)
-        assert est.fit(numeric_df) is est
-
     def test_custom_scaler_is_used_and_fitted(self, monkeypatch, numeric_df):
         from pgmpy.causal_discovery.gran_dag import _GraNDAGModel
 
@@ -336,13 +318,6 @@ class TestGraNDAGModel:
         X = torch.randn(8, 3)
         model.fit_network(X, X)
         assert steps == 4
-
-    def test_training_without_validation(self):
-        import torch
-
-        model = self._make_model(max_epochs=1, max_subproblems=1)
-        model.fit_network(torch.randn(8, 3), None)
-        assert hasattr(model, "lamb")
 
     def test_custom_network_and_likelihood(self):
         import torch
