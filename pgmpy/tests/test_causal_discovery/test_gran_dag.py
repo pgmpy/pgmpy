@@ -186,6 +186,18 @@ class TestGraNDAGFit:
         with pytest.raises(ValueError, match=match):
             GraNDAG(scaler=scaler).fit(X)
 
+    @pytest.mark.parametrize(
+        ("option", "match"),
+        [
+            ({"pns_threshold": 0.5}, "PNS is not yet implemented"),
+            ({"pruning_cutoff": 0.05}, "CAM pruning is not yet implemented"),
+        ],
+        ids=["pns", "cam-pruning"],
+    )
+    def test_unimplemented_graph_processing_raises(self, numeric_df, option, match):
+        with pytest.raises(NotImplementedError, match=match):
+            GraNDAG(**option).fit(numeric_df)
+
 
 @requires_torch
 class TestGraNDAGModel:

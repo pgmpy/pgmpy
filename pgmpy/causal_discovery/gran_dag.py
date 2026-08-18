@@ -96,15 +96,6 @@ def _run_pns(X: np.ndarray, pns_threshold: float, seed: int, estimator=None) -> 
     Returns a boolean mask of shape ``(d, d)`` where ``True`` indicates a
     surviving parent candidate.
     """
-    # Step 1: If `estimator` is None, instantiate the default `sklearn.ensemble.ExtraTreesRegressor(random_state=seed)`.
-    # Step 2: Initialize a boolean mask of shape (d, d) with False.
-    # Step 3: Loop over each variable `j` from 0 to d-1.
-    # Step 4: For variable `j`, prepare target y = X[:, j] and features X_rest = X without column `j`.
-    # Step 5: Fit the estimator on X_rest and y.
-    # Step 6: Verify the fitted estimator has a `feature_importances_` attribute; raise TypeError if not.
-    # Step 7: Calculate the importance threshold for variable `j` (pns_threshold * mean(feature_importances_)).
-    # Step 8: Set the mask for column `j` (excluding the diagonal) to True for features with importance >= threshold.
-    # Step 9: Return the boolean mask.
     raise NotImplementedError
 
 
@@ -113,13 +104,6 @@ def _run_cam_pruning(X: np.ndarray, adj: np.ndarray, pruning_cutoff: float) -> n
 
     Returns the pruned adjacency matrix.
     """
-    # Step 1: Initialize a copy of the adjacency matrix to store the pruned graph.
-    # Step 2: Loop over each node (variable) in the graph.
-    # Step 3: For each node, identify its current parents from the adjacency matrix.
-    # Step 4: Use pgmpy's CAM score implementation (or a fallback OLS implementation) to score each parent.
-    # Step 5: If the p-value of a parent's score exceeds `pruning_cutoff`,
-    # remove the edge (set to 0 in the pruned adj matrix).
-    # Step 6: Return the pruned adjacency matrix.
     raise NotImplementedError
 
 
@@ -554,6 +538,9 @@ class GraNDAG(BaseCausalDiscovery):
 
         if self.pns_threshold is not None:
             raise NotImplementedError("PNS is not yet implemented; pass pns_threshold=None.")
+
+        if self.pruning_cutoff is not None:
+            raise NotImplementedError("CAM pruning is not yet implemented; pass pruning_cutoff=None.")
 
         self.feature_names_in_ = pd.Index(X.columns)
         d = X.shape[1]
