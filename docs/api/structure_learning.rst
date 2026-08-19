@@ -70,6 +70,15 @@ Expert-Guided Discovery
    ~pgmpy.estimators.ExpertInLoop
    ~pgmpy.causal_discovery.ExpertKnowledge
 
+Stability Assessment and Bootstrapping
+--------------------------------------
+
+.. autosummary::
+   :toctree: generated/structure_learning
+   :template: autosummary/class.rst
+
+   ~pgmpy.causal_discovery.BootstrapEstimator
+
 .. seealso::
 
    :doc:`/api/ci_test` for conditional independence tests used by
