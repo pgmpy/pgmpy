@@ -282,9 +282,20 @@ class TabularCPD(DiscreteFactor):
 
             cdf_str = "\n".join(new_cdf_str)
 
-        # TODO: vertical limiter
-        # if table_height > terminal_height:
-        #     half_height = terminal_height // 2
+        list_rows_str = cdf_str.split("\n")
+        if len(list_rows_str) > terminal_height:
+            half_height = terminal_height // 3
+            top_end = half_height
+            while top_end > 0 and not list_rows_str[top_end].startswith("+"):
+                top_end -= 1
+            bottom_start = len(list_rows_str) - half_height
+            while bottom_start < len(list_rows_str) and not list_rows_str[bottom_start].startswith("+"):
+                bottom_start += 1
+            top = list_rows_str[: top_end + 1]
+            bottom = list_rows_str[bottom_start:]
+            separator = list_rows_str[0].replace("-", ".").replace("+", ".")
+            list_rows_str = top + [separator] + bottom
+            cdf_str = "\n".join(list_rows_str)
 
         return cdf_str
 
