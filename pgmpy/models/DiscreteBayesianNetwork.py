@@ -532,7 +532,7 @@ class DiscreteBayesianNetwork(DAG):
 
         return mm
 
-    def to_junction_tree(self) -> Any:
+    def to_junction_tree(self, heuristic: str = "MinFill", order: list[Hashable] | None = None) -> Any:
         """
         Creates a junction tree (or clique tree) for a given Bayesian Network.
 
@@ -543,6 +543,16 @@ class DiscreteBayesianNetwork(DAG):
         1. where each node in G corresponds to a maximal clique in H
         2. each sepset in G separates the variables strictly on one side of the
         edge to other.
+
+        Parameters
+        ----------
+        heuristic: str (default: "MinFill")
+            The heuristic used to triangulate the moral graph; see
+            `DiscreteMarkovNetwork.triangulate`.
+
+        order: list, tuple (array-like) (default: None)
+            The elimination order used to triangulate the moral graph; if given
+            the heuristic is not used.
 
         Examples
         --------
@@ -587,7 +597,7 @@ class DiscreteBayesianNetwork(DAG):
         >>> jt = G.to_junction_tree()
         """
         mm = self.to_markov_model()
-        return mm.to_junction_tree()
+        return mm.to_junction_tree(heuristic=heuristic, order=order)
 
     def fit(self, data, estimator=None, sample_weight=None) -> DAG:
         """
