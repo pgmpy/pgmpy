@@ -9,8 +9,9 @@ from pgmpy.metrics import VarSortability
 @pytest.fixture
 def recoverable_chain():
     """
-    X -> Y -> Z with strong, well-separated coefficients so that SortnRegress
-    recovers the chain exactly at threshold=0.3.
+    A three-node graph X -> Y, X -> Z, Y -> Z (a triangle).
+    Used to check that VarSortability returns a larger distance for a
+    reversed graph than for a partially correct one.
     """
     rng = np.random.default_rng(seed=42)
     n = 1000

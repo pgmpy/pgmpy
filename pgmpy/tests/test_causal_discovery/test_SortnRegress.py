@@ -43,7 +43,8 @@ class TestSortnRegressCore:
     def test_scale_invariance(self, causal_chain_data):
         """
         R²-SortnRegress is scale-invariant. It must recover identical graphs
-        on raw vs standardized (unit variance) datasets.
+        from raw data and from data with each column multiplied by an
+        independent random factor.
         """
         rng = np.random.default_rng(seed=7)
         est_raw = SortnRegress().fit(causal_chain_data)

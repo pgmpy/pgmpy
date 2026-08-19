@@ -10,48 +10,51 @@ from pgmpy.causal_discovery._base import BaseCausalDiscovery
 
 class SortnRegress(BaseCausalDiscovery):
     r"""
-     Implementation of SortnRegress, a scale-invariant causal discovery method based on sorting variables by an ordering
-     variant and iteratively regressing each variable on its predecessors in that order. Two ordering criteria are
-     supported via the ``variant`` parameter:
+    Implementation of SortnRegress, a causal discovery method based on sorting variables by an ordering
+    criterion and iteratively regressing each variable on its predecessors in that order. Two ordering
+    criteria are supported via the ``variant`` parameter:
 
-     - ``variant='r2'`` (default): orders variables by ascending global R², based on the phenomenon that the
-       explainable fraction of a variable's variance, captured by the coefficient of determination (R²), tends to
-       increase along the causal order in linear additive noise models :cite:p:`Reisach2023`.
-     - ``variant='varsortability'``: orders variables by ascending marginal variance, based on the var-sortability
-       phenomenon whereby variance tends to increase along the causal order :cite:p:`Reisach2021`.
+    - ``variant='r2'`` (default): orders variables by ascending global R², based on the phenomenon that the
+    explainable fraction of a variable's variance, captured by the coefficient of determination (R²), tends to
+    increase along the causal order in linear additive noise models :cite:p:`Reisach2023`. R² is invariant to
+    rescaling of the columns of :math:`\mathbf{X}`, so this variant is scale-invariant end to end.
+    - ``variant='varsortability'``: orders variables by ascending marginal variance, based on the var-sortability
+    phenomenon whereby variance tends to increase along the causal order :cite:p:`Reisach2021`. Marginal
+    variance depends on the measurement scale, so this variant is **not** scale-invariant: standardizing or
+    otherwise rescaling the data may change the recovered graph.
 
-     Steps 1-2 differ between the two criteria; the edge-selection procedure (Steps 3-4) is identical
-     for both. For ``variant='varsortability'``, Step 1 is replaced by computing the marginal variance
-     :math:`\text{Var}(X_t)` of each variable and Step 2 sorts ascending by that value.
+    Steps 1-2 differ between the two criteria; the edge-selection procedure (Steps 3-4) is identical
+    for both. For ``variant='varsortability'``, Step 1 is replaced by computing the marginal variance
+    :math:`\text{Var}(X_t)` of each variable and Step 2 sorts ascending by that value.
 
-     Given an :math:`n \times d` dataset :math:`\mathbf{X}` with columns :math:`X_1, \dots, X_d`, the algorithm proceeds
-     as follows:
+    Given an :math:`n \times d` dataset :math:`\mathbf{X}` with columns :math:`X_1, \dots, X_d`, the algorithm proceeds
+    as follows:
 
-     1. **Global R² Estimation**: For each variable :math:`X_t`, fit a linear regression using all remaining variables
-     :math:`\mathbf{X}_{ - \{t\}}` as predictors to calculate its global R² value:
+    1. **Global R² Estimation**: For each variable :math:`X_t`, fit a linear regression using all remaining variables
+    :math:`\mathbf{X}_{ - \{t\}}` as predictors to calculate its global R² value:
 
-        .. math::
+       .. math::
 
-            R^2(X_t) = 1 - \frac{\text{Var}(X_t - \widehat{X}_t)}{\text{Var}(X_t)}
+           R^2(X_t) = 1 - \frac{\text{Var}(X_t - \widehat{X}_t)}{\text{Var}(X_t)}
 
-     2. **Candidate Causal Ordering**: Sort the variables in ascending order of their estimated global R² values to form
-     a candidate topological ordering :math:`\pi`:
+    2. **Candidate Causal Ordering**: Sort the variables in ascending order of their estimated global R² values to form
+    a candidate topological ordering :math:`\pi`:
 
-        .. math::
+       .. math::
 
-            R^2(X_{\pi(1)}) \leq R^2(X_{\pi(2)}) \leq \dots \leq R^2(X_{\pi(d)})
+           R^2(X_{\pi(1)}) \leq R^2(X_{\pi(2)}) \leq \dots \leq R^2(X_{\pi(d)})
 
-     3. Iterative Regression: For each target node :math:`X_{\pi(i)}` (for :math:`i = 2, \dots, d`), fit a linear
-     regression on all preceding variables (potential parents :math:`X_{\pi(1)}, \dots, X_{\pi(i-1)}`):
+    3. Iterative Regression: For each target node :math:`X_{\pi(i)}` (for :math:`i = 2, \dots, d`), fit a linear
+    regression on all preceding variables (potential parents :math:`X_{\pi(1)}, \dots, X_{\pi(i-1)}`):
 
-        .. math::
+       .. math::
 
-            X_{\pi(i)} = \sum_{j=1}^{i-1} \beta_{j,\pi(i)} X_{\pi(j)} + \varepsilon_{\pi(i)}
+           X_{\pi(i)} = \sum_{j=1}^{i-1} \beta_{j,\pi(i)} X_{\pi(j)} + \varepsilon_{\pi(i)}
 
-        where :math:`\varepsilon_{\pi(i)}` is the noise term and :math:`\beta_{j,\pi(i)}` are the regression
-        coefficients.
+       where :math:`\varepsilon_{\pi(i)}` is the noise term and :math:`\beta_{j,\pi(i)}` are the regression
+       coefficients.
 
-     4. 4. **Edge Selection**: Prune edges using an adaptive Lasso :cite:p:`Reisach2021`. The absolute
+    4. **Edge Selection**: Prune edges using an adaptive Lasso :cite:p:`Reisach2021`. The absolute
     least-squares coefficients :math:`|\beta_{j,\pi(i)}|` serve as adaptive weights, and an L1
     penalty with the regularization parameter selected by the Bayesian Information Criterion is
     fit on the reweighted predictors. An edge :math:`X_{\pi(j)} \to X_{\pi(i)}` is added if the
@@ -59,51 +62,51 @@ class SortnRegress(BaseCausalDiscovery):
     predictors, this selection step is invariant to rescaling of the columns of
     :math:`\mathbf{X}`.
 
-     Parameters
-     ----------
+    Parameters
+    ----------
 
-     estimator : sklearn-style regression estimator, default=None
-         The regression estimator instance to use for edge selection. If None, defaults to
-         sklearn.linear_model.LinearRegression().
+    estimator : sklearn-style regression estimator, default=None
+        The least-squares estimator used to compute the global R² values and to supply the
+        adaptive weights. If None, defaults to sklearn.linear_model.LinearRegression().
 
-     variant : {'r2', 'varsortability'}, default='r2'
-         The variant used to compute the candidate causal ordering in Step 2.
+    variant : {'r2', 'varsortability'}, default='r2'
+        The variant used to compute the candidate causal ordering in Step 2.
 
-         - ``'r2'``: order variables by ascending global R² (the original R²-SortnRegress algorithm).
-         - ``'varsortability'``: order variables by ascending marginal variance, per the var-sortability phenomenon
-           described in :cite:p:`Reisach2021`
+        - ``'r2'``: order variables by ascending global R² (the original R²-SortnRegress algorithm).
+        - ``'varsortability'``: order variables by ascending marginal variance, per the var-sortability phenomenon
+          described in :cite:p:`Reisach2021`
 
-     Attributes
-     ----------
-     causal_graph_ : pgmpy.base.DAG
-         The learned causal graph.
+    Attributes
+    ----------
+    causal_graph_ : pgmpy.base.DAG
+        The learned causal graph.
 
-     adjacency_matrix_ : pd.DataFrame
-         Adjacency matrix representation of the learned causal graph.
+    adjacency_matrix_ : pd.DataFrame
+        Adjacency matrix representation of the learned causal graph.
 
-     n_features_in_: int
-         The number of features in the dataset used to learn the causal graph.
+    n_features_in_: int
+        The number of features in the dataset used to learn the causal graph.
 
-     feature_names_in_: np.ndarray
-         The feature names in the dataset used to learn the causal graph.
+    feature_names_in_: np.ndarray
+        The feature names in the dataset used to learn the causal graph.
 
-     Examples
-     --------
-     >>> import pandas as pd
-     >>> import numpy as np
-     >>> from pgmpy.causal_discovery import SortnRegress
-     >>> rng = np.random.default_rng(seed=42)
-     >>> data = pd.DataFrame(rng.standard_normal((1000, 3)), columns=['X', 'Y', 'Z'])
-     >>> data['Z'] += 2.5 * data['X'] + 2.5 * data['Y']
-     >>> model = SortnRegress()
-     >>> _ = model.fit(data)
-     >>> list(model.causal_graph_.edges())
-     [('X', 'Z'), ('Y', 'Z')]
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> import numpy as np
+    >>> from pgmpy.causal_discovery import SortnRegress
+    >>> rng = np.random.default_rng(seed=42)
+    >>> data = pd.DataFrame(rng.standard_normal((1000, 3)), columns=['X', 'Y', 'Z'])
+    >>> data['Z'] += 2.5 * data['X'] + 2.5 * data['Y']
+    >>> model = SortnRegress()
+    >>> _ = model.fit(data)
+    >>> list(model.causal_graph_.edges())
+    [('X', 'Z'), ('Y', 'Z')]
 
-     References
-     ----------
-     - :footcite:t:`Reisach2023`
-     - :footcite:t:`Reisach2021`
+    References
+    ----------
+    - :footcite:t:`Reisach2023`
+    - :footcite:t:`Reisach2021`
     """
 
     def __init__(self, variant="r2", estimator=None):
