@@ -19,8 +19,6 @@ class VarSortability(BaseUnsupervisedMetric):
     variant : {'r2', 'varsortability'}, default='r2'
         Ordering criterion passed through to `SortnRegress`. See
         :class:`~pgmpy.causal_discovery.SortnRegress` for details.
-    threshold: float, default=0.3
-        Threshold passed through to `SortnRegress`. See :class:`~pgmpy.causal_discovery.SortnRegress` for details.
     estimator: sklearn-style regression estimator, default=None
         Regression estimator passed through to `SortnRegress`. If None, `SortnRegress` defaults to
         sklearn.linear_model.LinearRegression().
@@ -52,15 +50,14 @@ class VarSortability(BaseUnsupervisedMetric):
         "name": "varsortability",
         "requires_true_graph": False,
         "requires_data": True,
-        "lower_is_better": False,
+        "lower_is_better": True,
         "supported_graph_types": (DAG, PDAG),
         "is_default": False,
     }
 
-    def __init__(self, metric="SHD", variant="r2", threshold=0.3, estimator=None):
+    def __init__(self, metric="SHD", variant="r2", estimator=None):
         self.metric = metric
         self.variant = variant
-        self.threshold = threshold
         self.estimator = estimator
         super().__init__()
 
@@ -68,7 +65,7 @@ class VarSortability(BaseUnsupervisedMetric):
         from pgmpy.causal_discovery import SortnRegress
 
         # Step 1: Use the sortnregress algorithm to estimate a causal graph.
-        est = SortnRegress(variant=self.variant, threshold=self.threshold, estimator=self.estimator)
+        est = SortnRegress(variant=self.variant, estimator=self.estimator)
         varsort_graph = est.fit(X).causal_graph_
 
         # Step 2: Use an supervised metric to compare the `causal_graph` with the one learned using sortnregress.

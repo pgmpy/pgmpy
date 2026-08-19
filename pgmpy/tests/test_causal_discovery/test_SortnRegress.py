@@ -20,7 +20,7 @@ def expected_failed_checks(estimator):
 
 
 @parametrize_with_checks(
-    [SortnRegress(threshold=0.3)],
+    [SortnRegress()],
     expected_failed_checks=expected_failed_checks,
 )
 def test_sortnregress_compatibility(estimator, check):
@@ -45,33 +45,21 @@ class TestSortnRegressCore:
         R²-SortnRegress is scale-invariant. It must recover identical graphs
         on raw vs standardized (unit variance) datasets.
         """
-        est_raw = SortnRegress(threshold=0.3)
-        est_raw.fit(causal_chain_data)
-        raw_edges = set(est_raw.causal_graph_.edges())
-
-        # Standardize data to unit variance
-        standardized_data = (causal_chain_data - causal_chain_data.mean()) / causal_chain_data.std()
-
-        est_std = SortnRegress(threshold=0.3)
-        est_std.fit(standardized_data)
-        std_edges = set(est_std.causal_graph_.edges())
-
-        assert len(raw_edges) > 0
-        assert raw_edges == std_edges
+        rng = np.random.default_rng(seed=7)
+        est_raw = SortnRegress().fit(causal_chain_data)
+        scaled = causal_chain_data * rng.uniform(0.05, 20, causal_chain_data.shape[1])
+        est_scaled = SortnRegress().fit(scaled)
+        assert len(est_raw.causal_graph_.edges()) > 0
+        assert set(est_raw.causal_graph_.edges()) == set(est_scaled.causal_graph_.edges())
 
     def test_adjacency_matrix(self, causal_chain_data):
-        est = SortnRegress(threshold=0.1)
+        est = SortnRegress()
         est.fit(causal_chain_data)
 
         adj = est.adjacency_matrix_
         assert isinstance(adj, pd.DataFrame)
         assert adj.shape == (3, 3)
         assert set(adj.columns) == {"X", "Y", "Z"}
-
-    def test_thresholding(self, causal_chain_data):
-        est = SortnRegress(threshold=100.0)
-        est.fit(causal_chain_data)
-        assert len(est.causal_graph_.edges()) == 0
 
     def test_feature_names(self, causal_chain_data):
         est = SortnRegress()
@@ -85,14 +73,14 @@ class TestSortnRegressCore:
         data = pd.DataFrame(rng.standard_normal((100, 2)), columns=["X", "Y"])
         data["C"] = 0.0
 
-        est = SortnRegress(threshold=0.3)
+        est = SortnRegress()
         with pytest.raises(ValueError, match="zero variance"):
             est.fit(data)
 
 
 class TestSortnRegressScoring:
     def test_score(self, causal_chain_data):
-        est = SortnRegress(threshold=0.3)
+        est = SortnRegress()
         est.fit(causal_chain_data)
 
         score = est.score(X=causal_chain_data)
@@ -105,17 +93,23 @@ class TestSortnRegressScoring:
 
 class TestSortnRegressvariant:
     def test_default_variant_is_r2(self, causal_chain_data):
-        est = SortnRegress(threshold=0.3)  # default variant is r2
+        est = SortnRegress()  # default variant is r2
         assert est.variant == "r2"
         est.fit(causal_chain_data)
         assert len(est.causal_graph_.edges()) > 0
 
     def test_varsortability_variant_fits(self, causal_chain_data):
-        est = SortnRegress(threshold=0.3, variant="varsortability")
+        est = SortnRegress(variant="varsortability")
         est.fit(causal_chain_data)
         assert len(est.causal_graph_.edges()) > 0
 
     def test_invalid_variant_raises(self, causal_chain_data):
-        est = SortnRegress(threshold=0.3, variant="not_a_real_variant")
-        with pytest.raises(ValueError, match="criterion must be one of"):
+        est = SortnRegress(variant="not_a_real_variant")
+        with pytest.raises(ValueError, match="variant must be one of"):
             est.fit(causal_chain_data)
+
+    def test_variance_variant_is_scale_sensitive(self, causal_chain_data):
+        std = (causal_chain_data - causal_chain_data.mean()) / causal_chain_data.std()
+        raw = SortnRegress(variant="varsortability").fit(causal_chain_data)
+        stdz = SortnRegress(variant="varsortability").fit(std)
+        assert set(raw.causal_graph_.edges()) != set(stdz.causal_graph_.edges())

@@ -27,13 +27,11 @@ class TestVarsortabilityparams:
         metric = VarSortability()
         assert metric.metric == "SHD"
         assert metric.variant == "r2"
-        assert metric.threshold == 0.3
         assert metric.estimator is None
 
     def test_params_stored_unmodified(self):
-        metric = VarSortability(metric="SHD", variant="varsortability", threshold=0.5)
+        metric = VarSortability(metric="SHD", variant="varsortability")
         assert metric.variant == "varsortability"
-        assert metric.threshold == 0.5
 
     def test_supported_graph_types(self):
         supported = VarSortability._tags["supported_graph_types"]
@@ -53,7 +51,7 @@ class TestVarsortabilityEvaluation:
 
     def test_mismatched_graph_scores(self, recoverable_chain):
         data, correct_dag = recoverable_chain
-        wrong_dag = DAG([("Z", "X"), ("X", "Y")])
+        wrong_dag = DAG([("Z", "Y"), ("Y", "X")])  # reversed chain
 
         metric = VarSortability()
         correct_score = metric.evaluate(X=data, causal_graph=correct_dag)

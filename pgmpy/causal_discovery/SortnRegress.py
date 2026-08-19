@@ -1,6 +1,7 @@
 import networkx as nx
+import numpy as np
 from sklearn.base import clone
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LassoLarsIC, LinearRegression
 from sklearn.metrics import r2_score
 
 from pgmpy.base import DAG
@@ -9,105 +10,104 @@ from pgmpy.causal_discovery._base import BaseCausalDiscovery
 
 class SortnRegress(BaseCausalDiscovery):
     r"""
-    Implementation of SortnRegress, a scale-invariant causal discovery method based on sorting variables by an ordering
-    variant and iteratively regressing each variable on its predecessors in that order. Two ordering criteria are
-    supported via the ``variant`` parameter:
+     Implementation of SortnRegress, a scale-invariant causal discovery method based on sorting variables by an ordering
+     variant and iteratively regressing each variable on its predecessors in that order. Two ordering criteria are
+     supported via the ``variant`` parameter:
 
-    - ``variant='r2'`` (default): orders variables by ascending global R², based on the phenomenon that the
-      explainable fraction of a variable's variance, captured by the coefficient of determination (R²), tends to
-      increase along the causal order in linear additive noise models :cite:p:`Reisach2023`.
-    - ``variant='varsortability'``: orders variables by ascending marginal variance, based on the var-sortability
-      phenomenon whereby variance tends to increase along the causal order :cite:p:`Reisach2021`.
+     - ``variant='r2'`` (default): orders variables by ascending global R², based on the phenomenon that the
+       explainable fraction of a variable's variance, captured by the coefficient of determination (R²), tends to
+       increase along the causal order in linear additive noise models :cite:p:`Reisach2023`.
+     - ``variant='varsortability'``: orders variables by ascending marginal variance, based on the var-sortability
+       phenomenon whereby variance tends to increase along the causal order :cite:p:`Reisach2021`.
 
-    Only the ordering step (Step 2 below) differs between the two criteria; the edge-selection procedure (Steps 3-4) is
-    identical for both.
+     Steps 1-2 differ between the two criteria; the edge-selection procedure (Steps 3-4) is identical
+     for both. For ``variant='varsortability'``, Step 1 is replaced by computing the marginal variance
+     :math:`\text{Var}(X_t)` of each variable and Step 2 sorts ascending by that value.
 
-    Given an :math:`n \times d` dataset :math:`\mathbf{X}` with columns :math:`X_1, \dots, X_d`, the algorithm proceeds
-    as follows:
+     Given an :math:`n \times d` dataset :math:`\mathbf{X}` with columns :math:`X_1, \dots, X_d`, the algorithm proceeds
+     as follows:
 
-    1. **Global R² Estimation**: For each variable :math:`X_t`, fit a linear regression using all remaining variables
-    :math:`\mathbf{X}_{ - \{t\}}` as predictors to calculate its global R² value:
+     1. **Global R² Estimation**: For each variable :math:`X_t`, fit a linear regression using all remaining variables
+     :math:`\mathbf{X}_{ - \{t\}}` as predictors to calculate its global R² value:
 
-       .. math::
+        .. math::
 
-           R^2(X_t) = 1 - \frac{\text{Var}(X_t - \widehat{X}_t)}{\text{Var}(X_t)}
+            R^2(X_t) = 1 - \frac{\text{Var}(X_t - \widehat{X}_t)}{\text{Var}(X_t)}
 
-    2. **Candidate Causal Ordering**: Sort the variables in ascending order of their estimated global R² values to form
-    a candidate topological ordering :math:`\pi`:
+     2. **Candidate Causal Ordering**: Sort the variables in ascending order of their estimated global R² values to form
+     a candidate topological ordering :math:`\pi`:
 
-       .. math::
+        .. math::
 
-           R^2(X_{\pi(1)}) \leq R^2(X_{\pi(2)}) \leq \dots \leq R^2(X_{\pi(d)})
+            R^2(X_{\pi(1)}) \leq R^2(X_{\pi(2)}) \leq \dots \leq R^2(X_{\pi(d)})
 
-    3. Iterative Regression: For each target node :math:`X_{\pi(i)}` (for :math:`i = 2, \dots, d`), fit a linear
-    regression on all preceding variables (potential parents :math:`X_{\pi(1)}, \dots, X_{\pi(i-1)}`):
+     3. Iterative Regression: For each target node :math:`X_{\pi(i)}` (for :math:`i = 2, \dots, d`), fit a linear
+     regression on all preceding variables (potential parents :math:`X_{\pi(1)}, \dots, X_{\pi(i-1)}`):
 
-       .. math::
+        .. math::
 
-           X_{\pi(i)} = \sum_{j=1}^{i-1} \beta_{j,\pi(i)} X_{\pi(j)} + \varepsilon_{\pi(i)}
+            X_{\pi(i)} = \sum_{j=1}^{i-1} \beta_{j,\pi(i)} X_{\pi(j)} + \varepsilon_{\pi(i)}
 
-       where :math:`\varepsilon_{\pi(i)}` is the noise term and :math:`\beta_{j,\pi(i)}` are the regression
-       coefficients.
+        where :math:`\varepsilon_{\pi(i)}` is the noise term and :math:`\beta_{j,\pi(i)}` are the regression
+        coefficients.
 
-    4. Edge Selection: Add a directed edge :math:`X_{\pi(j)} \to X_{\pi(i)}` if:
+     4. 4. **Edge Selection**: Prune edges using an adaptive Lasso :cite:p:`Reisach2021`. The absolute
+    least-squares coefficients :math:`|\beta_{j,\pi(i)}|` serve as adaptive weights, and an L1
+    penalty with the regularization parameter selected by the Bayesian Information Criterion is
+    fit on the reweighted predictors. An edge :math:`X_{\pi(j)} \to X_{\pi(i)}` is added if the
+    resulting coefficient is non-zero. Because the weights carry the same scale factor as the
+    predictors, this selection step is invariant to rescaling of the columns of
+    :math:`\mathbf{X}`.
 
-       .. math::
+     Parameters
+     ----------
 
-           |\beta_{j,\pi(i)}| \geq \texttt{threshold}
+     estimator : sklearn-style regression estimator, default=None
+         The regression estimator instance to use for edge selection. If None, defaults to
+         sklearn.linear_model.LinearRegression().
 
-    Parameters
-    ----------
-    threshold : float, default=0.3
-        The absolute value threshold for regression coefficients. Edges with coefficients below this value are pruned to
-        sparsify the graph. Default value of 0.3 is taken from :cite:p:`Reisach2023`.
+     variant : {'r2', 'varsortability'}, default='r2'
+         The variant used to compute the candidate causal ordering in Step 2.
 
-    estimator : sklearn-style regression estimator, default=None
-        The regression estimator instance to use for edge selection. If None, defaults to
-        sklearn.linear_model.LinearRegression().
+         - ``'r2'``: order variables by ascending global R² (the original R²-SortnRegress algorithm).
+         - ``'varsortability'``: order variables by ascending marginal variance, per the var-sortability phenomenon
+           described in :cite:p:`Reisach2021`
 
-    variant : {'r2', 'varsortability'}, default='r2'
-        The variant used to compute the candidate causal ordering in Step 2.
+     Attributes
+     ----------
+     causal_graph_ : pgmpy.base.DAG
+         The learned causal graph.
 
-        - ``'r2'``: order variables by ascending global R² (the original R²-SortnRegress algorithm).
-        - ``'varsortability'``: order variables by ascending marginal variance, per the var-sortability phenomenon
-          described in :cite:p:`Reisach2021`
+     adjacency_matrix_ : pd.DataFrame
+         Adjacency matrix representation of the learned causal graph.
 
-    Attributes
-    ----------
-    causal_graph_ : pgmpy.base.DAG
-        The learned causal graph.
+     n_features_in_: int
+         The number of features in the dataset used to learn the causal graph.
 
-    adjacency_matrix_ : pd.DataFrame
-        Adjacency matrix representation of the learned causal graph.
+     feature_names_in_: np.ndarray
+         The feature names in the dataset used to learn the causal graph.
 
-    n_features_in_: int
-        The number of features in the dataset used to learn the causal graph.
+     Examples
+     --------
+     >>> import pandas as pd
+     >>> import numpy as np
+     >>> from pgmpy.causal_discovery import SortnRegress
+     >>> rng = np.random.default_rng(seed=42)
+     >>> data = pd.DataFrame(rng.standard_normal((1000, 3)), columns=['X', 'Y', 'Z'])
+     >>> data['Z'] += 2.5 * data['X'] + 2.5 * data['Y']
+     >>> model = SortnRegress()
+     >>> _ = model.fit(data)
+     >>> list(model.causal_graph_.edges())
+     [('X', 'Z'), ('Y', 'Z')]
 
-    feature_names_in_: np.ndarray
-        The feature names in the dataset used to learn the causal graph.
-
-    Examples
-    --------
-    >>> import pandas as pd
-    >>> import numpy as np
-    >>> from pgmpy.causal_discovery import SortnRegress
-    >>> rng = np.random.default_rng(seed=42)
-    >>> data = pd.DataFrame(rng.standard_normal((1000, 3)), columns=['X', 'Y', 'Z'])
-    >>> data['Z'] += 2.5 * data['X'] + 2.5 * data['Y']
-    >>> model = SortnRegress(threshold=0.3)
-    >>> _ = model.fit(data)
-    >>> list(model.causal_graph_.edges())
-    [('X', 'Z'), ('Y', 'Z')]
-
-    References
-    ----------
-    - :footcite:t:`Reisach2023`
-    - :footcite:t:`Reisach2021`
+     References
+     ----------
+     - :footcite:t:`Reisach2023`
+     - :footcite:t:`Reisach2021`
     """
 
-    def __init__(self, variant="r2", threshold=0.3, estimator=None):
+    def __init__(self, variant="r2", estimator=None):
         super().__init__()
-        self.threshold = threshold
         self.estimator = estimator
         self.variant = variant
 
@@ -151,19 +151,26 @@ class SortnRegress(BaseCausalDiscovery):
         model = DAG()
         model.add_nodes_from(sorted_nodes)
 
-        # Step 2.1: Use regression with threshold to remove edges.
+        # Step 2.1: Adaptive Lasso (BIC-selected penalty) for parent selection.
         for i in range(1, len(sorted_nodes)):
             target = sorted_nodes[i]
             potential_parents = sorted_nodes[:i]
 
-            y = X[target]
-            predictors = X[potential_parents]
+            y = X[target].to_numpy().ravel()
+            predictors = X[potential_parents].to_numpy()
 
+            # Step 2.1.1: least-squares fit supplies the adaptive weights.
             model_reg.fit(predictors, y)
-            coefs = model_reg.coef_
+            weights = np.abs(model_reg.coef_)
+
+            # Step 2.1.2: L1 penalty on the reweighted design, lambda chosen by BIC.
+            # Reweighting makes the selection invariant to rescaling of columns.
+            sparse_reg = LassoLarsIC(criterion="bic")
+            sparse_reg.fit(predictors * weights, y)
+            coefs = sparse_reg.coef_ * weights
 
             for idx, coef in enumerate(coefs):
-                if abs(coef) >= self.threshold:
+                if coef != 0:
                     model.add_edge(potential_parents[idx], target)
 
         self.causal_graph_ = model
