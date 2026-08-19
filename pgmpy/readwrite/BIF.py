@@ -259,8 +259,8 @@ class BIFReader:
         state_name_type: int, str or bool (default: str)
             The data type to which to convert the state names of the variables.
 
-        Example
-        ----------
+        Examples
+        --------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
         >>> from pgmpy.example_models import load_model
         >>> asia = load_model("bnlearn/asia")
@@ -315,7 +315,7 @@ class BIFWriter:
         Round the probability values to `round_values` decimals. If None, keeps all decimal points.
 
     Examples
-    ---------
+    --------
     >>> from pgmpy.readwrite import BIFWriter
     >>> from pgmpy.example_models import load_model
     >>> asia = load_model("bnlearn/asia")
@@ -456,8 +456,8 @@ $values
         -------
         list: a list containing names of variable
 
-        Example
-        -------
+        Examples
+        --------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
         >>> from pgmpy.example_models import load_model
         >>> asia = load_model("bnlearn/asia")
@@ -476,8 +476,8 @@ $values
         -------
         dict: dict of type {variable: a list of states}
 
-        Example
-        -------
+        Examples
+        --------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
         >>> from pgmpy.example_models import load_model
         >>> asia = load_model("bnlearn/asia")
@@ -513,8 +513,8 @@ $values
         -------
         dict: dict of type {variable: list of properties }
 
-        Example
-        -------
+        Examples
+        --------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
         >>> from pgmpy.example_models import load_model
         >>> asia = load_model("bnlearn/asia")
@@ -537,8 +537,8 @@ $values
         -------
         dict: dict of type {variable: a list of parents}
 
-        Example
-        -------
+        Examples
+        --------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
         >>> from pgmpy.example_models import load_model
         >>> asia = load_model("bnlearn/asia")
@@ -567,8 +567,8 @@ $values
         -------
         dict: dict of type {variable: array}
 
-        Example
-        -------
+        Examples
+        --------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
         >>> from pgmpy.example_models import load_model
         >>> asia = load_model("bnlearn/asia")
@@ -595,8 +595,8 @@ $values
         ----------
         filename : Name of the file
 
-        Example
-        -------
+        Examples
+        --------
         >>> from pgmpy.example_models import load_model
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
         >>> asia = load_model("bnlearn/asia")

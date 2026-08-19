@@ -403,6 +403,7 @@ def list_datasets(**filter_tags) -> list[str]:
     **filter_tags : optional arguments
         If specified, returns only datasets matching the provided tag filters. Any dataset tag can be used as a filter.
         Available tags:
+
             - n_variables
             - n_samples
             - has_ground_truth

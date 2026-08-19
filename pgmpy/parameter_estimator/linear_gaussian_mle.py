@@ -19,18 +19,18 @@ class LinearGaussianMLE(GaussianParameterEstimator):
 
     Parameters
     ----------
-    std_estimator: {"unbiased", "mle"}, default="unbiased"
+    std_estimator : {"unbiased", "mle"}, default="unbiased"
         Method used to estimate the noise standard deviation.
-        - ``"unbiased"``: uses ``ddof = 1`` for root nodes and ``ddof = 1 + n_parents``
-          for non-root nodes.
-        - ``"mle"``: uses ``ddof = 0`` (biased, maximum likelihood estimate).
+        ``"unbiased"`` uses ``ddof = 1`` for root nodes and
+        ``ddof = 1 + n_parents`` for non-root nodes. ``"mle"`` uses
+        ``ddof = 0`` (biased, maximum likelihood estimate).
 
     Attributes
     ----------
     parameters_ : list of LinearGaussianCPD
         Learned Gaussian conditional probability distributions, one per
-        variable in the model, ordered by `self._model.nodes()`. Populated by
-        `fit`.
+        variable in the model, ordered by ``self._model.nodes()``. Populated by
+        ``fit``.
 
     Examples
     --------
