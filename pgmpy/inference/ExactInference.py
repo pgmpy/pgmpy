@@ -968,22 +968,21 @@ class BeliefPropagation(Inference):
             likelihoods.append(DiscreteFactor([var], [len(states)], cpd.values.reshape(-1), state_names={var: states}))
             query_variables.append(var)
 
-        # Step 3: Find the smallest subtree T' of the junction tree whose scope covers query_variables: the
-        #         cliques containing them plus the (unique) paths between consecutive such cliques.
-        nodes_with_query_variables = set()
+        # Step 3: Find a small subtree T' of the junction tree whose scope covers query_variables: for every
+        #         variable not covered yet the smallest clique containing it, plus the (unique) paths between
+        #         consecutive chosen cliques.
+        chosen_cliques = []
         for var in query_variables:
-            nodes_with_query_variables.update(filter(lambda x: var in x, self.junction_tree.nodes()))
-        subtree_nodes = nodes_with_query_variables
-
-        nodes_with_query_variables = tuple(nodes_with_query_variables)
-        for i in range(len(nodes_with_query_variables) - 1):
-            subtree_nodes.update(
-                nx.shortest_path(
-                    self.junction_tree,
-                    nodes_with_query_variables[i],
-                    nodes_with_query_variables[i + 1],
+            if not any(var in clique for clique in chosen_cliques):
+                chosen_cliques.append(
+                    min(
+                        (clique for clique in self.junction_tree.nodes() if var in clique),
+                        key=lambda clique: np.prod(self.clique_beliefs[clique].cardinality),
+                    )
                 )
-            )
+        subtree_nodes = set(chosen_cliques)
+        for i in range(len(chosen_cliques) - 1):
+            subtree_nodes.update(nx.shortest_path(self.junction_tree, chosen_cliques[i], chosen_cliques[i + 1]))
         subtree_undirected_graph = self.junction_tree.subgraph(subtree_nodes)
         if len(subtree_nodes) == 1:
             subtree = JunctionTree()
@@ -1020,7 +1019,8 @@ class BeliefPropagation(Inference):
             clique_potential_list[index] = clique_potential_list[index] * likelihood
         subtree.add_factors(*clique_potential_list)
 
-        # Step 6: Answer the query by variable elimination on T', applying the hard evidence.
+        # Step 6: Answer the query by variable elimination on T', applying the hard evidence; the MAP is the
+        #         most probable assignment of the joint marginal over `variables`.
         variable_elimination = VariableElimination(subtree)
         if operation == "marginalize":
             return variable_elimination.query(
@@ -1030,7 +1030,11 @@ class BeliefPropagation(Inference):
                 show_progress=show_progress,
             )
         elif operation == "maximize":
-            return variable_elimination.map_query(variables=variables, evidence=evidence, show_progress=show_progress)
+            joint_marginal = variable_elimination.query(
+                variables=variables, evidence=evidence, joint=True, show_progress=show_progress
+            )
+            assignment = joint_marginal.assignment([compat_fns.argmax(joint_marginal.values)])[0]
+            return dict(assignment)
 
     def query(
         self,
