@@ -252,8 +252,8 @@ class UAIReader:
         Variables are in the pattern var_0, var_1, var_2 where var_0 is
         0th index variable, var_1 is 1st index variable.
 
-        Return
-        ------
+        Returns
+        -------
         model: an instance of Bayesian or Markov Model.
 
         Examples
@@ -415,7 +415,7 @@ class UAIWriter:
         Adds functions to the network.
 
         Examples
-        -------_
+        --------
         >>> from pgmpy.readwrite import UAIWriter
         >>> from pgmpy.example_models import load_model
         >>> model = load_model("bnlearn/asia")

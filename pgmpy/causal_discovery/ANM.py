@@ -1,11 +1,13 @@
+from collections.abc import Callable
+
 import networkx as nx
 import numpy as np
 import pandas as pd
-from sklearn.base import clone
+from sklearn.base import BaseEstimator, clone
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
-from pgmpy.causal_discovery.anm_scores import get_anm_score
+from pgmpy.causal_discovery.bivariate_scores import BaseBivariateScore, get_bivariate_score
 from pgmpy.utils import get_dataset_type
 
 
@@ -21,7 +23,8 @@ class ANM(BaseCausalDiscovery):
     - The causal direction is identifiable only if the function ``f`` is nonlinear, or if the noise is non-Gaussian.
 
     The method fits a regressor in both directions and orients the edge toward the one whose residuals are more
-    independent of the input.
+    independent of the input. If a score is ``NaN`` or the directional scores are equal, the method raises a
+    :class:`ValueError` because it cannot determine a causal direction.
 
     Parameters
     ----------
@@ -30,14 +33,16 @@ class ANM(BaseCausalDiscovery):
         with an RBF plus white-noise kernel is used, with the input and target standardized so that the unit-scale
         kernel initialization is appropriate regardless of the scale of the data.
 
-    score : str, BaseANMScore instance, or callable, default="independence"
+    scoring_method : str, BaseBivariateScore instance, or callable, default="independence"
         How a candidate direction is scored from the cause and the regression residuals. A smaller score means the
         residuals are more independent of the cause, i.e. a better-fitting direction. One of:
 
         - a built-in name -- ``"independence"`` (a CI-test effect size, the default;
-          :class:`~pgmpy.causal_discovery.IndependenceScore` with ``"pearsonr"``), ``"entropy"``
-          (:class:`~pgmpy.causal_discovery.EntropyScore`), or ``"gauss"`` (:class:`~pgmpy.causal_discovery.GaussScore`);
-        - a configured :class:`~pgmpy.causal_discovery.BaseANMScore` instance, e.g. ``EntropyScore(method="vasicek")``;
+          :class:`~pgmpy.causal_discovery.bivariate_scores.IndependenceScore` with ``"pearsonr"``), ``"entropy"``
+          (:class:`~pgmpy.causal_discovery.bivariate_scores.EntropyScore`), or ``"gauss"``
+          (:class:`~pgmpy.causal_discovery.bivariate_scores.GaussScore`);
+        - a configured :class:`~pgmpy.causal_discovery.bivariate_scores.BaseBivariateScore` instance, e.g.
+          ``EntropyScore(method="vasicek")``;
         - any callable of the form ``fn(cause, residual) -> float``.
 
     Attributes
@@ -49,8 +54,8 @@ class ANM(BaseCausalDiscovery):
         Adjacency matrix representation of ``causal_graph_``.
 
     forward_score_ : float
-        Direction score for the first-column -> second-column direction, as computed by ``score``. A smaller value
-        means the residuals are more independent of the cause.
+        Direction score for the first-column -> second-column direction, as computed by ``scoring_method``. A
+        smaller value means the residuals are more independent of the cause.
 
     backward_score_ : float
         Direction score for the second-column -> first-column direction. The edge is oriented toward whichever
@@ -67,26 +72,26 @@ class ANM(BaseCausalDiscovery):
     >>> import numpy as np
     >>> import pandas as pd
     >>> from pgmpy.causal_discovery import ANM
-    >>> from pgmpy.causal_discovery.anm_scores import EntropyScore
+    >>> from pgmpy.causal_discovery.bivariate_scores import EntropyScore
     >>> rng = np.random.default_rng(42)
     >>> x = rng.uniform(-2, 2, 500)
     >>> df = pd.DataFrame({"X": x, "Y": x**3 + rng.laplace(size=500)})
     >>> anm = ANM().fit(df)
     >>> anm.causal_graph_.edges()
     OutEdgeView([('X', 'Y')])
-    >>> anm.forward_score_.round(5)
-    np.float64(0.00104)
-    >>> anm.backward_score_.round(5)
-    np.float64(0.00543)
+    >>> round(float(anm.forward_score_), 5)
+    0.00104
+    >>> round(float(anm.backward_score_), 5)
+    0.00543
 
     The scoring method can be selected by name:
 
-    >>> ANM(score="entropy").fit(df).causal_graph_.edges()
+    >>> ANM(scoring_method="entropy").fit(df).causal_graph_.edges()
     OutEdgeView([('X', 'Y')])
 
     or passed as an object for full control over its hyperparameters:
 
-    >>> ANM(score=EntropyScore(method="vasicek")).fit(df).causal_graph_.edges()
+    >>> ANM(scoring_method=EntropyScore(method="vasicek")).fit(df).causal_graph_.edges()
     OutEdgeView([('X', 'Y')])
 
     References
@@ -96,16 +101,22 @@ class ANM(BaseCausalDiscovery):
 
     """
 
-    def __init__(self, regressor=None, score="independence"):
+    def __init__(
+        self,
+        regressor: BaseEstimator | None = None,
+        scoring_method: str
+        | BaseBivariateScore
+        | Callable[[np.typing.ArrayLike, np.typing.ArrayLike], float] = "independence",
+    ) -> None:
         self.regressor = regressor
-        self.score = score
+        self.scoring_method = scoring_method
 
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
         tags.input_tags.categorical = False
         return tags
 
-    def _fit(self, X: pd.DataFrame):
+    def _fit(self, X: pd.DataFrame) -> "ANM":
         """
         The fitting procedure for the ANM algorithm.
 
@@ -132,22 +143,39 @@ class ANM(BaseCausalDiscovery):
                 raise ValueError(f"Variable '{col}' is constant; ANM requires non-constant variables.")
 
         # Step 1: Fit models in both directions and compute the residual-dependence scores.
-        self.forward_score_ = self._direction_score(cause=X[[x]], effect=X[y])
-        self.backward_score_ = self._direction_score(cause=X[[y]], effect=X[x])
+        score_fn = get_bivariate_score(self.scoring_method, algorithm="anm")
+        forward_score = self._direction_score(cause=X[[x]], effect=X[y], score_fn=score_fn)
+        backward_score = self._direction_score(cause=X[[y]], effect=X[x], score_fn=score_fn)
+
+        if np.isnan(forward_score) or np.isnan(backward_score):
+            raise ValueError("ANM scoring_method returned NaN; cannot determine a causal direction.")
+        if forward_score == backward_score:
+            raise ValueError(
+                f"ANM could not determine a causal direction because both directions produced the same score: "
+                f"{forward_score!r}."
+            )
+
+        self.forward_score_ = forward_score
+        self.backward_score_ = backward_score
 
         # Step 2: Orient the edge toward the direction with the smaller score.
-        edge = (x, y) if self.forward_score_ <= self.backward_score_ else (y, x)
+        edge = (x, y) if self.forward_score_ < self.backward_score_ else (y, x)
         self.causal_graph_ = DAG([edge])
         self.adjacency_matrix_ = nx.to_pandas_adjacency(self.causal_graph_, nodelist=[x, y], weight=None, dtype="int")
 
         return self
 
-    def _direction_score(self, cause: pd.DataFrame, effect: pd.Series) -> float:
+    def _direction_score(
+        self,
+        cause: pd.DataFrame,
+        effect: pd.Series,
+        score_fn: Callable[[np.typing.ArrayLike, np.typing.ArrayLike], float],
+    ) -> float:
         """
         Score the residual dependence for the ``cause -> effect`` direction.
 
         Fits the regressor to predict ``effect`` from ``cause``, then scores how dependent the resulting residuals
-        are on ``cause`` using the configured ``score``.
+        are on ``cause`` using the configured scoring method.
 
         Parameters
         ----------
@@ -157,11 +185,14 @@ class ANM(BaseCausalDiscovery):
         effect : pd.Series
             The candidate effect variable, regressed on ``cause``.
 
+        score_fn : callable
+            Resolved score callable with signature ``score_fn(cause, residual) -> float``.
+
         Returns
         -------
         score : float
-            The ``score`` evaluated on ``cause`` and the residuals. A smaller value indicates more independent
-            residuals, i.e. a better-fitting direction.
+            The configured scoring method evaluated on ``cause`` and the residuals. A smaller value indicates more
+            independent residuals, i.e. a better-fitting direction.
         """
         if self.regressor is None:
             from sklearn.gaussian_process import GaussianProcessRegressor
@@ -182,5 +213,4 @@ class ANM(BaseCausalDiscovery):
         regressor.fit(cause, effect)
         residual = effect - regressor.predict(cause)
 
-        score_fn = get_anm_score(self.score)
         return score_fn(np.asarray(cause).ravel(), np.asarray(residual))

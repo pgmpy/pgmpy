@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from functools import cached_property
 
 import numpy as np
 import pandas as pd
@@ -148,6 +149,10 @@ class BaseCITest(BaseObject):
         self._result_cache = {}
         super().__init__()
 
+    @cached_property
+    def _is_symmetric(self) -> bool:
+        return self.get_tag("is_symmetric", tag_value_default=True)
+
     def __call__(
         self,
         X: str,
@@ -228,7 +233,7 @@ class BaseCITest(BaseObject):
         Z = list(Z)
 
         if self.use_cache:
-            if self.get_tag("is_symmetric", tag_value_default=True):
+            if self._is_symmetric:
                 x_key, y_key = sorted((X, Y), key=repr)
             else:
                 x_key, y_key = X, Y

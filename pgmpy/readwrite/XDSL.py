@@ -238,7 +238,7 @@ class XDSLWriter:
         Encoding for text data
 
     Examples
-    ---------
+    --------
     >>> from pgmpy.readwrite import XDSLWriter
     >>> from pgmpy.example_models import load_model
     >>> asia = load_model("bnlearn/asia")
@@ -282,8 +282,8 @@ class XDSLWriter:
         """
         Add variables and their XML elements/representation to XDSL
 
-        Return
-        ------
+        Returns
+        -------
         dict: dict of type {variable: variable tags}
 
         Examples
@@ -308,12 +308,12 @@ class XDSLWriter:
         """
         Add the complete CPT element (with states and probabilities) to XDSL.
 
-        Return
-        ---------------
+        Returns
+        -------
         dict: dict of type {variable: table tag}
 
         Examples
-        -------
+        --------
         >>> from pgmpy.readwrite import XDSLWriter
         >>> from pgmpy.example_models import load_model
         >>> writer = XDSLWriter(load_model("bnlearn/asia"))
