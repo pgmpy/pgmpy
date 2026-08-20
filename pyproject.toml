@@ -37,6 +37,7 @@ dependencies = [
   "joblib>=1.2",
   "opt_einsum>=3.3",
   "scikit-base>=0.12.4",
+  "skpro",
 ]
 
 [project.optional-dependencies]
@@ -50,6 +51,8 @@ optional = [
   "xgboost>=2.0.3",
   "litellm>=1.61.15",
   "pygraphviz",
+  "matplotlib",
+  "pygam",
 ]
 tests = [
   "xdoctest>=0.11.0",
