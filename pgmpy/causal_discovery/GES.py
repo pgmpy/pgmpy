@@ -1,12 +1,14 @@
 from collections.abc import Hashable, Iterable
-from itertools import combinations
+from itertools import permutations
 from typing import Any
 
 import networkx as nx
 import numpy as np
 import pandas as pd
+from sklearn.base import clone
 
 from pgmpy.base import PDAG
+from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.causal_discovery._base import BaseCausalDiscovery, _ScoreMixin
 from pgmpy.structure_score import BaseStructureScore, get_scoring_method
 from pgmpy.utils.mathext import powerset
@@ -43,9 +45,17 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
         - 'pdag': Returns a partially directed acyclic graph (PDAG).
 
     min_improvement : float, default=1e-6
-        The minimum score improvement required to perform an operation
-        (edge addition, removal, or flipping). Operations with smaller
-        improvements are not performed.
+        The minimum score improvement required to perform an operation (edge addition, removal, or flipping). Operations
+        with smaller improvements are not performed.
+
+    expert_knowledge : ExpertKnowledge instance, default=None
+        Expert knowledge used to constrain the search space during structure learning. Supports user-specified forbidden
+        edges and search-space restrictions defined through ``ExpertKnowledge``. Edges excluded by these constraints are
+        not considered as candidate edge additions or orientations, reducing the search space explored by GES.
+
+    max_indegree : int or None, default=None
+        If provided, the procedure only searches among models where all nodes have at most `max_indegree` parents. This
+        can significantly reduce the search space and computation time for large graphs.
 
     Attributes
     ----------
@@ -85,6 +95,7 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
     References
     ----------
     - :footcite:t:`chickering_2002b`
+    - :footcite:t:`ramsey_2017`
     - https://github.com/juangamella/ges
     """
 
@@ -93,10 +104,14 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
         scoring_method: str | BaseStructureScore | None = None,
         return_type: str = "pdag",
         min_improvement: float = 1e-6,
+        expert_knowledge: ExpertKnowledge | None = None,
+        max_indegree: int | None = None,
     ):
         self.scoring_method = scoring_method
         self.return_type = return_type
         self.min_improvement = min_improvement
+        self.expert_knowledge = expert_knowledge
+        self.max_indegree = max_indegree
 
     def _separates(
         self,
@@ -251,6 +266,9 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
             Returns the instance with the fitted attributes.
         """
         self.variables_ = list(X.columns)
+        if self.max_indegree is not None:
+            if not isinstance(self.max_indegree, int) or self.max_indegree < 0:
+                raise ValueError(f"max_indegree must be a non-negative integer. Got: {self.max_indegree}")
 
         def ordered_tuple(nodes: Iterable[Any], model: PDAG) -> tuple[Any, ...]:
             node_set = set(nodes)
@@ -265,13 +283,28 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
         current_model = PDAG()
         current_model.add_nodes_from(self.variables_)
 
+        # Step 1.3: Check if expert knowledge was specified
+        if self.expert_knowledge is None:
+            expert_knowledge = ExpertKnowledge()
+        else:
+            # Clone so the fitted (`*_`) attributes land on a fresh copy, not the user's object.
+            expert_knowledge = clone(self.expert_knowledge)
+
+        expert_knowledge.fit(X)
+
+        current_model.add_edges_from([(u, v, "->") for u, v in expert_knowledge.required_edges_])
+        current_model = current_model.to_cpdag()
+
+        # Candidate insertions that are not excluded by expert knowledge.
+        candidate_edges = sorted(set(permutations(self.variables_, 2)) - expert_knowledge.forbidden_edges_)
+
         # Step 2: Forward phase. Iteratively add edges till score stops improving.
         while True:
             potential_edges = []
-            for u, v in combinations(sorted(current_model.nodes()), 2):
-                if not current_model.has_edge(u, v) and not current_model.has_edge(v, u):
-                    potential_edges.append((u, v))
-                    potential_edges.append((v, u))
+            for u, v in candidate_edges:
+                if current_model.has_edge(u, v) or current_model.has_edge(v, u):
+                    continue
+                potential_edges.append((u, v))
 
             score_deltas = np.zeros(len(potential_edges))
             insertion_ops: list[tuple[float, Any, Any, set[Any]] | None] = []
@@ -311,6 +344,9 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
                         parents_v = current_model.get_parents(v)
                         new_parents = ordered_tuple(na_vuT | parents_v | {u}, current_model)
                         old_parents = ordered_tuple(na_vuT | parents_v, current_model)
+                        # Enforce the maximum indegree constraint on the parent set produced by the insert operator.
+                        if self.max_indegree is not None and len(new_parents) > self.max_indegree:
+                            continue
                         score_delta = score_fn(v, new_parents) - score_fn(v, old_parents)
                         valid_insert_ops.append((score_delta, u, v, T))
 
@@ -334,7 +370,11 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
 
         # Step 3: Backward phase. Iteratively remove edges till score stops improving.
         while True:
-            potential_removals = self._legal_edge_deletions(current_model)
+            potential_removals = [
+                edge
+                for edge in self._legal_edge_deletions(current_model)
+                if edge not in expert_knowledge.required_edges_
+            ]
             score_deltas = np.zeros(len(potential_removals))
             deletion_ops: list[tuple[float, Any, Any, set[Any]] | None] = []
 
@@ -387,9 +427,15 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
             # sorted() gives a stable, canonical tie-break (matching the deletion phase) so the turn
             # chosen among equally-scored candidates does not depend on internal edge insertion order.
             for u, v, edge_type in sorted(current_model.get_edges(data=True)):
-                potential_turns.append((v, u))
+                if (v, u) not in expert_knowledge.forbidden_edges_ and (u, v) not in expert_knowledge.required_edges_:
+                    potential_turns.append((v, u))
+
                 if edge_type == "--":
-                    potential_turns.append((u, v))
+                    if (u, v) not in expert_knowledge.forbidden_edges_ and (
+                        v,
+                        u,
+                    ) not in expert_knowledge.required_edges_:
+                        potential_turns.append((u, v))
 
             score_deltas = np.zeros(len(potential_turns))
             turn_ops: list[tuple[float, Any, Any, set[Any]] | None] = []
@@ -422,9 +468,13 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
                             parents_v = current_model.get_parents(v)
                             parents_u = current_model.get_parents(u)
 
-                            new_score = score_fn(v, ordered_tuple(parents_v | C | {u}, current_model)) + score_fn(
-                                u, ordered_tuple(parents_u | (C & na_vu), current_model)
-                            )
+                            new_parents_v = ordered_tuple(parents_v | C | {u}, current_model)
+                            new_parents_u = ordered_tuple(parents_u | (C & na_vu), current_model)
+                            if self.max_indegree is not None and (
+                                len(new_parents_v) > self.max_indegree or len(new_parents_u) > self.max_indegree
+                            ):
+                                continue
+                            new_score = score_fn(v, new_parents_v) + score_fn(u, new_parents_u)
                             old_score = score_fn(v, ordered_tuple(parents_v | C, current_model)) + score_fn(
                                 u, ordered_tuple(parents_u | (C & na_vu) | {v}, current_model)
                             )
@@ -465,6 +515,12 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
                             parents_v = current_model.get_parents(v)
                             parents_u = current_model.get_parents(u)
 
+                            new_parents_v = ordered_tuple(C | parents_v | {u}, current_model)
+                            new_parents_u = ordered_tuple(parents_u - {v}, current_model)
+                            if self.max_indegree is not None and (
+                                len(new_parents_v) > self.max_indegree or len(new_parents_u) > self.max_indegree
+                            ):
+                                continue
                             new_score = score_fn(v, ordered_tuple(C | parents_v | {u}, current_model)) + score_fn(
                                 u, ordered_tuple(parents_u - {v}, current_model)
                             )
@@ -494,6 +550,10 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
 
         # Step 5: Store results
         current_model = current_model.to_cpdag()
+
+        # Enforce ExpertKnowledge on the learned graph
+        expert_knowledge.apply_to(current_model)
+        current_model = current_model.apply_meeks_rules(apply_r4=True, inplace=False)
 
         if self.return_type.lower() == "dag":
             self.causal_graph_ = current_model.to_dag()
