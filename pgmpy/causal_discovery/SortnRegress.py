@@ -58,9 +58,11 @@ class SortnRegress(BaseCausalDiscovery):
     least-squares coefficients :math:`|\beta_{j,\pi(i)}|` serve as adaptive weights, and an L1
     penalty with the regularization parameter selected by the Bayesian Information Criterion is
     fit on the reweighted predictors. An edge :math:`X_{\pi(j)} \to X_{\pi(i)}` is added if the
-    resulting coefficient is non-zero. Because the weights carry the same scale factor as the
-    predictors, this selection step is invariant to rescaling of the columns of
-    :math:`\mathbf{X}`.
+    resulting coefficient is non-zero. This step is invariant to rescaling of the columns of
+    :math:`\mathbf{X}`: a least-squares coefficient scales inversely with its predictor, so
+    under :math:`X_{\pi(j)} \mapsto c_j X_{\pi(j)}` the weight becomes
+    :math:`|\beta_{j,\pi(i)}| / c_j` and the reweighted predictor
+    :math:`c_j X_{\pi(j)} \cdot |\beta_{j,\pi(i)}| / c_j` is unchanged.
 
     Parameters
     ----------
