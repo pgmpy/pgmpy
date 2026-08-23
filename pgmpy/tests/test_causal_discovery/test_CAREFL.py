@@ -9,7 +9,7 @@ from skbase.utils.dependencies import _check_soft_dependencies
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.causal_discovery import CAREFL
-from pgmpy.causal_discovery.CAREFL import _ConditionerMLP
+from pgmpy.causal_discovery.CAREFL import _AffineARFlow, _ConditionerMLP
 
 requires_torch = pytest.mark.skipif(
     not _check_soft_dependencies("torch", severity="none"),
@@ -87,6 +87,44 @@ class TestConditionerMLP:
             (8, 1),
         ]
         assert model(torch.randn(5, 1)).shape == (5, 1)
+
+
+class TestAffineARFlow:
+    @requires_torch
+    def test_round_trip_and_shapes(self):
+        import torch
+
+        torch.manual_seed(0)
+        flow = _AffineARFlow(hidden_dim=8, hidden_layers=2)
+        z = torch.randn(5, 2)
+        x = flow(z)
+        recovered_z, log_abs_det_dx = flow.inverse(x)
+        original_x = torch.randn(5, 2)
+        recovered_x = flow(flow.inverse(original_x)[0])
+
+        assert x.shape == (5, 2)
+        assert recovered_z.shape == (5, 2)
+        assert recovered_x.shape == (5, 2)
+        assert log_abs_det_dx.shape == (5,)
+        assert torch.allclose(recovered_z, z, atol=1e-6)
+        assert torch.allclose(recovered_x, original_x, atol=1e-6)
+
+    @requires_torch
+    def test_inverse_log_jacobian_matches_autograd(self):
+        import torch
+
+        torch.manual_seed(0)
+        flow = _AffineARFlow(hidden_dim=4, hidden_layers=1).double()
+        x = torch.randn(2, dtype=torch.float64, requires_grad=True)
+
+        _, analytical_log_det = flow.inverse(x.unsqueeze(0))
+        jacobian = torch.autograd.functional.jacobian(
+            lambda value: flow.inverse(value.unsqueeze(0))[0].squeeze(0),
+            x,
+        )
+        _, autograd_log_det = torch.linalg.slogdet(jacobian)
+
+        assert torch.allclose(analytical_log_det[0], autograd_log_det, atol=1e-8)
 
 
 @requires_torch

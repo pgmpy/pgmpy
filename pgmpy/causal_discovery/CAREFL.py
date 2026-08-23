@@ -61,11 +61,17 @@ class _AffineARFlow(nn.Module):
 
     def __init__(self, hidden_dim: int, hidden_layers: int):
         super().__init__()
-        raise NotImplementedError
+        self.s1 = nn.Parameter(torch.zeros(()))
+        self.t1 = nn.Parameter(torch.zeros(()))
+        self.scale_net = _ConditionerMLP(hidden_dim, hidden_layers)
+        self.shift_net = _ConditionerMLP(hidden_dim, hidden_layers)
 
     def forward(self, z: "torch.Tensor") -> "torch.Tensor":
         """Transform latent ``z`` to observations, preserving column order."""
-        raise NotImplementedError
+        z1, z2 = z[:, 0:1], z[:, 1:2]
+        x1 = torch.exp(self.s1) * z1 + self.t1
+        x2 = torch.exp(self.scale_net(x1)) * z2 + self.shift_net(x1)
+        return torch.cat([x1, x2], dim=1)
 
     def inverse(self, x: "torch.Tensor") -> tuple["torch.Tensor", "torch.Tensor"]:
         """Return ``(z, log_abs_det_dx)`` using the analytical inverse.
@@ -73,7 +79,13 @@ class _AffineARFlow(nn.Module):
         ``log_abs_det_dx`` is the per-sample log absolute determinant of
         ``dz / dx`` and has shape ``(batch,)``. No full Jacobian is built.
         """
-        raise NotImplementedError
+        x1, x2 = x[:, 0:1], x[:, 1:2]
+        s2 = self.scale_net(x1)
+        t2 = self.shift_net(x1)
+        z1 = torch.exp(-self.s1) * (x1 - self.t1)
+        z2 = torch.exp(-s2) * (x2 - t2)
+        log_abs_det_dx = -self.s1 - s2.squeeze(1)
+        return torch.cat([z1, z2], dim=1), log_abs_det_dx
 
 
 class _CAREFLModel(nn.Module):
@@ -275,27 +287,29 @@ class CAREFL(BaseCausalDiscovery):
 
         # Train and score X -> Y and Y -> X.
         dtype = config.DTYPE if config.BACKEND == "torch" else torch.float32
+        train_tensor = torch.tensor(
+            np.ascontiguousarray(train_data[[x, y]].to_numpy()),
+            dtype=dtype,
+            device=config.DEVICE,
+        )
+        test_tensor = torch.tensor(
+            np.ascontiguousarray(test_data[[x, y]].to_numpy()),
+            dtype=dtype,
+            device=config.DEVICE,
+        )
         models = {}
         likelihoods = {}
-        for cause, effect in ((x, y), (y, x)):
-            train_tensor = torch.tensor(
-                train_data[[cause, effect]].to_numpy(),
-                dtype=dtype,
-                device=config.DEVICE,
-            )
-            test_tensor = torch.tensor(
-                test_data[[cause, effect]].to_numpy(),
-                dtype=dtype,
-                device=config.DEVICE,
-            )
-
+        for cause, effect, ordered_train, ordered_test in (
+            (x, y, train_tensor, test_tensor),
+            (y, x, train_tensor[:, [1, 0]], test_tensor[:, [1, 0]]),
+        ):
             model = _CAREFLModel(self.flow_config_, self.train_config_)
-            model.fit_network(train_tensor)
+            model.fit_network(ordered_train)
             model.eval()
             with torch.no_grad():
-                log_probs = model.log_prob(test_tensor)
+                log_probs = model.log_prob(ordered_test)
 
-            if log_probs.ndim != 1 or log_probs.shape[0] != test_tensor.shape[0]:
+            if log_probs.ndim != 1 or log_probs.shape[0] != ordered_test.shape[0]:
                 raise ValueError("_CAREFLModel.log_prob must return one scalar per held-out observation.")
             if not bool(torch.isfinite(log_probs).all().item()):
                 raise ValueError("_CAREFLModel.log_prob must return finite values.")
