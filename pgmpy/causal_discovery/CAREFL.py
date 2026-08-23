@@ -1,10 +1,15 @@
 from dataclasses import dataclass
+from numbers import Integral, Real
 from typing import Any
 
+import numpy as np
 import pandas as pd
 from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
+from sklearn.model_selection import train_test_split
 
+from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
+from pgmpy.global_vars import config
 
 torch = _safe_import("torch")
 nn = _safe_import("torch.nn")
@@ -124,18 +129,11 @@ class CAREFL(BaseCausalDiscovery):
         the paper explicitly reports an 80/20 split for its cause-effect-pair
         experiments, but does not state it as a universal algorithm default.
     optimizer : str, default="adam"
-        Optimizer name. Initially only ``"adam"`` should be supported because
-        that is the optimizer specified by the paper. The string is retained
-        to match pgmpy's estimator/configuration style and allow later growth.
+        Optimizer name passed to the private CAREFL model.
     optimizer_kwargs : dict or None, default=None
-        Keyword arguments for Adam. ``None`` means ``lr=1e-3`` and
-        ``betas=(0.9, 0.999)``, which are paper settings. ``params`` is invalid
-        because the private model owns its parameters.
+        Keyword arguments passed to the private model's optimizer resolver.
     scheduler_kwargs : dict or None, default=None
-        Keyword arguments for ``ReduceLROnPlateau``. ``None`` uses
-        ``factor=0.1`` (from the paper) plus PyTorch defaults for details the
-        paper does not report, such as patience. This convenience is exposed so
-        those implementation choices can be made reproducible and tunable.
+        Keyword arguments passed to the private model's scheduler resolver.
     seed : int or None, default=42
         Seed for splitting, initialization, and mini-batch ordering. This is a
         pgmpy reproducibility choice, not a paper default.
@@ -154,8 +152,8 @@ class CAREFL(BaseCausalDiscovery):
         The two input column labels in their original order, following sklearn.
     flow_config_ : FlowConfig
         Validated architecture configuration.
-    training_config_ : TrainingConfig
-        Resolved optimization configuration, including copied default kwargs.
+    train_config_ : TrainingConfig
+        Training configuration passed to each private direction model.
     models_ : dict[tuple[object, object], _CAREFLModel]
         Maps ``(cause, effect)`` hypotheses to their fitted fixed-order models.
     log_likelihoods_ : dict[tuple[object, object], float]
@@ -205,9 +203,126 @@ class CAREFL(BaseCausalDiscovery):
 
     def _fit(self, X: pd.DataFrame):
         """Fit both causal orderings and construct the selected bivariate DAG."""
-        # Validate bivariate numerical data and hyperparameters.
-        # Create one train/test split shared by both directions.
-        # Train fixed-order models on [X, Y] and [Y, X].
-        # Compare their mean held-out log-likelihoods.
-        # Select the direction and populate the fitted graph attributes.
-        raise NotImplementedError
+        # Validate CAREFL's bivariate data and parameters.
+        if X.shape[1] != 2:
+            raise ValueError(f"CAREFL requires exactly two variables, got {X.shape[1]}.")
+
+        invalid_columns = [
+            column
+            for column in X.columns
+            if not pd.api.types.is_numeric_dtype(X[column]) or pd.api.types.is_bool_dtype(X[column])
+        ]
+        if invalid_columns:
+            raise ValueError(f"CAREFL requires continuous numeric variables. Invalid columns: {invalid_columns}.")
+
+        constant_columns = [column for column in X.columns if X[column].nunique(dropna=False) <= 1]
+        if constant_columns:
+            raise ValueError(f"CAREFL requires non-constant variables. Constant columns: {constant_columns}.")
+
+        for name in (
+            "num_flows",
+            "hidden_dim",
+            "hidden_layers",
+            "batch_size",
+            "max_epochs",
+        ):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
+                raise ValueError(f"{name} must be an integer greater than or equal to 1, got {value!r}.")
+
+        if isinstance(self.test_size, bool) or not isinstance(self.test_size, Real) or not 0 < self.test_size < 1:
+            raise ValueError(f"test_size must be a number strictly between 0 and 1, got {self.test_size!r}.")
+
+        if self.seed is not None and (isinstance(self.seed, bool) or not isinstance(self.seed, Integral)):
+            raise ValueError(f"seed must be an integer or None, got {self.seed!r}.")
+
+        # Build architecture and training configs.
+        self.flow_config_ = FlowConfig(
+            num_flows=self.num_flows,
+            hidden_dim=self.hidden_dim,
+            hidden_layers=self.hidden_layers,
+        )
+        optimizer_kwargs = {
+            "lr": 1e-3,
+            "betas": (0.9, 0.999),
+            **(self.optimizer_kwargs or {}),
+        }
+        scheduler_kwargs = {
+            "factor": 0.1,
+            **(self.scheduler_kwargs or {}),
+        }
+        self.train_config_ = TrainingConfig(
+            batch_size=self.batch_size,
+            max_epochs=self.max_epochs,
+            optimizer=self.optimizer,
+            optimizer_kwargs=optimizer_kwargs,
+            scheduler_kwargs=scheduler_kwargs,
+            seed=self.seed,
+        )
+
+        # Split once so both directions use the same rows.
+        train_data, test_data = train_test_split(
+            X,
+            test_size=self.test_size,
+            random_state=self.seed,
+            shuffle=True,
+        )
+        x, y = self.feature_names_in_
+
+        # Train and score X -> Y and Y -> X.
+        dtype = config.DTYPE if config.BACKEND == "torch" else torch.float32
+        models = {}
+        likelihoods = {}
+        for cause, effect in ((x, y), (y, x)):
+            train_tensor = torch.tensor(
+                train_data[[cause, effect]].to_numpy(),
+                dtype=dtype,
+                device=config.DEVICE,
+            )
+            test_tensor = torch.tensor(
+                test_data[[cause, effect]].to_numpy(),
+                dtype=dtype,
+                device=config.DEVICE,
+            )
+
+            model = _CAREFLModel(self.flow_config_, self.train_config_)
+            model.fit_network(train_tensor)
+            model.eval()
+            with torch.no_grad():
+                log_probs = model.log_prob(test_tensor)
+
+            if log_probs.ndim != 1 or log_probs.shape[0] != test_tensor.shape[0]:
+                raise ValueError("_CAREFLModel.log_prob must return one scalar per held-out observation.")
+            if not bool(torch.isfinite(log_probs).all().item()):
+                raise ValueError("_CAREFLModel.log_prob must return finite values.")
+
+            models[(cause, effect)] = model
+            likelihoods[(cause, effect)] = float(log_probs.mean().item())
+
+        # Compare directions and build the graph.
+        self.models_ = models
+        self.log_likelihoods_ = likelihoods
+        forward_ll = likelihoods[(x, y)]
+        backward_ll = likelihoods[(y, x)]
+        self.causal_score_ = forward_ll - backward_ll
+        if forward_ll > backward_ll:
+            self.causal_direction_ = (x, y)
+        elif backward_ll > forward_ll:
+            self.causal_direction_ = (y, x)
+        else:
+            self.causal_direction_ = None
+
+        self.causal_graph_ = DAG()
+        self.causal_graph_.add_nodes_from([x, y])
+        if self.causal_direction_ is not None:
+            self.causal_graph_.add_edge(*self.causal_direction_)
+
+        self.adjacency_matrix_ = pd.DataFrame(
+            np.zeros((2, 2), dtype=int),
+            index=[x, y],
+            columns=[x, y],
+        )
+        if self.causal_direction_ is not None:
+            self.adjacency_matrix_.loc[self.causal_direction_] = 1
+
+        return self

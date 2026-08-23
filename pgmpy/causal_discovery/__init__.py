@@ -1,3 +1,4 @@
+from .CAREFL import CAREFL
 from .ChowLiu import ChowLiu
 from .ExpertInLoop import ExpertInLoop
 from .ExpertKnowledge import ExpertKnowledge
@@ -9,6 +10,7 @@ from .TAN import TAN
 from .TOPIC import TOPIC
 
 __all__ = [
+    "CAREFL",
     "ChowLiu",
     "ExpertInLoop",
     "ExpertKnowledge",

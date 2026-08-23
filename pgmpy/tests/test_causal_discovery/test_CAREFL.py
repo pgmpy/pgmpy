@@ -1,0 +1,198 @@
+"""Tests for the public CAREFL causal-discovery estimator."""
+
+import importlib
+
+import numpy as np
+import pandas as pd
+import pytest
+from skbase.utils.dependencies import _check_soft_dependencies
+from sklearn.utils.estimator_checks import parametrize_with_checks
+
+from pgmpy.causal_discovery import CAREFL
+
+requires_torch = pytest.mark.skipif(
+    not _check_soft_dependencies("torch", severity="none"),
+    reason="execute only if required dependency present",
+)
+
+carefl_module = importlib.import_module(CAREFL.__module__)
+
+
+class FakeCAREFLModel:
+    """Record public CAREFL orchestration while its private model is a stub."""
+
+    instances = []
+    log_prob_outputs = []
+
+    def __init__(self, flow_cfg, train_cfg):
+        self.flow_cfg = flow_cfg
+        self.train_cfg = train_cfg
+        self.train_tensor = None
+        self.test_tensor = None
+        self.index = len(self.instances)
+        self.instances.append(self)
+
+    def fit_network(self, x_train):
+        self.train_tensor = x_train.detach().cpu().clone()
+        return self
+
+    def eval(self):
+        return self
+
+    def log_prob(self, x_test):
+        import torch
+
+        self.test_tensor = x_test.detach().cpu().clone()
+        if self.index < len(self.log_prob_outputs):
+            return torch.as_tensor(
+                self.log_prob_outputs[self.index],
+                dtype=x_test.dtype,
+                device=x_test.device,
+            )
+        return torch.zeros(x_test.shape[0], dtype=x_test.dtype, device=x_test.device)
+
+
+def expected_failed_checks(estimator):
+    return {
+        "check_fit_score_takes_y": "Causal discovery estimators do not take y in score.",
+        "check_n_features_in_after_fitting": "BaseCausalDiscovery score compatibility limitation.",
+        "check_fit2d_1feature": "CAREFL requires exactly two variables.",
+    }
+
+
+if _check_soft_dependencies("torch", severity="none"):
+
+    @pytest.mark.skip(reason="Enable when the private _CAREFLModel is implemented.")
+    @parametrize_with_checks(
+        [CAREFL(max_epochs=1, seed=0)],
+        expected_failed_checks=expected_failed_checks,
+    )
+    def test_carefl_compatibility(estimator, check):
+        check(estimator)
+
+
+@requires_torch
+class TestCAREFLFit:
+    @pytest.fixture(autouse=True)
+    def fake_model(self, monkeypatch):
+        FakeCAREFLModel.instances = []
+        FakeCAREFLModel.log_prob_outputs = []
+        monkeypatch.setattr(carefl_module, "_CAREFLModel", FakeCAREFLModel)
+
+    def test_two_direction_orchestration_uses_one_shared_split(self):
+        data = pd.DataFrame(
+            {
+                "X": np.arange(30, dtype=float),
+                "Y": 1000 + np.arange(30, dtype=float),
+            }
+        )
+
+        estimator = CAREFL(seed=7).fit(data)
+        forward, backward = FakeCAREFLModel.instances
+
+        assert len(FakeCAREFLModel.instances) == 2
+        np.testing.assert_array_equal(backward.train_tensor, forward.train_tensor[:, [1, 0]])
+        np.testing.assert_array_equal(backward.test_tensor, forward.test_tensor[:, [1, 0]])
+        assert set(estimator.models_) == {("X", "Y"), ("Y", "X")}
+
+    @pytest.mark.parametrize(
+        (
+            "outputs",
+            "expected_score",
+            "expected_direction",
+            "expected_edges",
+            "expected_adjacency",
+        ),
+        [
+            (([1.0, 3.0], [0.0, 0.0]), 2.0, ("X", "Y"), {("X", "Y")}, [[0, 1], [0, 0]]),
+            (
+                ([-2.0, 0.0], [1.0, 3.0]),
+                -3.0,
+                ("Y", "X"),
+                {("Y", "X")},
+                [[0, 0], [1, 0]],
+            ),
+            (([1.0, 3.0], [2.0, 2.0]), 0.0, None, set(), [[0, 0], [0, 0]]),
+        ],
+    )
+    def test_direction_selection(
+        self,
+        outputs,
+        expected_score,
+        expected_direction,
+        expected_edges,
+        expected_adjacency,
+    ):
+        FakeCAREFLModel.log_prob_outputs = outputs
+        data = pd.DataFrame({"X": np.arange(10, dtype=float), "Y": np.arange(10, dtype=float) ** 2})
+
+        estimator = CAREFL(test_size=0.2).fit(data)
+
+        assert estimator.log_likelihoods_ == {
+            ("X", "Y"): np.mean(outputs[0]),
+            ("Y", "X"): np.mean(outputs[1]),
+        }
+        assert estimator.causal_score_ == expected_score
+        assert estimator.causal_direction_ == expected_direction
+        assert set(estimator.causal_graph_.edges()) == expected_edges
+        pd.testing.assert_frame_equal(
+            estimator.adjacency_matrix_,
+            pd.DataFrame(
+                expected_adjacency,
+                index=["X", "Y"],
+                columns=["X", "Y"],
+                dtype="int",
+            ),
+        )
+
+    @pytest.mark.parametrize(
+        ("data", "kwargs", "match"),
+        [
+            (
+                pd.DataFrame({"X": [1.0, 2.0], "Y": [2.0, 3.0], "Z": [3.0, 4.0]}),
+                {},
+                "exactly two",
+            ),
+            (
+                pd.DataFrame({"X": [1.0, 1.0, 1.0], "Y": [2.0, 3.0, 4.0]}),
+                {},
+                "non-constant",
+            ),
+            (
+                pd.DataFrame({"X": [1.0, 2.0], "Y": [2.0, 3.0]}),
+                {"test_size": 1.0},
+                "test_size",
+            ),
+        ],
+    )
+    def test_carefl_specific_validation(self, data, kwargs, match):
+        with pytest.raises(ValueError, match=match):
+            CAREFL(**kwargs).fit(data)
+
+    def test_train_config_resolves_defaults_without_mutating_caller_kwargs(self):
+        optimizer_kwargs = {"lr": 5e-4}
+        scheduler_kwargs = {"patience": 3}
+        data = pd.DataFrame({"X": np.arange(10, dtype=float), "Y": np.arange(10, dtype=float) ** 2})
+
+        estimator = CAREFL(
+            optimizer_kwargs=optimizer_kwargs,
+            scheduler_kwargs=scheduler_kwargs,
+        ).fit(data)
+
+        assert estimator.train_config_.optimizer_kwargs == {
+            "lr": 5e-4,
+            "betas": (0.9, 0.999),
+        }
+        assert estimator.train_config_.scheduler_kwargs == {
+            "factor": 0.1,
+            "patience": 3,
+        }
+        assert optimizer_kwargs == {"lr": 5e-4}
+        assert scheduler_kwargs == {"patience": 3}
+
+    def test_nonfinite_held_out_likelihood_is_rejected(self):
+        FakeCAREFLModel.log_prob_outputs = [[np.nan, 0.0], [0.0, 0.0]]
+        data = pd.DataFrame({"X": np.arange(10, dtype=float), "Y": np.arange(10, dtype=float) ** 2})
+
+        with pytest.raises(ValueError, match="finite"):
+            CAREFL(test_size=0.2).fit(data)
