@@ -45,11 +45,15 @@ class _ConditionerMLP(nn.Module):
 
     def __init__(self, hidden_dim: int, hidden_layers: int):
         super().__init__()
-        raise NotImplementedError
+        layers = [nn.Linear(1, hidden_dim), nn.LeakyReLU()]
+        for _ in range(hidden_layers - 1):
+            layers.extend([nn.Linear(hidden_dim, hidden_dim), nn.LeakyReLU()])
+        layers.append(nn.Linear(hidden_dim, 1))
+        self.network = nn.Sequential(*layers)
 
     def forward(self, x: "torch.Tensor") -> "torch.Tensor":
         """Map a ``(batch, 1)`` parent tensor to a ``(batch, 1)`` value."""
-        raise NotImplementedError
+        return self.network(x)
 
 
 class _AffineARFlow(nn.Module):

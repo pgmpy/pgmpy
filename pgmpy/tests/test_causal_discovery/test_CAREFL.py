@@ -9,6 +9,7 @@ from skbase.utils.dependencies import _check_soft_dependencies
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.causal_discovery import CAREFL
+from pgmpy.causal_discovery.CAREFL import _ConditionerMLP
 
 requires_torch = pytest.mark.skipif(
     not _check_soft_dependencies("torch", severity="none"),
@@ -69,6 +70,23 @@ if _check_soft_dependencies("torch", severity="none"):
     )
     def test_carefl_compatibility(estimator, check):
         check(estimator)
+
+
+class TestConditionerMLP:
+    @requires_torch
+    def test_architecture_and_forward(self):
+        import torch
+
+        model = _ConditionerMLP(hidden_dim=8, hidden_layers=3)
+        linear_layers = [layer for layer in model.network if isinstance(layer, torch.nn.Linear)]
+
+        assert [(layer.in_features, layer.out_features) for layer in linear_layers] == [
+            (1, 8),
+            (8, 8),
+            (8, 8),
+            (8, 1),
+        ]
+        assert model(torch.randn(5, 1)).shape == (5, 1)
 
 
 @requires_torch
