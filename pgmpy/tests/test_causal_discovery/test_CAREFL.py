@@ -66,16 +66,35 @@ class FakeCAREFLModel:
 
 
 def expected_failed_checks(estimator):
-    return {
+    checks = {
         "check_fit_score_takes_y": "Causal discovery estimators do not take y in score.",
         "check_n_features_in_after_fitting": "BaseCausalDiscovery score compatibility limitation.",
         "check_fit2d_1feature": "CAREFL requires exactly two variables.",
     }
+    checks.update(
+        dict.fromkeys(
+            (
+                "check_dont_overwrite_parameters",
+                "check_positive_only_tag_during_fit",
+                "check_estimators_dtypes",
+                "check_dtype_object",
+                "check_pipeline_consistency",
+                "check_estimators_nan_inf",
+                "check_estimators_pickle",
+                "check_f_contiguous_array_estimator",
+                "check_methods_sample_order_invariance",
+                "check_methods_subset_invariance",
+                "check_dict_unchanged",
+                "check_fit2d_predict1d",
+            ),
+            "The sklearn check fits more than two variables; CAREFL is bivariate-only.",
+        )
+    )
+    return checks
 
 
 if _check_soft_dependencies("torch", severity="none"):
 
-    @pytest.mark.skip(reason="Enable when the private _CAREFLModel is implemented.")
     @parametrize_with_checks(
         [CAREFL(max_epochs=1, seed=0)],
         expected_failed_checks=expected_failed_checks,

@@ -167,10 +167,6 @@ class _CAREFLModel(nn.Module):
             torch.manual_seed(self.train_cfg.seed)
 
         self.to(device=x_train.device, dtype=x_train.dtype)
-        _validate_optimizer(
-            self.train_cfg.optimizer,
-            self.train_cfg.optimizer_kwargs,
-        )
         optimizer_cls = {
             "adam": torch.optim.Adam,
             "sgd": torch.optim.SGD,
@@ -189,7 +185,7 @@ class _CAREFLModel(nn.Module):
         num_samples = x_train.shape[0]
         for _ in range(self.train_cfg.max_epochs):
             permutation = torch.randperm(num_samples, device=x_train.device)
-            epoch_loss = 0.0
+            epoch_loss = x_train.new_zeros(())
 
             for start in range(0, num_samples, self.train_cfg.batch_size):
                 batch = x_train[permutation[start : start + self.train_cfg.batch_size]]
@@ -199,7 +195,7 @@ class _CAREFLModel(nn.Module):
                 loss.backward()
                 optimizer.step()
 
-                epoch_loss += loss.item() * batch.shape[0]
+                epoch_loss += loss.detach() * batch.shape[0]
 
             scheduler.step(epoch_loss / num_samples)
 
