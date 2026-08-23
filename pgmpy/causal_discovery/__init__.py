@@ -10,14 +10,17 @@ from .TAN import TAN
 from .TOPIC import TOPIC
 
 __all__ = [
+    "ANM",
     "CAREFL",
     "ChowLiu",
     "ExpertInLoop",
     "ExpertKnowledge",
     "GES",
     "HillClimbSearch",
+    "IGCI",
     "LLMPairwise",
     "PC",
     "TAN",
     "TOPIC",
+    "SP",
 ]
