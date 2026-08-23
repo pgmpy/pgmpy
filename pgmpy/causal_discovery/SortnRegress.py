@@ -15,37 +15,38 @@ class SortnRegress(BaseCausalDiscovery):
     criteria are supported via the ``variant`` parameter:
 
     - ``variant='r2'`` (default): orders variables by ascending global R², based on the phenomenon that the
-    explainable fraction of a variable's variance, captured by the coefficient of determination (R²), tends to
-    increase along the causal order in linear additive noise models :cite:p:`Reisach2023`. R² is invariant to
-    rescaling of the columns of :math:`\mathbf{X}`, so this variant is scale-invariant end to end.
-    - ``variant='varsortability'``: orders variables by ascending marginal variance, based on the var-sortability
-    phenomenon whereby variance tends to increase along the causal order :cite:p:`Reisach2021`. Marginal
-    variance depends on the measurement scale, so this variant is **not** scale-invariant: standardizing or
-    otherwise rescaling the data may change the recovered graph.
+      explainable fraction of a variable's variance, captured by the coefficient of determination (R²), tends to
+      increase along the causal order in linear additive noise models :cite:p:`Reisach2023`. R² is invariant to
+      rescaling of the columns of :math:`\mathbf{X}`, so this variant is scale-invariant end to end.
 
-    Steps 1-2 differ between the two criteria; the edge-selection procedure (Steps 3-4) is identical
-    for both. For ``variant='varsortability'``, Step 1 is replaced by computing the marginal variance
-    :math:`\text{Var}(X_t)` of each variable and Step 2 sorts ascending by that value.
+    - ``variant='varsortability'``: orders variables by ascending marginal variance, based on the var-sortability
+      phenomenon whereby variance tends to increase along the causal order :cite:p:`Reisach2021`. Marginal
+      variance depends on the measurement scale, so this variant is **not** scale-invariant: standardizing or
+      otherwise rescaling the data may change the recovered graph.
+
+    Step 1 differs between the two criteria; the remaining steps are identical for both. For
+    ``variant='varsortability'``, Step 1 is replaced by computing the marginal variance
+    :math:`\text{Var}(X_t)` of each variable.
 
     Given an :math:`n \times d` dataset :math:`\mathbf{X}` with columns :math:`X_1, \dots, X_d`, the algorithm proceeds
     as follows:
 
     1. **Global R² Estimation**: For each variable :math:`X_t`, fit a linear regression using all remaining variables
-    :math:`\mathbf{X}_{ - \{t\}}` as predictors to calculate its global R² value:
+       :math:`\mathbf{X}_{\setminus t}` as predictors to calculate its global R² value:
 
        .. math::
 
            R^2(X_t) = 1 - \frac{\text{Var}(X_t - \widehat{X}_t)}{\text{Var}(X_t)}
 
     2. **Candidate Causal Ordering**: Sort the variables in ascending order of their estimated global R² values to form
-    a candidate topological ordering :math:`\pi`:
+       a candidate topological ordering :math:`\pi`:
 
        .. math::
 
            R^2(X_{\pi(1)}) \leq R^2(X_{\pi(2)}) \leq \dots \leq R^2(X_{\pi(d)})
 
-    3. Iterative Regression: For each target node :math:`X_{\pi(i)}` (for :math:`i = 2, \dots, d`), fit a linear
-    regression on all preceding variables (potential parents :math:`X_{\pi(1)}, \dots, X_{\pi(i-1)}`):
+    3. **Iterative Regression**: For each target node :math:`X_{\pi(i)}` (for :math:`i = 2, \dots, d`), fit a linear
+       regression on all preceding variables (potential parents :math:`X_{\pi(1)}, \dots, X_{\pi(i-1)}`):
 
        .. math::
 
@@ -55,14 +56,14 @@ class SortnRegress(BaseCausalDiscovery):
        coefficients.
 
     4. **Edge Selection**: Prune edges using an adaptive Lasso :cite:p:`Reisach2021`. The absolute
-    least-squares coefficients :math:`|\beta_{j,\pi(i)}|` serve as adaptive weights, and an L1
-    penalty with the regularization parameter selected by the Bayesian Information Criterion is
-    fit on the reweighted predictors. An edge :math:`X_{\pi(j)} \to X_{\pi(i)}` is added if the
-    resulting coefficient is non-zero. This step is invariant to rescaling of the columns of
-    :math:`\mathbf{X}`: a least-squares coefficient scales inversely with its predictor, so
-    under :math:`X_{\pi(j)} \mapsto c_j X_{\pi(j)}` the weight becomes
-    :math:`|\beta_{j,\pi(i)}| / c_j` and the reweighted predictor
-    :math:`c_j X_{\pi(j)} \cdot |\beta_{j,\pi(i)}| / c_j` is unchanged.
+       least-squares coefficients :math:`|\beta_{j,\pi(i)}|` serve as adaptive weights, and an L1
+       penalty with the regularization parameter selected by the Bayesian Information Criterion is
+       fit on the reweighted predictors. An edge :math:`X_{\pi(j)} \to X_{\pi(i)}` is added if the
+       resulting coefficient is non-zero. This step is invariant to rescaling of the predictor columns:
+       a least-squares coefficient scales inversely with its predictor, so under
+       :math:`X_{\pi(j)} \mapsto c_j X_{\pi(j)}` the weight becomes
+       :math:`|\beta_{j,\pi(i)}| / c_j` and the reweighted predictor
+       :math:`c_j X_{\pi(j)} \cdot |\beta_{j,\pi(i)}| / c_j` is unchanged.
 
     Parameters
     ----------

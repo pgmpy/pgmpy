@@ -19,7 +19,7 @@ class VarSortability(BaseUnsupervisedMetric):
     variant : {'r2', 'varsortability'}, default='r2'
         Ordering criterion passed through to `SortnRegress`. See
         :class:`~pgmpy.causal_discovery.SortnRegress` for details.
-    estimator: sklearn-style regression estimator, default=None
+    estimator : sklearn-style regression estimator, default=None
         Regression estimator passed through to `SortnRegress`. If None, `SortnRegress` defaults to
         sklearn.linear_model.LinearRegression().
 
@@ -41,9 +41,14 @@ class VarSortability(BaseUnsupervisedMetric):
     >>> score
     2
 
+    Here the score is 2 rather than 0 because the R² values of ``Y`` and ``Z`` fall within
+    0.002 of each other, so the ordering breaks the wrong way. Passing
+    ``variant='varsortability'`` recovers the chain exactly on this data.
+
     References
     ----------
-    - :cite:p:`Reisach2021`
+    - :footcite:t:`Reisach2023`
+    - :footcite:t:`Reisach2021`
     """
 
     _tags = {

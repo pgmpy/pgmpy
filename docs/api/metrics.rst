@@ -26,6 +26,7 @@ Unsupervised Metrics
    ~pgmpy.metrics.ImpliedCIs
    ~pgmpy.metrics.FisherC
    ~pgmpy.metrics.StructureScore
+   ~pgmpy.metrics.VarSortability
 
 Utilities
 ---------
