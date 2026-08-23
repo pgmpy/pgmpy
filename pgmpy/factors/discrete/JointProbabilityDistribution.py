@@ -313,7 +313,7 @@ class JointProbabilityDistribution(DiscreteFactor):
         Returns A copy of JointProbabilityDistribution object
 
         Examples
-        ---------
+        --------
         >>> import numpy as np
         >>> from pgmpy.factors.discrete import JointProbabilityDistribution
         >>> prob = JointProbabilityDistribution(

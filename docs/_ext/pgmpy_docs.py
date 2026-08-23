@@ -849,12 +849,27 @@ def expand_references(app: Any, what: str, name: str, obj: Any, options: Any, li
             lines[end:end] = ["", ".. footbibliography::", ""]
 
 
+def skip_sklearn_metadata_request_method(
+    app: Any,
+    what: str,
+    name: str,
+    obj: Any,
+    skip: bool,
+    options: Any,
+) -> bool | None:
+    """Skip scikit-learn-generated metadata request methods in API docs."""
+    if getattr(obj, "__module__", None) == "sklearn.utils._metadata_requests" and re.fullmatch(r"set_.+_request", name):
+        return True
+    return None
+
+
 def setup(app: Any) -> dict[str, Any]:
     app.connect("builder-inited", on_builder_inited)
     app.connect("html-page-context", on_html_page_context)
     app.connect("build-finished", on_build_finished)
     # priority < numpydoc's default (500) so we edit the raw numpydoc docstring
     app.connect("autodoc-process-docstring", expand_references, priority=400)
+    app.connect("autodoc-skip-member", skip_sklearn_metadata_request_method)
     return {
         "parallel_read_safe": True,
         "parallel_write_safe": True,

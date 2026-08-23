@@ -160,17 +160,17 @@ class XBNReader:
 
         The ndarray is stored in the standard way such that the rightmost variable
         changes most often. Consider a CPD of variable 'd' which has parents 'b' and
-        'c' (distribution['CONDSET'] = ['b', 'c'])
+        'c' (distribution['CONDSET'] = ['b', 'c'])::
 
-                  |  d_0     d_1
-        ---------------------------
-        b_0, c_0  |  0.8     0.2
-        b_0, c_1  |  0.9     0.1
-        b_1, c_0  |  0.7     0.3
-        b_1, c_1  |  0.05    0.95
+            Parent states    d_0     d_1
+            b_0, c_0         0.8     0.2
+            b_0, c_1         0.9     0.1
+            b_1, c_0         0.7     0.3
+            b_1, c_1         0.05    0.95
 
-        The value of distribution['d']['DPIS'] for the above example will be:
-        array([[ 0.8 ,  0.2 ], [ 0.9 ,  0.1 ], [ 0.7 ,  0.3 ], [ 0.05,  0.95]])
+        The value of distribution['d']['DPIS'] for the above example will be::
+
+            array([[ 0.8 ,  0.2 ], [ 0.9 ,  0.1 ], [ 0.7 ,  0.3 ], [ 0.05,  0.95]])
 
         Examples
         --------
@@ -500,8 +500,8 @@ class XBNWriter:
         ----------
         filename : Name of the file
 
-        Example
-        -------
+        Examples
+        --------
         >>> from pgmpy.example_models import load_model
         >>> from pgmpy.readwrite import XBNWriter
         >>> asia = load_model("bnlearn/asia")
