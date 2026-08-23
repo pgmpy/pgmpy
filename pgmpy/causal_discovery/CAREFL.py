@@ -126,19 +126,35 @@ class _CAREFLModel(nn.Module):
 
     def __init__(self, flow_cfg: FlowConfig, train_cfg: TrainingConfig):
         super().__init__()
-        raise NotImplementedError
+        self.flow_cfg = flow_cfg
+        self.train_cfg = train_cfg
+        self.flows = nn.ModuleList(
+            [_AffineARFlow(flow_cfg.hidden_dim, flow_cfg.hidden_layers) for _ in range(flow_cfg.num_flows)]
+        )
+        self.register_buffer("base_loc", torch.tensor(0.0))
+        self.register_buffer("base_scale", torch.tensor(1.0))
 
     def forward(self, z: "torch.Tensor") -> "torch.Tensor":
         """Apply all flow layers in generative order, mapping ``z`` to ``x``."""
-        raise NotImplementedError
+        x = z
+        for flow in self.flows:
+            x = flow(x)
+        return x
 
     def inverse(self, x: "torch.Tensor") -> tuple["torch.Tensor", "torch.Tensor"]:
         """Invert all layers and sum per-sample inverse log-Jacobians."""
-        raise NotImplementedError
+        z = x
+        total_log_det = x.new_zeros(x.shape[0])
+        for flow in reversed(self.flows):
+            z, log_det = flow.inverse(z)
+            total_log_det = total_log_det + log_det
+        return z, total_log_det
 
     def log_prob(self, x: "torch.Tensor") -> "torch.Tensor":
         """Return one exact joint log-likelihood per row of ordered ``x``."""
-        raise NotImplementedError
+        z, log_det = self.inverse(x)
+        base_dist = torch.distributions.Laplace(self.base_loc, self.base_scale)
+        return base_dist.log_prob(z).sum(dim=1) + log_det
 
     def fit_network(self, x_train: "torch.Tensor") -> "_CAREFLModel":
         """Minimize mini-batch negative mean log-likelihood and return ``self``.
@@ -147,7 +163,47 @@ class _CAREFLModel(nn.Module):
         ``train_cfg``. Training state remains private; direction comparison is
         deliberately not performed here.
         """
-        raise NotImplementedError
+        if self.train_cfg.seed is not None:
+            torch.manual_seed(self.train_cfg.seed)
+
+        self.to(device=x_train.device, dtype=x_train.dtype)
+        _validate_optimizer(
+            self.train_cfg.optimizer,
+            self.train_cfg.optimizer_kwargs,
+        )
+        optimizer_cls = {
+            "adam": torch.optim.Adam,
+            "sgd": torch.optim.SGD,
+            "adamw": torch.optim.AdamW,
+        }[self.train_cfg.optimizer.lower()]
+        optimizer = optimizer_cls(
+            self.parameters(),
+            **self.train_cfg.optimizer_kwargs,
+        )
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer,
+            **self.train_cfg.scheduler_kwargs,
+        )
+
+        self.train()
+        num_samples = x_train.shape[0]
+        for _ in range(self.train_cfg.max_epochs):
+            permutation = torch.randperm(num_samples, device=x_train.device)
+            epoch_loss = 0.0
+
+            for start in range(0, num_samples, self.train_cfg.batch_size):
+                batch = x_train[permutation[start : start + self.train_cfg.batch_size]]
+                loss = -self.log_prob(batch).mean()
+
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+
+                epoch_loss += loss.item() * batch.shape[0]
+
+            scheduler.step(epoch_loss / num_samples)
+
+        return self
 
 
 class CAREFL(BaseCausalDiscovery):

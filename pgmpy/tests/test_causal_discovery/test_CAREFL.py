@@ -9,7 +9,13 @@ from skbase.utils.dependencies import _check_soft_dependencies
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.causal_discovery import CAREFL
-from pgmpy.causal_discovery.CAREFL import _AffineARFlow, _ConditionerMLP
+from pgmpy.causal_discovery.CAREFL import (
+    FlowConfig,
+    TrainingConfig,
+    _AffineARFlow,
+    _CAREFLModel,
+    _ConditionerMLP,
+)
 
 requires_torch = pytest.mark.skipif(
     not _check_soft_dependencies("torch", severity="none"),
@@ -131,6 +137,90 @@ class TestAffineARFlow:
         _, autograd_log_det = torch.linalg.slogdet(jacobian)
 
         assert torch.allclose(analytical_log_det[0], autograd_log_det, atol=1e-8)
+
+
+@requires_torch
+class TestCAREFLModel:
+    @staticmethod
+    def make_model(num_flows=2, max_epochs=1):
+        return _CAREFLModel(
+            FlowConfig(num_flows=num_flows, hidden_dim=4, hidden_layers=1),
+            TrainingConfig(
+                batch_size=8,
+                max_epochs=max_epochs,
+                optimizer="adam",
+                optimizer_kwargs={"lr": 1e-3, "betas": (0.9, 0.999)},
+                scheduler_kwargs={"factor": 0.1},
+                seed=0,
+            ),
+        )
+
+    def test_flow_stack_order_and_log_jacobian(self):
+        import torch
+
+        calls = []
+
+        class RecordingFlow(torch.nn.Module):
+            def __init__(self, value):
+                super().__init__()
+                self.value = value
+
+            def forward(self, x):
+                calls.append(("forward", self.value, x.clone()))
+                return x + self.value
+
+            def inverse(self, x):
+                calls.append(("inverse", self.value, x.clone()))
+                return x - self.value, x.new_full((x.shape[0],), self.value)
+
+        model = self.make_model(num_flows=3)
+        assert len(model.flows) == 3
+        model.flows = torch.nn.ModuleList([RecordingFlow(value) for value in (1, 2, 3)])
+        z = torch.zeros(2, 2)
+
+        x = model(z)
+        recovered_z, log_det = model.inverse(x)
+
+        assert [(operation, value) for operation, value, _ in calls] == [
+            ("forward", 1),
+            ("forward", 2),
+            ("forward", 3),
+            ("inverse", 3),
+            ("inverse", 2),
+            ("inverse", 1),
+        ]
+        assert [tensor[0, 0].item() for _, _, tensor in calls] == [0, 1, 3, 6, 3, 1]
+        assert x.shape == recovered_z.shape == (2, 2)
+        assert log_det.shape == (2,)
+        assert torch.equal(recovered_z, z)
+        assert torch.equal(log_det, torch.full((2,), 6.0))
+
+    def test_log_prob_change_of_variables(self, monkeypatch):
+        import torch
+
+        model = self.make_model()
+        z = torch.tensor([[0.0, 1.0], [-1.0, 2.0]])
+        log_det = torch.tensor([0.5, -0.25])
+        monkeypatch.setattr(model, "inverse", lambda x: (z, log_det))
+
+        actual = model.log_prob(torch.zeros(2, 2))
+        expected = torch.distributions.Laplace(0.0, 1.0).log_prob(z).sum(dim=1) + log_det
+
+        assert actual.shape == (2,)
+        assert torch.allclose(actual, expected)
+
+    def test_fit_network_updates_parameters(self):
+        import torch
+
+        torch.manual_seed(0)
+        model = self.make_model(num_flows=1, max_epochs=1)
+        before = [parameter.detach().clone() for parameter in model.parameters()]
+        x_train = torch.randn(16, 2)
+
+        result = model.fit_network(x_train)
+
+        assert result is model
+        assert any(not torch.equal(previous, current) for previous, current in zip(before, model.parameters()))
 
 
 class TestOptimizerValidation:
