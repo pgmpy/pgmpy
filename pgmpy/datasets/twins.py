@@ -1,7 +1,7 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class TwinsDataset(_BaseDataset):
+class TwinsDataset(BaseDataset):
     _tags = {
         "name": "twins",
         "n_variables": 56,
@@ -24,64 +24,5 @@ class TwinsDataset(_BaseDataset):
 
     ground_truth_url = None
     expert_knowledge_url = None
-
-    missing_values_marker = ""
-
-    sep = "\t"
-
-    categorical_variables = [
-        "pldel",
-        "birattnd",
-        "brstate",
-        "stoccfipb",
-        "mager8",
-        "ormoth",
-        "mrace",
-        "meduc6",
-        "dmar",
-        "mplbir",
-        "mpre5",
-        "adequacy",
-        "orfath",
-        "frace",
-        "birmon",
-        "gestat10",
-        "csex",
-        "anemia",
-        "cardiac",
-        "lung",
-        "diabetes",
-        "herpes",
-        "hydra",
-        "hemo",
-        "chyper",
-        "phyper",
-        "eclamp",
-        "incervix",
-        "pre4000",
-        "preterm",
-        "renal",
-        "rh",
-        "uterine",
-        "othermr",
-        "tobacco",
-        "alcohol",
-        "cigar6",
-        "drink5",
-        "crace",
-        "data_year",
-        "nprevistq",
-        "dfageq",
-        "feduc6",
-        "dlivord_min",
-        "dtotord_min",
-        "bord_0",
-        "bord_1",
-        "brstate_reg",
-        "stoccfipb_reg",
-        "mplbir_reg",
-        "mort_0",
-        "mort_1",
-    ]
-
+    categorical_variables = []
     ordinal_variables = dict()
