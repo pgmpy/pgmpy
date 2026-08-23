@@ -36,6 +36,39 @@ class TrainingConfig:
     seed: int | None
 
 
+_OPTIMIZER_VALID_KWARGS = {
+    "adam": {"lr", "betas", "eps", "weight_decay", "amsgrad", "maximize"},
+    "sgd": {
+        "lr",
+        "momentum",
+        "dampening",
+        "weight_decay",
+        "nesterov",
+        "maximize",
+    },
+    "adamw": {"lr", "betas", "eps", "weight_decay", "amsgrad", "maximize"},
+}
+
+
+def _validate_optimizer(
+    optimizer: str,
+    optimizer_kwargs: dict[str, Any],
+) -> None:
+    """Validate the optimizer name and keyword arguments."""
+    if not isinstance(optimizer, str):
+        raise ValueError(f"optimizer must be a string, got {type(optimizer)}.")
+
+    name = optimizer.lower()
+    if name not in _OPTIMIZER_VALID_KWARGS:
+        raise ValueError(f"Unknown optimizer '{optimizer}'. Supported optimizers are: {list(_OPTIMIZER_VALID_KWARGS)}.")
+    if "params" in optimizer_kwargs:
+        raise ValueError("'params' cannot be passed in optimizer_kwargs; CAREFL manages model parameters internally.")
+
+    unknown = set(optimizer_kwargs) - _OPTIMIZER_VALID_KWARGS[name]
+    if unknown:
+        raise ValueError(f"Unknown optimizer_kwargs for '{optimizer}': {sorted(unknown)}.")
+
+
 class _ConditionerMLP(nn.Module):
     """Private scalar-to-scalar MLP used for either scale or shift.
 
@@ -252,17 +285,23 @@ class CAREFL(BaseCausalDiscovery):
         if self.seed is not None and (isinstance(self.seed, bool) or not isinstance(self.seed, Integral)):
             raise ValueError(f"seed must be an integer or None, got {self.seed!r}.")
 
+        _validate_optimizer(self.optimizer, self.optimizer_kwargs or {})
+
         # Build architecture and training configs.
         self.flow_config_ = FlowConfig(
             num_flows=self.num_flows,
             hidden_dim=self.hidden_dim,
             hidden_layers=self.hidden_layers,
         )
-        optimizer_kwargs = {
-            "lr": 1e-3,
-            "betas": (0.9, 0.999),
-            **(self.optimizer_kwargs or {}),
-        }
+        optimizer = self.optimizer.lower()
+        if optimizer == "adam":
+            optimizer_kwargs = {
+                "lr": 1e-3,
+                "betas": (0.9, 0.999),
+                **(self.optimizer_kwargs or {}),
+            }
+        else:
+            optimizer_kwargs = dict(self.optimizer_kwargs or {})
         scheduler_kwargs = {
             "factor": 0.1,
             **(self.scheduler_kwargs or {}),
@@ -270,7 +309,7 @@ class CAREFL(BaseCausalDiscovery):
         self.train_config_ = TrainingConfig(
             batch_size=self.batch_size,
             max_epochs=self.max_epochs,
-            optimizer=self.optimizer,
+            optimizer=optimizer,
             optimizer_kwargs=optimizer_kwargs,
             scheduler_kwargs=scheduler_kwargs,
             seed=self.seed,

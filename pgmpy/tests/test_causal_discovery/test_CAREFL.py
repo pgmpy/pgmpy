@@ -19,6 +19,12 @@ requires_torch = pytest.mark.skipif(
 carefl_module = importlib.import_module(CAREFL.__module__)
 
 
+@pytest.fixture
+def numeric_df():
+    rng = np.random.default_rng(42)
+    return pd.DataFrame(rng.standard_normal((50, 2)), columns=["X", "Y"])
+
+
 class FakeCAREFLModel:
     """Record public CAREFL orchestration while its private model is a stub."""
 
@@ -125,6 +131,31 @@ class TestAffineARFlow:
         _, autograd_log_det = torch.linalg.slogdet(jacobian)
 
         assert torch.allclose(analytical_log_det[0], autograd_log_det, atol=1e-8)
+
+
+class TestOptimizerValidation:
+    @requires_torch
+    def test_invalid_optimizer_string_raises(self, numeric_df):
+        with pytest.raises(ValueError, match="Supported optimizers are"):
+            CAREFL(optimizer="rmsprop", max_epochs=1).fit(numeric_df)
+
+    @requires_torch
+    @pytest.mark.parametrize(
+        ("optimizer", "bad_kwargs", "match"),
+        [
+            ("adam", {"momentum": 0.9}, "Unknown optimizer_kwargs"),
+            ("sgd", {"betas": (0.9, 0.999)}, "Unknown optimizer_kwargs"),
+            ("adamw", {"nesterov": True}, "Unknown optimizer_kwargs"),
+            ("adam", {"params": [1, 2, 3]}, "params"),
+        ],
+    )
+    def test_invalid_kwargs_raises(self, numeric_df, optimizer, bad_kwargs, match):
+        with pytest.raises(ValueError, match=match):
+            CAREFL(
+                optimizer=optimizer,
+                optimizer_kwargs=bad_kwargs,
+                max_epochs=1,
+            ).fit(numeric_df)
 
 
 @requires_torch
