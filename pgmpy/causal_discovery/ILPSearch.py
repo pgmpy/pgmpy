@@ -144,18 +144,39 @@ class ILPSearch(BaseCausalDiscovery):
 
     Examples
     --------
-    >>> import pandas as pd
-    >>> from pgmpy.causal_discovery import ExpertKnowledge, ILPSearch
-    >>> df = pd.DataFrame({"A": [1.0, 2.0, 3.0], "B": [2.0, 4.0, 6.0]})
-    >>> ek = ExpertKnowledge(required_edges=[("A", "B")])
-    >>> ilp = ILPSearch(expert_knowledge=ek, options={"time_limit": 10.0})
-    >>> ilp = ilp.fit(df)
-    >>> ("A", "B") in ilp.causal_graph_.edges()
-    True
+    Simulate some data to use for causal discovery:
+
+    >>> from pgmpy.example_models import load_model
+    >>> model = load_model("bnlearn/cancer")
+    >>> df = model.simulate(n_samples=5000, seed=42, show_progress=False)
+    >>> df = df.astype("category").apply(lambda x: x.cat.codes).astype(float)
+
+    Use the ILPSearch algorithm to learn the causal structure from data:
+
+    >>> from pgmpy.causal_discovery import ILPSearch
+    >>> ilp = ILPSearch(l_penalty=0.0001)
+    >>> ilp.fit(df)
+    ILPSearch(l_penalty=0.0001)
+    >>> sorted(ilp.causal_graph_.edges())
+    [('Cancer', 'Dyspnoea'), ('Cancer', 'Pollution'), ('Cancer', 'Smoker'), ('Cancer', 'Xray')]
+
+    Use expert knowledge to constrain the search:
+
+    >>> from pgmpy.causal_discovery import ExpertKnowledge
+    >>> expert = ExpertKnowledge(required_edges=[("Pollution", "Cancer"), ("Smoker", "Cancer")])
+    >>> ilp = ILPSearch(l_penalty=0.0001, expert_knowledge=expert)
+    >>> ilp.fit(df)  # doctest: +ELLIPSIS
+    ILPSearch(expert_knowledge=ExpertKnowledge(...),
+              l_penalty=0.0001)
+    >>> sorted(ilp.causal_graph_.edges())
+    [('Cancer', 'Dyspnoea'), ('Cancer', 'Xray'), ('Pollution', 'Cancer'), ('Smoker', 'Cancer')]
 
     References
     ----------
     - :footcite:t:`manzour_2021`
+
+
+
     """
 
     def __init__(
