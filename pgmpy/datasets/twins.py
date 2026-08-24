@@ -64,8 +64,6 @@ class TwinsDataset(BaseDataset):
         "tobacco",
         "alcohol",
     ]
-    missing_values = {
-     }
     ordinal_variables = {
         "mager8": [1, 2, 3, 4, 5, 6, 7, 8],
         "dfageq": [0, 1, 2, 3, 4, 5, 6, 7],
