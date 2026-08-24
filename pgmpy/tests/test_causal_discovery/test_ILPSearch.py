@@ -11,6 +11,9 @@ def expected_failed_checks(estimator):
     return {
         "check_fit_score_takes_y": "Causal discovery estimators do not take y parameter in score method.",
         "check_n_features_in_after_fitting": "Failing for score method (not for fit) for unknown reason.",
+        "check_dtype_object": (
+            "ILPSearch requires continuous numeric data; object arrays with integers are classified as discrete."
+        ),
     }
 
 
@@ -52,7 +55,7 @@ def cancer_data():
 
 
 def test_rand_data(rand_data):
-    est = ILPSearch(penalty="l0", l_penalty=0.01)
+    est = ILPSearch(l_penalty=0.01)
     est.fit(rand_data)
 
     expected_edges = {
@@ -74,7 +77,7 @@ def test_rand_data(rand_data):
 def test_rand_data_expert_knowledge(rand_data):
     # Test required and forbidden edge constraints with full edge verification
     ek1 = ExpertKnowledge(required_edges=[("X0", "X1")], forbidden_edges=[("X1", "X0")])
-    est1 = ILPSearch(penalty="l0", l_penalty=0.01, expert_knowledge=ek1)
+    est1 = ILPSearch(l_penalty=0.01, expert_knowledge=ek1)
     est1.fit(rand_data)
 
     expected_edges_ek1 = {
@@ -94,7 +97,7 @@ def test_rand_data_expert_knowledge(rand_data):
     # Test restricted candidate search space with full edge verification
     search_space = [("X0", "X1"), ("X1", "X2"), ("X0", "X3"), ("X2", "X4"), ("X3", "X4")]
     ek2 = ExpertKnowledge(search_space=search_space)
-    est2 = ILPSearch(penalty="l0", l_penalty=0.01, expert_knowledge=ek2)
+    est2 = ILPSearch(l_penalty=0.01, expert_knowledge=ek2)
     est2.fit(rand_data)
 
     expected_edges_ek2 = {("X0", "X1"), ("X1", "X2"), ("X0", "X3"), ("X2", "X4"), ("X3", "X4")}
@@ -102,7 +105,7 @@ def test_rand_data_expert_knowledge(rand_data):
 
 
 def test_cancer_data(cancer_data):
-    est = ILPSearch(penalty="l0", l_penalty=0.001)
+    est = ILPSearch(l_penalty=0.001)
     est.fit(cancer_data)
 
     expected_edges = {("Cancer", "Xray"), ("Cancer", "Smoker"), ("Cancer", "Dyspnoea")}
