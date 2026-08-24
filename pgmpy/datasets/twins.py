@@ -8,7 +8,7 @@ class TwinsDataset(BaseDataset):
         "n_samples": 71345,
         "has_ground_truth": False,
         "has_expert_knowledge": False,
-        "has_missing_data": True,
+        "has_missing_data": True,    
         "has_index_col": False,
         "is_simulated": False,
         "is_interventional": False,
@@ -17,7 +17,7 @@ class TwinsDataset(BaseDataset):
         "is_mixed": True,
         "is_ordinal": True,
     }
-
+    missing_values_marker = ""
     base_url = "twins"
 
     data_url = "twins.txt"
@@ -64,7 +64,8 @@ class TwinsDataset(BaseDataset):
         "tobacco",
         "alcohol",
     ]
-
+    missing_values = {
+     }
     ordinal_variables = {
         "mager8": [1, 2, 3, 4, 5, 6, 7, 8],
         "dfageq": [0, 1, 2, 3, 4, 5, 6, 7],
