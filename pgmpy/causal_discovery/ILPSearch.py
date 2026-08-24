@@ -45,7 +45,7 @@ class ILPSearch(BaseCausalDiscovery):
         \\min_{z} \\sum_{j,k} \\left( -\\Delta S_{jk} + \\lambda \\right) z_{jk}
 
     This pre-computation makes the problem solvable by a standard MILP solver, but it introduces
-    a marginal (single-parent) approximation — each edge is scored independently rather than jointly
+    a marginal (single-parent) approximation, where each edge is scored independently rather than jointly
     with other parents.
 
     .. note::
