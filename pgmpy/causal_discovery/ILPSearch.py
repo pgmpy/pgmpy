@@ -191,8 +191,6 @@ class ILPSearch(BaseCausalDiscovery):
         variable_map = {name: idx for idx, name in enumerate(self.feature_names_in_)}
 
         # Step 1: Superstructure & Expert Knowledge Resolution
-        # If expert knowledge is supplied, resolve required/forbidden edges and custom search space.
-        # Otherwise, default to exploring the full complete graph without CI-test screening.
         if self.expert_knowledge is not None:
             ek = cast(ExpertKnowledge, clone(self.expert_knowledge)).fit(X)
             required_edges = set(ek.required_edges_)
@@ -220,11 +218,10 @@ class ILPSearch(BaseCausalDiscovery):
         num_directed_edges = len(directed_edges)
         directed_edge_index = {edge: i for i, edge in enumerate(directed_edges)}
 
-        # Step 2: Weight Upper Bound (Big-M) Estimation via unconstrained OLS
-        # In mixed-integer linear programming, "Big-M" is an upper bound on regression weights used
-        # to couple continuous structural weights (beta_jk) with binary edge activation (g_jk):
-        # -M * g_jk <= beta_jk <= M * g_jk
-        # When g_jk = 0 (no edge), beta_jk is forced to 0. When g_jk = 1 (edge exists), beta_jk is free within [-M, M].
+        # Step 2: Big-M Upper Bound Estimation
+        # Big-M is a large constant in integer programming used to link continuous edge weights (beta)
+        # with binary edge choices (g). If an edge is off (g=0), Big-M forces its weight to 0.
+        # If an edge is on (g=1), its weight is allowed to range freely between -M and +M.
         X_mat_raw = X.to_numpy(dtype=float)
         X_mat = X_mat_raw - X_mat_raw.mean(axis=0)
 
@@ -238,23 +235,21 @@ class ILPSearch(BaseCausalDiscovery):
                 max_ols_weight = max(max_ols_weight, float(np.max(np.abs(beta_ols))))
         big_m_weight_bound = max(2.0 * max_ols_weight, 10.0)
 
-        # Step 3: Decision Vector Assembly
-        # Decision variable layout in the MILP solver vector x:
-        # 1. z_jk (binary): Pairwise orientation variables enforcing tournament ordering (num_directed_edges)
-        # 2. beta_jk (continuous): Structural linear regression weights (num_directed_edges)
-        # 3. g_jk (binary): Edge activation indicators, 1 if edge j -> k is selected in DAG (num_directed_edges)
-        # 4. psi_j (continuous): Layer potential/topological depth of node j in [1, m] (n_features_in_)
+        # Step 3: Decision Variables Setup
+        # Vector layout: [z (orientation binaries), beta (edge weights), g (active edges), psi (node layers)]
         offset_orientation_z = 0
         offset_weight_beta = offset_orientation_z + num_directed_edges
         offset_active_g = offset_weight_beta + num_directed_edges
         offset_layer_psi = offset_active_g + num_directed_edges
         n_solver_vars = offset_layer_psi + self.n_features_in_
 
-        # Step 4: Objective Vector obj_coefficients
-        # Minimize: sum_jk (-delta_S_jk + lambda) * g_jk
-        # delta_S_jk is the marginal reduction in residual sum of squares (RSS) when adding parent j to child k.
+        # Step 4: Objective Function Setup
+        # For each candidate edge (j -> k), pre-compute how much parent j reduces the error (RSS) of child k.
+        # The solver minimizes: -(error reduction) + (penalty per edge).
+        # An edge is selected only if its error reduction outweighs the edge penalty (l_penalty).
         obj_coefficients = np.zeros(n_solver_vars)
         n_samples = len(X_mat)
+
         for idx, (j, k) in enumerate(directed_edges):
             y = X_mat[:, k]
             rss_empty = float(np.sum(y**2))
@@ -271,30 +266,35 @@ class ILPSearch(BaseCausalDiscovery):
         integrality[offset_orientation_z : offset_orientation_z + num_directed_edges] = 1
         integrality[offset_active_g : offset_active_g + num_directed_edges] = 1
 
-        # Variable Bounds:
-        # z in [0, 1] (binary orientation)
-        # beta in [-M, M] (bounded structural weight)
-        # g in [0, 1] (binary edge activation)
-        # psi in [1, m] (topological layer level)
+        # Variable Bounds
         lb = np.zeros(n_solver_vars)
         ub = np.zeros(n_solver_vars)
+
+        # Orientation variables z_jk in [0, 1] (binary direction indicators)
         lb[offset_orientation_z : offset_orientation_z + num_directed_edges] = 0
         ub[offset_orientation_z : offset_orientation_z + num_directed_edges] = 1
+
+        # Structural regression weights beta_jk in [-M, M] (bounded by Big-M)
         lb[offset_weight_beta : offset_weight_beta + num_directed_edges] = -big_m_weight_bound
         ub[offset_weight_beta : offset_weight_beta + num_directed_edges] = big_m_weight_bound
+
+        # Edge activation variables g_jk in [0, 1] (binary edge selection)
         lb[offset_active_g : offset_active_g + num_directed_edges] = 0
         ub[offset_active_g : offset_active_g + num_directed_edges] = 1
+
+        # Node layer potential variables psi_j in [1, n_features] (topological depth)
         lb[offset_layer_psi : offset_layer_psi + self.n_features_in_] = 1
         ub[offset_layer_psi : offset_layer_psi + self.n_features_in_] = self.n_features_in_
 
         # Enforce expert knowledge constraints by fixing decision variable bounds:
         # - Required edges: lower bound set to 1 (forces edge activation)
-        # - Forbidden edges: upper bound set to 0 (prohibits edge activation)
         for u, v in required_edges:
             if (variable_map[u], variable_map[v]) in directed_edge_index:
                 idx = directed_edge_index[(variable_map[u], variable_map[v])]
                 lb[offset_orientation_z + idx] = 1
                 lb[offset_active_g + idx] = 1
+
+        # - Forbidden edges: upper bound set to 0 (prohibits edge activation)
         for u, v in forbidden_edges:
             if (variable_map[u], variable_map[v]) in directed_edge_index:
                 idx = directed_edge_index[(variable_map[u], variable_map[v])]
@@ -311,6 +311,7 @@ class ILPSearch(BaseCausalDiscovery):
         # (A) Tournament Ordering Constraint: z_jk + z_kj = 1
         # For every connected pair of variables, exactly one orientation is allowed in the global ordering.
         seen_pairs = set()
+
         for j, k in directed_edges:
             pair = tuple(sorted((j, k)))
             if pair not in seen_pairs:
@@ -323,15 +324,15 @@ class ILPSearch(BaseCausalDiscovery):
                 constraint_lb.append(1.0)
                 constraint_ub.append(1.0)
 
-        # (B) Big-M Weight Coupling Constraints: -M * g_jk <= beta_jk <= M * g_jk and g_jk <= z_jk
-        # Couples regression weight beta_jk to binary edge presence g_jk, and prevents edge j->k
-        # if j is after k in the topological ordering.
+        # (B) Big-M Weight Coupling Constraints: |beta_jk| <= M * g_jk and g_jk <= z_jk
+        # Forces beta_jk = 0 when edge is inactive (g_jk = 0), and ensures edge j -> k
+        # can only be active if it matches the topological pairwise order (z_jk = 1).
         for j, k in directed_edges:
             idx = directed_edge_index[(j, k)]
             act_idx = offset_active_g + idx
             beta_idx = offset_weight_beta + idx
 
-            # beta_jk - M * g_jk <= 0
+            # Upper bound: beta_jk - M * g_jk <= 0 (beta_jk <= M * g_jk)
             row1 = np.zeros(n_solver_vars)
             row1[beta_idx] = 1
             row1[act_idx] = -big_m_weight_bound
@@ -339,7 +340,7 @@ class ILPSearch(BaseCausalDiscovery):
             constraint_lb.append(-np.inf)
             constraint_ub.append(0.0)
 
-            # -beta_jk - M * g_jk <= 0
+            # Lower bound: -beta_jk - M * g_jk <= 0 (beta_jk >= -M * g_jk)
             row2 = np.zeros(n_solver_vars)
             row2[beta_idx] = -1
             row2[act_idx] = -big_m_weight_bound
@@ -347,7 +348,7 @@ class ILPSearch(BaseCausalDiscovery):
             constraint_lb.append(-np.inf)
             constraint_ub.append(0.0)
 
-            # Edge activation requires orientation alignment: g_jk - z_jk <= 0 (i.e., g_jk <= z_jk)
+            # Orientation link: g_jk - z_jk <= 0 (g_jk <= z_jk)
             row_link = np.zeros(n_solver_vars)
             row_link[offset_active_g + idx] = 1
             row_link[offset_orientation_z + idx] = -1
