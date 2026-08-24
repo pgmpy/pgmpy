@@ -1005,7 +1005,7 @@ class CausalInference:
         # Step 2: Check if adjustment set is provided, otherwise try calculating it.
         if adjustment_set is None:
             do_vars = [var for var, state in do.items()]
-            adjustment_set = self.model.get_parents(do_vars)
+            adjustment_set = self.model.get_parents(do_vars) - set(do_vars)
             if len(adjustment_set.intersection(self.model.latents)) != 0:
                 raise ValueError("Not all parents of do variables are observed. Please specify an adjustment set.")
 
@@ -1064,9 +1064,9 @@ class CausalInference:
 
         for state_comb in product(*adj_states):
             adj_evidence = {var: state for var, state in zip(adjustment_set, state_comb)}
-            evidence = {**do, **adj_evidence}
+            evidence_combined = {**evidence, **do, **adj_evidence}
             values.append(
-                infer.query(variables, evidence=evidence, show_progress=False) * p_z.get_value(**adj_evidence)
+                infer.query(variables, evidence=evidence_combined, show_progress=False) * p_z.get_value(**adj_evidence)
             )
 
             if show_progress and config.SHOW_PROGRESS:
