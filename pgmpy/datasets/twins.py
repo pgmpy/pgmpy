@@ -8,7 +8,7 @@ class TwinsDataset(BaseDataset):
         "n_samples": 71345,
         "has_ground_truth": False,
         "has_expert_knowledge": False,
-        "has_missing_data": True,    
+        "has_missing_data": True,
         "has_index_col": False,
         "is_simulated": False,
         "is_interventional": False,
