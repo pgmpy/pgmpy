@@ -889,10 +889,12 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
                     "so it cannot be classified as incoming or not."
                 )
 
-        # Step 2: Remove every incoming (arrowhead-at-`node`) edge.
+        # Step 2: Remove every incoming (arrowhead-at-`node`) edge. Queried on `graph` rather than
+        # `self` so that an edge already dropped for an earlier do-variable isn't removed twice; a
+        # symmetric edge (e.g. `A <> B`) is incoming at both of its endpoints.
         for node in nodes:
             for edge_type in arrowhead_types:
-                for neighbor in self.get_neighbors(node, edge_type):
+                for neighbor in graph.get_neighbors(node, edge_type):
                     graph.remove_edge(node, neighbor, edge_type)
         return graph
 
