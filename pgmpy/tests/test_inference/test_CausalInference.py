@@ -1119,15 +1119,15 @@ class TestDoQuery(unittest.TestCase):
             str(cm.exception),
         )
 
-
-
     def test_evidence_outside_adjustment_set(self):
         model = DiscreteBayesianNetwork([("C", "S"), ("C", "R"), ("S", "W"), ("R", "W")])
         model.add_cpds(
             TabularCPD("C", 2, [[0.5], [0.5]]),
             TabularCPD("S", 2, [[0.5, 0.9], [0.5, 0.1]], evidence=["C"], evidence_card=[2]),
             TabularCPD("R", 2, [[0.8, 0.2], [0.2, 0.8]], evidence=["C"], evidence_card=[2]),
-            TabularCPD("W", 2, [[1.0, 0.1, 0.1, 0.01], [0.0, 0.9, 0.9, 0.99]], evidence=["S", "R"], evidence_card=[2, 2]),
+            TabularCPD(
+                "W", 2, [[1.0, 0.1, 0.1, 0.01], [0.0, 0.9, 0.9, 0.99]], evidence=["S", "R"], evidence_card=[2, 2]
+            ),
         )
         from pgmpy.inference import VariableElimination
 
@@ -1145,7 +1145,9 @@ class TestDoQuery(unittest.TestCase):
         from pgmpy.inference import VariableElimination
 
         result = CausalInference(model).query(["C"], do={"A": 1, "B": 1}, show_progress=False)
-        expected = VariableElimination(model.do(["A", "B"])).query(["C"], evidence={"A": 1, "B": 1}, show_progress=False)
+        expected = VariableElimination(model.do(["A", "B"])).query(
+            ["C"], evidence={"A": 1, "B": 1}, show_progress=False
+        )
         np_test.assert_array_almost_equal(result.values, expected.values)
 
     def test_do_on_root_node(self):
@@ -1154,7 +1156,9 @@ class TestDoQuery(unittest.TestCase):
             TabularCPD("C", 2, [[0.5], [0.5]]),
             TabularCPD("S", 2, [[0.5, 0.9], [0.5, 0.1]], evidence=["C"], evidence_card=[2]),
             TabularCPD("R", 2, [[0.8, 0.2], [0.2, 0.8]], evidence=["C"], evidence_card=[2]),
-            TabularCPD("W", 2, [[1.0, 0.1, 0.1, 0.01], [0.0, 0.9, 0.9, 0.99]], evidence=["S", "R"], evidence_card=[2, 2]),
+            TabularCPD(
+                "W", 2, [[1.0, 0.1, 0.1, 0.01], [0.0, 0.9, 0.9, 0.99]], evidence=["S", "R"], evidence_card=[2, 2]
+            ),
         )
         from pgmpy.inference import VariableElimination
 
@@ -1168,12 +1172,16 @@ class TestDoQuery(unittest.TestCase):
             TabularCPD("C", 2, [[0.5], [0.5]]),
             TabularCPD("S", 2, [[0.5, 0.9], [0.5, 0.1]], evidence=["C"], evidence_card=[2]),
             TabularCPD("R", 2, [[0.8, 0.2], [0.2, 0.8]], evidence=["C"], evidence_card=[2]),
-            TabularCPD("W", 2, [[1.0, 0.1, 0.1, 0.01], [0.0, 0.9, 0.9, 0.99]], evidence=["S", "R"], evidence_card=[2, 2]),
+            TabularCPD(
+                "W", 2, [[1.0, 0.1, 0.1, 0.01], [0.0, 0.9, 0.9, 0.99]], evidence=["S", "R"], evidence_card=[2, 2]
+            ),
         )
         from pgmpy.inference import VariableElimination
 
         result = CausalInference(model).query(["W"], do={"S": 1}, evidence={"R": 1, "C": 0}, show_progress=False)
-        expected = VariableElimination(model.do(["S"])).query(["W"], evidence={"S": 1, "R": 1, "C": 0}, show_progress=False)
+        expected = VariableElimination(model.do(["S"])).query(
+            ["W"], evidence={"S": 1, "R": 1, "C": 0}, show_progress=False
+        )
         np_test.assert_array_almost_equal(result.values, expected.values)
 
     def test_chained_multi_do(self):
@@ -1198,7 +1206,9 @@ class TestDoQuery(unittest.TestCase):
             TabularCPD("Z", 2, [[0.5], [0.5]]),
             TabularCPD("X1", 2, [[0.8, 0.2], [0.2, 0.8]], evidence=["Z"], evidence_card=[2]),
             TabularCPD("X2", 2, [[0.7, 0.3], [0.3, 0.7]], evidence=["Z"], evidence_card=[2]),
-            TabularCPD("Y", 2, [[0.9, 0.6, 0.4, 0.1], [0.1, 0.4, 0.6, 0.9]], evidence=["X1", "X2"], evidence_card=[2, 2]),
+            TabularCPD(
+                "Y", 2, [[0.9, 0.6, 0.4, 0.1], [0.1, 0.4, 0.6, 0.9]], evidence=["X1", "X2"], evidence_card=[2, 2]
+            ),
         )
         from pgmpy.inference import VariableElimination
 
@@ -1228,7 +1238,9 @@ class TestDoQuery(unittest.TestCase):
             TabularCPD("C", 2, [[0.5], [0.5]]),
             TabularCPD("S", 2, [[0.5, 0.9], [0.5, 0.1]], evidence=["C"], evidence_card=[2]),
             TabularCPD("R", 2, [[0.8, 0.2], [0.2, 0.8]], evidence=["C"], evidence_card=[2]),
-            TabularCPD("W", 2, [[1.0, 0.1, 0.1, 0.01], [0.0, 0.9, 0.9, 0.99]], evidence=["S", "R"], evidence_card=[2, 2]),
+            TabularCPD(
+                "W", 2, [[1.0, 0.1, 0.1, 0.01], [0.0, 0.9, 0.9, 0.99]], evidence=["S", "R"], evidence_card=[2, 2]
+            ),
         )
         from pgmpy.inference import VariableElimination
 
