@@ -1562,7 +1562,7 @@ class TestCoreGraph:
         assert ADMG(edge_list=[("A", "B", "<>")]).do(["A", "B"]).get_edges(data=True) == []
 
         # inplace=True returns and mutates the same graph
-        graph = m. _CoreGraph(edge_list=[("X", "A", "->"), ("A", "Y", "->")])
+        graph = _CoreGraph(edge_list=[("X", "A", "->"), ("A", "Y", "->")])
         same = graph.do("A", inplace=True)
         assert same is graph
         assert set(graph.get_edges(data=True)) == {("A", "Y", "->")}
