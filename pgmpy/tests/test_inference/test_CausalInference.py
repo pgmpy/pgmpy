@@ -6,6 +6,7 @@ import pandas as pd
 
 from pgmpy.base import DAG
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.inference import VariableElimination
 from pgmpy.inference.CausalInference import CausalInference
 from pgmpy.models import DiscreteBayesianNetwork, SEMGraph
 
@@ -1118,6 +1119,125 @@ class TestDoQuery(unittest.TestCase):
             " variable 'R' to the intervention variable 'S'.",
             str(cm.exception),
         )
+
+    def _build_model(self):
+        model = DiscreteBayesianNetwork([("C", "S"), ("C", "R"), ("S", "W"), ("R", "W")])
+        model.add_cpds(
+            TabularCPD("C", 2, [[0.5], [0.5]]),
+            TabularCPD("S", 2, [[0.5, 0.9], [0.5, 0.1]], evidence=["C"], evidence_card=[2]),
+            TabularCPD("R", 2, [[0.8, 0.2], [0.2, 0.8]], evidence=["C"], evidence_card=[2]),
+            TabularCPD(
+                "W",
+                2,
+                [[1.0, 0.1, 0.1, 0.01], [0.0, 0.9, 0.9, 0.99]],
+                evidence=["S", "R"],
+                evidence_card=[2, 2],
+            ),
+        )
+        return model
+
+    def test_evidence_outside_adjustment_set(self):
+        model = self._build_model()
+        result = CausalInference(model).query(["W"], do={"S": 1}, evidence={"R": 1}, show_progress=False)
+        expected = VariableElimination(model.do(["S"])).query(["W"], evidence={"S": 1, "R": 1}, show_progress=False)
+        np_test.assert_array_almost_equal(result.values, expected.values)
+
+    def test_causally_related_do_targets(self):
+        model = DiscreteBayesianNetwork([("A", "B"), ("A", "C"), ("B", "C")])
+        model.add_cpds(
+            TabularCPD("A", 2, [[0.6], [0.4]]),
+            TabularCPD("B", 2, [[0.7, 0.2], [0.3, 0.8]], evidence=["A"], evidence_card=[2]),
+            TabularCPD(
+                "C",
+                2,
+                [[0.5, 0.5, 0.5, 0.0], [0.5, 0.5, 0.5, 1.0]],
+                evidence=["A", "B"],
+                evidence_card=[2, 2],
+            ),
+        )
+        result = CausalInference(model).query(["C"], do={"A": 1, "B": 1}, show_progress=False)
+        expected = VariableElimination(model.do(["A", "B"])).query(
+            ["C"], evidence={"A": 1, "B": 1}, show_progress=False
+        )
+        np_test.assert_array_almost_equal(result.values, expected.values)
+
+    def test_do_on_root_node(self):
+        model = self._build_model()
+        result = CausalInference(model).query(["W"], do={"C": 0}, show_progress=False)
+        expected = VariableElimination(model.do(["C"])).query(["W"], evidence={"C": 0}, show_progress=False)
+        np_test.assert_array_almost_equal(result.values, expected.values)
+
+    def test_multiple_evidence_outside_adjustment_set(self):
+        model = self._build_model()
+        result = CausalInference(model).query(["W"], do={"S": 1}, evidence={"R": 1, "C": 0}, show_progress=False)
+        expected = VariableElimination(model.do(["S"])).query(
+            ["W"], evidence={"S": 1, "R": 1, "C": 0}, show_progress=False
+        )
+        np_test.assert_array_almost_equal(result.values, expected.values)
+
+    def test_chained_multi_do(self):
+        model = DiscreteBayesianNetwork([("A", "B"), ("B", "C"), ("C", "D"), ("A", "D")])
+        model.add_cpds(
+            TabularCPD("A", 2, [[0.3], [0.7]]),
+            TabularCPD("B", 2, [[0.6, 0.1], [0.4, 0.9]], evidence=["A"], evidence_card=[2]),
+            TabularCPD("C", 2, [[0.8, 0.3], [0.2, 0.7]], evidence=["B"], evidence_card=[2]),
+            TabularCPD(
+                "D",
+                2,
+                [[0.9, 0.4, 0.5, 0.1], [0.1, 0.6, 0.5, 0.9]],
+                evidence=["A", "C"],
+                evidence_card=[2, 2],
+            ),
+        )
+        result = CausalInference(model).query(["D"], do={"A": 1, "B": 1, "C": 1}, show_progress=False)
+        expected = VariableElimination(model.do(["A", "B", "C"])).query(
+            ["D"], evidence={"A": 1, "B": 1, "C": 1}, show_progress=False
+        )
+        np_test.assert_array_almost_equal(result.values, expected.values)
+
+    def test_independent_do_targets_common_child(self):
+        model = DiscreteBayesianNetwork([("Z", "X1"), ("Z", "X2"), ("X1", "Y"), ("X2", "Y")])
+        model.add_cpds(
+            TabularCPD("Z", 2, [[0.5], [0.5]]),
+            TabularCPD("X1", 2, [[0.8, 0.2], [0.2, 0.8]], evidence=["Z"], evidence_card=[2]),
+            TabularCPD("X2", 2, [[0.7, 0.3], [0.3, 0.7]], evidence=["Z"], evidence_card=[2]),
+            TabularCPD(
+                "Y",
+                2,
+                [[0.9, 0.6, 0.4, 0.1], [0.1, 0.4, 0.6, 0.9]],
+                evidence=["X1", "X2"],
+                evidence_card=[2, 2],
+            ),
+        )
+        result = CausalInference(model).query(["Y"], do={"X1": 0, "X2": 0}, show_progress=False)
+        expected = VariableElimination(model.do(["X1", "X2"])).query(
+            ["Y"], evidence={"X1": 0, "X2": 0}, show_progress=False
+        )
+        np_test.assert_array_almost_equal(result.values, expected.values)
+
+    def test_diamond_graph_do_with_evidence(self):
+        model = DiscreteBayesianNetwork([("Z", "X"), ("Z", "M"), ("X", "M"), ("M", "Y")])
+        model.add_cpds(
+            TabularCPD("Z", 2, [[0.4], [0.6]]),
+            TabularCPD("X", 2, [[0.9, 0.2], [0.1, 0.8]], evidence=["Z"], evidence_card=[2]),
+            TabularCPD(
+                "M",
+                2,
+                [[0.7, 0.3, 0.5, 0.1], [0.3, 0.7, 0.5, 0.9]],
+                evidence=["Z", "X"],
+                evidence_card=[2, 2],
+            ),
+            TabularCPD("Y", 2, [[0.8, 0.2], [0.2, 0.8]], evidence=["M"], evidence_card=[2]),
+        )
+        result = CausalInference(model).query(["Y"], do={"X": 1}, evidence={"M": 1}, show_progress=False)
+        expected = VariableElimination(model.do(["X"])).query(["Y"], evidence={"X": 1, "M": 1}, show_progress=False)
+        np_test.assert_array_almost_equal(result.values, expected.values)
+
+    def test_basic_do_no_evidence(self):
+        model = self._build_model()
+        result = CausalInference(model).query(["W"], do={"S": 0}, show_progress=False)
+        expected = VariableElimination(model.do(["S"])).query(["W"], evidence={"S": 0}, show_progress=False)
+        np_test.assert_array_almost_equal(result.values, expected.values)
 
 
 class TestEstimator(unittest.TestCase):
