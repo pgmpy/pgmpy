@@ -1119,7 +1119,7 @@ class TestDoQuery(unittest.TestCase):
             " variable 'R' to the intervention variable 'S'.",
             str(cm.exception),
         )
-        
+
     def _build_model(self):
         model = DiscreteBayesianNetwork([("C", "S"), ("C", "R"), ("S", "W"), ("R", "W")])
         model.add_cpds(
