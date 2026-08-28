@@ -6,6 +6,7 @@ import numpy.testing as np_test
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
+from pgmpy.factors import factor_product
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.inference import BeliefPropagation, VariableElimination
 from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork, JunctionTree
@@ -825,6 +826,35 @@ class TestBeliefPropagation(unittest.TestCase):
         self.assertEqual(clique_belief[("B", "C")], b_B_C)
         self.assertEqual(clique_belief[("C", "D")], b_C_D)
 
+    def test_calibrate_deeper_tree_single_pass(self):
+        junction_tree = JunctionTree(
+            [(("C", "D"), ("B", "C")), (("B", "C"), ("A", "B")), (("C", "D"), ("D", "E")), (("D", "E"), ("E", "F"))]
+        )
+        factors = [
+            DiscreteFactor(["A", "B"], [2, 2], [0.1, 0.9, 0.6, 0.4]),
+            DiscreteFactor(["B", "C"], [2, 2], [0.7, 0.3, 0.2, 0.8]),
+            DiscreteFactor(["C", "D"], [2, 2], [0.5, 0.5, 0.9, 0.1]),
+            DiscreteFactor(["D", "E"], [2, 2], [0.3, 0.7, 0.4, 0.6]),
+            DiscreteFactor(["E", "F"], [2, 2], [0.8, 0.2, 0.1, 0.9]),
+        ]
+        junction_tree.add_factors(*factors)
+        joint = factor_product(*factors)
+        for operation, calibrate in [("marginalize", "calibrate"), ("maximize", "max_calibrate")]:
+            belief_propagation = BeliefPropagation(junction_tree)
+            messages = []
+            update_beliefs = belief_propagation._update_beliefs
+            belief_propagation._update_beliefs = lambda *args, **kwargs: (
+                messages.append(args),
+                update_beliefs(*args, **kwargs),
+            )[1]
+            getattr(belief_propagation, calibrate)()
+            self.assertEqual(len(messages), 2 * (len(junction_tree.nodes()) - 1))
+            self.assertTrue(belief_propagation._is_converged(operation=operation))
+            for clique, belief in belief_propagation.get_clique_beliefs().items():
+                self.assertEqual(
+                    belief, getattr(joint, operation)(list(set(joint.scope()) - set(clique)), inplace=False)
+                )
+
     def test_calibrate_sepset_belief(self):
         belief_propagation = BeliefPropagation(self.junction_tree)
         belief_propagation.calibrate()
@@ -946,6 +976,17 @@ class TestBeliefPropagation(unittest.TestCase):
     def test_map_query_common_var(self):
         belief_propagation = BeliefPropagation(self.bayesian_model)
         self.assertRaises(ValueError, belief_propagation.map_query, variables=["J"], evidence=["J"])
+
+    def test_query_keeps_calibration_and_model(self):
+        belief_propagation = BeliefPropagation(self.bayesian_model)
+        junction_tree = belief_propagation.junction_tree
+        result = belief_propagation.query(["J"], evidence={"A": 0}, show_progress=False)
+        self.assertEqual(result, belief_propagation.query(["J"], evidence={"A": 0}, show_progress=False))
+        self.assertRaises(ValueError, belief_propagation.query, ["J"], evidence={"Z": 0}, show_progress=False)
+        self.assertIs(belief_propagation.model, self.bayesian_model)
+        self.assertIs(belief_propagation.junction_tree, junction_tree)
+        self.assertEqual(set(belief_propagation.get_clique_beliefs()), set(junction_tree.nodes()))
+        self.assertEqual(sorted(self.bayesian_model.nodes()), ["A", "G", "J", "L", "Q", "R"])
 
     def test_issue_1048(self):
         model = DiscreteBayesianNetwork()

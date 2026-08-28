@@ -187,6 +187,23 @@ class TestBayesianNetworkMethods(unittest.TestCase):
                 or (edge[1], edge[0]) in [("a", "b"), ("a", "d"), ("b", "c"), ("d", "b"), ("e", "d")]
             )
 
+    def test_to_junction_tree(self):
+        model = DiscreteBayesianNetwork([("a", "b"), ("b", "c"), ("d", "c"), ("e", "d"), ("e", "a")])
+        model.add_cpds(
+            TabularCPD("e", 2, [[0.4], [0.6]]),
+            TabularCPD("a", 2, [[0.3, 0.8], [0.7, 0.2]], evidence=["e"], evidence_card=[2]),
+            TabularCPD("b", 2, [[0.5, 0.1], [0.5, 0.9]], evidence=["a"], evidence_card=[2]),
+            TabularCPD("d", 2, [[0.6, 0.2], [0.4, 0.8]], evidence=["e"], evidence_card=[2]),
+            TabularCPD("c", 2, [[0.9, 0.5, 0.4, 0.1], [0.1, 0.5, 0.6, 0.9]], evidence=["b", "d"], evidence_card=[2, 2]),
+        )
+        default_cliques = {frozenset(c) for c in model.to_junction_tree().nodes()}
+        self.assertIn(frozenset({"a", "b", "e"}), default_cliques)
+        ordered_cliques = {frozenset(c) for c in model.to_junction_tree(order=["e", "a", "b", "c", "d"]).nodes()}
+        self.assertIn(frozenset({"a", "d", "e"}), ordered_cliques)
+        self.assertNotEqual(default_cliques, ordered_cliques)
+        with self.assertRaises(ValueError):
+            model.to_junction_tree(heuristic="bogus")
+
     def test_moral_graph_with_edge_present_over_parents(self):
         G = DiscreteBayesianNetwork([("a", "d"), ("d", "e"), ("b", "d"), ("b", "c"), ("a", "b")])
         moral_graph = G.moralize()
