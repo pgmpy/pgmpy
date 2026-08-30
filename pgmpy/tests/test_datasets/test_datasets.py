@@ -12,6 +12,7 @@ ALL_DATASETS = [
     "airfoil",
     "angrist_krueger_qob",
     "algerian_forest",
+    "angrist_krueger_cps",
     "apple_watch_fitbit",
     "auto_mpg",
     "blue_driver",
