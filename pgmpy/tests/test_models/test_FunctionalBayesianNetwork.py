@@ -822,6 +822,158 @@ class TestFBNSimulation(unittest.TestCase):
     _check_soft_dependencies("pyro-ppl", severity="none"),
     reason="execute only if required dependency present",
 )
+class TestFBNPrediction(unittest.TestCase):
+    def setUp(self):
+        config.set_backend("torch")
+
+    def test_predict_errors(self):
+        model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        model.add_cpds(
+            FunctionalCPD("x1", lambda _: dist.Normal(0.0, 1.0)),
+            FunctionalCPD("x2", lambda p: dist.Normal(p["x1"] + 2.0, 1.0), parents=["x1"]),
+            FunctionalCPD("x3", lambda p: dist.Normal(p["x2"] + 0.3, 2.0), parents=["x2"]),
+        )
+
+        with self.assertRaises(ValueError):
+            model.predict(pd.DataFrame({"x1": [0.0], "x2": [1.0], "x3": [2.0]}))
+
+        with self.assertRaises(ValueError):
+            model.predict(pd.DataFrame({"x1": [0.0], "x4": [1.0]}))
+
+    def test_predict_probability_errors(self):
+        model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        model.add_cpds(
+            FunctionalCPD("x1", lambda _: dist.Normal(0.0, 1.0)),
+            FunctionalCPD("x2", lambda p: dist.Normal(p["x1"] + 2.0, 1.0), parents=["x1"]),
+            FunctionalCPD("x3", lambda p: dist.Normal(p["x2"] + 0.3, 2.0), parents=["x2"]),
+        )
+
+        with self.assertRaises(ValueError):
+            model.predict_probability(pd.DataFrame({"x1": [0.0], "x2": [1.0], "x3": [2.0]}))
+
+        with self.assertRaises(ValueError):
+            model.predict_probability(pd.DataFrame({"x1": [0.0], "x4": [1.0]}))
+
+        with self.assertRaises(ValueError):
+            model.predict_probability(pd.DataFrame({"x1": [0.0], "x2": [np.nan]}))
+
+    def test_predict_probability_linear_gaussian_matches_lgbn(self):
+        lg_model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        lg_model.add_cpds(
+            LinearGaussianCPD(variable="x1", beta=[1], std=1),
+            LinearGaussianCPD(variable="x2", beta=[-5, 0.5], std=1, evidence=["x1"]),
+            LinearGaussianCPD(variable="x3", beta=[4, -1], std=1, evidence=["x2"]),
+        )
+
+        fn_model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        fn_model.add_cpds(
+            FunctionalCPD("x1", lambda _: dist.Normal(1.0, 1.0)),
+            FunctionalCPD("x2", lambda p: dist.Normal(-5.0 + 0.5 * p["x1"], 1.0), parents=["x1"]),
+            FunctionalCPD("x3", lambda p: dist.Normal(4.0 - p["x2"], 1.0), parents=["x2"]),
+        )
+
+        df = lg_model.simulate(n_samples=5, seed=42).drop(columns=["x2"])
+        variables_lg, mu_lg, cov_lg = lg_model.predict_probability(df)
+        variables_fn, mu_fn, cov_fn = fn_model.predict_probability(df, n_samples=10000, seed=42)
+
+        self.assertEqual(variables_fn, variables_lg)
+        self.assertEqual(mu_fn.shape, mu_lg.shape)
+        self.assertEqual(cov_fn.shape, (df.shape[0], len(variables_fn), len(variables_fn)))
+        np.testing.assert_allclose(mu_fn, mu_lg, atol=0.15)
+        np.testing.assert_allclose(
+            cov_fn,
+            np.repeat(cov_lg[None, :, :], repeats=df.shape[0], axis=0),
+            atol=0.15,
+        )
+
+    def test_predict_linear_gaussian_matches_lgbn_mean(self):
+        lg_model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        lg_model.add_cpds(
+            LinearGaussianCPD(variable="x1", beta=[1], std=1),
+            LinearGaussianCPD(variable="x2", beta=[-5, 0.5], std=1, evidence=["x1"]),
+            LinearGaussianCPD(variable="x3", beta=[4, -1], std=1, evidence=["x2"]),
+        )
+
+        fn_model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        fn_model.add_cpds(
+            FunctionalCPD("x1", lambda _: dist.Normal(1.0, 1.0)),
+            FunctionalCPD("x2", lambda p: dist.Normal(-5.0 + 0.5 * p["x1"], 1.0), parents=["x1"]),
+            FunctionalCPD("x3", lambda p: dist.Normal(4.0 - p["x2"], 1.0), parents=["x2"]),
+        )
+
+        df = lg_model.simulate(n_samples=5, seed=21).drop(columns=["x2"])
+        _, mu_lg, _ = lg_model.predict_probability(df)
+        pred_fn = fn_model.predict(df, n_samples=10000, seed=21)
+
+        np.testing.assert_allclose(pred_fn["x2"].values, mu_lg.squeeze(), atol=0.15)
+
+    def test_predict_fills_missing_column_for_delta_cpd(self):
+        model = FunctionalBayesianNetwork([("x1", "x2")])
+        model.add_cpds(
+            FunctionalCPD("x1", fn=lambda _: dist.Normal(0.0, 1.0)),
+            FunctionalCPD("x2", fn=lambda p: dist.Delta(2.0 * p["x1"] + 1.0), parents=["x1"]),
+        )
+
+        df = pd.DataFrame({"x1": np.array([-1.0, 0.0, 2.0])})
+        pred = model.predict(df, n_samples=500, seed=11)
+
+        np.testing.assert_allclose(pred["x1"].values, df["x1"].values)
+        np.testing.assert_allclose(pred["x2"].values, (2.0 * df["x1"] + 1.0).values)
+
+    def test_predict_fills_nan_cells_for_delta_cpd(self):
+        model = FunctionalBayesianNetwork([("x1", "x2")])
+        model.add_cpds(
+            FunctionalCPD("x1", fn=lambda _: dist.Normal(0.0, 1.0)),
+            FunctionalCPD("x2", fn=lambda p: dist.Delta(2.0 * p["x1"] + 1.0), parents=["x1"]),
+        )
+
+        df = pd.DataFrame({"x1": np.array([-1.0, 0.0, 2.0]), "x2": np.array([-1.0, np.nan, 5.0])})
+        pred = model.predict(df, n_samples=500, seed=12)
+
+        np.testing.assert_allclose(pred["x1"].values, df["x1"].values)
+        np.testing.assert_allclose(pred["x2"].values, np.array([-1.0, 1.0, 5.0]))
+
+    def test_predict_probability_bernoulli_returns_probability_dataframe(self):
+        model = FunctionalBayesianNetwork([("A", "B")])
+        model.add_cpds(
+            FunctionalCPD("A", lambda _: dist.Bernoulli(0.7)),
+            FunctionalCPD("B", lambda p: dist.Bernoulli(0.1 + 0.8 * p["A"]), parents=["A"]),
+        )
+
+        df = pd.DataFrame({"A": np.array([0.0, 1.0, 0.0, 1.0])})
+        pred_prob = model.predict_probability(df, n_samples=5000, seed=42)
+
+        self.assertListEqual(list(pred_prob.columns), ["B_0.0", "B_1.0"])
+        np.testing.assert_allclose(pred_prob.sum(axis=1).values, np.ones(len(df)), atol=1e-6)
+        np.testing.assert_allclose(
+            pred_prob.values,
+            np.array([[0.9, 0.1], [0.1, 0.9], [0.9, 0.1], [0.1, 0.9]]),
+            atol=0.05,
+        )
+
+    def test_predict_bernoulli_returns_mode_and_stochastic_samples(self):
+        model = FunctionalBayesianNetwork([("A", "B")])
+        model.add_cpds(
+            FunctionalCPD("A", lambda _: dist.Bernoulli(0.7)),
+            FunctionalCPD("B", lambda p: dist.Bernoulli(0.1 + 0.8 * p["A"]), parents=["A"]),
+        )
+
+        mode_df = pd.DataFrame({"A": np.array([0.0, 1.0])})
+        mode_pred = model.predict(mode_df, n_samples=5000, seed=7)
+        np.testing.assert_allclose(mode_pred["B"].values, np.array([0.0, 1.0]))
+
+        sample_df = pd.DataFrame({"A": np.concatenate([np.zeros(60), np.ones(60)])})
+        sampled_pred = model.predict(sample_df, stochastic=True, n_samples=2000, seed=13)
+
+        self.assertTrue(set(sampled_pred["B"].unique()).issubset({0.0, 1.0}))
+        self.assertAlmostEqual(sampled_pred.iloc[:60]["B"].mean(), 0.1, delta=0.15)
+        self.assertAlmostEqual(sampled_pred.iloc[60:]["B"].mean(), 0.9, delta=0.15)
+
+
+@unittest.skipUnless(
+    _check_soft_dependencies("pyro-ppl", severity="none"),
+    reason="execute only if required dependency present",
+)
 class TestFBNCreation(unittest.TestCase):
     def test_class_init_with_adj_matrix_dict_of_dict(self):
         adj = {"a": {"b": 4, "c": 3}, "b": {"c": 2}}
