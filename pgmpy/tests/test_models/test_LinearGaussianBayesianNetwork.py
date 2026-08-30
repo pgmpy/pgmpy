@@ -258,6 +258,39 @@ class TestLGBNMethods(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "can't be in both do and evidence.*A"):
             model.simulate(n_samples=100, do={"A": 1.0}, evidence={"A": 2.0})
 
+    def test_simulate_missing_prob(self):
+        self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
+        n = 1000
+
+        # MCAR
+        df = self.model.simulate(n, missing_prob={"x1": 0.3}, seed=42)
+        self.assertTrue(0.25 <= df["x1"].isna().mean() <= 0.35)
+        self.assertEqual(df[["x2", "x3"]].isna().sum().sum(), 0)
+
+        # MAR
+        df = self.model.simulate(n, missing_prob={"x2": lambda df: np.sin(df["x1"]) > 0.5}, seed=42)
+        self.assertGreater(df["x2"].isna().sum(), 0)
+        self.assertEqual(df[["x1", "x3"]].isna().sum().sum(), 0)
+
+        # MNAR
+        df = self.model.simulate(n, missing_prob={"x3": lambda df: df["x3"] > 0.5}, seed=42)
+        self.assertGreater(df["x3"].isna().sum(), 0)
+        self.assertEqual(df[["x1", "x2"]].isna().sum().sum(), 0)
+
+        # Mixed
+        df = self.model.simulate(n, missing_prob={"x1": 0.3, "x2": lambda df: np.sin(df["x1"]) > 0.5}, seed=42)
+        self.assertGreater(df["x1"].isna().sum(), 0)
+        self.assertGreater(df["x2"].isna().sum(), 0)
+        self.assertEqual(df["x3"].isna().sum(), 0)
+
+        # Errors
+        with self.assertRaises(ValueError):
+            self.model.simulate(n, missing_prob={"x1": 1.5})
+        with self.assertRaises(ValueError):
+            self.model.simulate(n, missing_prob={"x99": 0.3})
+        with self.assertRaises(ValueError):
+            self.model.simulate(n, missing_prob="x1")
+
     def test_fit(self):
         # Test fit on a simple model
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
@@ -597,35 +630,3 @@ class TestLGBNIO(unittest.TestCase):
         """Clean up the test file"""
         if os.path.exists(self.filename):
             os.remove(self.filename)
-
-    def test_simulate_missing_prob(self):
-        model = LinearGaussianBayesianNetwork([("X1", "X2")])
-        cpd1 = LinearGaussianCPD("X1", [0], 1)
-        cpd2 = LinearGaussianCPD("X2", [0, 1], 1, evidence=["X1"])
-
-        model.add_cpds(cpd1, cpd2)
-        df = model.simulate(n_samples=500, missing_prob={"X1": 0.5})
-        nan_ratio = df["X1"].isna().mean()
-
-        self.assertTrue(0.4 <= nan_ratio <= 0.6)
-
-    def test_simulate_missing_prob_invalid_node(self):
-        model = LinearGaussianBayesianNetwork([("X1", "X2")])
-        cpd1 = LinearGaussianCPD("X1", [0], 1)
-        cpd2 = LinearGaussianCPD("X2", [0, 1], 1, evidence=["X1"])
-        model.add_cpds(cpd1, cpd2)
-
-        with self.assertRaises(ValueError):
-            model.simulate(n_samples=10, missing_prob={"X3": 0.5})
-
-    def test_simulate_missing_prob_invalid_probability(self):
-        model = LinearGaussianBayesianNetwork([("X1", "X2")])
-        cpd1 = LinearGaussianCPD("X1", [0], 1)
-        cpd2 = LinearGaussianCPD("X2", [0, 1], 1, evidence=["X1"])
-        model.add_cpds(cpd1, cpd2)
-
-        with self.assertRaises(ValueError):
-            model.simulate(n_samples=10, missing_prob={"X1": -0.1})
-
-        with self.assertRaises(ValueError):
-            model.simulate(n_samples=10, missing_prob={"X1": 1.5})

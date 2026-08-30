@@ -624,7 +624,7 @@ class LinearGaussianBayesianNetwork(DAG):
         virtual_intervention: list[LinearGaussianCPD] | None = None,
         include_latents: bool = False,
         seed: int | None = None,
-        missing_prob=None,
+        missing_prob: dict[str, float | callable] | None = None,
     ) -> pd.DataFrame:
         """
         Simulates data from the model.
@@ -655,12 +655,9 @@ class LinearGaussianBayesianNetwork(DAG):
             Seed for the random number generator.
 
         missing_prob: dict (default: None)
-            A dictionary specifying the probability of missingness for each variable.
-            Keys must be valid variable names in the model, and values must be floats
-            between 0 and 1. Each sampled value is independently replaced with NaN
-            with the specified probability (MCAR assumption). A ValueError is raised
-            if a variable is not present in the sampled data or if the probability
-            is outside the range [0, 1].
+            A dictionary where keys are variable names (str) and values are either floats in [0,1]
+            for MCAR missingness or callable for MAR/MNAR missingness which must return a boolean array or
+            float array of probabilities in [0, 1]
 
         Returns
         -------
@@ -838,21 +835,24 @@ class LinearGaussianBayesianNetwork(DAG):
         # Step 7: Handle missing_prob argument
         if missing_prob is not None:
             if not isinstance(missing_prob, dict):
-                raise ValueError(f"missing_prob should be dict[str, float]. Got {type(missing_prob)}")
+                raise ValueError(f"missing_prob must be a dict. Got {type(missing_prob)}.")
 
-            for node, prob in missing_prob.items():
+            for node, val in missing_prob.items():
                 if node not in df.columns:
-                    raise ValueError(f"{node} not present in sampled data")
+                    raise ValueError(f"'{node}' not present in sampled data columns.")
+                if not isinstance(val, (int, float)) and not callable(val):
+                    raise ValueError(f"Value for '{node}' must be a float or callable. Got {type(val)}.")
+                if isinstance(val, (int, float)) and not (0.0 <= val <= 1.0):
+                    raise ValueError(f"Missing probability for '{node}' must be in [0, 1]. Got {val}.")
 
-                if not isinstance(prob, (int, float)):
-                    raise ValueError(f"Missing probability for {node} must be numeric")
+            # Step 8: Apply masking
+            for node, val in missing_prob.items():
+                if isinstance(val, (int, float)):
+                    mask = rng.random(n_samples) < float(val)
+                else:
+                    result = np.asarray(val(df))
+                    mask = result if result.dtype == bool else rng.random(n_samples) < result
 
-                if not (0 <= prob <= 1):
-                    raise ValueError(f"Missing probability for {node} must be between 0 and 1")
-
-            # Apply masking (post-processing stage)
-            for node, prob in missing_prob.items():
-                mask = rng.random(len(df)) < prob
                 df.loc[mask, node] = np.nan
 
         return df
