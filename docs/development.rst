@@ -26,8 +26,9 @@ Roadmap
 For a high-level view of the project direction and the areas where
 contributions are especially useful, see the :doc:`Roadmap <roadmap>`.
 
-The roadmap is intentionally theme-based rather than milestone-based, so it can
-evolve with community feedback and active development work.
+The roadmap combines broad project goals with near-term release-oriented focus
+areas, so contributors and users can see both long-running themes and upcoming
+priorities.
 
 Quick Links
 ^^^^^^^^^^^
