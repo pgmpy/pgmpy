@@ -24,18 +24,21 @@ Identification methods follow a consistent pattern — create the identifier, ca
 `identify(...)`, and inspect the result:
 
 ```python
-from pgmpy.base import DAG
-from pgmpy.identification import Adjustment  # swap in any identification method
+>>> from pgmpy.base import DAG
+>>> from pgmpy.identification import Adjustment  # swap in any identification method
 
-dag = DAG(
-    [("X", "Y"), ("Z", "X"), ("Z", "Y")],
-    roles={"exposures": "X", "outcomes": "Y"},
-)
+>>> dag = DAG(
+...     [("X", "Y"), ("Z", "X"), ("Z", "Y")],
+...     roles={"exposures": "X", "outcomes": "Y"},
+... )
 
-identified_graph, success = Adjustment(variant="minimal").identify(dag)
+>>> identified_graph, success = Adjustment(variant="minimal").identify(dag)
 
-print(success)
-print(identified_graph.get_role("adjustment"))
+>>> print(success)
+True
+>>> print(identified_graph.get_role("adjustment"))
+['Z']
+
 ```
 
 ## Backdoor Adjustment
@@ -45,21 +48,28 @@ paths between exposure and outcome. pgmpy supports finding minimal adjustment se
 variance-optimal sets, or enumerating all valid sets:
 
 ```python
-from pgmpy.base import DAG
-from pgmpy.identification import Adjustment
+>>> from pgmpy.base import DAG
+>>> from pgmpy.identification import Adjustment
 
-dag = DAG(
-    [("X", "Y"), ("Z", "X"), ("Z", "Y")],
-    roles={"exposures": "X", "outcomes": "Y"},
-)
+>>> dag = DAG(
+...     [("X", "Y"), ("Z", "X"), ("Z", "Y")],
+...     roles={"exposures": "X", "outcomes": "Y"},
+... )
 
 # Minimal adjustment set
-identified_min, ok_min = Adjustment(variant="minimal").identify(dag)
-print("Minimal:", identified_min.get_role("adjustment"), ok_min)
+>>> identified_min, ok_min = Adjustment(variant="minimal").identify(dag)
+>>> print("Minimal:", identified_min.get_role("adjustment"))
+Minimal: ['Z']
+>>> print(ok_min)
+True
 
 # All valid adjustment sets
-identified_all, ok_all = Adjustment(variant="all").identify(dag)
-print("All:", identified_all.get_role("adjustment"), ok_all)
+>>> identified_all, ok_all = Adjustment(variant="all").identify(dag)
+>>> print("All:", [g.get_role("adjustment") for g in identified_all])
+All: [['Z']]
+>>> print(ok_all)
+True
+
 ```
 
 ## Frontdoor Identification
@@ -73,16 +83,18 @@ If you already have a candidate adjustment or frontdoor set, use `validate(...)`
 whether it satisfies the graphical criterion before proceeding to estimation:
 
 ```python
-from pgmpy.base import DAG
-from pgmpy.identification import Adjustment
+>>> from pgmpy.base import DAG
+>>> from pgmpy.identification import Adjustment
 
-dag = DAG(
-    [("X", "Y"), ("Z", "X"), ("Z", "Y")],
-    roles={"exposures": "X", "outcomes": "Y", "adjustment": "Z"},
-)
+>>> dag = DAG(
+...     [("X", "Y"), ("Z", "X"), ("Z", "Y")],
+...     roles={"exposures": "X", "outcomes": "Y", "adjustment": "Z"},
+... )
 
-is_valid = Adjustment(variant="minimal").validate(dag)
-print(is_valid)  # True
+>>> is_valid = Adjustment(variant="minimal").validate(dag)
+>>> print(is_valid)
+True
+
 ```
 
 ## See Also

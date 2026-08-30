@@ -28,13 +28,18 @@ parameters from scratch.
 The example-model API mirrors the dataset API — discover, then load:
 
 ```python
-from pgmpy.example_models import list_models, load_model
+>>> from pgmpy.example_models import list_models, load_model
 
-names = list_models(is_parameterized=True, is_discrete=True)
-model = load_model(names[0])
+>>> names = list_models(is_parameterized=True, is_discrete=True)
+>>> model = load_model(names[0])
 
-print(model)
-print(len(model.nodes()), len(model.edges()))
+>>> print(model)
+DiscreteBayesianNetwork named 'unknown' with 37 nodes and 46 edges
+>>> print(len(model.nodes()))
+37
+>>> print(len(model.edges()))
+46
+
 ```
 
 The returned object type depends on the model family (e.g., `DiscreteBayesianNetwork`,

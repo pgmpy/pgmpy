@@ -20,17 +20,21 @@ and CPDs, and supports several model families beyond standard discrete Bayesian 
 The common pattern is: choose a model class, define the structure, add CPDs, and validate:
 
 ```python
-from pgmpy.models import DiscreteBayesianNetwork
-from pgmpy.factors.discrete import TabularCPD
+>>> from pgmpy.models import DiscreteBayesianNetwork
+>>> from pgmpy.factors.discrete import TabularCPD
 
-model = DiscreteBayesianNetwork([("A", "B"), ("A", "C")])
+>>> model = DiscreteBayesianNetwork([("A", "B"), ("A", "C")])
 
-cpd_a = TabularCPD("A", 2, [[0.6], [0.4]])
-cpd_b = TabularCPD("B", 2, [[0.9, 0.2], [0.1, 0.8]], evidence=["A"], evidence_card=[2])
-cpd_c = TabularCPD("C", 2, [[0.3, 0.7], [0.7, 0.3]], evidence=["A"], evidence_card=[2])
+>>> cpd_a = TabularCPD("A", 2, [[0.6], [0.4]])
+>>> cpd_b = TabularCPD("B", 2, [[0.9, 0.2], [0.1, 0.8]], evidence=["A"], evidence_card=[2])
+>>> cpd_c = TabularCPD("C", 2, [[0.3, 0.7], [0.7, 0.3]], evidence=["A"], evidence_card=[2])
 
-model.add_cpds(cpd_a, cpd_b, cpd_c)
-print(model.check_model())
+>>> model.add_cpds(cpd_a, cpd_b, cpd_c)
+>>> print(model.check_model())
+True
+>>> model.get_cpds()[0] # doctest: +ELLIPSIS
+<TabularCPD representing P(A:2) at 0x...>
+
 ```
 
 Once valid, the model works with inference, simulation, and the rest of the pgmpy stack.
@@ -46,17 +50,21 @@ Each family uses the same create → add CPDs → validate pattern shown above. 
 a continuous model:
 
 ```python
-from pgmpy.models import LinearGaussianBayesianNetwork
-from pgmpy.factors.continuous import LinearGaussianCPD
+>>> from pgmpy.models import LinearGaussianBayesianNetwork
+>>> from pgmpy.factors.continuous import LinearGaussianCPD
 
-model = LinearGaussianBayesianNetwork([("X", "Y"), ("Z", "Y")])
+>>> model = LinearGaussianBayesianNetwork([("X", "Y"), ("Z", "Y")])
 
-cpd_x = LinearGaussianCPD("X", beta=[0.0], std=1.0)
-cpd_z = LinearGaussianCPD("Z", beta=[0.0], std=1.0)
-cpd_y = LinearGaussianCPD("Y", beta=[0.2, 0.5, 0.3], std=1.0, evidence=["X", "Z"])
+>>> cpd_x = LinearGaussianCPD("X", beta=[0.0], std=1.0)
+>>> cpd_z = LinearGaussianCPD("Z", beta=[0.0], std=1.0)
+>>> cpd_y = LinearGaussianCPD("Y", beta=[0.2, 0.5, 0.3], std=1.0, evidence=["X", "Z"])
 
-model.add_cpds(cpd_x, cpd_z, cpd_y)
-print(model.check_model())
+>>> model.add_cpds(cpd_x, cpd_z, cpd_y)
+>>> print(model.check_model())
+True
+>>> model.get_cpds()[0] # doctest: +ELLIPSIS
+<LinearGaussianCPD: P(X) = N(0.0; 1.0) at 0x...
+
 ```
 
 ## Model Validation

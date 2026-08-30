@@ -22,18 +22,22 @@ relationships.
 All discovery algorithms follow the same pattern — instantiate, fit, and read the result:
 
 ```python
-from pgmpy.datasets import load_dataset
-from pgmpy.causal_discovery import PC   # swap in any discovery algorithm
-from pgmpy.structure_score import BIC
+>>> from pgmpy.datasets import load_dataset
+>>> from pgmpy.causal_discovery import PC   # swap in any discovery algorithm
+>>> from pgmpy.structure_score import BIC
 
-dataset = load_dataset("sachs_discrete")
-data = dataset.data
+>>> dataset = load_dataset("sachs_discrete")
+>>> data = dataset.data
 
-est = PC(ci_test="chi_square", return_type="dag", show_progress=False)
-est.fit(data)
+>>> est = PC(ci_test="chi_square", return_type="dag", show_progress=False, variant="stable")
+>>> est.fit(data)
+PC(ci_test='chi_square', return_type='dag', show_progress=False,
+   variant='stable')
+>>> print(sorted(est.causal_graph_.nodes()))
+['akt', 'erk', 'jnk', 'mek', 'p38', 'pip2', 'pip3', 'pka', 'pkc', 'plc', 'raf']
+>>> print(sorted(est.adjacency_matrix_.head()))
+['akt', 'erk', 'jnk', 'mek', 'p38', 'pip2', 'pip3', 'pka', 'pkc', 'plc', 'raf']
 
-print(est.causal_graph_.edges())
-print(est.adjacency_matrix_.head())
 ```
 
 Switching algorithms requires only changing the class and its constructor arguments.
@@ -52,23 +56,27 @@ pgmpy supports incorporating domain knowledge into the discovery process through
 Both constraint-based and score-based algorithms accept an `expert_knowledge` parameter:
 
 ```python
-from pgmpy.causal_discovery import HillClimbSearch, ExpertKnowledge
-from pgmpy.datasets import load_dataset
+>>> from pgmpy.causal_discovery import HillClimbSearch, ExpertKnowledge
+>>> from pgmpy.datasets import load_dataset
 
-dataset = load_dataset("sachs_discrete")
-data = dataset.data
+>>> dataset = load_dataset("sachs_discrete")
+>>> data = dataset.data
 
-expert = ExpertKnowledge(
-    required_edges=[("PKC", "PKA")],
-    forbidden_edges=[("PKA", "PKC")],
-    temporal_order=[["PKC", "Raf"], ["Mek", "PKA"]],
-)
+>>> expert = ExpertKnowledge(
+...     required_edges=[("pkc", "pka")],
+...     forbidden_edges=[("pka", "pkc")],
+...     temporal_order=[["pkc", "raf"], ["mek", "pka"]],
+... )
 
-est = HillClimbSearch(
-    scoring_method="bic-d", expert_knowledge=expert, show_progress=False
-)
-est.fit(data)
-print(est.causal_graph_.edges())
+>>> est = HillClimbSearch(
+...     scoring_method="bic-d", expert_knowledge=expert, show_progress=False
+... )
+>>> est.fit(data) # doctest: +NORMALIZE_WHITESPACE
+HillClimbSearch(expert_knowledge=Expert Knowledge: 1 required edges, 4 forbidden edges, temporal order on 4 nodes, and 0 search space edges,
+                scoring_method='bic-d', show_progress=False)
+>>> print(sorted(est.causal_graph_.nodes()))
+['akt', 'erk', 'jnk', 'mek', 'p38', 'pip2', 'pip3', 'pka', 'pkc', 'plc', 'raf']
+
 ```
 
 ## Scoring and Evaluation
@@ -76,19 +84,22 @@ print(est.causal_graph_.edges())
 All discovery estimators expose a unified `score(...)` method for comparing results:
 
 ```python
-from pgmpy.causal_discovery import HillClimbSearch, PC
-from pgmpy.datasets import load_dataset
-from pgmpy.structure_score import BIC
+>>> from pgmpy.causal_discovery import HillClimbSearch, PC
+>>> from pgmpy.datasets import load_dataset
+>>> from pgmpy.structure_score import BIC
 
-dataset = load_dataset("sachs_discrete")
-data = dataset.data
+>>> dataset = load_dataset("sachs_discrete")
+>>> data = dataset.data
 
-hc = HillClimbSearch(scoring_method=BIC(data), show_progress=False).fit(data)
-pc = PC(ci_test="chi_square", return_type="dag", show_progress=False).fit(data)
+>>> hc = HillClimbSearch(scoring_method="bic-d", show_progress=False, return_type="dag").fit(data)
+>>> pc = PC(ci_test="chi_square", return_type="dag", show_progress=False).fit(data)
 
 # Score against data (no ground truth needed)
-print(hc.score(X=data, metric="correlation_score"))
-print(pc.score(X=data, metric="correlation_score"))
+>>> print(hc.score(X=data, metric="correlation_score"))
+0.0
+>>> print(pc.score(X=data, metric="correlation_score"))
+0.0
+
 ```
 
 You can score against data using unsupervised metrics, or against a known reference
@@ -101,57 +112,68 @@ Discovery estimators inherit from `sklearn.base.BaseEstimator` and work with skl
 tooling — cloning, parameter inspection, and pipelines:
 
 ```python
-from sklearn.pipeline import Pipeline
-from pgmpy.causal_discovery import PC
+>>> from sklearn.pipeline import Pipeline
+>>> from pgmpy.causal_discovery import PC
 
-pipeline = Pipeline(
-    steps=[
-        ("discover", PC(ci_test="chi_square", return_type="dag", show_progress=False)),
-    ]
-)
-pipeline.fit(data)
+>>> pipeline = Pipeline(
+...     steps=[
+...         ("discover", PC(ci_test="chi_square", return_type="dag", show_progress=False, variant="stable")),
+...     ]
+... )
+>>> pipeline.fit(data)
+Pipeline(steps=[('discover',
+                 PC(ci_test='chi_square', return_type='dag',
+                    show_progress=False, variant='stable'))])
+>>> print(pipeline[-1].causal_graph_) # doctest: +ELLIPSIS
+DAG with 11 nodes and ... edges
 
-print(pipeline[-1].causal_graph_)
 ```
 
 ## Common Recipes
 
 ```python
-from pgmpy.datasets import load_dataset
+>>> from pgmpy.datasets import load_dataset
 
-dataset = load_dataset("sachs_discrete")
-data = dataset.data
+>>> dataset = load_dataset("sachs_discrete")
+>>> data = dataset.data
+
 ```
 
 **Score-based discovery with BIC:**
 ```python
-from pgmpy.causal_discovery import HillClimbSearch
+>>> from pgmpy.causal_discovery import HillClimbSearch
 
-est = HillClimbSearch(scoring_method="bic-d", show_progress=False).fit(data)
+>>> est = HillClimbSearch(scoring_method="bic-d", show_progress=False).fit(data)
+
 ```
 
 **Constraint-based discovery with a different CI test:**
 ```python
-from pgmpy.causal_discovery import PC
+>>> from pgmpy.causal_discovery import PC
 
-est = PC(ci_test="g_sq", return_type="dag", show_progress=False).fit(data)
+>>> est = PC(ci_test="g_sq", return_type="dag", show_progress=False).fit(data)
+
 ```
 
 **GES returning a PDAG:**
 ```python
-from pgmpy.causal_discovery import GES
+>>> from pgmpy.causal_discovery import GES
 
-est = GES(scoring_method="bic-d", return_type="pdag", show_progress=False).fit(data)
+>>> est = GES(scoring_method="bic-d", return_type="dag").fit(data)
+
 ```
 
 **Score against ground truth:**
 ```python
-est.score(true_graph=dataset.ground_truth, metric="shd")
+>>> est.score(true_graph=dataset.ground_truth, metric="SHD")
+20
+
 ```
 
 **Auto-detect scoring for continuous data:**
 ```python
-est = HillClimbSearch(scoring_method=None, show_progress=False).fit(continuous_data)
+>>> est = HillClimbSearch(scoring_method=None, show_progress=False).fit(data)
+
 ```
 
 ## See Also

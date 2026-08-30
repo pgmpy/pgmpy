@@ -29,12 +29,14 @@ and testing model behavior under interventions.
 The primary entry point is `model.simulate(...)`:
 
 ```python
-from pgmpy.example_models import load_model
+>>> from pgmpy.example_models import load_model
 
-model = load_model("bnlearn/alarm")
-samples = model.simulate(n_samples=1000, seed=42, show_progress=False)
+>>> model = load_model("bnlearn/alarm")
+>>> samples = model.simulate(n_samples=1000, seed=42, show_progress=False)
 
-print(samples.head())
+>>> sorted(samples.head())
+['ANAPHYLAXIS', 'ARTCO2', 'BP', 'CATECHOL', 'CO', 'CVP', 'DISCONNECT', 'ERRCAUTER', 'ERRLOWOUTPUT', 'EXPCO2', 'FIO2', 'HISTORY', 'HR', 'HRBP', 'HREKG', 'HRSAT', 'HYPOVOLEMIA', 'INSUFFANESTH', 'INTUBATION', 'KINKEDTUBE', 'LVEDVOLUME', 'LVFAILURE', 'MINVOL', 'MINVOLSET', 'PAP', 'PCWP', 'PRESS', 'PULMEMBOLUS', 'PVSAT', 'SAO2', 'SHUNT', 'STROKEVOLUME', 'TPR', 'VENTALV', 'VENTLUNG', 'VENTMACH', 'VENTTUBE']
+
 ```
 
 For more control over the sampling algorithm, use the classes in `pgmpy.sampling`
@@ -46,7 +48,10 @@ The `do` parameter fixes specific variables to given values, implementing Pearl'
 do-operator to generate interventional data:
 
 ```python
-samples = model.simulate(n_samples=1000, do={"CVP": "LOW"}, show_progress=False)
+>>> samples = model.simulate(n_samples=1000, do={"CVP": "LOW"}, show_progress=False)
+>>> sorted(samples.head())
+['ANAPHYLAXIS', 'ARTCO2', 'BP', 'CATECHOL', 'CO', 'CVP', 'DISCONNECT', 'ERRCAUTER', 'ERRLOWOUTPUT', 'EXPCO2', 'FIO2', 'HISTORY', 'HR', 'HRBP', 'HREKG', 'HRSAT', 'HYPOVOLEMIA', 'INSUFFANESTH', 'INTUBATION', 'KINKEDTUBE', 'LVEDVOLUME', 'LVFAILURE', 'MINVOL', 'MINVOLSET', 'PAP', 'PCWP', 'PRESS', 'PULMEMBOLUS', 'PVSAT', 'SAO2', 'SHUNT', 'STROKEVOLUME', 'TPR', 'VENTALV', 'VENTLUNG', 'VENTMACH', 'VENTTUBE']
+
 ```
 
 ## Conditional Simulation
@@ -54,9 +59,12 @@ samples = model.simulate(n_samples=1000, do={"CVP": "LOW"}, show_progress=False)
 The `evidence` parameter generates samples conditioned on observed values:
 
 ```python
-samples = model.simulate(
-    n_samples=1000, evidence={"CVP": "LOW", "PCWP": "HIGH"}, show_progress=False
-)
+>>> samples = model.simulate(
+...     n_samples=1000, evidence={"CVP": "LOW", "PCWP": "HIGH"}, show_progress=False
+... )
+>>> sorted(samples.head())
+['ANAPHYLAXIS', 'ARTCO2', 'BP', 'CATECHOL', 'CO', 'CVP', 'DISCONNECT', 'ERRCAUTER', 'ERRLOWOUTPUT', 'EXPCO2', 'FIO2', 'HISTORY', 'HR', 'HRBP', 'HREKG', 'HRSAT', 'HYPOVOLEMIA', 'INSUFFANESTH', 'INTUBATION', 'KINKEDTUBE', 'LVEDVOLUME', 'LVFAILURE', 'MINVOL', 'MINVOLSET', 'PAP', 'PCWP', 'PRESS', 'PULMEMBOLUS', 'PVSAT', 'SAO2', 'SHUNT', 'STROKEVOLUME', 'TPR', 'VENTALV', 'VENTLUNG', 'VENTMACH', 'VENTTUBE']
+
 ```
 
 ## Soft Evidence
@@ -65,16 +73,27 @@ samples = model.simulate(
 variables are influenced probabilistically rather than set to fixed values:
 
 ```python
-from pgmpy.example_models import load_model
-from pgmpy.factors.discrete import TabularCPD
+>>> from pgmpy.example_models import load_model
+>>> from pgmpy.factors.discrete import TabularCPD
 
-model = load_model("bnlearn/alarm")
+>>> model = load_model("bnlearn/alarm")
+>>> cpd = model.get_cpds("CVP")
+>>> soft = TabularCPD(
+...     "CVP",
+...     3,
+...     [[0.7], [0.2], [0.1]],
+...     state_names={"CVP": ["LOW", "NORMAL", "HIGH"]},
+... )
+>>> samples = model.simulate(
+...     n_samples=100, virtual_evidence=[soft], seed=42, show_progress=False
+... )
+>>> print(samples["CVP"].value_counts(normalize=True))
+CVP
+NORMAL    0.60
+LOW       0.28
+HIGH      0.12
+Name: proportion, dtype: float64
 
-soft = TabularCPD("CVP", 3, [[0.7], [0.2], [0.1]])
-samples = model.simulate(
-    n_samples=100, virtual_evidence=[soft], seed=42, show_progress=False
-)
-print(samples["CVP"].value_counts(normalize=True))
 ```
 
 ## Missing Data Generation
@@ -87,34 +106,41 @@ output.
 ## Common Recipes
 
 ```python
-from pgmpy.example_models import load_model
+>>> from pgmpy.example_models import load_model
 
-model = load_model("bnlearn/alarm")
+>>> model = load_model("bnlearn/alarm")
+
 ```
 
 **Basic forward sampling:**
 ```python
-samples = model.simulate(n_samples=1000, seed=42, show_progress=False)
+>>> samples = model.simulate(n_samples=1000, seed=42, show_progress=False)
+
 ```
 
 **Interventional data (do-operator):**
 ```python
-samples = model.simulate(n_samples=1000, do={"CVP": "LOW"}, show_progress=False)
+>>> samples = model.simulate(n_samples=1000, do={"CVP": "LOW"}, show_progress=False)
+
 ```
 
 **Conditional sampling (evidence):**
 ```python
-samples = model.simulate(n_samples=1000, evidence={"CVP": "LOW"}, show_progress=False)
+>>> samples = model.simulate(n_samples=1000, evidence={"CVP": "LOW"}, show_progress=False)
+
 ```
 
 **Generate data with 10% missing values:**
 ```python
-samples = model.simulate(n_samples=1000, missing_prob=0.1, show_progress=False)
+>>> cpd = TabularCPD("HISTORY*", 2, [[0.5], [0.5]])
+>>> samples = model.simulate(n_samples=1000, missing_prob=cpd, show_progress=False)
+
 ```
 
 **Include latent variables in output:**
 ```python
-samples = model.simulate(n_samples=1000, include_latents=True, show_progress=False)
+>>> samples = model.simulate(n_samples=1000, include_latents=True, show_progress=False)
+
 ```
 
 ## See Also

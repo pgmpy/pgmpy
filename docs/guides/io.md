@@ -20,14 +20,16 @@ as persisting fitted models to disk for later use.
 The simplest way to save and load models is through the model-level methods:
 
 ```python
-from pgmpy.example_models import load_model
-from pgmpy.models import DiscreteBayesianNetwork
+>>> from pgmpy.example_models import load_model
+>>> from pgmpy.models import DiscreteBayesianNetwork
 
-model = load_model("bnlearn/alarm")
-model.save("alarm.bif", filetype="bif")
+>>> model = load_model("bnlearn/alarm")
+>>> model.save("alarm.bif", filetype="bif")
 
-loaded = DiscreteBayesianNetwork.load("alarm.bif", filetype="bif")
-print(loaded)
+>>> loaded = DiscreteBayesianNetwork.load("alarm.bif", filetype="bif")
+>>> print(loaded)
+DiscreteBayesianNetwork named 'unknown' with 37 nodes and 46 edges
+
 ```
 
 ## Supported Formats
@@ -42,10 +44,11 @@ For fine-grained control, each format has dedicated reader and writer classes in
 `pgmpy.readwrite` that expose format-specific options:
 
 ```python
-from pgmpy.readwrite import BIFReader
+>>> from pgmpy.readwrite import BIFReader
 
-reader = BIFReader("alarm.bif")
-model = reader.get_model()
+>>> reader = BIFReader("alarm.bif")
+>>> model = reader.get_model()
+
 ```
 
 ## See Also
