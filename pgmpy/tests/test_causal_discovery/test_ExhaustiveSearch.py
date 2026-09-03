@@ -65,6 +65,16 @@ def est_rand():
     return est
 
 
+def test_all_dags_large_n_logs_warning(est_rand, caplog):
+    nodes = list("ABCDEFG")  # 7 nodes crosses the n>6 warning threshold
+
+    with caplog.at_level("INFO", logger="pgmpy"):
+        first_dag = next(est_rand.all_dags(nodes))
+
+    assert isinstance(first_dag, nx.DiGraph)
+    assert "not feasible for n>6" in caplog.text
+
+
 def test_all_dags(est_rand):
     assert len(list(est_rand.all_dags(["A", "B", "C", "D"]))) == 543
 
