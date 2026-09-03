@@ -10,7 +10,7 @@ from sklearn.base import clone
 from sklearn.exceptions import NotFittedError
 
 from pgmpy.causal_discovery import ExhaustiveSearch
-from pgmpy.structure_score import BDeu, K2
+from pgmpy.structure_score import K2, BDeu
 
 # Unlike HillClimbSearch, ExhaustiveSearch cannot go through sklearn's full
 # `parametrize_with_checks` battery: several generic checks (e.g.
