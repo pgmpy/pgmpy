@@ -1,5 +1,6 @@
 from .ANM import ANM
 from .ChowLiu import ChowLiu
+from .ExhaustiveSearch import ExhaustiveSearch
 from .ExpertInLoop import ExpertInLoop
 from .ExpertKnowledge import ExpertKnowledge
 from .GES import GES
@@ -14,6 +15,7 @@ from .TOPIC import TOPIC
 __all__ = [
     "ANM",
     "ChowLiu",
+    "ExhaustiveSearch",
     "ExpertInLoop",
     "ExpertKnowledge",
     "GES",
