@@ -141,7 +141,7 @@ def _reachable_on_non_directed_path(G_orig, i, cond_set, path_matrix, path_matri
         reachable_on_non_causal_path[tt] = True
 
     reachable_with_incoming_edge = reachable_on_non_causal_path[:p]
-    reachable_with_outgoing_edge = reachable_on_non_causal_path[p:2 * p]
+    reachable_with_outgoing_edge = reachable_on_non_causal_path[p : 2 * p]
 
     return reachable_with_incoming_edge + reachable_with_outgoing_edge
 
