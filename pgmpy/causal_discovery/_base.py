@@ -73,6 +73,21 @@ class BaseCausalDiscovery(BaseEstimator):
         self.n_features_in_ = len(X.columns)
         return X
 
+    def _check_zero_variance(self, X: pd.DataFrame, algorithm_name: str) -> None:
+        """Check whether any column of the input data is constant.
+
+        Parameters
+        ----------
+        X: pd.DataFrame
+            The (numeric) input data used for fitting the causal discovery algorithm.
+
+        algorithm_name: str
+            Name of the algorithm, used to generate specific error messages.
+        """
+        for col in X.columns:
+            if X[col].std() == 0:
+                raise ValueError(f"Variable '{col}' is constant; {algorithm_name} requires non-constant variables.")
+
     def fit(self, X: pd.DataFrame, y=None):
         """Fit data (`X`) to a causal graph. The method
         calls the `_fit` method, which must be implemented separately in any causal
