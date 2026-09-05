@@ -14,24 +14,24 @@ class TestApproxInferenceBN(unittest.TestCase):
         self.alarm_model = load_model("bnlearn/alarm")
         self.infer_alarm = ApproxInference(self.alarm_model)
         self.alarm_ve = VariableElimination(self.alarm_model)
-        self.samples = self.alarm_model.simulate(int(1e4))
+        self.samples = self.alarm_model.simulate(int(1e4), seed=42)
 
     def test_query_marg(self):
-        query_results = self.infer_alarm.query(variables=["HISTORY"])
+        query_results = self.infer_alarm.query(variables=["HISTORY"], seed=42)
         ve_results = self.alarm_ve.query(variables=["HISTORY"])
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
         query_results = self.infer_alarm.query(variables=["HISTORY"], samples=self.samples)
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
-        query_results = self.infer_alarm.query(variables=["HISTORY", "CVP"], joint=True)
+        query_results = self.infer_alarm.query(variables=["HISTORY", "CVP"], joint=True, seed=42)
         ve_results = self.alarm_ve.query(variables=["HISTORY", "CVP"], joint=True)
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
         query_results = self.infer_alarm.query(variables=["HISTORY", "CVP"], samples=self.samples, joint=True)
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
-        query_results = self.infer_alarm.query(variables=["HISTORY", "CVP"], joint=False)
+        query_results = self.infer_alarm.query(variables=["HISTORY", "CVP"], joint=False, seed=42)
         ve_results = self.alarm_ve.query(variables=["HISTORY", "CVP"], joint=False)
         for var in ["HISTORY", "CVP"]:
             self.assertTrue(query_results[var].__eq__(ve_results[var], atol=0.01))
@@ -322,24 +322,24 @@ class TestApproxInferenceBNTorch(unittest.TestCase):
         self.alarm_model = load_model("bnlearn/alarm")
         self.infer_alarm = ApproxInference(self.alarm_model)
         self.alarm_ve = VariableElimination(self.alarm_model)
-        self.samples = self.alarm_model.simulate(int(1e4))
+        self.samples = self.alarm_model.simulate(int(1e4), seed=42)
 
     def test_query_marg(self):
-        query_results = self.infer_alarm.query(variables=["HISTORY"])
+        query_results = self.infer_alarm.query(variables=["HISTORY"], seed=42)
         ve_results = self.alarm_ve.query(variables=["HISTORY"])
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
         query_results = self.infer_alarm.query(variables=["HISTORY"], samples=self.samples)
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
-        query_results = self.infer_alarm.query(variables=["HISTORY", "CVP"], joint=True)
+        query_results = self.infer_alarm.query(variables=["HISTORY", "CVP"], joint=True, seed=42)
         ve_results = self.alarm_ve.query(variables=["HISTORY", "CVP"], joint=True)
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
         query_results = self.infer_alarm.query(variables=["HISTORY", "CVP"], samples=self.samples, joint=True)
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
-        query_results = self.infer_alarm.query(variables=["HISTORY", "CVP"], joint=False)
+        query_results = self.infer_alarm.query(variables=["HISTORY", "CVP"], joint=False, seed=42)
         ve_results = self.alarm_ve.query(variables=["HISTORY", "CVP"], joint=False)
         for var in ["HISTORY", "CVP"]:
             self.assertTrue(query_results[var].__eq__(ve_results[var], atol=0.01))
