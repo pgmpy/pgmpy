@@ -1,4 +1,5 @@
 from collections import Counter
+from itertools import permutations
 
 
 class _TreeNode:
@@ -18,6 +19,93 @@ class _TreeNode:
     def _vars_to_latex(var_set):
         """Sort and join variable names for deterministic LaTeX output."""
         return ", ".join(sorted((str(v) for v in var_set), key=str))
+
+    def marginalize(self, sumset):
+        r"""Return :math:`\sum_{sumset} self`.
+
+        Returns a new expression; nodes are immutable. Summing over nothing is the identity, and a sum that is exactly
+        a smaller node is returned as one rather than wrapped: a plain joint ``P(A)`` shrinks to ``P(A \ sumset)``, and
+        nested sums collapse into one.
+
+        Parameters
+        ----------
+        sumset: iterable of hashable
+            The variables being summed out. Assumed to be a subset of the variables this expression ranges over.
+
+        Returns
+        -------
+        expression: _TreeNode
+            The marginalised expression.
+
+        Examples
+        --------
+        >>> from pgmpy.identification.probability_expression import ProbabilityNode
+        >>> ProbabilityNode(frozenset({"X"}), cond=frozenset({"Z"})).marginalize({"X"}).to_latex()
+        '\\sum_{X} P(X \\mid Z)'
+        """
+        sumset = frozenset(sumset)
+        if not sumset:
+            return self
+        return self._marginalize(sumset)
+
+    def _marginalize(self, sumset):
+        """Build the marginal of this node over a guaranteed non-empty ``sumset``.
+
+        The general case wraps the node in a sum; subclasses override this to simplify instead.
+        """
+        return MarginalNode(self, sumset=sumset)
+
+    def simplify(self):
+        r"""Return the expression with the sums and factors that cancel taken out.
+
+        Returns a new expression; nodes are immutable. A shape none of the rules matches is returned as it stands.
+        Every rule holds for any positive distribution, so none of them needs the graph the expression came from:
+
+        1. A term summed over its whole head sums to one and drops out, and :math:`\sum_{t} P(a, t \mid do(d), c)`
+           is :math:`P(a \mid do(d), c)`. Within a product this needs ``t`` in no other factor, as only then does
+           the sum distribute.
+        2. The chain rule :math:`P(a \mid do(d), c) P(b \mid do(d), a, c) = P(a, b \mid do(d), c)`, applied when it
+           moves a summed variable into a head for rule 1.
+        3. :math:`P(a, b \mid do(d), c) / P(b \mid do(d), c)` is :math:`P(a \mid do(d), b, c)`, and a denominator
+           repeated among the numerator's factors cancels.
+
+        :footcite:t:`tikka_2017` shorten further by rewriting terms under conditional independences read off the
+        graph, which the expression on its own does not carry.
+
+        Returns
+        -------
+        expression: _TreeNode
+            The simplified expression.
+
+        Examples
+        --------
+        >>> from pgmpy.identification.probability_expression import MarginalNode, ProbabilityNode, ProductNode
+        >>> chain = MarginalNode(
+        ...     ProductNode([
+        ...         ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"})),
+        ...         ProbabilityNode(frozenset({"Z"}), cond=frozenset({"X", "Y"})),
+        ...     ]),
+        ...     sumset=frozenset({"Y"}),
+        ... )
+        >>> chain.simplify().to_latex()
+        'P(Z \\mid X)'
+
+        References
+        ----------
+        - :footcite:t:`tikka_2017`
+        """
+        return self
+
+    def _variables(self):
+        """Return every variable name mentioned in this subtree, bound ones included.
+
+        ``simplify`` uses this to spot a variable sitting where it would block a rewrite; over-reporting only costs
+        a rewrite.
+        """
+        names = set()
+        for child in self.children:
+            names |= child._variables()
+        return names
 
     def to_latex(self):
         """Return a LaTeX string representation of this node.
@@ -93,12 +181,26 @@ class ProbabilityNode(_TreeNode):
         self.cond = frozenset(cond)
         self.children = []
 
+    def _marginalize(self, sumset):
+        r"""Shrink a plain joint :math:`P(A)` to :math:`P(A \setminus sumset)`.
+
+        Only a plain joint simplifies this way; summing out of a conditional or interventional term cannot be written
+        as a single atomic term.
+        """
+        if self.do or self.cond:
+            return super()._marginalize(sumset)
+        return ProbabilityNode(self.variables - sumset)
+
+    def _variables(self):
+        """Return the variables of this term, on whichever side of the conditioning bar they sit."""
+        return set(self.variables | self.do | self.cond)
+
     def to_latex(self):
         r"""
         Return LaTeX for this atomic probability term.
 
         The conditioning bar is omitted when both ``do`` and ``cond`` are empty.
-        ``do(·)`` is always rendered before passive conditioning.
+        ``do(...)`` is always rendered before passive conditioning.
 
         Returns
         -------
@@ -190,6 +292,75 @@ class MarginalNode(_TreeNode):
             raise ValueError("MarginalNode requires at least one variable to sum over.")
         self.children = [child]
 
+    def _marginalize(self, sumset):
+        """Collapse nested sums into a single sum over the union of the two sumsets."""
+        return MarginalNode(self.children[0], sumset=self.sumset | sumset)
+
+    def simplify(self):
+        """Apply rules 1 and 2 of ``_TreeNode.simplify`` to the factors under this sum.
+
+        The two alternate to a fixed point, rule 2 running only to set rule 1 up, and each pass drops a variable
+        from the sumset or a factor from the product, so the loop ends. The sumset binds its variables, so a name
+        used above this node is a different variable and these factors are the whole scope the rules look at.
+
+        Returns
+        -------
+        expression: _TreeNode
+            The simplified expression.
+        """
+        child = self.children[0].simplify()
+        sumset = self.sumset
+        factors = list(child.children) if isinstance(child, ProductNode) else [child]
+
+        changed = True
+        while changed:
+            changed = False
+
+            # Rule 1: sum out a variable that this factor alone has in its head.
+            for index, factor in enumerate(factors):
+                if not isinstance(factor, ProbabilityNode):
+                    continue
+                others = (other for position, other in enumerate(factors) if position != index)
+                elsewhere = set().union(*(other._variables() for other in others))
+                summed = (sumset & factor.variables) - elsewhere
+                # Summing away the head of the only factor leaves the constant one, which has no node to live in.
+                if not summed or (summed == factor.variables and len(factors) == 1):
+                    continue
+                sumset -= summed
+                if summed == factor.variables:
+                    del factors[index]
+                else:
+                    factors[index] = ProbabilityNode(factor.variables - summed, do=factor.do, cond=factor.cond)
+                changed = True
+                break
+
+            if changed:
+                continue
+
+            # Rule 2: merge a pair by the chain rule, so that rule 1 gets a head to work on next pass.
+            for (first_index, first), (second_index, second) in permutations(enumerate(factors), 2):
+                if not (isinstance(first, ProbabilityNode) and isinstance(second, ProbabilityNode)):
+                    continue
+                if first.do != second.do or second.cond != first.variables | first.cond:
+                    continue
+                if not first.variables.isdisjoint(second.variables) or sumset.isdisjoint(first.variables):
+                    continue
+                joined = ProbabilityNode(first.variables | second.variables, do=first.do, cond=first.cond)
+                merged = {first_index, second_index}
+                factors = [f for position, f in enumerate(factors) if position not in merged] + [joined]
+                changed = True
+                break
+
+        product = factors[0] if len(factors) == 1 else ProductNode(factors)
+        # As above: a plain joint summed over its own head is the constant one, so that sum is left as it stands.
+        if isinstance(product, ProbabilityNode) and not (product.do or product.cond) and product.variables <= sumset:
+            return MarginalNode(product, sumset=sumset)
+        return product.marginalize(sumset)
+
+    def _variables(self):
+        """Return the variables of the summed expression, including the bound ones this node sums over."""
+        return super()._variables() | set(self.sumset)
+
     def to_latex(self):
         r"""
         Return LaTeX for the marginalisation expression.
@@ -262,6 +433,23 @@ class ProductNode(_TreeNode):
             raise ValueError(f"Product requires at least two factors; got {len(factors)}.")
         self.children = list(factors)
 
+    def simplify(self):
+        """Simplify each factor, and flatten a product among them into this one.
+
+        A nested product is only a grouping, multiplication being associative. Flattening puts every factor in one
+        list, where the sum above can pair them up.
+
+        Returns
+        -------
+        product: ProductNode
+            The simplified product.
+        """
+        factors = []
+        for child in self.children:
+            child = child.simplify()
+            factors.extend(child.children if isinstance(child, ProductNode) else [child])
+        return ProductNode(factors)
+
     def to_latex(self):
         r"""
         Return LaTeX for the product of all children, space-separated.
@@ -332,6 +520,40 @@ class DivisionNode(_TreeNode):
 
     def __init__(self, numerator, denominator):
         self.children = [numerator, denominator]
+
+    def simplify(self):
+        r"""Apply rule 3 of ``_TreeNode.simplify`` to this ratio.
+
+        A ratio of two terms of one distribution is the conditional :math:`P(a \mid do(d), b, c)`, and a denominator
+        repeated among the numerator's factors cancels against it. Both take the denominator to be positive, as
+        identification does throughout.
+
+        Returns
+        -------
+        expression: _TreeNode
+            The simplified expression.
+        """
+        numerator = self.children[0].simplify()
+        denominator = self.children[1].simplify()
+
+        if (
+            isinstance(numerator, ProbabilityNode)
+            and isinstance(denominator, ProbabilityNode)
+            and (numerator.do, numerator.cond) == (denominator.do, denominator.cond)
+            and denominator.variables < numerator.variables
+        ):
+            return ProbabilityNode(
+                numerator.variables - denominator.variables,
+                do=numerator.do,
+                cond=numerator.cond | denominator.variables,
+            )
+
+        if isinstance(numerator, ProductNode) and denominator in numerator.children:
+            remaining = list(numerator.children)
+            remaining.remove(denominator)
+            return remaining[0] if len(remaining) == 1 else ProductNode(remaining)
+
+        return DivisionNode(numerator, denominator)
 
     def to_latex(self):
         r"""
@@ -445,6 +667,37 @@ class ProbabilityExpressionTree:
         'P(Y \\mid X)'
         """
         return self.root.to_latex()
+
+    def simplify(self):
+        r"""
+        Return a new tree holding an equivalent but shorter expression.
+
+        Starts the recursive ``simplify()`` traversal from the root node. Each node applies the rewrites it has a
+        rule for and delegates to its children; see ``_TreeNode.simplify`` for what those rules are.
+
+        Returns
+        -------
+        expression: ProbabilityExpressionTree
+            The simplified expression.
+
+        Examples
+        --------
+        The napkin graph, whose denominator sums out a variable that only its own factor mentions:
+
+        >>> from pgmpy.base import ADMG
+        >>> from pgmpy.identification import ID
+        >>> admg = ADMG(
+        ...     edge_list=[
+        ...         ("W", "R", "->"), ("R", "X", "->"), ("X", "Y", "->"),
+        ...         ("W", "X", "<>"), ("W", "Y", "<>"),
+        ...     ],
+        ...     exposures={"X"},
+        ...     outcomes={"Y"},
+        ... )
+        >>> ID().identify(admg).simplify().to_latex()
+        '\\frac{\\sum_{W} P(W) P(X \\mid R, W) P(Y \\mid R, W, X)}{\\sum_{W} P(W) P(X \\mid R, W)}'
+        """
+        return ProbabilityExpressionTree(root=self.root.simplify())
 
     def collect_node_types(self, node=None):
         """
