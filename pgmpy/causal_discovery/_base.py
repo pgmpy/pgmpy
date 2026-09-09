@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import math
 from collections import deque
 from collections.abc import Callable, Generator, Hashable
 from itertools import combinations, permutations
@@ -6,6 +9,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
+from skbase.utils.dependencies import _safe_import
 from sklearn.base import BaseEstimator
 from sklearn.metrics import (
     adjusted_mutual_info_score,
@@ -21,6 +25,8 @@ from pgmpy.ci_tests import IndependenceMatch, get_ci_test
 from pgmpy.independencies import Independencies
 from pgmpy.metrics import get_metrics
 from pgmpy.structure_score import BaseStructureScore
+
+torch = _safe_import("torch")
 
 
 class BaseCausalDiscovery(BaseEstimator):
@@ -169,6 +175,328 @@ class BaseCausalDiscovery(BaseEstimator):
             return metric.evaluate(true_causal_graph=true_graph, est_causal_graph=self.causal_graph_)
         else:
             raise ValueError("Either `X` or `true_graph` needs to be specified")
+
+
+class _BaseDAGMAMixin:
+    """
+    Mixin class implementing shared acyclicity constraint, optimization, and graph reconstruction logic for DAGMA and
+    its variants.
+    """
+
+    def _resolve_device_and_dtype(self) -> tuple:
+        """
+        Queries the global pgmpy configurations to resolve the PyTorch device and tensor float precision (mapping
+        string representations to torch.dtype objects).
+
+        If the global backend is ``"numpy"``, it is automatically switched to ``"torch"`` (DAGMA requires PyTorch).
+        """
+        if config.get_backend() == "numpy":
+            config.set_backend("torch")
+        device = config.get_device()
+        dtype_str = config.get_dtype()
+        if isinstance(dtype_str, str):
+            dtype = getattr(torch, dtype_str)
+        else:
+            dtype = dtype_str
+        return device, dtype
+
+    def _log_det_barrier(self, W, s: float, squared: bool = False):
+        r"""
+        Computes the log-determinant acyclicity barrier function:
+
+        .. math::
+            h(W) = -\log \det(sI - W \circ W) + d \log s
+
+        Parameters
+        ----------
+        W : torch.Tensor
+            The (d, d) weight matrix (or pre-squared adjacency for nonlinear).
+        s : float
+            M-matrix domain parameter.
+        squared : bool, optional (default=False)
+            If True, ``W`` is treated as already element-wise squared (i.e., ``M = sI - W`` instead of
+            ``M = sI - W * W``). Used by the nonlinear dagma where ``A = W_squared`` is pre-computed.
+
+        Returns
+        -------
+        is_cyclic : bool
+            True if the matrix violates the M-matrix domain (sign <= 0).
+        h : torch.Tensor or None
+            The computed barrier value if acyclic, otherwise None.
+        """
+        d = W.shape[0]
+        eye = torch.eye(d, device=W.device, dtype=W.dtype)
+        M = s * eye - (W if squared else W * W)
+
+        sign, logdet = torch.slogdet(M)
+        if sign <= 0:
+            return True, None
+
+        h = -logdet + d * math.log(s)
+        return False, h
+
+    def _convert_to_dag(self, W: np.ndarray, feature_names: list, w_threshold: float, return_type: str):
+        """
+        Thresholds the estimated weight matrix and converts it into a pgmpy DAG or CPDAG.
+        """
+        W_thresh = np.where(np.abs(W) > w_threshold, W, 0)
+        # Zero out diagonal entries -- self-loops are never part of a DAG
+        np.fill_diagonal(W_thresh, 0)
+        dag = nx.from_pandas_adjacency(
+            pd.DataFrame(W_thresh, index=feature_names, columns=feature_names),
+            create_using=nx.DiGraph,
+        )
+
+        # Check for residual cycles. The optimization should guarantee a DAG, but early stopping or loose thresholds
+        # might leave cycles.
+        if not nx.is_directed_acyclic_graph(dag):
+            cycle = nx.find_cycle(dag)
+            raise ValueError(
+                f"Estimated graph contains a cycle: {cycle}. "
+                "The optimization did not converge to a DAG. "
+                "Try increasing max_iter or adjusting w_threshold."
+            )
+        if return_type == "dag":
+            return DAG(dag)
+        elif return_type == "cpdag":
+            return DAG(dag).to_pdag()
+        else:
+            raise ValueError(f"return_type must be 'dag' or 'cpdag', got {return_type}")
+
+    def _optimize(
+        self,
+        W_tensor,
+        optimizer_cls,
+        optimizer_kwargs: dict,
+        objective_fn,
+        mu_init: float,
+        mu_factor: float,
+        max_iter: int,
+        inner_iter: int = 1,
+        gradient_fn=None,
+        s_schedule=None,
+        warm_iter=None,
+        lr=None,
+        tol=1e-6,
+        checkpoint=1000,
+    ) -> np.ndarray:
+        """
+        Unified optimization loop executing the dual-loop DAGMA optimization with domain-violation recovery and
+        optional analytical gradients.
+
+        When ``gradient_fn`` is provided, gradients are computed analytically and injected into ``W_param.grad``
+        -- eliminating autograd backward pass overhead. Any ``torch.optim.Optimizer`` works because all optimizers read
+        ``param.grad``the same way.
+
+        When ``gradient_fn`` is None, falls back to autograd (``loss.backward()``).
+
+        Domain-violation recovery: when a step leaves the M-matrix domain, the whole
+        inner loop for the current outer iteration is restarted from the weights it
+        began with, using a halved learning rate and a loosened s (+0.1). Retries
+        until the inner loop completes or lr < 1e-16, at which point the last valid
+        weights are accepted.
+
+        Parameters
+        ----------
+        W_tensor : torch.Tensor
+            Initial weight matrix.
+        optimizer_cls : type
+            Uninstantiated PyTorch optimizer class.
+        optimizer_kwargs : dict
+            Keyword arguments for the optimizer constructor.
+        objective_fn : callable
+            ``fn(W, mu, s) -> loss`` -- computes scalar loss (with or without graph).
+        mu_init : float
+            Initial central path parameter.
+        mu_factor : float
+            Decay factor for mu (mu *= mu_factor each outer iteration).
+        max_iter : int
+            Number of outer iterations (T).
+        inner_iter : int, optional (default=1)
+            Number of inner optimization steps per outer iteration.
+            When ``warm_iter`` is provided, this applies only to the final stage.
+        gradient_fn : callable or None, optional (default=None)
+            ``fn(W, mu, s) -> (grad, is_valid)`` -- analytical gradient + domain check.
+            When None, autograd ``loss.backward()`` is used.
+        s_schedule : list of float or None, optional (default=None)
+            s values per outer iteration. If None, defaults to ``[1.0] * max_iter``.
+        warm_iter : int or None, optional (default=None)
+            Inner steps for non-final outer iterations. If None, ``inner_iter`` is
+            used for all stages (no warm/final split).
+        lr : float or None, optional (default=None)
+            Initial learning rate for retry halving. If None, extracted from
+            ``optimizer_kwargs['lr']`` or defaults to 0.0003.
+        tol : float, optional (default=1e-6)
+            Relative tolerance for convergence early-stop.
+        checkpoint : int, optional (default=1000)
+            Frequency (in inner steps) of convergence checks.
+
+        Returns
+        -------
+        np.ndarray
+            Optimized weight matrix.
+        """
+        mu = mu_init
+        W_current = W_tensor.detach().clone()
+        use_analytical = gradient_fn is not None
+
+        # Resolve learning rate for retry halving
+        if lr is None:
+            lr = optimizer_kwargs.get("lr", 0.0003)
+        lr_initial = lr
+
+        # Resolve s-schedule
+        if s_schedule is None:
+            s_schedule = [1.0] * max_iter
+        else:
+            s_schedule = list(s_schedule)
+            if len(s_schedule) < max_iter:
+                s_schedule += [s_schedule[-1]] * (max_iter - len(s_schedule))
+        # Resolve warm/final iteration split
+        resolved_warm_iter = warm_iter if warm_iter is not None else inner_iter
+        resolved_final_iter = inner_iter
+
+        # Detect L-BFGS -- requires step(closure) API
+        is_lbfgs = optimizer_cls is torch.optim.LBFGS
+
+        for t in range(max_iter):
+            s = s_schedule[t]
+            inner_iters = resolved_final_iter if t == max_iter - 1 else resolved_warm_iter
+            lr_current = lr_initial
+
+            W_param = torch.nn.Parameter(W_current.clone().requires_grad_(not use_analytical))
+            opt_kw = dict(optimizer_kwargs)
+            opt_kw["lr"] = lr_current
+            optimizer = optimizer_cls([W_param], **opt_kw)
+
+            success = False
+
+            while not success:
+                obj_prev_val = 1e16
+                success = True
+
+                W_prev = W_param.data.clone()
+                grad_prev = None
+
+                i = 1
+                while i <= inner_iters:
+                    if use_analytical:
+                        # --- Analytical gradient path ---
+                        with torch.no_grad():
+                            grad, is_valid = gradient_fn(W_param.data, mu, s)
+
+                        if not is_valid:
+                            # Domain violation: M-matrix has negative inv entries
+                            if i == 1 or s <= 0.9:
+                                success = False
+                                break
+
+                            # Inner recovery: undo step, halve lr, redo
+                            W_param.data.copy_(W_prev)
+                            lr_current *= 0.5
+                            for param_group in optimizer.param_groups:
+                                param_group["lr"] = lr_current
+
+                            if lr_current < 1e-16:
+                                break
+
+                            W_param.grad = grad_prev
+                            optimizer.step()
+                            continue
+
+                        W_prev = W_param.data.clone()
+                        grad_prev = grad.clone()
+
+                        W_param.grad = grad
+                        optimizer.step()
+
+                        # Convergence check (loss computed without graph)
+                        if i % checkpoint == 0 or i == inner_iters:
+                            with torch.no_grad():
+                                obj_new = objective_fn(W_param.data, mu, s).item()
+                            if abs((obj_prev_val - obj_new) / max(abs(obj_prev_val), 1e-16)) <= tol:
+                                break
+                            obj_prev_val = obj_new
+
+                    elif is_lbfgs:
+                        # --- L-BFGS autograd path (step-with-closure API) ---
+                        def closure():
+                            optimizer.zero_grad()
+                            loss = objective_fn(W_param, mu, s)
+                            if loss.item() >= 1e10:  # barrier violation sentinel
+                                return loss
+                            loss.backward()
+                            return loss
+
+                        loss = optimizer.step(closure)
+                        if loss.item() >= 1e10:
+                            success = False
+                            break
+
+                        if i % checkpoint == 0 or i == inner_iters:
+                            obj_new = loss.item()
+                            if abs((obj_prev_val - obj_new) / max(abs(obj_prev_val), 1e-16)) <= tol:
+                                break
+                            obj_prev_val = obj_new
+
+                    else:
+                        # --- Standard autograd path (Adam, SGD, etc.) ---
+                        optimizer.zero_grad()
+                        loss = objective_fn(W_param, mu, s)
+
+                        if loss.item() >= 1e10:  # barrier violation sentinel
+                            if i == 1 or s <= 0.9:
+                                success = False
+                                break
+
+                            # Inner recovery
+                            with torch.no_grad():
+                                W_param.data.copy_(W_prev)
+                            lr_current *= 0.5
+                            for param_group in optimizer.param_groups:
+                                param_group["lr"] = lr_current
+
+                            if lr_current < 1e-16:
+                                break
+
+                            optimizer.zero_grad()
+                            loss = objective_fn(W_param, mu, s)
+                            loss.backward()
+                            optimizer.step()
+                            continue
+
+                        W_prev = W_param.data.clone()
+
+                        loss.backward()
+                        optimizer.step()
+
+                        # Convergence check
+                        if i % checkpoint == 0 or i == inner_iters:
+                            obj_new = loss.item()
+                            if abs((obj_prev_val - obj_new) / max(abs(obj_prev_val), 1e-16)) <= tol:
+                                break
+                            obj_prev_val = obj_new
+
+                    i += 1
+
+                if not success:
+                    # Outer Recovery: rollback W, halve lr, loosen s, retry inner loop
+                    with torch.no_grad():
+                        W_param.data.copy_(W_current)
+                    lr_current *= 0.5
+                    for param_group in optimizer.param_groups:
+                        param_group["lr"] = lr_current
+                    s = s + 0.1
+                    s_schedule[t] = s
+                    if lr_current < 1e-16:
+                        # Give up gracefully -- accept current checkpoint
+                        success = True
+                else:
+                    W_current = W_param.detach().clone()
+
+            mu *= mu_factor
+
+        return W_current.cpu().numpy()
 
 
 class _ConstraintMixin:
