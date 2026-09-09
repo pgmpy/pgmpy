@@ -55,3 +55,37 @@ class TestSP:
         est2.fit(cancer_data)
         assert set(est1.causal_graph_.edges()) == set(est2.causal_graph_.edges())
         assert est1.optimal_permutations_ == est2.optimal_permutations_
+
+
+class TestGSP:
+    def test_greedy_recovery_and_attributes(self, cancer_data):
+        est = SP(ci_test="g_sq", variant="greedy", seed=42)
+        est.fit(cancer_data)
+        assert isinstance(est.causal_graph_, DAG)
+
+        assert set(est.causal_graph_.edges()) == {("Xray", "Cancer")}
+        assert est.n_features_in_ == cancer_data.shape[1]
+        assert list(est.feature_names_in_) == list(cancer_data.columns)
+
+        adj = est.adjacency_matrix_
+        assert sorted(adj.index) == sorted(cancer_data.columns)
+        assert sorted(adj.columns) == sorted(cancer_data.columns)
+        assert np.all(np.diag(adj) == 0)
+
+    def test_greedy_returns_pdag(self, cancer_data):
+        est = SP(ci_test="g_sq", variant="greedy", return_type="pdag", seed=0)
+        est.fit(cancer_data)
+        assert isinstance(est.causal_graph_, PDAG)
+
+    def test_greedy_seed_and_params_reproducibility(self, cancer_data):
+        est1 = SP(ci_test="g_sq", variant="greedy", search_depth=4, n_restarts=5, seed=42)
+        est2 = SP(ci_test="g_sq", variant="greedy", search_depth=4, n_restarts=5, seed=42)
+        est1.fit(cancer_data)
+        est2.fit(cancer_data)
+        assert set(est1.causal_graph_.edges()) == set(est2.causal_graph_.edges())
+        assert est1.optimal_permutations_ == est2.optimal_permutations_
+
+    def test_invalid_variant_raises(self, cancer_data):
+        est = SP(ci_test="g_sq", variant="not_a_variant")
+        with pytest.raises(ValueError, match="variant must be one of"):
+            est.fit(cancer_data)
