@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 from skbase.base import BaseObject
 from skbase.lookup import all_objects
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.base import ADMG, DAG, MAG, PDAG
 from pgmpy.causal_discovery import ExpertKnowledge
@@ -123,6 +124,8 @@ class BaseDataset(BaseObject):
         """
         Fetches a dataset file from the Hugging Face Hub cache.
         """
+        _check_soft_dependencies("huggingface_hub", obj=cls)
+
         return read_hf_file(
             repo_id=cls.repo_id,
             filename=f"{cls.base_url}/{filename}",
