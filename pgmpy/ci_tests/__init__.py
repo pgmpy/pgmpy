@@ -5,7 +5,9 @@ from .g_sq import GSq
 from .gcm import GCM
 from .generalized_cov import GeneralizedCov
 from .hotelling_lawley import HotellingLawley
+from .hsic import HSIC
 from .independence_match import IndependenceMatch
+from .kci import KCI
 from .log_likelihood import LogLikelihood
 from .modified_log_likelihood import ModifiedLogLikelihood
 from .pearsonr import Pearsonr
@@ -22,9 +24,11 @@ __all__ = [
     "FisherZ",
     "GSq",
     "GCM",
+    "HSIC",
     "GeneralizedCov",
     "HotellingLawley",
     "IndependenceMatch",
+    "KCI",
     "LogLikelihood",
     "ModifiedLogLikelihood",
     "Pearsonr",
