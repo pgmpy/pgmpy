@@ -448,6 +448,47 @@ def test_required_edge_enforced_against_independent_data():
     assert ("A", "B") in pdag.directed_edges
 
 
+def test_pc_search_space_and_required_edges():
+    """
+    Regression test for two related bugs in `_build_skeleton`:
+    1. The initial skeleton must be seeded from `search_space` (not a complete
+       graph), otherwise CI tests can condition on irrelevant variables and
+       incorrectly drop edges that are genuinely dependent.
+    2. An edge in `required_edges` must be added as a candidate even if it
+       wasn't included in `search_space`, otherwise it can never appear in
+       the final graph.
+    """
+
+    def fake_ci(X, Y, Z=tuple(), **kwargs):
+        pair = frozenset((X, Y))
+        if pair == frozenset(("A", "C")) and set(Z) == {"B"}:
+            return True
+        return False
+
+    data = pd.DataFrame(np.random.randint(0, 2, size=(100, 4)), columns=["A", "B", "C", "D"])
+
+    search_space = [("A", "B"), ("B", "C"), ("B", "D"), ("A", "C")]
+    background = ExpertKnowledge(
+        search_space=search_space,
+        required_edges=[("B", "D")],
+    )
+    est = PC(
+        variant="stable",
+        ci_test=fake_ci,
+        expert_knowledge=background,
+        show_progress=False,
+    )
+    est.fit(X=data)
+
+    edges = set(est.skeleton_.edges())
+
+    assert ("A", "C") not in edges and ("C", "A") not in edges
+    assert ("A", "D") not in edges and ("D", "A") not in edges
+    assert ("A", "B") in edges or ("B", "A") in edges
+    assert ("B", "C") in edges or ("C", "B") in edges
+    assert ("B", "D") in edges or ("D", "B") in edges
+
+
 @pytest.mark.parametrize("ci_test", ["pearsonr", "pillai", "gcm"])
 @pytest.mark.parametrize("variant", ["orig", "stable", "parallel"])
 def test_build_skeleton_continuous(ci_test, variant):

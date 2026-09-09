@@ -300,8 +300,13 @@ class _ConstraintMixin:
 
         variables = list(data.columns.values)
 
-        # Step 1: Initialize a fully connected undirected graph
-        graph = nx.complete_graph(n=variables, create_using=nx.Graph)
+        # Step 1: Initialize graph from search_space if provided; otherwise complete graph
+        if expert_knowledge is not None and expert_knowledge.search_space:
+            graph = nx.Graph()
+            graph.add_nodes_from(variables)
+            graph.add_edges_from(expert_knowledge.search_space_)
+        else:
+            graph = nx.complete_graph(n=variables, create_using=nx.Graph)
         if expert_knowledge is None:
             temporal_ordering, required_edges, forbidden_edges = {}, set(), set()
         else:
@@ -312,6 +317,7 @@ class _ConstraintMixin:
         # Remove edges that are forbidden in both directions. Directed forbidden are enforced as orientations after the
         # skeleton is learned.
         graph.remove_edges_from([(u, v) for (u, v) in forbidden_edges if (v, u) in forbidden_edges])
+        graph.add_edges_from(required_edges)
 
         # Exit condition: 1. If all the nodes in graph has less than `lim_neighbors` neighbors.
         #             or  2. `lim_neighbors` is greater than `max_conditional_variables`.
