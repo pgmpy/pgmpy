@@ -1,4 +1,5 @@
 from .ANM import ANM
+from .BQCD import BQCD
 from .ChowLiu import ChowLiu
 from .ExpertInLoop import ExpertInLoop
 from .ExpertKnowledge import ExpertKnowledge
@@ -13,6 +14,7 @@ from .TOPIC import TOPIC
 
 __all__ = [
     "ANM",
+    "BQCD",
     "ChowLiu",
     "ExpertInLoop",
     "ExpertKnowledge",
