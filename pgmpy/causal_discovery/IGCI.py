@@ -123,7 +123,6 @@ class IGCI(BaseCausalDiscovery):
             raise ValueError("IGCI requires continuous (numeric) variables; got non-continuous data.")
 
         x, y = self.feature_names_in_
-        self._check_zero_variance(X, "IGCI")
 
         # Step 3: Affine normalization to the reference measure.
         x_vals = X[x].to_numpy(dtype=float)

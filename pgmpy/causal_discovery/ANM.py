@@ -138,7 +138,6 @@ class ANM(BaseCausalDiscovery):
             raise ValueError("ANM requires continuous (numeric) variables; got non-continuous data.")
 
         x, y = self.feature_names_in_
-        self._check_zero_variance(X, "ANM")
 
         # Step 1: Fit models in both directions and compute the residual-dependence scores.
         score_fn = get_bivariate_score(self.scoring_method, algorithm="anm")
