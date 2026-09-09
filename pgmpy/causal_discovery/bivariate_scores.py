@@ -64,7 +64,7 @@ class IndependenceScore(BaseBivariateScore):
         - ``"p_value"`` returns the negative p-value.
     """
 
-    _tags = {"name": "independence", "supported_algorithms": ["anm"]}
+    _tags = {"name": "independence", "supported_algorithms": ["anm", "pnl"]}
 
     def __init__(self, ci_test: str | BaseCITest = "pearsonr", criterion: str = "effect_size") -> None:
         self.ci_test = ci_test
@@ -240,7 +240,7 @@ def get_bivariate_score(
     ----------
     score : str or callable
         Built-in score name, configured score object, or custom callable.
-    algorithm : {"anm", "igci"}
+    algorithm : {"anm", "igci", "pnl"}
         Causal discovery algorithm that will use the score.
 
     Returns
