@@ -102,6 +102,42 @@ class TestTreeNodeAbstract:
         assert isinstance(DivisionNode(prob_y, prob_x), _TreeNode)
 
 
+class TestMarginalize:
+    """Summing over an expression, and the exact simplifications each node type applies."""
+
+    def test_marginalize_over_nothing_is_the_identity(self):
+        node = ProbabilityNode(frozenset({"X", "Y"}))
+        assert node.marginalize(frozenset()) is node
+
+    def test_marginalize_shrinks_a_plain_joint(self):
+        """sum_X P(X, Y) is P(Y), not a MarginalNode wrapping P(X, Y). This keeps an estimand a plain joint for as
+        long as it genuinely is one, which is what lets the ID algorithm emit atomic conditionals instead of ratios."""
+        assert ProbabilityNode(frozenset({"X", "Y"})).marginalize({"X"}) == ProbabilityNode(frozenset({"Y"}))
+
+    def test_marginalize_does_not_shrink_a_conditional(self):
+        node = ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"}))
+        assert node.marginalize({"Y"}) == MarginalNode(node, sumset=frozenset({"Y"}))
+
+    def test_marginalize_does_not_shrink_an_interventional_term(self):
+        node = ProbabilityNode(frozenset({"Y", "Z"}), do=frozenset({"X"}))
+        assert node.marginalize({"Z"}) == MarginalNode(node, sumset=frozenset({"Z"}))
+
+    def test_marginalize_flattens_nested_sums(self):
+        inner = MarginalNode(ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"})), sumset=frozenset({"X"}))
+        result = inner.marginalize({"Y"})
+        assert result.sumset == frozenset({"X", "Y"})
+        assert result.children[0] == inner.children[0]
+
+    def test_marginalize_wraps_a_composite_expression(self, prob_y_cond_x, prob_x):
+        product = ProductNode([prob_y_cond_x, prob_x])
+        assert product.marginalize({"X"}) == MarginalNode(product, sumset=frozenset({"X"}))
+
+    def test_marginalize_coerces_and_leaves_the_original_untouched(self, prob_y_cond_x):
+        result = prob_y_cond_x.marginalize(["X"])
+        assert result.sumset == frozenset({"X"})
+        assert prob_y_cond_x.cond == frozenset({"X"})
+
+
 class TestProbabilityNode:
     def test_init(self):
         p = ProbabilityNode(frozenset({"Y"}), do=frozenset({"X"}), cond=frozenset({"Z"}))
