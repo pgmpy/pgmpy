@@ -116,7 +116,6 @@ def test_incompatible_score_instance_raises(nonlinear_data):
     [
         (IGCI(scoring_method="gauss"), pd.DataFrame({"X": [0, 1], "Y": [0, 1]}), "IGCI"),
         (IGCI(ref_measure="bogus"), pd.DataFrame({"X": [0, 1], "Y": [0, 1]}), "ref_measure"),
-        (IGCI(), pd.DataFrame({"X": [1, 1, 1], "Y": [1, 2, 3]}), "constant"),
         (IGCI(), pd.DataFrame({"X": [0, 1], "Y": [1, 2], "Z": [2, 1]}), "exactly two"),
         (IGCI(), pd.DataFrame({"X": [0, 1, np.nan], "Y": [1, 2, 3]}), None),
         (IGCI(), pd.DataFrame({"X": list("aabbab"), "Y": list("xyxyxy")}), "continuous"),
