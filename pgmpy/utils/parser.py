@@ -210,6 +210,7 @@ def parse_dagitty(lines):
     # If header is present, override target_type to follow the file.
     import re
 
+    target_type = "DAG"
     first_nonempty = None
     for ln in lines:
         if isinstance(ln, str) and ln.strip():
@@ -252,39 +253,43 @@ def parse_dagitty(lines):
     dagitty_line = ZeroOrMore(statement + Optional(";"))
 
     # Step 2: Preprocess lines and strip outer dag { ... }
+    # Only when a wrapper is actually present. A bare edge list has no "{" to
+    # strip, and the loops below discard whichever line they last looked at,
+    # so running them unconditionally would drop the entire input.
     lines = split_at_betas(lines)
-    cleaned_dag = False
-    while True:
-        if not lines:
-            break
-        first_line = lines.pop(0).strip()
-        if first_line:
-            if not cleaned_dag:
-                # Accept headers "dag", "mag", or "pag" (case insensitive).
-                # Remove the header token (whatever it is) instead of assuming "dag".
-                m_hdr = re.match(r"^\s*(\w+)", first_line, flags=re.IGNORECASE)
-                if m_hdr and m_hdr.group(1).lower() in ("dag", "mag", "pag", "pdag"):
-                    cleaned_dag = True
-                    # remove the header token from the start so the "{" is handled below
-                    first_line = first_line[m_hdr.end() :]
-            start_loc = first_line.find("{")
-            if start_loc >= 0:
-                first_line = first_line[start_loc + 1 :].strip()
-                lines.insert(0, first_line)
+    if any("{" in ln for ln in lines):
+        cleaned_dag = False
+        while True:
+            if not lines:
                 break
+            first_line = lines.pop(0).strip()
+            if first_line:
+                if not cleaned_dag:
+                    # Accept headers "dag", "mag", or "pag" (case insensitive).
+                    # Remove the header token (whatever it is) instead of assuming "dag".
+                    m_hdr = re.match(r"^\s*(\w+)", first_line, flags=re.IGNORECASE)
+                    if m_hdr and m_hdr.group(1).lower() in ("dag", "mag", "pag", "pdag"):
+                        cleaned_dag = True
+                        # remove the header token from the start so the "{" is handled below
+                        first_line = first_line[m_hdr.end() :]
+                start_loc = first_line.find("{")
+                if start_loc >= 0:
+                    first_line = first_line[start_loc + 1 :].strip()
+                    lines.insert(0, first_line)
+                    break
 
-    while True:
-        if not lines:
-            break
-        last_line = lines.pop().strip()
-        if last_line:
-            end_loc = last_line.rfind("}")
-            if end_loc != -1:
-                last_line = last_line[:end_loc]
-                lines.append(last_line)
-            else:
-                lines.append(last_line)
-            break
+        while True:
+            if not lines:
+                break
+            last_line = lines.pop().strip()
+            if last_line:
+                end_loc = last_line.rfind("}")
+                if end_loc != -1:
+                    last_line = last_line[:end_loc]
+                    lines.append(last_line)
+                else:
+                    lines.append(last_line)
+                break
 
     # Step 3: Parse lines
     ebunch = []
