@@ -998,6 +998,78 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         ancestors_list.update(nodes)
         return ancestors_list
 
+    def to_admg(self):
+        """
+        Returns the latent projection of the DAG onto its observed nodes as an ADMG.
+
+        Algorithms formulated for semi-Markovian models, such as the ID algorithm, expect every unobserved
+        variable to have been summarized by a bidirected edge. The nodes carrying the ``latents`` role are
+        dropped, and for observed nodes ``A`` and ``B`` the projection has
+
+        - ``A -> B`` when this DAG has a directed path from ``A`` to ``B`` whose intermediate nodes are all
+          latent, and
+        - ``A <> B`` when some latent node has such a directed path to each of ``A`` and ``B``, that is, when
+          ``A`` and ``B`` share an unobserved common cause.
+
+        Returns
+        -------
+        Latent projection: pgmpy.base.ADMG
+            An instance of pgmpy.base.ADMG over the observed nodes, carrying over every role except ``latents``.
+
+        Examples
+        --------
+        A latent common cause becomes a bidirected edge.
+
+        >>> from pgmpy.base import DAG
+        >>> dag = DAG(ebunch=[("U", "X"), ("U", "Y"), ("X", "Y")], latents={"U"})
+        >>> sorted(dag.to_admg().get_edges(data=True))
+        [('X', 'Y', '->'), ('X', 'Y', '<>')]
+
+        A latent lying on a directed path becomes a directed edge instead.
+
+        >>> dag = DAG(ebunch=[("X", "U"), ("U", "Y")], latents={"U"})
+        >>> sorted(dag.to_admg().get_edges(data=True))
+        [('X', 'Y', '->')]
+
+        References
+        ----------
+        - :footcite:t:`verma_1993` (Section 3).
+        """
+        from pgmpy.base import ADMG
+
+        latents = set(self.latents)
+
+        def observed_reachable(node):
+            """The observed nodes reached from ``node`` by a directed path running only through latents."""
+            reached, seen, stack = set(), {node}, list(self.get_children(node))
+            while stack:
+                current = stack.pop()
+                if current in seen:
+                    continue
+                seen.add(current)
+                if current in latents:
+                    stack.extend(self.get_children(current))
+                else:
+                    reached.add(current)
+            return reached
+
+        edges = set()
+        for node in self.nodes():
+            if node in latents:
+                # A latent with several such descendants confounds every pair of them.
+                confounded = sorted(observed_reachable(node), key=str)
+                edges.update((u, v, "<>") for i, u in enumerate(confounded) for v in confounded[i + 1 :])
+            else:
+                edges.update((node, child, "->") for child in observed_reachable(node))
+
+        projection = ADMG(edge_list=sorted(edges, key=str))
+        # `edge_list` alone silently drops nodes that have no edges.
+        projection.add_nodes_from(node for node in self.nodes() if node not in latents)
+        for role, variables in self.get_role_dict().items():
+            if role != "latents":
+                projection.with_role(role=role, variables=variables, inplace=True)
+        return projection
+
     def to_pdag(self):
         """
         Returns the CPDAG (Completed Partial DAG) of the DAG representing the equivalence class
