@@ -56,6 +56,7 @@ Score-Based and Tree Search
 
    ~pgmpy.causal_discovery.HillClimbSearch
    ~pgmpy.causal_discovery.GES
+   ~pgmpy.causal_discovery.ILPSearch
    ~pgmpy.estimators.TreeSearch
    ~pgmpy.estimators.ExhaustiveSearch
    ~pgmpy.causal_discovery.TOPIC
