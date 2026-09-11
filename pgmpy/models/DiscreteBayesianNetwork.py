@@ -1223,19 +1223,11 @@ class DiscreteBayesianNetwork(DAG):
         bn_model = DiscreteBayesianNetwork(dag)
         bn_model.latents = dag.latents
 
-        cpds = []
-        for node in bn_model.nodes():
-            parents = list(bn_model.predecessors(node))
-            cpds.append(
-                TabularCPD.get_random(
-                    variable=node,
-                    evidence=parents,
-                    cardinality=n_states_dict,
-                    seed=seed,
-                )
-            )
+        # Set latents safely after all nodes have been added
+        if hasattr(dag, "latents") and dag.latents:
+            bn_model.latents = dag.latents
 
-        bn_model.add_cpds(*cpds)
+        bn_model.get_random_cpds(n_states=n_states_dict, inplace=True, seed=seed)
         return bn_model
 
     def get_random_cpds(
@@ -1262,19 +1254,35 @@ class DiscreteBayesianNetwork(DAG):
             The seed value for random number generators.
 
         """
+        rng = np.random.default_rng(seed)
         if isinstance(n_states, int):
             n_states = dict.fromkeys(self.nodes(), n_states)
         elif isinstance(n_states, dict):
             if set(n_states.keys()) != set(self.nodes()):
                 raise ValueError("Number of states not specified for each variable")
         elif n_states is None:
-            gen = np.random.default_rng(seed=seed)
-            n_states = {var: gen.integers(low=1, high=5, size=1)[0] for var in self.nodes()}
+            n_states = {var: rng.integers(low=1, high=5, size=1).item() for var in self.nodes()}
 
         cpds = []
         for node in self.nodes():
             parents = list(self.predecessors(node))
-            cpds.append(TabularCPD.get_random(variable=node, evidence=parents, cardinality=n_states, seed=seed))
+            current_seed = int(rng.integers(0, 2**31 - 1)) if seed is not None else None
+
+            node_card = n_states[node]
+            evidence_cards = {p: n_states[p] for p in parents}
+
+            cpds.append(
+                TabularCPD.get_random(
+                    variable=node,
+                    evidence=parents,
+                    cardinality={node: node_card, **evidence_cards},
+                    state_names={
+                        node: list(range(node_card)),
+                        **{p: list(range(c)) for p, c in evidence_cards.items()},
+                    },
+                    seed=current_seed,
+                )
+            )
 
         if inplace:
             self.add_cpds(*cpds)
