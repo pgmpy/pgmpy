@@ -1,0 +1,1131 @@
+from collections.abc import Hashable, Iterable
+from itertools import combinations, product
+
+import networkx as nx
+
+from pgmpy.base.ADMG import _CoreGraph
+
+
+class PAG(_CoreGraph):
+    """
+    Partial Ancestral Graph (PAG).
+
+    A PAG represents an equivalence class of MAGs. It allows for circle endpoints ('o')
+    to represent uncertainty about whether an endpoint is an arrow ('>') or a tail ('-').
+    """
+
+    @staticmethod
+    def _normalize_edge_type(edge_type: str) -> str:
+        if not isinstance(edge_type, str):
+            return edge_type
+
+        normalization_map = {
+            "o->": "o>",
+            "-o>": "->",
+            "o-<": "<o",
+            "o-o": "oo",
+            ">-": "<-",
+            "-<": "->",
+            ">o": "<o",
+            "o<": "o>",
+        }
+        return normalization_map.get(edge_type, edge_type)
+
+    def __init__(
+        self,
+        edge_list: Iterable[tuple[Hashable, Hashable, str]] | None = None,
+        latents: set[Hashable] = set(),
+        exposures: set[Hashable] = set(),
+        outcomes: set[Hashable] = set(),
+        roles=None,
+    ):
+        """Initialize Partial Ancestral Graphs.
+
+        Unlike MAGs, PAGs allow circle marks ('o') at edge endpoints to represent
+        uncertainty about the true edge mark in the underlying MAG.
+
+        Parameters
+        ----------
+        edge_list : Iterable[tuple], optional
+            An iterable of edges of the form (u, v, u_mark, v_mark) used to
+            initialize the graph. Each mark must be one of {">", "-", "o"}.
+            Default is None, which initializes an empty graph.
+
+        latents : set, optional
+            Set of latent (unobserved) variables in the graph. Default is
+            an empty set.
+
+        roles : dict, optional (default: None)
+            The keys are roles, and the values are role names (strings or iterables of str).
+            If provided, this will automatically assign roles to the nodes in the graph.
+            Passing a key-value pair via ``roles`` is equivalent to calling
+            ``with_role(role, variables)`` for each key-value pair in the dictionary.
+
+        Returns
+        -------
+        PAG
+            A new instance of a Partial Ancestral Graph.
+
+        Examples
+        --------
+        >>> from pgmpy.base import AncestralBase
+        [('A', 'B', {'marks': {'A': '-', 'B': '>'}}),
+         ('B', 'C', {'marks': {'B': '>', 'C': '-'}}),
+         ('C', 'D', {'marks': {'C': 'o', 'D': 'o'}})]
+
+        Roles can be assigned to nodes in the graph at construction or using methods.
+
+        At construction:
+        >>> g = AncestralBase(
+        ...     edge_list=[("L", "A", "-", ">"), ("B", "C", "-", ">")],
+        ...     latents={"L"},
+        ...     roles={"exposure": "A", "outcome": "B"},
+        ... )
+
+        Roles can also be assigned after creation using ``with_role`` method.
+
+        >>> g = g.with_role("adjustment", {"L", "C"})
+
+        Vertices of a specific role can be retrieved using ``get_role`` method.
+
+        >>> g.get_role("exposure")
+        ["A"]
+        >>> g.get_role("adjustment")
+        ["L", "C"]
+        """
+        # `_CoreGraph` expects edges as (u, v, edge_type). Accept the legacy
+        # four-tuple form (u, v, u_mark, v_mark) here and convert it into the
+        # canonical three-tuple using `_to_edge_type` so construction works with
+        # either format.
+        converted_edges = None
+        if edge_list is not None:
+            converted_edges = []
+            for edge in edge_list:
+                if len(edge) == 3:
+                    u, v, edge_type = edge
+                    converted_edges.append((u, v, self._normalize_edge_type(edge_type)))
+                elif len(edge) == 4:
+                    u, v, mu, mv = edge
+                    markers = {u: mu, v: mv}
+                    edge_type = self._to_edge_type(u, v, markers)
+                    converted_edges.append((u, v, edge_type))
+                else:
+                    raise ValueError(f"Edge tuple must have 3 or 4 elements. Edge {edge} is of length {len(edge)}.")
+
+        super().__init__(
+            edge_list=converted_edges,
+            latents=latents,
+            roles=roles,
+            exposures=exposures,
+            outcomes=outcomes,
+        )
+
+    # utility function for getting edge marks
+    def get_edge_marks(self, u, v):
+        """
+        Get the marks on the edge between two nodes.
+
+        Parameters
+        ----------
+        u, v : Hashable
+            The two nodes connected by the edge.
+
+        Returns
+        -------
+        dict
+            A dictionary with keys as the nodes and values as their corresponding marks.
+            For example, {u: '-', v: '>'} indicates a tail at u and an arrowhead at v.
+        """
+        if not self.has_edge(u, v):
+            raise ValueError(f"No edge exists between {u} and {v}.")
+
+        data = self.get_edge_data(u, v)
+        if not data:
+            raise ValueError(f"No edge exists between {u} and {v}.")
+
+        # If there are parallel edges, the caller should use get_edge_type/get_marker
+        if len(data) > 1:
+            raise ValueError(f"Multiple parallel edges between {u} and {v}; use get_edge_type/get_marker instead.")
+
+        # Return a copy of the stored marker dict (keys are node ids).
+        return list(data.values())[0].copy()
+
+    def get_neighbors(
+        self,
+        node: Hashable,
+        edge_types: str | Iterable[str] | None = None,
+    ) -> set[Hashable]:
+        """
+        Get the neighbors of a given node.
+
+        Parameters
+        ----------
+        node : Hashable
+            The node whose neighbors are being queried.
+        edge_types : str | Iterable[str] | None, optional
+            Restrict neighbors to edges of the specified type(s). If None,
+            all neighboring nodes are returned regardless of edge mark.
+
+        Returns
+        -------
+        set[Hashable]
+            Set of neighboring nodes.
+        """
+        return super().get_neighbors(node, edge_types=edge_types)
+
+    def _neighbors_by_mark(
+        self,
+        node: Hashable,
+        u_type: str | None = None,
+        v_type: str | None = None,
+    ) -> set[Hashable]:
+        """
+        Get the neighbors of `node`, filtered by the edge mark at `node` itself
+        and/or the edge mark at the neighboring node.
+
+        This is a small helper built on top of the public, `_CoreGraph`-compatible
+        ``get_neighbors`` method. It restores the old "u_type"/"v_type" filtering
+        behaviour used throughout the orientation rules without changing the
+        public ``get_neighbors`` signature.
+
+        Parameters
+        ----------
+        node : Hashable
+            The node whose neighbors are being queried. This corresponds to the
+            "u" side of the pair for the purposes of `u_type`.
+
+        u_type : str or None, default None
+            Required mark on the edge at `node` (allowed values: '-', '>', 'o').
+            If None, the mark at `node` is unconstrained.
+
+        v_type : str or None, default None
+            Required mark on the edge at the neighboring node (allowed values:
+            '-', '>', 'o'). If None, the mark at the neighbor is unconstrained.
+
+        Returns
+        -------
+        set[Hashable]
+            Neighbors of `node` whose incident edge matches the given mark
+            constraints.
+        """
+        matches = set()
+        for neighbor in self.get_neighbors(node):
+            marks = self.get_edge_marks(node, neighbor)
+            if u_type is not None and marks.get(node) != u_type:
+                continue
+            if v_type is not None and marks.get(neighbor) != v_type:
+                continue
+            matches.add(neighbor)
+        return matches
+
+    def is_definite_non_collider(self, vertex, adj_u, adj_v):
+        """
+        Determine if a vertex on a path is a definite non-collider.
+
+        A vertex is a definite non-collider if:
+        - Either incident edge has a tail at the vertex, or
+        - Both incident edges have circle marks at vertex and the two adjacent vertices are not adjacent to each other.
+
+        Parameters
+        ----------
+        vertex : Hashable
+            The vertex to check on the path.
+
+        adj_u : Hashable
+            The node preceding `vertex` on the path.Other smaller issues I noticed (optional fixes)
+
+        adj_v : Hashable
+            The node following `vertex` on the path.
+
+        Returns
+        -------
+        bool
+            True if the vertex is a definite non-collider, False otherwise.
+        """
+        edge_uv = self.get_edge_marks(adj_u, vertex)
+        edge_vw = self.get_edge_marks(vertex, adj_v)
+
+        # Check for tail at vertex on either edge
+        if edge_uv.get(vertex) == "-" or edge_vw.get(vertex) == "-":
+            return True
+
+        # Check for circle marks at vertex on both edges
+        if edge_uv.get(vertex) == "o" and edge_vw.get(vertex) == "o":
+            # If both adjacent vertices are not adjacent to each other, it's a definite non-collider
+            if not self.has_edge(adj_u, adj_v):
+                return True
+
+        return False
+
+    def get_possible_ancestors(self, node):
+        """
+        Return the set of possible ancestors of a given node.
+
+        A node X is a possible ancestor of Y if X=Y or if there exists a possibly directed path from X to Y.
+
+        Parameters
+        ----------
+        node : Hashable
+            The node whose possible ancestors are being queried.
+
+        Returns
+        -------
+        set
+            Set of possible ancestor nodes including the node itself.
+        """
+        possible_ancestors = {node}
+        for other in self.nodes:
+            if other == node:
+                continue
+            pd_paths = self.get_potentially_directed_paths(start=other, end=node)
+            if pd_paths:
+                possible_ancestors.add(other)
+        return possible_ancestors
+
+    def is_definitely_visible(self, u, v):
+        """
+        Determine if an edge u -> v is definitely visible in the PAG.
+
+        An edge is definitely visible if it satisfies the visibility conditions
+        for all MAGs represented by the PAG.
+
+        Parameters
+        ----------
+        u : Hashable
+            The source node of the edge.
+
+        v : Hashable
+            The target node of the edge.
+
+        Returns
+        -------
+        bool
+            True if the edge is definitely visible, False otherwise.
+        """
+        if not self.has_edge(u, v):
+            return False
+        if self.get_edge_marks(u, v).get(u) != "-" or self.get_edge_marks(u, v).get(v) != ">":
+            return False
+
+        for neighbor in self._neighbors_by_mark(u, v_type=">"):
+            if neighbor not in self.get_neighbors(v):
+                return True
+
+        stack = [u]
+        visited = set()
+
+        while stack:
+            current = stack.pop()
+
+            for pred in self._neighbors_by_mark(current, u_type="-", v_type=">"):
+                if pred in visited or pred == u:
+                    continue
+                visited.add(pred)
+
+                if pred not in self.get_neighbors(v):
+                    return True
+
+                if pred in self._neighbors_by_mark(v, u_type="-", v_type=">"):
+                    stack.append(pred)
+
+        return False
+
+    def is_uncovered(self, path):
+        r"""
+        Check whether a path is uncovered.
+
+        a path :math:`p = (V_0 , \cdots , V_n)` is said to be uncovered if
+        for every :math:`1 \le i \le n-1, V_{i-1} `and` V_{i+1}` are not adjacent, i.e.,
+        if every consecutive triple on the path is unshielded.
+
+        Parameters
+        ----------
+        path : list
+            Sequence of nodes representing the path.
+
+        Returns
+        -------
+        bool
+            True if the path is uncovered, False otherwise.
+        """
+        if len(path) < 3:
+            return True
+
+        for i in range(1, len(path) - 1):
+            x = path[i - 1]
+            z = path[i + 1]
+            if self.has_edge(x, z):
+                return False
+
+        return True
+
+    def get_potentially_directed_paths(self, start, end):
+        r"""
+        Return all potentially directed paths between two nodes.
+
+        A path :math: `p = (V_0 , \cdots , V_n)` is said to be potentially directed (abbreviated as p.d.)
+        from :math:`V_0 \text{to} V_n \text{if for every} 0 \le i \le n-1, \text{the edge between}
+        V_{i} \text{and} V_{i+1} \text{is not into} V_{i} \text{or out of} V_{i+1}`.
+
+        Parameters
+        ----------
+        start : Hashable
+            The starting node.
+
+        end : Hashable
+            The target node.
+
+        Returns
+        -------
+        list[list[Hashable]]
+            List of paths, each represented as a list of nodes.
+        """
+        all_pd = []
+        all_paths = nx.all_simple_paths(self, source=start, target=end)
+
+        for path in all_paths:
+            is_pd = True
+            for i in range(len(path) - 1):
+                x = path[i]
+                y = path[i + 1]
+                edge_marks = self.get_edge_marks(x, y)
+                # Do not allow an arrowhead into x, nor a tail at y
+                if edge_marks.get(x) == ">" or edge_marks.get(y) == "-":
+                    is_pd = False
+                    break
+
+            if is_pd:
+                all_pd.append(path)
+
+        return all_pd
+
+    def is_valid_fork_configuration(self, u, w, forks):
+        """
+        Check whether a pair of forks supports the R10 orientation condition.
+
+        This verifies that there exist nodes `v` and `x` such that both point into `w`
+        (i.e., `v --> w` and `x --> w`), and there are uncovered, potentially directed
+        paths from `u` to each of them. The first neighbors after `u` on these paths
+        (`mu` and `omega`) must be different and must not be adjacent.
+
+        Parameters
+        ----------
+        u : Hashable
+            The source node with an edge `u o--> w`.
+
+        w : Hashable
+            The endpoint of the edge `u o--> w`.
+
+        forks : list
+            Nodes that have edges pointing into `w` (i.e., all `v` such that `v --> w`).
+
+        Returns
+        -------
+        bool
+            True if the configuration satisfies the R10 condition, otherwise False.
+        """
+        for (
+            v,
+            x,
+        ) in combinations(forks, 2):
+            pd_uv = [p for p in self.get_potentially_directed_paths(u, v) if self.is_uncovered(p)]
+            if not pd_uv:
+                continue
+
+            pd_ux = [p for p in self.get_potentially_directed_paths(u, x) if self.is_uncovered(p)]
+            if not pd_ux:
+                continue
+
+            for p1 in pd_uv:
+                mu = p1[1] if len(p1) > 1 else v
+                for p2 in pd_ux:
+                    omega = p2[1] if len(p2) > 1 else x
+                    if mu != omega and not self.has_edge(mu, omega):
+                        return True
+        return False
+
+    def get_paths_with_marks(self, u, v, u_type=None, v_type=None):
+        """
+        Find all simple paths between two nodes that satisfy given edge-mark constraints.
+
+        A valid path is one where every traversed edge matches the required mark
+        on the current node (`u_type`) and on the neighbor (`v_type`). If either
+        constraint is None, that side of the edge is unrestricted.
+
+        Parameters
+        ----------
+        u, v : Hashable
+            The start and end nodes. They must be different.
+
+        u_type : str or None, default None
+            The required mark on the current node for each step along the path.
+            If None, any mark is allowed.
+
+        v_type : str or None, default None
+            The required mark on the neighboring node for each step.
+            If None, any mark is allowed.
+
+        Returns
+        -------
+        list[list[Hashable]]
+            All simple paths from `u` to `v` that satisfy the mark conditions.
+
+        Raises
+        ------
+        ValueError
+            If `u` and `v` are the same node.
+        """
+        if u == v:
+            raise ValueError("Start and end nodes must differ (path length >= 2).")
+
+        valid_paths = []
+        for path in nx.all_simple_paths(self, source=u, target=v):
+            ok = True
+            for a, b in zip(path, path[1:]):
+                marks = self.get_edge_marks(a, b)
+                mark_a = marks.get(a)
+                mark_b = marks.get(b)
+                if u_type is not None and mark_a != u_type:
+                    ok = False
+                    break
+                if v_type is not None and mark_b != v_type:
+                    ok = False
+                    break
+            if ok:
+                valid_paths.append(path)
+
+        return valid_paths
+
+    def modify_edge(self, u, v, mark_u=None, mark_v=None):
+        """
+        Modify the marks on an existing edge between two nodes.
+
+        This updates the marks on the edge `u--v`. Any mark set to None is left
+        unchanged, so only the marks you explicitly provide will be updated.
+
+        Parameters
+        ----------
+        u : Hashable
+            One endpoint of the edge.
+
+        v : Hashable
+            The other endpoint of the edge.
+
+        mark_u : str, default None
+            The new mark at node `u` (allowed values: '-', '>', 'o').
+            If None, the existing mark at `u` is preserved.
+
+        mark_v : str, default None
+            The new mark at node `v` (allowed values: '-', '>', 'o').
+            If None, the existing mark at `v` is preserved.
+
+        Raises
+        ------
+        ValueError
+            If no edge exists between `u` and `v`.
+        """
+
+        if not self.has_edge(u, v):
+            raise ValueError(f"No edge between {u} and {v}")
+
+        # Use _CoreGraph.set_marker which handles multigraph safety, validation and
+        # directed-cycle checks. Note that set_marker(u, v, m) sets the marker at v's
+        # endpoint for the edge between u and v.
+        if mark_v is not None:
+            self.set_marker(u, v, mark_v)
+        if mark_u is not None:
+            # To set the marker at `u` we call set_marker with reversed endpoints.
+            self.set_marker(v, u, mark_u)
+
+    def get_discriminating_path(self, x, y, v):
+        r"""
+        Check whether there exists a discriminating path for node `v` between `x` and `y`.
+
+        A path \( p = (X, \ldots, W, V, Y)  \) in a MAG is a *discriminating path*
+        for `V` if it meets the following conditions:
+
+        - The path has at least three edges.
+        - `V` is an internal (non-endpoint) node on the path and is adjacent to `Y`
+        along that path.
+        - `X` is not adjacent to `Y`.
+        - Every node between `X` and `V` is a collider on the path and is also
+        a parent of `Y`.
+
+        The function returns all such discriminating paths, if any exist.
+
+        Returns
+        -------
+        list[list[Hashable]]
+            All discriminating paths for `v` between `x` and `y`.
+            Returns an empty list if none exist.
+        """
+
+        if x == y:
+            raise ValueError("`x` and `y` cannot be the same nodes.")
+
+        # The edge (v, y) should exist
+        if not self.has_edge(v, y):
+            return []
+
+        discriminating_paths = []
+
+        # x and y cannot be adjacent
+        if self.has_edge(x, y):
+            return []
+
+        for edge_path in nx.all_simple_edge_paths(self, x, v):
+            # Convert edge path to node path
+            node_path = [x]
+            path_nodes = []
+            for edge in edge_path:
+                if len(edge) == 2:
+                    u, node = edge
+                elif len(edge) == 3:
+                    u, node = edge[0], edge[1]
+                else:
+                    raise ValueError(f"Unexpected edge tuple length: {len(edge)}")
+                node_path.append(node)
+                path_nodes.append((u, node))
+
+            valid = True
+            # All edges in the path should have arrowheads at their endpoints (colliders)
+            # except possibly the first edge from x
+            for u, v_node in path_nodes:
+                edge_marks = self.get_edge_marks(u, v_node)
+                # All edges should have arrowhead at the next node
+                if edge_marks.get(v_node) != ">":
+                    valid = False
+                    break
+
+            if valid:
+                # Also check: w (node before v on path) should be parent of y
+                # This is the second-to-last node in node_path
+                if len(node_path) >= 2:
+                    w = node_path[-2]
+                    # Check if w and y are connected
+                    if not self.has_edge(w, y):
+                        valid = False
+                    elif self.get_edge_marks(w, y) != {w: "-", y: ">"}:
+                        valid = False
+
+            if valid:
+                # Append the full path including y at the end
+                discriminating_paths.append(node_path + [y])
+
+        return discriminating_paths
+
+        return discriminating_paths
+
+    def rule_1(self, inplace=False, **kwargs):
+        """
+        Orient a triple of nodes when the middle node forms a specific mixed pattern.
+
+        If the graph contains a configuration of the form
+        `u *--> v o--* w`
+        and `u` and `w` are not adjacent, then the edges are oriented as
+        `u *--> v --> w`.
+
+        Parameters
+        ----------
+        inplace : bool, default False
+            If True, apply the orientation directly to the graph.
+            If False, return a modified copy and leave the original graph unchanged.
+
+        Returns
+        -------
+        PAG or None
+            The updated graph if `inplace=False`. Returns None when applying
+            changes in place.
+        """
+        pag = self if inplace else self.copy()
+
+        for node in list(pag.nodes):
+            u_candidates = pag._neighbors_by_mark(node, u_type=">", v_type=None)
+
+            w_candidates = pag._neighbors_by_mark(node, u_type="o", v_type=None)
+
+            for u, w in product(u_candidates, w_candidates):
+                if pag.get_edge_marks(node, w)[node] != "o":
+                    continue
+                if not pag.has_edge(u, w):
+                    pag.modify_edge(node, w, mark_u="-", mark_v=">")
+
+        if not inplace:
+            return pag
+
+    def rule_2(self, inplace=False, **kwargs):
+        """
+        If u --> v *--> w or u *--> v --> w and u *--o w, then orient u *--> w .
+
+        Parameters
+        ----------
+        inplace : bool, default=False
+            If True, modifies the graph in place.
+            If False, works on and returns a copy.
+
+        Returns
+        -------
+        PAG or None
+            A new graph with orientations applied if inplace=False,
+            otherwise None.
+        """
+        pag = self if inplace else self.copy()
+
+        for node in list(pag.nodes):
+            u_candidates = pag._neighbors_by_mark(node, u_type=">", v_type="-")
+            w_candidates = pag._neighbors_by_mark(node, u_type=None, v_type=">")
+
+            for u, w in product(u_candidates, w_candidates):
+                if pag.has_edge(u, w):
+                    edge_marks = pag.get_edge_marks(u, w)
+                    if edge_marks.get(u) == "o" and edge_marks.get(w) == ">":
+                        pag.modify_edge(u, w, mark_u="-", mark_v=">")
+
+        for node in pag.nodes:
+            u_candidates = pag._neighbors_by_mark(node, u_type=">", v_type=None)
+            w_candidates = pag._neighbors_by_mark(node, u_type="-", v_type=">")
+
+            for u, w in product(u_candidates, w_candidates):
+                if pag.has_edge(u, w):
+                    edge_marks = pag.get_edge_marks(u, w)
+                    if edge_marks.get(u) == "o" and edge_marks.get(w) == ">":
+                        pag.modify_edge(u, w, mark_u="-", mark_v=">")
+
+        if not inplace:
+            return pag
+
+    def rule_3(self, inplace=False, **kwargs):
+        """
+        Orient the edge `z *--o v` when it is supported by the surrounding structure.
+
+        This rule applies when the following configuration is present:
+
+        - `u *--> v <--* w`
+        - `u *--o z o--* w`
+        - `u` and `w` are not adjacent
+        - `z *--o v` is an existing edge
+
+        When all these conditions hold, the edge `z *--o v` is oriented as `z *-> v`.
+
+        Parameters
+        ----------
+        inplace : bool, default False
+            If True, apply the orientation directly to the current graph.
+            If False, operate on and return a modified copy.
+
+        Returns
+        -------
+        PAG or None
+            The updated graph if `inplace=False`. Returns None when changes
+            are applied in place.
+        """
+
+        pag = self if inplace else self.copy()
+
+        for v in list(pag.nodes):
+            potential_uw_cond1 = pag._neighbors_by_mark(v, u_type=">", v_type=None)
+
+            if len(potential_uw_cond1) < 2:
+                continue
+
+            potential_z = pag._neighbors_by_mark(v, u_type="o", v_type=None)
+            for z in potential_z:
+                potential_uw_cond2 = pag._neighbors_by_mark(z, u_type="o", v_type=None)
+
+                common_uw = potential_uw_cond2.intersection(potential_uw_cond1)
+                for u, w in combinations(common_uw, 2):
+                    if not pag.has_edge(u, w):
+                        pag.modify_edge(z, v, mark_u=None, mark_v=">")
+
+        if not inplace:
+            return pag
+
+    def rule_4(self, inplace=False, **kwargs):
+        """
+        Orient edges using discriminating paths.
+
+        This rule examines each node `v` and looks for nodes `y` connected to `v`
+        with an `o` mark at `v`. For each such pair `(v, y)`, it checks every
+        other node `x` to determine whether a discriminating path exists for
+        the triple `(x, y, v)`.
+
+        For each discriminating path found:
+
+        - If `v` is in the separating set for the pair `(x, y)`,
+        the edge between `v` and `y` is oriented as `v > y`.
+
+        - If `v` is *not* in the separating set for that pair,
+        the edge connecting the predecessor of `v` on the path (i.e., `path[-3]`)
+        is oriented as `path[-3] --> v`, and the edge `v`--`y` is oriented as `v --> y`.
+
+        A dictionary of separating sets must be provided via the `separating_sets`
+        keyword argument. Keys should be `(x, y)` tuples, and values should be
+        sets of conditioning nodes.
+
+        Parameters
+        ----------
+        inplace : bool, default False
+            If True, update the current graph directly.
+            If False, return a modified copy and leave the original graph unchanged.
+
+        **kwargs
+            separating_sets : dict
+                A mapping from `(x, y)` node pairs to the set of nodes that
+                separate them. This argument is required.
+
+        Returns
+        -------
+        PAG or None
+            The updated graph when `inplace=False`. Returns None when changes
+            are applied in place.
+
+        Raises
+        ------
+        ValueError
+            If `separating_sets` is not provided.
+
+        """
+        pag = self if inplace else self.copy()
+
+        if "separating_sets" not in kwargs:
+            raise ValueError("Separating Sets not provided")
+
+        separating_sets = kwargs["separating_sets"]
+
+        for c in pag.nodes:
+            # Find all d such that edge (c, d) has a circle on c's side
+            neighbors = pag._neighbors_by_mark(c, u_type="o", v_type=None)
+
+            for d in neighbors:
+                # Try each possible a (start node)
+                for a in pag.nodes:
+                    if a == c or a == d:
+                        continue
+
+                    # Find paths that end ... b, c, d
+                    paths = pag.get_discriminating_path(a, d, c)
+
+                    for path in paths:
+                        # Need at least [a, ..., b, c, d]
+                        if len(path) < 3:
+                            continue
+
+                        # b is predecessor of c on the path
+                        b = path[-3]
+
+                        # ---------- CASE 1 ----------
+                        # c is in Sepset(a, d) → orient: c → d
+                        in_sepset = False
+                        if (a, d) in separating_sets and c in separating_sets[(a, d)]:
+                            in_sepset = True
+                        if (d, a) in separating_sets and c in separating_sets[(d, a)]:
+                            in_sepset = True
+
+                        if in_sepset:
+                            # make c → d
+                            pag.modify_edge(c, d, mark_u="-", mark_v=">")
+
+                        # ---------- CASE 2 ----------
+                        # otherwise orient: b ↔ c ↔ d
+                        else:
+                            # b ↔ c  (arrowheads on both sides)
+                            pag.modify_edge(b, c, mark_u=">", mark_v=">")
+                            # c ↔ d
+                            pag.modify_edge(c, d, mark_u=">", mark_v=">")
+
+        if not inplace:
+            return pag
+
+    def rule_5(self, inplace=False, **kwargs):
+        r"""
+        Orient edges along an uncovered circle path.
+
+        This rule is triggered when two nodes `u` and `v` are connected by an `o--o`
+        edge, and there exists an uncovered circle path between them. Specifically:
+
+        - `u` and `v` share an `o--o` edge.
+        - There is a path ⟨u, …, v⟩ of length at least 4 made entirely of `o--o` edges.
+        - The path is uncovered.
+        - The second node and the second-to-last node on the path are not adjacent
+        to the opposite endpoints (i.e., no edge between `path[0]` and `path[-2]`,
+        and none between `path[1]` and `path[-1]`).
+
+        When these conditions are met, the `o–o` edge between `u` and `v` is oriented,
+        and all edges along the uncovered path are oriented as well.
+
+        Parameters
+        ----------
+        inplace : bool, default False
+            If True, update the current graph directly.
+            If False, return a modified copy and leave the original untouched.
+
+        Returns
+        -------
+        PAG or None
+            The updated graph when `inplace=False`. Returns None when changes
+            are applied in place.
+        """
+        pag = self if inplace else self.copy()
+
+        for u, v in list(pag.edges(keys=False)):
+            edge_marks = pag.get_edge_marks(u, v)
+            if edge_marks[u] == "o" and edge_marks[v] == ">":
+                paths = pag.get_paths_with_marks(u, v, u_type="o", v_type=None)
+                for path in paths:
+                    if len(path) >= 4 and pag.is_uncovered(path):
+                        if not pag.has_edge(path[0], path[-2]) and not pag.has_edge(path[1], path[-1]):
+                            pag.modify_edge(u, v, mark_u="-", mark_v="-")
+
+                            if len(path) >= 2:
+                                pag.modify_edge(path[0], path[1], mark_u=None, mark_v="-")
+
+                            for i in range(1, len(path) - 1):
+                                pag.modify_edge(path[i], path[i + 1], mark_u="-", mark_v="-")
+
+        if not inplace:
+            return pag
+
+    def rule_6(self, inplace=False, **kwargs):
+        r"""
+        If u -- v o--* w and u and w may or may not be adjacent, then orient v o--* w as v --* w.
+
+        Parameters
+        ----------
+        inplace : bool, default=False
+            If True, modifies the graph in place.
+            If False, works on and returns a copy.
+
+        Returns
+        -------
+        PAG or None
+            A new graph with orientations applied if inplace=False,
+            otherwise None.
+        """
+        pag = self if inplace else self.copy()
+
+        for v in list(pag.nodes):
+            u_candidates = pag._neighbors_by_mark(v, u_type="-", v_type="-")
+
+            w_candidates = pag._neighbors_by_mark(v, u_type="o", v_type=None)
+
+            if len(u_candidates) > 0:
+                for w in w_candidates:
+                    if pag.get_edge_marks(v, w).get(v) != "o":
+                        continue
+                    pag.modify_edge(v, w, mark_u="-", mark_v=None)
+
+        if not inplace:
+            return pag
+
+    def rule_7(self, inplace=False, **kwargs):
+        r"""
+        If u --o v o--* w, u and w are non-adjacent, then orient v o--* w as v -–* w.
+
+        Parameters
+        ----------
+        inplace : bool, default=False
+            If True, modifies the graph in place.
+            If False, works on and returns a copy.
+
+        Returns
+        -------
+        PAG or None
+            A new graph with orientations applied if inplace=False,
+            otherwise None.
+        """
+        pag = self if inplace else self.copy()
+
+        for v in list(pag.nodes):
+            u_candidates = pag._neighbors_by_mark(v, u_type="o", v_type="-")
+            w_candidates = pag._neighbors_by_mark(v, u_type="o", v_type=None)
+            for u in u_candidates:
+                for w in w_candidates:
+                    if u == w or pag.has_edge(u, w):
+                        continue
+
+                    if pag.get_edge_marks(v, w).get(v) != "o":
+                        continue
+
+                    pag.modify_edge(v, w, mark_u="-", mark_v=None)
+
+        if not inplace:
+            return pag
+
+    def rule_8(self, inplace=False, **kwargs):
+        r"""
+        if u --> v --> w or u --o v --> w, and u o--> w, then orient u o--> w as u --> w.
+
+        Parameters
+        ----------
+        inplace : bool, default=False
+            If True, modifies the graph in place.
+            If False, works on and returns a copy.
+
+        Returns
+        -------
+        PAG or None
+            A new graph with orientations applied if inplace=False,
+            otherwise None.
+        """
+        pag = self if inplace else self.copy()
+
+        for u in pag.nodes:
+            for v in pag.neighbors(u):
+                marks_uv = pag.get_edge_marks(u, v)
+
+                # Check u -> v   OR   u --o v
+                cond_uv_arrow = marks_uv.get(u) == "-" and marks_uv.get(v) == ">"
+                cond_uv_circle = marks_uv.get(u) == "-" and marks_uv.get(v) == "o"
+
+                if not (cond_uv_arrow or cond_uv_circle):
+                    continue
+
+                # Now check v -> w
+                for w in pag.neighbors(v):
+                    if w == u:
+                        continue
+
+                    marks_vw = pag.get_edge_marks(v, w)
+                    if not (marks_vw.get(v) == "-" and marks_vw.get(w) == ">"):
+                        continue
+
+                    # Finally check u o-> w
+                    marks_uw = pag.get_edge_marks(u, w)
+                    if marks_uw.get(u) == "o" and marks_uw.get(w) == ">":
+                        # Orient u -> w
+                        pag.modify_edge(u, w, mark_u="-", mark_v=">")
+
+        if not inplace:
+            return pag
+
+    def rule_9(self, inplace=False, **kwargs):
+        r"""
+        Orient the edge `u --> w` when an uncovered, potentially directed path supports it.
+
+        This rule applies when:
+
+        - The edge between `u` and `w` is `u o --> w` (circle at `u`, arrow at `w`), and
+        - There exists an uncovered, potentially directed path
+        ⟨u, v, …, w⟩ such that `v` and `w` are not adjacent.
+
+        When these conditions are satisfied, the edge is oriented as `u --> w`.
+
+        Parameters
+        ----------
+        inplace : bool, default False
+            If True, apply the orientation directly to the existing graph.
+            If False, operate on a copy and return the updated graph.
+
+        Returns
+        -------
+        PAG or None
+            The updated graph if `inplace=False`. Returns None when applying
+            changes in place.
+        """
+        pag = self if inplace else self.copy()
+
+        for u, w in list(pag.edges(keys=False)):
+            marks = pag.get_edge_marks(u, w)
+            if marks.get(u) == "o" and marks.get(w) == ">":
+                pd_paths = pag.get_potentially_directed_paths(start=u, end=w)
+
+                for path in pd_paths:
+                    if len(path) >= 4 and pag.is_uncovered(path=path):
+                        v = path[1]
+
+                        if not pag.has_edge(v, w):
+                            pag.modify_edge(u, w, mark_u="-", mark_v=">")
+
+        if not inplace:
+            return pag
+
+    def rule_10(self, inplace=False, **kwargs):
+        r"""
+        Orient the edge `u -> w` based on uncovered, potentially directed paths.
+
+        This rule applies when there are two nodes `v` and `x` such that
+        `v → w ← x`, and the following conditions hold:
+
+        - There is an uncovered, potentially directed path from `u` to `v`.
+        - There is an uncovered, potentially directed path from `u` to `x`.
+        - The first neighbors after `u` on these paths (call them `mu` and `omega`)
+        are different.
+        - `mu` and `omega` are not adjacent.
+
+        When these conditions are met, the edge `u --> w` is oriented accordingly.
+
+        Parameters
+        ----------
+        inplace : bool, default False
+            If True, apply the orientation directly to the existing graph.
+            If False, operate on a copy and return the updated graph.
+
+        Returns
+        -------
+        PAG or None
+            The updated graph if `inplace=False`. Returns None when changes
+            are applied in place.
+        """
+        pag = self if inplace else self.copy()
+
+        for u, w in list(pag.edges(keys=False)):
+            if not (pag.has_edge(u, w) and self.get_edge_marks(u, w)[u] == "o" and self.get_edge_marks(u, w)[w] == ">"):
+                continue
+
+            forks = pag._neighbors_by_mark(w, u_type="-", v_type=">")
+
+            if len(forks) < 2:
+                continue
+
+            if pag.is_valid_fork_configuration(u=u, w=w, forks=forks):
+                pag.modify_edge(u, w, mark_u="-", mark_v=">")
+
+        if not inplace:
+            return pag
+
+    def apply_orientation_rules(self, rules=None, inplace=False, separating_sets=None):
+        """
+        Apply all orientation rules (R1 to R10) until no more changes occur.
+
+        The rules are applied repeatedly in sequence, propagating orientations
+        until the graph stabilizes.
+
+        Parameters
+        ----------
+        inplace : bool, default=False
+            If True, modifies the graph in place.
+            If False, returns a new graph.
+
+        Returns
+        -------
+        PAG
+            The graph with orientation rules applied.
+        """
+        pag = self if inplace else self.copy()
+
+        rules_map = {
+            "R1": pag.rule_1,
+            "R2": pag.rule_2,
+            "R3": pag.rule_3,
+            "R4": pag.rule_4,
+            "R5": pag.rule_5,
+            "R6": pag.rule_6,
+            "R7": pag.rule_7,
+            "R8": pag.rule_8,
+            "R9": pag.rule_9,
+            "R10": pag.rule_10,
+        }
+
+        rules_to_apply = rules or list(rules_map.keys())
+
+        missing = set(rules_to_apply) - set(rules_map.keys())
+        if missing:
+            raise ValueError(f"Unknown Rule(s) Requested:  {missing}")
+
+        for r in rules_to_apply:
+            func = rules_map[r]
+            if inplace:
+                func(separating_sets=separating_sets, inplace=inplace)
+            else:
+                pag = func(separating_sets=separating_sets, inplace=inplace)
+        return pag
