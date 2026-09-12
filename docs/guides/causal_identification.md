@@ -1,7 +1,8 @@
 # Causal Identification
 
-```{meta}
-:description: Identify adjustment and frontdoor strategies from causal graphs using pgmpy's identification APIs.
+```{eval-rst}
+.. meta::
+   :description: Identify adjustment and frontdoor strategies from causal graphs using pgmpy's identification APIs.
 ```
 
 Before estimating a causal effect from data, you need to determine whether the effect
