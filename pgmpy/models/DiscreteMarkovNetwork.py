@@ -279,7 +279,71 @@ class DiscreteMarkovNetwork(UndirectedGraph):
                     raise ValueError("DiscreteFactor inconsistent with the model.")
         return True
 
+    def fit(self, data, estimator=None, **kwargs):
+        """
+        Estimates the parameters (DiscreteFactor objects) of the DiscreteMarkovNetwork from data.
+
+        Parameters
+        ----------
+        data: pandas.DataFrame
+            DataFrame object with column names identical to the variable names of the network.
+
+        estimator: MaximumLikelihoodEstimator, optional
+            An initialized parameter estimator. If None, defaults to MaximumLikelihoodEstimator.
+
+        Returns
+        -------
+        self: DiscreteMarkovNetwork
+            Returns self with learned DiscreteFactor objects added.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>> from pgmpy.models import DiscreteMarkovNetwork
+        >>> data = pd.DataFrame(
+        ...     np.random.randint(low=0, high=2, size=(1000, 3)),
+        ...     columns=["A", "B", "C"],
+        ... )
+        >>> model = DiscreteMarkovNetwork([("A", "B"), ("B", "C")])
+        >>> model.fit(data)  # doctest: +ELLIPSIS
+        <pgmpy.models.DiscreteMarkovNetwork.DiscreteMarkovNetwork object at 0x...>
+        >>> len(model.get_factors())
+        2
+        """
+        # 1. Input Validation
+        if set(self.nodes()) - set(data.columns):
+            raise ValueError(
+                f"Nodes detected in the model that are not present in the dataset: "
+                f"{set(self.nodes()) - set(data.columns)}."
+            )
+
+        # 2. Ensure initial factors exist for Junction Tree construction
+        if not self.factors:
+            for u, v in self.edges():
+                card_u = len(data[u].unique())
+                card_v = len(data[v].unique())
+                factor = DiscreteFactor([u, v], [card_u, card_v], np.ones(card_u * card_v))
+                self.add_factors(factor)
+
+        # 3. Convert to Junction Tree and compute potentials using MaximumLikelihoodEstimator
+        import warnings
+        from pgmpy.estimators import MaximumLikelihoodEstimator
+
+        jt = self.to_junction_tree()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=FutureWarning)
+            mle = MaximumLikelihoodEstimator(jt, data)
+            potentials = mle.estimate_potentials()
+
+
+        # 4. Update model factors
+        self.factors = []
+        self.add_factors(*potentials.values())
+        return self
+
     def to_factor_graph(self):
+
         """
         Converts the Markov Model into Factor Graph.
 
