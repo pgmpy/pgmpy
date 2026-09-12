@@ -58,10 +58,7 @@ class PAG(_CoreGraph):
 
         edge_data = self.get_edge_data(u, v)
         if edge_data is None or len(edge_data) != 1:
-            raise ValueError(
-                f"Expected one edge between {u!r} and {v!r}; use get_edge_type "
-                "for parallel edges."
-            )
+            raise ValueError(f"Expected one edge between {u!r} and {v!r}; use get_edge_type for parallel edges.")
 
         return next(iter(edge_data.values())).copy()
 
@@ -83,9 +80,7 @@ class PAG(_CoreGraph):
         if mark_v is not None:
             self.set_marker(u, v, mark_v)
 
-    def is_definite_non_collider(
-        self, previous: Hashable, node: Hashable, next_node: Hashable
-    ) -> bool:
+    def is_definite_non_collider(self, previous: Hashable, node: Hashable, next_node: Hashable) -> bool:
         """Return whether ``node`` is a definite non-collider on a path.
 
         A node is a definite non-collider when one incident edge has a tail at
@@ -98,11 +93,7 @@ class PAG(_CoreGraph):
         if previous_marks[node] == "-" or next_marks[node] == "-":
             return True
 
-        return (
-            previous_marks[node] == "o"
-            and next_marks[node] == "o"
-            and not self.has_edge(previous, next_node)
-        )
+        return previous_marks[node] == "o" and next_marks[node] == "o" and not self.has_edge(previous, next_node)
 
     def is_uncovered(self, path: list[Hashable]) -> bool:
         """Return whether every consecutive triple in ``path`` is unshielded."""
@@ -112,14 +103,9 @@ class PAG(_CoreGraph):
         if any(not self.has_edge(left, right) for left, right in zip(path, path[1:])):
             raise ValueError("Every consecutive pair in path must be adjacent.")
 
-        return all(
-            not self.has_edge(path[index - 1], path[index + 1])
-            for index in range(1, len(path) - 1)
-        )
+        return all(not self.has_edge(path[index - 1], path[index + 1]) for index in range(1, len(path) - 1))
 
-    def get_potentially_directed_paths(
-        self, start: Hashable, end: Hashable
-    ) -> list[list[Hashable]]:
+    def get_potentially_directed_paths(self, start: Hashable, end: Hashable) -> list[list[Hashable]]:
         """Return simple paths that can be directed from ``start`` to ``end``.
 
         A path is potentially directed when no edge has an arrowhead into its
@@ -133,8 +119,7 @@ class PAG(_CoreGraph):
         potentially_directed = []
         for path in nx.all_simple_paths(self, source=start, target=end):
             if all(
-                self.get_edge_marks(left, right)[left] != ">"
-                and self.get_edge_marks(left, right)[right] != "-"
+                self.get_edge_marks(left, right)[left] != ">" and self.get_edge_marks(left, right)[right] != "-"
                 for left, right in zip(path, path[1:])
             ):
                 potentially_directed.append(path)
