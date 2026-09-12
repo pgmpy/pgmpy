@@ -645,3 +645,31 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
 
     def tearDown(self):
         del self.graph
+
+
+class TestMarkovNetworkFit(unittest.TestCase):
+    def setUp(self):
+        self.graph = DiscreteMarkovNetwork([("A", "B"), ("B", "C")])
+        import pandas as pd
+
+        np.random.seed(42)
+        self.data = pd.DataFrame(
+            np.random.randint(low=0, high=2, size=(1000, 3)),
+            columns=["A", "B", "C"],
+        )
+
+    def test_fit(self):
+        fitted_model = self.graph.fit(self.data)
+        self.assertIs(fitted_model, self.graph)
+        self.assertGreater(len(self.graph.get_factors()), 0)
+        self.assertTrue(self.graph.check_model())
+
+    def test_fit_invalid_nodes(self):
+        import pandas as pd
+
+        bad_data = pd.DataFrame({"A": [0, 1], "B": [1, 0]})
+        with self.assertRaises(ValueError):
+            self.graph.fit(bad_data)
+
+    def tearDown(self):
+        del self.graph
