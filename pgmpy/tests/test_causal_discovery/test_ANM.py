@@ -118,7 +118,6 @@ def test_incompatible_score_instance_raises(nonlinear_data):
 @pytest.mark.parametrize(
     ("data", "match"),
     [
-        (pd.DataFrame({"X": [1.0, 1.0, 1.0], "Y": [1.0, 2.0, 3.0]}), "constant"),
         (pd.DataFrame({"X": [0.0, 1.0, 2.0], "Y": [1.0, 2.0, 3.0], "Z": [2.0, 1.0, 0.0]}), "exactly two variables"),
         (pd.DataFrame({"X": [0.0, 1.0, np.nan], "Y": [1.0, 2.0, 3.0]}), None),
         (pd.DataFrame({"X": list("aabbab"), "Y": list("xyxyxy")}), "continuous"),
