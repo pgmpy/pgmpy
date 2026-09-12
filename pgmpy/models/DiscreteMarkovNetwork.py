@@ -323,11 +323,12 @@ class DiscreteMarkovNetwork(UndirectedGraph):
             for u, v in self.edges():
                 card_u = len(data[u].unique())
                 card_v = len(data[v].unique())
-                factor = DiscreteFactor([u, v], [card_u, card_v], np.ones(card_u * card_v))
+                factor = DiscreteFactor(variables=[u, v], cardinality=[card_u, card_v], values=np.ones(card_u * card_v))
                 self.add_factors(factor)
 
         # 3. Convert to Junction Tree and compute potentials using MaximumLikelihoodEstimator
         import warnings
+
         from pgmpy.estimators import MaximumLikelihoodEstimator
 
         jt = self.to_junction_tree()
@@ -336,14 +337,12 @@ class DiscreteMarkovNetwork(UndirectedGraph):
             mle = MaximumLikelihoodEstimator(jt, data)
             potentials = mle.estimate_potentials()
 
-
         # 4. Update model factors
         self.factors = []
         self.add_factors(*potentials.values())
         return self
 
     def to_factor_graph(self):
-
         """
         Converts the Markov Model into Factor Graph.
 
