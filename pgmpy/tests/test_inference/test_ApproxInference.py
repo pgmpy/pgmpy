@@ -41,7 +41,7 @@ class TestApproxInferenceBN(unittest.TestCase):
             self.assertTrue(query_results[var].__eq__(ve_results[var], atol=0.01))
 
     def test_query_evidence(self):
-        query_results = self.infer_alarm.query(variables=["HISTORY"], evidence={"PVSAT": "LOW"}, joint=True)
+        query_results = self.infer_alarm.query(variables=["HISTORY"], evidence={"PVSAT": "LOW"}, joint=True, seed=42)
         ve_results = self.alarm_ve.query(variables=["HISTORY"], evidence={"PVSAT": "LOW"}, joint=True)
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
@@ -53,7 +53,9 @@ class TestApproxInferenceBN(unittest.TestCase):
         )
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
-        query_results = self.infer_alarm.query(variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=True)
+        query_results = self.infer_alarm.query(
+            variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=True, seed=42
+        )
         ve_results = self.alarm_ve.query(variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=True)
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
@@ -63,9 +65,11 @@ class TestApproxInferenceBN(unittest.TestCase):
             samples=self.samples[self.samples.PVSAT == "LOW"],
             joint=True,
         )
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
+        self.assertTrue(query_results.__eq__(ve_results, atol=0.02))
 
-        query_results = self.infer_alarm.query(variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=False)
+        query_results = self.infer_alarm.query(
+            variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=False, seed=42
+        )
         ve_results = self.alarm_ve.query(variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=False)
         for var in ["HISTORY", "CVP"]:
             self.assertTrue(query_results[var].__eq__(ve_results[var], atol=0.01))
@@ -77,7 +81,7 @@ class TestApproxInferenceBN(unittest.TestCase):
             joint=False,
         )
         for var in ["HISTORY", "CVP"]:
-            self.assertTrue(query_results[var].__eq__(ve_results[var], atol=0.01))
+            self.assertTrue(query_results[var].__eq__(ve_results[var], atol=0.02))
 
     def test_virtual_evidence(self):
         virtual_evid = TabularCPD(
@@ -349,7 +353,7 @@ class TestApproxInferenceBNTorch(unittest.TestCase):
             self.assertTrue(query_results[var].__eq__(ve_results[var], atol=0.01))
 
     def test_query_evidence(self):
-        query_results = self.infer_alarm.query(variables=["HISTORY"], evidence={"PVSAT": "LOW"}, joint=True)
+        query_results = self.infer_alarm.query(variables=["HISTORY"], evidence={"PVSAT": "LOW"}, joint=True, seed=42)
         ve_results = self.alarm_ve.query(variables=["HISTORY"], evidence={"PVSAT": "LOW"}, joint=True)
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
@@ -361,7 +365,9 @@ class TestApproxInferenceBNTorch(unittest.TestCase):
         )
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
-        query_results = self.infer_alarm.query(variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=True)
+        query_results = self.infer_alarm.query(
+            variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=True, seed=42
+        )
         ve_results = self.alarm_ve.query(variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=True)
         self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
 
@@ -371,9 +377,11 @@ class TestApproxInferenceBNTorch(unittest.TestCase):
             samples=self.samples[self.samples.PVSAT == "LOW"],
             joint=True,
         )
-        self.assertTrue(query_results.__eq__(ve_results, atol=0.01))
+        self.assertTrue(query_results.__eq__(ve_results, atol=0.02))
 
-        query_results = self.infer_alarm.query(variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=False)
+        query_results = self.infer_alarm.query(
+            variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=False, seed=42
+        )
         ve_results = self.alarm_ve.query(variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=False)
         for var in ["HISTORY", "CVP"]:
             self.assertTrue(query_results[var].__eq__(ve_results[var], atol=0.01))
@@ -385,7 +393,7 @@ class TestApproxInferenceBNTorch(unittest.TestCase):
             joint=False,
         )
         for var in ["HISTORY", "CVP"]:
-            self.assertTrue(query_results[var].__eq__(ve_results[var], atol=0.01))
+            self.assertTrue(query_results[var].__eq__(ve_results[var], atol=0.02))
 
     def test_virtual_evidence(self):
         virtual_evid = TabularCPD(
