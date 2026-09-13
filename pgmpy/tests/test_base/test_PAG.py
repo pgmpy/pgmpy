@@ -23,6 +23,16 @@ class TestPAG:
         with pytest.raises(ValueError, match="already has an edge"):
             pag.add_edge("A", "B", "->")
 
+    def test_get_edge_marks_rejects_missing_or_parallel_edges(self):
+        pag = PAG(edge_list=[("A", "B", "oo")])
+
+        with pytest.raises(ValueError, match="No edge exists"):
+            pag.get_edge_marks("A", "C")
+
+        super(PAG, pag).add_edge("A", "B", "->")
+        with pytest.raises(ValueError, match="Expected one edge"):
+            pag.get_edge_marks("A", "B")
+
     def test_definite_non_collider(self):
         pag = PAG(edge_list=[("A", "B", "oo"), ("B", "C", "oo")])
         assert pag.is_definite_non_collider("A", "B", "C")
@@ -69,3 +79,6 @@ class TestPAG:
             pag.get_potentially_directed_paths("A", "A")
         with pytest.raises(ValueError, match="must both be present"):
             pag.get_potentially_directed_paths("A", "C")
+
+        with pytest.raises(ValueError, match="is not in the graph"):
+            pag.get_possible_ancestors("C")
