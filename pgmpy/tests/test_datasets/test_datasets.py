@@ -16,6 +16,7 @@ ALL_DATASETS = [
     "auto_mpg",
     "blue_driver",
     "boston_housing",
+    "car_evaluation",
     "cities",
     "college_plans",
     "contraceptive_method",
@@ -25,6 +26,24 @@ ALL_DATASETS = [
     "depression_coping",
     "dropouts",
     "dry_bean",
+    "feedbacks_network1_amp",              
+    "feedbacks_network2_amp",
+    "feedbacks_network3_amp",
+    "feedbacks_network4_amp",
+    "feedbacks_network5_amp",
+    "feedbacks_network5_cont",
+    "feedbacks_network5_cont_p3n7",
+    "feedbacks_network5_cont_p7n3",
+    "feedbacks_network6_amp",
+    "feedbacks_network6_cont",
+    "feedbacks_network7_amp",
+    "feedbacks_network7_cont",
+    "feedbacks_network8_amp_amp",
+    "feedbacks_network8_amp_cont",
+    "feedbacks_network8_cont_amp",
+    "feedbacks_network9_amp_amp",
+    "feedbacks_network9_amp_cont",
+    "feedbacks_network9_cont_amp",
     "galton_stature",
     "goldberg",
     "hitters",
@@ -137,6 +156,27 @@ def test_load_tubingen_dataset():
     pd.testing.assert_frame_equal(actual.data, expected.data)
     assert set(actual.ground_truth.edges()) == set(expected.ground_truth.edges())
 
+def test_load_feedbacks_dataset():
+    dataset = load_dataset("feedbacks_network1_amp")
+    assert dataset.name == "feedbacks_network1_amp"
+    assert dataset.data.shape == (500, 5)
+    assert isinstance(dataset.data, pd.DataFrame)
+    assert isinstance(dataset.ground_truth, DAG)
+    assert set(dataset.ground_truth.nodes()) == set(dataset.data.columns)
+
+    # sim_id selects one of the 60 independent simulation runs; the shared
+    # ground-truth graph does not change across runs.
+    ds_sim1 = load_dataset("feedbacks_network1_amp", sim_id=1)
+    ds_sim2 = load_dataset("feedbacks_network1_amp", sim_id=2)
+    assert not ds_sim1.data.equals(ds_sim2.data)
+    assert set(ds_sim1.ground_truth.edges()) == set(ds_sim2.ground_truth.edges())
+
+    with pytest.raises(ValueError, match="sim_id"):
+        load_dataset("feedbacks_network1_amp", sim_id=61)
+
+    # n_samples truncates to the first n rows of the selected run.
+    truncated = load_dataset("feedbacks_network1_amp", sim_id=1, n_samples=10)
+    pd.testing.assert_frame_equal(truncated.data, ds_sim1.data.iloc[:10].reset_index(drop=True))
 
 def test_tubingen_missing_data_tag():
     for i in [1, 47, 108]:
