@@ -254,6 +254,17 @@ class TestApproxInferenceLikelihoodWeighting(unittest.TestCase):
         ve_results = self.alarm_ve.query(variables=["HISTORY"], evidence={"PVSAT": "LOW"})
         self.assertTrue(query_results.__eq__(ve_results, atol=0.05))
 
+    def test_query_tuple_variables(self):
+        query_results = self.infer_alarm.query(
+            variables=("HISTORY", "CVP"),
+            evidence={"PVSAT": "LOW"},
+            sampling_algorithm="likelihood_weighting",
+            joint=True,
+            n_samples=int(1e4),
+        )
+        ve_results = self.alarm_ve.query(variables=["HISTORY", "CVP"], evidence={"PVSAT": "LOW"}, joint=True)
+        self.assertTrue(query_results.__eq__(ve_results, atol=0.05))
+
 
 class TestApproxInferenceDBN(unittest.TestCase):
     def setUp(self):
