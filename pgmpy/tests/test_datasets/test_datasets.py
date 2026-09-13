@@ -26,7 +26,7 @@ ALL_DATASETS = [
     "depression_coping",
     "dropouts",
     "dry_bean",
-    "feedbacks_network1_amp",              
+    "feedbacks_network1_amp",
     "feedbacks_network2_amp",
     "feedbacks_network3_amp",
     "feedbacks_network4_amp",
@@ -156,6 +156,7 @@ def test_load_tubingen_dataset():
     pd.testing.assert_frame_equal(actual.data, expected.data)
     assert set(actual.ground_truth.edges()) == set(expected.ground_truth.edges())
 
+
 def test_load_feedbacks_dataset():
     dataset = load_dataset("feedbacks_network1_amp")
     assert dataset.name == "feedbacks_network1_amp"
@@ -177,6 +178,7 @@ def test_load_feedbacks_dataset():
     # n_samples truncates to the first n rows of the selected run.
     truncated = load_dataset("feedbacks_network1_amp", sim_id=1, n_samples=10)
     pd.testing.assert_frame_equal(truncated.data, ds_sim1.data.iloc[:10].reset_index(drop=True))
+
 
 def test_tubingen_missing_data_tag():
     for i in [1, 47, 108]:

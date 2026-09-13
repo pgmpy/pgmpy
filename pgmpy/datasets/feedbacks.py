@@ -16,7 +16,7 @@ class BaseFeedbacksDataset(BaseDataset):
     ----------
     - :footcite:t:`sanchezromero_2019`
     """
-    
+
     _tags = {
         "is_simulated": True,
         "has_ground_truth": True,
@@ -74,7 +74,7 @@ class BaseFeedbacksDataset(BaseDataset):
         graph.add_nodes_from(nodes)
 
         edge_pattern = re.compile(r"^\d+\.\s+(\S+)\s+-->\s+(\S+)")
-        for line in lines[edges_idx + 1:]:
+        for line in lines[edges_idx + 1 :]:
             if not line:
                 continue
             match = edge_pattern.match(line)
