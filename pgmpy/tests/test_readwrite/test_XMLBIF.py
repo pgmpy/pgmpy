@@ -1,14 +1,16 @@
+import logging
 import os
 import tempfile
-import unittest
 from unittest.mock import patch
 
 import numpy as np
 import numpy.testing as np_test
+import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config, logger
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.global_vars import logger
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.readwrite import XMLBIFReader, XMLBIFWriter
 
@@ -128,8 +130,9 @@ TEST_FILE = """<?xml version="1.0"?>
 </BIF>"""
 
 
-class TestXMLBIFReaderMethods(unittest.TestCase):
-    def setUp(self):
+class TestXMLBIFReaderMethods:
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         self.reader = XMLBIFReader(string=TEST_FILE)
 
     def test_get_variables(self):
@@ -141,7 +144,7 @@ class TestXMLBIFReaderMethods(unittest.TestCase):
             "hear_bark",
             "family_out",
         ]
-        self.assertListEqual(self.reader.variables, var_expected)
+        assert self.reader.variables == var_expected
 
     def test_get_states(self):
         states_expected = {
@@ -154,7 +157,7 @@ class TestXMLBIFReaderMethods(unittest.TestCase):
         }
         states = self.reader.variable_states
         for variable in states_expected:
-            self.assertListEqual(states_expected[variable], states[variable])
+            assert states_expected[variable] == states[variable]
 
     def test_get_parents(self):
         parents_expected = {
@@ -167,7 +170,7 @@ class TestXMLBIFReaderMethods(unittest.TestCase):
         }
         parents = self.reader.variable_parents
         for variable in parents_expected:
-            self.assertListEqual(parents_expected[variable], parents[variable])
+            assert parents_expected[variable] == parents[variable]
 
     def test_get_edges(self):
         edges_expected = [
@@ -176,7 +179,7 @@ class TestXMLBIFReaderMethods(unittest.TestCase):
             ["family_out", "light_on"],
             ["dog_out", "hear_bark"],
         ]
-        self.assertListEqual(sorted(self.reader.edge_list), sorted(edges_expected))
+        assert sorted(self.reader.edge_list) == sorted(edges_expected)
 
     def test_get_values(self):
         cpd_expected = {
@@ -202,40 +205,41 @@ class TestXMLBIFReaderMethods(unittest.TestCase):
         }
         prop = self.reader.variable_property
         for variable in property_expected:
-            self.assertListEqual(property_expected[variable], prop[variable])
+            assert property_expected[variable] == prop[variable]
 
     def test_model(self):
         self.reader.get_model().check_model()
-
-    def tearDown(self):
-        del self.reader
 
     def test_make_valid_state_name(self):
         model = DiscreteBayesianNetwork()
         writer = XMLBIFWriter(model)
 
         valid_state = "valid_state"
-        self.assertEqual(writer._make_valid_state_name(valid_state), valid_state)
+        assert writer._make_valid_state_name(valid_state) == valid_state
 
         with patch.object(logger, "warning") as mock_warning:
             invalid_state = "invalid-state@123"
             expected_fixed = "invalid_state_123"
             result = writer._make_valid_state_name(invalid_state)
 
-            self.assertEqual(result, expected_fixed)
+            assert result == expected_fixed
             mock_warning.assert_called_once()
             warning_msg = mock_warning.call_args[0][0]
-            self.assertIn(
-                f"State name '{invalid_state}' has been modified to '{expected_fixed}'",
-                warning_msg,
+            assert (
+                f"State name '{invalid_state}' has been modified to '{expected_fixed}'"
+                in warning_msg
             )
 
 
-class TestXMLBIFReaderMethodsFile(unittest.TestCase):
-    def setUp(self):
+class TestXMLBIFReaderMethodsFile:
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         with open("dog_problem.xml", "w") as fout:
             fout.write(TEST_FILE)
         self.reader = XMLBIFReader("dog_problem.xml")
+        yield
+        del self.reader
+        os.remove("dog_problem.xml")
 
     def test_get_variables(self):
         var_expected = [
@@ -246,7 +250,7 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
             "hear_bark",
             "family_out",
         ]
-        self.assertListEqual(self.reader.variables, var_expected)
+        assert self.reader.variables == var_expected
 
     def test_get_states(self):
         states_expected = {
@@ -259,7 +263,7 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
         }
         states = self.reader.variable_states
         for variable in states_expected:
-            self.assertListEqual(states_expected[variable], states[variable])
+            assert states_expected[variable] == states[variable]
 
     def test_get_parents(self):
         parents_expected = {
@@ -272,7 +276,7 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
         }
         parents = self.reader.variable_parents
         for variable in parents_expected:
-            self.assertListEqual(parents_expected[variable], parents[variable])
+            assert parents_expected[variable] == parents[variable]
 
     def test_get_edges(self):
         edges_expected = [
@@ -281,7 +285,7 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
             ["family_out", "light_on"],
             ["dog_out", "hear_bark"],
         ]
-        self.assertListEqual(sorted(self.reader.edge_list), sorted(edges_expected))
+        assert sorted(self.reader.edge_list) == sorted(edges_expected)
 
     def test_get_values(self):
         cpd_expected = {
@@ -307,18 +311,15 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
         }
         prop = self.reader.variable_property
         for variable in property_expected:
-            self.assertListEqual(property_expected[variable], prop[variable])
+            assert property_expected[variable] == prop[variable]
 
     def test_model(self):
         self.reader.get_model().check_model()
 
-    def tearDown(self):
-        del self.reader
-        os.remove("dog_problem.xml")
 
-
-class TestXMLBIFWriterMethodsString(unittest.TestCase):
-    def setUp(self):
+class TestXMLBIFWriterMethodsString:
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         reader = XMLBIFReader(string=TEST_FILE)
         self.expected_model = reader.get_model()
         self.writer = XMLBIFWriter(self.expected_model)
@@ -373,27 +374,31 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
             reader = XMLBIFReader(f)
         model = reader.get_model(state_name_type=int)
         self.assert_models_equivelent(self.model_stateless, model)
-        self.assertDictEqual({"D": [0, 1]}, model.get_cpds("D").state_names)
+        assert {"D": [0, 1]} == model.get_cpds("D").state_names
         os.remove("grade_problem_output.xbif")
 
     def assert_models_equivelent(self, expected, got):
-        self.assertSetEqual(set(expected.nodes()), set(got.nodes()))
+        assert set(expected.nodes()) == set(got.nodes())
         for node in expected.nodes():
-            self.assertListEqual(sorted(expected.get_parents(node)), sorted(got.get_parents(node)))
+            assert sorted(expected.get_parents(node)) == sorted(got.get_parents(node))
             cpds_expected = expected.get_cpds(node=node)
             cpds_got = got.get_cpds(node=node)
-            self.assertEqual(cpds_expected, cpds_got)
+            assert cpds_expected == cpds_got
 
 
-@unittest.skipUnless(
-    _check_soft_dependencies("torch", severity="none"),
+@pytest.mark.skipif(
+    not _check_soft_dependencies("torch", severity="none"),
     reason="execute only if required dependency present",
 )
-class TestXMLBIFReaderMethodsTorch(unittest.TestCase):
-    def setUp(self):
+class TestXMLBIFReaderMethodsTorch:
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         config.set_backend("torch")
 
         self.reader = XMLBIFReader(string=TEST_FILE)
+        yield
+        del self.reader
+        config.set_backend("numpy")
 
     def test_get_variables(self):
         var_expected = [
@@ -404,7 +409,7 @@ class TestXMLBIFReaderMethodsTorch(unittest.TestCase):
             "hear_bark",
             "family_out",
         ]
-        self.assertListEqual(self.reader.variables, var_expected)
+        assert self.reader.variables == var_expected
 
     def test_get_states(self):
         states_expected = {
@@ -417,7 +422,7 @@ class TestXMLBIFReaderMethodsTorch(unittest.TestCase):
         }
         states = self.reader.variable_states
         for variable in states_expected:
-            self.assertListEqual(states_expected[variable], states[variable])
+            assert states_expected[variable] == states[variable]
 
     def test_get_parents(self):
         parents_expected = {
@@ -430,7 +435,7 @@ class TestXMLBIFReaderMethodsTorch(unittest.TestCase):
         }
         parents = self.reader.variable_parents
         for variable in parents_expected:
-            self.assertListEqual(parents_expected[variable], parents[variable])
+            assert parents_expected[variable] == parents[variable]
 
     def test_get_edges(self):
         edges_expected = [
@@ -439,7 +444,7 @@ class TestXMLBIFReaderMethodsTorch(unittest.TestCase):
             ["family_out", "light_on"],
             ["dog_out", "hear_bark"],
         ]
-        self.assertListEqual(sorted(self.reader.edge_list), sorted(edges_expected))
+        assert sorted(self.reader.edge_list) == sorted(edges_expected)
 
     def test_get_values(self):
         cpd_expected = {
@@ -465,27 +470,28 @@ class TestXMLBIFReaderMethodsTorch(unittest.TestCase):
         }
         prop = self.reader.variable_property
         for variable in property_expected:
-            self.assertListEqual(property_expected[variable], prop[variable])
+            assert property_expected[variable] == prop[variable]
 
     def test_model(self):
         self.reader.get_model().check_model()
 
-    def tearDown(self):
-        del self.reader
-        config.set_backend("numpy")
 
-
-@unittest.skipUnless(
-    _check_soft_dependencies("torch", severity="none"),
+@pytest.mark.skipif(
+    not _check_soft_dependencies("torch", severity="none"),
     reason="execute only if required dependency present",
 )
-class TestXMLBIFReaderMethodsFileTorch(unittest.TestCase):
-    def setUp(self):
+class TestXMLBIFReaderMethodsFileTorch:
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         config.set_backend("torch")
 
         with open("dog_problem.xml", "w") as fout:
             fout.write(TEST_FILE)
         self.reader = XMLBIFReader("dog_problem.xml")
+        yield
+        del self.reader
+        os.remove("dog_problem.xml")
+        config.set_backend("numpy")
 
     def test_get_variables(self):
         var_expected = [
@@ -496,7 +502,7 @@ class TestXMLBIFReaderMethodsFileTorch(unittest.TestCase):
             "hear_bark",
             "family_out",
         ]
-        self.assertListEqual(self.reader.variables, var_expected)
+        assert self.reader.variables == var_expected
 
     def test_get_states(self):
         states_expected = {
@@ -509,7 +515,7 @@ class TestXMLBIFReaderMethodsFileTorch(unittest.TestCase):
         }
         states = self.reader.variable_states
         for variable in states_expected:
-            self.assertListEqual(states_expected[variable], states[variable])
+            assert states_expected[variable] == states[variable]
 
     def test_get_parents(self):
         parents_expected = {
@@ -522,7 +528,7 @@ class TestXMLBIFReaderMethodsFileTorch(unittest.TestCase):
         }
         parents = self.reader.variable_parents
         for variable in parents_expected:
-            self.assertListEqual(parents_expected[variable], parents[variable])
+            assert parents_expected[variable] == parents[variable]
 
     def test_get_edges(self):
         edges_expected = [
@@ -531,7 +537,7 @@ class TestXMLBIFReaderMethodsFileTorch(unittest.TestCase):
             ["family_out", "light_on"],
             ["dog_out", "hear_bark"],
         ]
-        self.assertListEqual(sorted(self.reader.edge_list), sorted(edges_expected))
+        assert sorted(self.reader.edge_list) == sorted(edges_expected)
 
     def test_get_values(self):
         cpd_expected = {
@@ -557,23 +563,19 @@ class TestXMLBIFReaderMethodsFileTorch(unittest.TestCase):
         }
         prop = self.reader.variable_property
         for variable in property_expected:
-            self.assertListEqual(property_expected[variable], prop[variable])
+            assert property_expected[variable] == prop[variable]
 
     def test_model(self):
         self.reader.get_model().check_model()
 
-    def tearDown(self):
-        del self.reader
-        os.remove("dog_problem.xml")
-        config.set_backend("numpy")
 
-
-@unittest.skipUnless(
-    _check_soft_dependencies("torch", severity="none"),
+@pytest.mark.skipif(
+    not _check_soft_dependencies("torch", severity="none"),
     reason="execute only if required dependency present",
 )
-class TestXMLBIFWriterMethodsStringTorch(unittest.TestCase):
-    def setUp(self):
+class TestXMLBIFWriterMethodsStringTorch:
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         config.set_backend("torch")
 
         reader = XMLBIFReader(string=TEST_FILE)
@@ -614,6 +616,8 @@ class TestXMLBIFWriterMethodsStringTorch(unittest.TestCase):
 
         self.model_stateless.add_cpds(self.cpd_d, self.cpd_i, self.cpd_g, self.cpd_l, self.cpd_s)
         self.writer_stateless = XMLBIFWriter(self.model_stateless)
+        yield
+        config.set_backend("numpy")
 
     def test_write_xmlbif_statefull(self):
         self.writer.write_xmlbif("dog_problem_output.xbif")
@@ -630,18 +634,18 @@ class TestXMLBIFWriterMethodsStringTorch(unittest.TestCase):
             reader = XMLBIFReader(f)
         model = reader.get_model(state_name_type=int)
         self.assert_models_equivelent(self.model_stateless, model)
-        self.assertDictEqual({"D": [0, 1]}, model.get_cpds("D").state_names)
+        assert {"D": [0, 1]} == model.get_cpds("D").state_names
         os.remove("grade_problem_output.xbif")
 
     def assert_models_equivelent(self, expected, got):
-        self.assertSetEqual(set(expected.nodes()), set(got.nodes()))
+        assert set(expected.nodes()) == set(got.nodes())
         for node in expected.nodes():
-            self.assertListEqual(sorted(expected.get_parents(node)), sorted(got.get_parents(node)))
+            assert sorted(expected.get_parents(node)) == sorted(got.get_parents(node))
             cpds_expected = expected.get_cpds(node=node)
             cpds_got = got.get_cpds(node=node)
-            self.assertEqual(cpds_expected, cpds_got)
+            assert cpds_expected == cpds_got
 
-    def test_comma_state_name_warning(self):
+    def test_comma_state_name_warning(self, caplog):
         # Create a simple model with state names containing commas
         model = DiscreteBayesianNetwork([("A", "B")])
         cpd_a = TabularCPD(
@@ -665,15 +669,17 @@ class TestXMLBIFWriterMethodsStringTorch(unittest.TestCase):
             tmp_path = tmp.name
 
         try:
-            with self.assertLogs("pgmpy", level="WARNING") as cm:
+            caplog.clear()
+            with caplog.at_level(logging.WARNING, logger="pgmpy"):
                 writer = XMLBIFWriter(model)
                 writer.write_xmlbif(tmp_path)
 
-                # Verify the warning was logged with the correct variable name
-                self.assertTrue(
-                    any("State name 'state,1' for variable 'A' contains commas" in msg for msg in cm.output),
-                    f"Expected warning about commas in state names, got: {cm.output}",
-                )
+            # Verify the warning was logged with the correct variable name
+            assert any(
+                "State name 'state,1' for variable 'A' contains commas"
+                in rec.getMessage()
+                for rec in caplog.records
+            ), f"Expected warning about commas in state names, got: {[r.getMessage() for r in caplog.records]}"
 
             # The file should still be loadable but with modified state names
             reader = XMLBIFReader(tmp_path)
@@ -681,12 +687,9 @@ class TestXMLBIFWriterMethodsStringTorch(unittest.TestCase):
 
             # Check that the state names were modified to be valid XMLBIF identifiers
             # Commas should be replaced with underscores, but no leading underscore needed
-            self.assertEqual(loaded_model.get_cpds("A").state_names["A"], ["state_1", "state_2"])
-            self.assertEqual(loaded_model.get_cpds("B").state_names["A"], ["state_1", "state_2"])
-            self.assertEqual(loaded_model.get_cpds("B").state_names["B"], ["yes", "no"])
+            assert loaded_model.get_cpds("A").state_names["A"] == ["state_1", "state_2"]
+            assert loaded_model.get_cpds("B").state_names["A"] == ["state_1", "state_2"]
+            assert loaded_model.get_cpds("B").state_names["B"] == ["yes", "no"]
         finally:
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
-
-    def tearDown(self):
-        config.set_backend("numpy")

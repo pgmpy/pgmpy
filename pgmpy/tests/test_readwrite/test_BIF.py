@@ -1,9 +1,10 @@
+import logging
 import os
 import tempfile
-import unittest
 
 import numpy as np
 import numpy.testing as np_test
+import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
@@ -12,8 +13,9 @@ from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.readwrite import BIFReader, BIFWriter
 
 
-class TestBIFReader(unittest.TestCase):
-    def setUp(self):
+class TestBIFReader:
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         self.reader = BIFReader(
             string="""
                 // Bayesian Network in the Interchange Format
@@ -67,7 +69,7 @@ class TestBIFReader(unittest.TestCase):
 
     def test_network_name(self):
         name_expected = "Dog-Problem"
-        self.assertEqual(self.reader.network_name, name_expected)
+        assert self.reader.network_name == name_expected
 
     def test_variable_names(self):
         var_expected = [
@@ -77,7 +79,7 @@ class TestBIFReader(unittest.TestCase):
             "hear-bark",
             "family-out",
         ]
-        self.assertListEqual(self.reader.variable_names, var_expected)
+        assert self.reader.variable_names == var_expected
 
     def test_variable_states(self):
         states_expected = {
@@ -89,7 +91,7 @@ class TestBIFReader(unittest.TestCase):
         }
         states = self.reader.variable_states
         for variable in states_expected:
-            self.assertListEqual(states_expected[variable], states[variable])
+            assert states_expected[variable] == states[variable]
 
     def test_variable_properties(self):
         property_expected = {
@@ -101,7 +103,7 @@ class TestBIFReader(unittest.TestCase):
         }
         prop = self.reader.variable_properties
         for variable in property_expected:
-            self.assertListEqual(property_expected[variable], prop[variable])
+            assert property_expected[variable] == prop[variable]
 
     def test_variable_cpds(self):
         cpd_expected = {
@@ -171,7 +173,7 @@ class TestBIFReader(unittest.TestCase):
         }
         parents = self.reader.variable_parents
         for variable in parents_expected:
-            self.assertListEqual(parents_expected[variable], parents[variable])
+            assert parents_expected[variable] == parents[variable]
 
     def test_variable_edges(self):
         edges_expected = [
@@ -180,7 +182,7 @@ class TestBIFReader(unittest.TestCase):
             ["family-out", "light-on"],
             ["dog-out", "hear-bark"],
         ]
-        self.assertListEqual(sorted(self.reader.variable_edges), sorted(edges_expected))
+        assert sorted(self.reader.variable_edges) == sorted(edges_expected)
 
     def test_get_model(self):
         edges_expected = [
@@ -261,22 +263,19 @@ class TestBIFReader(unittest.TestCase):
         model = self.reader.get_model()
         model_cpds = model.get_cpds()
         for cpd_index in range(5):
-            self.assertEqual(model_cpds[cpd_index], cpds_expected[cpd_index])
+            assert model_cpds[cpd_index] == cpds_expected[cpd_index]
 
-        self.assertDictEqual(dict(model.nodes), node_expected)
-        self.assertDictEqual(dict(model.adj), edge_expected)
+        assert dict(model.nodes) == node_expected
+        assert dict(model.adj) == edge_expected
 
-        self.assertListEqual(sorted(model.nodes()), sorted(nodes_expected))
-        self.assertListEqual(sorted(model.edges()), sorted(edges_expected))
+        assert sorted(model.nodes()) == sorted(nodes_expected)
+        assert sorted(model.edges()) == sorted(edges_expected)
 
     def test_water_model(self):
         model = self.water_model.get_model()
-        self.assertEqual(len(model.nodes()), 32)
-        self.assertEqual(len(model.edges()), 66)
-        self.assertEqual(len(model.get_cpds()), 32)
-
-    def tearDown(self):
-        del self.reader
+        assert len(model.nodes()) == 32
+        assert len(model.edges()) == 66
+        assert len(model.get_cpds()) == 32
 
     def test_default_attribut_equal_table(self):
         default_reader = BIFReader(
@@ -324,10 +323,10 @@ class TestBIFReader(unittest.TestCase):
         )
         table_model = self.reader.get_model()
         default_model = default_reader.get_model()
-        self.assertEqual(sorted(table_model.nodes()), sorted(default_model.nodes()))
-        self.assertEqual(sorted(table_model.edges()), sorted(default_model.edges()))
+        assert sorted(table_model.nodes()) == sorted(default_model.nodes())
+        assert sorted(table_model.edges()) == sorted(default_model.edges())
         for var in table_model.nodes():
-            self.assertEqual(table_model.get_cpds(var), default_model.get_cpds(var))
+            assert table_model.get_cpds(var) == default_model.get_cpds(var)
 
     def test_cpp_style_comments(self):
         reader = BIFReader(
@@ -358,8 +357,9 @@ class TestBIFReader(unittest.TestCase):
         assert "http://health-data.org/lung-cancer" in reader.network
 
 
-class TestBIFWriter(unittest.TestCase):
-    def setUp(self):
+class TestBIFWriter:
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         variables = [
             "kid",
             "bowel-problem",
@@ -490,20 +490,19 @@ probability ( light-on | family-out ) {
 
 }
 """
-        self.maxDiff = None
-        self.assertEqual(self.writer.__str__(), self.expected_string)
+        assert self.writer.__str__() == self.expected_string
 
     def test_write_read_equal(self):
         self.writer.write_bif("test_bif.bif")
         reader = BIFReader("test_bif.bif")
         read_model = reader.get_model(state_name_type=int)
-        self.assertEqual(sorted(self.model.nodes()), sorted(read_model.nodes()))
-        self.assertEqual(sorted(self.model.edges()), sorted(read_model.edges()))
+        assert sorted(self.model.nodes()) == sorted(read_model.nodes())
+        assert sorted(self.model.edges()) == sorted(read_model.edges())
         for var in self.model.nodes():
-            self.assertEqual(self.model.get_cpds(var), read_model.get_cpds(var))
+            assert self.model.get_cpds(var) == read_model.get_cpds(var)
         os.remove("test_bif.bif")
 
-    def test_comma_state_name_warning(self):
+    def test_comma_state_name_warning(self, caplog):
         # Create a simple model with state names containing commas
         model = DiscreteBayesianNetwork([("A", "B")])
         cpd_a = TabularCPD(
@@ -527,31 +526,31 @@ probability ( light-on | family-out ) {
             tmp_path = tmp.name
 
         try:
-            with self.assertLogs("pgmpy", level="WARNING") as cm:
-                writer = BIFWriter(model)
+            writer = BIFWriter(model)
+            with caplog.at_level(logging.WARNING, logger="pgmpy"):
                 writer.write_bif(tmp_path)
 
-                # Verify the warning was logged
-                self.assertIn(
-                    "State name 'state,1' for variable 'A' contains commas. "
-                    "This may cause issues when loading the file. Consider removing any special characters.",
-                    cm.output[0],
-                )
+            # Verify the warning was logged
+            assert (
+                "State name 'state,1' for variable 'A' contains commas. "
+                "This may cause issues when loading the file. Consider removing any special characters."
+            ) in caplog.text
 
             # Verify that loading fails due to commas in state names
-            with self.assertRaises(ValueError):
+            with pytest.raises(ValueError):
                 BIFReader(tmp_path).get_model()
         finally:
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
 
 
-@unittest.skipUnless(
-    _check_soft_dependencies("torch", severity="none"),
+@pytest.mark.skipif(
+    not _check_soft_dependencies("torch", severity="none"),
     reason="execute only if required dependency present",
 )
-class TestBIFReaderTorch(unittest.TestCase):
-    def setUp(self):
+class TestBIFReaderTorch:
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         config.set_backend("torch")
 
         self.reader = BIFReader(
@@ -603,11 +602,16 @@ class TestBIFReaderTorch(unittest.TestCase):
             include_properties=True,
         )
 
-        self.water_model = BIFReader("pgmpy/tests/test_readwrite/testdata/water.bif", include_properties=True)
+        self.water_model = BIFReader(
+            "pgmpy/tests/test_readwrite/testdata/water.bif", include_properties=True
+        )
+        yield
+        del self.reader
+        config.set_backend("numpy")
 
     def test_network_name(self):
         name_expected = "Dog-Problem"
-        self.assertEqual(self.reader.network_name, name_expected)
+        assert self.reader.network_name == name_expected
 
     def test_variable_names(self):
         var_expected = [
@@ -617,7 +621,7 @@ class TestBIFReaderTorch(unittest.TestCase):
             "hear-bark",
             "family-out",
         ]
-        self.assertListEqual(self.reader.variable_names, var_expected)
+        assert self.reader.variable_names == var_expected
 
     def test_variable_states(self):
         states_expected = {
@@ -629,7 +633,7 @@ class TestBIFReaderTorch(unittest.TestCase):
         }
         states = self.reader.variable_states
         for variable in states_expected:
-            self.assertListEqual(states_expected[variable], states[variable])
+            assert states_expected[variable] == states[variable]
 
     def test_variable_properties(self):
         property_expected = {
@@ -641,7 +645,7 @@ class TestBIFReaderTorch(unittest.TestCase):
         }
         prop = self.reader.variable_properties
         for variable in property_expected:
-            self.assertListEqual(property_expected[variable], prop[variable])
+            assert property_expected[variable] == prop[variable]
 
     def test_variable_cpds(self):
         cpd_expected = {
@@ -711,7 +715,7 @@ class TestBIFReaderTorch(unittest.TestCase):
         }
         parents = self.reader.variable_parents
         for variable in parents_expected:
-            self.assertListEqual(parents_expected[variable], parents[variable])
+            assert parents_expected[variable] == parents[variable]
 
     def test_variable_edges(self):
         edges_expected = [
@@ -720,7 +724,7 @@ class TestBIFReaderTorch(unittest.TestCase):
             ["family-out", "light-on"],
             ["dog-out", "hear-bark"],
         ]
-        self.assertListEqual(sorted(self.reader.variable_edges), sorted(edges_expected))
+        assert sorted(self.reader.variable_edges) == sorted(edges_expected)
 
     def test_get_model(self):
         edges_expected = [
@@ -801,19 +805,19 @@ class TestBIFReaderTorch(unittest.TestCase):
         model = self.reader.get_model()
         model_cpds = model.get_cpds()
         for cpd_index in range(5):
-            self.assertEqual(model_cpds[cpd_index], cpds_expected[cpd_index])
+            assert model_cpds[cpd_index] == cpds_expected[cpd_index]
 
-        self.assertDictEqual(dict(model.nodes), node_expected)
-        self.assertDictEqual(dict(model.adj), edge_expected)
+        assert dict(model.nodes) == node_expected
+        assert dict(model.adj) == edge_expected
 
-        self.assertListEqual(sorted(model.nodes()), sorted(nodes_expected))
-        self.assertListEqual(sorted(model.edges()), sorted(edges_expected))
+        assert sorted(model.nodes()) == sorted(nodes_expected)
+        assert sorted(model.edges()) == sorted(edges_expected)
 
     def test_water_model(self):
         model = self.water_model.get_model()
-        self.assertEqual(len(model.nodes()), 32)
-        self.assertEqual(len(model.edges()), 66)
-        self.assertEqual(len(model.get_cpds()), 32)
+        assert len(model.nodes()) == 32
+        assert len(model.edges()) == 66
+        assert len(model.get_cpds()) == 32
 
     def test_default_attribut_equal_table(self):
         default_reader = BIFReader(
@@ -861,14 +865,10 @@ class TestBIFReaderTorch(unittest.TestCase):
         )
         table_model = self.reader.get_model()
         default_model = default_reader.get_model()
-        self.assertEqual(sorted(table_model.nodes()), sorted(default_model.nodes()))
-        self.assertEqual(sorted(table_model.edges()), sorted(default_model.edges()))
+        assert sorted(table_model.nodes()) == sorted(default_model.nodes())
+        assert sorted(table_model.edges()) == sorted(default_model.edges())
         for var in table_model.nodes():
-            self.assertEqual(table_model.get_cpds(var), default_model.get_cpds(var))
-
-    def tearDown(self):
-        del self.reader
-        config.set_backend("numpy")
+            assert table_model.get_cpds(var) == default_model.get_cpds(var)
 
     def test_cpp_style_comments(self):
         reader = BIFReader(
@@ -899,12 +899,13 @@ class TestBIFReaderTorch(unittest.TestCase):
         assert "http://health-data.org/lung-cancer" in reader.network
 
 
-@unittest.skipUnless(
-    _check_soft_dependencies("torch", severity="none"),
+@pytest.mark.skipif(
+    not _check_soft_dependencies("torch", severity="none"),
     reason="execute only if required dependency present",
 )
-class TestBIFWriterTorch(unittest.TestCase):
-    def setUp(self):
+class TestBIFWriterTorch:
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         config.set_backend("torch")
 
         variables = [
@@ -982,6 +983,8 @@ class TestBIFWriterTorch(unittest.TestCase):
                 self.model.nodes[node][prop_name] = prop_value
 
         self.writer = BIFWriter(model=self.model, round_values=4)
+        yield
+        config.set_backend("numpy")
 
     def test_str(self):
         self.expected_string = """network unknown {
@@ -1037,18 +1040,14 @@ probability ( light-on | family-out ) {
 
 }
 """
-        self.maxDiff = None
-        self.assertEqual(self.writer.__str__(), self.expected_string)
+        assert self.writer.__str__() == self.expected_string
 
     def test_write_read_equal(self):
         self.writer.write_bif("test_bif.bif")
         reader = BIFReader("test_bif.bif")
         read_model = reader.get_model(state_name_type=int)
-        self.assertEqual(sorted(self.model.nodes()), sorted(read_model.nodes()))
-        self.assertEqual(sorted(self.model.edges()), sorted(read_model.edges()))
+        assert sorted(self.model.nodes()) == sorted(read_model.nodes())
+        assert sorted(self.model.edges()) == sorted(read_model.edges())
         for var in self.model.nodes():
-            self.assertEqual(self.model.get_cpds(var), read_model.get_cpds(var))
+            assert self.model.get_cpds(var) == read_model.get_cpds(var)
         os.remove("test_bif.bif")
-
-    def tearDown(self):
-        config.set_backend("numpy")

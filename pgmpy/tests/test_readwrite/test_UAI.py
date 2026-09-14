@@ -1,6 +1,5 @@
-import unittest
-
 import numpy as np
+import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
@@ -9,8 +8,9 @@ from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork
 from pgmpy.readwrite import UAIReader, UAIWriter
 
 
-class TestUAIReader(unittest.TestCase):
-    def setUp(self):
+class TestUAIReader:
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         string = """MARKOV
 3
 2 2 3
@@ -44,30 +44,29 @@ class TestUAIReader(unittest.TestCase):
  0.0000 0.0000 10.0000
  1.8750 4.0000 3.3330
  2.0000 2.0000 3.4000"""
-        self.maxDiff = None
         self.reader_string = UAIReader(string=string)
         self.reader_string_with_comment = UAIReader(string=string_with_comment)
         self.reader_file = UAIReader("pgmpy/tests/test_readwrite/testdata/grid4x4.uai")
 
     def test_get_network_type(self):
         network_type_expected = "MARKOV"
-        self.assertEqual(self.reader_string.network_type, network_type_expected)
-        self.assertEqual(self.reader_string_with_comment.network_type, network_type_expected)
+        assert self.reader_string.network_type == network_type_expected
+        assert self.reader_string_with_comment.network_type == network_type_expected
 
     def test_get_variables(self):
         variables_expected = ["var_0", "var_1", "var_2"]
-        self.assertListEqual(self.reader_string.variables, variables_expected)
-        self.assertListEqual(self.reader_string_with_comment.variables, variables_expected)
+        assert self.reader_string.variables == variables_expected
+        assert self.reader_string_with_comment.variables == variables_expected
 
     def test_get_domain(self):
         domain_expected = {"var_1": "2", "var_2": "3", "var_0": "2"}
-        self.assertDictEqual(self.reader_string.domain, domain_expected)
-        self.assertDictEqual(self.reader_string_with_comment.domain, domain_expected)
+        assert self.reader_string.domain == domain_expected
+        assert self.reader_string_with_comment.domain == domain_expected
 
     def test_get_edges(self):
         edges_expected = {("var_0", "var_1"), ("var_0", "var_2"), ("var_1", "var_2")}
-        self.assertSetEqual(self.reader_string.edges, edges_expected)
-        self.assertSetEqual(self.reader_string_with_comment.edges, edges_expected)
+        assert self.reader_string.edges == edges_expected
+        assert self.reader_string_with_comment.edges == edges_expected
 
     def test_get_tables(self):
         tables_expected = [
@@ -90,8 +89,8 @@ class TestUAIReader(unittest.TestCase):
                 ],
             ),
         ]
-        self.assertListEqual(self.reader_string.tables, tables_expected)
-        self.assertListEqual(self.reader_string_with_comment.tables, tables_expected)
+        assert self.reader_string.tables == tables_expected
+        assert self.reader_string_with_comment.tables == tables_expected
 
     def test_get_model(self):
         model = self.reader_string.get_model()
@@ -101,8 +100,8 @@ class TestUAIReader(unittest.TestCase):
             "var_1": {"var_2": {"weight": None}, "var_0": {"weight": None}},
         }
 
-        self.assertListEqual(sorted(model.nodes()), sorted(["var_0", "var_2", "var_1"]))
-        self.assertDictEqual(dict(model.adj), edge_expected)
+        assert sorted(model.nodes()) == sorted(["var_0", "var_2", "var_1"])
+        assert dict(model.adj) == edge_expected
 
     def test_read_file(self):
         model = self.reader_file.get_model()
@@ -124,12 +123,12 @@ class TestUAIReader(unittest.TestCase):
             "var_2": {},
             "var_4": {},
         }
-        self.assertDictEqual(dict(model.nodes), node_expected)
+        assert dict(model.nodes) == node_expected
 
 
-class TestUAIWriter(unittest.TestCase):
-    def setUp(self):
-        self.maxDiff = None
+class TestUAIWriter:
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         variables = [
             "kid",
             "bowel-problem",
@@ -243,7 +242,7 @@ class TestUAIWriter(unittest.TestCase):
 0.3 0.7
 4
 0.6 0.4 0.05 0.95"""
-        self.assertEqual(str(self.bayeswriter.__str__()), str(self.expected_bayes_file))
+        assert str(self.bayeswriter.__str__()) == str(self.expected_bayes_file)
 
     def test_markov_model(self):
         self.expected_markov_file = """MARKOV
@@ -257,15 +256,16 @@ class TestUAIWriter(unittest.TestCase):
 4.0 2.4 1.0 0.0
 12
 2.25 3.25 3.75 0.0 0.0 10.0 1.875 4.0 3.333 2.0 2.0 3.4"""
-        self.assertEqual(str(self.markovwriter.__str__()), str(self.expected_markov_file))
+        assert str(self.markovwriter.__str__()) == str(self.expected_markov_file)
 
 
-@unittest.skipUnless(
-    _check_soft_dependencies("torch", severity="none"),
+@pytest.mark.skipif(
+    not _check_soft_dependencies("torch", severity="none"),
     reason="execute only if required dependency present",
 )
-class TestUAIReaderTorch(unittest.TestCase):
-    def setUp(self):
+class TestUAIReaderTorch:
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         config.set_backend("torch")
 
         string = """MARKOV
@@ -301,30 +301,31 @@ class TestUAIReaderTorch(unittest.TestCase):
  0.0000 0.0000 10.0000
  1.8750 4.0000 3.3330
  2.0000 2.0000 3.4000"""
-        self.maxDiff = None
         self.reader_string = UAIReader(string=string)
         self.reader_string_with_comment = UAIReader(string=string_with_comment)
         self.reader_file = UAIReader("pgmpy/tests/test_readwrite/testdata/grid4x4.uai")
+        yield
+        config.set_backend("numpy")
 
     def test_get_network_type(self):
         network_type_expected = "MARKOV"
-        self.assertEqual(self.reader_string.network_type, network_type_expected)
-        self.assertEqual(self.reader_string_with_comment.network_type, network_type_expected)
+        assert self.reader_string.network_type == network_type_expected
+        assert self.reader_string_with_comment.network_type == network_type_expected
 
     def test_get_variables(self):
         variables_expected = ["var_0", "var_1", "var_2"]
-        self.assertListEqual(self.reader_string.variables, variables_expected)
-        self.assertListEqual(self.reader_string_with_comment.variables, variables_expected)
+        assert self.reader_string.variables == variables_expected
+        assert self.reader_string_with_comment.variables == variables_expected
 
     def test_get_domain(self):
         domain_expected = {"var_1": "2", "var_2": "3", "var_0": "2"}
-        self.assertDictEqual(self.reader_string.domain, domain_expected)
-        self.assertDictEqual(self.reader_string_with_comment.domain, domain_expected)
+        assert self.reader_string.domain == domain_expected
+        assert self.reader_string_with_comment.domain == domain_expected
 
     def test_get_edges(self):
         edges_expected = {("var_0", "var_1"), ("var_0", "var_2"), ("var_1", "var_2")}
-        self.assertSetEqual(self.reader_string.edges, edges_expected)
-        self.assertSetEqual(self.reader_string_with_comment.edges, edges_expected)
+        assert self.reader_string.edges == edges_expected
+        assert self.reader_string_with_comment.edges == edges_expected
 
     def test_get_tables(self):
         tables_expected = [
@@ -347,8 +348,8 @@ class TestUAIReaderTorch(unittest.TestCase):
                 ],
             ),
         ]
-        self.assertListEqual(self.reader_string.tables, tables_expected)
-        self.assertListEqual(self.reader_string_with_comment.tables, tables_expected)
+        assert self.reader_string.tables == tables_expected
+        assert self.reader_string_with_comment.tables == tables_expected
 
     def test_get_model(self):
         model = self.reader_string.get_model()
@@ -358,8 +359,8 @@ class TestUAIReaderTorch(unittest.TestCase):
             "var_1": {"var_2": {"weight": None}, "var_0": {"weight": None}},
         }
 
-        self.assertListEqual(sorted(model.nodes()), sorted(["var_0", "var_2", "var_1"]))
-        self.assertDictEqual(dict(model.adj), edge_expected)
+        assert sorted(model.nodes()) == sorted(["var_0", "var_2", "var_1"])
+        assert dict(model.adj) == edge_expected
 
     def test_read_file(self):
         model = self.reader_file.get_model()
@@ -381,21 +382,18 @@ class TestUAIReaderTorch(unittest.TestCase):
             "var_2": {},
             "var_4": {},
         }
-        self.assertDictEqual(dict(model.nodes), node_expected)
-
-    def tearDown(self):
-        config.set_backend("numpy")
+        assert dict(model.nodes) == node_expected
 
 
-@unittest.skipUnless(
-    _check_soft_dependencies("pyro-ppl", severity="none"),
+@pytest.mark.skipif(
+    not _check_soft_dependencies("pyro-ppl", severity="none"),
     reason="execute only if required dependency present",
 )
-class TestUAIWriterTorch(unittest.TestCase):
-    def setUp(self):
+class TestUAIWriterTorch:
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         config.set_backend("torch")
 
-        self.maxDiff = None
         variables = [
             "kid",
             "bowel-problem",
@@ -484,6 +482,8 @@ class TestUAIWriterTorch(unittest.TestCase):
             factors.append(factor)
         self.markovmodel.add_factors(*factors)
         self.markovwriter = UAIWriter(self.markovmodel, round_values=4)
+        yield
+        config.set_backend("numpy")
 
     def test_bayes_model(self):
         self.expected_bayes_file = """BAYES
@@ -509,7 +509,7 @@ class TestUAIWriterTorch(unittest.TestCase):
 0.3 0.7
 4
 0.6 0.4 0.05 0.95"""
-        self.assertEqual(str(self.bayeswriter.__str__()), str(self.expected_bayes_file))
+        assert str(self.bayeswriter.__str__()) == str(self.expected_bayes_file)
 
     def test_markov_model(self):
         self.expected_markov_file = """MARKOV
@@ -523,7 +523,4 @@ class TestUAIWriterTorch(unittest.TestCase):
 4.0 2.4 1.0 0.0
 12
 2.25 3.25 3.75 0.0 0.0 10.0 1.875 4.0 3.333 2.0 2.0 3.4"""
-        self.assertEqual(str(self.markovwriter.__str__()), str(self.expected_markov_file))
-
-    def tearDown(self):
-        config.set_backend("numpy")
+        assert str(self.markovwriter.__str__()) == str(self.expected_markov_file)
