@@ -270,11 +270,29 @@ class TestADMGRelationships:
 
     def test_get_district(self):
         """Test getting district (bidirected connected components)."""
+        # Graph: A->B, B->C, D->E, A<>D, B<>E
+        # C-components: {A, D}, {B, E}, {C}
+        # single node returns the c-component containing it
         district_a = self.admg.get_district("A")
-
-        # A and D are connected by bidirected edge
         assert "A" in district_a
         assert "D" in district_a
+
+        # nodes=None returns all c-components
+        all_districts = self.admg.get_district()
+        assert len(all_districts) == 3
+        assert frozenset({"A", "D"}) in all_districts
+        assert frozenset({"B", "E"}) in all_districts
+        assert frozenset({"C"}) in all_districts
+
+        # nodes as list returns c-components containing those nodes
+        districts = self.admg.get_district(nodes=["A", "C"])
+        assert len(districts) == 2
+        assert frozenset({"A", "D"}) in districts
+        assert frozenset({"C"}) in districts
+
+        # DAG (no bidirected edges) - each node is its own district
+        dag = ADMG(edge_list=[("X", "Y", "->"), ("Y", "Z", "->")])
+        assert dag.get_district() == {frozenset({"X"}), frozenset({"Y"}), frozenset({"Z"})}
 
     def test_nonexistent_node_error(self):
         """Test that operations on nonexistent nodes raise errors."""

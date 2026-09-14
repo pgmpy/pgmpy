@@ -1,3 +1,5 @@
+from collections.abc import Hashable
+
 import numpy as np
 import pandas as pd
 from scipy.stats import multivariate_normal
@@ -81,7 +83,7 @@ class LogLikelihoodCondGauss(BaseStructureScore):
             df_cov = df_cov + 1e-6
         return df_cov
 
-    def _cat_parents_product(self, parents: tuple[str, ...]) -> int:
+    def _cat_parents_product(self, parents: tuple[Hashable, ...]) -> int:
         k = 1
         for pa in parents:
             if self.dtypes[pa] != "N":
@@ -90,7 +92,7 @@ class LogLikelihoodCondGauss(BaseStructureScore):
                     k *= self.data[pa].nunique()
         return k
 
-    def _get_num_parameters(self, variable: str, parents: tuple[str, ...]) -> int:
+    def _get_num_parameters(self, variable: Hashable, parents: tuple[Hashable, ...]) -> int:
         parent_dtypes = [self.dtypes[pa] for pa in parents]
         n_cont_parents = parent_dtypes.count("N")
 
@@ -108,7 +110,7 @@ class LogLikelihoodCondGauss(BaseStructureScore):
 
         return k
 
-    def _log_likelihood(self, variable: str, parents: tuple[str, ...]) -> float:
+    def _log_likelihood(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         parent_list = list(parents)
         df = self.data.loc[:, [variable] + parent_list]
 
@@ -229,6 +231,6 @@ class LogLikelihoodCondGauss(BaseStructureScore):
                     log_like += np.sum(np.log((p_c_d1d2 * p_d1d2) / (p_c_d2 * p_d2.values.ravel()[0])))
             return log_like
 
-    def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
+    def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         ll = self._log_likelihood(variable=variable, parents=parents)
         return ll

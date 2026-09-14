@@ -1,3 +1,4 @@
+import warnings
 from collections import deque
 from collections.abc import Callable, Generator, Hashable
 from itertools import combinations, permutations
@@ -79,6 +80,15 @@ class BaseCausalDiscovery(BaseEstimator):
         discovery algorithm inheriting from `BaseCausalDiscovery`.
         """
         X = self._check_fit_data(X)
+
+        for col in X.columns:
+            if X[col].nunique() == 1:
+                warnings.warn(
+                    f"Variable '{col}' is constant (zero variance), which can lead to unreliable "
+                    f"results for {type(self).__name__}. Consider removing it before fitting.",
+                    UserWarning,
+                )
+
         return self._fit(X)
 
     def score(

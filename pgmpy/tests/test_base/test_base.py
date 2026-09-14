@@ -792,11 +792,13 @@ class TestCoreGraph:
     def test_get_district(self):
         """`get_district`: the bidirected-connected component, available on the `_CoreGraph` base."""
         g = _CoreGraph(edge_list=[("A", "B", "->"), ("A", "C", "<>"), ("C", "D", "<>"), ("E", "F", "->")])
-        # transitive closure over bidirected edges, including the node itself
+        # single node returns the c-component containing it
         assert g.get_district("A") == {"A", "C", "D"}
         assert g.get_district("E") == {"E"}  # no bidirected edge -> just the node
-        # union over a collection; a list/set is a collection, str/int/tuple is a single node
-        assert g.get_district(["A", "F"]) == {"A", "C", "D", "F"}
+        # list returns set of frozensets (c-components containing those nodes)
+        assert g.get_district(["A", "F"]) == {frozenset({"A", "C", "D"}), frozenset({"F"})}
+        # None returns all c-components
+        assert g.get_district() == {frozenset({"A", "C", "D"}), frozenset({"B"}), frozenset({"E"}), frozenset({"F"})}
         # non-string single node is treated as one node (matches the other relation accessors)
         gi = _CoreGraph(edge_list=[(1, 2, "<>"), (2, 3, "<>")])
         assert gi.get_district(1) == {1, 2, 3}

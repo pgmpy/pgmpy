@@ -163,9 +163,9 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         Returns the cpd of the node. If node is not specified returns all the CPDs
         that have been added till now to the graph
 
-        Parameter
-        ---------
-        node: any hashable python object (optional)
+        Parameters
+        ----------
+        node : any hashable python object, optional
             The node whose CPD we want. If node not specified returns all the
             CPDs added to the model.
 

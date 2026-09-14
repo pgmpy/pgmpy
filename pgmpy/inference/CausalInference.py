@@ -695,40 +695,38 @@ class CausalInference:
 
         Parameters
         ----------
-        X: str (variable name)
+        X : str
             The cause/exposure variables.
 
-        Y: str (variable name)
-            The outcome variable
+        Y : str
+            The outcome variable.
 
-        data: pandas.DataFrame
+        data : pandas.DataFrame
             All observed data for this Bayesian Network.
 
-        estimand_strategy: str or frozenset
+        estimand_strategy : str or frozenset
             Either specify a specific backdoor adjustment set or a strategy.
-            The available options are:
-                smallest:
-                    Use the smallest estimand of observed variables
-                all:
-                    Estimate the ATE from each identified estimand
+            Use ``"smallest"`` to select the smallest estimand of observed
+            variables, or ``"all"`` to estimate the ATE from every identified
+            estimand.
 
-        estimator_type: str
+        estimator_type : str
             The type of model to be used to estimate the ATE.
-            All of the linear regression classes in statsmodels are available including:
-                * GLS: generalized least squares for arbitrary covariance
-                * OLS: ordinary least square of i.i.d. errors
-                * WLS: weighted least squares for heteroskedastic error
-            Specify them with their acronym (e.g. "OLS") or simple "linear" as an alias for OLS.
+            All linear regression classes in statsmodels are available,
+            including ``GLS`` for generalized least squares, ``OLS`` for
+            ordinary least squares, and ``WLS`` for weighted least squares.
+            Specify a class by its acronym or use ``"linear"`` as an alias
+            for ``OLS``.
 
-        **kwargs: dict
-            Keyward arguments specific to the selected estimator.
-            linear:
-              missing: str
-                Available options are "none", "drop", or "raise"
+        **kwargs : dict
+            Keyword arguments specific to the selected estimator. For linear
+            estimators, ``missing`` can be ``"none"``, ``"drop"``, or
+            ``"raise"``.
 
         Returns
         -------
-        The average treatment effect: float
+        float
+            The average treatment effect.
 
         Examples
         --------

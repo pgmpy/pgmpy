@@ -157,7 +157,7 @@ class FactorSet:
             return a new FactorSet object.
 
         Returns
-        --------
+        -------
         If inpalce = False, will return a new FactorSet object, which is product of two factors
 
         Examples
@@ -219,7 +219,7 @@ class FactorSet:
             return a new FactorSet object.
 
         Returns
-        --------
+        -------
         If inplace = False, will return a new FactorSet Object which is division of
         given factors.
 
