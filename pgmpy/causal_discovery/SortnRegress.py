@@ -19,13 +19,13 @@ class SortnRegress(BaseCausalDiscovery):
       increase along the causal order in linear additive noise models :cite:p:`Reisach2023`. R² is invariant to
       rescaling of the columns of :math:`\mathbf{X}`, so this variant is scale-invariant end to end.
 
-    - ``variant='varsortability'``: orders variables by ascending marginal variance, based on the var-sortability
+    - ``variant='var'``: orders variables by ascending marginal variance, based on the var-sortability
       phenomenon whereby variance tends to increase along the causal order :cite:p:`Reisach2021`. Marginal
       variance depends on the measurement scale, so this variant is **not** scale-invariant: standardizing or
       otherwise rescaling the data may change the recovered graph.
 
     Step 1 differs between the two criteria; the remaining steps are identical for both. For
-    ``variant='varsortability'``, Step 1 is replaced by computing the marginal variance
+    ``variant='var'``, Step 1 is replaced by computing the marginal variance
     :math:`\text{Var}(X_t)` of each variable.
 
     Given an :math:`n \times d` dataset :math:`\mathbf{X}` with columns :math:`X_1, \dots, X_d`, the algorithm proceeds
@@ -72,11 +72,11 @@ class SortnRegress(BaseCausalDiscovery):
         The least-squares estimator used to compute the global R² values and to supply the
         adaptive weights. If None, defaults to sklearn.linear_model.LinearRegression().
 
-    variant : {'r2', 'varsortability'}, default='r2'
+    variant : {'r2', 'var'}, default='r2'
         The variant used to compute the candidate causal ordering in Step 2.
 
         - ``'r2'``: order variables by ascending global R² (the original R²-SortnRegress algorithm).
-        - ``'varsortability'``: order variables by ascending marginal variance, per the var-sortability phenomenon
+        - ``'var'``: order variables by ascending marginal variance, per the var-sortability phenomenon
           described in :cite:p:`Reisach2021`
 
     Attributes
@@ -119,8 +119,8 @@ class SortnRegress(BaseCausalDiscovery):
 
     def _fit(self, X):
         # Step 0: Validate the input arguments and initialize regressor.
-        if self.variant not in ("r2", "varsortability"):
-            raise ValueError(f"variant must be one of 'r2' or 'varsortability', got {self.variant!r}.")
+        if self.variant not in ("r2", "var"):
+            raise ValueError(f"variant must be one of 'r2' or 'var', got {self.variant!r}.")
         if any(X.std() == 0):
             constant_cols = X.columns[X.std() == 0].tolist()
             raise ValueError(

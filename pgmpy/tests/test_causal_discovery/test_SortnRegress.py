@@ -99,8 +99,8 @@ class TestSortnRegressvariant:
         est.fit(causal_chain_data)
         assert len(est.causal_graph_.edges()) > 0
 
-    def test_varsortability_variant_fits(self, causal_chain_data):
-        est = SortnRegress(variant="varsortability")
+    def test_var_variant_fits(self, causal_chain_data):
+        est = SortnRegress(variant="var")
         est.fit(causal_chain_data)
         assert len(est.causal_graph_.edges()) > 0
 
@@ -111,6 +111,6 @@ class TestSortnRegressvariant:
 
     def test_variance_variant_is_scale_sensitive(self, causal_chain_data):
         std = (causal_chain_data - causal_chain_data.mean()) / causal_chain_data.std()
-        raw = SortnRegress(variant="varsortability").fit(causal_chain_data)
-        stdz = SortnRegress(variant="varsortability").fit(std)
+        raw = SortnRegress(variant="var").fit(causal_chain_data)
+        stdz = SortnRegress(variant="var").fit(std)
         assert set(raw.causal_graph_.edges()) != set(stdz.causal_graph_.edges())
