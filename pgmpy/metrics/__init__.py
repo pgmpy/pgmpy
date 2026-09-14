@@ -5,8 +5,8 @@ from .fisher_c import FisherC
 from .implied_cis import ImpliedCIs
 from .orientation_cm import OrientationConfusionMatrix
 from .shd import SHD
+from .sortnregress import SortnRegress
 from .structure_score import StructureScore
-from .SortnRegress import SortnRegress
 
 __all__ = [
     "BaseSupervisedMetric",
@@ -19,5 +19,5 @@ __all__ = [
     "ImpliedCIs",
     "FisherC",
     "StructureScore",
-    "VarSortability",
+    "SortnRegress",
 ]
