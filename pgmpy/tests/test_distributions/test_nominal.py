@@ -34,20 +34,24 @@ class TestNominalDistribution:
 
         assert PublicCat is NominalDistribution
 
-    def test_interface_compatibility(self):
+    @pytest.mark.parametrize("scalar", [False, True])
+    def test_interface_compatibility(self, scalar):
         """ensure interface compatibility by skpro.utils.estimator_checks.check_estimator"""
         from skpro.utils.estimator_checks import check_estimator
 
         probs = [[0.1, 0.9], [0.7, 0.3]]
+        probs = probs[0] if scalar else probs
         dist = NominalDistribution(probs=probs, categories=[1, 2])
         check_estimator(dist, raise_exceptions=True, verbose=False)
 
         probs = [[0.1, 0.7, 0.2], [0.6, 0.3, 0.1], [0.6, 0.3, 0.1], [0.6, 0.3, 0.1]]
+        probs = probs[0] if scalar else probs
         dist = NominalDistribution(probs=probs, categories=[1, 2, 3])
         check_estimator(dist, raise_exceptions=True, verbose=False)
 
         # Nominal categories with string labels must also pass the interface checks.
         probs = [[0.1, 0.9], [0.7, 0.3]]
+        probs = probs[0] if scalar else probs
         dist = NominalDistribution(probs=probs, categories=["A", "B"])
         check_estimator(dist, raise_exceptions=True, verbose=False)
 
@@ -177,6 +181,16 @@ class TestNominalDistribution:
         assert dist.random_state == 42
         assert dist.get_params()["random_state"] == 42
 
+        scalar = NominalDistribution(probs=[0.1, 0.9], categories=[1, 2])
+        assert scalar.shape == ()
+        assert scalar.index is None and scalar.columns is None
+        assert scalar.get_params()["probs"] == [0.1, 0.9]
+
+        batch = NominalDistribution(probs=[[0.1, 0.9]], categories=[1, 2])
+        assert batch.shape == (1, 1)
+        labeled = NominalDistribution(probs=[0.1, 0.9], categories=[1, 2], index=["row"], columns=["state"])
+        pd.testing.assert_frame_equal(labeled.pmf(1), pd.DataFrame({"state": [0.1]}, index=["row"]))
+
     def test_nominal_methods_unsupported(self):
         """Order- and arithmetic-based methods are undefined for nominal categoricals."""
         probs = [[0.1, 0.2, 0.7], [0.5, 0.3, 0.2]]
@@ -246,6 +260,15 @@ class TestNominalDistribution:
         expected = pd.DataFrame({"variable": [0.1, 0.5]})
         pd.testing.assert_frame_equal(dist.pmf(x), expected)
 
+        for scalar in (dist.iat[1, 0], dist.at[1, "variable"]):
+            assert scalar.shape == ()
+            assert np.isscalar(scalar.pmf(1))
+            assert scalar.pmf(1) == 0.5
+            assert scalar.pmf("unknown") == 0.0
+        batch = dist.iloc[[1], [0]]
+        assert batch.shape == (1, 1)
+        pd.testing.assert_frame_equal(batch.pmf(1), expected.iloc[[1]])
+
     def test_log_pmf(self):
         """test"""
         # Case 1: x: int
@@ -302,6 +325,14 @@ class TestNominalDistribution:
         expected = pd.DataFrame({"variable": np.log([0.1, 0.5])})
         pd.testing.assert_frame_equal(dist.log_pmf(x), expected)
 
+        scalar = NominalDistribution(probs=[0.2, 0.8, 0.0], categories=["A", "B", "C"])
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            assert np.isscalar(scalar.log_pmf("A"))
+            assert scalar.log_pmf("A") == pytest.approx(np.log(0.2))
+            assert scalar.log_pmf("C") == -np.inf
+            assert scalar.log_pmf("unknown") == -np.inf
+
     def test_sample(self):
         """Sampling is reproducible across runs when ``random_state`` is set."""
         probs = [[0.1, 0.8, 0.1], [0.2, 0.2, 0.6]]
@@ -346,6 +377,10 @@ class TestNominalDistribution:
         with pytest.raises(TypeError):
             d1.sample("A")
 
+        scalar = NominalDistribution(probs=[0.0, 1.0], categories=["A", "B"])
+        assert scalar.sample() == "B"
+        pd.testing.assert_frame_equal(scalar.sample(3), pd.DataFrame(["B", "B", "B"]))
+
     @pytest.mark.skipif(
         not _check_soft_dependencies("matplotlib", severity="none"),
         reason="execute only if required dependency present",
@@ -377,6 +412,16 @@ class TestNominalDistribution:
 
             for ax in axes:
                 assert ax.get_ylim() == pytest.approx((0.0, 1.0))
+        finally:
+            plt.close(fig)
+
+        scalar = dist.iat[0, 0]
+        ax = scalar.plot()
+        fig = plt.gcf()
+        try:
+            assert isinstance(ax, plt.Axes)
+            np.testing.assert_allclose([bar.get_height() for bar in ax.patches], probs[0])
+            assert scalar.plot(ax=ax) is ax
         finally:
             plt.close(fig)
 
