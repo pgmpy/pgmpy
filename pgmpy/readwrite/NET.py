@@ -1,11 +1,9 @@
 import collections
-import warnings
+from collections.abc import Hashable
 from math import prod
 from string import Template
 
 import numpy as np
-
-from pgmpy import logger
 
 try:
     from pyparsing import (
@@ -30,6 +28,7 @@ except ImportError as e:
 from pgmpy.factors.discrete.CPD import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import compat_fns
+from pgmpy.utils._warnings import _warn_external
 
 
 class NETWriter:
@@ -226,7 +225,7 @@ class NETWriter:
                 property_tag[variable].append(str(prop) + " = " + str(val))
         return property_tag
 
-    def get_states(self):
+    def get_states(self) -> dict[Hashable, list[str]]:
         """
         Add states to variable of NET
 
@@ -234,6 +233,11 @@ class NETWriter:
         -------
         dict: dict of type {variable: a list of states}
 
+        Warns
+        -----
+        UserWarning
+            If a state name contains a comma and cannot be read back correctly
+            by pgmpy's NETReader.
 
         Examples
         --------
@@ -255,9 +259,11 @@ class NETWriter:
             for state in cpd.state_names[variable]:
                 state_str = str(state)
                 if "," in state_str:
-                    logger.warning(
-                        f"State name '{state_str}' for variable '{variable}' contains commas. "
-                        "This may cause issues when loading the file. Consider removing any special characters."
+                    _warn_external(
+                        f"State name {state_str!r} for variable {variable!r} contains a comma "
+                        "and cannot be read back correctly by pgmpy's NETReader. "
+                        "Rename the state if pgmpy round-trip compatibility is required.",
+                        UserWarning,
                     )
                 variable_states[variable].append(state_str)
         return variable_states
@@ -308,10 +314,10 @@ class NETWriter:
             fout.write(writer)
 
     def write_net(self, filename):
-        warnings.warn(
-            "`NETWriter.write_net` is deprecated and will be removed in v2.0. Please use `NETWriter.write` instead.",
+        _warn_external(
+            "`NETWriter.write_net` is deprecated since v1.1.0 and will be removed in v2.0. "
+            "Use `NETWriter.write` instead.",
             FutureWarning,
-            stacklevel=2,
         )
         self.write(filename)
 
