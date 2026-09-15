@@ -232,10 +232,10 @@ class BaseOrderDiscovery(BaseCausalDiscovery):
         self.estimator = estimator
         self.return_type = return_type
 
-    def _fit_from_causal_order(
+    def _estimate_dag_from_causal_order(
         self, X: pd.DataFrame, causal_order: list[Hashable], *, regressor: BaseEstimator | None = None
-    ) -> "BaseOrderDiscovery":
-        """Estimate a graph by regressing each variable on its predecessors.
+    ) -> DAG:
+        """Return a DAG by regressing each variable on its predecessors.
 
         Parameters
         ----------
@@ -255,14 +255,10 @@ class BaseOrderDiscovery(BaseCausalDiscovery):
 
         Returns
         -------
-        self : BaseOrderDiscovery
-            The estimator with ``causal_order_``, ``causal_graph_``, and
-            ``adjacency_matrix_`` set.
+        dag : pgmpy.base.DAG
+            Estimated graph, including variables with no selected edges. The caller
+            handles graph conversion and assignment of fitted attributes.
         """
-        return_type = self.return_type.lower()
-        if return_type not in ("dag", "pdag"):
-            raise ValueError(f"return_type must be one of: dag, pdag. Got: {self.return_type}")
-
         model_reg = regressor
         if model_reg is None:
             model_reg = clone(self.estimator) if self.estimator is not None else LinearRegression()
@@ -286,12 +282,7 @@ class BaseOrderDiscovery(BaseCausalDiscovery):
                 if coef != 0:
                     model.add_edge(potential_parents[idx], target)
 
-        self.causal_order_ = list(causal_order)
-        self.causal_graph_ = model if return_type == "dag" else model.to_pdag()
-        self.adjacency_matrix_ = self.causal_graph_.to_adjacency(
-            encoding="binary", nodelist=list(self.feature_names_in_)
-        )
-        return self
+        return model
 
 
 class _ConstraintMixin:

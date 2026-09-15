@@ -70,6 +70,17 @@ class VarSort(BaseOrderDiscovery):
 
     def _fit(self, X: pd.DataFrame) -> "VarSort":
         """Estimate a causal order from marginal variances, then learn the graph."""
+        return_type = self.return_type.lower()
+        if return_type not in ("dag", "pdag"):
+            raise ValueError(f"return_type must be one of: dag, pdag. Got: {self.return_type}")
+
         order_values = X.var().to_dict()
         causal_order = sorted(order_values, key=order_values.get)
-        return self._fit_from_causal_order(X, causal_order)
+        model = self._estimate_dag_from_causal_order(X, causal_order)
+
+        self.causal_order_ = list(causal_order)
+        self.causal_graph_ = model if return_type == "dag" else model.to_pdag()
+        self.adjacency_matrix_ = self.causal_graph_.to_adjacency(
+            encoding="binary", nodelist=list(self.feature_names_in_)
+        )
+        return self

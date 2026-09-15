@@ -77,6 +77,10 @@ class R2Sort(BaseOrderDiscovery):
 
     def _fit(self, X: pd.DataFrame) -> "R2Sort":
         """Estimate a causal order from global R² values, then learn the graph."""
+        return_type = self.return_type.lower()
+        if return_type not in ("dag", "pdag"):
+            raise ValueError(f"return_type must be one of: dag, pdag. Got: {self.return_type}")
+
         model_reg = clone(self.estimator) if self.estimator is not None else LinearRegression()
         all_nodes_set = set(self.feature_names_in_)
         order_values = {}
@@ -90,4 +94,11 @@ class R2Sort(BaseOrderDiscovery):
             order_values[target] = r2_score(y, predictions)
 
         causal_order = sorted(order_values, key=order_values.get)
-        return self._fit_from_causal_order(X, causal_order, regressor=model_reg)
+        model = self._estimate_dag_from_causal_order(X, causal_order, regressor=model_reg)
+
+        self.causal_order_ = list(causal_order)
+        self.causal_graph_ = model if return_type == "dag" else model.to_pdag()
+        self.adjacency_matrix_ = self.causal_graph_.to_adjacency(
+            encoding="binary", nodelist=list(self.feature_names_in_)
+        )
+        return self
