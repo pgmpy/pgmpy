@@ -196,34 +196,13 @@ class BaseOrderDiscovery(BaseCausalDiscovery):
     Parameters
     ----------
     estimator : sklearn-style regression estimator, default=None
-        Regressor supplying the adaptive weights through its ``coef_`` attribute.
-        If None, uses :class:`sklearn.linear_model.LinearRegression`. The estimator
-        is cloned before fitting. Subclasses may also use it to estimate the causal order.
+        Regressor supplying the adaptive weights through its ``coef_`` attribute. If None, uses
+        :class:`sklearn.linear_model.LinearRegression`. The estimator is cloned before fitting. Subclasses may also use
+        it to estimate the causal order.
 
     return_type : str, default="dag"
-        The graph type stored in ``causal_graph_``: ``"dag"`` or ``"pdag"``.
-        The ``"pdag"`` option returns the completed PDAG representing the learned
-        DAG's Markov equivalence class, so some edges can become undirected.
-
-    Attributes
-    ----------
-    causal_order_ : list
-        Estimated causal order used to construct the DAG before any conversion
-        to a PDAG. Each parent precedes its children in this order.
-
-    causal_graph_ : pgmpy.base.DAG or pgmpy.base.PDAG
-        Learned graph in the requested representation, including isolated variables.
-
-    adjacency_matrix_ : pandas.DataFrame
-        Binary adjacency matrix in the input feature order. A value of one in
-        row ``u``, column ``v`` represents the edge ``u -> v``. Undirected edges
-        have a one in both directions.
-
-    n_features_in_ : int
-        Number of features in the data used to learn the graph.
-
-    feature_names_in_ : numpy.ndarray
-        Names of the features in the data used to learn the graph.
+        The graph type stored in ``causal_graph_``: ``"dag"`` or ``"pdag"``. The ``"pdag"`` option returns the completed
+        PDAG representing the learned DAG's Markov equivalence class, so some edges can become undirected.
     """
 
     def __init__(self, estimator: BaseEstimator | None = None, return_type: str = "dag") -> None:

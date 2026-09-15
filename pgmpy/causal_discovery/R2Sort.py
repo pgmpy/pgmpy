@@ -7,10 +7,10 @@ from pgmpy.causal_discovery._base import BaseOrderDiscovery
 
 
 class R2Sort(BaseOrderDiscovery):
-    r"""Causal discovery by sorting global R² values and regressing on predecessors.
+    r"""Causal discovery by sorting global R^2 values and regressing on predecessors.
 
     For each variable, fit a regression on all remaining variables and calculate
-    its coefficient of determination, R². Sort variables by increasing R² to
+    its coefficient of determination, R^2. Sort variables by increasing R^2 to
     obtain an estimated causal order :cite:p:`Reisach2023`. Equal scores retain
     their input column order.
 
@@ -23,29 +23,26 @@ class R2Sort(BaseOrderDiscovery):
     Parameters
     ----------
     estimator : sklearn-style regression estimator, default=None
-        Regressor used to calculate global R² values and supply adaptive weights.
-        It must implement ``fit`` and ``predict`` and expose ``coef_`` after fitting.
-        If None, uses :class:`sklearn.linear_model.LinearRegression`. The estimator
-        is cloned before fitting.
+        Regressor used to calculate global R^2 values and supply adaptive weights. It must implement ``fit`` and
+        ``predict`` and expose ``coef_`` after fitting. If None, uses :class:`sklearn.linear_model.LinearRegression`.
+        The estimator is cloned before fitting.
 
     return_type : str, default="dag"
-        The graph type stored in ``causal_graph_``: ``"dag"`` or ``"pdag"``.
-        The ``"pdag"`` option returns the completed PDAG representing the learned
-        DAG's Markov equivalence class, so some edges can become undirected.
+        The graph type stored in ``causal_graph_``: ``"dag"`` or ``"pdag"``. The ``"pdag"`` option returns the completed
+        PDAG representing the learned DAG's Markov equivalence class, so some edges can become undirected.
 
     Attributes
     ----------
     causal_order_ : list
-        Estimated causal order obtained by sorting global R² values.
-        This is the order used to construct the DAG before any conversion to a PDAG.
+        Estimated causal order obtained by sorting global R^2 values. This is the order used to construct the DAG before
+        any conversion to a PDAG.
 
     causal_graph_ : pgmpy.base.DAG or pgmpy.base.PDAG
         The learned causal graph in the requested representation.
 
     adjacency_matrix_ : pandas.DataFrame
-        Binary adjacency matrix in the input feature order. Directed edges have
-        a one in the cause-to-effect entry; undirected edges have a one in both
-        directions.
+        Binary adjacency matrix in the input feature order. Directed edges have a one in the cause-to-effect entry;
+        undirected edges have a one in both directions.
 
     n_features_in_ : int
         Number of features in the data used to learn the graph.
@@ -76,14 +73,13 @@ class R2Sort(BaseOrderDiscovery):
     """
 
     def _fit(self, X: pd.DataFrame) -> "R2Sort":
-        """Estimate a causal order from global R² values, then learn the graph."""
         return_type = self.return_type.lower()
         if return_type not in ("dag", "pdag"):
             raise ValueError(f"return_type must be one of: dag, pdag. Got: {self.return_type}")
 
         model_reg = clone(self.estimator) if self.estimator is not None else LinearRegression()
         all_nodes_set = set(self.feature_names_in_)
-        order_values = {}
+        r2_values = {}
         for target in self.feature_names_in_:
             other_nodes = list(all_nodes_set - {target})
             y = X[target]
@@ -91,9 +87,9 @@ class R2Sort(BaseOrderDiscovery):
 
             model_reg.fit(predictors, y)
             predictions = model_reg.predict(predictors)
-            order_values[target] = r2_score(y, predictions)
+            r2_values[target] = r2_score(y, predictions)
 
-        causal_order = sorted(order_values, key=order_values.get)
+        causal_order = sorted(r2_values, key=r2_values.get)
         model = self._estimate_dag_from_causal_order(X, causal_order, regressor=model_reg)
 
         self.causal_order_ = list(causal_order)
