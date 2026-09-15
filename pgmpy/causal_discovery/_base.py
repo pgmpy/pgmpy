@@ -402,7 +402,7 @@ class _ConstraintMixin:
             # Step 3: After iterating over all the edges, expand the search space by increasing the size
             #         of conditioning set by 1.
             if lim_neighbors >= max_cond_vars:
-                logger.info("Reached maximum number of allowed conditional variables. Exiting")
+                logger.info(f"Reached the maximum number of conditional variables ({max_cond_vars}). Exiting.")
                 break
             lim_neighbors += 1
 

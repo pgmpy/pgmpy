@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import itertools
-import logging
 from collections import defaultdict
 from collections.abc import Hashable, Iterable
 from functools import reduce
@@ -306,7 +305,7 @@ class DiscreteBayesianNetwork(DAG):
 
             for prev_cpd_index in range(len(self.cpds)):
                 if self.cpds[prev_cpd_index].variable == cpd.variable:
-                    logger.warning(f"Replacing existing CPD for {cpd.variable}")
+                    logger.debug(f"Replacing existing CPD for {cpd.variable}")
                     self.cpds[prev_cpd_index] = cpd
                     break
             else:
@@ -719,13 +718,7 @@ class DiscreteBayesianNetwork(DAG):
         _est.fit(self, data)
         cpds = _est.parameters_
 
-        # Temporarily suppress logger to stop giving warning about replacing CPDs.
-        _prev_level = logger.level
-        logger.setLevel(logging.CRITICAL)
-        try:
-            self.add_cpds(*cpds)
-        finally:
-            logger.setLevel(_prev_level)
+        self.add_cpds(*cpds)
 
     def predict(
         self,
