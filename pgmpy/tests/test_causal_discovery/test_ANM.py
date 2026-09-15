@@ -29,7 +29,7 @@ def test_score_algorithm_tags():
     }
     for name, score in scores.items():
         assert score.get_tag("name") == name
-        assert score.get_tag("supported_algorithms") == ["anm"]
+        assert score.get_tag("supported_algorithms") == (["anm", "pnl"] if name == "independence" else ["anm"])
 
 
 def test_fit_recovers_direction(nonlinear_data):
