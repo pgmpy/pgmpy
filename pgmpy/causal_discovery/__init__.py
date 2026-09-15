@@ -7,10 +7,11 @@ from .HillClimbSearch import HillClimbSearch
 from .IGCI import IGCI
 from .LLMPairwise import LLMPairwise
 from .PC import PC
-from .SortnRegress import SortnRegress
+from .R2Sort import R2Sort
 from .SP import SP
 from .TAN import TAN
 from .TOPIC import TOPIC
+from .VarSort import VarSort
 
 __all__ = [
     "ANM",
@@ -22,8 +23,9 @@ __all__ = [
     "IGCI",
     "LLMPairwise",
     "PC",
-    "SortnRegress",
+    "R2Sort",
     "SP",
     "TAN",
     "TOPIC",
+    "VarSort",
 ]
