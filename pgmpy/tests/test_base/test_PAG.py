@@ -121,6 +121,32 @@ class TestPAG:
         pag_complex.modify_edge("A", "E", mark_u="-")
         assert pag_complex.get_edge_marks("A", "E")["A"] == "-"
 
+    def test_init_with_legacy_4_tuple_and_invalid_length(self):
+        graph = PAG(edge_list=[("A", "B", "-", ">"), ("B", "C", "o", "-")])
+        assert graph.get_edge_marks("A", "B") == {"A": "-", "B": ">"}
+        assert graph.get_edge_marks("B", "C") == {"B": "o", "C": "-"}
+
+        with pytest.raises(ValueError):
+            PAG(edge_list=[("A", "B", "-", ">", "x")])
+
+    def test_get_possible_ancestors(self):
+        graph = PAG(edge_list=[("A", "B", "->"), ("B", "C", "->")])
+        assert graph.get_possible_ancestors("C") == {"A", "B", "C"}
+        assert graph.get_possible_ancestors("A") == {"A"}
+
+    def test_rule_9_orients_circle_arrow_edge_on_directed_path(self):
+        pag = PAG(
+            edge_list=[
+                ("A", "B", "->"),
+                ("B", "C", "->"),
+                ("C", "D", "->"),
+                ("A", "D", "o>"),
+            ]
+        )
+
+        updated = pag.rule_9()
+        assert updated.get_edge_marks("A", "D") == {"A": "-", "D": ">"}
+
 
 class TestPAGRules:
     all_rules = [f"rule_{i}" for i in range(1, 11)]
