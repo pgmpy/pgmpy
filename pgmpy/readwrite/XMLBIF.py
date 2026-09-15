@@ -1,16 +1,15 @@
 #!/usr/bin/env python
 
-import warnings
 import xml.etree.ElementTree as etree
 from io import BytesIO
 from itertools import chain
 
 import numpy as np
 
-from pgmpy import logger
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import compat_fns
+from pgmpy.utils._warnings import _warn_external
 
 try:
     import pyparsing as pp
@@ -430,29 +429,24 @@ class XMLBIFWriter:
         return outcome_tag
 
     def _make_valid_state_name(self, state_name):
-        """Transform the input state_name into a valid state in XMLBIF.
-        XMLBIF states must start with a letter and only contain letters,
-        numbers and underscores.
+        """Convert state_name to a string and replace special-character runs.
+
+        Runs of characters other than ASCII letters, digits, and underscores
+        are replaced with a single underscore.
         """
         s = str(state_name)
-
-        # Warn about commas in state names as they can cause issues when loading
-        if "," in s:
-            var_name = self.variable_name if hasattr(self, "variable_name") else "unknown"
-            logger.warning(
-                f"State name '{s}' for variable '{var_name}' contains commas. "
-                "This may cause issues when loading the file. Consider removing any special characters."
-            )
-
-        # Keep existing transformation logic
         s_fixed = pp.CharsNotIn(pp.alphanums + "_").set_parse_action(pp.replace_with("_")).transform_string(s)
         if not s_fixed[0].isalpha():
             s_fixed = s_fixed
 
         if s != s_fixed:
-            logger.warning(
-                f"State name '{s}' has been modified to '{s_fixed}' to comply with XMLBIF format requirements. "
-                "XMLBIF states must start with a letter and only contain letters, numbers, and underscores."  # noqa: E501
+            var_name = getattr(self, "variable_name", "unknown")
+            _warn_external(
+                f"State name {s!r} for variable {var_name!r} was changed "
+                f"to {s_fixed!r} for XMLBIF serialization. "
+                "pgmpy replaces characters other than ASCII letters, digits, "
+                "and underscores with underscores.",
+                UserWarning,
             )
         return s_fixed
 
@@ -579,10 +573,9 @@ class XMLBIFWriter:
             fout.write(self.__str__())
 
     def write_xmlbif(self, filename):
-        warnings.warn(
-            """`XMLBIFWriter.write_xmlbif` is deprecated and will be removed in v2.0. Please use `XMLBIFWriter.write`
-            instead.""",
+        _warn_external(
+            "`XMLBIFWriter.write_xmlbif` is deprecated since v1.1.0 and will be removed in v2.0. "
+            "Use `XMLBIFWriter.write` instead.",
             FutureWarning,
-            stacklevel=2,
         )
         self.write(filename)

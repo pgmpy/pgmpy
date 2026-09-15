@@ -1,5 +1,3 @@
-import logging
-
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -541,7 +539,7 @@ def test_pc_alarm():
     est.fit(X=data)
 
 
-def test_pc_asia(caplog):
+def test_pc_asia():
     asia_model = load_model("bnlearn/asia")
     data = asia_model.simulate(n_samples=int(1e5), seed=42)
     req_edges = [("xray", "either")]
@@ -554,18 +552,8 @@ def test_pc_asia(caplog):
         show_progress=False,
     )
 
-    pgmpy_logger = logging.getLogger("pgmpy")
-    pgmpy_logger.addHandler(caplog.handler)
-    try:
-        with caplog.at_level("WARNING", logger="pgmpy"):
-            est.fit(X=data)
-    finally:
-        pgmpy_logger.removeHandler(caplog.handler)
-    expected_warning = (
-        "Specified expert knowledge conflicts with learned structure. Ignoring edge xray->either from required edges"
-    )
-
-    assert any(expected_warning in message for message in caplog.messages)
+    with pytest.warns(UserWarning, match="Required edge xray->either is absent or oppositely oriented"):
+        est.fit(X=data)
 
 
 def test_pc_asia_expert():

@@ -4,8 +4,8 @@ import pytest
 from scipy.special import softmax
 
 from pgmpy.factors.discrete import TabularCPD
-from pgmpy.inference import DBNInference
-from pgmpy.models import DynamicBayesianNetwork
+from pgmpy.inference import DBNInference, VariableElimination
+from pgmpy.models import DiscreteBayesianNetwork, DynamicBayesianNetwork
 
 # The sample Dynamic Bayesian Network is taken from the following paper:-
 # Novel recursive inference algorithm for discrete dynamic Bayesian networks
@@ -33,6 +33,24 @@ def dbn_inference_instances():
     dbn_2.initialize_initial_state()
     dbn_inference_2 = DBNInference(dbn_2)
     return dbn_inference_1, dbn_inference_2
+
+
+def unrolled_dbn_2(n_slices=3):
+    """dbn_2 from the fixture unrolled into a plain Bayesian network over `n_slices` time slices."""
+    model = DiscreteBayesianNetwork()
+    for t in range(n_slices):
+        model.add_edges_from([(("Z", t), ("X", t)), (("X", t), ("Y", t))])
+        if t + 1 < n_slices:
+            model.add_edge(("Z", t), ("Z", t + 1))
+    model.add_cpds(TabularCPD(("Z", 0), 2, [[0.5], [0.5]]))
+    for t in range(n_slices):
+        model.add_cpds(
+            TabularCPD(("X", t), 2, [[0.6, 0.9], [0.4, 0.1]], [("Z", t)], [2]),
+            TabularCPD(("Y", t), 2, [[0.2, 0.3], [0.8, 0.7]], [("X", t)], [2]),
+        )
+        if t + 1 < n_slices:
+            model.add_cpds(TabularCPD(("Z", t + 1), 2, [[0.4, 0.7], [0.6, 0.3]], [("Z", t)], [2]))
+    return model
 
 
 class TestDBNInference:
@@ -82,9 +100,30 @@ class TestDBNInference:
 
     def test_backward_inf_multiple_variables_with_evidence(self, dbn_inference_instances):
         _, dbn_inference_2 = dbn_inference_instances
-        query_result = dbn_inference_2.backward_inference([("X", 0), ("X", 1)], {("Y", 0): 0, ("Y", 1): 1, ("Y", 2): 1})
-        np_test.assert_array_almost_equal(query_result[("X", 0)].values, np.array([0.677533, 0.322467]))
+        evidence = {("Y", 0): 0, ("Y", 1): 1, ("Y", 2): 1}
+        query_result = dbn_inference_2.backward_inference([("X", 0), ("X", 1)], evidence)
+        # same evidence as the single-variable case above, so ("X", 0) must agree with it and with exact
+        # inference on the unrolled network
+        np_test.assert_array_almost_equal(query_result[("X", 0)].values, np.array([0.66594382, 0.33405618]))
         np_test.assert_array_almost_equal(query_result[("X", 1)].values, np.array([0.7621772, 0.2378228]))
+        exact = VariableElimination(unrolled_dbn_2(3))
+        for var in [("X", 0), ("X", 1)]:
+            np_test.assert_array_almost_equal(
+                query_result[var].values, exact.query([var], evidence=evidence, show_progress=False).values
+            )
+
+    def test_forward_inf_multiple_time_slices_with_evidence(self, dbn_inference_instances):
+        _, dbn_inference_2 = dbn_inference_instances
+        evidence = {("Y", 0): 1, ("Y", 1): 0, ("Y", 2): 1}
+        query_result = dbn_inference_2.forward_inference([("X", 1), ("X", 2)], evidence)
+        exact = VariableElimination(unrolled_dbn_2(3))
+        for var, past_evidence in [(("X", 1), {("Y", 0): 1, ("Y", 1): 0}), (("X", 2), evidence)]:
+            np_test.assert_array_almost_equal(
+                query_result[var].values, exact.query([var], evidence=past_evidence, show_progress=False).values
+            )
+        # querying only the last slice gives the same answer for it
+        single = dbn_inference_2.forward_inference([("X", 2)], evidence)
+        np_test.assert_array_almost_equal(query_result[("X", 2)].values, single[("X", 2)].values)
 
     def test_super_connected_network(self):
         edges = [
