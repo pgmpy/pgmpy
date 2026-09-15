@@ -286,6 +286,8 @@ class NominalDistribution(BaseDistribution):
         Returns
         -------
         scalar or pd.DataFrame
+            Multiple samples of an array distribution add a ``sample`` index
+            level before the original index levels, preserving their names.
 
         """
         probs = np.atleast_2d(np.asarray(self.probs, dtype=float))
@@ -324,9 +326,15 @@ class NominalDistribution(BaseDistribution):
                 columns=columns,
             )
         else:
-            multi_index = pd.MultiIndex.from_product(
-                [pd.RangeIndex(n_samples), index],
-                names=["sample", None],
+            if not isinstance(index, pd.MultiIndex):
+                index = pd.MultiIndex.from_arrays([index])
+            multi_index = pd.MultiIndex(
+                levels=[pd.RangeIndex(n_samples), *index.levels],
+                codes=[
+                    np.repeat(np.arange(n_samples), n_rows),
+                    *[np.tile(code, n_samples) for code in index.codes],
+                ],
+                names=["sample", *index.names],
             )
 
             res = pd.DataFrame(

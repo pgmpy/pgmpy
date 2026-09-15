@@ -333,7 +333,15 @@ class TestNominalDistribution:
             assert scalar.log_pmf("C") == -np.inf
             assert scalar.log_pmf("unknown") == -np.inf
 
-    def test_sample(self):
+    @pytest.mark.parametrize(
+        "index",
+        [
+            pd.Index(["studentB", "studentA"], name="student"),
+            pd.MultiIndex.from_tuples([("yes", "good"), ("no", "poor")], names=["Studied", "Sleep"]),
+        ],
+        ids=["named-index", "multi-index"],
+    )
+    def test_sample(self, index):
         """Sampling is reproducible across runs when ``random_state`` is set."""
         probs = [[0.1, 0.8, 0.1], [0.2, 0.2, 0.6]]
         categories = [1, 2, 3]
@@ -380,6 +388,21 @@ class TestNominalDistribution:
         scalar = NominalDistribution(probs=[0.0, 1.0], categories=["A", "B"])
         assert scalar.sample() == "B"
         pd.testing.assert_frame_equal(scalar.sample(3), pd.DataFrame(["B", "B", "B"]))
+
+        dist = NominalDistribution(
+            probs=[[0.0, 1.0], [1.0, 0.0]],
+            categories=["fail", "pass"],
+            index=index,
+            columns=["Exam"],
+        )
+        expected = pd.DataFrame({"Exam": ["pass", "fail"]}, index=index)
+        pd.testing.assert_frame_equal(dist.sample(), expected)
+
+        samples = dist.sample(2)
+        assert samples.index.names == ["sample", *index.names]
+        for sample in range(2):
+            pd.testing.assert_frame_equal(samples.xs(sample, level=0), expected)
+        pd.testing.assert_frame_equal(dist.sample(0), samples.iloc[:0])
 
     @pytest.mark.skipif(
         not _check_soft_dependencies("matplotlib", severity="none"),
