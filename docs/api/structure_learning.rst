@@ -13,6 +13,7 @@ Bivariate Discovery
 
    ~pgmpy.causal_discovery.ANM
    ~pgmpy.causal_discovery.IGCI
+   ~pgmpy.causal_discovery.BQCD
 
 Bivariate Scores
 ----------------
