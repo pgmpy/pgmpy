@@ -1,5 +1,6 @@
 from collections.abc import Hashable, Iterable
 from itertools import combinations, product
+from typing import cast
 
 import networkx as nx
 
@@ -15,7 +16,7 @@ class PAG(_CoreGraph):
     """
 
     @staticmethod
-    def _normalize_edge_type(edge_type: str) -> str:
+    def _normalize_edge_type(edge_type: Hashable) -> Hashable:
         if not isinstance(edge_type, str):
             return edge_type
 
@@ -68,16 +69,9 @@ class PAG(_CoreGraph):
 
         Examples
         --------
-        >>> from pgmpy.base import AncestralBase
-        [('A', 'B', {'marks': {'A': '-', 'B': '>'}}),
-         ('B', 'C', {'marks': {'B': '>', 'C': '-'}}),
-         ('C', 'D', {'marks': {'C': 'o', 'D': 'o'}})]
-
-        Roles can be assigned to nodes in the graph at construction or using methods.
-
-        At construction:
-        >>> g = AncestralBase(
-        ...     edge_list=[("L", "A", "-", ">"), ("B", "C", "-", ">")],
+        >>> from pgmpy.base import PAG
+        >>> g = PAG(
+        ...     edge_list=[("L", "A", "->"), ("B", "C", "->")],
         ...     latents={"L"},
         ...     roles={"exposure": "A", "outcome": "B"},
         ... )
@@ -85,13 +79,10 @@ class PAG(_CoreGraph):
         Roles can also be assigned after creation using ``with_role`` method.
 
         >>> g = g.with_role("adjustment", {"L", "C"})
-
-        Vertices of a specific role can be retrieved using ``get_role`` method.
-
-        >>> g.get_role("exposure")
-        ["A"]
-        >>> g.get_role("adjustment")
-        ["L", "C"]
+        >>> sorted(g.get_role("exposure"))
+        ['A']
+        >>> sorted(g.get_role("adjustment"))
+        ['C', 'L']
         """
         # `_CoreGraph` expects edges as (u, v, edge_type). Accept the legacy
         # four-tuple form (u, v, u_mark, v_mark) here and convert it into the
@@ -101,16 +92,19 @@ class PAG(_CoreGraph):
         if edge_list is not None:
             converted_edges = []
             for edge in edge_list:
-                if len(edge) == 3:
-                    u, v, edge_type = edge
+                edge_tuple = tuple(edge)
+                if len(edge_tuple) == 3:
+                    u, v, edge_type = edge_tuple
                     converted_edges.append((u, v, self._normalize_edge_type(edge_type)))
-                elif len(edge) == 4:
-                    u, v, mu, mv = edge
+                elif len(edge_tuple) == 4:
+                    u, v, mu, mv = edge_tuple
                     markers = {u: mu, v: mv}
                     edge_type = self._to_edge_type(u, v, markers)
                     converted_edges.append((u, v, edge_type))
                 else:
-                    raise ValueError(f"Edge tuple must have 3 or 4 elements. Edge {edge} is of length {len(edge)}.")
+                    raise ValueError(
+                        f"Edge tuple must have 3 or 4 elements. Edge {edge} is of length {len(edge_tuple)}."
+                    )
 
         super().__init__(
             edge_list=converted_edges,
@@ -121,7 +115,7 @@ class PAG(_CoreGraph):
         )
 
     # utility function for getting edge marks
-    def get_edge_marks(self, u, v):
+    def get_edge_marks(self, u: Hashable, v: Hashable) -> dict[Hashable, str]:
         """
         Get the marks on the edge between two nodes.
 
@@ -148,7 +142,7 @@ class PAG(_CoreGraph):
             raise ValueError(f"Multiple parallel edges between {u} and {v}; use get_edge_type/get_marker instead.")
 
         # Return a copy of the stored marker dict (keys are node ids).
-        return list(data.values())[0].copy()
+        return cast(dict[Hashable, str], list(data.values())[0].copy())
 
     def get_neighbors(
         self,
