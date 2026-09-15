@@ -5,6 +5,7 @@ from .ExpertKnowledge import ExpertKnowledge
 from .GES import GES
 from .HillClimbSearch import HillClimbSearch
 from .IGCI import IGCI
+from .ILPSearch import ILPSearch
 from .LLMPairwise import LLMPairwise
 from .PC import PC
 from .SP import SP
@@ -19,6 +20,7 @@ __all__ = [
     "GES",
     "HillClimbSearch",
     "IGCI",
+    "ILPSearch",
     "LLMPairwise",
     "PC",
     "TAN",
