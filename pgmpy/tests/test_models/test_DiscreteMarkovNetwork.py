@@ -645,3 +645,55 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
 
     def tearDown(self):
         del self.graph
+
+
+class TestMarkovNetworkFit(unittest.TestCase):
+    def setUp(self):
+        self.graph = DiscreteMarkovNetwork([("A", "B"), ("B", "C")])
+        import pandas as pd
+
+        np.random.seed(42)
+        self.data = pd.DataFrame(
+            np.random.randint(low=0, high=2, size=(1000, 3)),
+            columns=["A", "B", "C"],
+        )
+
+    def test_fit(self):
+        fitted_model = self.graph.fit(self.data)
+        self.assertIs(fitted_model, self.graph)
+        self.assertGreater(len(self.graph.get_factors()), 0)
+        self.assertTrue(self.graph.check_model())
+
+    def test_fit_invalid_nodes(self):
+        import pandas as pd
+
+        bad_data = pd.DataFrame({"A": [0, 1], "B": [1, 0]})
+        with self.assertRaises(ValueError):
+            self.graph.fit(bad_data)
+
+    def test_fit_simulated_data(self):
+        from pgmpy.sampling import GibbsSampling
+
+        known_model = DiscreteMarkovNetwork([("A", "B"), ("B", "C")])
+        f_ab = DiscreteFactor(["A", "B"], [2, 2], [1.0, 4.0, 4.0, 1.0])
+        f_bc = DiscreteFactor(["B", "C"], [2, 2], [2.0, 3.0, 3.0, 2.0])
+        known_model.add_factors(f_ab, f_bc)
+
+        gibbs = GibbsSampling(known_model)
+        simulated_data = gibbs.sample(size=5000, seed=42)
+
+        learned_model = DiscreteMarkovNetwork([("A", "B"), ("B", "C")])
+        learned_model.fit(simulated_data)
+
+        for known_factor in known_model.get_factors():
+            scope = known_factor.scope()
+            learned_factor = next(
+                f for f in learned_model.get_factors() if set(f.scope()) == set(scope)
+            )
+            norm_known = known_factor.values / known_factor.values.sum()
+            norm_learned = learned_factor.values / learned_factor.values.sum()
+            np.testing.assert_allclose(norm_learned, norm_known, atol=0.05)
+
+    def tearDown(self):
+        del self.graph
+
