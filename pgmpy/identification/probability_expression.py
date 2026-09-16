@@ -19,6 +19,41 @@ class _TreeNode:
         """Sort and join variable names for deterministic LaTeX output."""
         return ", ".join(sorted((str(v) for v in var_set), key=str))
 
+    def marginalize(self, sumset):
+        r"""Return :math:`\sum_{sumset} self`.
+
+        Returns a new expression; nodes are immutable. Summing over nothing is the identity, and a sum that is exactly
+        a smaller node is returned as one rather than wrapped: a plain joint ``P(A)`` shrinks to ``P(A \ sumset)``, and
+        nested sums collapse into one.
+
+        Parameters
+        ----------
+        sumset: iterable of hashable
+            The variables being summed out. Assumed to be a subset of the variables this expression ranges over.
+
+        Returns
+        -------
+        expression: _TreeNode
+            The marginalised expression.
+
+        Examples
+        --------
+        >>> from pgmpy.identification.probability_expression import ProbabilityNode
+        >>> ProbabilityNode(frozenset({"X"}), cond=frozenset({"Z"})).marginalize({"X"}).to_latex()
+        '\\sum_{X} P(X \\mid Z)'
+        """
+        sumset = frozenset(sumset)
+        if not sumset:
+            return self
+        return self._marginalize(sumset)
+
+    def _marginalize(self, sumset):
+        """Build the marginal of this node over a guaranteed non-empty ``sumset``.
+
+        The general case wraps the node in a sum; subclasses override this to simplify instead.
+        """
+        return MarginalNode(self, sumset=sumset)
+
     def to_latex(self):
         """Return a LaTeX string representation of this node.
 
@@ -93,12 +128,22 @@ class ProbabilityNode(_TreeNode):
         self.cond = frozenset(cond)
         self.children = []
 
+    def _marginalize(self, sumset):
+        r"""Shrink a plain joint :math:`P(A)` to :math:`P(A \setminus sumset)`.
+
+        Only a plain joint simplifies this way; summing out of a conditional or interventional term cannot be written
+        as a single atomic term.
+        """
+        if self.do or self.cond:
+            return super()._marginalize(sumset)
+        return ProbabilityNode(self.variables - sumset)
+
     def to_latex(self):
         r"""
         Return LaTeX for this atomic probability term.
 
         The conditioning bar is omitted when both ``do`` and ``cond`` are empty.
-        ``do(·)`` is always rendered before passive conditioning.
+        ``do(...)`` is always rendered before passive conditioning.
 
         Returns
         -------
@@ -189,6 +234,10 @@ class MarginalNode(_TreeNode):
         if not self.sumset:
             raise ValueError("MarginalNode requires at least one variable to sum over.")
         self.children = [child]
+
+    def _marginalize(self, sumset):
+        """Collapse nested sums into a single sum over the union of the two sumsets."""
+        return MarginalNode(self.children[0], sumset=self.sumset | sumset)
 
     def to_latex(self):
         r"""
