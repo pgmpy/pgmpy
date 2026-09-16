@@ -923,7 +923,7 @@ class DiscreteBayesianNetwork(DAG):
             for k, v in states_dict.items():
                 for index in range(len(v.values)):
                     state = self.get_cpds(k).state_names[k][index]
-                    pred_values[k + "_" + str(state)].append(v.values[index])
+                    pred_values[f"{k}_{state}"].append(v.values[index])
         return pd.DataFrame(pred_values, index=data.index)
 
     def get_state_probability(self, states: dict[Hashable, Hashable]) -> float:
