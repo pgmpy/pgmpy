@@ -7,7 +7,8 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
-from sklearn.base import BaseEstimator
+from sklearn.base import BaseEstimator, clone
+from sklearn.linear_model import LassoLarsIC, LinearRegression
 from sklearn.metrics import (
     adjusted_mutual_info_score,
     mutual_info_score,
@@ -71,6 +72,14 @@ class BaseCausalDiscovery(BaseEstimator):
         if not all([isinstance(x, Hashable) for x in X.values.flat]):
             raise TypeError("argument must be a string, number, or hashable object.")
 
+        for col in X.columns:
+            if X[col].nunique() == 1:
+                warnings.warn(
+                    f"Variable '{col}' is constant (zero variance), which can lead to unreliable results for"
+                    f"{type(self).__name__}. Consider removing it before fitting.",
+                    UserWarning,
+                )
+
         self.n_features_in_ = len(X.columns)
         return X
 
@@ -80,14 +89,6 @@ class BaseCausalDiscovery(BaseEstimator):
         discovery algorithm inheriting from `BaseCausalDiscovery`.
         """
         X = self._check_fit_data(X)
-
-        for col in X.columns:
-            if X[col].nunique() == 1:
-                warnings.warn(
-                    f"Variable '{col}' is constant (zero variance), which can lead to unreliable "
-                    f"results for {type(self).__name__}. Consider removing it before fitting.",
-                    UserWarning,
-                )
 
         return self._fit(X)
 
@@ -179,6 +180,88 @@ class BaseCausalDiscovery(BaseEstimator):
             return metric.evaluate(true_causal_graph=true_graph, est_causal_graph=self.causal_graph_)
         else:
             raise ValueError("Either `X` or `true_graph` needs to be specified")
+
+
+class BaseOrderDiscovery(BaseCausalDiscovery):
+    """
+    Base class for causal discovery by estimating causal ordering.
+
+    This class provides shared functionality for causal ordering based discovery method. The standard pattern is: 1. Use
+    a method to estimate the causal ordering, 2. Use the causal ordering to estimate the DAG. This pattern is followed
+    by many causal discovery methods such as LinGAM class of methods, Var/R2-Sortability methods. This base class
+    provides the shared functionality for the second step. The first step is left to the subclasses to implement.
+    Currently only one approach is implemented, regress each variable on its predecessors and selects parents using
+    adaptive Lasso with a BIC-selected penalty :cite:p:`Reisach2021`.
+
+    Parameters
+    ----------
+    estimator : sklearn-style regression estimator, default=None
+        Regressor supplying the adaptive weights through its ``coef_`` attribute. If None, uses
+        :class:`sklearn.linear_model.LinearRegression`. The estimator is cloned before fitting. Subclasses may also use
+        it to estimate the causal order.
+
+    return_type : str, default="dag"
+        The graph type stored in ``causal_graph_``: ``"dag"`` or ``"pdag"``. The ``"pdag"`` option returns the completed
+        PDAG representing the learned DAG's Markov equivalence class, so some edges can become undirected.
+    """
+
+    def __init__(self, estimator: BaseEstimator | None = None, return_type: str = "dag") -> None:
+        """Configure the initial regressor and the learned graph representation."""
+        super().__init__()
+        self.estimator = estimator
+        self.return_type = return_type
+
+    def _estimate_dag_from_causal_order(
+        self, X: pd.DataFrame, causal_order: list[Hashable], *, regressor: BaseEstimator | None = None
+    ) -> DAG:
+        """Return a DAG by regressing each variable on its predecessors.
+
+        Parameters
+        ----------
+        X : pandas.DataFrame
+            Validated, original data used to learn the graph. Algorithms that
+            transform data while estimating a causal order should pass the original data here.
+
+        causal_order : list of hashable
+            Estimated causal order, containing each input column exactly once.
+            Parents are selected only from earlier variables, making this a valid
+            causal order of the learned DAG.
+
+        regressor : sklearn-style regression estimator, default=None
+            Working regressor already cloned by the ordering step. If supplied,
+            it is reused and fitted in place, preserving its state between steps.
+            Otherwise, clone ``self.estimator`` or use a default linear regressor.
+
+        Returns
+        -------
+        dag : pgmpy.base.DAG
+            Estimated graph, including variables with no selected edges. The caller
+            handles graph conversion and assignment of fitted attributes.
+        """
+        model_reg = regressor
+        if model_reg is None:
+            model_reg = clone(self.estimator) if self.estimator is not None else LinearRegression()
+        model = DAG()
+        model.add_nodes_from(causal_order)
+
+        for i in range(1, len(causal_order)):
+            target = causal_order[i]
+            potential_parents = causal_order[:i]
+            y = X[target].to_numpy().ravel()
+            predictors = X[potential_parents].to_numpy()
+
+            model_reg.fit(predictors, y)
+            weights = np.abs(model_reg.coef_)
+
+            sparse_reg = LassoLarsIC(criterion="bic")
+            sparse_reg.fit(predictors * weights, y)
+            coefs = sparse_reg.coef_ * weights
+
+            for idx, coef in enumerate(coefs):
+                if coef != 0:
+                    model.add_edge(potential_parents[idx], target)
+
+        return model
 
 
 class _ConstraintMixin:
@@ -402,7 +485,7 @@ class _ConstraintMixin:
             # Step 3: After iterating over all the edges, expand the search space by increasing the size
             #         of conditioning set by 1.
             if lim_neighbors >= max_cond_vars:
-                logger.info("Reached maximum number of allowed conditional variables. Exiting")
+                logger.info(f"Reached the maximum number of conditional variables ({max_cond_vars}). Exiting.")
                 break
             lim_neighbors += 1
 
