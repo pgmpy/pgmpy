@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import itertools
 import os
 import unittest
 
@@ -884,6 +885,86 @@ class TestDoOperator(unittest.TestCase):
         # a node not in the graph raises
         with self.assertRaises(ValueError):
             self.g1.do("Q")
+
+
+class TestDAGToADMG(unittest.TestCase):
+    """Tests for the latent projection of a DAG onto its observed nodes."""
+
+    @staticmethod
+    def edges(dag):
+        return sorted(dag.to_admg().get_edges(data=True))
+
+    def test_latent_common_cause_becomes_a_bidirected_edge(self):
+        dag = DAG(ebunch=[("U", "X"), ("U", "Y"), ("X", "Y")], latents={"U"})
+        self.assertEqual(self.edges(dag), [("X", "Y", "->"), ("X", "Y", "<>")])
+
+    def test_latent_mediator_becomes_a_directed_edge(self):
+        """A latent on a directed path is not a confounder, so it must not produce a bidirected edge."""
+        dag = DAG(ebunch=[("X", "U"), ("U", "Y")], latents={"U"})
+        self.assertEqual(self.edges(dag), [("X", "Y", "->")])
+
+    def test_latent_with_an_observed_parent(self):
+        """A latent need not be a root; its observed parent keeps its directed edges through the projection."""
+        dag = DAG(ebunch=[("W", "U"), ("U", "X"), ("U", "Y")], latents={"U"})
+        self.assertEqual(self.edges(dag), [("W", "X", "->"), ("W", "Y", "->"), ("X", "Y", "<>")])
+
+    def test_latent_confounds_every_pair_of_observed_descendants(self):
+        dag = DAG(ebunch=[("U", "A"), ("U", "B"), ("U", "C")], latents={"U"})
+        self.assertEqual(sorted(dag.to_admg().nodes()), ["A", "B", "C"])
+        self.assertEqual(self.edges(dag), [("A", "B", "<>"), ("A", "C", "<>"), ("B", "C", "<>")])
+
+    def test_chained_latents(self):
+        """A latent reached only through another latent still confounds the observed nodes below it."""
+        dag = DAG(ebunch=[("U1", "U2"), ("U2", "X"), ("U1", "Y")], latents={"U1", "U2"})
+        self.assertEqual(self.edges(dag), [("X", "Y", "<>")])
+
+    def test_latent_without_observed_descendants_is_dropped(self):
+        dag = DAG(ebunch=[("X", "Y"), ("X", "U")], latents={"U"})
+        self.assertEqual(sorted(dag.to_admg().nodes()), ["X", "Y"])
+        self.assertEqual(self.edges(dag), [("X", "Y", "->")])
+
+    def test_isolated_observed_nodes_are_kept(self):
+        """`edge_list` alone silently drops nodes that have no edges."""
+        dag = DAG(ebunch=[("A", "B")])
+        dag.add_node("C")
+        self.assertEqual(sorted(dag.to_admg().nodes()), ["A", "B", "C"])
+
+    def test_roles_carry_over_but_latents_does_not(self):
+        dag = DAG(ebunch=[("U", "X"), ("U", "Y")], latents={"U"})
+        dag = dag.with_role("exposures", ["X"]).with_role("outcomes", ["Y"])
+        projection = dag.to_admg()
+        self.assertEqual(set(projection.get_role("exposures")), {"X"})
+        self.assertEqual(set(projection.get_role("outcomes")), {"Y"})
+        self.assertEqual(set(projection.latents), set())
+
+    def test_dag_without_latents_projects_to_its_directed_edges(self):
+        dag = DAG(ebunch=[("X", "M"), ("M", "Y")])
+        self.assertEqual(self.edges(dag), [("M", "Y", "->"), ("X", "M", "->")])
+
+    def test_projection_preserves_d_separation_over_observed_nodes(self):
+        """The defining property of the projection, checked against the canonical DAG of the result."""
+        dag = DAG(ebunch=[("W", "U"), ("U", "X"), ("U", "Y"), ("X", "M"), ("M", "Y")], latents={"U"})
+        projection = dag.to_admg()
+
+        canonical = nx.DiGraph()
+        canonical.add_nodes_from(projection.nodes())
+        for i, (u, v, edge_type) in enumerate(projection.get_edges(data=True)):
+            if edge_type == "->":
+                canonical.add_edge(u, v)
+            else:
+                canonical.add_edge(f"_L{i}", u)
+                canonical.add_edge(f"_L{i}", v)
+
+        observed = sorted(projection.nodes())
+        for a, b in itertools.combinations(observed, 2):
+            rest = [node for node in observed if node not in (a, b)]
+            for size in range(len(rest) + 1):
+                for z in itertools.combinations(rest, size):
+                    self.assertEqual(
+                        nx.is_d_separator(dag, {a}, {b}, set(z)),
+                        nx.is_d_separator(canonical, {a}, {b}, set(z)),
+                        msg=f"{a} vs {b} given {z}",
+                    )
 
 
 class TestDAGConversion(unittest.TestCase):
