@@ -61,6 +61,25 @@ class Adjustment(BaseIdentification):
         elif self.variant == "minimal_variance":
             self.supported_graph_types = (DAG, PDAG)
 
+    @staticmethod
+    def _proper_causal_paths(causal_graph):
+        """
+        Yield the node paths of all proper causal paths from `exposures` to `outcomes`.
+
+        A proper causal path is a directed path from an exposure to an outcome
+        that does not pass through another exposure. For graph types that also
+        carry non-directed edges (ADMG, MAG), the paths are computed on the
+        directed projection of the graph.
+        """
+        exposures = causal_graph.get_role("exposures")
+        outcomes = causal_graph.get_role("outcomes")
+        directed = causal_graph if isinstance(causal_graph, DAG) else causal_graph.get_directed_graph()
+        for source in exposures:
+            for path in nx.all_simple_paths(directed, source, outcomes):
+                if set(path[1:]).intersection(exposures):
+                    continue
+                yield path
+
     def _get_proper_backdoor_graph(self, causal_graph, inplace=False):
         """
         Returns a proper backdoor graph of the `causal_graph`.
@@ -101,14 +120,12 @@ class Adjustment(BaseIdentification):
         ----------
         - :footcite:t:`perkovic_2018`
         """
-        # TODO: Make this work for all graph types.
         model = causal_graph if inplace else causal_graph.copy()
-        edges_to_remove = []
-        for source in causal_graph.get_role("exposures"):
-            paths = nx.all_simple_edge_paths(causal_graph, source, causal_graph.get_role("outcomes"))
-            for path in paths:
-                edges_to_remove.append(path[0])
-        model.remove_edges_from(edges_to_remove)
+        first_edges = {(path[0], path[1]) for path in self._proper_causal_paths(causal_graph)}
+        if isinstance(causal_graph, DAG):
+            model.remove_edges_from(first_edges)
+        else:
+            model.remove_edges_from([(u, v, "->") for u, v in first_edges])
         return model
 
     def _identify(self, causal_graph):
@@ -181,7 +198,11 @@ class Adjustment(BaseIdentification):
 
         Given a `causal_graph` with variable roles `exposures`, `outcomes`, and
         `adjustment` defined, this method checks if the given `adjustment` set
-        is valid.
+        satisfies the adjustment criterion [1]: it must not contain a forbidden
+        node (an exposure, a node on a proper causal path from the exposures to
+        the outcomes, or a descendant of such a node), and it must block every
+        proper non-causal path, i.e. the exposures must be separated from the
+        outcomes given the adjustment set in the proper backdoor graph.
 
         Parameters
         ----------
@@ -192,27 +213,46 @@ class Adjustment(BaseIdentification):
         -------
         bool:
             True if the `adjustment` set is valid, False otherwise.
+
+        References
+        ----------
+        - :footcite:t:`perkovic_2018`
         """
-        exposure = causal_graph.get_role("exposures")
-        outcome = causal_graph.get_role("outcomes")
-        adjustment_vars = causal_graph.get_role("adjustment")
+        exposures = causal_graph.get_role("exposures")
+        outcomes = causal_graph.get_role("outcomes")
+        adjustment_vars = set(causal_graph.get_role("adjustment"))
 
-        conditional_vars = exposure + adjustment_vars
+        is_dag = isinstance(causal_graph, DAG)
+        directed = causal_graph if is_dag else causal_graph.get_directed_graph()
 
-        # Parents of the exposure(s) that are themselves conditioned on are trivially separated.
-        parents = causal_graph.get_parents(exposure) - set(conditional_vars)
+        # Condition 1: No adjustment variable may be forbidden - an exposure,
+        # a node on a proper causal path, or a descendant of such a node.
+        causal_path_nodes = set()
+        for path in self._proper_causal_paths(causal_graph):
+            causal_path_nodes.update(path[1:])
+
+        forbidden = set(exposures).union(causal_path_nodes)
+        for node in causal_path_nodes:
+            forbidden.update(nx.descendants(directed, node))
+
+        if adjustment_vars.intersection(forbidden):
+            return False
+
+        # Condition 2: The adjustment set must block every proper non-causal
+        # path from the exposures to the outcomes.
+        backdoor_graph = self._get_proper_backdoor_graph(causal_graph, inplace=False)
 
         # DAG has not migrated onto _CoreGraph yet and exposes d-separation as `is_dconnected`;
         # this branch collapses into the `is_mseparated` call once it does.
-        if isinstance(causal_graph, DAG):
+        if is_dag:
             return all(
-                not causal_graph.is_dconnected(parent, outcome_var, observed=conditional_vars)
-                for parent in parents
-                for outcome_var in outcome
+                not backdoor_graph.is_dconnected(exposure_var, outcome_var, observed=list(adjustment_vars) or None)
+                for exposure_var in exposures
+                for outcome_var in outcomes
             )
 
         return all(
-            causal_graph.is_mseparated(parent, outcome_var, conditioning_set=conditional_vars)
-            for parent in parents
-            for outcome_var in outcome
+            backdoor_graph.is_mseparated(exposure_var, outcome_var, conditioning_set=adjustment_vars)
+            for exposure_var in exposures
+            for outcome_var in outcomes
         )
