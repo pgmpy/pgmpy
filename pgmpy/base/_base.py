@@ -892,7 +892,7 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
         # Step 2: Remove every incoming (arrowhead-at-`node`) edge.
         for node in nodes:
             for edge_type in arrowhead_types:
-                for neighbor in self.get_neighbors(node, edge_type):
+                for neighbor in graph.get_neighbors(node, edge_type):
                     graph.remove_edge(node, neighbor, edge_type)
         return graph
 

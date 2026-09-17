@@ -102,6 +102,183 @@ class TestTreeNodeAbstract:
         assert isinstance(DivisionNode(prob_y, prob_x), _TreeNode)
 
 
+class TestMarginalize:
+    """Summing over an expression, and the exact simplifications each node type applies."""
+
+    def test_marginalize_over_nothing_is_the_identity(self):
+        node = ProbabilityNode(frozenset({"X", "Y"}))
+        assert node.marginalize(frozenset()) is node
+
+    def test_marginalize_shrinks_a_plain_joint(self):
+        """sum_X P(X, Y) is P(Y), not a MarginalNode wrapping P(X, Y). This keeps an estimand a plain joint for as
+        long as it genuinely is one, which is what lets the ID algorithm emit atomic conditionals instead of ratios."""
+        assert ProbabilityNode(frozenset({"X", "Y"})).marginalize({"X"}) == ProbabilityNode(frozenset({"Y"}))
+
+    def test_marginalize_does_not_shrink_a_conditional(self):
+        node = ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"}))
+        assert node.marginalize({"Y"}) == MarginalNode(node, sumset=frozenset({"Y"}))
+
+    def test_marginalize_does_not_shrink_an_interventional_term(self):
+        node = ProbabilityNode(frozenset({"Y", "Z"}), do=frozenset({"X"}))
+        assert node.marginalize({"Z"}) == MarginalNode(node, sumset=frozenset({"Z"}))
+
+    def test_marginalize_flattens_nested_sums(self):
+        inner = MarginalNode(ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"})), sumset=frozenset({"X"}))
+        result = inner.marginalize({"Y"})
+        assert result.sumset == frozenset({"X", "Y"})
+        assert result.children[0] == inner.children[0]
+
+    def test_marginalize_wraps_a_composite_expression(self, prob_y_cond_x, prob_x):
+        product = ProductNode([prob_y_cond_x, prob_x])
+        assert product.marginalize({"X"}) == MarginalNode(product, sumset=frozenset({"X"}))
+
+    def test_marginalize_coerces_and_leaves_the_original_untouched(self, prob_y_cond_x):
+        result = prob_y_cond_x.marginalize(["X"])
+        assert result.sumset == frozenset({"X"})
+        assert prob_y_cond_x.cond == frozenset({"X"})
+
+
+class TestSimplify:
+    """The rewrites of `_TreeNode.simplify`, and the shapes that must survive them untouched."""
+
+    def test_sums_out_a_variable_only_one_factor_has_in_its_head(self):
+        """sum_W P(W | X) P(Y | X) drops the first factor: it sums to one, and W is nowhere else."""
+        product = ProductNode(
+            [
+                ProbabilityNode(frozenset({"W"}), cond=frozenset({"X"})),
+                ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"})),
+            ]
+        )
+        expr = MarginalNode(product, sumset=frozenset({"W"}))
+        assert expr.simplify() == ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"}))
+
+        # sum_W P(W, Y | X) keeps the factor and shrinks its head instead.
+        joint = MarginalNode(ProbabilityNode(frozenset({"W", "Y"}), cond=frozenset({"X"})), sumset=frozenset({"W"}))
+        assert joint.simplify() == ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"}))
+
+    def test_sum_is_kept_when_the_variable_is_used_elsewhere(self):
+        """W sits in the second factor's conditioning set, so the sum does not distribute over the product. The two
+        do not form a chain rule pair either, since the conditioning sets differ by Z."""
+        product = ProductNode(
+            [
+                ProbabilityNode(frozenset({"W"}), cond=frozenset({"X"})),
+                ProbabilityNode(frozenset({"Y"}), cond=frozenset({"W", "Z"})),
+            ]
+        )
+        expr = MarginalNode(product, sumset=frozenset({"W"}))
+        assert expr.simplify() == expr
+
+    def test_joins_by_the_chain_rule_to_expose_a_sum(self):
+        """sum_Y P(Y | X) P(Z | X, Y) joins to sum_Y P(Y, Z | X), and Y then sums away."""
+        product = ProductNode(
+            [
+                ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"})),
+                ProbabilityNode(frozenset({"Z"}), cond=frozenset({"X", "Y"})),
+            ]
+        )
+        expr = MarginalNode(product, sumset=frozenset({"Y"}))
+        assert expr.simplify() == ProbabilityNode(frozenset({"Z"}), cond=frozenset({"X"}))
+
+        # The same holds down a longer chain, one pairwise join at a time.
+        chain = ProductNode(
+            [
+                ProbabilityNode(frozenset({"Z"}), cond=frozenset({"X", "Y", "W"})),
+                ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"})),
+                ProbabilityNode(frozenset({"W"}), cond=frozenset({"X", "Y"})),
+            ]
+        )
+        assert MarginalNode(chain, sumset=frozenset({"Y", "W"})).simplify() == ProbabilityNode(
+            frozenset({"Z"}), cond=frozenset({"X"})
+        )
+
+    def test_join_needs_the_conditioning_sets_to_line_up(self):
+        """The adjustment formula: P(Z) is not P(Z | X), so no chain rule applies and Z cannot be summed out."""
+        product = ProductNode(
+            [
+                ProbabilityNode(frozenset({"Z"})),
+                ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X", "Z"})),
+            ]
+        )
+        expr = MarginalNode(product, sumset=frozenset({"Z"}))
+        assert expr.simplify() == expr
+
+        # Nor does it apply across different interventions.
+        mismatched = ProductNode(
+            [
+                ProbabilityNode(frozenset({"Y"}), do=frozenset({"W"}), cond=frozenset({"X"})),
+                ProbabilityNode(frozenset({"Z"}), cond=frozenset({"X", "Y"})),
+            ]
+        )
+        assert MarginalNode(mismatched, sumset=frozenset({"Y"})).simplify() == MarginalNode(
+            mismatched, sumset=frozenset({"Y"})
+        )
+
+    def test_the_frontdoor_formula_is_already_as_short_as_it_gets(self, frontdoor_expr):
+        assert frontdoor_expr.simplify() == frontdoor_expr
+
+    def test_a_bound_variable_is_not_confused_with_the_free_one_above_it(self):
+        """The X summed over inside is not the X conditioned on outside, so the inner sum simplifies on its own."""
+        inner = MarginalNode(
+            ProductNode(
+                [
+                    ProbabilityNode(frozenset({"X"})),
+                    ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"})),
+                ]
+            ),
+            sumset=frozenset({"X"}),
+        )
+        expr = ProductNode([ProbabilityNode(frozenset({"M"}), cond=frozenset({"X"})), inner])
+        assert expr.simplify() == ProductNode(
+            [ProbabilityNode(frozenset({"M"}), cond=frozenset({"X"})), ProbabilityNode(frozenset({"Y"}))]
+        )
+
+    def test_a_ratio_of_two_terms_of_one_distribution_is_a_conditional(self):
+        ratio = DivisionNode(
+            ProbabilityNode(frozenset({"Y", "Z"}), do=frozenset({"X"}), cond=frozenset({"W"})),
+            ProbabilityNode(frozenset({"Z"}), do=frozenset({"X"}), cond=frozenset({"W"})),
+        )
+        assert ratio.simplify() == ProbabilityNode(frozenset({"Y"}), do=frozenset({"X"}), cond=frozenset({"W", "Z"}))
+
+        # An equal numerator and denominator is the constant one, which has no node, so the ratio stands.
+        same = ProbabilityNode(frozenset({"Z"}), cond=frozenset({"X"}))
+        assert DivisionNode(same, same).simplify() == DivisionNode(same, same)
+
+    def test_a_denominator_cancels_against_the_numerator(self):
+        shared = ProbabilityNode(frozenset({"Z"}), cond=frozenset({"X"}))
+        numerator = ProductNode([ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X", "Z"})), shared])
+        assert DivisionNode(numerator, shared).simplify() == ProbabilityNode(
+            frozenset({"Y"}), cond=frozenset({"X", "Z"})
+        )
+
+    def test_summing_a_whole_expression_away_is_left_alone(self):
+        """These all equal one, which the tree cannot represent, so nothing is rewritten."""
+        for expr in (
+            MarginalNode(ProbabilityNode(frozenset({"X", "Y"})), sumset=frozenset({"X", "Y"})),
+            MarginalNode(ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"})), sumset=frozenset({"Y"})),
+        ):
+            assert expr.simplify() == expr
+
+    def test_simplify_returns_a_new_tree_and_leaves_the_original_alone(self, conditional_id_expr):
+        product = ProductNode(
+            [
+                ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"})),
+                ProbabilityNode(frozenset({"Z"}), cond=frozenset({"X", "Y"})),
+            ]
+        )
+        expr = ProbabilityExpressionTree(root=MarginalNode(product, sumset=frozenset({"Y"})))
+        simplified = expr.simplify()
+
+        assert isinstance(simplified, ProbabilityExpressionTree)
+        assert simplified.to_latex() == r"P(Z \mid X)"
+        assert expr.to_latex() == r"\sum_{Y} P(Y \mid X) P(Z \mid X, Y)"
+
+        # A leaf, and a shape no rule matches, both come back as they went in.
+        assert ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"})).simplify() == ProbabilityNode(
+            frozenset({"Y"}), cond=frozenset({"X"})
+        )
+        assert conditional_id_expr.simplify() == conditional_id_expr
+
+
 class TestProbabilityNode:
     def test_init(self):
         p = ProbabilityNode(frozenset({"Y"}), do=frozenset({"X"}), cond=frozenset({"Z"}))
