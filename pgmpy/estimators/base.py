@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from collections import defaultdict
+from typing import Any
 
 import numpy as np
 
@@ -230,8 +231,10 @@ class StructureEstimator(BaseEstimator):
 
         super().__init__(data=data, **kwargs)
 
-    def estimate(self):
-        pass
+    # Changed here: subclasses will override this with concrete implementation
+    def estimate(self) -> Any:
+        """Subclasses override this with a concrete implementation."""
+        return None
 
 
 class MarginalEstimator(BaseEstimator):
