@@ -1541,18 +1541,21 @@ class TestCoreGraph:
         assert result.get_edges(data=True) == []
         assert set(result.nodes()) == {"X", "A", "B", "Y"}
 
-        # a symmetric edge is incoming at BOTH endpoints: intervening on both removes it exactly once
+        # a symmetric edge is incoming at BOTH endpoints: intervening on both removes it exactly once,
+        # and the same holds for coincident edges between the pair
         graph = _CoreGraph(edge_list=[("A", "B", "<>"), ("C", "A", "->"), ("B", "D", "->")])
+        graph.add_edge("A", "B", "->")
         result = graph.do(["A", "B"])
         assert set(result.get_edges(data=True)) == {("B", "D", "->")}
         assert set(result.nodes()) == {"A", "B", "C", "D"}
-        assert set(graph.get_edges(data=True)) == {("A", "B", "<>"), ("C", "A", "->"), ("B", "D", "->")}
-        # same for coincident edges between the pair, and for a repeated do-variable
-        multi = _CoreGraph()
-        multi.add_edge("A", "B", "<>")
-        multi.add_edge("A", "B", "->")
-        assert multi.do(["A", "B"]).get_edges(data=True) == []
-        assert _CoreGraph(edge_list=[("A", "B", "<>")]).do(["A", "A"]).get_edges(data=True) == []
+        assert set(graph.get_edges(data=True)) == {
+            ("A", "B", "<>"),
+            ("A", "B", "->"),
+            ("C", "A", "->"),
+            ("B", "D", "->"),
+        }
+        # a repeated do-variable is harmless
+        assert set(graph.do(["A", "A", "B"]).get_edges(data=True)) == {("B", "D", "->")}
 
         # works on a subclass with restricted edge types (ADMG has no circle/`<o` types to query)
         admg = ADMG(edge_list=[("X", "A", "->"), ("Z", "A", "<>"), ("A", "Y", "->")])
