@@ -95,6 +95,7 @@ class BaseCausalDiscovery(BaseEstimator):
     def score(
         self,
         X=None,
+        y=None,
         true_graph=None,
         metric=None,
     ):
@@ -149,6 +150,7 @@ class BaseCausalDiscovery(BaseEstimator):
                 ensure_all_finite=True,
                 reset=False,
             )
+            self.n_features_in_ = X.shape[1]
             if isinstance(X, np.ndarray):
                 X = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
 
