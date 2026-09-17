@@ -273,6 +273,10 @@ class IDC(BaseFormulaIdentification):
     ... )
     >>> IDC().identify(admg).to_latex()
     'P(Y \\\\mid X, Z)'
+
+    References
+    ----------
+    - :footcite:t:`shpitser_2006a`
     """
 
     supported_graph_types = (ADMG, DAG)
@@ -328,16 +332,12 @@ class IDC(BaseFormulaIdentification):
         ----------
         node: hashable
             The conditioning variable Z being tested.
-
         outcomes: frozenset
             ``y``, the outcome variables.
-
         exposures: frozenset
             ``x``, the variables being intervened on.
-
         conditioning: frozenset
             ``z``, the remaining conditioning set, including ``node``.
-
         causal_graph: ADMG
             ``G``, the causal graph.
 
@@ -359,17 +359,20 @@ class IDC(BaseFormulaIdentification):
     def _identify_conditional(self, outcomes, exposures, conditioning, causal_graph):
         """Recursive implementation of the IDC algorithm, following Fig. 3 of the paper.
 
+        Each call tries to shrink ``conditioning``: whenever rule 2 of do-calculus applies to one of its variables,
+        that variable moves into ``exposures`` and the call repeats on the smaller conditioning set. Once
+        nothing can be moved, the joint effect P_x(y, z) over what is left is identified with ``ID`` and the
+        conditional is recovered by dividing by its marginal over y (Step 2). The recursion is therefore on the three
+        variable sets alone; the graph is the same in every call.
+
         Parameters
         ----------
         outcomes: frozenset
             ``y``, the outcome variables.
-
         exposures: frozenset
             ``x``, the variables being intervened on.
-
         conditioning: frozenset
             ``z``, the context the effect is conditioned on.
-
         causal_graph: ADMG
             ``G``, the causal graph. Unlike ID, IDC never recurses into a subgraph.
 
