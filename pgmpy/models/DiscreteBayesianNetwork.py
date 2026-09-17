@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import itertools
-import logging
 from collections import defaultdict
 from collections.abc import Hashable, Iterable
 from functools import reduce
@@ -306,7 +305,7 @@ class DiscreteBayesianNetwork(DAG):
 
             for prev_cpd_index in range(len(self.cpds)):
                 if self.cpds[prev_cpd_index].variable == cpd.variable:
-                    logger.warning(f"Replacing existing CPD for {cpd.variable}")
+                    logger.debug(f"Replacing existing CPD for {cpd.variable}")
                     self.cpds[prev_cpd_index] = cpd
                     break
             else:
@@ -719,13 +718,7 @@ class DiscreteBayesianNetwork(DAG):
         _est.fit(self, data)
         cpds = _est.parameters_
 
-        # Temporarily suppress logger to stop giving warning about replacing CPDs.
-        _prev_level = logger.level
-        logger.setLevel(logging.CRITICAL)
-        try:
-            self.add_cpds(*cpds)
-        finally:
-            logger.setLevel(_prev_level)
+        self.add_cpds(*cpds)
 
     def predict(
         self,
@@ -1088,7 +1081,10 @@ class DiscreteBayesianNetwork(DAG):
         model_copy.add_edges_from(self.edges())
         if self.cpds:
             model_copy.add_cpds(*[cpd.copy() for cpd in self.cpds])
-        model_copy.latents = self.latents
+
+        for role, var in self.get_role_dict().copy().items():
+            model_copy.with_role(role=role, variables=var, inplace=True)
+
         return model_copy
 
     def get_markov_blanket(self, node: Hashable) -> list[Hashable]:

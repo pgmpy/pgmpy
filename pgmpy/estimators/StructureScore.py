@@ -13,8 +13,6 @@ Notes
 
 from __future__ import annotations
 
-import warnings
-
 import pandas as pd
 
 from pgmpy.structure_score import AIC as _AIC
@@ -31,6 +29,7 @@ from pgmpy.structure_score import LogLikelihood as _LogLikelihood
 from pgmpy.structure_score import LogLikelihoodCondGauss as _LogLikelihoodCondGauss
 from pgmpy.structure_score import LogLikelihoodGauss as _LogLikelihoodGauss
 from pgmpy.structure_score import get_scoring_method as _get_scoring_method
+from pgmpy.utils._warnings import _warn_external
 
 # Legacy base class. Aliased to the canonical base so that isinstance checks
 # against `pgmpy.estimators.StructureScore` keep working for legacy shims,
@@ -39,11 +38,10 @@ StructureScore = BaseStructureScore
 
 
 def _warn_deprecated(old_name: str, new_name: str) -> None:
-    warnings.warn(
-        f"`pgmpy.estimators.{old_name}` is deprecated and will be removed in v2.0. "
+    _warn_external(
+        f"`pgmpy.estimators.{old_name}` is deprecated since v1.1.0 and will be removed in v2.0. "
         f"Use `pgmpy.structure_score.{new_name}` instead.",
         FutureWarning,
-        stacklevel=3,
     )
 
 
@@ -97,7 +95,7 @@ class LogLikelihood(_LogLikelihood):
     """Deprecated: use :class:`pgmpy.structure_score.LogLikelihood` instead."""
 
     def __init__(self, data: pd.DataFrame, state_names: dict | None = None, max_cache_size: int | None = 10000):
-        _warn_deprecated("LogLikeliHood", "LogLikelihood")
+        _warn_deprecated("LogLikelihood", "LogLikelihood")
         super().__init__(data, state_names=state_names, max_cache_size=max_cache_size)
 
 

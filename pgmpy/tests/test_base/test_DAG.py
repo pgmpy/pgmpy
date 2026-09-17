@@ -426,7 +426,7 @@ class TestDAGCreation(unittest.TestCase):
             DAG.get_random(n_nodes=n_nodes, n_edges=3, node_names=["a", "b", "c"])
 
     def test_random_dag_edge_prob_default(self):
-        with self.assertLogs("pgmpy", level="INFO") as cm:
+        with self.assertLogs("pgmpy", level="DEBUG") as cm:
             dag = DAG.get_random(n_nodes=5, n_edges=None, edge_prob=None, seed=13)
 
         self.assertEqual(len(dag.nodes()), 5)
