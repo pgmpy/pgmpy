@@ -60,6 +60,16 @@ Score-Based and Tree Search
    ~pgmpy.estimators.ExhaustiveSearch
    ~pgmpy.causal_discovery.TOPIC
 
+Order-Based Discovery
+---------------------
+
+.. autosummary::
+   :toctree: generated/structure_learning
+   :template: autosummary/class.rst
+
+   ~pgmpy.causal_discovery.R2Sort
+   ~pgmpy.causal_discovery.VarSort
+
 Expert-Guided Discovery
 -----------------------
 

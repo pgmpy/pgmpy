@@ -1,6 +1,5 @@
 """Deprecated compatibility shim for :class:`pgmpy.causal_discovery.GES`."""
 
-import warnings
 from collections.abc import Iterable
 from typing import Any
 
@@ -10,6 +9,7 @@ from pgmpy.base import PDAG
 from pgmpy.causal_discovery import GES as _GES
 from pgmpy.estimators import StructureEstimator
 from pgmpy.structure_score import BaseStructureScore
+from pgmpy.utils._warnings import _warn_external
 
 
 class GES(StructureEstimator):
@@ -31,10 +31,10 @@ class GES(StructureEstimator):
     """
 
     def __init__(self, data: pd.DataFrame, use_cache: bool = False, **kwargs):
-        warnings.warn(
-            "GES is deprecated and will be removed in v2.0. Please use pgmpy.causal_discovery.GES instead.",
+        _warn_external(
+            "`pgmpy.estimators.GES` is deprecated since v1.1.0 and will be removed in v2.0. "
+            "Use `pgmpy.causal_discovery.GES` instead.",
             FutureWarning,
-            stacklevel=2,
         )
         super().__init__(data, **kwargs)
 

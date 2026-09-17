@@ -1,4 +1,3 @@
-import warnings
 from collections.abc import Hashable
 from itertools import chain
 
@@ -11,6 +10,7 @@ from pgmpy.factors import FactorDict
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork, JunctionTree
 from pgmpy.parameter_estimator import DiscreteMLE
+from pgmpy.utils._warnings import _warn_external
 
 
 class MaximumLikelihoodEstimator(ParameterEstimator):
@@ -55,11 +55,10 @@ class MaximumLikelihoodEstimator(ParameterEstimator):
         data: pd.DataFrame,
         **kwargs,
     ) -> None:
-        warnings.warn(
-            "`pgmpy.estimators.MaximumLikelihoodEstimator` is deprecated and will be removed in v2.0. "
-            "Please use `pgmpy.parameter_estimator.DiscreteMLE` instead.",
+        _warn_external(
+            "`pgmpy.estimators.MaximumLikelihoodEstimator` is deprecated since v1.1.1 and will be removed in v2.0. "
+            "Use `pgmpy.parameter_estimator.DiscreteMLE` instead.",
             FutureWarning,
-            stacklevel=2,
         )
 
         if not isinstance(model, (DiscreteBayesianNetwork, JunctionTree, DAG)):
