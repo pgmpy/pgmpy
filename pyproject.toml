@@ -25,7 +25,6 @@ classifiers = [
 ]
 
 dependencies = [
-  "huggingface_hub>=0.23",
   "networkx>=3.0",
   "numpy>=2.0",
   "scipy>=1.10",
@@ -50,6 +49,7 @@ optional = [
   "xgboost>=2.0.3",
   "litellm>=1.61.15",
   "pygraphviz",
+  "huggingface_hub>=0.23",
 ]
 tests = [
   "xdoctest>=0.11.0",
