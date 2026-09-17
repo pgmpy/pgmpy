@@ -21,15 +21,17 @@ backends for different use cases — quick inspection, publication figures, or f
 Plotting helpers are called directly on the graph or model object:
 
 ```python
-from pgmpy.example_models import load_model
+>>> from pgmpy.example_models import load_model
 
-model = load_model("bnlearn/sachs")
+>>> model = load_model("bnlearn/sachs")
 
-graphviz_graph = model.to_graphviz()
-graphviz_graph.draw("sachs.png", prog="dot")
+>>> graphviz_graph = model.to_graphviz()
+>>> graphviz_graph.draw("sachs.png", prog="dot")
 
-daft_graph = model.to_daft()
-daft_graph.render()
+>>> daft_graph = model.to_daft()
+>>> daft_graph.render()
+<Axes: >
+
 ```
 
 ## Graphviz
@@ -45,11 +47,13 @@ visualizing partially directed graphs from discovery workflows.
 suitable for academic papers:
 
 ```python
-from pgmpy.example_models import load_model
+>>> from pgmpy.example_models import load_model
 
-model = load_model("bnlearn/sachs")
-daft_graph = model.to_daft(node_pos="circular")
-daft_graph.render()
+>>> model = load_model("bnlearn/sachs")
+>>> daft_graph = model.to_daft(node_pos="circular")
+>>> daft_graph.render()
+<Axes: >
+
 ```
 
 ## NetworkX Drawing
@@ -59,14 +63,15 @@ functions directly for lightweight interactive plotting or integration with exis
 networkx visualization pipelines:
 
 ```python
-import matplotlib.pyplot as plt
-import networkx as nx
-from pgmpy.example_models import load_model
+>>> import matplotlib.pyplot as plt
+>>> import networkx as nx
+>>> from pgmpy.example_models import load_model
 
-model = load_model("bnlearn/sachs")
-pos = nx.spring_layout(model)
-nx.draw(model, pos, with_labels=True, node_size=800, font_size=8)
-plt.show()
+>>> model = load_model("bnlearn/sachs")
+>>> pos = nx.spring_layout(model)
+>>> nx.draw(model, pos, with_labels=True, node_size=800, font_size=8, arrows=False)
+>>> plt.show()
+
 ```
 
 ## See Also

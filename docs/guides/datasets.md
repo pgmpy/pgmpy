@@ -28,14 +28,18 @@ benchmarking.
 The dataset API has two entry points — discover, then load:
 
 ```python
-from pgmpy.datasets import list_datasets, load_dataset
+>>> from pgmpy.datasets import list_datasets, load_dataset
 
-matches = list_datasets(is_discrete=True, has_ground_truth=True)
-dataset = load_dataset(matches[0])
+>>> matches = list_datasets(is_discrete=True, has_ground_truth=True)
+>>> dataset = load_dataset(matches[0])
 
-print(dataset.name)
-print(dataset.data.shape)
-print(dataset.tags)
+>>> print(dataset.name)
+sachs_discrete
+>>> print(dataset.data.shape)
+(5400, 11)
+>>> print(dataset.tags) # doctest: +NORMALIZE_WHITESPACE
+{'name': 'sachs_discrete', 'n_variables': 11, 'n_samples': 5400, 'has_ground_truth': True, 'has_expert_knowledge': True, 'has_missing_data': False, 'has_index_col': False, 'is_simulated': False, 'is_interventional': False, 'is_discrete': True, 'is_continuous': False, 'is_mixed': False, 'is_ordinal': False}
+
 ```
 
 The loaded object exposes the data as a `pandas.DataFrame` and keeps all metadata on
