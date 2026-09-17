@@ -1,11 +1,13 @@
 import unittest
 
+import networkx as nx
 import numpy as np
 import numpy.testing as np_test
 import pandas as pd
 
 from pgmpy.base import DAG
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.inference import VariableElimination
 from pgmpy.inference.CausalInference import CausalInference
 from pgmpy.models import DiscreteBayesianNetwork, SEMGraph
 
@@ -1057,6 +1059,110 @@ class TestDoQuery(unittest.TestCase):
         causal_infer = CausalInference(bn)
         query = causal_infer.query(["Y"], do={"X": 1}, evidence={"W1": 1})
         np_test.assert_array_almost_equal(query.values, np.array([0.48, 0.52]))
+
+    @staticmethod
+    def mutilated_ground_truth(model, variables, do, evidence):
+        # P(variables | do, evidence) by explicit graph surgery: cut the edges
+        # into each do-variable, make it exogenous with a uniform prior, and
+        # condition on both the do states and the evidence.
+        mutilated = DiscreteBayesianNetwork([(u, v) for u, v in model.edges() if v not in do])
+        mutilated.add_nodes_from(model.nodes())
+        for cpd in model.get_cpds():
+            if cpd.variable in do:
+                states = cpd.state_names[cpd.variable]
+                card = len(states)
+                mutilated.add_cpds(
+                    TabularCPD(cpd.variable, card, [[1.0 / card]] * card, state_names={cpd.variable: states})
+                )
+            else:
+                mutilated.add_cpds(cpd.copy())
+        return VariableElimination(mutilated).query(variables, evidence={**do, **evidence}, show_progress=False)
+
+    def get_evidence_model(self):
+        # Model structure: Z -> X -> Y; Z -> Y; U -> Y; Y -> W
+        model = DiscreteBayesianNetwork([("Z", "X"), ("Z", "Y"), ("X", "Y"), ("U", "Y"), ("Y", "W")])
+        cpd_z = TabularCPD("Z", 2, [[0.4], [0.6]])
+        cpd_u = TabularCPD("U", 2, [[0.7], [0.3]])
+        cpd_x = TabularCPD("X", 2, [[0.7, 0.2], [0.3, 0.8]], evidence=["Z"], evidence_card=[2])
+        cpd_y = TabularCPD(
+            "Y",
+            2,
+            [
+                [0.9, 0.5, 0.4, 0.1, 0.8, 0.6, 0.3, 0.2],
+                [0.1, 0.5, 0.6, 0.9, 0.2, 0.4, 0.7, 0.8],
+            ],
+            evidence=["Z", "X", "U"],
+            evidence_card=[2, 2, 2],
+        )
+        cpd_w = TabularCPD("W", 2, [[0.8, 0.3], [0.2, 0.7]], evidence=["Y"], evidence_card=[2])
+        model.add_cpds(cpd_z, cpd_u, cpd_x, cpd_y, cpd_w)
+        return model
+
+    def test_query_do_with_evidence(self):
+        # do + evidence together: the evidence must enter the per-state queries
+        # of the adjustment sum, not just the weights over the adjustment set.
+        model = self.get_evidence_model()
+        infer = CausalInference(model)
+
+        for algo in ["ve", "bp"]:
+            # Evidence on a descendant of the do-variable (X -> Y -> W).
+            query1 = infer.query(["Y"], do={"X": 1}, evidence={"W": 1}, inference_algo=algo, show_progress=False)
+            expected1 = self.mutilated_ground_truth(model, ["Y"], {"X": 1}, {"W": 1})
+            np_test.assert_array_almost_equal(query1.values, expected1.values)
+
+            # Evidence on a non-descendant outside the adjustment set (U -> Y).
+            query2 = infer.query(["Y"], do={"X": 1}, evidence={"U": 1}, inference_algo=algo, show_progress=False)
+            expected2 = self.mutilated_ground_truth(model, ["Y"], {"X": 1}, {"U": 1})
+            np_test.assert_array_almost_equal(query2.values, expected2.values)
+
+            # Mixed evidence: inside ({Z}) and outside ({W}) the adjustment set.
+            query3 = infer.query(
+                ["Y"], do={"X": 1}, evidence={"Z": 0, "W": 1}, inference_algo=algo, show_progress=False
+            )
+            expected3 = self.mutilated_ground_truth(model, ["Y"], {"X": 1}, {"Z": 0, "W": 1})
+            np_test.assert_array_almost_equal(query3.values, expected3.values)
+
+            # Sanity: without evidence the adjustment result already matches
+            # the mutilated network and must stay that way.
+            query4 = infer.query(["Y"], do={"X": 1}, inference_algo=algo, show_progress=False)
+            expected4 = self.mutilated_ground_truth(model, ["Y"], {"X": 1}, {})
+            np_test.assert_array_almost_equal(query4.values, expected4.values)
+
+    def test_query_do_with_evidence_custom_adjustment(self):
+        # A user-specified adjustment set with evidence on a non-descendant of
+        # the do-variable: the weights must be conditioned on that evidence
+        # (p(z | evidence)), not the marginal prior.
+        # Model: Z -> X -> Y; Z -> W -> Y (self.example_model).
+        for adjustment_set, ev in [({"W"}, {"Z": 0}), ({"Z"}, {"W": 0}), (["W"], {"Z": 1})]:
+            query = self.example_infer.query(
+                ["Y"], do={"X": 1}, evidence=ev, adjustment_set=adjustment_set, show_progress=False
+            )
+            expected = self.mutilated_ground_truth(self.example_model, ["Y"], {"X": 1}, ev)
+            np_test.assert_array_almost_equal(query.values, expected.values)
+
+    def test_query_do_with_evidence_random_models(self):
+        # Property check on random binary networks: the adjustment-based query
+        # with do + evidence must equal inference on the mutilated network.
+        tested = 0
+        for seed in range(10):
+            model = DiscreteBayesianNetwork.get_random(n_nodes=5, edge_prob=0.4, n_states=2, seed=seed)
+            infer = CausalInference(model)
+            do_var = next((n for n in sorted(model.nodes()) if model.get_parents(n)), None)
+            if do_var is None:
+                continue
+            descendants = sorted(nx.descendants(model, do_var))
+            if not descendants:
+                continue
+            query_var = descendants[0]
+            other_nodes = [n for n in sorted(model.nodes()) if n not in (do_var, query_var)]
+            if not other_nodes:
+                continue
+            evidence = {other_nodes[0]: 0}
+            query = infer.query([query_var], do={do_var: 0}, evidence=evidence, show_progress=False)
+            expected = self.mutilated_ground_truth(model, [query_var], {do_var: 0}, evidence)
+            np_test.assert_array_almost_equal(query.values, expected.values)
+            tested += 1
+        self.assertGreaterEqual(tested, 5)
 
     def test_query_error(self):
         self.assertRaises(ValueError, self.simp_infer.query, variables="C", do={"T": 1})
