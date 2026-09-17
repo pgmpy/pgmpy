@@ -699,9 +699,16 @@ class DiscreteBayesianNetwork(DAG):
             n_prev_samples = data.shape[0]
 
         # Step 1: Compute the pseudo_counts for the dirichlet prior.
-        pseudo_counts = {
-            var: compat_fns.to_numpy(self.get_cpds(var).get_values()) * n_prev_samples for var in data.columns
-        }
+        # Align CPD columns with DiscreteBayesianEstimator's sorted parent order.
+        pseudo_counts = {}
+        for var in data.columns:
+            cpd = self.get_cpds(var)
+            parents = sorted(self.get_parents(var))
+            if parents:
+                values = cpd.reorder_parents(parents, inplace=False)
+            else:
+                values = cpd.get_values()
+            pseudo_counts[var] = compat_fns.to_numpy(values) * n_prev_samples
 
         # Step 2: Get the current order of state names for aligning pseudo counts.
         state_names = {}
