@@ -1,5 +1,4 @@
 import numbers
-import warnings
 from collections.abc import Hashable
 from typing import Any
 
@@ -12,6 +11,7 @@ from pgmpy.estimators import ParameterEstimator
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.parameter_estimator import DiscreteBayesianEstimator
+from pgmpy.utils._warnings import _warn_external
 
 
 class BayesianEstimator(ParameterEstimator):
@@ -28,11 +28,10 @@ class BayesianEstimator(ParameterEstimator):
         data: pd.DataFrame,
         **kwargs,
     ):
-        warnings.warn(
-            "`pgmpy.estimators.BayesianEstimator` is deprecated and will be removed in v2.0. "
-            "Please use `pgmpy.parameter_estimator.DiscreteBayesianEstimator` instead.",
+        _warn_external(
+            "`pgmpy.estimators.BayesianEstimator` is deprecated since v1.1.1 and will be removed in v2.0. "
+            "Use `pgmpy.parameter_estimator.DiscreteBayesianEstimator` instead.",
             FutureWarning,
-            stacklevel=2,
         )
 
         if not isinstance(model, (DAG, DiscreteBayesianNetwork)):
@@ -104,6 +103,11 @@ class BayesianEstimator(ParameterEstimator):
         parameters: list
             List of TabularCPDs, one for each variable of the model
 
+        Warns
+        -----
+        UserWarning
+            If nonempty `pseudo_counts` for a model node are ignored because the prior is not Dirichlet.
+
         Examples
         --------
         >>> import numpy as np
@@ -125,6 +129,14 @@ class BayesianEstimator(ParameterEstimator):
          <TabularCPD representing P(C:2) at 0x...>,
          <TabularCPD representing P(D:2 | C:2) at 0x...>]
         """
+
+        if DiscreteBayesianEstimator._has_ignored_pseudo_counts(self.model.nodes(), prior_type, pseudo_counts):
+            _warn_external(
+                f"pseudo_counts is ignored with prior_type={prior_type.lower()!r}. "
+                "Use prior_type='dirichlet' to specify pseudo_counts.",
+                UserWarning,
+            )
+            pseudo_counts = None
 
         def _get_node_param(node: Hashable) -> TabularCPD:
             # Dict-valued `equivalent_sample_size`/`pseudo_counts` are resolved
@@ -186,6 +198,11 @@ class BayesianEstimator(ParameterEstimator):
         CPD: TabularCPD
             The estimated CPD for `node`.
 
+        Warns
+        -----
+        UserWarning
+            If nonempty `pseudo_counts` for `node` are ignored because the prior is not Dirichlet.
+
         Examples
         --------
         >>> import pandas as pd
@@ -214,6 +231,13 @@ class BayesianEstimator(ParameterEstimator):
         # pseudo counts provided".
         if not isinstance(pseudo_counts, (numbers.Real, dict)) and np.array(pseudo_counts).size == 0:
             pseudo_counts = None
+
+        if DiscreteBayesianEstimator._has_ignored_pseudo_counts([node], prior_type, pseudo_counts):
+            _warn_external(
+                f"pseudo_counts is ignored with prior_type={prior_type.lower()!r}. "
+                "Use prior_type='dirichlet' to specify pseudo_counts.",
+                UserWarning,
+            )
 
         cpd = DiscreteBayesianEstimator._estimate_cpd(
             model=self.model,

@@ -42,7 +42,7 @@ class IGCI(BaseCausalDiscovery):
         Learned graph with the single oriented edge.
 
     adjacency_matrix_ : pd.DataFrame
-        Adjacency matrix of causal_graph_.
+        Adjacency matrix of ``causal_graph_``.
 
     forward_score_ : float
         Score when the first column is treated as cause. Lower is better.
@@ -123,9 +123,6 @@ class IGCI(BaseCausalDiscovery):
             raise ValueError("IGCI requires continuous (numeric) variables; got non-continuous data.")
 
         x, y = self.feature_names_in_
-        for col in (x, y):
-            if X[col].std() == 0:
-                raise ValueError(f"Variable '{col}' is constant; IGCI requires non-constant variables.")
 
         # Step 3: Affine normalization to the reference measure.
         x_vals = X[x].to_numpy(dtype=float)

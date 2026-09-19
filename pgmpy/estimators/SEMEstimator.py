@@ -88,7 +88,12 @@ class SEMEstimator:
         method after each iteration with updated params to compute the new loss.
 
         The fitting function for ML is:
-        .. math:: F_{ML} = \log |\Sigma(\theta)| + tr(S \Sigma^{-1}(\theta)) - \log S - (p+q)
+
+        .. math::
+
+            F_{ML} = \log \lvert\Sigma(\theta)\rvert
+            + \operatorname{tr}(S \Sigma^{-1}(\theta))
+            - \log \lvert S \rvert - (p + q)
 
         Parameters
         ----------
@@ -236,16 +241,15 @@ class SEMEstimator:
             dict: dictionary with keys `B` and `zeta`.
 
         **kwargs: dict
-            Extra parameters required in case of some estimators.
-            GLS:
-                W: np.array (n x n) where n is the number of observe variables.
-            2sls:
-                x:
-                y:
+            Extra parameters required by some estimators. For GLS, ``W`` is an
+            ``n x n`` array where ``n`` is the number of observed variables.
+            For 2SLS, specify ``x`` and ``y``.
 
         Returns
         -------
-            pgmpy.model.SEM instance: Instance of the model with estimated parameters
+        summary : dict
+            Goodness-of-fit statistics for the fitted model. The estimator updates
+            ``self.model`` with the learned parameters in place.
 
         References
         ----------

@@ -88,12 +88,10 @@ def get_scoring_method(
     scoring_method : str or BaseStructureScore or None
         The scoring method whose instance is to be returned.
 
-        - If a string is provided, the corresponding scoring method is
-        instantiated with default parameters.
-        - If a ``BaseStructureScore`` instance is provided, it is returned
-        unchanged.
-        - If ``None``, the default scoring method for the data type is
-        selected automatically.
+        A string selects the corresponding scoring method with default
+        parameters. A ``BaseStructureScore`` instance is returned unchanged.
+        If ``None``, the default scoring method for the data type is selected
+        automatically.
 
     data : pandas.DataFrame
         Dataset used to determine the default scoring method and to

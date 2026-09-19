@@ -10,8 +10,9 @@ import pandas as pd
 
 from pgmpy import logger
 from pgmpy.base._mixin_roles import _GraphRolesMixin
-from pgmpy.ci_tests import get_ci_test
+from pgmpy.ci_tests import BaseCITest, get_ci_test
 from pgmpy.independencies import Independencies
+from pgmpy.utils._warnings import _warn_external
 from pgmpy.utils.parser import parse_dagitty, parse_lavaan
 
 
@@ -226,6 +227,11 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         filename: str (default: None)
             The filename of the file containing the model in lavaan syntax.
 
+        Warns
+        -----
+        UserWarning
+            If residual correlations are ignored when constructing the DAG.
+
         Examples
         --------
         """
@@ -238,7 +244,10 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             raise ValueError("Either `filename` or `string` need to be specified")
         ebunch, latents, err_corr, _ = parse_lavaan(lavaan_str)
         if err_corr:
-            logger.warning(f"Residual correlations {err_corr} are ignored in DAG. Use the SEM class to keep them.")
+            _warn_external(
+                f"Residual correlations {err_corr} are ignored in DAG. Use the SEM class to keep them.",
+                UserWarning,
+            )
         return cls(ebunch=ebunch, latents=latents)
 
     @classmethod
@@ -382,7 +391,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         will be automatically added. Node names can be any hashable python
         object.
 
-        **The behavior of adding weights is different than networkx.
+        **The behavior of adding weights is different than networkx.**
 
         Parameters
         ----------
@@ -682,7 +691,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         model : A DAG object, for which you want to check I-equivalence
 
         Returns
-        --------
+        -------
         I-equivalence: boolean
             True if both are I-equivalent, False otherwise
 
@@ -717,7 +726,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             A set of all the immoralities in the model
 
         Examples
-        ---------
+        --------
         >>> from pgmpy.base import DAG
         >>> student = DAG()
         >>> student.add_edges_from(
@@ -1140,11 +1149,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             f"got {encoding!r}. Other encodings become available once DAG inherits _CoreGraph."
         )
 
-    def do(
-        self,
-        nodes: Hashable | Iterable[Hashable] | tuple[Hashable, Hashable],
-        inplace=False,
-    ):
+    def do(self, nodes: Hashable | Iterable[Hashable], inplace: bool = False):
         """
         Applies the do operator to the graph and returns a new DAG with the
         transformed graph.
@@ -1154,8 +1159,9 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         Parameters
         ----------
-        nodes : list, array-like
-            The names of the nodes to apply the do-operator for.
+        nodes : Hashable or iterable of Hashable
+            The variable(s) to intervene on; all must be present in the graph. A ``str``, ``int``
+            or ``tuple`` is one node; a list, set or frozenset is a collection.
 
         inplace: boolean (default: False)
             If inplace=True, makes the changes to the current object,
@@ -1164,7 +1170,12 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         Returns
         -------
         Modified DAG: pgmpy.base.DAG
-            A new instance of DAG modified by the do-operator
+            The post-intervention graph: `self` if `inplace=True`, otherwise a modified copy.
+
+        Raises
+        ------
+        ValueError
+            If any node is not present in the graph.
 
         Examples
         --------
@@ -1182,19 +1193,13 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         ----------
         - :footcite:t:`pearl_2009` (page 70).
         """
+        nodes = list(nodes) if isinstance(nodes, (list, set, frozenset)) else [nodes]
+        if missing := (set(nodes) - set(self.nodes())):
+            raise ValueError(f"Nodes not found in the model: {missing}")
+
         dag = self if inplace else self.copy()
-
-        if isinstance(nodes, (str, int)):
-            nodes = [nodes]
-        else:
-            nodes = list(nodes)
-
-        if not set(nodes).issubset(set(self.nodes())):
-            raise ValueError(f"Nodes not found in the model: {set(nodes) - set(self.nodes())}")
-
         for node in nodes:
-            parents = list(dag.predecessors(node))
-            for parent in parents:
+            for parent in list(dag.predecessors(node)):
                 dag.remove_edge(parent, node)
         return dag
 
@@ -1459,7 +1464,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         if n_edges is None and edge_prob is None:
             edge_prob = 0.5
-            logger.info("Using default edge_prob=0.5 since neither n_edges nor edge_prob were specified.")
+            logger.debug("Using default edge_prob=0.5 since neither n_edges nor edge_prob were specified.")
 
         shuffled_names = list(node_names)
         gen.shuffle(shuffled_names)
@@ -1706,7 +1711,12 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             and self.get_role_dict() == other.get_role_dict()
         )
 
-    def edge_strength(self, data, edges=None, ci_test=None):
+    def edge_strength(
+        self,
+        data: pd.DataFrame,
+        edges: tuple[Hashable, Hashable] | list[tuple[Hashable, Hashable]] | None = None,
+        ci_test: str | BaseCITest | None = None,
+    ) -> dict[tuple[Hashable, Hashable], float | None]:
         """
         Computes the strength of each edge in `edges`. The strength is bounded
         between 0 and 1, with 1 signifying strong effect.
@@ -1742,6 +1752,13 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         -------
         dict
             Dictionary mapping edges to their strength values.
+
+        Warns
+        -----
+        UserWarning
+            If requested edges are skipped because an endpoint or a parent of
+            the target is latent. Only strengths for the remaining requested
+            edges are returned.
 
         Examples
         --------
@@ -1819,9 +1836,11 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             self.edges[edge]["strength"] = ci_test.effect_size_
 
         if skipped_edges:
-            logger.warning(
-                f"Skipped computing strengths for edges involving latent variables: {skipped_edges}. "
-                "Use CausalInference class for advanced causal effect estimation."
+            _warn_external(
+                "Skipped computing strengths for edges with a latent endpoint "
+                f"or a latent parent of the target: {skipped_edges}. "
+                "Returning strengths only for the remaining requested edges.",
+                UserWarning,
             )
 
         return strengths
