@@ -260,4 +260,7 @@ class BayesianFunctionalRegression(BaseParameter):
         with torch.no_grad():
             samples = predictive(X_tensor)
 
-        return samples  # log_proba
+        # TODO: Implement calculating log_proba logic
+        log_proba = None
+
+        return samples, log_proba

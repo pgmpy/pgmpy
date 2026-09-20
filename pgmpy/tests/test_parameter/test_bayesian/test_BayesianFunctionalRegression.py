@@ -155,8 +155,9 @@ class TestBayesianFunctionalRegression:
         assert estimated_intercept == pytest.approx(0.3, abs=0.15)
         assert estimated_sigma == pytest.approx(0.7, abs=0.15)
 
-        distribution = parameter.sample(X.iloc[:20])
-        assert distribution.shape == (20, 1)
+        samples, log_proba = parameter.sample(X.iloc[:20])
+        assert torch.is_tensor(samples["obs"])
+        assert log_proba is None
 
     def test_fit_mcmc(self, data, model):
         X, y = data
@@ -202,7 +203,6 @@ class TestBayesianFunctionalRegression:
             abs=0.1,
         )
 
-        X_test = X.iloc[:20]
-        distribution = parameter.sample(X_test)
-
-        assert distribution.shape == (20, 1)
+        samples, log_proba = parameter.sample(X.iloc[:20])
+        assert torch.is_tensor(samples["obs"])
+        assert log_proba is None
