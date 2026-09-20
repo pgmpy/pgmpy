@@ -6,7 +6,6 @@ torch = pytest.importorskip("torch")
 pyro = pytest.importorskip("pyro")
 dist = pytest.importorskip("pyro.distributions")
 
-from skpro.distributions.normal import Normal as SkproNormal
 
 from pgmpy.parameter.bayesian.BayesianFunctionalRegression import BayesianFunctionalRegression
 
@@ -84,13 +83,13 @@ class TestBayesianFunctionalRegression:
         parameter = BayesianFunctionalRegression(model)
 
         assert parameter.__class__.__name__ == "BayesianFunctionalRegression"
-        assert parameter.get_class_tag("variable_type") == "continuous"
-        assert parameter.get_class_tag("produces_factor") is False
-        assert parameter.get_class_tag("missing") is False
-        assert parameter.get_class_tag("is_linear_gaussian") is False
-        assert parameter.get_class_tag("supports_fit_joint") is False
-        assert parameter.get_class_tag("can_be_root") is False
-        assert parameter.get_class_tag("python_dependencies") == ("pyro-ppl")
+        assert parameter.get_class_tag("object_type") == {"continuous"}
+        assert parameter.get_class_tag("fit_mode") == {"supervise"}
+        assert parameter.get_class_tag("python_dependencies") == ["pyro-ppl"]
+        assert parameter.get_class_tag("local:plug_in") == set()
+        assert parameter.get_class_tag("global:plug_in") == set()
+        assert parameter.get_class_tag("local:full_bayesian") == {"mcmc", "svi"}
+        assert parameter.get_class_tag("global:full_bayesian") == set()
 
     def test_fails(self, data, model):
         X, y = data
@@ -124,7 +123,6 @@ class TestBayesianFunctionalRegression:
             optim=pyro.optim.Adam({"lr": 0.05}),
             loss=pyro.infer.Trace_ELBO(),
             num_iterations=500,
-            posterior="normal",
             device="cpu",
             svi_log=True,
         )
@@ -157,10 +155,9 @@ class TestBayesianFunctionalRegression:
         assert estimated_intercept == pytest.approx(0.3, abs=0.15)
         assert estimated_sigma == pytest.approx(0.7, abs=0.15)
 
-        distribution = parameter.predict_proba(X.iloc[:20])
-
-        assert isinstance(distribution, SkproNormal)
-        assert distribution.shape == (20, 1)
+        samples, log_proba = parameter.sample(X.iloc[:20])
+        assert torch.is_tensor(samples["obs"])
+        assert log_proba is None
 
     def test_fit_mcmc(self, data, model):
         X, y = data
@@ -206,8 +203,6 @@ class TestBayesianFunctionalRegression:
             abs=0.1,
         )
 
-        X_test = X.iloc[:20]
-        distribution = parameter.predict_proba(X_test)
-
-        assert isinstance(distribution, SkproNormal)
-        assert distribution.shape == (20, 1)
+        samples, log_proba = parameter.sample(X.iloc[:20])
+        assert torch.is_tensor(samples["obs"])
+        assert log_proba is None

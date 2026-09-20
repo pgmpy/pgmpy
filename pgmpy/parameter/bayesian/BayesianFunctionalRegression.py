@@ -2,7 +2,6 @@ from typing import Literal
 
 from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 
-from pgmpy.distributions.converter.PyroToSkpro import PyroToSkpro
 from pgmpy.parameter._base import BaseParameter
 
 torch = _safe_import("torch")
@@ -48,11 +47,6 @@ class BayesianFunctionalRegression(BaseParameter):
     num_samples : int, default=1000
         Number of posterior predictive samples to draw. When `estimator="mcmc"`,
         this is also the number of posterior samples generated during fitting.
-
-    posterior : str, default="normal"
-        Posterior distribution specification passed to
-        :class:`PyroToSkpro` for converting Pyro samples into an skpro
-        distribution.
 
     return_sites : str, default="obs"
         Name of the Pyro sample site whose posterior predictive samples are
@@ -162,13 +156,13 @@ class BayesianFunctionalRegression(BaseParameter):
     """
 
     _tags = {
-        "variable_type": "continuous",
-        "produces_factor": False,
-        "is_linear_gaussian": False,
-        "missing": False,
-        "supports_fit_joint": False,
-        "can_be_root": False,
-        "python_dependencies": ("pyro-ppl"),
+        "object_type": {"continuous"},
+        "fit_mode": {"supervise"},
+        "python_dependencies": ["pyro-ppl"],
+        "local:plug_in": set(),
+        "global:plug_in": set(),
+        "local:full_bayesian": {"mcmc", "svi"},
+        "global:full_bayesian": set(),
     }
 
     def __init__(
@@ -177,7 +171,6 @@ class BayesianFunctionalRegression(BaseParameter):
         estimator: Literal["svi", "mcmc"] = "svi",
         num_samples=1000,
         *,
-        posterior="normal",
         return_sites="obs",
         device="cpu",
         # MCMC
@@ -196,7 +189,6 @@ class BayesianFunctionalRegression(BaseParameter):
         self.estimator = estimator
         self.num_samples = num_samples
 
-        self.posterior = posterior
         self.return_sites = return_sites
         self.device = device
 
@@ -238,7 +230,6 @@ class BayesianFunctionalRegression(BaseParameter):
                 if self.svi_log and j % 100 == 0:
                     print(f"[iteration {j + 1:04d}] loss: {loss / X_tensor.shape[0]:.4f}")
 
-        self.posterior_ = PyroToSkpro(self.posterior)
         self.columns_ = y.columns[0]
         if self.device == "cpu":
             self.parallel_ = False
@@ -246,8 +237,7 @@ class BayesianFunctionalRegression(BaseParameter):
             self.parallel_ = True
         return self
 
-    def _predict_proba(self, X):
-        index = X.index
+    def _sample(self, X=None, n_samples=None):
         X_tensor = to_tensor(X, self.device)
 
         if self.estimator == "mcmc":
@@ -270,5 +260,7 @@ class BayesianFunctionalRegression(BaseParameter):
         with torch.no_grad():
             samples = predictive(X_tensor)
 
-        SkproDistribution = self.posterior_.convert(samples, index, [self.columns_], self.return_sites)
-        return SkproDistribution
+        # TODO: Implement calculating log_proba logic
+        log_proba = None
+
+        return samples, log_proba
