@@ -1,8 +1,4 @@
-"""
-Tests for GeneralizedStructureScore.
-
-File location in repo: pgmpy/tests/test_structure_score/test_generalized_structure_score.py
-"""
+from types import SimpleNamespace
 
 import numpy as np
 import pandas as pd
@@ -10,9 +6,9 @@ import pytest
 from scipy import stats
 from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import SplineTransformer
+from sklearn.preprocessing import SplineTransformer, StandardScaler
 
-from pgmpy.structure_score import GeneralizedStructureScore
+from pgmpy.structure_score import AICGauss, BICGauss, GeneralizedStructureScore, LogLikelihoodGauss
 
 
 @pytest.fixture
@@ -37,50 +33,27 @@ def spline_lr():
 
 class TestInit:
     def test_defaults(self, linear_gaussian_data):
-        s = GeneralizedStructureScore(linear_gaussian_data, LinearRegression())
+        s = GeneralizedStructureScore(linear_gaussian_data)
+        assert isinstance(s.estimator, LinearRegression)
         assert s.penalty == "bic"
         assert s.noise_dist is stats.norm
-        assert s.n_params_fn is None
-
-    def test_custom_noise_dist(self, linear_gaussian_data):
-        s = GeneralizedStructureScore(linear_gaussian_data, LinearRegression(), noise_dist=stats.laplace)
-        assert s.noise_dist is stats.laplace
-
-    def test_none_penalty(self, linear_gaussian_data):
-        s = GeneralizedStructureScore(linear_gaussian_data, LinearRegression(), penalty=None)
-        assert s.penalty is None
-
-    def test_callable_penalty_stored(self, linear_gaussian_data):
-        fn = lambda k, n: k * 2.0
-        s = GeneralizedStructureScore(linear_gaussian_data, LinearRegression(), penalty=fn)
-        assert s.penalty is fn
+        assert s.n_params is None
 
 
 class TestPenaltyValue:
-    def setup_method(self):
-        data = pd.DataFrame({"x": [1.0, 2.0], "y": [1.0, 2.0]})
-        self.s = GeneralizedStructureScore(data, LinearRegression())
+    @pytest.mark.parametrize(
+        ("penalty", "expected"),
+        [(None, 0), ("aic", 10), ("bic", 5 * np.log(100)), pytest.param(lambda k, n: 3 * k, 15, id="callable")],
+    )
+    def test_penalty_value(self, linear_gaussian_data, penalty, expected):
+        s = GeneralizedStructureScore(linear_gaussian_data, penalty=penalty)
+        assert s.penalty is penalty
+        assert s._penalty_value(5, 100) == pytest.approx(expected)
 
-    def test_none_returns_zero(self):
-        self.s.penalty = None
-        assert self.s._penalty_value(5, 100) == 0.0
-
-    def test_aic_returns_k(self):
-        self.s.penalty = "aic"
-        assert self.s._penalty_value(5, 100) == 5.0
-
-    def test_bic_returns_k_log_n(self):
-        self.s.penalty = "bic"
-        assert self.s._penalty_value(5, 100) == pytest.approx(5 * np.log(100))
-
-    def test_callable_is_called(self):
-        self.s.penalty = lambda k, n: k * 3.0
-        assert self.s._penalty_value(4, 100) == pytest.approx(12.0)
-
-    def test_invalid_raises(self):
-        self.s.penalty = "invalid"
+    def test_invalid_penalty(self, linear_gaussian_data):
+        s = GeneralizedStructureScore(linear_gaussian_data, penalty="invalid")
         with pytest.raises(ValueError, match="Unknown penalty"):
-            self.s._penalty_value(5, 100)
+            s.local_score("y", ("x",))
 
 
 class TestNParams:
@@ -91,60 +64,31 @@ class TestNParams:
         # 1 coef + 1 intercept = 2
         assert s._n_params(est, X) == 2
 
-    def test_custom_n_params_fn(self, linear_gaussian_data):
-        s = GeneralizedStructureScore(linear_gaussian_data, LinearRegression(), n_params=lambda est, X: 99)
+    def test_custom_n_params(self, linear_gaussian_data):
+        n_params = lambda est, X: 99
+        s = GeneralizedStructureScore(linear_gaussian_data, LinearRegression(), n_params=n_params)
         X = linear_gaussian_data[["x"]].to_numpy()
         est = LinearRegression().fit(X, linear_gaussian_data["y"].to_numpy())
         assert s._n_params(est, X) == 99
+        assert s.get_params()["n_params"] is n_params
+        assert "GeneralizedStructureScore" in repr(s)
 
-    def test_statsmodels_convention(self, linear_gaussian_data):
-        """Estimator with df_model attribute (statsmodels-like)."""
+        original_score = s.local_score("y", ("x",))
+        s.set_params(n_params=lambda est, X: 100)
+        assert s.local_score("y", ("x",)) == pytest.approx(original_score - np.log(len(X)) / 2)
 
-        class FakeStatsmodels:
-            df_model = 3
-
-            def fit(self, X, y):
-                return self
-
-            def predict(self, X):
-                return np.zeros(len(X))
-
-        s = GeneralizedStructureScore(linear_gaussian_data, FakeStatsmodels())
-        est = FakeStatsmodels()
-        X = np.zeros((10, 2))
-        # df_model=3 + 1 intercept = 4
-        assert s._n_params(est, X) == 4
-
-    def test_pygam_convention(self, linear_gaussian_data):
-        """Estimator with statistics_['edof'] attribute (pygam-like)."""
-
-        class FakePygam:
-            statistics_ = {"edof": 7}
-
-            def fit(self, X, y):
-                return self
-
-            def predict(self, X):
-                return np.zeros(len(X))
-
-        s = GeneralizedStructureScore(linear_gaussian_data, FakePygam())
-        est = FakePygam()
-        X = np.zeros((10, 2))
-        assert s._n_params(est, X) == 7
+    @pytest.mark.parametrize(
+        ("attributes", "expected"),
+        [pytest.param({"df_model": 3}, 4, id="statsmodels"), pytest.param({"statistics_": {"edof": 7}}, 7, id="pygam")],
+    )
+    def test_parameter_count_conventions(self, linear_gaussian_data, attributes, expected):
+        s = GeneralizedStructureScore(linear_gaussian_data)
+        assert s._n_params(SimpleNamespace(**attributes), np.zeros((10, 2))) == expected
 
     def test_unknown_estimator_raises(self, linear_gaussian_data):
-        class WeirdEst:
-            def fit(self, X, y):
-                return self
-
-            def predict(self, X):
-                return np.zeros(len(X))
-
-        s = GeneralizedStructureScore(linear_gaussian_data, WeirdEst())
-        est = WeirdEst()
-        X = np.zeros((10, 2))
+        s = GeneralizedStructureScore(linear_gaussian_data)
         with pytest.raises(AttributeError, match="Cannot determine parameter count"):
-            s._n_params(est, X)
+            s._n_params(SimpleNamespace(), np.zeros((10, 2)))
 
     def test_tags_exist(self, linear_gaussian_data):
         s = GeneralizedStructureScore(linear_gaussian_data, LinearRegression())
@@ -153,137 +97,72 @@ class TestNParams:
 
 
 class TestLocalScore:
-    def test_returns_float(self, linear_gaussian_data):
-        s = GeneralizedStructureScore(linear_gaussian_data, LinearRegression())
-        result = s.local_score("y", ("x",))
-        assert isinstance(result, float)
-
-    def test_finite_with_parents(self, linear_gaussian_data):
-        s = GeneralizedStructureScore(linear_gaussian_data, LinearRegression())
-        assert np.isfinite(s.local_score("y", ("x",)))
-
-    def test_finite_no_parents(self, linear_gaussian_data):
-        s = GeneralizedStructureScore(linear_gaussian_data, LinearRegression())
-        assert np.isfinite(s.local_score("y", ()))
-
-    def test_bic_lower_than_aic(self, linear_gaussian_data):
-        """BIC penalises more than AIC for n > e^2 ≈ 7.4."""
-        s_aic = GeneralizedStructureScore(linear_gaussian_data, LinearRegression(), penalty="aic")
-        s_bic = GeneralizedStructureScore(linear_gaussian_data, LinearRegression(), penalty="bic")
-        assert s_bic.local_score("y", ("x",)) < s_aic.local_score("y", ("x",))
-
-    def test_laplace_noise(self, linear_gaussian_data):
-        """LiNGAM-flavoured: Laplace noise should run without error."""
-        s = GeneralizedStructureScore(
-            linear_gaussian_data,
-            LinearRegression(),
-            noise_dist=stats.laplace,
-            penalty="bic",
-        )
-        assert np.isfinite(s.local_score("y", ("x",)))
-
     def test_callable_penalty(self, linear_gaussian_data):
-        """Custom penalty callable should run and return finite score."""
-        s = GeneralizedStructureScore(linear_gaussian_data, LinearRegression(), penalty=lambda k, n: k * 3.0)
+        s = GeneralizedStructureScore(linear_gaussian_data, penalty=lambda k, n: 10 * k * np.log(n))
+        log_likelihood = LogLikelihoodGauss(linear_gaussian_data).local_score("y", ("x",))
+        assert s.local_score("y", ("x",)) == pytest.approx(log_likelihood - 15 * np.log(len(linear_gaussian_data)))
+
+    @pytest.mark.parametrize("penalty", [None, "aic"])
+    def test_spline_estimator(self, linear_gaussian_data, spline_lr, penalty):
+        s = GeneralizedStructureScore(linear_gaussian_data, spline_lr, penalty=penalty)
         assert np.isfinite(s.local_score("y", ("x",)))
 
-    def test_invalid_penalty_raises_on_call(self, linear_gaussian_data):
-        """Invalid penalty string should raise ValueError when scoring."""
-        s = GeneralizedStructureScore(linear_gaussian_data, LinearRegression(), penalty="invalid")
-        with pytest.raises(ValueError, match="Unknown penalty"):
-            s.local_score("y", ("x",))
+    @pytest.mark.parametrize(
+        ("penalty", "reference"), [(None, LogLikelihoodGauss), ("aic", AICGauss), ("bic", BICGauss)]
+    )
+    @pytest.mark.parametrize("parents", [(), ("x",), ("x", "z")])
+    def test_matches_gaussian_scores(self, linear_gaussian_data, penalty, reference, parents):
+        data = linear_gaussian_data.assign(z=np.random.default_rng(1).standard_normal(len(linear_gaussian_data)))
+        s = GeneralizedStructureScore(data, penalty=penalty)
+        result = s.local_score("y", parents)
 
-    def test_spline_estimator(self, linear_gaussian_data, spline_lr):
-        """CAM-style spline pipeline should work end to end."""
-        s = GeneralizedStructureScore(linear_gaussian_data, spline_lr, penalty=None)
-        assert np.isfinite(s.local_score("y", ("x",)))
-
-    def test_aic_with_spline(self, linear_gaussian_data, spline_lr):
-        """TOPIC-style: spline + AIC should return finite score."""
-        s = GeneralizedStructureScore(linear_gaussian_data, spline_lr, penalty="aic")
-        assert np.isfinite(s.local_score("y", ("x",)))
-
-    def test_parents_as_tuple(self, linear_gaussian_data):
-        """BaseStructureScore passes parents as tuple — must work."""
-        s = GeneralizedStructureScore(linear_gaussian_data, LinearRegression())
-        # tuple input (as called by the base class via lru_cache)
-        result = s._local_score("y", ("x",))
+        assert isinstance(result, float)
         assert np.isfinite(result)
+        assert result == pytest.approx(reference(data).local_score("y", parents))
+        assert s.local_score("y", parents) == result
 
-    def test_caching_consistent(self, linear_gaussian_data):
-        """Calling local_score twice should return the same value (lru_cache)."""
-        s = GeneralizedStructureScore(linear_gaussian_data, LinearRegression())
-        r1 = s.local_score("y", ("x",))
-        r2 = s.local_score("y", ("x",))
-        assert r1 == r2
+    @pytest.mark.parametrize("noise_dist", [stats.norm, stats.laplace])
+    @pytest.mark.parametrize(("fit_intercept", "use_pipeline"), [(True, False), (False, False), (True, True)])
+    def test_counts_location_once(self, linear_gaussian_data, noise_dist, fit_intercept, use_pipeline):
+        X = linear_gaussian_data[["x"]].to_numpy()
+        y = linear_gaussian_data["y"].to_numpy()
+        estimator = LinearRegression(fit_intercept=fit_intercept)
+        if use_pipeline:
+            estimator = Pipeline([("scale", StandardScaler()), ("regression", estimator)])
+        fitted = estimator.fit(X, y)
+        residuals = y - fitted.predict(X)
+        log_likelihood = noise_dist.logpdf(residuals, *noise_dist.fit(residuals)).sum()
+        expected = log_likelihood - 1.5 * np.log(len(y))
+        score = GeneralizedStructureScore(linear_gaussian_data, estimator, noise_dist=noise_dist)
 
-    def test_exact_value_aic(self, linear_gaussian_data):
-        """Verify exact AIC score value with manual computation."""
-        data = linear_gaussian_data
-        y = data["y"].to_numpy()
-        X = data[["x"]].to_numpy()
+        assert score.noise_dist is noise_dist
+        assert score.local_score("y", ("x",)) == pytest.approx(expected)
 
-        est = LinearRegression().fit(X, y)
-        residuals = y - est.predict(X)
-        params = stats.norm.fit(residuals)
-        log_L = float(stats.norm.logpdf(residuals, *params).sum())
-        k = 4  # 1 coef + 1 intercept + 2 norm params
-        expected = log_L - k / 2
+    def test_preserves_configured_pygam_terms(self):
+        pygam = pytest.importorskip("pygam")
+        x = np.linspace(-3, 3, 80)
+        y = np.sin(x) + np.random.default_rng(5).normal(scale=0.1, size=len(x))
+        data = pd.DataFrame({"x": x, "y": y})
+        estimator = pygam.LinearGAM(pygam.s(0, n_splines=8))
+        reference = pygam.LinearGAM(pygam.s(0, n_splines=8))
+        reference.fit(x[:, None], y)
+        residuals = y - reference.predict(x[:, None])
+        expected = stats.norm.logpdf(residuals, *stats.norm.fit(residuals)).sum()
+        score = GeneralizedStructureScore(data, estimator, penalty=None)
 
-        s = GeneralizedStructureScore(data, LinearRegression(), penalty="aic")
-        assert s.local_score("y", ("x",)) == pytest.approx(expected, rel=1e-5)
-
-    def test_exact_value_no_penalty(self, linear_gaussian_data):
-        """Verify exact score with no penalty."""
-        data = linear_gaussian_data
-        y = data["y"].to_numpy()
-        X = data[["x"]].to_numpy()
-
-        est = LinearRegression().fit(X, y)
-        residuals = y - est.predict(X)
-        params = stats.norm.fit(residuals)
-        log_L = float(stats.norm.logpdf(residuals, *params).sum())
-
-        s = GeneralizedStructureScore(data, LinearRegression(), penalty=None)
-        assert s.local_score("y", ("x",)) == pytest.approx(log_L, rel=1e-5)
-
-    def test_exact_value_no_parents(self, linear_gaussian_data):
-        """Verify exact marginal score with no parents."""
-        data = linear_gaussian_data
-        y = data["y"].to_numpy()
-        n = len(y)
-
-        params = stats.norm.fit(y)
-        log_L = float(stats.norm.logpdf(y, *params).sum())
-        k = 2  # 2 norm params
-        expected = log_L - (k * np.log(n)) / 2
-
-        s = GeneralizedStructureScore(data, LinearRegression(), penalty="bic")
-        assert s.local_score("y", ()) == pytest.approx(expected, rel=1e-5)
+        assert score.local_score("y", ("x",)) == pytest.approx(expected)
+        assert not hasattr(estimator, "coef_")
 
 
-class TestCAMRecovery:
-    """
-    CAM-style scoring should prefer the true causal direction over the reverse
-    on nonlinear synthetic data.
-
-    Data generating process: y = x^2 + noise (x -> y).
-    Total DAG score = sum of local scores for all nodes.
-    """
-
-    def test_cam_prefers_true_direction(self):
+class TestCausalDirection:
+    def test_cam_prefers_true_direction(self, spline_lr):
+        """Spline scoring prefers x -> y for y = x**2 + Gaussian noise."""
         rng = np.random.default_rng(0)
         n = 500
         x = rng.standard_normal(n)
         y = x**2 + 0.3 * rng.standard_normal(n)
         data = pd.DataFrame({"x": x, "y": y})
 
-        spline_lr = Pipeline(
-            [
-                ("spline", SplineTransformer(degree=3, n_knots=5)),
-                ("lr", LinearRegression()),
-            ]
-        )
         s = GeneralizedStructureScore(data, spline_lr, penalty=None)
 
         # True DAG: x -> y
@@ -291,16 +170,13 @@ class TestCAMRecovery:
         # Reversed DAG: y -> x
         score_reverse = s.local_score("x", ("y",)) + s.local_score("y", ())
 
-        assert score_true > score_reverse, (
-            f"CAM should prefer x->y (true) over y->x (reverse). Got true={score_true:.2f}, reverse={score_reverse:.2f}"
-        )
+        assert score_true > score_reverse
 
-    def test_lingam_laplace_runs_on_nongaussian(self):
-        """LiNGAM-flavoured scoring on Laplace-distributed noise."""
+    def test_laplace_prefers_true_direction(self):
+        """Laplace scoring prefers x -> y for y = 2*x + Laplace noise."""
         rng = np.random.default_rng(1)
         n = 300
         x = rng.standard_normal(n)
-        # Laplace noise
         y = 2 * x + rng.laplace(scale=0.5, size=n)
         data = pd.DataFrame({"x": x, "y": y})
 
@@ -308,25 +184,4 @@ class TestCAMRecovery:
         score_true = s.local_score("y", ("x",)) + s.local_score("x", ())
         score_reverse = s.local_score("x", ("y",)) + s.local_score("y", ())
 
-        # True direction should score higher
         assert score_true > score_reverse
-
-
-class TestEdgeCases:
-    def test_single_parent(self, linear_gaussian_data):
-        s = GeneralizedStructureScore(linear_gaussian_data, LinearRegression())
-        assert np.isfinite(s.local_score("y", ("x",)))
-
-    def test_empty_parents_tuple(self, linear_gaussian_data):
-        s = GeneralizedStructureScore(linear_gaussian_data, LinearRegression())
-        assert np.isfinite(s.local_score("y", ()))
-
-    def test_score_decreases_with_stronger_bic_penalty(self, linear_gaussian_data):
-        """Stronger penalty → lower score."""
-        s_bic = GeneralizedStructureScore(linear_gaussian_data, LinearRegression(), penalty="bic")
-        s_strong = GeneralizedStructureScore(
-            linear_gaussian_data,
-            LinearRegression(),
-            penalty=lambda k, n: k * np.log(n) * 10,
-        )
-        assert s_strong.local_score("y", ("x",)) < s_bic.local_score("y", ("x",))

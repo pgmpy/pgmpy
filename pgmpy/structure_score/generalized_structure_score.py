@@ -1,104 +1,120 @@
 from __future__ import annotations
 
+from copy import deepcopy
+
 import numpy as np
 from scipy import stats
-from sklearn.base import clone
+from sklearn.base import BaseEstimator, clone
 
 from pgmpy.structure_score._base import BaseStructureScore
 
 
 class GeneralizedStructureScore(BaseStructureScore):
     r"""
-    A composable continuous structure score that decouples the regression model,
-    residual noise distribution, and penalisation strategy.
+    Structure score for continuous data with configurable regression, noise, and penalty.
 
-    The local score for a node :math:`X_i` given parents :math:`\Pi_i` is:
+    Each local score fits a regressor to the parent variables, then evaluates the
+    residuals under the noise distribution:
 
     .. math::
-        \text{score}(X_i, \Pi_i) = \log p(\hat{\varepsilon}_i \mid \hat{\theta}) -
-        \frac{1}{2} \cdot \text{penalty}(k, n)
+        \operatorname{score} = \sum_{j=1}^{n} \log p(\hat{\varepsilon}_j \mid \hat{\theta})
+        - \frac{1}{2} \operatorname{penalty}(k, n),
 
-    where :math:`\hat{\varepsilon}_i = X_i - \hat{f}(\Pi_i)` are the residuals from
-    the fitted estimator, :math:`\hat{\theta}` are the fitted noise distribution
-    parameters, :math:`k` is the total parameter count, and :math:`n` is the sample size.
+    where :math:`\hat{\varepsilon}_j` is a fitted residual, :math:`\hat{\theta}` contains the
+    noise parameters, :math:`k` is the total parameter count, and :math:`n` is the sample size.
+    Higher scores are preferred. For nodes without parents, the noise distribution is fitted
+    directly to the observed values.
 
-    This single class reproduces several causal discovery scoring methods depending
-    on the components passed in:
+    Configurations for common scores:
 
-    +--------------------+-------------------------------+------------------+---------+
-    | Method             | estimator                     | noise_dist       | penalty |
-    +====================+===============================+==================+=========+
-    | CAM                | ``LinearGAM()`` or spline     | ``stats.norm``   | ``None``|
-    |                    | pipeline                      |                  |         |
-    +--------------------+-------------------------------+------------------+---------+
-    | TOPIC (no sig.)    | ``LinearGAM()``               | ``stats.norm``   | ``"aic"``|
-    +--------------------+-------------------------------+------------------+---------+
-    | LiNGAM-flavoured   | ``LinearRegression()``        | ``stats.laplace``| ``"bic"``|
-    +--------------------+-------------------------------+------------------+---------+
+    +-------------------------+------------------------------------+-------------------+------------------+
+    | Scoring method          | ``estimator``                      | ``noise_dist``    | ``penalty``      |
+    +=========================+====================================+===================+==================+
+    | Gaussian log-likelihood | ``LinearRegression()``             | ``stats.norm``    | ``None``         |
+    +-------------------------+------------------------------------+-------------------+------------------+
+    | Gaussian AIC            | ``LinearRegression()``             | ``stats.norm``    | ``"aic"``        |
+    +-------------------------+------------------------------------+-------------------+------------------+
+    | Gaussian BIC            | ``LinearRegression()``             | ``stats.norm``    | ``"bic"``        |
+    +-------------------------+------------------------------------+-------------------+------------------+
+    | Gaussian AICc           | ``LinearRegression()``             | ``stats.norm``    | ``aicc_penalty`` |
+    +-------------------------+------------------------------------+-------------------+------------------+
+    | Gaussian HQIC           | ``LinearRegression()``             | ``stats.norm``    | ``hqic_penalty`` |
+    +-------------------------+------------------------------------+-------------------+------------------+
+    | CAM-style               | ``LinearGAM()`` or spline pipeline | ``stats.norm``    | ``None``         |
+    +-------------------------+------------------------------------+-------------------+------------------+
+    | TOPIC-style             | ``LinearGAM()``                    | ``stats.norm``    | ``"aic"``        |
+    +-------------------------+------------------------------------+-------------------+------------------+
+    | LiNGAM-flavoured        | ``LinearRegression()``             | ``stats.laplace`` | ``"bic"``        |
+    +-------------------------+------------------------------------+-------------------+------------------+
+
+    The Gaussian rows assume a full-rank linear regression with an intercept and
+    count the noise scale as a parameter. Information criteria are returned as
+    ``-IC / 2``; AICc is applied separately to each node. The callable penalties
+    are defined in the examples below.
+
+    ``LinearGAM`` is from pyGAM. The CAM, TOPIC, and LiNGAM rows are related
+    configurations; matching those methods requires matching their regression
+    settings, noise estimation, and parameter counts.
 
     Parameters
     ----------
-    data : pd.DataFrame
-        Continuous observational data. Each column is a variable.
-    estimator : sklearn-style estimator
-        Any object implementing ``.fit(X, y)`` and ``.predict(X)``. Examples:
-        ``LinearRegression()``, ``LinearGAM()`` (pygam), or an sklearn
-        ``Pipeline``. Must be cloneable via ``sklearn.base.clone``.
-
-        .. note::
-            Non-sklearn estimators (e.g. pygam, statsmodels) work as long as they
-            follow the ``fit`` / ``predict`` convention. If ``clone()`` fails, wrap
-            the estimator in a thin sklearn-compatible wrapper.
-
-    noise_dist : scipy.stats continuous distribution, optional
-        Must support ``.fit(data)`` and ``.logpdf(data, *params)``.
-        Default is ``scipy.stats.norm`` (Gaussian).
-    penalty : {None, "aic", "bic"} or callable, optional
-        Penalisation applied as ``score = log_L - penalty(k, n) / 2``.
-
-        - ``None``      : no penalty (pure log-likelihood).
-        - ``"aic"``     : :math:`k` (Akaike).
-        - ``"bic"``     : :math:`k \log n` (Schwarz). **Default.**
-        - ``callable``  : any function ``f(k: int, n: int) -> float``.
-
-    n_params : callable or None, optional
-        Override for parameter count extraction from the fitted estimator.
-        Signature: ``n_params(estimator, X) -> int``. When ``None``,
-        :meth:`_n_params` duck-types over statsmodels, pygam, and sklearn
-        conventions automatically.
+    data : pandas.DataFrame
+        Continuous observations, with one variable per column.
+    estimator : regressor or None, default=None
+        Unfitted regressor implementing ``fit(X, y)`` and ``predict(X)``.
+        ``None`` uses ``sklearn.linear_model.LinearRegression``. The regressor
+        is cloned or deep-copied before each fit. Estimators inside an sklearn
+        pipeline must support cloning without losing their configuration.
+    noise_dist : object, default=scipy.stats.norm
+        Distribution implementing ``fit(data)`` and ``logpdf(data, *params)``.
+        Each parameter returned by ``fit`` contributes to the parameter count.
+        For scipy.stats distributions, an estimator intercept and the noise
+        location are counted as one shared parameter.
+    penalty : {None, "aic", "bic"} or callable, default="bic"
+        Raw penalty before division by two: ``None`` gives zero, ``"aic"`` gives
+        :math:`2k`, and ``"bic"`` gives :math:`k \log n`. A callable must accept
+        ``(k, n)`` and return the raw penalty.
+    n_params : callable or None, default=None
+        ``n_params(estimator, X) -> int`` returns the fitted regressor's parameter
+        count, including its intercept and excluding noise parameters. ``X`` is
+        the array of parent observations. If ``None``, the count is inferred from
+        ``df_model``, ``statistics_["edof"]``, or ``coef_``; other estimators require
+        a callback.
+    state_names : dict or None, default=None
+        Mapping of variables to allowed states, usually omitted for continuous data.
 
     Examples
     --------
-    CAM-style scoring (nonlinear, Gaussian, no penalty):
+    Define the AICc and Hannan--Quinn (HQIC) penalties used in the table:
 
     >>> import numpy as np
+    >>> def aicc_penalty(k, n):
+    ...     return 2 * k * n / (n - k - 1) if n > k + 1 else np.inf
+    >>> def hqic_penalty(k, n):
+    ...     return 2 * k * np.log(np.log(n))
+
+    Score a spline regression with Gaussian noise and no penalty:
+
     >>> import pandas as pd
-    >>> from sklearn.preprocessing import SplineTransformer
     >>> from sklearn.linear_model import LinearRegression
-    >>> from sklearn.pipeline import Pipeline
+    >>> from sklearn.pipeline import make_pipeline
+    >>> from sklearn.preprocessing import SplineTransformer
     >>> from pgmpy.structure_score import GeneralizedStructureScore
     >>> rng = np.random.default_rng(0)
-    >>> data = pd.DataFrame({"x": rng.standard_normal(200), "y": rng.standard_normal(200)})
-    >>> spline_lr = Pipeline([("spline", SplineTransformer()), ("lr", LinearRegression())])
-    >>> score = GeneralizedStructureScore(data, estimator=spline_lr, penalty=None)
-    >>> isinstance(score.local_score("y", ("x",)), float)
-    True
-
-    LiNGAM-flavoured scoring (linear, Laplace, BIC):
-
-    >>> from scipy import stats
-    >>> from sklearn.linear_model import LinearRegression
-    >>> score = GeneralizedStructureScore(data, LinearRegression(),
-    ...                                   noise_dist=stats.laplace, penalty="bic")
-    >>> isinstance(score.local_score("y", ("x",)), float)
-    True
+    >>> x = rng.standard_normal(200)
+    >>> data = pd.DataFrame({"x": x, "y": x**2 + rng.standard_normal(200)})
+    >>> estimator = make_pipeline(SplineTransformer(), LinearRegression())
+    >>> score = GeneralizedStructureScore(data, estimator=estimator, penalty=None)
+    >>> round(score.local_score("y", ("x",)), 3)
+    -284.923
 
     References
     ----------
-    - :cite:p:`buhlmann_peters_ernest_2014` (CAM)
-    - :cite:p:`rolland_2022` (SCORE)
-    - :cite:p:`xu_mameche_vreeken_2025` (TOPIC)
-    - :cite:p:`schultheiss_buhlmann_2023` (LiNGAM-flavoured Gaussian-likelihood pitfalls)
+    - Likelihood foundations: :cite:p:`fisher_1922`.
+    - AIC: :cite:p:`akaike_1973,akaike_1974`.
+    - BIC: :cite:p:`schwarz_1978`.
+    - AICc: :cite:p:`sugiura_1978,hurvich_tsai_1989`.
+    - HQIC: :cite:p:`hannan_quinn_1979`.
     """
 
     _tags = {
@@ -124,38 +140,11 @@ class GeneralizedStructureScore(BaseStructureScore):
         self.estimator = estimator
         self.noise_dist = noise_dist
         self.penalty = penalty
-        self.n_params_fn = n_params
+        self.n_params = n_params
         super().__init__(data, state_names=state_names)
 
     def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
-        """
-        Compute the local structure score for ``variable`` given ``parents``.
-
-        Parameters
-        ----------
-        variable : str
-            Name of the target variable (column in ``self.data``).
-        parents : tuple of str
-            Names of parent variables. Empty tuple scores the marginal.
-
-        Returns
-        -------
-        float
-            Log-likelihood minus half the penalty term. Higher is better.
-
-        Notes
-        -----
-        When ``parents`` is empty the score is the log-likelihood of ``variable``
-        under the marginal fit of ``noise_dist`` — the correct no-parent baseline
-        (log p(y) under the noise model, not conditional on any regressor).
-
-        The score formula is::
-
-            score = log L(residuals | noise_dist) - penalty(k, n) / 2
-
-        where ``k = n_params(estimator) + n_params(noise_dist)`` and ``n`` is
-        the number of observations.
-        """
+        """Compute the penalized log-likelihood for a node and its parents."""
         data = self.data
         y = data[variable].to_numpy()
         n = len(y)
@@ -169,50 +158,45 @@ class GeneralizedStructureScore(BaseStructureScore):
             return log_L - self._penalty_value(k, n) / 2
 
         X = data[list(parents)].to_numpy()
-        est = clone(self.estimator).fit(X, y)
+        if hasattr(self.estimator, "__sklearn_clone__"):
+            est = self.estimator.__sklearn_clone__()
+        elif isinstance(self.estimator, BaseEstimator):
+            est = clone(self.estimator)
+        else:
+            est = deepcopy(self.estimator)
+        est = est.fit(X, y)
         residuals = y - est.predict(X)
         params = self.noise_dist.fit(residuals)
         log_L = float(self.noise_dist.logpdf(residuals, *params).sum())
         k = self._n_params(est, X) + len(params)
+        if isinstance(self.noise_dist, stats.rv_continuous) and self._has_intercept(est):
+            k -= 1
         return log_L - self._penalty_value(k, n) / 2
 
     # ------------------------------------------------------------------
     # Parameter counting
     # ------------------------------------------------------------------
 
+    def _has_intercept(self, est: object) -> bool:
+        """Return whether the fitted estimator includes an intercept."""
+        if hasattr(est, "steps"):
+            return self._has_intercept(est[-1])
+        if hasattr(est, "fit_intercept"):
+            return bool(est.fit_intercept)
+        if hasattr(est, "k_constant"):
+            return bool(est.k_constant)
+        if hasattr(est, "df_model"):
+            return True
+        return getattr(est, "intercept_", None) is not None
+
     def _n_params(self, est, X: np.ndarray) -> int:
+        """Return the regression parameter count, excluding noise parameters.
+
+        Use the callback or inspect the estimator, using the final step for pipelines.
+        Raise ``AttributeError`` if no count can be determined.
         """
-        Extract the number of free parameters from a fitted estimator.
-
-        Duck-types over three common conventions in order:
-
-        1. **statsmodels** — uses ``est.df_model`` (excludes intercept; we add 1
-           to account for the intercept that statsmodels fits by default).
-        2. **pygam** — uses ``est.statistics_["edof"]`` (effective degrees of
-           freedom under penalised splines; the correct count for CAM).
-        3. **sklearn-style** — counts ``est.coef_`` entries plus 1 if an
-           intercept (``est.intercept_``) was fitted.
-
-        Parameters
-        ----------
-        est : fitted estimator
-            The estimator after calling ``.fit(X, y)``.
-        X : np.ndarray
-            The design matrix used for fitting (used for shape info if needed).
-
-        Returns
-        -------
-        int
-            Number of free parameters in the fitted estimator.
-
-        Raises
-        ------
-        AttributeError
-            If none of the above conventions apply and no ``n_params`` callable
-            was supplied at construction time.
-        """
-        if self.n_params_fn is not None:
-            return int(self.n_params_fn(est, X))
+        if self.n_params is not None:
+            return int(self.n_params(est, X))
 
         # sklearn Pipeline: delegate to the final step
         if hasattr(est, "steps"):
@@ -220,7 +204,7 @@ class GeneralizedStructureScore(BaseStructureScore):
 
         # statsmodels convention: df_model excludes intercept
         if hasattr(est, "df_model"):
-            return int(est.df_model) + 1  # +1 for intercept
+            return int(est.df_model) + int(self._has_intercept(est))
 
         # pygam convention: effective degrees of freedom
         if hasattr(est, "statistics_") and "edof" in est.statistics_:
@@ -229,7 +213,7 @@ class GeneralizedStructureScore(BaseStructureScore):
         # sklearn convention: coef_ array + optional intercept
         if hasattr(est, "coef_"):
             n = int(np.asarray(est.coef_).size)
-            n += int(getattr(est, "intercept_", None) is not None)
+            n += int(self._has_intercept(est))
             return n
 
         raise AttributeError(
@@ -243,30 +227,11 @@ class GeneralizedStructureScore(BaseStructureScore):
     # ------------------------------------------------------------------
 
     def _penalty_value(self, k: int, n: int) -> float:
-        """
-        Compute the raw penalty term (before the /2 division).
-
-        Parameters
-        ----------
-        k : int
-            Total parameter count (estimator + noise distribution).
-        n : int
-            Number of observations.
-
-        Returns
-        -------
-        float
-            The penalty value. The caller divides by 2 before subtracting.
-
-        Raises
-        ------
-        ValueError
-            If ``self.penalty`` is not one of the supported options.
-        """
+        """Return the penalty for ``k`` parameters and ``n`` observations, before halving."""
         if self.penalty is None:
             return 0.0
         if self.penalty == "aic":
-            return float(k)
+            return 2.0 * k
         if self.penalty == "bic":
             return float(k) * np.log(n)
         if callable(self.penalty):

@@ -488,11 +488,13 @@ class LinearGaussianBayesianNetwork(DAG):
         Linear Gaussian Bayesian Networks can be represented using a joint
         Gaussian distribution over all the variables. This method gives
         the mean and covariance of this equivalent joint gaussian distribution.
+
         Returns
         -------
-        mean, cov: np.ndarray, np.ndarray
+        mean, cov : np.ndarray, np.ndarray
             Mean vector and covariance matrix of the joint Gaussian.
             The mean and the covariance matrix of the joint gaussian distribution.
+
         Examples
         --------
         >>> from pgmpy.models import LinearGaussianBayesianNetwork
@@ -675,6 +677,7 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> model.add_cpds(cpd1, cpd2, cpd3)
 
         Simple forward sampling
+
         >>> model.simulate(n_samples=3, seed=42) # doctest: +NORMALIZE_WHITESPACE
                  x1        x2        x3
         0 -3.307168 -4.270673  9.688070
@@ -682,6 +685,7 @@ class LinearGaussianBayesianNetwork(DAG):
         2 -0.324284 -4.959026  8.758940
 
         Sampling with intervention (do)
+
         >>> model.simulate(n_samples=3, seed=42, do={"x2": 0.0}) # doctest: +NORMALIZE_WHITESPACE
                  x1        x3   x2
         0  2.218868  0.880048  0.0
@@ -689,6 +693,7 @@ class LinearGaussianBayesianNetwork(DAG):
         2 -6.804141  0.093461  0.0
 
         Sampling with evidence
+
         >>> model.simulate(n_samples=3, seed=42, evidence={"x1": 2.0}) # doctest: +NORMALIZE_WHITESPACE
             x1        x2         x3
         0  2.0 -6.753790   8.242987
@@ -696,6 +701,7 @@ class LinearGaussianBayesianNetwork(DAG):
         2  2.0  1.133549  -3.023892
 
         Sampling with both intervention and evidence
+
         >>> model.simulate(n_samples=3, seed=42, do={"x2": 1.0}, evidence={"x1": 0.0}) # doctest: +NORMALIZE_WHITESPACE
             x1        x3   x2
         0  0.0  3.914151  1.0
@@ -1058,40 +1064,44 @@ class LinearGaussianBayesianNetwork(DAG):
         seed: int | None = None,
     ) -> LinearGaussianBayesianNetwork:
         """
-        Returns a randomly generated Linear Gaussian Bayesian Network on `n_nodes`
-        Returns a randomly generated Linear Gaussian Bayesian Network on `n_nodes` variables
-        with edge probabiliy of `edge_prob` between variables.
+        Returns a randomly generated Linear Gaussian Bayesian Network on
+        ``n_nodes`` variables with edge probability ``edge_prob`` between
+        variables.
+
         Parameters
         ----------
-        n_nodes: int
+        n_nodes : int
             Number of nodes.
             The number of nodes in the randomly generated DAG.
 
-        n_edges: int or None (default: None)
+        n_edges : int or None, default=None
             The number of edges in the randomly generated DAG.
 
-        edge_prob: float or None
+        edge_prob : float or None
             Probability of an edge (consistent with a topological order).
             The probability of edge between any two nodes in the topologically
             sorted DAG.
 
-        node_names: list (default: None)
+        node_names : list, default=None
             A list of variables names to use in the random graph.
             If None, the node names are "X_0", "X_1", ..., "X_{n-1}".
 
-        latents: bool (default: False)
-        loc: float
+        latents : bool, default=False
+            Whether to include latent variables in the generated graph.
 
+        loc : float
             Mean of normal for coefficients.
             The mean of the normal distribution from which the coefficients are
             sampled.
 
+        scale : float
             Std dev of normal for coefficients.
             The standard deviation of the normal distribution from which the
             coefficients are sampled.
 
-        seed: int
+        seed : int
             The seed for the random number generator.
+
         Returns
         -------
         LinearGaussianBayesianNetwork

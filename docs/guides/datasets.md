@@ -1,7 +1,8 @@
 # Example Datasets
 
-```{meta}
-:description: Discover and load built-in benchmark datasets using pgmpy's dataset helpers.
+```{eval-rst}
+.. meta::
+   :description: Discover and load built-in benchmark datasets using pgmpy's dataset helpers.
 ```
 
 pgmpy ships a curated collection of benchmark datasets for causal discovery and graphical

@@ -4,6 +4,38 @@ Causal Discovery and Structure Learning
 Discovery algorithms and expert-guided workflows for learning graph structure
 from data.
 
+Bivariate Discovery
+-------------------
+
+.. autosummary::
+   :toctree: generated/structure_learning
+   :template: autosummary/class.rst
+
+   ~pgmpy.causal_discovery.ANM
+   ~pgmpy.causal_discovery.IGCI
+
+Bivariate Scores
+----------------
+
+Configurable scoring methods used by the bivariate discovery estimators.
+
+.. autosummary::
+   :toctree: generated/structure_learning
+   :template: autosummary/class.rst
+
+   ~pgmpy.causal_discovery.bivariate_scores.BaseBivariateScore
+   ~pgmpy.causal_discovery.bivariate_scores.IndependenceScore
+   ~pgmpy.causal_discovery.bivariate_scores.EntropyScore
+   ~pgmpy.causal_discovery.bivariate_scores.EntropyDifferenceScore
+   ~pgmpy.causal_discovery.bivariate_scores.GaussScore
+   ~pgmpy.causal_discovery.bivariate_scores.SlopeScore
+
+.. autosummary::
+   :toctree: generated/structure_learning
+   :template: autosummary/function.rst
+
+   ~pgmpy.causal_discovery.bivariate_scores.get_bivariate_score
+
 Constraint and Hybrid Discovery
 -------------------------------
 
@@ -13,6 +45,7 @@ Constraint and Hybrid Discovery
 
    ~pgmpy.causal_discovery.PC
    ~pgmpy.estimators.MmhcEstimator
+   ~pgmpy.causal_discovery.SP
 
 Score-Based and Tree Search
 ---------------------------
