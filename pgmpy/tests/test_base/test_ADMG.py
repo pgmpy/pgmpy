@@ -38,14 +38,6 @@ class TestADMGInitialization:
         assert admg.has_edge("X", "Y")
         assert admg.has_edge("Y", "X")
 
-    def test_initialization_with_latents(self):
-        """Test initialization with latent variables."""
-        bidirected_edges = [("L1", "L2", "<>")]
-        latents = ["L1", "L2"]
-        admg = ADMG(edge_list=bidirected_edges, latents=latents)
-
-        assert admg.latents == {"L1", "L2"}
-
     def test_initialization_with_roles(self):
         """Test initialization with roles variables."""
         directed_edges = [("A", "C", "->"), ("B", "C", "->")]
@@ -57,49 +49,51 @@ class TestADMGInitialization:
         assert set(admg.get_roles()) == {"exposures", "outcomes"}
         assert admg.get_role_dict() == {"exposures": ["A", "B"], "outcomes": ["C"]}
 
-    def test_latents_with_role(self):
-        edges = [
-            ("X", "Y", "->"),
-            ("A", "B", "<>"),
-            ("B", "C", "<>"),
-            ("C", "D", "<>"),
-            ("D", "E", "<>"),
-            ("E", "F", "<>"),
-        ]
-        admg = ADMG(
-            edge_list=edges,
-            latents=["A"],
-            roles={"exposures": "X", "outcomes": "Y", "latents": "B"},
-        )
-        admg.with_role(role="latents", variables="C", inplace=True)
-        admg.with_role(role="latents", variables=["D", "E", "F"], inplace=True)
+    def test_latents_rejected(self):
+        """Every vertex of an ADMG is observed; latent confounding is expressed only through `<>` edges."""
+        edges = [("X", "Y", "->"), ("L", "X", "->")]
+        with pytest.raises(ValueError, match="DAG.to_admg"):
+            ADMG(edge_list=edges, latents={"L"})
+        with pytest.raises(ValueError, match="DAG.to_admg"):
+            ADMG(edge_list=edges, roles={"latents": "L"})
 
-        assert admg.latents == {"A", "B", "C", "D", "E", "F"}
-        assert set(admg.get_role("latents")) == {"A", "B", "C", "D", "E", "F"}
-
-        with pytest.raises(ValueError, match="Variable 'G' not found in the graph."):
-            admg.with_role(role="latents", variables="G", inplace=True)
-
-    def test_latents_without_role(self):
-        edges = [
-            ("X", "Y", "->"),
-            ("A", "B", "<>"),
-            ("B", "C", "<>"),
-            ("C", "D", "<>"),
-            ("D", "E", "<>"),
-            ("E", "F", "<>"),
-        ]
-        admg = ADMG(
-            edge_list=edges,
-            latents=["A", "B", "C"],
-            roles={"exposures": "X", "outcomes": "Y", "latents": ("D", "E", "F")},
-        )
-
-        admg.without_role(role="latents", variables="A", inplace=True)
-        admg.without_role(role="latents", variables=["B", "C", "D", "E", "F"], inplace=True)
-
+        admg = ADMG(edge_list=edges, latents=set())
+        with pytest.raises(ValueError, match="DAG.to_admg"):
+            admg.latents = {"L"}
+        with pytest.raises(ValueError, match="DAG.to_admg"):
+            admg.with_role(role="latents", variables="L")
         assert admg.latents == set()
-        assert set(admg.get_role("latents")) == set()
+
+
+class TestADMGConversion:
+    """Test conversion of an ADMG to its canonical DAG."""
+
+    def test_to_dag(self):
+        """Each `<>` edge becomes a new latent parent of its two endpoints; roles are kept."""
+        admg = ADMG(edge_list=[("X", "M", "->"), ("M", "Y", "->"), ("Y", "X", "<>")], exposures={"X"}, outcomes={"Y"})
+        dag = admg.to_dag()
+        assert isinstance(dag, DAG)
+        assert set(dag.nodes()) == {"X", "M", "Y", "U_X_Y"}
+        assert set(dag.edges()) == {("X", "M"), ("M", "Y"), ("U_X_Y", "X"), ("U_X_Y", "Y")}
+        assert dag.latents == {"U_X_Y"}
+        assert dag.exposures == {"X"}
+        assert dag.outcomes == {"Y"}
+
+        assert admg.to_dag(latent_prefix="L").latents == {"L_X_Y"}
+
+        # Projecting the canonical DAG recovers the ADMG, including a pair joined by both `->` and `<>`.
+        admg = ADMG(
+            edge_list=[("A", "B", "->"), ("A", "B", "<>"), ("B", "C", "<>"), ("A", "C", "<>"), ("C", "D", "->")],
+            roles={"exposures": "A", "outcomes": "D"},
+        )
+        admg.add_node("E")
+        assert admg.to_dag().to_admg() == admg
+
+    def test_to_dag_name_collision(self):
+        admg = ADMG(edge_list=[("X", "Y", "<>"), ("U_X_Y", "X", "->")])
+        with pytest.raises(ValueError, match="U_X_Y"):
+            admg.to_dag()
+        assert admg.to_dag(latent_prefix="L").latents == {"L_X_Y"}
 
 
 class TestADMGNodeOperations:
@@ -335,7 +329,6 @@ class TestADMGGraphOperations:
                 ("A", "D", "<>"),
                 ("B", "E", "<>"),
             ],
-            latents=["D"],
             roles={"exposures": ["A"], "outcomes": ["C"]},
         )
 
@@ -348,7 +341,6 @@ class TestADMGGraphOperations:
                 ("A", "D", "<>"),
                 ("B", "E", "<>"),
             ],
-            latents=["D"],
             roles={"exposures": ["A"], "outcomes": ["C"]},
         )
 
@@ -368,7 +360,6 @@ class TestADMGGraphOperations:
                 ("A", "D", "<>"),
                 ("B", "E", "<>"),
             ],
-            latents=["D"],
             roles={"exposures": ["A"], "outcomes": ["C"]},
         )
 
@@ -381,11 +372,10 @@ class TestADMGGraphOperations:
                 ("A", "E", "<>"),
                 ("B", "E", "<>"),
             ],
-            latents=["D"],
             roles={"exposures": ["A"], "outcomes": ["C"]},
         )
 
-        # Case5: When the latents variables differ
+        # Case5: When the roles variables differ
         other5 = ADMG(
             edge_list=[
                 ("A", "B", "->"),
@@ -394,20 +384,6 @@ class TestADMGGraphOperations:
                 ("A", "D", "<>"),
                 ("B", "E", "<>"),
             ],
-            latents=["B"],
-            roles={"exposures": ["A"], "outcomes": ["C"]},
-        )
-
-        # Case6: When the roles variables differ
-        other6 = ADMG(
-            edge_list=[
-                ("A", "B", "->"),
-                ("B", "C", "->"),
-                ("D", "E", "->"),
-                ("A", "D", "<>"),
-                ("B", "E", "<>"),
-            ],
-            latents=["D"],
             roles={"exposures": ["A"], "adjustment": "D", "outcomes": ["C"]},
         )
 
@@ -416,4 +392,3 @@ class TestADMGGraphOperations:
         assert admg.__eq__(other3) is False
         assert admg.__eq__(other4) is False
         assert admg.__eq__(other5) is False
-        assert admg.__eq__(other6) is False

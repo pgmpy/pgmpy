@@ -7,23 +7,21 @@ class MAG(_CoreGraph):
     """
     Class for representing Maximal Ancestral Graphs (MAGs).
 
-    A MAG is a graph used in causal inference to represent conditional independence relations when
-    some variables are latent (unobserved) or selection is present. MAGs allow directed (``"->"``),
-    bidirected (``"<>"``), and undirected (``"--"``) edges -- bidirected edges encode latent
-    confounding and undirected edges encode selection bias. A MAG is *maximal*: no edge can be added
-    without changing the implied conditional-independence relations.
+    A MAG is a graph used in causal inference to represent conditional independence relations when some variables are
+    latent (unobserved) or selection is present. MAGs allow directed (``"->"``), bidirected (``"<>"``), and undirected
+    (``"--"``) edges -- bidirected edges encode latent confounding and undirected edges encode selection bias. A MAG is
+    *maximal*: no edge can be added without changing the implied conditional-independence relations. Every vertex of a
+    MAG is observed: latent variables and selection are represented only through bidirected and undirected edges, so the
+    ``latents`` role cannot be assigned.
 
-    Built on :class:`~pgmpy.base._base._CoreGraph`, restricted to the directed/bidirected/undirected
-    edge types via ``SUPPORTED_EDGE_TYPES`` (no circle endpoints -- those are for PAGs).
+    Built on :class:`~pgmpy.base._base._CoreGraph`, restricted to the directed/bidirected/undirected edge types via
+    ``SUPPORTED_EDGE_TYPES`` and ``SUPPORTS_LATENTS=False``.
 
     Parameters
     ----------
     edge_list : iterable of tuples, optional
         Edges of the form ``(u, v, edge_type)`` with ``edge_type`` one of ``"->"``, ``"<-"``,
         ``"<>"``, ``"--"``.
-
-    latents : set, default=set()
-        Set of latent (unobserved) variables.
 
     exposures, outcomes : set, default=set()
         Treatment / response variables (causal-analysis roles).
@@ -34,11 +32,9 @@ class MAG(_CoreGraph):
     Examples
     --------
     >>> from pgmpy.base import MAG
-    >>> mag = MAG(edge_list=[("L", "A", "->"), ("A", "B", "<>")], latents={"L"})
+    >>> mag = MAG(edge_list=[("L", "A", "->"), ("A", "B", "<>")])
     >>> sorted(mag.get_edges(data=True))
     [('A', 'B', '<>'), ('L', 'A', '->')]
-    >>> mag.latents
-    {'L'}
 
     References
     ----------
@@ -46,6 +42,7 @@ class MAG(_CoreGraph):
     """
 
     SUPPORTED_EDGE_TYPES = frozenset(["->", "<-", "<>", "--"])
+    SUPPORTS_LATENTS = False
 
     def is_maximal(self) -> bool:
         """
@@ -56,8 +53,7 @@ class MAG(_CoreGraph):
         can be m-separated by some subset of the remaining nodes. By the characterization of
         :footcite:t:`zhang_2008` this holds exactly when no *primitive* inducing path (an inducing
         path relative to the full vertex set: every intermediate node is a collider and an
-        ancestor of an endpoint) joins a non-adjacent pair. The ``latents`` role is ignored:
-        maximality is a property of the graph itself.
+        ancestor of an endpoint) joins a non-adjacent pair.
 
         Returns
         -------
