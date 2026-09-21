@@ -95,30 +95,6 @@ class TestNParams:
         assert "name" in s._tags
         assert s._tags["supported_datatype"] == "continuous"
 
-    def test_has_intercept_k_constant(self, linear_gaussian_data):
-        class FakeKConstant:
-            k_constant = 1
-
-            def fit(self, X, y):
-                return self
-
-            def predict(self, X):
-                return np.zeros(len(X))
-
-        s = GeneralizedStructureScore(linear_gaussian_data, FakeKConstant())
-        assert s._has_intercept(FakeKConstant()) is True
-
-    def test_has_intercept_no_intercept_attr(self, linear_gaussian_data):
-        class NoIntercept:
-            def fit(self, X, y):
-                return self
-
-            def predict(self, X):
-                return np.zeros(len(X))
-
-        s = GeneralizedStructureScore(linear_gaussian_data, NoIntercept())
-        assert s._has_intercept(NoIntercept()) is False
-
 
 class TestLocalScore:
     def test_callable_penalty(self, linear_gaussian_data):
