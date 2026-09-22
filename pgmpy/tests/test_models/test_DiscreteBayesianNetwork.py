@@ -378,6 +378,19 @@ class TestBayesianNetworkMethods(unittest.TestCase):
         self.assertNotEqual(sorted(self.G1.nodes()), sorted(model_copy.nodes()))
         self.assertNotEqual(sorted(self.G1.edges()), sorted(model_copy.edges()))
 
+        self.G1.with_role(role="exposure", variables="diff", inplace=True)
+        model_copy = self.G1.copy()
+        self.assertEqual(self.G1.exposures, model_copy.exposures)
+
+        model_copy.with_role(role="outcome", variables="grade", inplace=True)
+        self.assertNotIn("grade", self.G1.get_role_dict().get("outcome", []))
+
+        self.G1.latents = {"diff"}
+        model_copy = self.G1.copy()
+        self.assertEqual(model_copy.latents, {"diff"})
+        model_copy.latents.add("intel")
+        self.assertNotIn("intel", self.G1.latents)
+
     def test_get_random(self):
         model = DiscreteBayesianNetwork.get_random(n_nodes=5, edge_prob=0.5)
         self.assertEqual(len(model.nodes()), 5)

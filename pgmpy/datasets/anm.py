@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import numbers
-import warnings
 from typing import Any
 
 import networkx as nx
@@ -10,6 +9,7 @@ import pandas as pd
 
 from pgmpy.base import DAG
 from pgmpy.datasets._base import BaseSimulatedDataset
+from pgmpy.utils._warnings import _warn_external
 
 
 class AdditiveNoiseModel(BaseSimulatedDataset):
@@ -70,10 +70,9 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
             if not isinstance(dag, DAG):
                 raise TypeError(f"dag must be a pgmpy.base.DAG instance, got {type(dag).__name__}.")
             if n_nodes != 5 or edge_prob != 0.5:
-                warnings.warn(
+                _warn_external(
                     "dag was provided; n_nodes and edge_prob are ignored.",
                     UserWarning,
-                    stacklevel=2,
                 )
             self.dag = dag
         else:
