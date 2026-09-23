@@ -93,107 +93,12 @@ class LinearGaussianBayesianNetwork(DAG):
     >>> pred = model.predict(df_missing)
     >>> list(pred.columns)
     ['x3']
-    >>> print(pred.values)
-    [[ 8.01138228]
-     [13.61181367]
-     [ 8.70432782]
-     [ 3.71719153]
-     [ 8.1509597 ]
-     [ 6.24976516]
-     [12.2121776 ]
-     [ 6.01448446]
-     [ 5.49139518]
-     [ 9.23748708]
-     [17.92545478]
-     [ 3.24653756]
-     [ 8.78452503]
-     [10.3678509 ]
-     [ 5.33405765]
-     [ 9.09319649]
-     [10.66717573]
-     [10.9290793 ]
-     [ 6.48827753]
-     [12.7339279 ]
-     [ 0.79803275]
-     [ 9.69425692]
-     [ 5.27994359]
-     [ 8.80268511]
-     [ 4.31081468]
-     [10.76081874]
-     [10.05810137]
-     [ 5.93859429]
-     [ 4.10420816]
-     [ 7.74976272]
-     [11.67397411]
-     [ 9.63141961]
-     [ 1.72775337]
-     [ 2.2725024 ]
-     [ 8.44578257]
-     [ 7.602702  ]
-     [10.53853647]
-     [11.31860773]
-     [ 8.00975022]
-     [ 9.22702521]
-     [ 3.64868722]
-     [13.67114269]
-     [15.01854326]
-     [ 6.37691191]
-     [13.14971548]
-     [ 2.75588544]
-     [16.93490848]
-     [ 2.97009486]
-     [ 5.64759205]
-     [ 7.74788815]
-     [ 9.86681496]
-     [ 3.40585598]
-     [ 9.89093876]
-     [ 4.08221225]
-     [15.617452  ]
-     [ 4.14029637]
-     [ 8.59698685]
-     [11.89439088]
-     [ 0.44433568]
-     [ 8.42879464]
-     [14.45268215]
-     [10.62681186]
-     [10.76349781]
-     [16.0269725 ]
-     [ 8.83836337]
-     [ 5.30435055]
-     [ 7.63843465]
-     [13.18359343]
-     [ 0.92282836]
-     [ 3.35438779]
-     [11.61943098]
-     [ 4.52648267]
-     [11.18074558]
-     [ 4.86137485]
-     [ 8.49295864]
-     [ 7.07209154]
-     [ 6.85461911]
-     [ 3.96748462]
-     [ 8.3311032 ]
-     [ 8.04499479]
-     [ 7.27919516]
-     [ 4.77660469]
-     [-0.33549712]
-     [ 2.65815359]
-     [15.58173105]
-     [12.24334129]
-     [ 7.60858529]
-     [ 8.0673818 ]
-     [10.30962944]
-     [ 9.73931168]
-     [ 5.46107107]
-     [16.95243925]
-     [ 2.80408287]
-     [12.23910532]
-     [14.03289339]
-     [ 6.26117488]
-     [ 7.37468791]
-     [13.3850798 ]
-     [ 6.83845881]
-     [ 5.59547155]]
+    >>> print(pred.values[:5])
+    [[11.44002506]
+     [13.55810512]
+     [ 9.17133321]
+     [ 6.65304283]
+     [ 4.12695995]]
     """
 
     def __init__(
@@ -679,10 +584,10 @@ class LinearGaussianBayesianNetwork(DAG):
         Simple forward sampling
 
         >>> model.simulate(n_samples=3, seed=42) # doctest: +NORMALIZE_WHITESPACE
-                 x1        x2        x3
-        0 -3.307168 -4.270673  9.688070
-        1 -7.195367 -9.833986  9.493212
-        2 -0.324284 -4.959026  8.758940
+                 x1         x2         x3
+        0  2.218868  -8.050502  14.301856
+        1  4.762259 -10.423011  10.516473
+        2  1.511362  -5.509290   9.458886
 
         Sampling with intervention (do)
 
@@ -695,10 +600,10 @@ class LinearGaussianBayesianNetwork(DAG):
         Sampling with evidence
 
         >>> model.simulate(n_samples=3, seed=42, evidence={"x1": 2.0}) # doctest: +NORMALIZE_WHITESPACE
-            x1        x2         x3
-        0  2.0 -6.753790   8.242987
-        1  2.0 -5.284287  12.763190
-        2  2.0  1.133549  -3.023892
+            x1         x2         x3
+        0  2.0  -2.781132   3.661179
+        1  2.0  -0.998195   7.819889
+        2  2.0 -11.804141  11.897602
 
         Sampling with both intervention and evidence
 
@@ -801,7 +706,7 @@ class LinearGaussianBayesianNetwork(DAG):
         # Step 4: Sample according to evidence
         if len(evidence) == 0:
             df = pd.DataFrame(
-                rng.multivariate_normal(mean=mean, cov=cov, size=n_samples),
+                rng.multivariate_normal(mean=mean, cov=cov, size=n_samples, method="cholesky"),
                 columns=variables,
             )
 
@@ -814,7 +719,9 @@ class LinearGaussianBayesianNetwork(DAG):
             mean_cond = mean_cond[:, sorted_indices]
             cov_cond = cov_cond[sorted_indices][:, sorted_indices]
 
-            samples_missing = rng.multivariate_normal(mean=mean_cond[0], cov=cov_cond, size=n_samples)
+            samples_missing = rng.multivariate_normal(
+                mean=mean_cond[0], cov=cov_cond, size=n_samples, method="cholesky"
+            )
             df_missing = pd.DataFrame(samples_missing, columns=missing_vars)
 
             df = pd.DataFrame(index=range(n_samples), columns=variables)
@@ -971,11 +878,11 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> df = df.drop(columns=["folK"])
         >>> model.predict(df) # doctest: +NORMALIZE_WHITESPACE
                folK
-        0  0.903384
-        1  0.576122
-        2  1.331394
-        3  0.027018
-        4  1.731904
+        0  1.198400
+        1  1.778992
+        2  1.605741
+        3  1.312239
+        4  1.885455
         """
         # Step 0: Check the inputs
         missing_vars = list(set(self.nodes()) - set(data.columns))
@@ -1031,11 +938,11 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> df = df.drop(columns=["folK"])
         >>> model.predict(df) # doctest: +NORMALIZE_WHITESPACE
                folK
-        0  0.903384
-        1  0.576122
-        2  1.331394
-        3  0.027018
-        4  1.731904
+        0  1.198400
+        1  1.778992
+        2  1.605741
+        3  1.312239
+        4  1.885455
         """
         missing_vars, mu_cond, _ = self.predict_probability(data)
         return pd.DataFrame(mu_cond, columns=missing_vars, index=data.index)
