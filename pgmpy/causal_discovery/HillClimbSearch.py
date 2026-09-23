@@ -25,6 +25,7 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
     the score until a local maximum is reached.
 
     The algorithm is a greedy local search method that:
+
     1. Starts from an initial graph (empty by default or based on provided expert knowledge).
     2. Evaluates all possible single-edge modifications (add, delete, reverse).
     3. Applies the modification with the highest score improvement.
@@ -55,7 +56,7 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
 
     max_indegree : int or None, default=None
         If provided, the procedure only searches among models where all nodes
-        have at most `max_indegree` parents. This can significantly reduce
+        have at most ``max_indegree`` parents. This can significantly reduce
         the search space and computation time for large graphs.
 
     expert_knowledge : ExpertKnowledge instance, default=None
@@ -68,18 +69,19 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
 
     return_type : str, default='pdag'
         The type of graph to return. Options are:
+
         - 'dag': Returns a directed acyclic graph (DAG).
         - 'pdag': Returns a partially directed acyclic graph (PDAG) where edges that
           could not be oriented are left undirected.
 
     epsilon : float, default=1e-4
         Defines the exit condition. If the improvement in score is less
-        than `epsilon`, the algorithm terminates and returns the learned model.
+        than ``epsilon``, the algorithm terminates and returns the learned model.
 
     max_iter : int, default=1e6
         The maximum number of iterations allowed. The algorithm terminates
         and returns the learned model when the number of iterations exceeds
-        `max_iter`.
+        ``max_iter``.
 
     show_progress : bool, default=True
         If True, shows a progress bar while learning the causal structure.

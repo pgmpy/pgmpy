@@ -7,6 +7,7 @@ from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
 from pgmpy.example_models import load_model
+from pgmpy.factors import factor_product
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.inference import BeliefPropagation, VariableElimination
 from pgmpy.inference.ExactInference import BeliefPropagationWithMessagePassing
@@ -808,6 +809,35 @@ class TestBeliefPropagation(unittest.TestCase):
         self.assertEqual(clique_belief[("B", "C")], b_B_C)
         self.assertEqual(clique_belief[("C", "D")], b_C_D)
 
+    def test_calibrate_deeper_tree_single_pass(self):
+        junction_tree = JunctionTree(
+            [(("C", "D"), ("B", "C")), (("B", "C"), ("A", "B")), (("C", "D"), ("D", "E")), (("D", "E"), ("E", "F"))]
+        )
+        factors = [
+            DiscreteFactor(["A", "B"], [2, 2], [0.1, 0.9, 0.6, 0.4]),
+            DiscreteFactor(["B", "C"], [2, 2], [0.7, 0.3, 0.2, 0.8]),
+            DiscreteFactor(["C", "D"], [2, 2], [0.5, 0.5, 0.9, 0.1]),
+            DiscreteFactor(["D", "E"], [2, 2], [0.3, 0.7, 0.4, 0.6]),
+            DiscreteFactor(["E", "F"], [2, 2], [0.8, 0.2, 0.1, 0.9]),
+        ]
+        junction_tree.add_factors(*factors)
+        joint = factor_product(*factors)
+        for operation, calibrate in [("marginalize", "calibrate"), ("maximize", "max_calibrate")]:
+            belief_propagation = BeliefPropagation(junction_tree)
+            messages = []
+            update_beliefs = belief_propagation._update_beliefs
+            belief_propagation._update_beliefs = lambda *args, **kwargs: (
+                messages.append(args),
+                update_beliefs(*args, **kwargs),
+            )[1]
+            getattr(belief_propagation, calibrate)()
+            self.assertEqual(len(messages), 2 * (len(junction_tree.nodes()) - 1))
+            self.assertTrue(belief_propagation._is_converged(operation=operation))
+            for clique, belief in belief_propagation.get_clique_beliefs().items():
+                self.assertEqual(
+                    belief, getattr(joint, operation)(list(set(joint.scope()) - set(clique)), inplace=False)
+                )
+
     def test_calibrate_sepset_belief(self):
         belief_propagation = BeliefPropagation(self.junction_tree)
         belief_propagation.calibrate()
@@ -929,6 +959,73 @@ class TestBeliefPropagation(unittest.TestCase):
     def test_map_query_common_var(self):
         belief_propagation = BeliefPropagation(self.bayesian_model)
         self.assertRaises(ValueError, belief_propagation.map_query, variables=["J"], evidence=["J"])
+
+    def test_query_keeps_calibration_and_model(self):
+        belief_propagation = BeliefPropagation(self.bayesian_model)
+        junction_tree = belief_propagation.junction_tree
+        self.assertTrue(belief_propagation._is_converged(operation="marginalize"))
+        calibrations = []
+        calibrate = belief_propagation._calibrate_junction_tree
+        belief_propagation._calibrate_junction_tree = lambda *args, **kwargs: (
+            calibrations.append(args),
+            calibrate(*args, **kwargs),
+        )[1]
+
+        result = belief_propagation.query(["J"], evidence={"A": 0}, show_progress=False)
+        self.assertEqual(result, belief_propagation.query(["J"], evidence={"A": 0}, show_progress=False))
+        self.assertEqual(
+            belief_propagation.map_query(["J", "Q"], evidence={"A": 0}, show_progress=False), {"J": 0, "Q": 0}
+        )
+        for kwargs in [{"variables": ["Z"]}, {"variables": ["J"], "evidence": {"Z": 0}}]:
+            self.assertRaises(ValueError, belief_propagation.query, show_progress=False, **kwargs)
+            self.assertRaises(ValueError, belief_propagation.map_query, show_progress=False, **kwargs)
+        self.assertRaises(KeyError, belief_propagation.query, ["J"], evidence={"A": 5}, show_progress=False)
+        self.assertEqual(
+            belief_propagation.query(["J"], show_progress=False),
+            BeliefPropagation(self.bayesian_model).query(["J"], show_progress=False),
+        )
+        self.assertIs(belief_propagation.model, self.bayesian_model)
+        self.assertIs(belief_propagation.junction_tree, junction_tree)
+        self.assertEqual(calibrations, [])
+        self.assertEqual(sorted(self.bayesian_model.nodes()), ["A", "G", "J", "L", "Q", "R"])
+        self.assertEqual(
+            BeliefPropagation(self.junction_tree).map_query(show_progress=False),
+            VariableElimination(self.junction_tree).map_query(show_progress=False),
+        )
+
+    def test_query_matches_variable_elimination(self):
+        alarm, asia = load_model("bnlearn/alarm"), load_model("bnlearn/asia")
+        virtual_evidence = [
+            TabularCPD("smoke", 2, [[0.9], [0.1]], state_names={"smoke": asia.states["smoke"]}),
+            TabularCPD("xray", 2, [[0.3], [0.7]], state_names={"xray": asia.states["xray"]}),
+        ]
+        cases = [
+            (alarm, alarm, ["HR"], {}, None),
+            (alarm, alarm, ["HR", "BP"], {"CVP": "LOW"}, None),
+            (alarm, alarm, ["HISTORY"], {"MINVOLSET": "HIGH", "HRBP": "LOW"}, None),
+            (alarm, alarm, ["CVP", "PCWP"], {"LVFAILURE": "TRUE"}, None),
+            (asia, asia, ["dysp", "lung"], {}, virtual_evidence),
+            (asia, asia, ["dysp", "lung"], {"asia": "yes"}, virtual_evidence),
+            (asia.to_junction_tree(), asia, ["dysp", "lung"], {"asia": "yes"}, virtual_evidence),
+        ]
+        for model, reference, variables, evidence, virt in cases:
+            bp, ve = BeliefPropagation(model), VariableElimination(reference)
+            kwargs = {"evidence": evidence, "virtual_evidence": virt, "show_progress": False}
+            self.assertEqual(bp.query(variables, **kwargs), ve.query(variables, **kwargs))
+            bp_marginals = bp.query(variables, joint=False, **kwargs)
+            ve_marginals = ve.query(variables, joint=False, **kwargs)
+            self.assertEqual([bp_marginals[var] for var in variables], [ve_marginals[var] for var in variables])
+            self.assertEqual(bp.map_query(variables, **kwargs), ve.map_query(variables, **kwargs))
+            self.assertEqual(sorted(bp.model.nodes()), sorted(model.nodes()))
+
+        bp = BeliefPropagation(asia)
+        for bad_cpd in [
+            TabularCPD("smoke", 2, [[0.9], [0.1]]),
+            TabularCPD("smoke", 3, [[0.5], [0.3], [0.2]]),
+            TabularCPD("nonexistent", 2, [[0.9], [0.1]]),
+            TabularCPD("smoke", 2, [[0.9, 0.2], [0.1, 0.8]], evidence=["asia"], evidence_card=[2]),
+        ]:
+            self.assertRaises(ValueError, bp.query, ["dysp"], virtual_evidence=[bad_cpd], show_progress=False)
 
     def test_issue_1048(self):
         model = DiscreteBayesianNetwork()

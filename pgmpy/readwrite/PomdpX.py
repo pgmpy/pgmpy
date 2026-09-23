@@ -16,8 +16,8 @@ class PomdpXReader:
     string : str
         String containing PomdpX information.
 
-    Example
-    -------
+    Examples
+    --------
     reader = PomdpXReader('TestPomdpX.xml')
 
     References
@@ -56,7 +56,7 @@ class PomdpXReader:
         """
         Returns the discount factor for the problem
 
-        Example
+        Examples
         --------
         >>> reader = PomdpXReader("Test_PomdpX.xml")
         >>> reader.get_discount()
@@ -68,8 +68,8 @@ class PomdpXReader:
         """
         Returns list of variables of the network
 
-        Example
-        -------
+        Examples
+        --------
         >>> reader = PomdpXReader("pomdpx.xml")
         >>> reader.get_variables()
         {'StateVar': [
@@ -171,7 +171,7 @@ class PomdpXReader:
         case of table type parameter and a nested structure in case of
         decision diagram parameter
 
-        Example
+        Examples
         --------
         >>> reader = PomdpXReader("Test_PomdpX.xml")
         >>> reader.get_state_transition_function()
@@ -207,7 +207,7 @@ class PomdpXReader:
         type parameter and a nested structure in case of
         decision diagram parameter
 
-        Example
+        Examples
         --------
         >>> reader = PomdpXReader("Test_PomdpX.xml")
         >>> reader.get_obs_function()
@@ -241,7 +241,7 @@ class PomdpXReader:
         type parameter and a nested structure in case of
         decision diagram parameter
 
-        Example
+        Examples
         --------
         >>> reader = PomdpXReader("Test_PomdpX.xml")
         >>> reader.get_reward_function()
@@ -410,12 +410,12 @@ class PomdpXWriter:
         supports adding variables to the xml
 
         Parameters
-        ---------------
+        ----------
         var: The SubElement variable
         tag: The SubElement tag to which enum value is to be added
 
-        Return
-        ---------------
+        Returns
+        -------
         None
         """
         if var["ValueEnum"][0] == "s0":
@@ -432,8 +432,8 @@ class PomdpXWriter:
         """
         Add variables to PomdpX
 
-        Return
-        ---------------
+        Returns
+        -------
         xml containing variables tag
         """
         state_variables = self.model["variables"]["StateVar"]
@@ -470,14 +470,14 @@ class PomdpXWriter:
         helper function for adding parameters in condition
 
         Parameters
-        ---------------
+        ----------
         dag_tag: etree SubElement
                  the DAG tag is contained in this subelement
         node_dict: dictionary
                    the decision diagram dictionary
 
-        Return
-        ---------------
+        Returns
+        -------
         None
         """
         if isinstance(node_dict, defaultdict) or isinstance(node_dict, dict):
@@ -520,15 +520,15 @@ class PomdpXWriter:
         helper function for adding probability conditions for model\
 
         Parameters
-        ---------------
+        ----------
 
         condition:  dictionary
                     contains and element of conditions list
         condprob:   etree SubElement
                     the tag to which condition is added
 
-        Return
-        ---------------
+        Returns
+        -------
         None
         """
         var_tag = etree.SubElement(condprob, "Var")
@@ -581,8 +581,8 @@ class PomdpXWriter:
         """
         add initial belief tag to pomdpx model
 
-        Return
-        ---------------
+        Returns
+        -------
         string containing the xml for initial belief tag
         """
         initial_belief = self.model["initial_state_belief"]
@@ -595,8 +595,8 @@ class PomdpXWriter:
         """
         add state transition function tag to pomdpx model
 
-        Return
-        ---------------
+        Returns
+        -------
         string containing the xml for state transition tag
         """
         state_transition_function = self.model["state_transition_function"]
@@ -609,8 +609,8 @@ class PomdpXWriter:
         """
         add observation function tag to pomdpx model
 
-        Return
-        ---------------
+        Returns
+        -------
         string containing the xml for observation function tag
         """
         obs_function = self.model["obs_function"]
@@ -623,8 +623,8 @@ class PomdpXWriter:
         """
         add reward function tag to pomdpx model
 
-        Return
-        ---------------
+        Returns
+        -------
         string containing the xml for reward function tag
         """
         reward_function = self.model["reward_function"]

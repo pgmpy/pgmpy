@@ -1,4 +1,3 @@
-import warnings
 from itertools import combinations
 
 import numpy as np
@@ -13,6 +12,7 @@ except ImportError as e:
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork
 from pgmpy.utils import compat_fns
+from pgmpy.utils._warnings import _warn_external
 
 
 class UAIReader:
@@ -252,8 +252,8 @@ class UAIReader:
         Variables are in the pattern var_0, var_1, var_2 where var_0 is
         0th index variable, var_1 is 1st index variable.
 
-        Return
-        ------
+        Returns
+        -------
         model: an instance of Bayesian or Markov Model.
 
         Examples
@@ -415,7 +415,7 @@ class UAIWriter:
         Adds functions to the network.
 
         Examples
-        -------_
+        --------
         >>> from pgmpy.readwrite import UAIWriter
         >>> from pgmpy.example_models import load_model
         >>> model = load_model("bnlearn/asia")
@@ -514,9 +514,9 @@ class UAIWriter:
             fout.write(writer)
 
     def write_uai(self, filename):
-        warnings.warn(
-            "`UAIWriter.write_uai` is deprecated and will be removed in v2.0. Please use `UAIWriter.write` instead.",
+        _warn_external(
+            "`UAIWriter.write_uai` is deprecated since v1.1.0 and will be removed in v2.0. "
+            "Use `UAIWriter.write` instead.",
             FutureWarning,
-            stacklevel=2,
         )
         self.write(filename)
