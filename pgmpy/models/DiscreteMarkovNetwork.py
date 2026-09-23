@@ -81,6 +81,13 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         self.factors = []
         self.latents = latents
 
+    def __repr__(self):
+        return (
+            f"<DiscreteMarkovNetwork(nodes={len(self.nodes())},"
+            f" edges={len(self.edges())},"
+            f" factors={len(self.factors)}) at {hex(id(self))}>"
+        )
+
     def add_edge(self, u, v, **kwargs):
         """
         Add an edge between u and v.
