@@ -90,6 +90,11 @@ class TestNParams:
         with pytest.raises(AttributeError, match="Cannot determine parameter count"):
             s._n_params(SimpleNamespace(), np.zeros((10, 2)))
 
+    def test_tags_exist(self, linear_gaussian_data):
+        s = GeneralizedStructureScore(linear_gaussian_data, LinearRegression())
+        assert "name" in s._tags
+        assert s._tags["supported_datatype"] == "continuous"
+
 
 class TestLocalScore:
     def test_callable_penalty(self, linear_gaussian_data):
