@@ -37,5 +37,8 @@ jobs:
           pip install .[all]
           pip install pygraphviz
 
+      - name: Run code snippets in documentations
+        run: pytest --doctest-modules docs README.md --xdoctest-glob="*.md" --xdoctest-glob="*.rst" -v
+
       - name: Run doctests
         run: pytest --doctest-modules --ignore=pgmpy/tests pgmpy/ -v

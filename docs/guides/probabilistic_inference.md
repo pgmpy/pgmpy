@@ -34,17 +34,25 @@ interventions (do-calculus), see {doc}`Causal Estimation <causal_estimation>`.
 All inference engines follow the same pattern — instantiate with a model, then query:
 
 ```python
-from pgmpy.example_models import load_model
-from pgmpy.inference import VariableElimination  # swap in any inference engine
+>>> from pgmpy.example_models import load_model
+>>> from pgmpy.inference import VariableElimination  # swap in any inference engine
 
-model = load_model("bnlearn/alarm")
-infer = VariableElimination(model)
+>>> model = load_model("bnlearn/alarm")
+>>> infer = VariableElimination(model)
 
-posterior = infer.query(
-    variables=["HISTORY"],
-    evidence={"CVP": "LOW", "PCWP": "LOW"},
-)
-print(posterior)
+>>> posterior = infer.query(
+...    variables=["HISTORY"],
+...    evidence={"CVP": "LOW", "PCWP": "LOW"},
+... )
+>>> print(posterior)
++----------------+----------------+
+| HISTORY        |   phi(HISTORY) |
++================+================+
+| HISTORY(TRUE)  |         0.4923 |
++----------------+----------------+
+| HISTORY(FALSE) |         0.5077 |
++----------------+----------------+
+
 ```
 
 Switching inference engines requires only changing the class.
@@ -62,8 +70,10 @@ In addition to full posterior distributions, inference engines support Maximum A
 queries that return the single most likely assignment:
 
 ```python
-map_result = infer.map_query(variables=["HISTORY"], evidence={"CVP": "LOW"})
-print(map_result)
+>>> map_result = infer.map_query(variables=["HISTORY"], evidence={"CVP": "LOW"})
+>>> print(map_result)
+{'HISTORY': 'FALSE'}
+
 ```
 
 ## Approximate Inference
@@ -75,40 +85,58 @@ also specialized support for inference on Dynamic Bayesian Networks.
 ## Common Recipes
 
 ```python
-from pgmpy.example_models import load_model
-from pgmpy.inference import VariableElimination
+>>> from pgmpy.example_models import load_model
+>>> from pgmpy.inference import VariableElimination
 
-model = load_model("bnlearn/alarm")
-infer = VariableElimination(model)
+>>> model = load_model("bnlearn/alarm")
+>>> infer = VariableElimination(model)
+
 ```
 
 **Posterior over a single variable:**
 ```python
-infer.query(variables=["HISTORY"], evidence={"CVP": "LOW"})
+>>> infer.query(variables=["HISTORY"], evidence={"CVP": "LOW"}) # doctest: +ELLIPSIS
+<DiscreteFactor representing phi(HISTORY:2) at 0x...>
+
 ```
 
 **Joint posterior over multiple variables:**
 ```python
-infer.query(variables=["HISTORY", "CO"], evidence={"CVP": "LOW"}, joint=True)
+>>> infer.query(variables=["HISTORY", "CO"], evidence={"CVP": "LOW"}, joint=True) # doctest: +ELLIPSIS
+<DiscreteFactor representing phi(HISTORY:2, CO:3) at 0x...>
+
 ```
 
 **Separate marginals instead of joint:**
 ```python
-marginals = infer.query(variables=["HISTORY", "CO"], joint=False)
-print(marginals["HISTORY"])
+>>> marginals = infer.query(variables=["HISTORY", "CO"], joint=False)
+>>> print(marginals["HISTORY"])
++----------------+----------------+
+| HISTORY        |   phi(HISTORY) |
++================+================+
+| HISTORY(TRUE)  |         0.0545 |
++----------------+----------------+
+| HISTORY(FALSE) |         0.9455 |
++----------------+----------------+
+
 ```
 
 **MAP assignment:**
 ```python
-infer.map_query(variables=["HISTORY", "CO"], evidence={"CVP": "LOW"})
+>>> result = infer.map_query(variables=["HISTORY", "CO"], evidence={"CVP": "LOW"})
+>>> sorted(result.items())
+[('CO', 'HIGH'), ('HISTORY', 'FALSE')]
+
 ```
 
 **Switch to Belief Propagation:**
 ```python
-from pgmpy.inference import BeliefPropagation
+>>> from pgmpy.inference import BeliefPropagation
 
-infer = BeliefPropagation(model)
-infer.query(variables=["HISTORY"], evidence={"CVP": "LOW"})
+>>> infer = BeliefPropagation(model)
+>>> infer.query(variables=["HISTORY"], evidence={"CVP": "LOW"}) # doctest: +ELLIPSIS
+<DiscreteFactor representing phi(HISTORY:2) at 0x...>
+
 ```
 
 ## See Also

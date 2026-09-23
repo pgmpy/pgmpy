@@ -36,25 +36,27 @@ pgmpy provides two consistent entry points:
 **Graph-based queries** using `CausalInference`:
 
 ```python
-import numpy as np
-import pandas as pd
-from pgmpy.base import DAG
-from pgmpy.inference import CausalInference
+>>> import numpy as np
+>>> import pandas as pd
+>>> from pgmpy.base import DAG
+>>> from pgmpy.inference import CausalInference
 
-rng = np.random.default_rng(42)
-data = pd.DataFrame(
-    {
-        "X": rng.normal(size=500),
-        "Z": rng.normal(size=500),
-        "Y": rng.normal(size=500),
-    }
-)
+>>> rng = np.random.default_rng(42)
+>>> data = pd.DataFrame(
+...     {
+...         "X": rng.normal(size=500),
+...         "Z": rng.normal(size=500),
+...         "Y": rng.normal(size=500),
+...     }
+... )
 
-graph = DAG([("X", "Y"), ("Z", "X"), ("Z", "Y")])
-ci = CausalInference(graph)
+>>> graph = DAG([("X", "Y"), ("Z", "X"), ("Z", "Y")])
+>>> ci = CausalInference(graph)
 
-ate = ci.estimate_ate("X", "Y", data=data, estimator_type="linear")
-print(round(float(ate), 4))
+>>> ate = ci.estimate_ate("X", "Y", data=data, estimator_type="linear")
+>>> print(round(float(ate), 4))
+0.0546
+
 ```
 
 **Sklearn-style regressors** using `pgmpy.prediction` estimators that use causal graph
@@ -67,19 +69,27 @@ interventional distributions such as P(Y | do(X), Z), letting you answer "what i
 questions directly from the model:
 
 ```python
-from pgmpy.example_models import load_model
-from pgmpy.inference import CausalInference
+>>> from pgmpy.example_models import load_model
+>>> from pgmpy.inference import CausalInference
 
-model = load_model("bnlearn/alarm")
-ci = CausalInference(model)
+>>> model = load_model("bnlearn/alarm")
+>>> ci = CausalInference(model)
 
-result = ci.query(
-    variables=["HISTORY"],
-    do={"CVP": "LOW"},
-    evidence={"PCWP": "LOW"},
-    show_progress=False,
-)
-print(result)
+>>> result = ci.query(
+...     variables=["HISTORY"],
+...     do={"CVP": "LOW"},
+...     evidence={"PCWP": "LOW"},
+...     show_progress=False,
+... )
+>>> print(result)
++----------------+----------------+
+| HISTORY        |   phi(HISTORY) |
++================+================+
+| HISTORY(TRUE)  |         0.3704 |
++----------------+----------------+
+| HISTORY(FALSE) |         0.6296 |
++----------------+----------------+
+
 ```
 
 ## Average Treatment Effect
@@ -95,25 +105,28 @@ regression, instrumental variable regression, and cross-fitted double machine le
 for flexible nuisance models:
 
 ```python
-import numpy as np
-import pandas as pd
-from pgmpy.base import DAG
-from pgmpy.prediction import NaiveAdjustmentRegressor
+>>> import numpy as np
+>>> import pandas as pd
+>>> from pgmpy.base import DAG
+>>> from pgmpy.prediction import NaiveAdjustmentRegressor
 
-rng = np.random.default_rng(42)
-Z = rng.normal(size=500)
-X = 0.5 * Z + rng.normal(size=500)
-Y = 0.8 * X + 0.3 * Z + rng.normal(size=500)
-data = pd.DataFrame({"X": X, "Z": Z, "Y": Y})
+>>> rng = np.random.default_rng(42)
+>>> Z = rng.normal(size=500)
+>>> X = 0.5 * Z + rng.normal(size=500)
+>>> Y = 0.8 * X + 0.3 * Z + rng.normal(size=500)
+>>> data = pd.DataFrame({"X": X, "Z": Z, "Y": Y})
 
-graph = DAG(
-    [("X", "Y"), ("Z", "X"), ("Z", "Y")],
-    roles={"exposures": "X", "outcomes": "Y", "adjustment": "Z"},
-)
+>>> graph = DAG(
+...     [("X", "Y"), ("Z", "X"), ("Z", "Y")],
+...     roles={"exposures": "X", "outcomes": "Y", "adjustment": "Z"},
+... )
 
-reg = NaiveAdjustmentRegressor(causal_graph=graph)
-reg.fit(data[["X", "Z"]], data["Y"])
-print(reg.predict(data[["X", "Z"]])[:5])
+>>> reg = NaiveAdjustmentRegressor(causal_graph=graph)
+>>> reg.fit(data[["X", "Z"]], data["Y"]) # doctest: +ELLIPSIS
+NaiveAdjustmentRegressor(causal_graph=<pgmpy.base.DAG.DAG object at 0x...>)
+>>> print(reg.predict(data[["X", "Z"]])[:5])
+[ 1.26579945 -0.10657223  0.01244585 -0.44158363 -3.73926525]
+
 ```
 
 ## See Also

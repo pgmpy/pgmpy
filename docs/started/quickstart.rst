@@ -17,14 +17,15 @@ Learn a graph structure directly from data.
 
 .. code-block:: python
 
-    from pgmpy.datasets import load_dataset
-    from pgmpy.causal_discovery import PC
+    >>> from pgmpy.datasets import load_dataset
+    >>> from pgmpy.causal_discovery import PC
 
-    dataset = load_dataset("sachs_discrete")
-    est = PC(ci_test="chi_square", return_type="dag")
-    est.fit(dataset.data)
-    print(est.causal_graph_)
-
+    >>> dataset = load_dataset("sachs_discrete")
+    >>> est = PC(ci_test="chi_square", return_type="dag", variant="stable")
+    >>> est.fit(dataset.data)
+    PC(ci_test='chi_square', return_type='dag', variant='stable')
+    >>> print(est.causal_graph_) # doctest: +ELLIPSIS
+    DAG with 11 nodes and ... edges
 
 .. _quickstart-parameter-estimation:
 
@@ -37,19 +38,21 @@ Fit conditional distributions for a known graph structure.
 
 .. code-block:: python
 
-    from pgmpy.models import DiscreteBayesianNetwork
-    from pgmpy.parameter_estimator import DiscreteMLE
-    from pgmpy.example_models import load_model
+    >>> from pgmpy.parameter_estimator import DiscreteMLE
+    >>> from pgmpy.models import DiscreteBayesianNetwork
+    >>> from pgmpy.example_models import load_model
 
     # Generate some data to use for fitting.
-    model = load_model("bnlearn/alarm")
-    df = model.simulate(n_samples=1000, seed=42)
+    >>> model = load_model("bnlearn/alarm")
+    >>> df = model.simulate(n_samples=1000, seed=42)
 
     # Create a network structure and fit data to it.
-    bn_struct = DiscreteBayesianNetwork(model.edges())
-    bn_struct.fit(df, estimator=DiscreteMLE())
-    bn_struct.cpds
+    >>> bn_struct = DiscreteBayesianNetwork(model.edges())
 
+    >>> bn_struct.fit(df, estimator=DiscreteMLE()) # doctest: +ELLIPSIS
+    <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork object at 0x...>
+    >>> bn_struct.get_cpds()[0] # doctest: +ELLIPSIS
+    <TabularCPD representing P(HYPOVOLEMIA:2) ...>
 
 .. _quickstart-probabilistic-inference:
 
@@ -62,18 +65,24 @@ Query posterior distributions from a Bayesian Network.
 
 .. code-block:: python
 
-    from pgmpy.example_models import load_model
-    from pgmpy.inference import VariableElimination
+    >>> from pgmpy.example_models import load_model
+    >>> from pgmpy.inference import VariableElimination
 
-    model = load_model("bnlearn/alarm")
-    infer = VariableElimination(model)
+    >>> model = load_model("bnlearn/alarm")
+    >>> infer = VariableElimination(model)
 
-    result = infer.query(
-        variables=["HISTORY"],
-        evidence={"CVP": "LOW", "PCWP": "LOW"},
-    )
-    print(result)
-
+    >>> result = infer.query(
+    ...     variables=["HISTORY"],
+    ...     evidence={"CVP": "LOW", "PCWP": "LOW"},
+    ... )
+    >>> print(result)
+    +----------------+----------------+
+    | HISTORY        |   phi(HISTORY) |
+    +================+================+
+    | HISTORY(TRUE)  |         0.4923 |
+    +----------------+----------------+
+    | HISTORY(FALSE) |         0.5077 |
+    +----------------+----------------+
 
 .. _quickstart-causal-identification:
 
@@ -86,15 +95,18 @@ Check whether a causal effect is identifiable from the graph alone.
 
 .. code-block:: python
 
-    from pgmpy.base import DAG
-    from pgmpy.identification import Adjustment
+    >>> from pgmpy.base import DAG
+    >>> from pgmpy.identification import Adjustment
 
-    dag = DAG(
-        [("X", "Y"), ("Z", "X"), ("Z", "Y")],
-        roles={"exposures": "X", "outcomes": "Y"},
-    )
-    identified_graph, is_identified = Adjustment(variant="minimal").identify(dag)
-    identified.get_role("adjustment")
+    >>> dag = DAG(
+    ...     [("X", "Y"), ("Z", "X"), ("Z", "Y")],
+    ...     roles={"exposures": "X", "outcomes": "Y"},
+    ... )
+    >>> identified_graph, is_identified = Adjustment(variant="minimal").identify(dag)
+    >>> is_identified
+    True
+    >>> identified_graph.get_role("adjustment")
+    ['Z']
 
 
 .. _quickstart-causal-inference:
@@ -108,12 +120,21 @@ Estimate a causal effect from data once you have a causal graph.
 
 .. code-block:: python
 
-    from pgmpy.example_models import load_model
-    from pgmpy.inference import CausalInference
+    >>> from pgmpy.example_models import load_model
+    >>> from pgmpy.inference import CausalInference
 
-    model = load_model("bnlearn/sachs")
-    infer = CausalInference(model)
-    infer.query(variables=["Akt"], do={"PKC": "LOW"})
+    >>> model = load_model("bnlearn/sachs")
+    >>> infer = CausalInference(model)
+    >>> print(infer.query(variables=["Akt"], do={"PKC": "LOW"}))
+    +-----------+------------+
+    | Akt       |   phi(Akt) |
+    +===========+============+
+    | Akt(LOW)  |     0.5334 |
+    +-----------+------------+
+    | Akt(AVG)  |     0.2839 |
+    +-----------+------------+
+    | Akt(HIGH) |     0.1827 |
+    +-----------+------------+
 
 
 .. _quickstart-example-data-models:
@@ -127,16 +148,23 @@ Discover built-in datasets and example models.
 
 .. code-block:: python
 
-    from pgmpy.datasets import list_datasets, load_dataset
-    from pgmpy.example_models import list_models, load_model
+    >>> from pgmpy.datasets import list_datasets, load_dataset
+    >>> from pgmpy.example_models import list_models, load_model
 
-    print(list_datasets(is_discrete=True, has_ground_truth=True)[:3])
-    dataset = load_dataset("sachs_discrete")
-    print(dataset.name, dataset.data.shape)
-
-    print(list_models()[:3])
-    model = load_model("bnlearn/alarm")
-    print(len(model.nodes()), len(model.edges()))
+    >>> print(list_datasets(is_discrete=True, has_ground_truth=True)[:3])
+    ['sachs_discrete']
+    >>> dataset = load_dataset("sachs_discrete")
+    >>> print(dataset.name)
+    sachs_discrete
+    >>> print(dataset.data.shape)
+    (5400, 11)
+    >>> print(list_models()[:3])
+    ['bnlearn/alarm', 'bnlearn/andes', 'bnlearn/arth150']
+    >>> model = load_model("bnlearn/alarm")
+    >>> print(len(model.nodes()))
+    37
+    >>> print(len(model.edges()))
+    46
 
 
 .. _quickstart-simulations:
@@ -150,12 +178,12 @@ Generate synthetic data from a model for testing and experimentation.
 
 .. code-block:: python
 
-    from pgmpy.example_models import load_model
+    >>> from pgmpy.example_models import load_model
 
-    model = load_model("bnlearn/ecoli70")
-    data = model.simulate(int(1e3))
-    data.head()
-
+    >>> model = load_model("bnlearn/ecoli70")
+    >>> data = model.simulate(int(1e3))
+    >>> data.shape
+    (1000, 46)
 
 .. _quickstart-extensibility:
 
