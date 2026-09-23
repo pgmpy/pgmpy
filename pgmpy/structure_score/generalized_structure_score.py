@@ -218,7 +218,7 @@ class GeneralizedStructureScore(BaseStructureScore):
 
         raise AttributeError(
             "Cannot determine parameter count from the fitted estimator. "
-            "Pass `n_params=callable(est, X) -> int` to FlexibleStructureScore. "
+            "Pass `n_params=callable(est, X) -> int` to GeneralizedStructureScore. "
             f"Estimator type: {type(est).__name__}."
         )
 
