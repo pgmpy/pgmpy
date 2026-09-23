@@ -216,6 +216,65 @@ class TestCoreGraph:
         with pytest.raises(ValueError):
             _CoreGraph(edge_list=[("A", "B", "->")], roles={"test_role1": "A", "test_role2": "C", "test_role3": "B"})
 
+    @pytest.mark.parametrize("graph_cls", [_CoreGraph, DAG, PDAG])
+    def test_node_insertion_with_latents(self, graph_cls):
+        graph = graph_cls()
+        graph.add_node("X", roles={"exposures"}, label="original")
+        graph.add_node("X", color="blue")
+        assert graph.nodes["X"] == {"roles": {"exposures"}, "label": "original", "color": "blue"}
+
+        nodes = [("X", {"roles": {"outcomes"}, "color": "red"}), (("Y", 0), {"roles": set()})]
+        graph.add_nodes_from(iter(nodes), roles={"latents"}, color="green")
+        assert graph.nodes["X"] == {"roles": {"outcomes"}, "label": "original", "color": "red"}
+        assert graph.nodes[("Y", 0)] == {"roles": set(), "color": "green"}
+        graph.add_nodes_from([("Z", 0), "W"], roles={"exposures"})
+        graph.add_nodes_from(iter(()), roles={"latents"})
+        assert graph.exposures == {("Z", 0), "W"}
+        assert graph.outcomes == {"X"}
+        assert graph.latents == set()
+        assert graph.copy() == graph
+
+        graph.add_node("U", roles={"latents"})
+        graph.add_nodes_from(["V"], roles={"latents"})
+        graph.add_nodes_from([("W", {"roles": {"latents"}})])
+        assert graph.latents == {"U", "V", "W"}
+        assert graph.copy() == graph
+
+    @pytest.mark.parametrize("graph_cls", [ADMG, MAG])
+    def test_node_insertion_without_latents(self, graph_cls):
+        graph = graph_cls()
+        with pytest.raises(ValueError, match="the 'latents' role cannot be assigned"):
+            graph.add_node("L", roles={"latents"})
+        assert not graph.nodes
+
+        graph.add_node("X", roles={"exposures"}, label="original")
+        graph.add_node("X", color="blue")
+        expected = {"roles": {"exposures"}, "label": "original", "color": "blue"}
+        assert graph.nodes["X"] == expected
+        with pytest.raises(ValueError, match="the 'latents' role cannot be assigned"):
+            graph.add_node("X", roles={"latents"}, color="red")
+        assert graph.nodes["X"] == expected
+        for nodes, attributes in [
+            (["L"], {"roles": {"latents"}}),
+            ([("X", {"color": "red"}), ("L", {"roles": {"latents"}})], {}),
+            ([("X", {"roles": {"latents"}})], {"roles": {"exposures"}}),
+        ]:
+            with pytest.raises(ValueError, match="the 'latents' role cannot be assigned"):
+                graph.add_nodes_from(iter(nodes), **attributes)
+            assert dict(graph.nodes(data=True)) == {"X": expected}
+        assert graph.latents == set()
+
+        nodes = [("X", {"roles": {"outcomes"}, "color": "red"}), (("Y", 0), {"roles": set()})]
+        graph.add_nodes_from(iter(nodes), roles={"latents"}, color="green")
+        assert graph.nodes["X"] == {"roles": {"outcomes"}, "label": "original", "color": "red"}
+        assert graph.nodes[("Y", 0)] == {"roles": set(), "color": "green"}
+        graph.add_nodes_from([("Z", 0), "W"], roles={"exposures"})
+        graph.add_nodes_from(iter(()), roles={"latents"})
+        assert graph.exposures == {("Z", 0), "W"}
+        assert graph.outcomes == {"X"}
+        assert graph.latents == set()
+        assert graph.copy() == graph
+
     def test_add_edge(self):
         """Test the `_CoreGraph.add_edge` method."""
         # directed edge

@@ -26,7 +26,7 @@ def mag2():
         ("P", "R", "->"),
         ("P", "L", "->"),
     ]
-    return MAG(edge_list=edges, latents={"L"})
+    return MAG(edge_list=edges)
 
 
 # mag3 and mag4 are taken from Maathuis 2018 JMLR Figure 2
@@ -57,6 +57,21 @@ class TestMAG:
         assert len(empty.nodes()) == 0
         assert empty.latents == set()
 
+    def test_latents_rejected(self):
+        """Every vertex of a MAG is observed; latent confounding is expressed only through `<>` edges."""
+        edges = [("X", "Y", "->"), ("L", "X", "->")]
+        with pytest.raises(ValueError, match="Every vertex of a MAG is observed"):
+            MAG(edge_list=edges, latents={"L"})
+        with pytest.raises(ValueError, match="Every vertex of a MAG is observed"):
+            MAG(edge_list=edges, roles={"latents": "L"})
+
+        mag = MAG(edge_list=edges)
+        with pytest.raises(ValueError, match="Every vertex of a MAG is observed"):
+            mag.latents = {"L"}
+        with pytest.raises(ValueError, match="Every vertex of a MAG is observed"):
+            mag.with_role(role="latents", variables="L")
+        assert mag.latents == set()
+
     def test_roles_and_equality(self):
         e = [
             ("X", "Z", "->"),
@@ -66,15 +81,14 @@ class TestMAG:
             ("U", "X", "->"),
         ]
         roles = {"exposures": "X", "outcomes": "Z", "adjustment": {"Y"}}
-        m1 = MAG(edge_list=e, latents={"L"}, roles=roles)
+        m1 = MAG(edge_list=e, roles=roles)
         m2 = MAG(
             edge_list=e,
-            latents={"L"},
             roles={"exposures": "X", "outcomes": "Z", "adjustment": {"Y"}},
         )
         assert m1 == m2
 
-        m3 = MAG(edge_list=e, latents={"L"}, roles={"exposures": "X"})
+        m3 = MAG(edge_list=e, roles={"exposures": "X"})
         assert m1 != m3
 
         m4 = MAG(
@@ -85,13 +99,9 @@ class TestMAG:
                 ("L", "Z", "->"),
                 ("U", "X", "->"),
             ],
-            latents={"L"},
             roles=roles,
         )
         assert m1 != m4
-
-        m5 = MAG(edge_list=e, latents={"L", "U"}, roles=roles)
-        assert m1 != m5
 
     @pytest.mark.skip(reason="Refactoring: Skip now. I implement this When Refactoring DAG(Related: #2384, #2385)")
     def test_is_valid_mag(self):
@@ -185,9 +195,6 @@ class TestMAG:
         assert MAG(edge_list=edges).is_maximal() is False
         # Fig. 1-(b): adding the C <> D edge makes it maximal
         assert MAG(edge_list=[*edges, ("C", "D", "<>")]).is_maximal() is True
-
-        # maximality is a property of the graph itself: the latents role must not affect it
-        assert MAG(edge_list=edges, latents={"A"}).is_maximal() is False
 
         # chain and collider: the non-adjacent pair has no inducing path (Y not a collider /
         # Y a collider but not an ancestor of an endpoint) -> maximal
