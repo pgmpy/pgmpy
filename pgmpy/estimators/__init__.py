@@ -1,19 +1,27 @@
 from .base import BaseEstimator, MarginalEstimator, ParameterEstimator, StructureEstimator
 from .MLE import MaximumLikelihoodEstimator
 from .BayesianEstimator import BayesianEstimator
-from .StructureScore import (
-    AIC,
-    BIC,
+from pgmpy.estimators.base import (
+    BaseEstimator,
+    MarginalEstimator,
+    ParameterEstimator,
+    StructureEstimator,
+)
+from pgmpy.estimators.MLE import MaximumLikelihoodEstimator
+from pgmpy.estimators.BayesianEstimator import BayesianEstimator
+from pgmpy.estimators.StructureScore import (
+    StructureScore,
     K2,
-    AICCondGauss,
-    AICGauss,
     BDeu,
     BDs,
-    BICCondGauss,
+    BIC,
     BICGauss,
-    LogLikelihoodCondGauss,
+    BICCondGauss,
+    AIC,
+    AICGauss,
+    AICCondGauss,
     LogLikelihoodGauss,
-    StructureScore,
+    LogLikelihoodCondGauss,
 )
 from .ExhaustiveSearch import ExhaustiveSearch
 from .ExpertKnowledge import ExpertKnowledge
@@ -26,6 +34,15 @@ from .PC import PC
 from .MirrorDescentEstimator import MirrorDescentEstimator
 from .expert import ExpertInLoop, llm_pairwise_orient
 from .GES import GES
+from pgmpy.estimators.TreeSearch import TreeSearch
+from pgmpy.estimators.SEMEstimator import SEMEstimator, IVEstimator
+from pgmpy.estimators.MmhcEstimator import MmhcEstimator
+from pgmpy.estimators.EM import ExpectationMaximization
+from pgmpy.estimators.PC import PC
+from pgmpy.estimators.base import MarginalEstimator
+from pgmpy.estimators.MirrorDescentEstimator import MirrorDescentEstimator
+from pgmpy.estimators.expert import ExpertInLoop
+from pgmpy.estimators.GES import GES
 
 __all__ = [
     "BaseEstimator",
