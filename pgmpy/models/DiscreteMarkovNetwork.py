@@ -327,15 +327,11 @@ class DiscreteMarkovNetwork(UndirectedGraph):
                 self.add_factors(factor)
 
         # 3. Convert to Junction Tree and compute potentials using MaximumLikelihoodEstimator
-        import warnings
-
         from pgmpy.estimators import MaximumLikelihoodEstimator
 
         jt = self.to_junction_tree()
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=FutureWarning)
-            mle = MaximumLikelihoodEstimator(jt, data)
-            potentials = mle.estimate_potentials()
+        mle = MaximumLikelihoodEstimator(jt, data)
+        potentials = mle.estimate_potentials()
 
         # 4. Update model factors
         self.factors = []
