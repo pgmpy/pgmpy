@@ -3,6 +3,7 @@ from itertools import chain, combinations
 from typing import Any
 
 import numpy as np
+import pandas as pd
 
 from pgmpy.utils import compat_fns
 from pgmpy.utils._warnings import _warn_external
@@ -226,3 +227,59 @@ def powerset(l_input: list):
     [(), (1,), (2,), (3,), (1, 2), (1, 3), (2, 3), (1, 2, 3)]
     """
     return chain.from_iterable(combinations(l_input, r) for r in range(len(l_input) + 1))
+
+
+def covariance_sufficient_stats(data: pd.DataFrame) -> tuple[np.ndarray, np.ndarray, dict[Any, int], frozenset]:
+    """Mean and covariance of the numeric and boolean columns of `data`; other columns are skipped.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Dataset to summarize.
+
+    Returns
+    -------
+    cov : numpy.ndarray
+        Maximum likelihood (``ddof=0``) covariance matrix of the retained columns.
+    means : numpy.ndarray
+        Column means, in the order of `cov`.
+    col_index : dict
+        Mapping from column name to its position in `cov`.
+    missing : frozenset
+        Retained columns with missing values; their entries in `cov` are ``nan``.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> from pgmpy.utils import covariance_sufficient_stats
+    >>> data = pd.DataFrame({"A": [1.0, 2.0, 3.0], "B": [3.0, 5.0, 4.0], "C": list("xyz")})
+    >>> cov, means, col_index, missing = covariance_sufficient_stats(data)
+    >>> col_index, means, missing
+    ({'A': 0, 'B': 1}, array([2., 4.]), frozenset())
+    >>> cov.round(4)
+    array([[0.6667, 0.3333],
+           [0.3333, 0.6667]])
+    """
+    numeric = data.select_dtypes(include=["number", "bool"])
+    values = numeric.to_numpy(dtype=float)
+
+    return (
+        np.atleast_2d(np.cov(values, rowvar=False, ddof=0)),
+        values.mean(axis=0),
+        {col: index for index, col in enumerate(numeric.columns)},
+        frozenset(numeric.columns[np.isnan(values).any(axis=0)]),
+    )
+
+
+def residual_covariance(cov: np.ndarray, targets: list[int], given: list[int]) -> np.ndarray:
+    r"""Covariance of `targets` after regressing them on `given`, as a block of `cov`.
+
+    Schur complement :math:`\Sigma_{TT} - \Sigma_{TG} \Sigma_{GG}^{+} \Sigma_{GT}`; the pseudo-inverse matches a
+    minimum-norm least-squares fit when `given` is rank deficient.
+    """
+    residual = cov[np.ix_(targets, targets)]
+    if len(given) == 0:
+        return residual
+
+    cross = cov[np.ix_(targets, given)]
+    return residual - cross @ np.linalg.pinv(cov[np.ix_(given, given)]) @ cross.T

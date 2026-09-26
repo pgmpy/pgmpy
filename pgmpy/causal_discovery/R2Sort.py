@@ -1,9 +1,11 @@
+import numpy as np
 import pandas as pd
 from sklearn.base import clone
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 
 from pgmpy.causal_discovery._base import BaseOrderDiscovery
+from pgmpy.utils import residual_covariance
 
 
 class R2Sort(BaseOrderDiscovery):
@@ -78,16 +80,30 @@ class R2Sort(BaseOrderDiscovery):
             raise ValueError(f"return_type must be one of: dag, pdag. Got: {self.return_type}")
 
         model_reg = clone(self.estimator) if self.estimator is not None else LinearRegression()
-        all_nodes_set = set(self.feature_names_in_)
-        r2_values = {}
-        for target in self.feature_names_in_:
-            other_nodes = list(all_nodes_set - {target})
-            y = X[target]
-            predictors = X[other_nodes]
+        if self.estimator is None:
+            # A constant column has no correlation and is fit exactly by the intercept, so its R^2 is one.
+            values = X.to_numpy(dtype=float)
+            varying = ~np.isclose(values.std(axis=0), 0.0)
+            correlation = np.atleast_2d(np.corrcoef(values[:, varying], rowvar=False))
 
-            model_reg.fit(predictors, y)
-            predictions = model_reg.predict(predictors)
-            r2_values[target] = r2_score(y, predictions)
+            r2 = np.ones(values.shape[1])
+            positions = np.flatnonzero(varying)
+            for offset, column in enumerate(positions):
+                others = [other for other in range(len(positions)) if other != offset]
+                residual = residual_covariance(correlation, [offset], others)[0, 0]
+                r2[column] = 1.0 - max(float(residual), 0.0) / correlation[offset, offset]
+            r2_values = dict(zip(self.feature_names_in_, r2))
+        else:
+            all_nodes_set = set(self.feature_names_in_)
+            r2_values = {}
+            for target in self.feature_names_in_:
+                other_nodes = list(all_nodes_set - {target})
+                y = X[target]
+                predictors = X[other_nodes]
+
+                model_reg.fit(predictors, y)
+                predictions = model_reg.predict(predictors)
+                r2_values[target] = r2_score(y, predictions)
 
         causal_order = sorted(r2_values, key=r2_values.get)
         model = self._estimate_dag_from_causal_order(X, causal_order, regressor=model_reg)

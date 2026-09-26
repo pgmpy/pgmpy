@@ -25,3 +25,13 @@ def _check_length_equal(param_1, param_2, name_param_1, name_param_2):
     """
     if len(param_1) != len(param_2):
         raise ValueError(f"Length of {name_param_1} must be same as Length of {name_param_2}")
+
+
+def _check_no_missing_values(variables, missing, context):
+    """Raise a ValueError naming `context` if any of `variables` is in `missing`."""
+    found = [var for var in variables if var in missing]
+    if found:
+        raise ValueError(
+            f"{context} is not defined when the data contain missing values. Variables with "
+            f"missing values: {found}. Drop or impute these rows before computing it."
+        )

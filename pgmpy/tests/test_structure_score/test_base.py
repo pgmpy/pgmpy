@@ -117,3 +117,15 @@ class TestGetScoringMethod:
 
         with pytest.raises(TypeError, match=r"unexpected keyword argument 'equivalent_sample_size'"):
             get_scoring_method("bdeu", data, equivalent_sample_size=5)
+
+
+class TestStateNameCollection:
+    def test_continuous_and_mixed_scores_skip_numerical_columns(self):
+        continuous = pd.DataFrame({"A": [0.5, 1.5, 2.5], "B": [0.1, 0.4, 0.2]})
+        int_coded = pd.DataFrame({"A": [0, 1, 0, 1], "B": ["x", "y", "x", "y"]})
+
+        # Integer coded columns are typed numerical, but discrete and untagged scores still collect them.
+        assert BICGauss(continuous).state_names == {}
+        assert set(CountingScore(continuous).state_names) == {"A", "B"}
+        assert BICCondGauss(int_coded).state_names == {"B": ["x", "y"]}
+        assert K2(int_coded).state_names == {"A": [0, 1], "B": ["x", "y"]}

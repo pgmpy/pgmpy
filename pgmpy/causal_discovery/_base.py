@@ -69,7 +69,8 @@ class BaseCausalDiscovery(BaseEstimator):
             X = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
             self.feature_names_in_ = X.columns
 
-        if not all([isinstance(x, Hashable) for x in X.values.flat]):
+        # Only an object column can hold an unhashable value.
+        if not all([isinstance(x, Hashable) for x in X.select_dtypes(include=["object"]).values.flat]):
             raise TypeError("argument must be a string, number, or hashable object.")
 
         for col in X.columns:
