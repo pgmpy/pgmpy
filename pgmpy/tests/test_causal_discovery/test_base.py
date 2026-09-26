@@ -27,3 +27,9 @@ from pgmpy.causal_discovery import ChowLiu
 def test_fit_warns_on_constant_column(data):
     with pytest.warns(UserWarning, match="constant"):
         ChowLiu().fit(data)
+
+
+def test_unhashable_cell_is_rejected():
+    data = pd.DataFrame({"A": [[1, 2], [3, 4], [5, 6]], "B": [1.0, 2.0, 3.0]})
+    with pytest.raises(TypeError, match="hashable object"):
+        ChowLiu().fit(data)

@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from scipy import stats
+from scipy import special
 
 from ._base import _CITestResult
 from .pearsonr import Pearsonr
@@ -121,8 +121,8 @@ class PearsonrEquivalence(Pearsonr):
         Returns the Fisher z-transformed partial correlation statistic and p-value.
         """
         # Step 2: Compute Partial Pearson Correlation via parent and clip to avoid infinities
-        pearsonr_result = super()._compute_result(X, Y, Z)
-        rho = np.clip(pearsonr_result.statistic, -0.999999, 0.999999)
+        partial_corr, dof = self._partial_correlation(X, Y, Z)
+        rho = np.clip(partial_corr, -0.999999, 0.999999)
 
         # Step 3: Fisher Z-Transformation
         coeff = np.arctanh(rho)
@@ -136,15 +136,15 @@ class PearsonrEquivalence(Pearsonr):
         # Step 4: TOST (Two One-Sided Tests)
         # Step 4.1: H0: rho <= -delta  vs  H1: rho > -delta
         z_score_lower = std_error_factor * (coeff + z_delta)
-        p_value_lower = 1 - stats.norm.cdf(z_score_lower)
+        p_value_lower = 1 - special.ndtr(z_score_lower)
 
         # Step 4.2: H0: rho >= delta   vs  H1: rho < delta
         z_score_upper = std_error_factor * (coeff - z_delta)
-        p_value_upper = stats.norm.cdf(z_score_upper)
+        p_value_upper = special.ndtr(z_score_upper)
 
         return _CITestResult(
             statistic=coeff,
             p_value=max(p_value_lower, p_value_upper),
-            effect_size=abs(pearsonr_result.statistic),
-            attributes=dict(pearsonr_result.attributes),
+            effect_size=abs(partial_corr),
+            attributes={"dof_": dof} if len(Z) > 0 else {},
         )

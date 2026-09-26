@@ -1,5 +1,5 @@
-from .check_functions import _check_1d_array_object, _check_length_equal
-from .mathext import cartesian, sample_discrete
+from .check_functions import _check_1d_array_object, _check_length_equal, _check_no_missing_values
+from .mathext import cartesian, covariance_sufficient_stats, residual_covariance, sample_discrete
 from .optimizer import optimize, pinverse
 from .state_name import StateNameMixin
 from .tabular import (
@@ -20,10 +20,13 @@ from .utils import (
 
 __all__ = [
     "cartesian",
+    "covariance_sufficient_stats",
+    "residual_covariance",
     "sample_discrete",
     "StateNameMixin",
     "_check_1d_array_object",
     "_check_length_equal",
+    "_check_no_missing_values",
     "optimize",
     "pinverse",
     "get_example_model",
