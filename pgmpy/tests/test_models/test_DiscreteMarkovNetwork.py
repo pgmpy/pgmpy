@@ -687,13 +687,10 @@ class TestMarkovNetworkFit(unittest.TestCase):
 
         for known_factor in known_model.get_factors():
             scope = known_factor.scope()
-            learned_factor = next(
-                f for f in learned_model.get_factors() if set(f.scope()) == set(scope)
-            )
+            learned_factor = next(f for f in learned_model.get_factors() if set(f.scope()) == set(scope))
             norm_known = known_factor.values / known_factor.values.sum()
             norm_learned = learned_factor.values / learned_factor.values.sum()
             np.testing.assert_allclose(norm_learned, norm_known, atol=0.05)
 
     def tearDown(self):
         del self.graph
-
