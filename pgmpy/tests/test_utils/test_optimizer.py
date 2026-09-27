@@ -1,6 +1,6 @@
-import pytest
 import numpy as np
 import numpy.testing as npt
+import pytest
 from skbase.utils.dependencies import _safe_import
 
 from pgmpy import config
@@ -8,9 +8,7 @@ from pgmpy.utils import optimize, pinverse
 
 torch = _safe_import("torch")
 
-requires_torch = pytest.mark.skipif(
-    config.BACKEND == "numpy", reason="backend is numpy"
-)
+requires_torch = pytest.mark.skipif(config.BACKEND == "numpy", reason="backend is numpy")
 
 
 def loss_fn(params, loss_params):
@@ -22,16 +20,12 @@ def loss_fn(params, loss_params):
 
 @pytest.fixture
 def A():
-    return torch.randn(
-        5, 5, device=config.DEVICE, dtype=config.DTYPE, requires_grad=True
-    )
+    return torch.randn(5, 5, device=config.DEVICE, dtype=config.DTYPE, requires_grad=True)
 
 
 @pytest.fixture
 def B():
-    return torch.ones(
-        5, 5, device=config.DEVICE, dtype=config.DTYPE, requires_grad=False
-    )
+    return torch.ones(5, 5, device=config.DEVICE, dtype=config.DTYPE, requires_grad=False)
 
 
 class TestOptimize:
