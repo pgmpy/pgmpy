@@ -348,11 +348,13 @@ class NominalDistribution(BaseDistribution):
         for j in range(n_states - 1):
             state_idx += uniform >= cdf[:, j]
         sampled = self._categories[state_idx]
+        # Take the dtype from the categories, not the drawn values, so it is the same for any number of draws.
+        dtype = pd.Series(self._categories).infer_objects().dtype
 
         if self.ndim == 0:
             if n_samples is None:
                 return sampled[0, 0]
-            return pd.DataFrame(sampled).infer_objects()
+            return pd.DataFrame(sampled).astype(dtype)
 
         index = self.index
         if n_samples is not None:
@@ -364,7 +366,7 @@ class NominalDistribution(BaseDistribution):
                 names=[None, *index.names],
             )
 
-        return pd.DataFrame(sampled.reshape(-1, 1), index=index, columns=self.columns).infer_objects()
+        return pd.DataFrame(sampled.reshape(-1, 1), index=index, columns=self.columns).astype(dtype)
 
     def plot(
         self, fun: str | None = "pmf", ax: "Axes | np.ndarray | None" = None, **kwargs: Any
