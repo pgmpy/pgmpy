@@ -121,7 +121,7 @@ class AdjacencyF1Score(BaseSupervisedMetric):
     >>> scorer = AdjacencyF1Score()
     >>> result = scorer.evaluate(true_dag, est_dag)
     >>> result
-    0.666666666
+    0.6666666666666666
     """
 
     _tags = {
@@ -167,7 +167,7 @@ class AdjacencyNPV(BaseSupervisedMetric):
     >>> scorer = AdjacencyNPV()
     >>> result = scorer.evaluate(true_dag, est_dag)
     >>> result
-    1.0
+    0.5
     """
 
     _tags = {
@@ -213,7 +213,7 @@ class AdjacencySpecificity(BaseSupervisedMetric):
     >>> scorer = AdjacencySpecificity()
     >>> result = scorer.evaluate(true_dag, est_dag)
     >>> result
-    0.5
+    1.0
     """
 
     _tags = {

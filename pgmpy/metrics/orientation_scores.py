@@ -165,7 +165,7 @@ class OrientationNPV(BaseSupervisedMetric):
     >>> est_dag = DAG([("Smoking", "Lung_Cancer"), ("Age", "Heart_Disease")])
     >>> scorer = OrientationNPV()
     >>> result = scorer.evaluate(true_dag, est_dag)
-    >>> result["precision"]
+    >>> result
     1.0
     """
 
