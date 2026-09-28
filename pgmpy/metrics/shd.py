@@ -58,6 +58,7 @@ class SHD(BaseSupervisedMetric):
         "is_symmetric": True,
         "supported_graph_types": (DAG, PDAG),
         "is_default": True,
+        "output_type": "scalar",
     }
 
     def __init__(self, edge_reverse_penalty=1):

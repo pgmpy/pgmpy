@@ -3,7 +3,6 @@ from itertools import combinations
 
 import numpy as np
 import pandas as pd
-from rmsea import RMSEA
 from scipy import stats
 from tqdm import tqdm
 
@@ -11,6 +10,8 @@ from pgmpy.base import DAG
 from pgmpy.ci_tests import get_ci_test
 from pgmpy.global_vars import config
 from pgmpy.metrics import BaseUnsupervisedMetric
+
+from .rmsea import RMSEA
 
 
 class FisherC(BaseUnsupervisedMetric):
@@ -99,7 +100,7 @@ class FisherC(BaseUnsupervisedMetric):
 
         if self.compute_rmsea:
             if len(X) != 1 and len(cis) != 0:
-                rmsea = RMSEA.compute_rmsea(C,(2* len(cis)), X)
+                rmsea = RMSEA.compute_rmsea(test_statistic=C, deg_of_freedom=(2 * len(cis)), data=X)
             return (p_value, rmsea)
 
         else:

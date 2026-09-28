@@ -73,6 +73,7 @@ class OrientationConfusionMatrix(BaseSupervisedMetric):
         "lower_is_better": False,
         "is_symmetric": False,
         "supported_graph_types": (DAG,),
+        "output_type": "report",
     }
 
     def __init__(self, metrics: list[str] | None = None):
