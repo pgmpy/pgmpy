@@ -1,3 +1,5 @@
+from functools import lru_cache
+
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -91,8 +93,9 @@ class AdjacencyConfusionMatrix(BaseSupervisedMetric):
         ]
         super().__init__()
 
-    def _evaluate(self, true_causal_graph, est_causal_graph):
-        """Evaluate adjacency confusion matrix metrics."""
+    @staticmethod
+    @lru_cache(maxsize=1024)
+    def _compute_matrix_components(true_causal_graph, est_causal_graph):
         # Step 1: Get adjacency matrices for both graphs
         nodes_list = sorted(true_causal_graph.nodes())
         true_adj = nx.adjacency_matrix(true_causal_graph, nodelist=nodes_list, weight=None).todense()
@@ -110,8 +113,13 @@ class AdjacencyConfusionMatrix(BaseSupervisedMetric):
         fp = int(np.sum(~true_edges & est_edges))
         fn = int(np.sum(true_edges & ~est_edges))
         tn = int(np.sum(~true_edges & ~est_edges))
+        return tp, fp, fn, tn
+
+    def _evaluate(self, true_causal_graph, est_causal_graph):
+        """Evaluate adjacency confusion matrix metrics."""
 
         # Step 3: Compute specified metrics
+        tp, fp, fn, tn = self._compute_matrix_components(true_causal_graph, est_causal_graph)
         results = {}
         if "cm" in self.metrics:
             results["cm"] = pd.DataFrame(

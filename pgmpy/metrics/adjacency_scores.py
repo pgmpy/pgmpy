@@ -13,6 +13,24 @@ class AdjacencyPrecision(BaseSupervisedMetric):
     float
         The Adjacency Precision value.
 
+    Examples
+    --------
+    >>> from pgmpy.metrics import AdjacencyPrecision
+    >>> from pgmpy.base import DAG
+    >>> true_dag = DAG(
+    ...     [
+    ...         ("Smoking", "Lung_Cancer"),
+    ...         ("Smoking", "Heart_Disease"),
+    ...         ("Age", "Heart_Disease"),
+    ...         ("Age", "Lung_Cancer"),
+    ...     ]
+    ... )
+    >>> est_dag = DAG([("Smoking", "Lung_Cancer"), ("Age", "Heart_Disease")])
+    >>> scorer = AdjacencyPrecision()
+    >>> result = scorer.evaluate(true_dag, est_dag)
+    >>> result
+    1.0
+
     """
 
     _tags = {
@@ -26,8 +44,8 @@ class AdjacencyPrecision(BaseSupervisedMetric):
     }
 
     def _evaluate(self, true_causal_graph, est_causal_graph):
-        cm = AdjacencyConfusionMatrix(metrics=["precision"])
-        precision = cm.evaluate(true_causal_graph, est_causal_graph)["precision"]
+        scorer = AdjacencyConfusionMatrix(metrics=["precision"])
+        precision = scorer.evaluate(true_causal_graph, est_causal_graph)["precision"]
         return precision
 
 
@@ -41,6 +59,24 @@ class AdjacencyRecall(BaseSupervisedMetric):
     -----
     float
         The Adjacency Recall value.
+
+    Examples
+    --------
+    >>> from pgmpy.metrics import AdjacencyRecall
+    >>> from pgmpy.base import DAG
+    >>> true_dag = DAG(
+    ...     [
+    ...         ("Smoking", "Lung_Cancer"),
+    ...         ("Smoking", "Heart_Disease"),
+    ...         ("Age", "Heart_Disease"),
+    ...         ("Age", "Lung_Cancer"),
+    ...     ]
+    ... )
+    >>> est_dag = DAG([("Smoking", "Lung_Cancer"), ("Age", "Heart_Disease")])
+    >>> scorer = AdjacencyRecall()
+    >>> result = scorer.evaluate(true_dag, est_dag)
+    >>> result
+    0.5
     """
 
     _tags = {
@@ -54,12 +90,12 @@ class AdjacencyRecall(BaseSupervisedMetric):
     }
 
     def _evaluate(self, true_causal_graph, est_causal_graph):
-        cm = AdjacencyConfusionMatrix(metrics=["recall"])
-        recall = cm.evaluate(true_causal_graph, est_causal_graph)["recall"]
+        scorer = AdjacencyConfusionMatrix(metrics=["recall"])
+        recall = scorer.evaluate(true_causal_graph, est_causal_graph)["recall"]
         return recall
 
 
-class AdjacencyF1(BaseSupervisedMetric):
+class AdjacencyF1Score(BaseSupervisedMetric):
     """
     Derived from the computation of true and false nodes used to build the Adjacency Confusion Matrix,
     AdjacencyF1 returns a scalar value denoting the harmonic mean of both precision and recall.
@@ -68,6 +104,24 @@ class AdjacencyF1(BaseSupervisedMetric):
     -----
     float
         The Adjacency F1 Score.
+
+    Examples
+    --------
+    >>> from pgmpy.metrics import AdjacencyF1Score
+    >>> from pgmpy.base import DAG
+    >>> true_dag = DAG(
+    ...     [
+    ...         ("Smoking", "Lung_Cancer"),
+    ...         ("Smoking", "Heart_Disease"),
+    ...         ("Age", "Heart_Disease"),
+    ...         ("Age", "Lung_Cancer"),
+    ...     ]
+    ... )
+    >>> est_dag = DAG([("Smoking", "Lung_Cancer"), ("Age", "Heart_Disease")])
+    >>> scorer = AdjacencyF1Score()
+    >>> result = scorer.evaluate(true_dag, est_dag)
+    >>> result
+    0.666666666
     """
 
     _tags = {
@@ -81,15 +135,15 @@ class AdjacencyF1(BaseSupervisedMetric):
     }
 
     def _evaluate(self, true_causal_graph, est_causal_graph):
-        cm = AdjacencyConfusionMatrix(metrics=["f1"])
-        f1 = cm.evaluate(true_causal_graph, est_causal_graph)["f1"]
+        scorer = AdjacencyConfusionMatrix(metrics=["f1"])
+        f1 = scorer.evaluate(true_causal_graph, est_causal_graph)["f1"]
         return f1
 
 
 class AdjacencyNPV(BaseSupervisedMetric):
     """
     Derived from the computation of true and false nodes used to build the Adjacency Confusion Matrix,
-    AdjacencyNPV returns a scalar value denoting the fraction of absent estimated edges that are truly abselt
+    AdjacencyNPV returns a scalar value denoting the fraction of absent estimated edges that are truly absent
     i.e (TN / (TN + FN)).
 
     Returns
@@ -97,6 +151,23 @@ class AdjacencyNPV(BaseSupervisedMetric):
     float
         The Adjacency Negative Predictive Value.
 
+    Examples
+    --------
+    >>> from pgmpy.metrics import AdjacencyNPV
+    >>> from pgmpy.base import DAG
+    >>> true_dag = DAG(
+    ...     [
+    ...         ("Smoking", "Lung_Cancer"),
+    ...         ("Smoking", "Heart_Disease"),
+    ...         ("Age", "Heart_Disease"),
+    ...         ("Age", "Lung_Cancer"),
+    ...     ]
+    ... )
+    >>> est_dag = DAG([("Smoking", "Lung_Cancer"), ("Age", "Heart_Disease")])
+    >>> scorer = AdjacencyNPV()
+    >>> result = scorer.evaluate(true_dag, est_dag)
+    >>> result
+    1.0
     """
 
     _tags = {
@@ -110,8 +181,8 @@ class AdjacencyNPV(BaseSupervisedMetric):
     }
 
     def _evaluate(self, true_causal_graph, est_causal_graph):
-        cm = AdjacencyConfusionMatrix(metrics=["npv"])
-        npv = cm.evaluate(true_causal_graph, est_causal_graph)["npv"]
+        scorer = AdjacencyConfusionMatrix(metrics=["npv"])
+        npv = scorer.evaluate(true_causal_graph, est_causal_graph)["npv"]
         return npv
 
 
@@ -126,6 +197,23 @@ class AdjacencySpecificity(BaseSupervisedMetric):
     float
         The Adjacency True Negative Rate.
 
+    Examples
+    --------
+    >>> from pgmpy.metrics import AdjacencySpecificity
+    >>> from pgmpy.base import DAG
+    >>> true_dag = DAG(
+    ...     [
+    ...         ("Smoking", "Lung_Cancer"),
+    ...         ("Smoking", "Heart_Disease"),
+    ...         ("Age", "Heart_Disease"),
+    ...         ("Age", "Lung_Cancer"),
+    ...     ]
+    ... )
+    >>> est_dag = DAG([("Smoking", "Lung_Cancer"), ("Age", "Heart_Disease")])
+    >>> scorer = AdjacencySpecificity()
+    >>> result = scorer.evaluate(true_dag, est_dag)
+    >>> result
+    0.5
     """
 
     _tags = {
@@ -139,6 +227,6 @@ class AdjacencySpecificity(BaseSupervisedMetric):
     }
 
     def _evaluate(self, true_causal_graph, est_causal_graph):
-        cm = AdjacencyConfusionMatrix(metrics=["specificity"])
-        specificity = cm.evaluate(true_causal_graph, est_causal_graph)["specificity"]
+        scorer = AdjacencyConfusionMatrix(metrics=["specificity"])
+        specificity = scorer.evaluate(true_causal_graph, est_causal_graph)["specificity"]
         return specificity

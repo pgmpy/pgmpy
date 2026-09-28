@@ -1,7 +1,7 @@
 import pytest
 
 from pgmpy.base import DAG, PDAG
-from pgmpy.metrics import AdjacencyF1, AdjacencyNPV, AdjacencyPrecision, AdjacencyRecall, AdjacencySpecificity
+from pgmpy.metrics import AdjacencyF1Score, AdjacencyNPV, AdjacencyPrecision, AdjacencyRecall, AdjacencySpecificity
 
 
 # The models in true_dag and est_dag fixtures are taken from the paper: https://arxiv.org/pdf/2412.10039
@@ -64,7 +64,7 @@ def est_pdag():
 def test_default_metrics(true_dag, est_dag):
     precision_result = AdjacencyPrecision().evaluate(true_dag, est_dag)
     recall_result = AdjacencyRecall().evaluate(true_dag, est_dag)
-    f1_result = AdjacencyF1().evaluate(true_dag, est_dag)
+    f1_result = AdjacencyF1Score().evaluate(true_dag, est_dag)
     npv_result = AdjacencyNPV().evaluate(true_dag, est_dag)
     specificity_result = AdjacencySpecificity().evaluate(true_dag, est_dag)
 
@@ -75,7 +75,7 @@ def test_default_metrics(true_dag, est_dag):
 def test_individual_scores(true_dag, est_dag):
     precision = AdjacencyPrecision().evaluate(true_dag, est_dag)
     recall = AdjacencyRecall().evaluate(true_dag, est_dag)
-    f1 = AdjacencyF1().evaluate(true_dag, est_dag)
+    f1 = AdjacencyF1Score().evaluate(true_dag, est_dag)
     npv = AdjacencyNPV().evaluate(true_dag, est_dag)
     specificity = AdjacencySpecificity().evaluate(true_dag, est_dag)
     assert precision == pytest.approx(6 / 7)
@@ -88,7 +88,7 @@ def test_individual_scores(true_dag, est_dag):
 def test_perfect_match(true_dag):
     precision_result = AdjacencyPrecision().evaluate(true_dag, true_dag)
     recall_result = AdjacencyRecall().evaluate(true_dag, true_dag)
-    f1_result = AdjacencyF1().evaluate(true_dag, true_dag)
+    f1_result = AdjacencyF1Score().evaluate(true_dag, true_dag)
     npv = AdjacencyNPV().evaluate(true_dag, true_dag)
     specificity = AdjacencySpecificity().evaluate(true_dag, true_dag)
     assert precision_result == recall_result == f1_result == npv == specificity == 1.0
@@ -110,7 +110,7 @@ def test_pdag_support_metrics(true_pdag, est_pdag):
     # TP=2 (x1-x2, x2-x3), FP=1 (x1-x3), FN=2 (x3-x4, x4-x5), TN=5
     precision = AdjacencyPrecision().evaluate(true_pdag, est_pdag)
     recall = AdjacencyRecall().evaluate(true_pdag, est_pdag)
-    f1 = AdjacencyF1().evaluate(true_pdag, est_pdag)
+    f1 = AdjacencyF1Score().evaluate(true_pdag, est_pdag)
     npv = AdjacencyNPV().evaluate(true_pdag, est_pdag)
     specificity = AdjacencySpecificity().evaluate(true_pdag, est_pdag)
     assert precision == pytest.approx(2 / 3)
@@ -126,7 +126,7 @@ def test_different_nodes_raises_recall(true_dag):
     with pytest.raises(ValueError):
         AdjacencyPrecision().evaluate(true_dag, DAG(["x1", "x2"]))
     with pytest.raises(ValueError):
-        AdjacencyF1().evaluate(true_dag, DAG(["x1", "x2"]))
+        AdjacencyF1Score().evaluate(true_dag, DAG(["x1", "x2"]))
     with pytest.raises(ValueError):
         AdjacencyNPV().evaluate(true_dag, DAG(["x1", "x2"]))
     with pytest.raises(ValueError):

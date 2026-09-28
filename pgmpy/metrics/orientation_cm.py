@@ -1,3 +1,5 @@
+from functools import lru_cache
+
 import networkx as nx
 import pandas as pd
 
@@ -87,9 +89,9 @@ class OrientationConfusionMatrix(BaseSupervisedMetric):
         ]
         super().__init__()
 
-    def _evaluate(self, true_causal_graph, est_causal_graph):
-        """Evaluate orientation confusion matrix metrics."""
-
+    @staticmethod
+    @lru_cache(maxsize=1024)
+    def _compute_matrix_components(true_causal_graph, est_causal_graph):
         # Step 1: Get adjacency matrices for both graphs.
         nodes_list = sorted(true_causal_graph.nodes())
         true_adj = nx.adjacency_matrix(true_causal_graph, nodelist=nodes_list, weight=None).todense()
@@ -115,7 +117,12 @@ class OrientationConfusionMatrix(BaseSupervisedMetric):
                         fp += 1
                     elif true_arrow and not est_arrow:
                         fn += 1
+        return tp, fp, fn, tn
 
+    def _evaluate(self, true_causal_graph, est_causal_graph):
+        """Evaluate orientation confusion matrix metrics."""
+
+        tp, fp, fn, tn = self._compute_matrix_components(true_causal_graph, est_causal_graph)
         # Step 3: Compute specified metrics.
         results = {}
         if "cm" in self.metrics:

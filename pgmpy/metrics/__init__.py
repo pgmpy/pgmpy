@@ -1,12 +1,12 @@
 from ._base import BaseSupervisedMetric, BaseUnsupervisedMetric, get_metrics
 from .adjacency_cm import AdjacencyConfusionMatrix
-from .adjacency_scores import AdjacencyF1, AdjacencyNPV, AdjacencyPrecision, AdjacencyRecall, AdjacencySpecificity
+from .adjacency_scores import AdjacencyF1Score, AdjacencyNPV, AdjacencyPrecision, AdjacencyRecall, AdjacencySpecificity
 from .correlation_score import CorrelationScore
 from .fisher_c import FisherC
 from .implied_cis import ImpliedCIs
 from .orientation_cm import OrientationConfusionMatrix
 from .orientation_scores import (
-    OrientationF1,
+    OrientationF1Score,
     OrientationNPV,
     OrientationPrecision,
     OrientationRecall,
@@ -22,13 +22,13 @@ __all__ = [
     "AdjacencyConfusionMatrix",
     "AdjacencyRecall",
     "AdjacencyPrecision",
-    "AdjacencyF1",
+    "AdjacencyF1Score",
     "AdjacencyNPV",
     "AdjacencySpecificity",
     "OrientationConfusionMatrix",
     "OrientationPrecision",
     "OrientationRecall",
-    "OrientationF1",
+    "OrientationF1Score",
     "OrientationNPV",
     "OrientationSpecificity",
     "SHD",

@@ -1,7 +1,13 @@
 import pytest
 
 from pgmpy.base import DAG, PDAG
-from pgmpy.metrics import OrientationF1, OrientationNPV, OrientationPrecision, OrientationRecall, OrientationSpecificity
+from pgmpy.metrics import (
+    OrientationF1Score,
+    OrientationNPV,
+    OrientationPrecision,
+    OrientationRecall,
+    OrientationSpecificity,
+)
 
 
 # The models in true_dag and est_dag fixtures are taken from the paper: https://arxiv.org/pdf/2412.10039
@@ -54,7 +60,7 @@ def pdag():
 def test_default_metrics(true_dag, est_dag):
     precision_result = OrientationPrecision().evaluate(true_dag, est_dag)
     recall_result = OrientationRecall().evaluate(true_dag, est_dag)
-    f1_result = OrientationF1().evaluate(true_dag, est_dag)
+    f1_result = OrientationF1Score().evaluate(true_dag, est_dag)
     npv_result = OrientationNPV().evaluate(true_dag, est_dag)
     specificity_result = OrientationSpecificity().evaluate(true_dag, est_dag)
 
@@ -65,7 +71,7 @@ def test_default_metrics(true_dag, est_dag):
 def test_individual_scores(true_dag, est_dag):
     precision = OrientationPrecision().evaluate(true_dag, est_dag)
     recall = OrientationRecall().evaluate(true_dag, est_dag)
-    f1 = OrientationF1().evaluate(true_dag, est_dag)
+    f1 = OrientationF1Score().evaluate(true_dag, est_dag)
     npv = OrientationNPV().evaluate(true_dag, est_dag)
     specificity = OrientationSpecificity().evaluate(true_dag, est_dag)
     assert precision == pytest.approx(2 / 3)
@@ -78,7 +84,7 @@ def test_individual_scores(true_dag, est_dag):
 def test_perfect_match(true_dag):
     precision_result = OrientationPrecision().evaluate(true_dag, true_dag)
     recall_result = OrientationRecall().evaluate(true_dag, true_dag)
-    f1_result = OrientationF1().evaluate(true_dag, true_dag)
+    f1_result = OrientationF1Score().evaluate(true_dag, true_dag)
     npv = OrientationNPV().evaluate(true_dag, true_dag)
     specificity = OrientationSpecificity().evaluate(true_dag, true_dag)
     assert precision_result == recall_result == f1_result == npv == specificity == 1.0
@@ -98,7 +104,7 @@ def test_pdag_not_supported(pdag):
     with pytest.raises(ValueError):
         OrientationRecall().evaluate(pdag, pdag)
     with pytest.raises(ValueError):
-        OrientationF1().evaluate(pdag, pdag)
+        OrientationF1Score().evaluate(pdag, pdag)
     with pytest.raises(ValueError):
         OrientationNPV().evaluate(pdag, pdag)
     with pytest.raises(ValueError):
@@ -111,7 +117,7 @@ def test_different_nodes_raises_recall(true_dag):
     with pytest.raises(ValueError):
         OrientationPrecision().evaluate(true_dag, DAG(["x1", "x2"]))
     with pytest.raises(ValueError):
-        OrientationF1().evaluate(true_dag, DAG(["x1", "x2"]))
+        OrientationF1Score().evaluate(true_dag, DAG(["x1", "x2"]))
     with pytest.raises(ValueError):
         OrientationNPV().evaluate(true_dag, DAG(["x1", "x2"]))
     with pytest.raises(ValueError):

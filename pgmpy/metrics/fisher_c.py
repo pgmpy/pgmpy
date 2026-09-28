@@ -64,6 +64,7 @@ class FisherC(BaseUnsupervisedMetric):
         "lower_is_better": False,
         "supported_graph_types": (DAG,),
         "is_default": False,
+        "output_type": "scalar",
     }
 
     def __init__(self, ci_test=None, compute_rmsea=False, show_progress=True):
@@ -100,7 +101,7 @@ class FisherC(BaseUnsupervisedMetric):
 
         if self.compute_rmsea:
             if len(X) != 1 and len(cis) != 0:
-                rmsea = RMSEA.compute_rmsea(test_statistic=C, deg_of_freedom=(2 * len(cis)), data=X)
+                rmsea = RMSEA._compute_rmsea(test_statistic=C, deg_of_freedom=(2 * len(cis)), data=X)
             return (p_value, rmsea)
 
         else:
