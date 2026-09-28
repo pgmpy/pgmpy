@@ -47,7 +47,11 @@ class BaseStructureScore(BaseObject):
 
         if self.data is not None:
             self.variables = list(self.data.columns.values)
-            self.state_names = build_state_names(self.data, state_names=state_names)
+            # Only discrete scores read `state_names`, and need every column: integer-coded categories are typed "N".
+            named_data = self.data
+            if self.get_class_tag("supported_datatype") not in (None, "discrete"):
+                named_data = self.data.loc[:, [col for col in self.variables if self.dtypes[col] != "N"]]
+            self.state_names = build_state_names(named_data, state_names=state_names)
 
         self._cached_local_score = lru_cache(maxsize=max_cache_size)(self._local_score)
 

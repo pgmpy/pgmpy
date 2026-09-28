@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
-from scipy import stats
+from scipy import special
+
+from pgmpy.utils import _check_no_missing_values, covariance_sufficient_stats, residual_covariance
 
 from ._base import BaseCITest, _CITestResult
 
@@ -71,7 +73,29 @@ class Pearsonr(BaseCITest):
 
     def __init__(self, data: pd.DataFrame, use_cache: bool = True):
         self.data = data
+        self._cov, _, self._col_index, self._missing = covariance_sufficient_stats(data)
         super().__init__(use_cache=use_cache)
+
+    def _partial_correlation(self, X: str, Y: str, Z: list) -> tuple[float, int]:
+        """Partial correlation of `X` and `Y` given `Z`, and the degrees of freedom of the test.
+
+        A `Z` that determines `X` or `Y` makes them conditionally independent exactly, so the correlation is 0.0.
+        """
+        _check_no_missing_values((X, Y, *Z), self._missing, f"The partial correlation of {X} and {Y}")
+        xy = [self._col_index[X], self._col_index[Y]]
+        residual_cov = residual_covariance(self._cov, xy, [self._col_index[var] for var in Z])
+        dof = self.data.shape[0] - len(Z) - 2
+
+        if len(Z) > 0:
+            tolerance = np.sqrt(np.finfo(float).eps)
+            if any(residual_cov[i, i] <= tolerance * self._cov[col, col] for i, col in enumerate(xy)):
+                return 0.0, dof
+
+        with np.errstate(invalid="ignore", divide="ignore"):
+            coef = residual_cov[0, 1] / np.sqrt(residual_cov[0, 0] * residual_cov[1, 1])
+
+        # Rounding can push |coef| just past 1; clamp as numpy.corrcoef does and let nan through.
+        return (-1.0 if coef < -1.0 else 1.0 if coef > 1.0 else coef), dof
 
     def _compute_result(
         self,
@@ -84,27 +108,17 @@ class Pearsonr(BaseCITest):
 
         Returns Pearson's r, p-value, and optional degrees of freedom metadata.
         """
-        data = self.data
-        n_samples = data.shape[0]
+        coef, dof = self._partial_correlation(X, Y, Z)
+        attributes = {"dof_": dof} if len(Z) > 0 else {}
 
-        # Step 1: If Z is empty compute a non-conditional test.
-        attributes = {}
-        if len(Z) == 0:
-            coef, p_value = stats.pearsonr(data.loc[:, X], data.loc[:, Y])
-
-        # Step 2: If Z is non-empty, use linear regression to compute residuals and test independence on it.
+        if dof <= 0:
+            p_value = 1.0
+        elif coef >= 1.0 or coef <= -1.0:
+            # Infinite t; a clamped Python-float coef would raise ZeroDivisionError below.
+            p_value = 0.0
         else:
-            design_matrix = np.column_stack([np.ones(n_samples), data.loc[:, Z].to_numpy()])
-            X_coef = np.linalg.lstsq(design_matrix, data.loc[:, X], rcond=None)[0]
-            Y_coef = np.linalg.lstsq(design_matrix, data.loc[:, Y], rcond=None)[0]
-
-            residual_X = data.loc[:, X] - design_matrix @ X_coef
-            residual_Y = data.loc[:, Y] - design_matrix @ Y_coef
-
-            coef = np.corrcoef(residual_X, residual_Y)[0, 1]
-            dof = n_samples - len(Z) - 2
-            t_statistic = coef * np.sqrt(dof / (1 - coef**2))
-            p_value = 2 * stats.t.sf(np.abs(t_statistic), df=dof)
-            attributes["dof_"] = dof
+            with np.errstate(invalid="ignore", divide="ignore"):
+                t_statistic = coef * np.sqrt(dof / (1 - coef**2))
+            p_value = 2 * special.stdtr(dof, -abs(t_statistic))
 
         return _CITestResult(statistic=coef, p_value=p_value, effect_size=abs(coef), attributes=attributes)

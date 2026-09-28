@@ -27,7 +27,7 @@ class TestAICCondGauss:
     def test_score_bnlearn_many_parents(self, aic_cond_gauss_score):
         # score(model2network("[B][B_cat][C][C_cat][A|B:B_cat:C:C_cat]"), type='loglik-cg') -> -Inf
         assert aic_cond_gauss_score.local_score(variable="A", parents=("B_cat", "B", "C_cat", "C")) == pytest.approx(
-            -40.8443, abs=1e-3
+            -44.7744, abs=1e-3
         )
 
     def test_score_bnlearn_continuous_to_categorical(self, aic_cond_gauss_score):
@@ -38,4 +38,4 @@ class TestAICCondGauss:
         )
         assert aic_cond_gauss_score.local_score(
             variable="A_cat", parents=("B", "B_cat", "C", "C_cat")
-        ) == pytest.approx(-138.0878, abs=1e-3)
+        ) == pytest.approx(-148.3830, abs=1e-3)

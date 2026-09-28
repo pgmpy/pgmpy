@@ -304,7 +304,7 @@ class TestLogLikelihoodCondGauss:
     def test_score_bnlearn_many_parents(self, loglik_cond_gauss_score):
         # score(model2network("[B][B_cat][C][C_cat][A|B:B_cat:C:C_cat]"), type='loglik-cg') -> -Inf
         assert loglik_cond_gauss_score.local_score(variable="A", parents=["B_cat", "B", "C_cat", "C"]) == pytest.approx(
-            19.1557, abs=1e-3
+            15.2256, abs=1e-3
         )
 
     def test_score_bnlearn_continuous_to_categorical(self, loglik_cond_gauss_score):
@@ -317,7 +317,7 @@ class TestLogLikelihoodCondGauss:
         )
         assert loglik_cond_gauss_score.local_score(
             variable="A_cat", parents=["B", "B_cat", "C", "C_cat"]
-        ) == pytest.approx(41.9122, abs=1e-3)
+        ) == pytest.approx(31.6170, abs=1e-3)
 
 
 class TestAICCondGauss:
@@ -346,7 +346,7 @@ class TestAICCondGauss:
     def test_score_bnlearn_many_parents(self, aic_cond_gauss_score):
         # score(model2network("[B][B_cat][C][C_cat][A|B:B_cat:C:C_cat]"), type='loglik-cg') -> -Inf
         assert aic_cond_gauss_score.local_score(variable="A", parents=["B_cat", "B", "C_cat", "C"]) == pytest.approx(
-            -40.8443, abs=1e-3
+            -44.7744, abs=1e-3
         )
 
     def test_score_bnlearn_continuous_to_categorical(self, aic_cond_gauss_score):
@@ -357,7 +357,7 @@ class TestAICCondGauss:
         )
         assert aic_cond_gauss_score.local_score(
             variable="A_cat", parents=["B", "B_cat", "C", "C_cat"]
-        ) == pytest.approx(-138.0878, abs=1e-3)
+        ) == pytest.approx(-148.3830, abs=1e-3)
 
 
 class TestBICCondGauss:
@@ -386,7 +386,7 @@ class TestBICCondGauss:
     def test_score_bnlearn_many_parents(self, bic_cond_gauss_score):
         # score(model2network("[B][B_cat][C][C_cat][A|B:B_cat:C:C_cat]"), type='loglik-cg') -> -Inf
         assert bic_cond_gauss_score.local_score(variable="A", parents=["B_cat", "B", "C_cat", "C"]) == pytest.approx(
-            -118.9994, abs=1e-3
+            -122.9295, abs=1e-3
         )
 
     def test_score_bnlearn_continuous_to_categorical(self, bic_cond_gauss_score):
@@ -397,4 +397,4 @@ class TestBICCondGauss:
         )
         assert bic_cond_gauss_score.local_score(
             variable="A_cat", parents=["B", "B_cat", "C", "C_cat"]
-        ) == pytest.approx(-372.5531, abs=1e-3)
+        ) == pytest.approx(-382.8483, abs=1e-3)

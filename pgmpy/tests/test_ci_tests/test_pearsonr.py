@@ -3,6 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 import pytest
+from scipy import stats
 
 from pgmpy.ci_tests import Pearsonr
 from pgmpy.factors.continuous import LinearGaussianCPD
@@ -142,3 +143,43 @@ def test_pearsonr_residual_approx(residual_data):
     test("X", "Y", ["Z1", "Z2", "Z3"])
     assert test.statistic_ >= 0.1
     assert test.p_value_ <= 0.05
+
+
+def test_degenerate_inputs():
+    rng = np.random.default_rng(seed=16)
+    df = pd.DataFrame(rng.standard_normal((300, 3)), columns=["A", "B", "D"])
+    df["C"] = df["A"] + df["B"]
+    df["E"] = df["A"] + 1e-12 * rng.standard_normal(300)
+    df["M"] = df["D"].where(df.index > 0)
+    test = Pearsonr(data=df)
+
+    # Given A, C is B plus a constant; given C, A and B are perfectly anticorrelated. Rounding must not
+    # push either outside [-1, 1].
+    test("B", "C", ["A"])
+    assert test.statistic_ == pytest.approx(1.0, abs=1e-12)
+    assert test.p_value_ == 0.0
+    test("A", "B", ["C"])
+    assert test.statistic_ == pytest.approx(-1.0, abs=1e-12)
+
+    # Z determines X exactly (B, C fix A) or up to floating point noise (A fixes E).
+    for X, Y, Z in [("A", "D", ["B", "C"]), ("E", "D", ["A"])]:
+        assert test(X, Y, Z) is True
+        assert test.statistic_ == 0.0
+        assert test.p_value_ == 1.0
+
+    # The missing value in M only affects the queries that involve M.
+    for X, Z in [("M", []), ("A", ["M"])]:
+        with pytest.raises(ValueError, match=r"missing values.*M"):
+            test(X, "B", Z)
+
+
+@pytest.mark.filterwarnings("ignore::scipy.stats.ConstantInputWarning")
+def test_unconditional_matches_scipy():
+    rng = np.random.default_rng(seed=0)
+    # Two observations always lie on a line and carry no evidence; a constant variable has no correlation.
+    for a, b in [rng.standard_normal((2, 200)), ([1.0, 2.0], [3.0, 7.0]), ([1.0, 1.0, 1.0], [3.0, 7.0, 2.0])]:
+        expected = stats.pearsonr(a, b)
+        result = Pearsonr(data=pd.DataFrame({"A": a, "B": b}))._compute_result("A", "B", [])
+        assert result.statistic == pytest.approx(expected.statistic, rel=1e-12, nan_ok=True)
+        assert result.p_value == pytest.approx(expected.pvalue, rel=1e-9, nan_ok=True)
+        assert result.attributes == {}

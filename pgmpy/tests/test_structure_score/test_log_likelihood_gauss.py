@@ -1,4 +1,17 @@
+import numpy as np
+import pandas as pd
 import pytest
+
+from pgmpy.structure_score import LogLikelihoodGauss
+
+
+@pytest.fixture
+def collinear_data():
+    rng = np.random.default_rng(seed=1)
+    df = pd.DataFrame({"A": rng.normal(size=300), "B": rng.normal(size=300)})
+    df["C"] = df["A"] + df["B"]
+    df["D"] = df["A"] + rng.normal(size=300)
+    return df
 
 
 class TestLogLikeGauss:
@@ -25,3 +38,24 @@ class TestLogLikeGauss:
         m1, m2 = gauss_models
         assert loglik_gauss_score.score(m1) == pytest.approx(-455.1058, abs=1e-3)
         assert loglik_gauss_score.score(m2) == pytest.approx(-569.4505, abs=1e-3)
+
+    def test_missing_values_raise_clear_error(self, collinear_data):
+        collinear_data.loc[0, "B"] = np.nan
+        score = LogLikelihoodGauss(collinear_data)
+
+        with pytest.raises(ValueError, match=r"missing values.*B"):
+            score.local_score("A", ("B",))
+        with pytest.raises(ValueError, match=r"missing values.*B"):
+            score.local_score("B", ())
+
+        # A variable with missing values that is not part of the family must not interfere.
+        assert np.isfinite(score.local_score("A", ("D",)))
+
+    def test_collinear_parents_and_determined_variable(self, collinear_data):
+        score = LogLikelihoodGauss(collinear_data)
+
+        # C = A + B: a redundant parent is ignored, but a family its parents determine scores -inf.
+        assert np.isfinite(score.local_score("D", ("A", "B", "C")))
+        assert score.local_score("D", ("A", "B", "C")) == pytest.approx(score.local_score("D", ("A", "B")), abs=1e-8)
+        assert score.local_score("C", ("A", "B")) == -np.inf
+        assert score.local_score("A", ("B", "C")) == -np.inf
