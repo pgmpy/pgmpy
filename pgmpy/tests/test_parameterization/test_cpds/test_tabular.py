@@ -44,6 +44,7 @@ class TestTabularCPD:
     def test_tags(self):
         assert TabularCPD.get_class_tag("object_type") == "parameterization"
         assert TabularCPD.get_class_tag("variable_type") == "discrete"
+        assert TabularCPD.get_class_tag("parent_type") == "discrete"
         assert TabularCPD.get_class_tag("supports_weighted_data") is True
         assert TabularCPD.get_class_tag("python_dependencies") == "skpro"
 

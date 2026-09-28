@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
 
-from pgmpy.parameterization._base import BaseParameter
+from pgmpy.parameterization._base import BaseParameter, _check_names, _parent_order
 from pgmpy.parameterization.distributions import NominalDistribution
 from pgmpy.utils import build_state_names, encode_columns, get_state_counts
 
@@ -71,6 +71,7 @@ class TabularCPD(BaseParameter):
 
     _tags = {
         "variable_type": "discrete",
+        "parent_type": "discrete",
         "supports_weighted_data": True,
         "python_dependencies": "skpro",
     }
@@ -120,10 +121,7 @@ class TabularCPD(BaseParameter):
         evidence_card = [] if evidence_card is None else list(evidence_card)
         if len(evidence_card) != len(evidence):
             raise ValueError(f"evidence_card must have one entry per parent in {evidence}, but is {evidence_card}.")
-        if variable in evidence or len(set(evidence)) != len(evidence):
-            raise ValueError(
-                f"The variable and its parents must have different names, but got {variable!r} and {evidence}."
-            )
+        _check_names(variable, evidence)
         given = _checked_state_names(state_names)
         cardinalities = dict(zip([variable, *evidence], [variable_card, *evidence_card]))
         states = {name: given.get(name, list(range(card))) for name, card in cardinalities.items()}
@@ -141,12 +139,12 @@ class TabularCPD(BaseParameter):
         if (values < 0).any() or not np.allclose(values.sum(axis=0), 1, atol=0.01):
             raise ValueError("values must be non-negative, and each column must sum to 1.")
 
-        order = sorted(range(len(evidence)), key=lambda position: evidence[position])
+        order = _parent_order(evidence)
         values = values.reshape(variable_card, *evidence_card).transpose(0, *(1 + position for position in order))
 
         cpd = cls(state_names=state_names)
         cpd.variable_ = variable
-        cpd.evidence_ = sorted(evidence)
+        cpd.evidence_ = [evidence[position] for position in order]
         cpd.variable_type_ = "discrete"
         cpd._set_table(values.reshape(shape), states)
         cpd._marginal = None if cpd.evidence_ else cpd.CPT_[:, 0]
@@ -155,8 +153,7 @@ class TabularCPD(BaseParameter):
 
     def _fit(self, X: pd.DataFrame, y: pd.DataFrame, sample_weight: np.ndarray | None) -> None:
         given = _checked_state_names(self.state_names)
-        self.evidence_ = sorted(self.evidence_)
-        data = (pd.concat([y, X[self.evidence_]], axis=1) if self.evidence_ else y).reset_index(drop=True)
+        data = (pd.concat([y, X], axis=1) if self.evidence_ else y).reset_index(drop=True)
         state_names = build_state_names(data, given)
         if sample_weight is not None:
             sample_weight = sample_weight / sample_weight.max()

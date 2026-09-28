@@ -360,16 +360,7 @@ class NominalDistribution(BaseDistribution):
                 return sampled[0, 0]
             return pd.DataFrame(sampled).astype(dtype)
 
-        index = self.index
-        if n_samples is not None:
-            if not isinstance(index, pd.MultiIndex):
-                index = pd.MultiIndex.from_arrays([index])
-            index = pd.MultiIndex(
-                levels=[pd.RangeIndex(n_samples), *index.levels],
-                codes=[np.repeat(np.arange(n_samples), n_rows), *[np.tile(code, n_samples) for code in index.codes]],
-                names=[None, *index.names],
-            )
-
+        index = self.index if n_samples is None else _sample_index(self.index, n_samples)
         return pd.DataFrame(sampled.reshape(-1, 1), index=index, columns=self.columns).astype(dtype)
 
     def plot(
@@ -498,3 +489,14 @@ class NominalDistribution(BaseDistribution):
         params2 = {"probs": [[0.1, 0.7, 0.2], [0.5, 0.3, 0.2]], "categories": [1, 2, 3]}
         params3 = {"probs": [0.2, 0.8], "categories": ["A", "B"]}
         return [params1, params2, params3]
+
+
+def _sample_index(index: pd.Index, n_samples: int) -> pd.MultiIndex:
+    """Return the index of ``n_samples`` draws for each row of ``index``, with a first level numbering the draws."""
+    if not isinstance(index, pd.MultiIndex):
+        index = pd.MultiIndex.from_arrays([index])
+    return pd.MultiIndex(
+        levels=[pd.RangeIndex(n_samples), *index.levels],
+        codes=[np.repeat(np.arange(n_samples), len(index)), *[np.tile(code, n_samples) for code in index.codes]],
+        names=[None, *index.names],
+    )
