@@ -65,8 +65,7 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
 
     References
     ----------
-    .. [1] Friedman N, Geiger D and Goldszmidt M (1997). Bayesian network
-       classifiers. Machine Learning 29: 131–163
+    - :footcite:t:`friedman_geiger_goldszmidt_1997`
 
     Examples
     --------

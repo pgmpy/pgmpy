@@ -1,3 +1,5 @@
+from collections.abc import Hashable
+
 import numpy as np
 import pandas as pd
 from scipy.stats import multivariate_normal
@@ -9,7 +11,7 @@ class LogLikelihoodCondGauss(BaseStructureScore):
     r"""
     Log-likelihood score for Bayesian networks with mixed discrete and continuous variables.
 
-    This score is based on conditional Gaussian distributions [1]_ and supports local families with both discrete and
+    This score is based on conditional Gaussian distributions [1] and supports local families with both discrete and
     continuous variables.
 
     For a continuous target :math:`C_1` with continuous parents :math:`C_2` and discrete parents :math:`D`, it computes
@@ -31,6 +33,8 @@ class LogLikelihoodCondGauss(BaseStructureScore):
         DataFrame where columns may be discrete or continuous variables.
     state_names : dict, optional
         Dictionary mapping discrete variable names to their possible states.
+    max_cache_size : int or None, default=10000
+        Maximum number of local scores to cache. If None, the cache is unlimited.
 
     Examples
     --------
@@ -56,7 +60,7 @@ class LogLikelihoodCondGauss(BaseStructureScore):
 
     References
     ----------
-    - :cite:p:`andrews_ramsey_cooper_2018`
+    - :footcite:t:`andrews_ramsey_cooper_2018`
     """
 
     _tags = {
@@ -66,8 +70,8 @@ class LogLikelihoodCondGauss(BaseStructureScore):
         "is_parameteric": False,
     }
 
-    def __init__(self, data, state_names=None):
-        super().__init__(data, state_names=state_names)
+    def __init__(self, data, state_names=None, max_cache_size=10000):
+        super().__init__(data, state_names=state_names, max_cache_size=max_cache_size)
 
     @staticmethod
     def _adjusted_cov(df: pd.DataFrame) -> pd.DataFrame:
@@ -79,7 +83,7 @@ class LogLikelihoodCondGauss(BaseStructureScore):
             df_cov = df_cov + 1e-6
         return df_cov
 
-    def _cat_parents_product(self, parents: tuple[str, ...]) -> int:
+    def _cat_parents_product(self, parents: tuple[Hashable, ...]) -> int:
         k = 1
         for pa in parents:
             if self.dtypes[pa] != "N":
@@ -88,7 +92,7 @@ class LogLikelihoodCondGauss(BaseStructureScore):
                     k *= self.data[pa].nunique()
         return k
 
-    def _get_num_parameters(self, variable: str, parents: tuple[str, ...]) -> int:
+    def _get_num_parameters(self, variable: Hashable, parents: tuple[Hashable, ...]) -> int:
         parent_dtypes = [self.dtypes[pa] for pa in parents]
         n_cont_parents = parent_dtypes.count("N")
 
@@ -106,7 +110,7 @@ class LogLikelihoodCondGauss(BaseStructureScore):
 
         return k
 
-    def _log_likelihood(self, variable: str, parents: tuple[str, ...]) -> float:
+    def _log_likelihood(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         parent_list = list(parents)
         df = self.data.loc[:, [variable] + parent_list]
 
@@ -227,6 +231,6 @@ class LogLikelihoodCondGauss(BaseStructureScore):
                     log_like += np.sum(np.log((p_c_d1d2 * p_d1d2) / (p_c_d2 * p_d2.values.ravel()[0])))
             return log_like
 
-    def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
+    def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         ll = self._log_likelihood(variable=variable, parents=parents)
         return ll

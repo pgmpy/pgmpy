@@ -1,3 +1,5 @@
+from collections.abc import Hashable
+
 import numpy as np
 
 from pgmpy.structure_score.log_likelihood_cond_gauss import LogLikelihoodCondGauss
@@ -22,6 +24,8 @@ class BICCondGauss(LogLikelihoodCondGauss):
         DataFrame where columns may be discrete or continuous variables.
     state_names : dict, optional
         Dictionary mapping discrete variable names to their possible states.
+    max_cache_size : int or None, default=10000
+        Maximum number of local scores to cache. If None, the cache is unlimited.
 
     Examples
     --------
@@ -47,7 +51,7 @@ class BICCondGauss(LogLikelihoodCondGauss):
 
     References
     ----------
-    - :cite:p:`andrews_ramsey_cooper_2018`
+    - :footcite:t:`andrews_ramsey_cooper_2018`
     """
 
     _tags = {
@@ -57,10 +61,7 @@ class BICCondGauss(LogLikelihoodCondGauss):
         "is_parameteric": False,
     }
 
-    def __init__(self, data, state_names=None):
-        super().__init__(data, state_names=state_names)
-
-    def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
+    def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         ll = self._log_likelihood(variable=variable, parents=parents)
         k = self._get_num_parameters(variable=variable, parents=parents)
 

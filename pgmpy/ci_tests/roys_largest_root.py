@@ -65,9 +65,7 @@ class RoysLargestRoot(_ResidualMixin, BaseCITest):
 
     References
     ----------
-    .. [1] Muller, K. E. and Peterson B. L. (1984) Practical Methods for computing power in
-           testing the multivariate general linear hypothesis. Computational Statistics &
-           Data Analysis.
+    - :footcite:t:`muller_peterson_1984`
     """
 
     _tags = {

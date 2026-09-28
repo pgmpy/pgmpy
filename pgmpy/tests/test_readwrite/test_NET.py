@@ -178,19 +178,12 @@ potential (xray | either){
         model.add_cpds(cpd_a, cpd_b)
 
         # Test that warning is raised when writing
-        with self.assertLogs("pgmpy", level="WARNING") as cm:
+        with self.assertWarnsRegex(UserWarning, "State name 'state,1' for variable 'A' contains a comma"):
             writer = NETWriter(model)
             with tempfile.NamedTemporaryFile(suffix=".net", delete=False) as tmp:
                 tmp_path = tmp.name
             try:
                 writer.write_net(tmp_path)
-
-                # Verify the warning was logged
-                self.assertIn(
-                    "State name 'state,1' for variable 'A' contains commas. "
-                    "This may cause issues when loading the file. Consider removing any special characters.",
-                    cm.output[0],
-                )
 
                 # Verify that loading fails due to commas in state names
                 with self.assertRaises(ValueError):

@@ -1,4 +1,3 @@
-import networkx as nx
 import numpy as np
 
 from pgmpy.base import DAG, PDAG
@@ -45,8 +44,8 @@ class SHD(BaseSupervisedMetric):
     PDAGs are also supported:
 
     >>> from pgmpy.base import PDAG
-    >>> pdag1 = PDAG(directed_ebunch=[(1, 2)], undirected_ebunch=[(2, 3)])
-    >>> pdag2 = PDAG(directed_ebunch=[(1, 2), (2, 3)])
+    >>> pdag1 = PDAG(edge_list=[(1, 2, "->"), (2, 3, "--")])
+    >>> pdag2 = PDAG(edge_list=[(1, 2, "->"), (2, 3, "->")])
     >>> shd(true_causal_graph=pdag1, est_causal_graph=pdag2)
     1
     """
@@ -68,16 +67,13 @@ class SHD(BaseSupervisedMetric):
         super().__init__()
 
     def _evaluate(self, true_causal_graph, est_causal_graph):
-
-        nodes_list = true_causal_graph.nodes()
-
-        dag_true = nx.DiGraph(true_causal_graph.edges())
-        dag_true.add_nodes_from(list(nx.isolates(true_causal_graph)))
-        m1 = nx.adjacency_matrix(dag_true, nodelist=nodes_list).todense()
-
-        dag_est = nx.DiGraph(est_causal_graph.edges())
-        dag_est.add_nodes_from(list(nx.isolates(est_causal_graph)))
-        m2 = nx.adjacency_matrix(dag_est, nodelist=nodes_list).todense()
+        # Both DAG and PDAG expose ``to_adjacency``; the binary encoding gives a 0/1 directed
+        # adjacency (directed edges asymmetric, undirected edges symmetric). ``copy=True`` keeps the
+        # arrays writable -- under pandas copy-on-write ``to_numpy()`` returns a read-only view, and
+        # the SHD computation mutates ``m1`` in place.
+        nodes_list = list(true_causal_graph.nodes())
+        m1 = true_causal_graph.to_adjacency(encoding="binary", nodelist=nodes_list).to_numpy(copy=True)
+        m2 = est_causal_graph.to_adjacency(encoding="binary", nodelist=nodes_list).to_numpy(copy=True)
 
         shd = 0
 

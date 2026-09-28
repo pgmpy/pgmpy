@@ -100,8 +100,7 @@ def load_model(name: str):
 
     Returns
     -------
-    model: pgmpy.base.DAG or pgmpy.models.DiscreteBayesianNetwork or pgmpy.models.LinearGaussianBayesianNetwork or
-                pgmpy.models.FunctionalBayesianNetwork
+    model : DAG or Bayesian network model
         The loaded example model.
 
     Examples

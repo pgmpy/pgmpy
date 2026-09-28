@@ -1,6 +1,5 @@
 __authors__ = ["srhmm", "Nimish-4", "ankurankan"]
 
-import networkx as nx
 import numpy as np
 import pandas as pd
 from tqdm.auto import tqdm
@@ -24,10 +23,12 @@ class TOPIC(BaseCausalDiscovery):
     Parameters
     ----------
     scoring_method : str or BaseStructureScore instance, default=None
-        The local score used to evaluate edge additions and prunings. Supported structure scores: k2, bdeu, bds, bic-d,
-        aic-d, ll-g, aic-g, bic-g, ll-cg, aic-cg, bic-cg. Also accepts a custom score, but it should be an instance of
-        ``BaseStructureScore``. If ``None``, an appropriate default is selected automatically based on whether the
-        data is continuous or discrete.
+        The score to be optimized during structure estimation. Please refer :doc:`/api/structure_score` for a list of
+        available scoring methods.
+
+        If ``None``, the appropriate scoring method is automatically selected based on the data type. If a string is
+        provided, the corresponding scoring method is instantiated with default parameters. To customize score-specific
+        parameters, please pass an instance of the scoring class.
 
     return_type : str, default="dag"
         The type of structure to return. One of ``"dag"`` (a fully directed DAG) or ``"pdag"`` (the DAG converted to a
@@ -79,8 +80,7 @@ class TOPIC(BaseCausalDiscovery):
 
     References
     ----------
-    .. [1] Xu, S., Mameche, S. and Vreeken, J. Information-Theoretic Causal Discovery in Topological Order.
-           International Conference on Artificial Intelligence and Statistics (AISTATS), 2025.
+    - :footcite:t:`xu_mameche_vreeken_2025`
 
     """
 
@@ -179,7 +179,9 @@ class TOPIC(BaseCausalDiscovery):
         else:
             raise ValueError(f"return_type must be one of: dag, pdag, got {self.return_type}")
 
-        self.adjacency_matrix_ = nx.to_pandas_adjacency(self.causal_graph_)
+        self.adjacency_matrix_ = self.causal_graph_.to_adjacency(
+            encoding="binary", nodelist=list(self.causal_graph_.nodes())
+        )
         self.topological_order_ = topological_order_
 
         return self

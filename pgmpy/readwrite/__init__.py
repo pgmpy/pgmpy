@@ -7,8 +7,6 @@ from .XMLBeliefNetwork import XBNReader, XBNWriter
 from .XMLBIF import XMLBIFReader, XMLBIFWriter
 
 __all__ = [
-    "ProbModelXMLReader",
-    "ProbModelXMLWriter",
     "XMLBIFReader",
     "XMLBIFWriter",
     "XBNReader",

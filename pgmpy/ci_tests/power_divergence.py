@@ -94,7 +94,7 @@ class PowerDivergence(BaseCITest):
 
     References
     ----------
-    - :cite:p:`cressie_read_1984`
+    - :footcite:t:`cressie_read_1984`
 
     Examples
     --------
@@ -107,7 +107,7 @@ class PowerDivergence(BaseCITest):
     >>> data["E"] = data["A"] + data["B"] + data["C"]
     >>> test = PowerDivergence(data=data)
     >>> test(X="A", Y="C", Z=[], significance_level=0.05)
-    np.True_
+    True
     >>> round(test.statistic_, 2)
     np.float64(0.03)
     >>> round(test.p_value_, 2)
@@ -115,9 +115,9 @@ class PowerDivergence(BaseCITest):
     >>> test.dof_
     1
     >>> test(X="A", Y="B", Z=["D"], significance_level=0.05)
-    np.True_
+    True
     >>> test(X="A", Y="B", Z=["D", "E"], significance_level=0.05)
-    np.False_
+    False
     """
 
     _tags = {

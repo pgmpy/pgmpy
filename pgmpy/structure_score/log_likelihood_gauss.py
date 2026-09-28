@@ -1,3 +1,5 @@
+from collections.abc import Hashable
+
 import numpy as np
 
 from pgmpy.structure_score._base import BaseStructureScore
@@ -26,6 +28,8 @@ class LogLikelihoodGauss(BaseStructureScore):
         DataFrame where each column represents a continuous variable.
     state_names : dict, optional
         Accepted for API consistency but not typically used for Gaussian networks.
+    max_cache_size : int or None, default=10000
+        Maximum number of local scores to cache. If None, the cache is unlimited.
 
     Examples
     --------
@@ -57,14 +61,14 @@ class LogLikelihoodGauss(BaseStructureScore):
         "is_parameteric": False,
     }
 
-    def __init__(self, data, state_names=None):
-        super().__init__(data, state_names=state_names)
+    def __init__(self, data, state_names=None, max_cache_size=10000):
+        super().__init__(data, state_names=state_names, max_cache_size=max_cache_size)
         self._np_data = self.data.to_numpy()
         self._col_index = {col: i for i, col in enumerate(self.data.columns)}
         self._n_samples = self._np_data.shape[0]
         self._ll_const = -0.5 * self._n_samples * (np.log(2.0 * np.pi) + 1.0)
 
-    def _log_likelihood(self, variable: str, parents: tuple[str, ...]) -> tuple[float, float]:
+    def _log_likelihood(self, variable: Hashable, parents: tuple[Hashable, ...]) -> tuple[float, float]:
         n = self._n_samples
         y = self._np_data[:, self._col_index[variable]]
 
@@ -87,7 +91,7 @@ class LogLikelihoodGauss(BaseStructureScore):
         ll = self._ll_const - 0.5 * n * np.log(rss / n)
         return (ll, df_model)
 
-    def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
+    def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         ll, _ = self._log_likelihood(variable=variable, parents=parents)
 
         return ll
