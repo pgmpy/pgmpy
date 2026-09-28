@@ -33,6 +33,10 @@ class BaseParameter(BaseEstimator):
         Names of the parent variables; empty for a root variable.
     variable_type_ : str
         Type of the target, ``"discrete"`` or ``"continuous"``.
+
+    Warnings
+    --------
+    Experimental: the API of ``pgmpy.parameterization`` may change in any release without a deprecation period.
     """
 
     _tags = {

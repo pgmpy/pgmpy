@@ -1,9 +1,13 @@
+import importlib
+
 import numpy as np
 import pandas as pd
 import pytest
 from sklearn.exceptions import NotFittedError
 
+import pgmpy.parameterization
 from pgmpy.parameterization import BaseParameter
+from pgmpy.utils import ExperimentalWarning
 
 
 class CountParameter(BaseParameter):
@@ -34,6 +38,10 @@ def data():
 
 
 class TestBaseParameter:
+    def test_experimental_warning(self):
+        with pytest.warns(ExperimentalWarning, match="pgmpy.parameterization is experimental"):
+            importlib.reload(pgmpy.parameterization)
+
     def test_tags(self):
         assert BaseParameter.get_class_tag("object_type") == "parameterization"
         assert BaseParameter.get_class_tag("variable_type") == ["discrete", "continuous"]

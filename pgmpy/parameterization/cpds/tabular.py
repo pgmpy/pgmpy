@@ -39,6 +39,10 @@ class TabularCPD(BaseParameter):
     evidence_ : list
         Names of the parent variables, sorted.
 
+    Warnings
+    --------
+    Experimental: the API of ``pgmpy.parameterization`` may change in any release without a deprecation period.
+
     Examples
     --------
     >>> import pandas as pd

@@ -7,6 +7,13 @@ _PACKAGE_DIR = Path(__file__).resolve().parents[1]
 _SKIP_FILE_PREFIXES = tuple(str(path) for path in _PACKAGE_DIR.iterdir() if path.name != "tests")
 
 
+class ExperimentalWarning(UserWarning):
+    """Warns that a feature is experimental: its API may change in any release without a deprecation period.
+
+    Silence it with ``warnings.filterwarnings("ignore", category=ExperimentalWarning)``.
+    """
+
+
 def _warn_external(message: str, category: type[Warning] = UserWarning) -> None:
     """Issue a warning at the first external caller, treating pgmpy's tests as external."""
     if sys.version_info >= (3, 12):
