@@ -3,6 +3,7 @@ from itertools import combinations
 
 import numpy as np
 import pandas as pd
+from rmsea import RMSEA
 from scipy import stats
 from tqdm import tqdm
 
@@ -98,7 +99,7 @@ class FisherC(BaseUnsupervisedMetric):
 
         if self.compute_rmsea:
             if len(X) != 1 and len(cis) != 0:
-                rmsea = np.sqrt(max((C - 2 * len(cis)) / (2 * len(cis) * (len(X) - 1)), 0))
+                rmsea = RMSEA.compute_rmsea(C,(2* len(cis)), X)
             return (p_value, rmsea)
 
         else:

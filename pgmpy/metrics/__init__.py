@@ -1,5 +1,8 @@
 from ._base import BaseSupervisedMetric, BaseUnsupervisedMetric, get_metrics
 from .adjacency_cm import AdjacencyConfusionMatrix
+from .adjacency_scores import AdjacencyF1
+from .adjacency_scores import AdjacencyPrecision
+from .adjacency_scores import AdjacencyRecall
 from .correlation_score import CorrelationScore
 from .fisher_c import FisherC
 from .implied_cis import ImpliedCIs
@@ -12,6 +15,9 @@ __all__ = [
     "BaseUnsupervisedMetric",
     "get_metrics",
     "AdjacencyConfusionMatrix",
+    "AdjacencyRecall",
+    "AdjacencyPrecision",
+    "AdjacencyF1",
     "OrientationConfusionMatrix",
     "SHD",
     "CorrelationScore",
