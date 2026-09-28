@@ -44,6 +44,10 @@ class NominalDistribution(BaseDistribution):
         One column label for an array distribution, defaulting to ``["variable"]``. Scalar distributions have no column
         labels.
 
+    Warnings
+    --------
+    Experimental: the API of ``pgmpy.parameterization`` may change in any release without a deprecation period.
+
     Examples
     --------
     >>> from pgmpy.parameterization.distributions import NominalDistribution
