@@ -16,7 +16,7 @@ class RMSEA(BaseUnsupervisedMetric):
     }
 
     @staticmethod
-    def _compute_rmsea(test_statistic, deg_of_freedom, data):
+    def compute_rmsea(test_statistic, deg_of_freedom, data):
         """
         Computes the Root Mean Square Error of Approximation given data,
         a test_statistic(X^2 / chi_squared) and degrees of freedom. This statistic
