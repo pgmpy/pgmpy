@@ -58,8 +58,8 @@ class Pearsonr(BaseCITest):
 
     References
     ----------
-    - :cite:p:`peerj_blue_driver`
-    - :cite:p:`wikipedia_partial_correlation`
+    - :footcite:t:`peerj_blue_driver`
+    - :footcite:t:`wikipedia_partial_correlation`
     """
 
     _tags = {

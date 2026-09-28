@@ -71,9 +71,9 @@ class PillaiTrace(_ResidualMixin, BaseCITest):
 
     References
     ----------
-    - :cite:p:`ankan_textor_2023`
-    - :cite:p:`li_shepherd_2010`
-    - :cite:p:`muller_peterson_1984`
+    - :footcite:t:`ankan_textor_2023`
+    - :footcite:t:`li_shepherd_2010`
+    - :footcite:t:`muller_peterson_1984`
     """
 
     _tags = {

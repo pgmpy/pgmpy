@@ -330,7 +330,7 @@ class FactorGraph(UndirectedGraph):
 
         return mm
 
-    def to_junction_tree(self):
+    def to_junction_tree(self, heuristic="MinFill", order=None):
         """
         Create a junction treeo (or clique tree) for a given factor graph.
 
@@ -338,6 +338,16 @@ class FactorGraph(UndirectedGraph):
         1. where each node in G corresponds to a maximal clique in H
         2. each sepset in G separates the variables strictly on one side of
         edge to other
+
+        Parameters
+        ----------
+        heuristic: str (default: "MinFill")
+            The heuristic used to triangulate the Markov network; see
+            `DiscreteMarkovNetwork.triangulate`.
+
+        order: list, tuple (array-like) (default: None)
+            The elimination order used to triangulate the Markov network; if
+            given the heuristic is not used.
 
         Examples
         --------
@@ -353,7 +363,7 @@ class FactorGraph(UndirectedGraph):
         >>> mm = G.to_markov_model()
         """
         mm = self.to_markov_model()
-        return mm.to_junction_tree()
+        return mm.to_junction_tree(heuristic=heuristic, order=order)
 
     def get_factors(self, node=None):
         """

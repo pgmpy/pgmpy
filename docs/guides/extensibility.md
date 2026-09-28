@@ -1,7 +1,8 @@
 # Extensibility
 
-```{meta}
-:description: Extend pgmpy using the repository templates for new datasets, models, metrics, and discovery algorithms.
+```{eval-rst}
+.. meta::
+   :description: Extend pgmpy using the repository templates for new datasets, models, metrics, and discovery algorithms.
 ```
 
 pgmpy is designed to be extensible. When you want to add a new algorithm, dataset,

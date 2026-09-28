@@ -1,5 +1,4 @@
 import gzip
-import warnings
 
 import pandas as pd
 
@@ -10,6 +9,7 @@ except ImportError:
     from importlib_resources import files
 
 from pgmpy import logger
+from pgmpy.utils._warnings import _warn_external
 
 
 def get_example_model(model: str):
@@ -48,11 +48,10 @@ def get_example_model(model: str):
       one of the model classes in pgmpy.models
                            depending on the type of dataset.
     """
-    warnings.warn(
-        """`get_example_model` is deprecated and will be removed in v2.0. Please use `pgmpy.example_models.load_model`
-        instead.""",
+    _warn_external(
+        "`get_example_model` is deprecated since v1.1.0 and will be removed in v2.0. "
+        "Use `pgmpy.example_models.load_model` instead.",
         FutureWarning,
-        stacklevel=2,
     )
     cat_models = {
         "asia",
@@ -328,15 +327,13 @@ def preprocess_data(df):
                 "Try specifying the appropriate datatype to the column."
             )
 
-    logger.info(
-        f" Datatype (N=numerical, C=Categorical Unordered,O=Categorical Ordered)inferred from data: \n {dtypes}"
-    )
+    logger.debug(f"Inferred variable types (N=numerical, C=unordered categorical, O=ordered categorical): {dtypes}")
     return (df, dtypes)
 
 
 def _heuristic_categorical_detection(df, dtypes):
     """
-    Creates a warning if numerical values are detected for a categorical variable.
+    Warns when numeric columns have a low ratio of distinct to non-missing values.
     """
     # credit: https://stackoverflow.com/a/35827646
     potential_categorical = []
@@ -345,9 +342,10 @@ def _heuristic_categorical_detection(df, dtypes):
             if 1.0 * df[var].nunique() / df[var].count() < 0.1:
                 potential_categorical.append(var)
     if len(potential_categorical) > 0:
-        logger.warning(
-            f"Variables: {potential_categorical} are likely categorical, but using numerical values. Please set the"
-            " dtype as `categorical` in pandas dataframe if that's the case, otherwise ignore this warning."
+        _warn_external(
+            f"Numeric variables {potential_categorical} have fewer distinct values than 10% of non-missing rows. "
+            "If these variables are categorical, cast them to pandas 'category' dtype.",
+            UserWarning,
         )
 
 
@@ -365,6 +363,12 @@ def get_dataset_type(data: pd.DataFrame) -> str:
     -------
     str
         `continuous`, `discrete` or `mixed`.
+
+    Warns
+    -----
+    UserWarning
+        If a numeric column has fewer distinct values than 10% of its non-missing rows. This heuristic does not
+        change the column's inferred type or the returned dataset type.
     """
 
     df, dtypes = preprocess_data(data)
