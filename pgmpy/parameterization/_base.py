@@ -44,10 +44,6 @@ class BaseParameter(BaseEstimator):
         "variable_type": ["discrete", "continuous"],
         "supports_weighted_data": False,
         "python_dependencies": None,
-        "local:plug_in": [],
-        "global:plug_in": [],
-        "local:full_bayesian": [],
-        "global:full_bayesian": [],
     }
 
     def __init__(self) -> None:
@@ -85,6 +81,8 @@ class BaseParameter(BaseEstimator):
             X = pd.DataFrame(index=y.index)
         if not isinstance(X, pd.DataFrame):
             raise ValueError("X must be a pandas DataFrame, or None for a root variable.")
+        if X.columns.has_duplicates:
+            raise ValueError(f"X has repeated column names: {X.columns[X.columns.duplicated()].unique().tolist()}.")
         check_consistent_length(X, y)
         if len(y) == 0:
             raise ValueError("fit needs at least one row of data.")
@@ -99,6 +97,9 @@ class BaseParameter(BaseEstimator):
         if isinstance(supported_types, str):
             supported_types = [supported_types]
         variable_type = supported_types[0] if len(supported_types) == 1 else get_dataset_type(y)
+        # For one column, get_dataset_type says "mixed" only for an ordered categorical with non-string categories.
+        if variable_type == "mixed":
+            variable_type = "discrete"
         if variable_type not in supported_types:
             raise ValueError(f"{type(self).__name__} supports {supported_types} targets, but y is {variable_type}.")
         if variable_type == "continuous" and not pd.api.types.is_numeric_dtype(y.iloc[:, 0]):
@@ -107,6 +108,8 @@ class BaseParameter(BaseEstimator):
         if sample_weight is not None:
             if not self.get_tag("supports_weighted_data"):
                 raise ValueError(f"{type(self).__name__} does not support sample_weight.")
+            if isinstance(sample_weight, pd.Series) and not sample_weight.index.equals(y.index):
+                raise ValueError("A sample_weight Series must have the same index as y.")
             sample_weight = np.asarray(sample_weight, dtype=float)
             if sample_weight.shape != (len(y),):
                 raise ValueError(

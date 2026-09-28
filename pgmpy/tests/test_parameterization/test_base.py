@@ -47,8 +47,6 @@ class TestBaseParameter:
         assert BaseParameter.get_class_tag("variable_type") == ["discrete", "continuous"]
         assert BaseParameter.get_class_tag("supports_weighted_data") is False
         assert BaseParameter.get_class_tag("python_dependencies") is None
-        for tag in ("local:plug_in", "global:plug_in", "local:full_bayesian", "global:full_bayesian"):
-            assert BaseParameter.get_class_tag(tag) == []
 
     def test_fit(self, data):
         X, y = data
@@ -87,6 +85,7 @@ class TestBaseParameter:
             (X, y.assign(t=["0", np.nan, "1", "1"])),  # NaN in y
             (X.astype("string").assign(b=pd.array(["u", pd.NA, "u", "v"], dtype="string")), y),  # pd.NA in X
             (X.iloc[:0], y.iloc[:0]),  # no rows
+            (pd.concat([X, X[["a"]]], axis=1), y),  # duplicate column names in X
         ]
         for X_bad, y_bad in rejected:
             with pytest.raises(ValueError):
@@ -113,11 +112,19 @@ class TestBaseParameter:
 
         assert AnyParameter().fit(X, y.astype(float) + 0.5).variable_type_ == "continuous"
         assert AnyParameter().fit(X, y).variable_type_ == "discrete"
+        ordered = pd.Series(pd.Categorical([2, 1, 2, 2], categories=[1, 2], ordered=True), index=X.index, name="t")
+        assert AnyParameter().fit(X, ordered).variable_type_ == "discrete"
 
     def test_sample_weight(self, data):
         X, y = data
 
         assert CountParameter().fit(X, y, sample_weight=[0.5, 1, 0, 2]).total_weight_ == 3.5
+
+        # A Series of weights must have y's index; arrays and lists apply by position.
+        weights = pd.Series([0.5, 1, 0, 2], index=y.index)
+        assert CountParameter().fit(X, y, sample_weight=weights).total_weight_ == 3.5
+        with pytest.raises(ValueError, match="index"):
+            CountParameter().fit(X, y, sample_weight=weights.iloc[::-1])
         for weights in (
             [1, 1, 1],
             [[1], [1], [1], [1]],

@@ -46,7 +46,6 @@ class TestTabularCPD:
         assert TabularCPD.get_class_tag("variable_type") == "discrete"
         assert TabularCPD.get_class_tag("supports_weighted_data") is True
         assert TabularCPD.get_class_tag("python_dependencies") == "skpro"
-        assert TabularCPD.get_class_tag("local:plug_in") == ["mle"]
 
     def test_fit(self, discrete_data):
         X, y = discrete_data
@@ -116,6 +115,19 @@ class TestTabularCPD:
 
         with pytest.raises(ValueError, match="unexpected states"):
             TabularCPD(state_names={"y": ["0"]}).fit(X, y)
+        with pytest.raises(ValueError, match="Repeated state names"):
+            TabularCPD(state_names={"y": ["0", "1", "1"]}).fit(X, y)
+        with pytest.raises(TypeError, match="dict"):
+            TabularCPD(state_names=["0", "1"]).fit(X, y)
+        assert TabularCPD(state_names={"y": iter(["0", "1"])}).fit(X, y).state_names_["y"] == ["0", "1"]
+
+        # States that equal the data only under Python's == (here 0/1 for booleans) are caught instead of miscounted.
+        with pytest.raises(ValueError, match="don't match"):
+            TabularCPD(state_names={"y": [0, 1]}).fit(None, pd.Series([True, True, False], name="y"))
+
+        # Huge but finite weights don't overflow, and an index named like a parent doesn't clash with it.
+        np.testing.assert_allclose(TabularCPD().fit(X, y, sample_weight=np.full(len(y), 1e307)).CPT_, EXPECTED_CPT)
+        np.testing.assert_allclose(TabularCPD().fit(X.rename_axis("x1"), y.rename_axis("x1")).CPT_, EXPECTED_CPT)
 
     def test_predict_proba(self, discrete_data):
         X, y = discrete_data
@@ -155,6 +167,11 @@ class TestTabularCPD:
         marginal = root.predict_proba()
         assert marginal.shape == () and marginal.pmf("0") == pytest.approx(0.56)
 
+        # Returned distributions hold copies, so changing them leaves the CPD as it was.
+        marginal.probs[:] = 0.5
+        marginal.categories.reverse()
+        assert root.predict_proba().pmf("0") == pytest.approx(0.56) and root.state_names_["y"] == ["0", "1"]
+
         # Any fitted variable gives its marginal over the parent combinations seen in fit, which for these estimates
         # equals the frequencies of y, weighted by any sample weights.
         assert cpd.predict_proba().pmf("0") == pytest.approx(0.56)
@@ -190,8 +207,18 @@ class TestTabularCPD:
         with pytest.raises(ValueError, match="from_values"):
             cpd.predict_proba()
 
-        root = TabularCPD.from_values("y", 2, [[0.56], [0.44]], state_names={"y": ["0", "1"]})
+        # The table is copied, so reusing the caller's array doesn't change the CPD.
+        values = np.array([[0.56], [0.44]])
+        root = TabularCPD.from_values("y", 2, values, state_names={"y": ["0", "1"]})
+        values[:] = 0.5
         assert root == TabularCPD().fit(None, y)
+
+        # CPDs compare by distribution, whatever the order of their states.
+        flipped = fitted.CPT_.reshape(2, 3, 2)[::-1, ::-1, :].reshape(2, 6)
+        state_names = {"y": ["1", "0"], "x1": ["2", "1", "0"], "x2": ["0", "1"]}
+        reordered = TabularCPD.from_values("y", 2, flipped, ["x1", "x2"], [3, 2], state_names)
+        assert reordered == fitted and hash(reordered) == hash(fitted)
+        assert TabularCPD.from_values("y", 2, fitted.CPT_, ["x1", "x2"], [3, 2], state_names) != fitted
 
         # As in pgmpy.factors.discrete.TabularCPD, variables without state names get the states 0, 1, ...
         legacy = LegacyTabularCPD("y", 2, [[0.2, 0.7], [0.8, 0.3]], ["x"], [2])
@@ -208,3 +235,8 @@ class TestTabularCPD:
             TabularCPD.from_values("y", 3, [[0.5], [0.5]], state_names={"y": ["0", "1"]})
         with pytest.raises(ValueError, match="evidence_card"):
             TabularCPD.from_values("y", 2, [[0.5], [0.5]], ["x"])
+        with pytest.raises(ValueError, match="Repeated state names"):
+            TabularCPD.from_values("y", 2, [[0.5], [0.5]], state_names={"y": ["a", "a"]})
+        for evidence in (["y"], ["x", "x"]):
+            with pytest.raises(ValueError, match="different names"):
+                TabularCPD.from_values("y", 2, np.full((2, 2 ** len(evidence)), 0.5), evidence, [2] * len(evidence))

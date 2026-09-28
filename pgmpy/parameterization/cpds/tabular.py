@@ -73,7 +73,6 @@ class TabularCPD(BaseParameter):
         "variable_type": "discrete",
         "supports_weighted_data": True,
         "python_dependencies": "skpro",
-        "local:plug_in": ["mle"],
     }
 
     def __init__(self, state_names: dict | None = None) -> None:
@@ -121,14 +120,19 @@ class TabularCPD(BaseParameter):
         evidence_card = [] if evidence_card is None else list(evidence_card)
         if len(evidence_card) != len(evidence):
             raise ValueError(f"evidence_card must have one entry per parent in {evidence}, but is {evidence_card}.")
+        if variable in evidence or len(set(evidence)) != len(evidence):
+            raise ValueError(
+                f"The variable and its parents must have different names, but got {variable!r} and {evidence}."
+            )
+        given = _checked_state_names(state_names)
         cardinalities = dict(zip([variable, *evidence], [variable_card, *evidence_card]))
-        states = {name: list((state_names or {}).get(name, range(card))) for name, card in cardinalities.items()}
+        states = {name: given.get(name, list(range(card))) for name, card in cardinalities.items()}
         for name, card in cardinalities.items():
             if len(states[name]) != card:
                 raise ValueError(
                     f"{name!r} has {card} states, but state_names lists {len(states[name])}: {states[name]}."
                 )
-        values = np.asarray(values, dtype=float)
+        values = np.array(values, dtype=float)
         shape = (variable_card, int(np.prod(evidence_card)))
         if values.shape != shape:
             raise ValueError(
@@ -150,11 +154,19 @@ class TabularCPD(BaseParameter):
         return cpd
 
     def _fit(self, X: pd.DataFrame, y: pd.DataFrame, sample_weight: np.ndarray | None) -> None:
+        given = _checked_state_names(self.state_names)
         self.evidence_ = sorted(self.evidence_)
-        data = pd.concat([y, X[self.evidence_]], axis=1) if self.evidence_ else y
-        state_names = build_state_names(data, self.state_names)
+        data = (pd.concat([y, X[self.evidence_]], axis=1) if self.evidence_ else y).reset_index(drop=True)
+        state_names = build_state_names(data, given)
+        if sample_weight is not None:
+            sample_weight = sample_weight / sample_weight.max()
         counts = get_state_counts(data, state_names, self.variable_, self.evidence_, sample_weight)
         counts = counts.to_numpy(dtype=float, copy=True)
+        if not np.isclose(counts.sum(), len(data) if sample_weight is None else sample_weight.sum()):
+            raise ValueError(
+                "Some values in the data don't match state_names, e.g. [0, 1] given for boolean data; list the states "
+                "with the data's own types."
+            )
         self._marginal = counts.sum(axis=1) / counts.sum()
         counts[:, (counts == 0).all(axis=0)] = 1.0
         self._set_table(counts / counts.sum(axis=0), state_names)
@@ -170,7 +182,7 @@ class TabularCPD(BaseParameter):
                     "A TabularCPD with parents created by from_values has no data on its parents, so its marginal "
                     "distribution is unknown; pass X."
                 )
-            return NominalDistribution(probs=self._marginal, categories=self.state_names_[self.variable_])
+            return NominalDistribution(probs=self._marginal.copy(), categories=list(self.state_names_[self.variable_]))
         codes, cardinalities = encode_columns(X, self.state_names_)
         columns = np.zeros(len(X), dtype=int)
         for parent in self.evidence_:
@@ -183,7 +195,35 @@ class TabularCPD(BaseParameter):
             columns = columns * cardinalities[parent] + codes[parent]
         return NominalDistribution(
             probs=self.CPT_.T.take(columns, axis=0),
-            categories=self.state_names_[self.variable_],
+            categories=list(self.state_names_[self.variable_]),
             index=X.index,
             columns=[self.variable_],
         )
+
+    def __eq__(self, other: object) -> bool:
+        if type(other) is not type(self) or not (self.is_fitted and other.is_fitted):
+            return super().__eq__(other)
+        names = [self.variable_, *self.evidence_]
+        if (self.variable_, self.evidence_) != (other.variable_, other.evidence_) or any(
+            set(self.state_names_[name]) != set(other.state_names_[name]) for name in names
+        ):
+            return False
+        # Put other's table in this CPD's state order before comparing, as DiscreteFactor.__eq__ does.
+        positions = [[other.state_names_[name].index(state) for state in self.state_names_[name]] for name in names]
+        cardinalities = [len(self.state_names_[name]) for name in names]
+        return np.allclose(self.CPT_, other.CPT_.reshape(cardinalities)[np.ix_(*positions)].reshape(self.CPT_.shape))
+
+    __hash__ = BaseParameter.__hash__
+
+
+def _checked_state_names(state_names: dict | None) -> dict:
+    """Return the given state names as lists, rejecting anything but a dict and repeated states."""
+    if state_names is None:
+        return {}
+    if not isinstance(state_names, dict):
+        raise TypeError(f"state_names must be a dict of {{variable: [states]}}, but is a {type(state_names).__name__}.")
+    state_names = {variable: list(states) for variable, states in state_names.items()}
+    for variable, states in state_names.items():
+        if len(set(states)) != len(states):
+            raise ValueError(f"Repeated state names for variable {variable!r}: {states}.")
+    return state_names

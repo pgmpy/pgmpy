@@ -26,6 +26,10 @@ def _warn_external(message: str, category: type[Warning] = UserWarning) -> None:
         stack_level = 1
         try:
             while frame is not None:
+                # warnings.warn doesn't count importlib's frames towards stacklevel, so skip them here too.
+                if "importlib" in frame.f_code.co_filename and "_bootstrap" in frame.f_code.co_filename:
+                    frame = frame.f_back
+                    continue
                 filename = Path(frame.f_code.co_filename).resolve()
                 if not filename.is_relative_to(_PACKAGE_DIR) or filename.is_relative_to(test_dir):
                     break
