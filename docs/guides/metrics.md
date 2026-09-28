@@ -1,7 +1,8 @@
 # Metrics
 
-```{meta}
-:description: Evaluate learned graphs and fitted models using pgmpy's metric APIs.
+```{eval-rst}
+.. meta::
+   :description: Evaluate learned graphs and fitted models using pgmpy's metric APIs.
 ```
 
 After learning a graph or fitting a model, you need to evaluate how good the result is.

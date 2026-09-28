@@ -1,28 +1,40 @@
 from abc import abstractmethod
 from itertools import combinations
+from math import prod
 
-import numpy as np
+import networkx as nx
 from tqdm.auto import tqdm
 
 from pgmpy import config
-from pgmpy.models import DiscreteBayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork
 
 
 class BaseEliminationOrder:
     """
-    Init method for the base class of Elimination Orders.
+    Base class of the greedy elimination-order heuristics. Subclasses implement
+    `cost`, the cost of eliminating a node from the current graph; the node with
+    the smallest cost is eliminated first, its neighbours are connected (fill-in
+    edges) and the costs are recomputed on the reduced graph.
 
     Parameters
     ----------
-    model: DiscreteBayesianNetwork instance
-        The model on which we want to compute the elimination orders.
+    model: DiscreteBayesianNetwork or DiscreteMarkovNetwork instance
+        The model on which we want to compute the elimination orders. The costs are
+        computed on the moral graph of a Bayesian network, or on the Markov network
+        itself; the model is not modified.
     """
 
     def __init__(self, model):
-        if not isinstance(model, DiscreteBayesianNetwork):
-            raise ValueError("Model should be a DiscreteBayesianNetwork instance")
-        self.bayesian_model = model.copy()
-        self.moralized_model = self.bayesian_model.moralize()
+        if isinstance(model, DiscreteBayesianNetwork):
+            self.moralized_model = model.moralize()
+        elif isinstance(model, DiscreteMarkovNetwork):
+            self.moralized_model = nx.Graph()
+            self.moralized_model.add_nodes_from(model.nodes())
+            self.moralized_model.add_edges_from(model.edges())
+        else:
+            raise ValueError("Model should be a DiscreteBayesianNetwork or a DiscreteMarkovNetwork instance")
+        self.model = model
+        self.cardinality = model.get_cardinality()
 
     @abstractmethod
     def cost(self, node):
@@ -40,13 +52,20 @@ class BaseEliminationOrder:
 
     def get_elimination_order(self, nodes=None, show_progress=True):
         """
-        Returns the optimal elimination order based on the cost function.
-        The node having the least cost is removed first.
+        Returns the greedy elimination order based on the cost function: the node
+        having the least cost in the current graph is eliminated first (ties are
+        broken by the order of the nodes in the graph), its fill-in edges are added,
+        and the costs are recomputed. `self.moralized_model` is modified in the
+        process.
 
         Parameters
         ----------
         nodes: list, tuple, set (array-like)
-            The variables which are to be eliminated.
+            The variables which are to be eliminated. If None, all the variables
+            of the model are eliminated.
+
+        show_progress: boolean (default: True)
+            Whether to show a progress bar.
 
         Examples
         --------
@@ -78,43 +97,50 @@ class BaseEliminationOrder:
         >>> cpd_h = TabularCPD("h", 2, rng.random((2, 6)), ["g", "j"], [3, 2])
         >>> model.add_cpds(cpd_c, cpd_d, cpd_g, cpd_i, cpd_s, cpd_j, cpd_l, cpd_h)
         >>> WeightedMinFill(model).get_elimination_order(["c", "d", "g", "l", "s"])
-        ['c', 'd', 's', 'l', 'g']
-        >>> WeightedMinFill(model).get_elimination_order(["c", "d", "g", "l", "s"])
-        ['c', 'd', 's', 'l', 'g']
-        >>> WeightedMinFill(model).get_elimination_order(["c", "d", "g", "l", "s"])
-        ['c', 'd', 's', 'l', 'g']
+        ['c', 'd', 'l', 's', 'g']
         """
         if nodes is None:
-            nodes = self.bayesian_model.nodes()
-        nodes = set(nodes)
+            remaining = list(self.moralized_model.nodes())
+        else:
+            nodes = set(nodes)
+            if missing := nodes - set(self.moralized_model.nodes()):
+                raise ValueError(f"Nodes not found in the model: {missing}")
+            remaining = [node for node in self.moralized_model.nodes() if node in nodes]
 
-        ordering = []
+        pbar = None
         if show_progress and config.SHOW_PROGRESS:
-            pbar = tqdm(total=len(nodes))
+            pbar = tqdm(total=len(remaining))
             pbar.set_description("Finding Elimination Order: ")
 
-        while nodes:
-            scores = {node: self.cost(node) for node in nodes}
-            min_score_node = min(scores, key=scores.get)
-            ordering.append(min_score_node)
-            nodes.remove(min_score_node)
-            self.bayesian_model.remove_node(min_score_node)
-            self.moralized_model.remove_node(min_score_node)
-
-            if show_progress and config.SHOW_PROGRESS:
+        ordering = []
+        while remaining:
+            node = min(remaining, key=self.cost)
+            ordering.append(node)
+            remaining.remove(node)
+            self.moralized_model.add_edges_from(self.fill_in_edges(node))
+            self.moralized_model.remove_node(node)
+            if pbar is not None:
                 pbar.update(1)
+        if pbar is not None:
+            pbar.close()
         return ordering
 
     def fill_in_edges(self, node):
         """
-        Return edges needed to be added to the graph if a node is removed.
+        Return edges needed to be added to the graph if a node is removed: the pairs
+        of its neighbours which are not adjacent yet.
 
         Parameters
         ----------
         node: string (any hashable python object)
             Node to be removed from the graph.
         """
-        return combinations(self.bayesian_model.neighbors(node), 2)
+        graph = self.moralized_model
+        return [(u, v) for u, v in combinations(graph.neighbors(node), 2) if not graph.has_edge(u, v)]
+
+    def _weight(self, nodes):
+        """Product of the cardinalities of `nodes`; a node without a known cardinality counts as 1."""
+        return prod(self.cardinality.get(node, 1) for node in nodes)
 
 
 class WeightedMinFill(BaseEliminationOrder):
@@ -125,13 +151,7 @@ class WeightedMinFill(BaseEliminationOrder):
         be added to the graph due to its elimination, where a weight of an edge is the
         product of the weights, domain cardinality, of its constituent vertices.
         """
-        edges = combinations(self.moralized_model.neighbors(node), 2)
-        return sum(
-            [
-                self.bayesian_model.get_cardinality(edge[0]) * self.bayesian_model.get_cardinality(edge[1])
-                for edge in edges
-            ]
-        )
+        return sum(self._weight(edge) for edge in self.fill_in_edges(node))
 
 
 class MinNeighbors(BaseEliminationOrder):
@@ -140,7 +160,7 @@ class MinNeighbors(BaseEliminationOrder):
         The cost of eliminating a node is the number of neighbors it has in the
         current graph.
         """
-        return len(list(self.moralized_model.neighbors(node)))
+        return self.moralized_model.degree(node)
 
 
 class MinWeight(BaseEliminationOrder):
@@ -149,9 +169,7 @@ class MinWeight(BaseEliminationOrder):
         The cost of eliminating a node is the product of weights, domain cardinality,
         of its neighbors.
         """
-        return np.prod(
-            [self.bayesian_model.get_cardinality(neig_node) for neig_node in self.moralized_model.neighbors(node)]
-        )
+        return self._weight(self.moralized_model.neighbors(node))
 
 
 class MinFill(BaseEliminationOrder):
@@ -160,4 +178,84 @@ class MinFill(BaseEliminationOrder):
         The cost of eliminating a node is the number of edges that need to be added
         (fill in edges) to the graph due to its elimination
         """
-        return len(list(self.fill_in_edges(node)))
+        return len(self.fill_in_edges(node))
+
+
+class _Kjaerulff(BaseEliminationOrder):
+    """
+    Base class of Kjaerulff's triangulation heuristics H1-H6, defined for a node X(i)
+    of the current graph in terms of
+
+    * S(i) - the size (product of the cardinalities) of the clique created by deleting X(i),
+      i.e. of its neighbours,
+    * E(i) - the cardinality of X(i),
+    * M(i) - the maximum size of the cliques containing X(i),
+    * C(i) - the sum of the sizes of the cliques containing X(i).
+
+    References
+    ----------
+    Kjaerulff, U. (1990). Triangulation of graphs - algorithms giving small total state space.
+    """
+
+    def _terms(self, node):
+        graph = self.moralized_model
+        S = self._weight(graph.neighbors(node))
+        E = self.cardinality.get(node, 1)
+        clique_sizes = [self._weight(clique) for clique in nx.find_cliques(graph, nodes=[node])]
+        return S, E, max(clique_sizes), sum(clique_sizes)
+
+
+class H1(_Kjaerulff):
+    def cost(self, node):
+        """Kjaerulff H1: S(i)."""
+        S, E, M, C = self._terms(node)
+        return S
+
+
+class H2(_Kjaerulff):
+    def cost(self, node):
+        """Kjaerulff H2: S(i) / E(i)."""
+        S, E, M, C = self._terms(node)
+        return S / E
+
+
+class H3(_Kjaerulff):
+    def cost(self, node):
+        """Kjaerulff H3: S(i) - M(i)."""
+        S, E, M, C = self._terms(node)
+        return S - M
+
+
+class H4(_Kjaerulff):
+    def cost(self, node):
+        """Kjaerulff H4: S(i) - C(i)."""
+        S, E, M, C = self._terms(node)
+        return S - C
+
+
+class H5(_Kjaerulff):
+    def cost(self, node):
+        """Kjaerulff H5: S(i) / M(i)."""
+        S, E, M, C = self._terms(node)
+        return S / M
+
+
+class H6(_Kjaerulff):
+    def cost(self, node):
+        """Kjaerulff H6: S(i) / C(i)."""
+        S, E, M, C = self._terms(node)
+        return S / C
+
+
+ELIMINATION_HEURISTICS = {
+    "minfill": MinFill,
+    "weightedminfill": WeightedMinFill,
+    "minneighbors": MinNeighbors,
+    "minweight": MinWeight,
+    "h1": H1,
+    "h2": H2,
+    "h3": H3,
+    "h4": H4,
+    "h5": H5,
+    "h6": H6,
+}

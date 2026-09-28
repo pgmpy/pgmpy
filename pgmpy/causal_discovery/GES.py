@@ -16,7 +16,7 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
     """
     Score-based causal discovery using Greedy Equivalence Search (GES).
 
-    This class implements the GES algorithm [1]_ for causal discovery. Given a
+    This class implements the GES algorithm [1] for causal discovery. Given a
     tabular dataset, the algorithm estimates the causal structure among the
     variables in the data as a Directed Acyclic Graph (DAG) or Partially
     Directed Acyclic Graph (PDAG).
@@ -29,16 +29,12 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
     Parameters
     ----------
     scoring_method : str or BaseStructureScore instance, default=None
-        The score to be optimized during structure estimation. Supported
-        structure scores:
+        The score to be optimized during structure estimation. Please refer :doc:`/api/structure_score` for a list of
+        available scoring methods.
 
-        - Discrete data: 'k2', 'bdeu', 'bds', 'bic-d', 'aic-d'
-        - Continuous data: 'll-g', 'aic-g', 'bic-g'
-        - Mixed data: 'll-cg', 'aic-cg', 'bic-cg'
-
-        If None, the appropriate scoring method is automatically selected based
-        on the data type. Also accepts a custom score instance that inherits
-        from `BaseStructureScore`.
+        If ``None``, the appropriate scoring method is automatically selected based on the data type. If a string is
+        provided, the corresponding scoring method is instantiated with default parameters. To customize score-specific
+        parameters, please pass an instance of the scoring class.
 
     return_type : str, default='pdag'
         The type of graph to return. Options are:
@@ -88,7 +84,7 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
 
     References
     ----------
-    - :cite:p:`chickering_2002b`
+    - :footcite:t:`chickering_2002b`
     - https://github.com/juangamella/ges
     """
 
@@ -128,9 +124,15 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
         current_model: PDAG,
     ) -> list[tuple[Hashable, Hashable]]:
         """
-        Return all edges that can be considered for deletion.
+        Return all edges that can be considered for deletion. An undirected edge yields both orders
+        ``(u, v)`` and ``(v, u)`` (deletion is order-dependent via the conditioning set).
         """
-        return sorted(current_model.edges())
+        legal_edges = []
+        for u, v, edge_type in current_model.get_edges(data=True):
+            legal_edges.append((u, v))
+            if edge_type == "--":
+                legal_edges.append((v, u))
+        return sorted(legal_edges)
 
     def insert(
         self,
@@ -144,24 +146,25 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
         """
         T = set(T)
 
-        if current_model.has_edge(u, v) or current_model.has_edge(v, u):
+        if current_model.has_edge(u, v):
             raise ValueError(f"Nodes u={u} and v={v} are already connected.")
 
         if T:
-            if not T.issubset(current_model.undirected_neighbors(v)):
+            if not T.issubset(current_model.get_neighbors(v, "--")):
                 raise ValueError(f"Not all nodes in T={T} are undirected neighbors of v={v}.")
 
-            if current_model.all_neighbors(u) & T:
+            if current_model.get_neighbors(u) & T:
                 raise ValueError(f"Some nodes in T={T} are adjacent to u={u}.")
 
         new_model = current_model.copy()
-        new_model.add_edge(u, v)
+        if not new_model.has_edge(u, v, "->"):
+            new_model.add_edge(u, v, "->")
 
         # Orient v - t as t -> v for all t in T
-        remove_edges = [(v, t) for t in T]
-        new_model.remove_edges_from(remove_edges)
+        remove_edges = [(t, v) for t in T]
+        for edges in remove_edges:
+            new_model.replace_edge(edges[0], edges[1], "--", "->")
 
-        new_model.calibrate_directed_undirected_edges()
         return new_model
 
     def delete(
@@ -174,23 +177,27 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
         """
         Perform delete(u - v) or delete(u -> v) with conditioning set H.
         """
-        na_vu = current_model.undirected_neighbors(v) & current_model.all_neighbors(u)
+        na_vu = current_model.get_neighbors(v, "--") & current_model.get_neighbors(u)
 
         if not H.issubset(na_vu):
             raise ValueError(f"H={H} is not a subset of NA_vu={na_vu}.")
 
         new_model = current_model.copy()
-        new_model.remove_edges_from([(u, v), (v, u)])
+        if new_model.has_edge(u, v, "--"):
+            new_model.remove_edge(u, v, "--")
+        if new_model.has_edge(u, v, "->"):
+            new_model.remove_edge(u, v, "->")
+        if new_model.has_edge(v, u, "->"):
+            new_model.remove_edge(v, u, "->")
 
         for h in H:
-            if new_model.has_undirected_edge(v, h):
-                new_model.remove_edge(h, v)
+            if new_model.has_edge(v, h, "--"):
+                new_model.replace_edge(v, h, "--", "->")
 
-        u_neighbors = set(new_model.undirected_neighbors(u))
+        u_neighbors = set(new_model.get_neighbors(u, "--"))
         for h in H & u_neighbors:
-            new_model.remove_edge(h, u)
+            new_model.replace_edge(u, h, "--", "->")
 
-        new_model.calibrate_directed_undirected_edges()
         return new_model
 
     def turn(
@@ -205,23 +212,28 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
         """
         C = set(C)
 
-        if current_model.has_edge(u, v) and not current_model.has_edge(v, u):
+        if current_model.has_edge(u, v, "->"):
             raise ValueError(f"The edge {u} -> {v} already exists.")
 
         new_model = current_model.copy()
 
-        if new_model.has_edge(v, u):
-            new_model.remove_edge(v, u)
+        if new_model.has_edge(v, u, "--"):
+            new_model.remove_edge(v, u, "--")
 
-        if not new_model.has_edge(u, v):
-            new_model.add_edge(u, v)
+        if new_model.has_edge(v, u, "->"):
+            new_model.remove_edge(v, u, "->")
+
+        if not new_model.has_edge(u, v, "->"):
+            new_model.add_edge(u, v, "->")
 
         for c in C:
-            if new_model.has_edge(v, c):
-                new_model.remove_edge(v, c)
-            new_model.add_edge(c, v)
+            if new_model.has_edge(c, v, "--"):
+                new_model.replace_edge(c, v, "--", "->")
+            elif not new_model.has_edge(c, v, "->"):
+                if new_model.has_edge(v, c, "->"):
+                    new_model.remove_edge(v, c, "->")
+                new_model.add_edge(c, v, "->")
 
-        new_model.calibrate_directed_undirected_edges()
         return new_model
 
     def _fit(self, X: pd.DataFrame):
@@ -265,7 +277,7 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
             insertion_ops: list[tuple[float, Any, Any, set[Any]] | None] = []
 
             for index, (u, v) in enumerate(potential_edges):
-                T0 = current_model.undirected_neighbors(v) - current_model.all_neighbors(u)
+                T0 = current_model.get_neighbors(v, "--") - current_model.get_neighbors(u)
                 subsets = [[*T, False] for T in powerset(list(T0))]
                 valid_insert_ops = []
 
@@ -273,7 +285,7 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
                     entry = subsets.pop(0)
                     T, passed_cond_2 = set(entry[:-1]), entry[-1]
 
-                    na_vu = current_model.undirected_neighbors(v) & current_model.all_neighbors(u)
+                    na_vu = current_model.get_neighbors(v, "--") & current_model.get_neighbors(u)
                     na_vuT = na_vu.union(T)
 
                     cond_1 = current_model.is_clique(na_vuT)
@@ -296,7 +308,7 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
                         # no semi-directed v->u path bypassing it) guarantee the
                         # resulting graph has a consistent extension, so we don't
                         # need to construct the post-insert graph just to verify.
-                        parents_v = current_model.directed_parents(v)
+                        parents_v = current_model.get_parents(v)
                         new_parents = ordered_tuple(na_vuT | parents_v | {u}, current_model)
                         old_parents = ordered_tuple(na_vuT | parents_v, current_model)
                         score_delta = score_fn(v, new_parents) - score_fn(v, old_parents)
@@ -330,7 +342,7 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
                 if not current_model.has_edge(u, v):
                     raise ValueError(f"No edge exists between nodes {(u, v)} to delete.")
 
-                na_vu = current_model.undirected_neighbors(v) & current_model.all_neighbors(u)
+                na_vu = current_model.get_neighbors(v, "--") & current_model.get_neighbors(u)
                 subsets = [[*H, False] for H in powerset(list(na_vu))]
                 valid_delete_ops = []
 
@@ -345,7 +357,7 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
                                 s[-1] = True
 
                     if cond_1:
-                        aux = (na_vu - H) | current_model.directed_parents(v) | {u}
+                        aux = (na_vu - H) | current_model.get_parents(v) | {u}
                         old_parents = ordered_tuple(aux, current_model)
                         new_parents = ordered_tuple(aux - {u}, current_model)
                         score_delta = score_fn(v, new_parents) - score_fn(v, old_parents)
@@ -372,8 +384,12 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
         # Step 4: Turning phase. Iteratively reorient edges till score stops improving.
         while True:
             potential_turns = []
-            for u, v in sorted(current_model.edges()):
+            # sorted() gives a stable, canonical tie-break (matching the deletion phase) so the turn
+            # chosen among equally-scored candidates does not depend on internal edge insertion order.
+            for u, v, edge_type in sorted(current_model.get_edges(data=True)):
                 potential_turns.append((v, u))
+                if edge_type == "--":
+                    potential_turns.append((u, v))
 
             score_deltas = np.zeros(len(potential_turns))
             turn_ops: list[tuple[float, Any, Any, set[Any]] | None] = []
@@ -381,11 +397,11 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
             for index, (u, v) in enumerate(potential_turns):
                 valid_turn_ops = []
 
-                if current_model.has_edge(u, v) and current_model.has_edge(v, u):
-                    non_adjacents = current_model.undirected_neighbors(v) - current_model.all_neighbors(u) - {u}
+                if current_model.has_edge(u, v, "--"):
+                    non_adjacents = current_model.get_neighbors(v, "--") - current_model.get_neighbors(u) - {u}
 
                     if len(non_adjacents) > 0:
-                        C0 = current_model.undirected_neighbors(v) - {u}
+                        C0 = current_model.get_neighbors(v, "--") - {u}
                         subsets = [[*set(C), False] for C in powerset(list(C0)) if len(set(C) & non_adjacents) > 0]
 
                         while subsets:
@@ -398,13 +414,13 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
                                 continue
 
                             subgraph = nx.DiGraph(current_model.subgraph(current_model.chain_component(v)))
-                            na_vu = current_model.undirected_neighbors(v) & current_model.all_neighbors(u)
+                            na_vu = current_model.get_neighbors(v, "--") & current_model.get_neighbors(u)
 
                             if not self._separates({u, v}, C, na_vu - C, subgraph):
                                 continue
 
-                            parents_v = current_model.directed_parents(v)
-                            parents_u = current_model.directed_parents(u)
+                            parents_v = current_model.get_parents(v)
+                            parents_u = current_model.get_parents(u)
 
                             new_score = score_fn(v, ordered_tuple(parents_v | C | {u}, current_model)) + score_fn(
                                 u, ordered_tuple(parents_u | (C & na_vu), current_model)
@@ -415,14 +431,14 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
                             score_delta = new_score - old_score
                             valid_turn_ops.append((score_delta, u, v, C))
                 else:
-                    T0 = current_model.undirected_neighbors(v) - current_model.all_neighbors(u)
+                    T0 = current_model.get_neighbors(v, "--") - current_model.get_neighbors(u)
                     subsets = [[*T, False] for T in powerset(list(T0))]
 
                     while subsets:
                         entry = subsets.pop(0)
                         T, passed_cond_2 = set(entry[:-1]), entry[-1]
 
-                        na_vu = current_model.undirected_neighbors(v) & current_model.all_neighbors(u)
+                        na_vu = current_model.get_neighbors(v, "--") & current_model.get_neighbors(u)
                         C = na_vu.union(T)
 
                         cond_1 = current_model.is_clique(C)
@@ -436,7 +452,7 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
                             cond_2 = not current_model.has_semidirected_path(
                                 v,
                                 u,
-                                blocked_nodes=C | current_model.undirected_neighbors(u),
+                                blocked_nodes=C | current_model.get_neighbors(u, "--"),
                                 ignore_direct_edge=True,
                             )
 
@@ -446,8 +462,8 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
                                         s[-1] = True
 
                         if cond_1 and cond_2:
-                            parents_v = current_model.directed_parents(v)
-                            parents_u = current_model.directed_parents(u)
+                            parents_v = current_model.get_parents(v)
+                            parents_u = current_model.get_parents(u)
 
                             new_score = score_fn(v, ordered_tuple(C | parents_v | {u}, current_model)) + score_fn(
                                 u, ordered_tuple(parents_u - {v}, current_model)
@@ -486,6 +502,8 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
         else:
             raise ValueError(f"return_type must be one of: dag, pdag. Got: {self.return_type}")
 
-        self.adjacency_matrix_ = nx.to_pandas_adjacency(self.causal_graph_, weight=1, dtype="int")
+        self.adjacency_matrix_ = self.causal_graph_.to_adjacency(
+            encoding="binary", nodelist=list(self.causal_graph_.nodes())
+        )
 
         return self

@@ -1,3 +1,4 @@
+from collections.abc import Hashable
 from math import log
 
 from pgmpy.structure_score.log_likelihood import LogLikelihood
@@ -24,6 +25,8 @@ class BIC(LogLikelihood):
     state_names : dict, optional
         Dictionary mapping each variable to its discrete states. If not specified, the unique values observed in the
         data are used.
+    max_cache_size : int or None, default=10000
+        Maximum number of local scores to cache. If None, the cache is unlimited.
 
     Examples
     --------
@@ -48,8 +51,8 @@ class BIC(LogLikelihood):
 
     References
     ----------
-    - :cite:p:`koller_friedman_2009`
-    - :cite:p:`liao_2022`
+    - :footcite:t:`koller_friedman_2009`
+    - :footcite:t:`liao_2022`
     """
 
     _tags = {
@@ -59,10 +62,7 @@ class BIC(LogLikelihood):
         "is_parameteric": False,
     }
 
-    def __init__(self, data, state_names=None):
-        super().__init__(data, state_names=state_names)
-
-    def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
+    def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         sample_size = len(self.data)
         ll, num_parents_states, var_cardinality = self._log_likelihood(variable=variable, parents=parents)
         score = ll - 0.5 * log(sample_size) * num_parents_states * (var_cardinality - 1)

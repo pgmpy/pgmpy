@@ -1,3 +1,4 @@
+import warnings
 from collections import deque
 from collections.abc import Callable, Generator, Hashable
 from itertools import combinations, permutations
@@ -6,7 +7,8 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
-from sklearn.base import BaseEstimator
+from sklearn.base import BaseEstimator, clone
+from sklearn.linear_model import LassoLarsIC, LinearRegression
 from sklearn.metrics import (
     adjusted_mutual_info_score,
     mutual_info_score,
@@ -70,6 +72,14 @@ class BaseCausalDiscovery(BaseEstimator):
         if not all([isinstance(x, Hashable) for x in X.values.flat]):
             raise TypeError("argument must be a string, number, or hashable object.")
 
+        for col in X.columns:
+            if X[col].nunique() == 1:
+                warnings.warn(
+                    f"Variable '{col}' is constant (zero variance), which can lead to unreliable results for"
+                    f"{type(self).__name__}. Consider removing it before fitting.",
+                    UserWarning,
+                )
+
         self.n_features_in_ = len(X.columns)
         return X
 
@@ -79,6 +89,7 @@ class BaseCausalDiscovery(BaseEstimator):
         discovery algorithm inheriting from `BaseCausalDiscovery`.
         """
         X = self._check_fit_data(X)
+
         return self._fit(X)
 
     def score(
@@ -171,6 +182,88 @@ class BaseCausalDiscovery(BaseEstimator):
             raise ValueError("Either `X` or `true_graph` needs to be specified")
 
 
+class BaseOrderDiscovery(BaseCausalDiscovery):
+    """
+    Base class for causal discovery by estimating causal ordering.
+
+    This class provides shared functionality for causal ordering based discovery method. The standard pattern is: 1. Use
+    a method to estimate the causal ordering, 2. Use the causal ordering to estimate the DAG. This pattern is followed
+    by many causal discovery methods such as LinGAM class of methods, Var/R2-Sortability methods. This base class
+    provides the shared functionality for the second step. The first step is left to the subclasses to implement.
+    Currently only one approach is implemented, regress each variable on its predecessors and selects parents using
+    adaptive Lasso with a BIC-selected penalty :cite:p:`Reisach2021`.
+
+    Parameters
+    ----------
+    estimator : sklearn-style regression estimator, default=None
+        Regressor supplying the adaptive weights through its ``coef_`` attribute. If None, uses
+        :class:`sklearn.linear_model.LinearRegression`. The estimator is cloned before fitting. Subclasses may also use
+        it to estimate the causal order.
+
+    return_type : str, default="dag"
+        The graph type stored in ``causal_graph_``: ``"dag"`` or ``"pdag"``. The ``"pdag"`` option returns the completed
+        PDAG representing the learned DAG's Markov equivalence class, so some edges can become undirected.
+    """
+
+    def __init__(self, estimator: BaseEstimator | None = None, return_type: str = "dag") -> None:
+        """Configure the initial regressor and the learned graph representation."""
+        super().__init__()
+        self.estimator = estimator
+        self.return_type = return_type
+
+    def _estimate_dag_from_causal_order(
+        self, X: pd.DataFrame, causal_order: list[Hashable], *, regressor: BaseEstimator | None = None
+    ) -> DAG:
+        """Return a DAG by regressing each variable on its predecessors.
+
+        Parameters
+        ----------
+        X : pandas.DataFrame
+            Validated, original data used to learn the graph. Algorithms that
+            transform data while estimating a causal order should pass the original data here.
+
+        causal_order : list of hashable
+            Estimated causal order, containing each input column exactly once.
+            Parents are selected only from earlier variables, making this a valid
+            causal order of the learned DAG.
+
+        regressor : sklearn-style regression estimator, default=None
+            Working regressor already cloned by the ordering step. If supplied,
+            it is reused and fitted in place, preserving its state between steps.
+            Otherwise, clone ``self.estimator`` or use a default linear regressor.
+
+        Returns
+        -------
+        dag : pgmpy.base.DAG
+            Estimated graph, including variables with no selected edges. The caller
+            handles graph conversion and assignment of fitted attributes.
+        """
+        model_reg = regressor
+        if model_reg is None:
+            model_reg = clone(self.estimator) if self.estimator is not None else LinearRegression()
+        model = DAG()
+        model.add_nodes_from(causal_order)
+
+        for i in range(1, len(causal_order)):
+            target = causal_order[i]
+            potential_parents = causal_order[:i]
+            y = X[target].to_numpy().ravel()
+            predictors = X[potential_parents].to_numpy()
+
+            model_reg.fit(predictors, y)
+            weights = np.abs(model_reg.coef_)
+
+            sparse_reg = LassoLarsIC(criterion="bic")
+            sparse_reg.fit(predictors * weights, y)
+            coefs = sparse_reg.coef_ * weights
+
+            for idx, coef in enumerate(coefs):
+                if coef != 0:
+                    model.add_edge(potential_parents[idx], target)
+
+        return model
+
+
 class _ConstraintMixin:
     """
     Base class for all constraint-based causal discovery estimators.
@@ -198,7 +291,6 @@ class _ConstraintMixin:
         significance_level: float = 0.01,
         max_cond_vars: int = 5,
         expert_knowledge=None,
-        enforce_expert_knowledge: bool = False,
         n_jobs: int = -1,
         show_progress: bool = True,
         **kwargs,
@@ -259,30 +351,8 @@ class _ConstraintMixin:
             The maximum number of variables to condition on while testing
             independence.
 
-        expert_knowledge: pgmpy.estimators.ExpertKnowledge instance
-            Expert knowledge to be used with the algorithm. Expert knowledge
-            includes required/forbidden edges in the final graph, temporal
-            information about the variables etc. Please refer
-            pgmpy.estimators.ExpertKnowledge class for more details.
-
-        enforce_expert_knowledge: boolean (default: False)
-            If True, the algorithm modifies the search space according to the
-            edges specified in expert knowledge object. This implies the following:
-                1. For every edge (u, v) specified in `forbidden_edges`, there will
-                    be no edge between u and v.
-                2. For every edge (u, v) specified in `required_edges`, one of the
-                    following would be present in the final model: u -> v, u <-
-                    v, or u - v (if CPDAG is returned).
-
-            If False, the algorithm attempts to make the edge orientations as
-            specified by expert knowledge after learning the skeleton. This
-            implies the following:
-                1. For every edge (u, v) specified in `forbidden_edges`, the final
-                    graph would have either v <- u or no edge except if u -> v is part
-                    of a collider structure in the learned skeleton.
-                2. For every edge (u, v) specified in `required_edges`, the final graph
-                    would either have u -> v or no edge except if v <- u is part of a
-                    collider structure in the learned skeleton.
+        expert_knowledge: pgmpy.causal_discovery.ExpertKnowledge instance
+            Expert knowledge to be used with the algorithm.
 
         n_jobs: int (default: -1)
             The number of jobs to run in parallel.
@@ -303,8 +373,8 @@ class _ConstraintMixin:
 
         References
         ----------
-        - :cite:p:`neapolitan_2009` (Section 10.1.2, Algorithm 10.2, page 550).
-        - :cite:p:`koller_friedman_2009` (Section 3.4.2.1, page 85, Algorithm 3.3).
+        - :footcite:t:`neapolitan_2009` (Section 10.1.2, Algorithm 10.2, page 550).
+        - :footcite:t:`koller_friedman_2009` (Section 3.4.2.1, page 85, Algorithm 3.3).
         """
         # Initialize initial values and structures.
         lim_neighbors = 0
@@ -313,14 +383,6 @@ class _ConstraintMixin:
             ci_test = IndependenceMatch(independencies=independencies)
         else:
             ci_test = get_ci_test(test=ci_test, data=data)
-
-        if expert_knowledge is None:
-            from pgmpy.causal_discovery import ExpertKnowledge
-
-            expert_knowledge = ExpertKnowledge()
-
-        if expert_knowledge.search_space:
-            expert_knowledge.limit_search_space(data.columns)
 
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=max_cond_vars)
@@ -333,9 +395,16 @@ class _ConstraintMixin:
 
         # Step 1: Initialize a fully connected undirected graph
         graph = nx.complete_graph(n=variables, create_using=nx.Graph)
-        temporal_ordering = expert_knowledge.temporal_ordering
-        if enforce_expert_knowledge:
-            graph.remove_edges_from(expert_knowledge.forbidden_edges)
+        if expert_knowledge is None:
+            temporal_ordering, required_edges, forbidden_edges = {}, set(), set()
+        else:
+            temporal_ordering = expert_knowledge.temporal_ordering_
+            required_edges = expert_knowledge.required_edges_
+            forbidden_edges = expert_knowledge.forbidden_edges_
+
+        # Remove edges that are forbidden in both directions. Directed forbidden are enforced as orientations after the
+        # skeleton is learned.
+        graph.remove_edges_from([(u, v) for (u, v) in forbidden_edges if (v, u) in forbidden_edges])
 
         # Exit condition: 1. If all the nodes in graph has less than `lim_neighbors` neighbors.
         #             or  2. `lim_neighbors` is greater than `max_conditional_variables`.
@@ -344,7 +413,7 @@ class _ConstraintMixin:
             # size `lim_neighbors` which makes u and v independent.
             if variant == "orig":
                 for u, v in graph.edges():
-                    if (enforce_expert_knowledge is False) or ((u, v) not in expert_knowledge.required_edges):
+                    if (u, v) not in required_edges:
                         for separating_set in self._get_potential_sepsets(
                             u, v, temporal_ordering, graph, lim_neighbors
                         ):
@@ -365,7 +434,7 @@ class _ConstraintMixin:
                 edges_to_remove = []
                 # In case of stable, precompute neighbors as this is the stable algorithm.
                 for u, v in graph.edges():
-                    if (enforce_expert_knowledge is False) or ((u, v) not in expert_knowledge.required_edges):
+                    if (u, v) not in required_edges:
                         sep_vars = set()
                         found_independence = False
                         for separating_set in self._get_potential_sepsets(
@@ -402,9 +471,7 @@ class _ConstraintMixin:
                         return (u, v), tuple(sorted(sep_vars, key=repr))
 
                 results = parallel_pool(
-                    delayed(_parallel_fun)(u, v)
-                    for (u, v) in graph.edges()
-                    if (enforce_expert_knowledge is False) or ((u, v) not in expert_knowledge.required_edges)
+                    delayed(_parallel_fun)(u, v) for (u, v) in graph.edges() if (u, v) not in required_edges
                 )
                 for result in results:
                     if result is not None:
@@ -418,7 +485,7 @@ class _ConstraintMixin:
             # Step 3: After iterating over all the edges, expand the search space by increasing the size
             #         of conditioning set by 1.
             if lim_neighbors >= max_cond_vars:
-                logger.info("Reached maximum number of allowed conditional variables. Exiting")
+                logger.info(f"Reached the maximum number of conditional variables ({max_cond_vars}). Exiting.")
                 break
             lim_neighbors += 1
 

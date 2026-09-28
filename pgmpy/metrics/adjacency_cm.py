@@ -66,7 +66,7 @@ class AdjacencyConfusionMatrix(BaseSupervisedMetric):
 
     References
     ----------
-    - :cite:p:`petersen_2025`
+    - :footcite:t:`petersen_2025`
 
     """
 

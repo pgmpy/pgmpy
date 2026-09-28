@@ -14,8 +14,16 @@ from pgmpy.datasets._base import BaseDataset
 from pgmpy.estimators import ExpertKnowledge
 
 
-# TODO: Rename the class for your dataset. If the data file is reading a covariance matrix instead of tabular data, the
-# class signature should be `class YourDatasetClass(_CovarianceMixin, BaseDataset):`.
+# TODO: Rename the class for your dataset. Most datasets subclass `BaseDataset` directly. For specialized strategies,
+# subclass one of the dedicated base classes instead : `BaseCovarianceDataset` if the data file is a covariance matrix,
+# `BaseTubingenDataset` for cause-effect pair benchmarks, or `BaseSimulatedDataset` for programmatically generated
+# data. Those base classes already set the relevant tags (e.g. `is_simulated`), so a subclass only needs its non-default
+# tags.
+#
+# Note: `BaseSimulatedDataset` does not load files from the Hub. Build the model once in `__init__`, then implement
+# `load_dataframe(self, n_samples=None)` and `load_ground_truth(self)` as INSTANCE methods (not classmethods) that read
+# that single stored model, so one model backs both the data and the graph. See
+# `pgmpy/datasets/linear_gaussian_scm.py` for a complete example; the Hub-loading classmethods below do not apply to it.
 class YourDatasetClass(BaseDataset):
     # TODO: Fill in the tags for your dataset.
     # Note: 'name' is mandatory and must match the string used in load_dataset().

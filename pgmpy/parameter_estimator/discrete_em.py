@@ -7,10 +7,12 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
+from sklearn.exceptions import ConvergenceWarning
 from tqdm.auto import tqdm
 
-from pgmpy import config, logger
+from pgmpy import config
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.utils._warnings import _warn_external
 
 from .base import DiscreteParameterEstimator
 from .discrete_mle import DiscreteMLE
@@ -190,6 +192,14 @@ class DiscreteEM(DiscreteParameterEstimator):
             DataFrame object with column names identical to the observed variable names of the network. Fully missing
             columns are treated as latent variables if they are not already marked as latent.
 
+        Warns
+        -----
+        UserWarning
+            If fully missing columns are promoted to latent variables or rows with partial missingness are dropped.
+
+        sklearn.exceptions.ConvergenceWarning
+            If the estimator does not converge within `max_iter` iterations.
+
         Returns
         -------
         self: DiscreteEM
@@ -223,21 +233,23 @@ class DiscreteEM(DiscreteParameterEstimator):
         original_cols = set(data.columns)
         data = data.dropna(axis=1, how="all")
         dropped_cols = original_cols - set(data.columns)
-        new_latents = [col for col in dropped_cols if col not in model.latents]
+        new_latents = [col for col in dropped_cols if col in model.nodes() and col not in model.latents]
         if new_latents:
-            logger.warning(
+            _warn_external(
                 f"Columns {new_latents} have all missing values and are not marked as latent. "
-                "Treating them as latent variables."
+                "Treating them as latent variables.",
+                UserWarning,
             )
-            model.latents.update(new_latents)
+            model.latents = set(model.latents) | set(new_latents)
 
         original_rows_count = data.shape[0]
         data = data.dropna()
         dropped_rows_count = original_rows_count - data.shape[0]
         if dropped_rows_count:
-            logger.warning(
+            _warn_external(
                 f"{dropped_rows_count} rows with missing values in partially "
-                "missing columns were dropped from the dataset."
+                "missing columns were dropped from the dataset.",
+                UserWarning,
             )
 
         self._initialize_fit(model, data, sample_weight=sample_weight)
@@ -304,7 +316,7 @@ class DiscreteEM(DiscreteParameterEstimator):
         # Step 3.1: Partition nodes.
         #           `fixed_cpd_vars` = nodes with no latent involvement; their CPDs are the EM fixed point and
         #           can be estimated once from observed data. `updatable_vars` are refit every EM iteration.
-        children_of_latents = set(chain.from_iterable(self._model.get_children(var) for var in self._model.latents))
+        children_of_latents = self._model.get_children(self._model.latents)
         fixed_cpd_vars = [
             var
             for var in self._model.nodes()
@@ -370,5 +382,9 @@ class DiscreteEM(DiscreteParameterEstimator):
 
             self._model_copy.cpds = new_cpds
 
+        _warn_external(
+            f"EM did not converge after reaching max_iter={self.max_iter}. Increase max_iter or relax atol.",
+            ConvergenceWarning,
+        )
         self.parameters_ = new_cpds
         return self
