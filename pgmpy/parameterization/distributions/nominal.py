@@ -15,12 +15,10 @@ if TYPE_CHECKING:
 class NominalDistribution(BaseDistribution):
     """Nominal distribution for discrete random variables.
 
-    Represents one or more nominal categorical probability distributions over a
-    finite set of discrete states. A one-dimensional ``probs`` vector without
-    ``index`` or ``columns`` defines a scalar distribution with shape ``()``.
-    A two-dimensional ``probs`` array defines a distribution of shape
-    ``(n_instances, 1)``, with each row assigning probability mass to the states
-    specified by ``categories``.
+    Represents one or more nominal categorical probability distributions over a finite set of discrete states. A
+    one-dimensional ``probs`` vector without ``index`` or ``columns`` defines a scalar distribution with shape ``()``. A
+    two-dimensional ``probs`` array defines a distribution of shape ``(n_instances, 1)``, with each row assigning
+    probability mass to the states specified by ``categories``.
 
     The categories are treated as *nominal* (unordered, non-numeric) labels. Consequently, order-, arithmetic- and
     density-based summaries are undefined and raise ``NotImplementedError``: ``cdf``, ``ppf``, ``surv``, ``haz``,
@@ -41,11 +39,10 @@ class NominalDistribution(BaseDistribution):
         each row of ``probs``. Categories can be any distinct, hashable values, including values of different types, but
         not missing values.
     index : pd.Index or list, optional, default = None
-        Row labels for an array distribution, defaulting to a ``RangeIndex``.
-        Scalar distributions have no row labels.
+        Row labels for an array distribution, defaulting to a ``RangeIndex``. Scalar distributions have no row labels.
     columns : pd.Index or list, optional, default = None
-        One column label for an array distribution, defaulting to ``["variable"]``.
-        Scalar distributions have no column labels.
+        One column label for an array distribution, defaulting to ``["variable"]``. Scalar distributions have no column
+        labels.
 
     Examples
     --------
@@ -100,8 +97,7 @@ class NominalDistribution(BaseDistribution):
         invalid_rows = np.flatnonzero(~np.isclose(row_sums, 1.0, atol=0.01))
         if invalid_rows.size:
             raise ValueError(
-                "The probabilities in each row of probs must sum to 1; "
-                f"invalid row indices: {invalid_rows.tolist()}, "
+                f"The probabilities in each row of probs must sum to 1; invalid row indices: {invalid_rows.tolist()}, "
                 f"row sums: {row_sums[invalid_rows].tolist()}"
             )
 
@@ -150,8 +146,8 @@ class NominalDistribution(BaseDistribution):
         valid : 1D np.ndarray of bool
             Whether each queried value matches one of ``categories``.
         selected : 1D np.ndarray of float
-            Probability of the matched category. The value at non-matching
-            positions is arbitrary and is masked out by the callers.
+            Probability of the matched category. The value at non-matching positions is arbitrary and is masked out by
+            the callers.
 
         """
         x = np.atleast_2d(x)
@@ -184,8 +180,7 @@ class NominalDistribution(BaseDistribution):
     def _log_pmf(self, x):
         """Logarithmic probability mass function.
 
-        Values that do not match any category, or that match a
-        zero-probability category, map to ``-inf``.
+        Values that do not match any category, or that match a zero-probability category, map to ``-inf``.
 
         Parameters
         ----------
@@ -365,10 +360,7 @@ class NominalDistribution(BaseDistribution):
                 index = pd.MultiIndex.from_arrays([index])
             index = pd.MultiIndex(
                 levels=[pd.RangeIndex(n_samples), *index.levels],
-                codes=[
-                    np.repeat(np.arange(n_samples), n_rows),
-                    *[np.tile(code, n_samples) for code in index.codes],
-                ],
+                codes=[np.repeat(np.arange(n_samples), n_rows), *[np.tile(code, n_samples) for code in index.codes]],
                 names=[None, *index.names],
             )
 
@@ -383,8 +375,8 @@ class NominalDistribution(BaseDistribution):
         gets one evenly spaced bar, in the order of ``categories`` and labelled with the category, and the height of
         each bar represents the corresponding probability.
 
-        For an array distribution, each subplot is labeled using the corresponding
-        entry in ``index``. The first entry in ``columns`` is used as the figure title.
+        For an array distribution, each subplot is labeled using the corresponding entry in ``index``. The first entry
+        in ``columns`` is used as the figure title.
 
         Parameters
         ----------
@@ -401,8 +393,8 @@ class NominalDistribution(BaseDistribution):
         Returns
         -------
         matplotlib.Axes or tuple of (matplotlib.Figure, np.ndarray)
-            A scalar distribution returns its Axes. An array distribution returns
-            the Figure and a one-dimensional array containing one Axes per row.
+            A scalar distribution returns its Axes. An array distribution returns the Figure and a one-dimensional array
+            containing one Axes per row.
 
         Notes
         -----
@@ -486,16 +478,15 @@ class NominalDistribution(BaseDistribution):
         Parameters
         ----------
         parameter_set : str, default="default"
-            Name of the set of test parameters to return, for use in tests. If no
-            special parameters are defined for a value, will return `"default"` set.
+            Name of the set of test parameters to return, for use in tests. If no special parameters are defined for a
+            value, will return `"default"` set.
 
         Returns
         -------
         params : dict or list of dict, default = {}
-            Parameters to create testing instances of the class
-            Each dict are parameters to construct an "interesting" test instance, i.e.,
-            `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
-            `create_test_instance` uses the first (or only) dictionary in `params`
+            Parameters to create testing instances of the class. Each dict are parameters to construct an "interesting"
+            test instance, i.e., `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
+            `create_test_instance` uses the first (or only) dictionary in `params`.
         """
         params1 = {"probs": [[0.1, 0.9], [0.7, 0.3]], "categories": [1, 2]}
         params2 = {"probs": [[0.1, 0.7, 0.2], [0.5, 0.3, 0.2]], "categories": [1, 2, 3]}
