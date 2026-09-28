@@ -5,7 +5,7 @@ class SouthGermanCredit(BaseDataset):
     """
     References
     ----------
-    - :cite:p:`mendhe_2024`
+    - :footcite:t:`mendhe_2024`
     """
 
     _tags = {

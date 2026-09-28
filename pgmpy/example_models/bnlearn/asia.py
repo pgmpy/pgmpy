@@ -5,7 +5,7 @@ class Asia(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`lauritzen_spiegelhalter_1988`
+    - :footcite:t:`lauritzen_spiegelhalter_1988`
     """
 
     _tags = {

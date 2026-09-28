@@ -80,8 +80,7 @@ class TOPIC(BaseCausalDiscovery):
 
     References
     ----------
-    .. [1] Xu, S., Mameche, S. and Vreeken, J. Information-Theoretic Causal Discovery in Topological Order.
-           International Conference on Artificial Intelligence and Statistics (AISTATS), 2025.
+    - :footcite:t:`xu_mameche_vreeken_2025`
 
     """
 

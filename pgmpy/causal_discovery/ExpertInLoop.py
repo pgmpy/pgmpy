@@ -239,7 +239,7 @@ class ExpertInLoop(BaseCausalDiscovery):
                     effect, pvalue = ci_test.run_test(x, y, Z=Z)
                     if (effect < effect_size_threshold) and (pvalue > pval_threshold):
                         edges_to_remove.append((x, y))
-                        logger.info(f"Removing edge: {x} -> {y} to fix cycle")
+                        logger.info(f"Selected edge {x} -> {y} for removal to break the cycle.")
 
         return edges_to_remove
 
@@ -343,7 +343,7 @@ class ExpertInLoop(BaseCausalDiscovery):
 
                 if config.SHOW_PROGRESS and self.show_progress and edge_direction is not None:
                     logger.info(
-                        "\rQueried for edge orientation between "
+                        "Queried for edge orientation between "
                         f"{u} and {v}. Got: {edge_direction[0]} -> {edge_direction[1]}"
                     )
 
@@ -352,7 +352,7 @@ class ExpertInLoop(BaseCausalDiscovery):
             # 2. If new edge creates a cycle, try to resolve it
             # 3. Otherwise, add the edge
             if edge_direction is None:
-                logger.info(f"Orientation returned None for edge {u} - {v}. Skipping this edge.")
+                logger.info(f"No orientation was determined for candidate pair {u} - {v}. Skipping it.")
                 blacklist.add(frozenset((u, v)))
             elif nx.has_path(dag, edge_direction[1], edge_direction[0]):
                 edges_to_remove = self._break_cycle(

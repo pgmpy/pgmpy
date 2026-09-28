@@ -231,9 +231,10 @@ class TestExpertInLoop:
         assert ("Age", "Income") not in dag.edges()
 
         # Check temporal order
+        tier_of = {node: tier for tier, nodes in enumerate(expert_knowledge.temporal_order) for node in nodes}
         for u, v in dag.edges():
-            u_order = expert_knowledge.temporal_ordering[u]
-            v_order = expert_knowledge.temporal_ordering[v]
+            u_order = tier_of[u]
+            v_order = tier_of[v]
             assert u_order <= v_order, f"Edge {u}->{v} violates temporal order"
 
     @pytest.mark.skipif(

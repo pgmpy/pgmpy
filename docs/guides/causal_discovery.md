@@ -1,7 +1,8 @@
 # Causal Discovery and Structure Learning
 
-```{meta}
-:description: Learn causal graphs from data using the unified causal discovery APIs in pgmpy.
+```{eval-rst}
+.. meta::
+   :description: Learn causal graphs from data using the unified causal discovery APIs in pgmpy.
 ```
 
 Causal discovery recovers the causal graph from observational data — determining which

@@ -10,13 +10,13 @@ kwarg); with ``boolean=False`` they return the raw test results (see each
 function).
 """
 
-import warnings
 from collections.abc import Callable
 
 import pandas as pd
 
 import pgmpy.ci_tests as _ci
 from pgmpy.utils import get_dataset_type
+from pgmpy.utils._warnings import _warn_external
 
 
 class CITestRegistry:
@@ -125,10 +125,10 @@ ci_registry = CITestRegistry()
 
 
 def _warn_deprecated(old_name: str, new_name: str) -> None:
-    warnings.warn(
-        f"`{old_name}` is deprecated and will be removed in v2.0. Please use `pgmpy.ci_tests.{new_name}` instead.",
+    _warn_external(
+        f"`{old_name}` is deprecated since v1.1.0 and will be removed in v2.0. "
+        f"Use `pgmpy.ci_tests.{new_name}` instead.",
         FutureWarning,
-        stacklevel=3,
     )
 
 

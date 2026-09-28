@@ -5,7 +5,7 @@ class Cities(BaseCovarianceDataset):
     """
     References
     ----------
-    - :cite:p:`spirtes_glymour_scheines_2001`
+    - :footcite:t:`spirtes_glymour_scheines_2001`
     """
 
     _tags = {

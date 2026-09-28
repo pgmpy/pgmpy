@@ -30,7 +30,7 @@ class GSq(PowerDivergence):
 
     References
     ----------
-    - :cite:p:`wikipedia_gtest`
+    - :footcite:t:`wikipedia_gtest`
 
     Examples
     --------

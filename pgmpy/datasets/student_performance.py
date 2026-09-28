@@ -5,7 +5,7 @@ class StudentPerformance(BaseDataset):
     """
     References
     ----------
-    - :cite:p:`uci_student_performance`
+    - :footcite:t:`uci_student_performance`
     """
 
     _tags = {

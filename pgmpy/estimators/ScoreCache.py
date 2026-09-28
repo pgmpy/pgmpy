@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-import warnings
 
 from pgmpy.structure_score import BaseStructureScore
+from pgmpy.utils._warnings import _warn_external
 
 
 class ScoreCache(BaseStructureScore):
@@ -26,16 +26,15 @@ class ScoreCache(BaseStructureScore):
 
     References
     ----------
-    - :cite:p:`koller_friedman_2009` (Section 18.3).
+    - :footcite:t:`koller_friedman_2009` (Section 18.3).
     """
 
     def __init__(self, base_scorer, data, max_size=10000, **kwargs):
-        warnings.warn(
+        _warn_external(
             "`pgmpy.estimators.ScoreCache` is deprecated and will be removed in v2.0. "
             "Structure scores in `pgmpy.structure_score` cache local scores internally; "
             "use their `max_cache_size` parameter instead.",
             FutureWarning,
-            stacklevel=2,
         )
         assert isinstance(base_scorer, BaseStructureScore), "Base scorer has to be of type StructureScore."
 
