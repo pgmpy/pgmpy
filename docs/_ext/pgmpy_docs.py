@@ -867,7 +867,11 @@ def skip_sklearn_metadata_request_method(
 def _format_tag_type(tag_type: str | tuple) -> str:
     if isinstance(tag_type, str):
         return f"``{tag_type}``"
-    choices = ", ".join(f"``{choice!r}``" for choice in tag_type[1])
+    # Class-valued choices are graph classes, which are documented under pgmpy.base.
+    choices = ", ".join(
+        f":class:`~pgmpy.base.{choice.__name__}`" if isinstance(choice, type) else f"``{choice!r}``"
+        for choice in tag_type[1]
+    )
     return f"one of {choices}" if tag_type[0] == "str" else f"list with elements from {choices}"
 
 

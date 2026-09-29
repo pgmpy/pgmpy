@@ -12,7 +12,8 @@ docstring is the tag's documentation. The ``_tags`` of a tag class describe the 
   - ``"bool"``: ``True`` or ``False``.
   - ``"str"``: Any string.
   - ``("str", choices)``: Any element of ``choices``. ``None`` is valid only if it is in ``choices``.
-  - ``("list", choices)``: A list whose elements are all in ``choices``.
+  - ``("list", choices)``: A list whose elements are all in ``choices``. The choices can be classes, e.g. graph
+    classes from :mod:`pgmpy.base`.
 
 - ``short_descr`` (str): One-line description of the tag.
 
@@ -25,7 +26,11 @@ import sys
 import pandas as pd
 from skbase.base import BaseObject
 
-OBJECT_TYPES = ["causal_discovery", "ci_test", "structure_score"]
+from pgmpy.base import ADMG, DAG, MAG, PDAG
+
+OBJECT_TYPES = ["causal_discovery", "ci_test", "structure_score", "supervised_metric", "unsupervised_metric"]
+
+METRIC_TYPES = ["supervised_metric", "unsupervised_metric"]
 
 DATA_TYPES = ["discrete", "continuous", "mixed"]
 
@@ -42,9 +47,9 @@ class _BaseTag(BaseObject):
     }
 
 
-# ------------------------
-# Tags of all object types
-# ------------------------
+# ------------------------------------
+# Tags shared by several object types
+# ------------------------------------
 
 
 class object_type(_BaseTag):
@@ -67,8 +72,8 @@ class name(_BaseTag):
     """
     Unique lowercase name of the object.
 
-    CI tests and structure scores can be selected by this name, e.g. ``PC(ci_test="pearsonr")`` or
-    ``GES(scoring_method="bic-g")``.
+    CI tests, structure scores, and metrics can be selected by this name, e.g. ``PC(ci_test="pearsonr")``,
+    ``GES(scoring_method="bic-g")``, or ``PC().fit(data).score(X=data, metric="correlation_score")``.
     """
 
     _tags = {
@@ -100,17 +105,49 @@ class data_types(_BaseTag):
 
 class default_for(_BaseTag):
     """
-    Data type for which the object is used by default, or ``None``.
+    What the object is used by default for, or ``None``.
 
-    Used when a causal discovery algorithm is given ``ci_test=None`` or ``scoring_method=None``: the component whose
-    ``default_for`` matches the data type of the data is selected.
+    - CI tests and structure scores: the data type for which the object is selected when a causal discovery algorithm
+      is given ``ci_test=None`` or ``scoring_method=None``.
+    - Metrics: ``"supervised"`` or ``"unsupervised"``, for the metric used by
+      :meth:`pgmpy.causal_discovery._base.BaseCausalDiscovery.score` when ``metric=None``.
     """
 
     _tags = {
         "tag_name": "default_for",
-        "parent_type": ["ci_test", "structure_score"],
-        "tag_type": ("str", DATA_TYPES + [None]),
-        "short_descr": "Data type for which the object is used by default, or None.",
+        "parent_type": ["ci_test", "structure_score"] + METRIC_TYPES,
+        "tag_type": ("str", DATA_TYPES + ["supervised", "unsupervised", None]),
+        "short_descr": "What the object is used by default for, or None.",
+    }
+
+
+class requires_data(_BaseTag):
+    """
+    Whether the object needs data.
+
+    ``False`` for oracle CI tests such as ``IndependenceMatch`` and for metrics that only compare two graphs.
+    """
+
+    _tags = {
+        "tag_name": "requires_data",
+        "parent_type": ["ci_test"] + METRIC_TYPES,
+        "tag_type": "bool",
+        "short_descr": "Whether the object needs data.",
+    }
+
+
+class is_symmetric(_BaseTag):
+    """
+    Whether swapping the two inputs leaves the result unchanged.
+
+    For CI tests, swapping ``X`` and ``Y``. For supervised metrics, swapping the true and the estimated graph.
+    """
+
+    _tags = {
+        "tag_name": "is_symmetric",
+        "parent_type": ["ci_test", "supervised_metric"],
+        "tag_type": "bool",
+        "short_descr": "Whether swapping the two inputs leaves the result unchanged.",
     }
 
 
@@ -284,33 +321,6 @@ class assumption__low_noise(_BaseTag):
     }
 
 
-# --------
-# CI tests
-# --------
-
-
-class requires_data(_BaseTag):
-    """Whether the CI test needs data. ``False`` for oracle tests such as ``IndependenceMatch``."""
-
-    _tags = {
-        "tag_name": "requires_data",
-        "parent_type": ["ci_test"],
-        "tag_type": "bool",
-        "short_descr": "Whether the CI test needs data.",
-    }
-
-
-class is_symmetric(_BaseTag):
-    """Whether the CI test gives the same result when ``X`` and ``Y`` are swapped."""
-
-    _tags = {
-        "tag_name": "is_symmetric",
-        "parent_type": ["ci_test"],
-        "tag_type": "bool",
-        "short_descr": "Whether swapping X and Y leaves the result unchanged.",
-    }
-
-
 # ----------------
 # Structure scores
 # ----------------
@@ -335,6 +345,69 @@ class is_parameteric(_BaseTag):
         "parent_type": ["structure_score"],
         "tag_type": "bool",
         "short_descr": "Whether the structure score estimates parameters.",
+    }
+
+
+# -------
+# Metrics
+# -------
+
+
+class requires_true_graph(_BaseTag):
+    """Whether the metric compares an estimated graph against a true graph (supervised) rather than against data."""
+
+    _tags = {
+        "tag_name": "requires_true_graph",
+        "parent_type": METRIC_TYPES,
+        "tag_type": "bool",
+        "short_descr": "Whether the metric needs a true graph.",
+    }
+
+
+class supported_graph_types(_BaseTag):
+    """Graph classes from :mod:`pgmpy.base` that the metric accepts."""
+
+    _tags = {
+        "tag_name": "supported_graph_types",
+        "parent_type": METRIC_TYPES,
+        "tag_type": ("list", [DAG, PDAG, MAG, ADMG]),
+        "short_descr": "Graph classes the metric accepts.",
+    }
+
+
+class output_type(_BaseTag):
+    """
+    Type of the value returned by ``evaluate``.
+
+    - ``"scalar"``: A single number.
+    - ``"tuple"``: A tuple of numbers, e.g. ``FisherC(compute_rmsea=True)`` returns the p-value and the RMSEA.
+    - ``"dict"``: A dict of named results, e.g. precision and recall from ``AdjacencyConfusionMatrix``.
+    - ``"dataframe"``: A ``pandas.DataFrame``, e.g. one row per implied CI from ``ImpliedCIs``.
+
+    If the output depends on a hyperparameter, the class-level value is the default output and ``__init__`` sets it for
+    the instance.
+    """
+
+    _tags = {
+        "tag_name": "output_type",
+        "parent_type": METRIC_TYPES,
+        "tag_type": ("str", ["scalar", "tuple", "dict", "dataframe"]),
+        "short_descr": "Type of the value returned by evaluate.",
+    }
+
+
+class lower_is_better(_BaseTag):
+    """
+    Whether a lower value of the metric means a better graph.
+
+    Only meaningful when ``output_type`` is ``"scalar"``; ``False`` otherwise.
+    """
+
+    _tags = {
+        "tag_name": "lower_is_better",
+        "parent_type": METRIC_TYPES,
+        "tag_type": "bool",
+        "short_descr": "Whether a lower value means a better graph (scalar output only).",
     }
 
 

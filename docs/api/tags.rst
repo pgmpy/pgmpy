@@ -40,3 +40,13 @@ Structure Scores
 ----------------
 
 .. pgmpy-tags:: structure_score
+
+Supervised Metrics
+------------------
+
+.. pgmpy-tags:: supervised_metric
+
+Unsupervised Metrics
+--------------------
+
+.. pgmpy-tags:: unsupervised_metric

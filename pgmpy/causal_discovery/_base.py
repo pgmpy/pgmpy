@@ -204,7 +204,7 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
                 X = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
 
             if metric is None:
-                scoring_class = get_metrics(requires_data=True, is_default=True)[0]
+                scoring_class = get_metrics(default_for="unsupervised")[0]
                 metric = scoring_class()
 
             elif isinstance(metric, str):
@@ -219,7 +219,7 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         # Case 2: When true graph is provided.
         elif true_graph is not None:
             if metric is None:
-                scoring_class = get_metrics(requires_true_graph=True, is_default=True)
+                scoring_class = get_metrics(default_for="supervised")
                 metric = scoring_class[0]()
             elif isinstance(metric, str):
                 scoring_class = get_metrics(name=metric)
