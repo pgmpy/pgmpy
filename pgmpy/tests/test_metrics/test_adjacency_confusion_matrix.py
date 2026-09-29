@@ -49,7 +49,7 @@ def true_pdag():
     # skeleton: x1-x2, x2-x3, x3-x4, x4-x5  (4 edges, 6 non-edges over 5 nodes)
     pdag = PDAG()
     pdag.add_nodes_from(["x1", "x2", "x3", "x4", "x5"])
-    pdag.add_edges_from([("x1", "x2"), ("x2", "x3"), ("x3", "x4"), ("x4", "x5")])
+    pdag.add_edges_from([("x1", "x2", "--"), ("x2", "x3", "--"), ("x3", "x4", "--"), ("x4", "x5", "--")])
     return pdag
 
 
@@ -58,7 +58,7 @@ def est_pdag():
     # skeleton: x1-x2, x2-x3, x1-x3  (3 edges)
     pdag = PDAG()
     pdag.add_nodes_from(["x1", "x2", "x3", "x4", "x5"])
-    pdag.add_edges_from([("x1", "x2"), ("x2", "x3"), ("x1", "x3")])
+    pdag.add_edges_from([("x1", "x2", "--"), ("x2", "x3", "--"), ("x1", "x3", "--")])
     return pdag
 
 

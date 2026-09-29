@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Transport(BIFMixin, _BaseExampleModel):
+class Transport(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/transport",
         "n_nodes": 6,

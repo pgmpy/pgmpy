@@ -12,7 +12,7 @@
 import pandas as pd
 
 from pgmpy.base import DAG  # noqa: F401
-from pgmpy.causal_discovery._base import _BaseCausalDiscovery
+from pgmpy.causal_discovery._base import BaseCausalDiscovery
 
 # TODO: If the algorithm falls into a standard category (like constraint-based, score-based, etc.), mixin classes can be
 # imported for additional functionality. For example:
@@ -20,7 +20,7 @@ from pgmpy.causal_discovery._base import _BaseCausalDiscovery
 # from pgmpy.casual_discovery import _ConstraintMixin
 
 
-class MyCausalDiscoveryAlgo(_BaseCausalDiscovery):
+class MyCausalDiscoveryAlgo(BaseCausalDiscovery):
     # TODO: If applicable, additionally inherit mixin classes here.
     """
     [One line description of the algorithm.]

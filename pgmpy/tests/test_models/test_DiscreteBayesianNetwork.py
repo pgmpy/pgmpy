@@ -9,11 +9,6 @@ import pytest
 
 import pgmpy.tests.help_functions as hf
 from pgmpy.base import DAG
-from pgmpy.estimators import (
-    BayesianEstimator,
-    ExpectationMaximization,
-    MaximumLikelihoodEstimator,
-)
 from pgmpy.example_models import load_model
 from pgmpy.factors.discrete import (
     DiscreteFactor,
@@ -23,6 +18,7 @@ from pgmpy.factors.discrete import (
 from pgmpy.independencies import Independencies
 from pgmpy.inference import ApproxInference, BeliefPropagation
 from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork
+from pgmpy.parameter_estimator import DiscreteBayesianEstimator, DiscreteEM, DiscreteMLE
 from pgmpy.sampling import BayesianModelSampling
 
 
@@ -190,6 +186,23 @@ class TestBayesianNetworkMethods(unittest.TestCase):
                 edge in [("a", "b"), ("a", "d"), ("b", "c"), ("d", "b"), ("e", "d")]
                 or (edge[1], edge[0]) in [("a", "b"), ("a", "d"), ("b", "c"), ("d", "b"), ("e", "d")]
             )
+
+    def test_to_junction_tree(self):
+        model = DiscreteBayesianNetwork([("a", "b"), ("b", "c"), ("d", "c"), ("e", "d"), ("e", "a")])
+        model.add_cpds(
+            TabularCPD("e", 2, [[0.4], [0.6]]),
+            TabularCPD("a", 2, [[0.3, 0.8], [0.7, 0.2]], evidence=["e"], evidence_card=[2]),
+            TabularCPD("b", 2, [[0.5, 0.1], [0.5, 0.9]], evidence=["a"], evidence_card=[2]),
+            TabularCPD("d", 2, [[0.6, 0.2], [0.4, 0.8]], evidence=["e"], evidence_card=[2]),
+            TabularCPD("c", 2, [[0.9, 0.5, 0.4, 0.1], [0.1, 0.5, 0.6, 0.9]], evidence=["b", "d"], evidence_card=[2, 2]),
+        )
+        default_cliques = {frozenset(c) for c in model.to_junction_tree().nodes()}
+        self.assertIn(frozenset({"a", "b", "e"}), default_cliques)
+        ordered_cliques = {frozenset(c) for c in model.to_junction_tree(order=["e", "a", "b", "c", "d"]).nodes()}
+        self.assertIn(frozenset({"a", "d", "e"}), ordered_cliques)
+        self.assertNotEqual(default_cliques, ordered_cliques)
+        with self.assertRaises(ValueError):
+            model.to_junction_tree(heuristic="bogus")
 
     def test_moral_graph_with_edge_present_over_parents(self):
         G = DiscreteBayesianNetwork([("a", "d"), ("d", "e"), ("b", "d"), ("b", "c"), ("a", "b")])
@@ -365,6 +378,19 @@ class TestBayesianNetworkMethods(unittest.TestCase):
         self.assertNotEqual(sorted(self.G1.nodes()), sorted(model_copy.nodes()))
         self.assertNotEqual(sorted(self.G1.edges()), sorted(model_copy.edges()))
 
+        self.G1.with_role(role="exposure", variables="diff", inplace=True)
+        model_copy = self.G1.copy()
+        self.assertEqual(self.G1.exposures, model_copy.exposures)
+
+        model_copy.with_role(role="outcome", variables="grade", inplace=True)
+        self.assertNotIn("grade", self.G1.get_role_dict().get("outcome", []))
+
+        self.G1.latents = {"diff"}
+        model_copy = self.G1.copy()
+        self.assertEqual(model_copy.latents, {"diff"})
+        model_copy.latents.add("intel")
+        self.assertNotIn("intel", self.G1.latents)
+
     def test_get_random(self):
         model = DiscreteBayesianNetwork.get_random(n_nodes=5, edge_prob=0.5)
         self.assertEqual(len(model.nodes()), 5)
@@ -513,15 +539,74 @@ class TestBayesianNetworkMethods(unittest.TestCase):
                 np.array([[[0.3, 0.4], [0.7, 0.8]], [[0.7, 0.6], [0.3, 0.2]]]),
             )
 
+        # a tuple is a single (hashable) node, not a collection; the CPD is marginalized to the node itself
+        model = DiscreteBayesianNetwork([("X", ("A", 0)), (("A", 0), "Y")])
+        model.add_cpds(
+            TabularCPD("X", 2, [[0.4], [0.6]]),
+            TabularCPD(("A", 0), 2, [[0.2, 0.7], [0.8, 0.3]], evidence=["X"], evidence_card=[2]),
+            TabularCPD("Y", 2, [[0.1, 0.9], [0.9, 0.1]], evidence=[("A", 0)], evidence_card=[2]),
+        )
+        model_do = model.do(("A", 0))
+        self.assertEqual(sorted(model_do.edges()), [(("A", 0), "Y")])
+        self.assertEqual(model_do.get_cpds(("A", 0)).variables, [("A", 0)])
+        self.assertTrue(model_do.check_model())
+        # the original model is untouched
+        self.assertEqual(model.get_cpds(("A", 0)).variables, [("A", 0), "X"])
+
+        # without a value the intervened variable's distribution is unspecified: uniform, not the parent-average
+        model = DiscreteBayesianNetwork([("S", "T")])
+        model.add_cpds(
+            TabularCPD("S", 2, [[0.9], [0.1]], state_names={"S": ["m", "f"]}),
+            TabularCPD(
+                "T",
+                2,
+                [[0.9, 0.6], [0.1, 0.4]],
+                evidence=["S"],
+                evidence_card=[2],
+                state_names={"S": ["m", "f"], "T": ["no", "yes"]},
+            ),
+        )
+        cpd_t = model.do("T").get_cpds("T")
+        np_test.assert_array_equal(cpd_t.values, [0.5, 0.5])
+        self.assertEqual(cpd_t.state_names, {"T": ["no", "yes"]})
+
+        # hard intervention do(T = yes): point mass at the given state, edges into T removed
+        model_do = model.do({"T": "yes"})
+        np_test.assert_array_equal(model_do.get_cpds("T").values, [0.0, 1.0])
+        self.assertEqual(model_do.get_cpds("T").state_names, {"T": ["no", "yes"]})
+        self.assertEqual(list(model_do.edges()), [])
+        self.assertTrue(model_do.check_model())
+        self.assertEqual(model.get_cpds("T").variables, ["T", "S"])
+        with self.assertRaises(ValueError):
+            model.do({"T": "maybe"})
+
+        # soft intervention: the CPD of T is replaced by the given distribution; forms can be mixed
+        q_t = TabularCPD("T", 2, [[0.2], [0.8]], state_names={"T": ["no", "yes"]})
+        model_do = model.do({"S": "m", "T": q_t})
+        np_test.assert_array_equal(model_do.get_cpds("T").values, [0.2, 0.8])
+        np_test.assert_array_equal(model_do.get_cpds("S").values, [1.0, 0.0])
+        self.assertTrue(model_do.check_model())
+        # the intervention CPD must be over the variable alone and use the model's states
+        with self.assertRaises(ValueError):
+            model.do({"T": TabularCPD("T", 2, [[0.2, 0.3], [0.8, 0.7]], evidence=["S"], evidence_card=[2])})
+        with self.assertRaises(ValueError):
+            model.do({"T": TabularCPD("T", 2, [[0.2], [0.8]])})
+        with self.assertRaises(ValueError):
+            model.do({"T": TabularCPD("T", 3, [[0.2], [0.3], [0.5]], state_names={"T": ["no", "yes", "maybe"]})})
+        # None leaves the distribution unspecified; inplace=True modifies the model itself
+        self.assertIs(model.do({"T": None}, inplace=True), model)
+        np_test.assert_array_equal(model.get_cpds("T").values, [0.5, 0.5])
+        self.assertEqual(list(model.edges()), [])
+
     def test_simulate(self):
         asia = load_model("bnlearn/asia")
         n_samples = int(1e3)
         samples = asia.simulate(n_samples=n_samples, show_progress=False)
         self.assertEqual(samples.shape[0], n_samples)
 
-        # The probability values don't sum to 1 in this case.
-        barley = load_model("bnlearn/barley")
-        samples = barley.simulate(n_samples=n_samples, show_progress=False)
+        # Also simulate from a second, different network.
+        sachs = load_model("bnlearn/sachs")
+        samples = sachs.simulate(n_samples=n_samples, show_progress=False)
         self.assertEqual(samples.shape[0], n_samples)
 
     def test_simulate_with_partial_samples(self):
@@ -532,8 +617,8 @@ class TestBayesianNetworkMethods(unittest.TestCase):
 
     def test_load_save(self):
         test_model_small = load_model("bnlearn/alarm")
-        test_model_large = load_model("bnlearn/hailfinder")
-        for model in {test_model_small, test_model_large}:
+        test_model_other = load_model("bnlearn/sachs")
+        for model in {test_model_small, test_model_other}:
             for filetype in {"bif", "xmlbif", "xdsl", "net"}:
                 model.save("model." + filetype)
                 model.save("model.model", filetype=filetype)
@@ -953,13 +1038,14 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
     def test_bayesian_fit(self):
         self.model2.fit(
             self.data1,
-            estimator=BayesianEstimator,
-            prior_type="dirichlet",
-            pseudo_counts={
-                "A": [[9], [3]],
-                "B": [[9], [3]],
-                "C": [[9, 9, 9, 9], [3, 3, 3, 3]],
-            },
+            estimator=DiscreteBayesianEstimator(
+                prior_type="dirichlet",
+                pseudo_counts={
+                    "A": [[9], [3]],
+                    "B": [[9], [3]],
+                    "C": [[9, 9, 9, 9], [3, 3, 3, 3]],
+                },
+            ),
         )
         self.assertEqual(self.model2.get_cpds("B"), TabularCPD("B", 2, [[11.0 / 15], [4.0 / 15]]))
 
@@ -974,23 +1060,21 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
 
         fitted_model_bayesian = model.fit(
             data,
-            estimator=BayesianEstimator,
-            prior_type="dirichlet",
-            pseudo_counts=pseudo_counts,
+            estimator=DiscreteBayesianEstimator(prior_type="dirichlet", pseudo_counts=pseudo_counts),
         )
         self.assertEqual(
             fitted_model_bayesian.get_cpds("B"),
             TabularCPD("B", 2, [[11.0 / 15], [4.0 / 15]]),
         )
 
-        fitted_model_mle = model.fit(data, estimator=MaximumLikelihoodEstimator)
+        fitted_model_mle = model.fit(data, estimator=DiscreteMLE())
 
         self.assertEqual(
             fitted_model_mle.get_cpds("B"),
             TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]]),
         )
 
-        fitted_model_em = model.fit(data, estimator=ExpectationMaximization)
+        fitted_model_em = model.fit(data, estimator=DiscreteEM(show_progress=False))
 
         self.assertEqual(
             fitted_model_em.get_cpds("B"),
@@ -1024,15 +1108,13 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
 
         fitted_model_bayesian = model.fit(
             data,
-            estimator=BayesianEstimator,
-            prior_type="dirichlet",
-            pseudo_counts=pseudo_counts,
+            estimator=DiscreteBayesianEstimator(prior_type="dirichlet", pseudo_counts=pseudo_counts),
         )
         self.assertTrue(fitted_model_bayesian.check_model())
         self.assertEqual(sorted(fitted_model_bayesian.nodes()), ["A", "B", "C", "D"])
 
     def test_fit_missing_data(self):
-        self.model2.fit(self.data2, state_names={"C": [0, 1]})
+        self.model2.fit(self.data2, estimator=DiscreteMLE(state_names={"C": [0, 1]}))
         cpds = {
             TabularCPD("A", 2, [[0.5], [0.5]]),
             TabularCPD("B", 2, [[2.0 / 3], [1.0 / 3]]),
@@ -1433,6 +1515,21 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
         )[:]
         self.assertRaises(ValueError, self.model_connected.predict_probability, predict_data)
 
+    def test_predict_probability_non_string_nodes(self):
+        model = DiscreteBayesianNetwork([(0, 1)])
+        cpd0 = TabularCPD(0, 2, [[0.6], [0.4]])
+        cpd1 = TabularCPD(1, 2, [[0.8, 0.2], [0.2, 0.8]], evidence=[0], evidence_card=[2])
+        model.add_cpds(cpd0, cpd1)
+
+        predict_data = pd.DataFrame({0: [0, 1]})
+        result = model.predict_probability(predict_data)
+
+        self.assertIsInstance(result, pd.DataFrame)
+        self.assertEqual(list(result.columns), ["1_0", "1_1"])
+        self.assertEqual(len(result), 2)
+        np_test.assert_allclose(result["1_0"].values, [0.8, 0.2])
+        np_test.assert_allclose(result["1_1"].values, [0.2, 0.8])
+
     def tearDown(self):
         del self.model_connected
         del self.model_disconnected
@@ -1816,6 +1913,21 @@ class TestSimulation(unittest.TestCase):
             "ERRCAUTER": self.causal_infer_alarm.query(["ERRCAUTER"], do={"MINVOLSET": "NORMAL"}),
         }
         self._test_alarm_marginals_equal(alarm_samples, alarm_inference_marginals)
+
+        # A genuinely soft intervention: X is drawn from the given distribution and the downstream
+        # variables match exact inference on the intervened model; no helper columns leak into the output
+        from pgmpy.inference import VariableElimination
+
+        virt_inter = TabularCPD("X", 2, [[0.5], [0.5]])
+        con_model_samples = self.con_model.simulate(
+            n_samples=int(1e4), virtual_intervention=[virt_inter], show_progress=False, seed=42
+        )
+        self.assertEqual(set(con_model_samples.columns), set(self.con_model.nodes()))
+        x_marginal = con_model_samples["X"].value_counts(normalize=True)
+        self.assertTrue(np.isclose(x_marginal.loc[0], 0.5, atol=0.02))
+        soft_model = self.con_model.do({"X": virt_inter})
+        con_inference_marginals = VariableElimination(soft_model).query(["Y"], joint=False)
+        self._test_con_marginals_equal(con_model_samples, con_inference_marginals)
 
     def test_stimulate_missing_mcar(self):
         samples = self.con_model.simulate(n_samples=3000)

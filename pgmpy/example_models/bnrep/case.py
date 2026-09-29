@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Case(BIFMixin, _BaseExampleModel):
+class Case(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/case",
         "n_nodes": 23,

@@ -1,9 +1,10 @@
 import networkx as nx
 
 from pgmpy.base import UndirectedGraph
-from pgmpy.causal_discovery import ExpertKnowledge
-from pgmpy.estimators import BDeu, HillClimbSearch, StructureEstimator
-from pgmpy.estimators.CITests import chi_square
+from pgmpy.causal_discovery import ExpertKnowledge, HillClimbSearch
+from pgmpy.ci_tests import ChiSquare
+from pgmpy.estimators import StructureEstimator
+from pgmpy.structure_score import BDeu
 from pgmpy.utils.mathext import powerset
 
 
@@ -77,26 +78,25 @@ class MmhcEstimator(StructureEstimator):
         >>> est = MmhcEstimator(data)
         >>> model = est.estimate()
         >>> print(model.edges())  # doctest: +NORMALIZE_WHITESPACE
-        [('Y', 'X'), ('Z', 'Y'), ('Z', 'X'), ('W', 'Y'), ('W', 'X'), ('W', 'Z'),
-        ('sum', 'X'), ('sum', 'W'), ('sum', 'Z'), ('sum', 'Y')]
+        [('X', 'sum'), ('Y', 'sum'), ('Z', 'sum'), ('W', 'sum')]
         """
         if scoring_method is None:
             scoring_method = BDeu(self.data, equivalent_sample_size=10)
 
         skel = self.mmpc(significance_level)
-        hc = HillClimbSearch(self.data)
 
         possible_edges = nx.complete_graph(n=self.state_names.keys(), create_using=nx.Graph).edges()
 
         expert_knowledge = ExpertKnowledge(forbidden_edges=possible_edges - skel.to_directed().edges())
 
-        model = hc.estimate(
+        hc = HillClimbSearch(
             scoring_method=scoring_method,
             expert_knowledge=expert_knowledge,
             tabu_length=tabu_length,
+            return_type="dag",
         )
 
-        return model
+        return hc.fit(self.data).causal_graph_
 
     def mmpc(self, significance_level=0.01):
         """Estimates a graph skeleton (UndirectedGraph) for the data set, using then
@@ -152,12 +152,13 @@ class MmhcEstimator(StructureEstimator):
         """
 
         nodes = self.state_names.keys()
+        ci_test = ChiSquare(self.data)
 
         def assoc(X, Y, Zs):
             """Measure for (conditional) association between variables. Use negative
             p-value of independence test.
             """
-            return 1 - chi_square(X, Y, Zs, self.data, boolean=False)[1]
+            return 1 - ci_test.run_test(X, Y, list(Zs))[1]
 
         def min_assoc(X, Y, Zs):
             "Minimal association of X, Y given any subset of Zs."
@@ -193,11 +194,10 @@ class MmhcEstimator(StructureEstimator):
             for neigh in neighbors[node]:
                 other_neighbors = [n for n in neighbors[node] if n != neigh]
                 for sep_set in powerset(other_neighbors):
-                    if chi_square(
+                    if ci_test.is_independent(
                         X=node,
                         Y=neigh,
-                        Z=sep_set,
-                        data=self.data,
+                        Z=list(sep_set),
                         significance_level=significance_level,
                     ):
                         neighbors[node].remove(neigh)

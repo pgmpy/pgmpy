@@ -8,8 +8,7 @@ import pytest
 from sklearn.exceptions import NotFittedError
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
-from pgmpy.causal_discovery import HillClimbSearch
-from pgmpy.estimators import ExpertKnowledge
+from pgmpy.causal_discovery import ExpertKnowledge, HillClimbSearch
 from pgmpy.example_models import load_model
 from pgmpy.metrics import SHD, CorrelationScore
 from pgmpy.models import DiscreteBayesianNetwork

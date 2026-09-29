@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Argument(BIFMixin, _BaseExampleModel):
+class Argument(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/argument",
         "n_nodes": 10,

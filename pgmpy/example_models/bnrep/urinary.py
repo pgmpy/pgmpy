@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Urinary(BIFMixin, _BaseExampleModel):
+class Urinary(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/urinary",
         "n_nodes": 36,

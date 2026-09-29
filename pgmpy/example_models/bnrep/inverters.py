@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Inverters(BIFMixin, _BaseExampleModel):
+class Inverters(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/inverters",
         "n_nodes": 29,

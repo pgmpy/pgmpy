@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Dioxins(BIFMixin, _BaseExampleModel):
+class Dioxins(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/dioxins",
         "n_nodes": 9,

@@ -17,9 +17,9 @@
 from pgmpy.base import DAG  # noqa: F401
 
 # TODO: Choose the appropriate base class based on whether your metric requires ground truth:
-# For metrics that compare against a ground truth graph, import _BaseSupervisedMetric
-# For metrics that evaluate a graph against data without ground truth, import _BaseUnsupervisedMetric
-from pgmpy.metrics import _BaseSupervisedMetric, _BaseUnsupervisedMetric
+# For metrics that compare against a ground truth graph, import BaseSupervisedMetric
+# For metrics that evaluate a graph against data without ground truth, import BaseUnsupervisedMetric
+from pgmpy.metrics import BaseSupervisedMetric, BaseUnsupervisedMetric
 
 # TODO: Add any additional imports needed for your specific metric implementation.
 # Common imports might include:
@@ -30,7 +30,7 @@ from pgmpy.metrics import _BaseSupervisedMetric, _BaseUnsupervisedMetric
 
 # TODO: Choose ONE of the following class definitions and remove the other.
 # Option 1: For supervised metrics (requires ground truth)
-class MyMetric(_BaseSupervisedMetric):
+class MyMetric(BaseSupervisedMetric):
     """
     [One line description of the metric.]
 
@@ -123,7 +123,7 @@ class MyMetric(_BaseSupervisedMetric):
 
 # TODO: Choose ONE of the following class definitions and remove the other.
 # Option 2: For unsupervised metrics (no ground truth required)
-class MyUnsupervisedMetric(_BaseUnsupervisedMetric):
+class MyUnsupervisedMetric(BaseUnsupervisedMetric):
     """
     [One line description of the metric.]
 

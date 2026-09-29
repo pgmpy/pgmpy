@@ -167,9 +167,9 @@ class NaiveBayes(DiscreteBayesianNetwork):
             Parent node of the model, if not specified it looks for a previously specified
             parent node.
 
-        estimator: Estimator class
-            Any pgmpy estimator. If nothing is specified, the default ``MaximumLikelihoodEstimator``
-            would be used.
+        estimator: discrete parameter estimator, optional
+            An initialized estimator instance from `pgmpy.parameter_estimator`.
+            If not specified, defaults to ``DiscreteMLE()``.
 
         Examples
         --------

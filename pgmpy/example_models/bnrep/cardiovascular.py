@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Cardiovascular(BIFMixin, _BaseExampleModel):
+class Cardiovascular(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/cardiovascular",
         "n_nodes": 13,

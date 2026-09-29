@@ -1,5 +1,5 @@
 import re
-import warnings
+from collections.abc import Hashable
 from itertools import product
 from string import Template
 
@@ -23,10 +23,10 @@ except ImportError as e:
         f"{e}. pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
     ) from None
 
-from pgmpy import logger
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import compat_fns
+from pgmpy.utils._warnings import _warn_external
 
 
 class BIFReader:
@@ -55,10 +55,9 @@ class BIFReader:
     >>> print(reader) # doctest: +ELLIPSIS
     <pgmpy.readwrite.BIF.BIFReader object at 0x...>
 
-    Reference
-    ---------
-    [1] Geoff Hulten and Pedro Domingos. The interchange format for bayesian networks.
-        http://www.cs.washington.edu/dm/vfml/appendixes/bif.htm, 2003.
+    References
+    ----------
+    - :footcite:t:`hulten_domingos_bif`
     """
 
     def __init__(self, path=None, string=None, include_properties=False):
@@ -260,8 +259,8 @@ class BIFReader:
         state_name_type: int, str or bool (default: str)
             The data type to which to convert the state names of the variables.
 
-        Example
-        ----------
+        Examples
+        --------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
         >>> from pgmpy.example_models import load_model
         >>> asia = load_model("bnlearn/asia")
@@ -316,7 +315,7 @@ class BIFWriter:
         Round the probability values to `round_values` decimals. If None, keeps all decimal points.
 
     Examples
-    ---------
+    --------
     >>> from pgmpy.readwrite import BIFWriter
     >>> from pgmpy.example_models import load_model
     >>> asia = load_model("bnlearn/asia")
@@ -457,8 +456,8 @@ $values
         -------
         list: a list containing names of variable
 
-        Example
-        -------
+        Examples
+        --------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
         >>> from pgmpy.example_models import load_model
         >>> asia = load_model("bnlearn/asia")
@@ -469,16 +468,22 @@ $values
         variables = self.model.nodes()
         return variables
 
-    def get_states(self):
+    def get_states(self) -> dict[Hashable, list[str]]:
         """
-        Add states to variable of BIF, handling commas in state names by replacing them with underscores.
+        Return state names as strings for BIF serialization.
 
         Returns
         -------
         dict: dict of type {variable: a list of states}
 
-        Example
-        -------
+        Warns
+        -----
+        UserWarning
+            If a state name contains a comma and cannot be read back correctly
+            by pgmpy's BIFReader.
+
+        Examples
+        --------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
         >>> from pgmpy.example_models import load_model
         >>> asia = load_model("bnlearn/asia")
@@ -499,9 +504,11 @@ $values
 
                 # Warn users if any commas in state names
                 if "," in state_str:
-                    logger.warning(
-                        f"State name '{state_str}' for variable '{variable}' contains commas. "
-                        "This may cause issues when loading the file. Consider removing any special characters."
+                    _warn_external(
+                        f"State name {state_str!r} for variable {variable!r} contains a comma "
+                        "and cannot be read back correctly by pgmpy's BIFReader. "
+                        "Rename the state if pgmpy round-trip compatibility is required.",
+                        UserWarning,
                     )
                 variable_states[variable].append(state_str)
         return variable_states
@@ -514,8 +521,8 @@ $values
         -------
         dict: dict of type {variable: list of properties }
 
-        Example
-        -------
+        Examples
+        --------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
         >>> from pgmpy.example_models import load_model
         >>> asia = load_model("bnlearn/asia")
@@ -538,8 +545,8 @@ $values
         -------
         dict: dict of type {variable: a list of parents}
 
-        Example
-        -------
+        Examples
+        --------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
         >>> from pgmpy.example_models import load_model
         >>> asia = load_model("bnlearn/asia")
@@ -568,8 +575,8 @@ $values
         -------
         dict: dict of type {variable: array}
 
-        Example
-        -------
+        Examples
+        --------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
         >>> from pgmpy.example_models import load_model
         >>> asia = load_model("bnlearn/asia")
@@ -596,8 +603,8 @@ $values
         ----------
         filename : Name of the file
 
-        Example
-        -------
+        Examples
+        --------
         >>> from pgmpy.example_models import load_model
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
         >>> asia = load_model("bnlearn/asia")
@@ -609,7 +616,9 @@ $values
             fout.write(writer)
 
     def write_bif(self, filename):
-        warnings.warn(
-            "`BIFWriter.write_bif` is deprecated. Please use `BIFWriter.write` instead.", FutureWarning, stacklevel=2
+        _warn_external(
+            "`BIFWriter.write_bif` is deprecated since v1.1.0 and will be removed in v2.0. "
+            "Use `BIFWriter.write` instead.",
+            FutureWarning,
         )
         self.write(filename)

@@ -1,0 +1,11 @@
+/knowledge
+addtemporal
+
+1  ABILITY SEX
+2  GPQ
+3  PREPROD QFJ
+4  PUBS CITES
+
+forbiddirect
+
+requiredirect

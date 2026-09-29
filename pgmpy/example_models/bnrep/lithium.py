@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Lithium(BIFMixin, _BaseExampleModel):
+class Lithium(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/lithium",
         "n_nodes": 45,

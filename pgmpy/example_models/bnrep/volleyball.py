@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Volleyball(BIFMixin, _BaseExampleModel):
+class Volleyball(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/volleyball",
         "n_nodes": 14,

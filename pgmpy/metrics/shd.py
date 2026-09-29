@@ -1,27 +1,32 @@
-import networkx as nx
 import numpy as np
 
-from pgmpy.base import DAG
-from pgmpy.metrics import _BaseSupervisedMetric
+from pgmpy.base import DAG, PDAG
+from pgmpy.metrics import BaseSupervisedMetric
 
 
-class SHD(_BaseSupervisedMetric):
-    """
-    Computes the Structural Hamming Distance between `true_causal_graph` and `est_causal_graph`.
+class SHD(BaseSupervisedMetric):
+    r"""
+    Computes the Structural Hamming Distance (SHD) between two graphs.
 
-    SHD is defined as total number of basic operations: adding edges, removing edges, and reversing edges required to
-    transform one graph to the other. It is a symmetrical measure.
+    Given two graphs (DAGs or PDAGs) :math:`G_1` and :math:`G_2` over the same vertex set, let :math:`S(G)` denote the
+    skeleton (underlying undirected graph) of :math:`G`. The SHD is:
 
-    The code first accounts for edges that need to be deleted (from true_model), added (to true_model) and finally edges
-    that need to be reversed. All operations count as 1. Alternatively, setting `edge_reverse_penalty=2` counts
-    reversals as a distance of 2 (one deletion and one addition).
+    .. math::
+
+        \text{SHD}(G_1, G_2) = |S(G_1) \triangle S(G_2)|
+            + p \cdot |\{e \in S(G_1) \cap S(G_2) :
+            \text{orient}(e, G_1) \neq \text{orient}(e, G_2)\}|
+
+    where :math:`\triangle` js the symmetric difference and :math:`p` is the ``edge_reverse_penalty`` (default 1; set to
+    2 to count a reversal as one deletion plus one addition).
+
+    For PDAGs, an undirected edge is represented as a pair of directed edges, so any orientation mismatch on a shared
+    skeleton edge counts as one operation.
 
     Parameters
     ----------
     edge_reverse_penalty: int (default: 1)
-        The penalty for edge reversals. When set to 1, all basic operations (add,
-        delete, reverse) count as 1. When set to 2, additions and deletions count
-        as 1, while reversals count as 2.
+        Penalty :math:`p` for orientation mismatches on shared skeleton edges.
 
     Examples
     --------
@@ -35,6 +40,14 @@ class SHD(_BaseSupervisedMetric):
     >>> shd_double = SHD(edge_reverse_penalty=2)
     >>> shd_double(true_causal_graph=dag1, est_causal_graph=dag2)
     2
+
+    PDAGs are also supported:
+
+    >>> from pgmpy.base import PDAG
+    >>> pdag1 = PDAG(edge_list=[(1, 2, "->"), (2, 3, "--")])
+    >>> pdag2 = PDAG(edge_list=[(1, 2, "->"), (2, 3, "->")])
+    >>> shd(true_causal_graph=pdag1, est_causal_graph=pdag2)
+    1
     """
 
     _tags = {
@@ -43,7 +56,7 @@ class SHD(_BaseSupervisedMetric):
         "requires_data": False,
         "lower_is_better": True,
         "is_symmetric": True,
-        "supported_graph_types": (DAG,),
+        "supported_graph_types": (DAG, PDAG),
         "is_default": True,
     }
 
@@ -54,21 +67,22 @@ class SHD(_BaseSupervisedMetric):
         super().__init__()
 
     def _evaluate(self, true_causal_graph, est_causal_graph):
-
-        nodes_list = true_causal_graph.nodes()
-
-        dag_true = nx.DiGraph(true_causal_graph.edges())
-        dag_true.add_nodes_from(list(nx.isolates(true_causal_graph)))
-        m1 = nx.adjacency_matrix(dag_true, nodelist=nodes_list).todense()
-
-        dag_est = nx.DiGraph(est_causal_graph.edges())
-        dag_est.add_nodes_from(list(nx.isolates(est_causal_graph)))
-        m2 = nx.adjacency_matrix(dag_est, nodelist=nodes_list).todense()
+        # Both DAG and PDAG expose ``to_adjacency``; the binary encoding gives a 0/1 directed
+        # adjacency (directed edges asymmetric, undirected edges symmetric). ``copy=True`` keeps the
+        # arrays writable -- under pandas copy-on-write ``to_numpy()`` returns a read-only view, and
+        # the SHD computation mutates ``m1`` in place.
+        nodes_list = list(true_causal_graph.nodes())
+        m1 = true_causal_graph.to_adjacency(encoding="binary", nodelist=nodes_list).to_numpy(copy=True)
+        m2 = est_causal_graph.to_adjacency(encoding="binary", nodelist=nodes_list).to_numpy(copy=True)
 
         shd = 0
 
-        s1 = m1 + m1.T
-        s2 = m2 + m2.T
+        # Skeletons: 1 wherever there is any edge (directed or undirected) between a pair.
+        # For PDAGs, undirected edges have both m[i, j] and m[j, i] set to 1, so m + m.T
+        # produces a 2 at those positions; clipping to {0, 1} keeps the skeleton comparison
+        # honest and avoids double-counting an undirected-vs-nothing difference.
+        s1 = np.clip(m1 + m1.T, 0, 1)
+        s2 = np.clip(m2 + m2.T, 0, 1)
 
         # Edges that are in m1 but not in m2 (deletions from m1)
         ds = s1 - s2

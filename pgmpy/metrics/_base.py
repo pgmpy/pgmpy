@@ -3,7 +3,7 @@ from skbase.base import BaseObject
 from skbase.lookup import all_objects
 
 
-class _BaseSupervisedMetric(BaseObject):
+class BaseSupervisedMetric(BaseObject):
     """
     Base class for all metric classes in pgmpy that require ground truth causal graph.
     """
@@ -51,7 +51,7 @@ class _BaseSupervisedMetric(BaseObject):
         )
 
 
-class _BaseUnsupervisedMetric(BaseObject):
+class BaseUnsupervisedMetric(BaseObject):
     """
     Base class for all metric classes in pgmpy that do not require ground truth causal graph.
     """
@@ -110,7 +110,7 @@ def get_metrics(**kwargs):
         If no metric class matching the given tag filters is found.
     """
     return all_objects(
-        object_types=[_BaseSupervisedMetric, _BaseUnsupervisedMetric],
+        object_types=[BaseSupervisedMetric, BaseUnsupervisedMetric],
         package_name="pgmpy.metrics",
         return_names=False,
         filter_tags=kwargs,

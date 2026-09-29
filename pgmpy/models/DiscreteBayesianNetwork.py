@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import itertools
-import logging
 from collections import defaultdict
 from collections.abc import Hashable, Iterable
 from functools import reduce
@@ -306,7 +305,7 @@ class DiscreteBayesianNetwork(DAG):
 
             for prev_cpd_index in range(len(self.cpds)):
                 if self.cpds[prev_cpd_index].variable == cpd.variable:
-                    logger.warning(f"Replacing existing CPD for {cpd.variable}")
+                    logger.debug(f"Replacing existing CPD for {cpd.variable}")
                     self.cpds[prev_cpd_index] = cpd
                     break
             else:
@@ -532,7 +531,7 @@ class DiscreteBayesianNetwork(DAG):
 
         return mm
 
-    def to_junction_tree(self) -> Any:
+    def to_junction_tree(self, heuristic: str = "MinFill", order: list[Hashable] | None = None) -> Any:
         """
         Creates a junction tree (or clique tree) for a given Bayesian Network.
 
@@ -543,6 +542,16 @@ class DiscreteBayesianNetwork(DAG):
         1. where each node in G corresponds to a maximal clique in H
         2. each sepset in G separates the variables strictly on one side of the
         edge to other.
+
+        Parameters
+        ----------
+        heuristic: str (default: "MinFill")
+            The heuristic used to triangulate the moral graph; see
+            `DiscreteMarkovNetwork.triangulate`.
+
+        order: list, tuple (array-like) (default: None)
+            The elimination order used to triangulate the moral graph; if given
+            the heuristic is not used.
 
         Examples
         --------
@@ -587,9 +596,9 @@ class DiscreteBayesianNetwork(DAG):
         >>> jt = G.to_junction_tree()
         """
         mm = self.to_markov_model()
-        return mm.to_junction_tree()
+        return mm.to_junction_tree(heuristic=heuristic, order=order)
 
-    def fit(self, data, estimator=None, state_names=[], n_jobs=1, **kwargs) -> DAG:
+    def fit(self, data, estimator=None, sample_weight=None) -> DAG:
         """
         Estimates the CPD for each variable based on a given data set.
 
@@ -600,22 +609,14 @@ class DiscreteBayesianNetwork(DAG):
             (If some values in the data are missing the data cells should be set to `numpy.nan`.
             Note that pandas converts each column containing `numpy.nan`s to dtype `float`.)
 
-        estimator: Estimator class
-            One of:
-            - MaximumLikelihoodEstimator (default)
-            - BayesianEstimator: In this case, pass 'prior_type' and either 'pseudo_counts'
-            or 'equivalent_sample_size' as additional keyword arguments.
-            See `BayesianEstimator.get_parameters()` for usage.
-            - ExpectationMaximization
+        estimator: DiscreteMLE, DiscreteBayesianEstimator, or DiscreteEM, optional
+            An initialized discrete parameter estimator from
+            `pgmpy.parameter_estimator`. If not specified, defaults to
+            `DiscreteMLE()`.
 
-        state_names: dict (optional)
-            A dict indicating, for each variable, the discrete set of states
-            that the variable can take. If unspecified, the observed values
-            in the data set are taken to be the only possible states.
-
-        n_jobs: int (default: 1)
-            Number of threads/processes to use for estimation. Using n_jobs > 1
-            for small models or datasets might be slower.
+        sample_weight: array-like of shape (n_samples,), optional
+            Per-row weights for `data`. Forwarded to the estimator's `fit`. Only
+            accepted by estimators whose `supports_weighted_data` tag is True.
 
         Returns
         -------
@@ -626,47 +627,42 @@ class DiscreteBayesianNetwork(DAG):
 
         Examples
         --------
-        >>> import pandas as pd
+        >>> from pgmpy.datasets import load_dataset
         >>> from pgmpy.models import DiscreteBayesianNetwork
-        >>> from pgmpy.base import DAG
-        >>> data = pd.DataFrame(data={"A": [0, 0, 1], "B": [0, 1, 0], "C": [1, 1, 0]})
-        >>> model = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
-        >>> fitted_model = model.fit(data)
+        >>> from pgmpy.parameter_estimator import DiscreteMLE
+        >>> data = load_dataset("college_plans").data
+        >>> model = DiscreteBayesianNetwork(
+        ...     [("ses", "iq"), ("sex", "pe"), ("ses", "pe"), ("iq", "cp"), ("pe", "cp")]
+        ... )
+        >>> fitted_model = model.fit(data, estimator=DiscreteMLE())
         >>> len(fitted_model.get_cpds())
-        3
+        5
         >>> fitted_model.get_cpds()  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-        [<TabularCPD representing P(A:2) at 0x...>,
-        <TabularCPD representing P(C:2 | A:2, B:2) at 0x...>,
-        <TabularCPD representing P(B:2) at 0x...>]
+        [<TabularCPD representing P(ses:4) at 0x...>,
+         <TabularCPD representing P(iq:4 | ses:4) at 0x...>,
+         <TabularCPD representing P(sex:2) at 0x...>,
+         <TabularCPD representing P(pe:2 | ses:4, sex:2) at 0x...>,
+         <TabularCPD representing P(cp:2 | iq:4, pe:2) at 0x...>]
         """
-        from pgmpy.estimators import BaseEstimator, MaximumLikelihoodEstimator
-        from pgmpy.models import DiscreteBayesianNetwork
-
-        if isinstance(self, DiscreteBayesianNetwork):
-            bn = self
-        else:
-            bn = DiscreteBayesianNetwork(self.edges())
-            bn.add_nodes_from(self.nodes())
+        from pgmpy.parameter_estimator import DiscreteMLE
+        from pgmpy.parameter_estimator.base import DiscreteParameterEstimator
 
         if estimator is None:
-            estimator = MaximumLikelihoodEstimator
-        else:
-            if not issubclass(estimator, BaseEstimator):
-                raise TypeError("Estimator object should be a valid pgmpy estimator.")
+            estimator = DiscreteMLE()
+        elif not isinstance(estimator, DiscreteParameterEstimator):
+            raise TypeError(
+                "Estimator should be an instance of a discrete parameter estimator. "
+                "Pass an initialized estimator, for example `DiscreteMLE()`."
+            )
 
-        _estimator = estimator(
-            bn,
-            data,
-            state_names=state_names,
-        )
-        cpds_list = _estimator.get_parameters(n_jobs=n_jobs, **kwargs)
-        bn.add_cpds(*cpds_list)
-        return bn
+        estimator.fit(self, data, sample_weight=sample_weight)
+        self.add_cpds(*estimator.parameters_)
+        return self
 
     def fit_update(self, data: pd.DataFrame, n_prev_samples: int | None = None, n_jobs: int = 1) -> None:
         """
         Method to update the parameters of the DiscreteBayesianNetwork with more data.
-        Internally, uses BayesianEstimator with dirichlet prior, and uses
+        Internally, uses DiscreteBayesianEstimator with dirichlet prior, and uses
         the current CPDs (along with `n_prev_samples`) to compute the pseudo_counts.
 
         Parameters
@@ -697,7 +693,7 @@ class DiscreteBayesianNetwork(DAG):
         >>> data = BayesianModelSampling(model).forward_sample(int(1e3))
         >>> model.fit_update(data)
         """
-        from pgmpy.estimators import BayesianEstimator
+        from pgmpy.parameter_estimator import DiscreteBayesianEstimator
 
         if n_prev_samples is None:
             n_prev_samples = data.shape[0]
@@ -713,16 +709,16 @@ class DiscreteBayesianNetwork(DAG):
             state_names.update(self.get_cpds(var).state_names)
 
         # Step 3: Estimate the new CPDs.
-        _est = BayesianEstimator(self, data, state_names=state_names)
-        cpds = _est.get_parameters(prior_type="dirichlet", pseudo_counts=pseudo_counts, n_jobs=n_jobs)
+        _est = DiscreteBayesianEstimator(
+            state_names=state_names,
+            prior_type="dirichlet",
+            pseudo_counts=pseudo_counts,
+            n_jobs=n_jobs,
+        )
+        _est.fit(self, data)
+        cpds = _est.parameters_
 
-        # Temporarily suppress logger to stop giving warning about replacing CPDs.
-        _prev_level = logger.level
-        logger.setLevel(logging.CRITICAL)
-        try:
-            self.add_cpds(*cpds)
-        finally:
-            logger.setLevel(_prev_level)
+        self.add_cpds(*cpds)
 
     def predict(
         self,
@@ -738,68 +734,52 @@ class DiscreteBayesianNetwork(DAG):
 
         Parameters
         ----------
-        data: pandas DataFrame object
+        data : pandas.DataFrame
             A DataFrame object with column names same as the variables in the model.
 
-        algo: a subclass of pgmpy.inference.Inference or pgmpy.inference.ApproxInference
+        algo : type, optional
             An algorithm class from pgmpy Inference algorithms. Default is Variable Elimination.
 
-        stochastic: boolean
+        stochastic : bool
             If True, does prediction by sampling from the distribution of predicted variable(s).
             If False, returns the states with the highest probability value (i.e. MAP) for the
-                predicted variable(s).
+            predicted variable(s).
 
-        n_jobs: int (default: -1)
+        n_jobs : int, default=-1
             The number of CPU cores to use. If -1, uses all available cores.
 
-        seed: int (default: None)
-            When `stochastic=True`, the seed value to use for random number generators.
+        seed : int, optional
+            When ``stochastic=True``, the seed value to use for random number generators.
 
-        **kwargs
-            Optional keyword arguments specific to the selected algorithm.
-            - Variable Elimination:
-            - elimination_order: str or list (default='greedy')
-                Order in which to eliminate the variables in the algorithm. If list is provided,
-                should contain all variables in the model except the ones in `variables`. str options
-                are: `greedy`, `WeightedMinFill`, `MinNeighbors`, `MinWeight`, `MinFill`. Please
-                refer https://pgmpy.org/exact_infer/ve.html#module-pgmpy.inference.EliminationOrder
-                for details.
+        **kwargs : dict
+            Optional keyword arguments for the selected inference algorithm.
 
-            - joint: boolean (should only be used with stochastic=True i.e. when not calculating MAP)
-                If True, returns a Joint Distribution over `variables`.
-                If False, returns a dict of distributions over each of the `variables`.
-
-            - Belief Propagation:
-                - joint: boolean (should only be used with stochastic=True i.e. when not calculating MAP)
-                If True, returns a Joint Distribution over `variables`.
-                If False, returns a dict of distributions over each of the `variables`.
-
-            - Approx Inference:
-                - n_samples: int
-                    The number of samples to generate for computing the distributions. Higher `n_samples`
-                    results in more accurate results at the cost of more computation time.
-
-                - samples: pd.DataFrame (default: None)
-                    If provided, uses these samples to compute the distribution instead
-                    of generating samples. `samples` **must** conform with the
-                    `evidence` and `virtual_evidence`.
-
-                - state_names: dict (default: None)
-                    A dict of state names for each variable in `variables` in the form {variable_name: list of states}.
-                    If None, inferred from the data but is possible that the final distribution misses some states.
-
-                - seed: int (default: None)
-                    Sets the seed for the random generators.
-
-                - joint: boolean (should only be used with stochastic=True i.e. when not calculating MAP)
-                    If True, returns a Joint Distribution over `variables`.
-                    If False, returns a dict of distributions over each of the `variables`.
+            - ``elimination_order`` (str or list, default ``"greedy"``): Variable
+              elimination order. A list must contain all model variables except
+              those being predicted. String options are ``"greedy"``,
+              ``"WeightedMinFill"``, ``"MinNeighbors"``, ``"MinWeight"``, and
+              ``"MinFill"``.
+            - ``n_samples`` (int): Number of samples used by approximate
+              inference. Larger values improve accuracy at additional cost.
+            - ``samples`` (pandas.DataFrame, default ``None``): Existing samples
+              for approximate inference. They must conform to the evidence and
+              virtual evidence.
+            - ``state_names`` (dict, default ``None``): Possible states for each
+              variable. When inferred from samples, unobserved states can be
+              absent from the resulting distribution.
+            - ``seed`` (int, default ``None``): Random seed used by approximate
+              inference.
+            - ``joint`` (bool): Used only for stochastic prediction. If true,
+              return a joint distribution; otherwise, return one distribution
+              per variable. This option is supported by variable elimination,
+              belief propagation, and approximate inference.
 
         Returns
         -------
-        Inference results: Pandas DataFrame
-            If `stochastic` is True, returns state(s) by sampling from the distribution of predicted variables.
-            If `stochastic` is False, returns state(s) with the highest probability value.
+        results : pandas.DataFrame
+            If ``stochastic`` is True, returns states sampled from the
+            distribution of predicted variables. Otherwise, returns states
+            with the highest probability values.
 
         Examples
         --------
@@ -936,7 +916,7 @@ class DiscreteBayesianNetwork(DAG):
             for k, v in states_dict.items():
                 for index in range(len(v.values)):
                     state = self.get_cpds(k).state_names[k][index]
-                    pred_values[k + "_" + str(state)].append(v.values[index])
+                    pred_values[f"{k}_{state}"].append(v.values[index])
         return pd.DataFrame(pred_values, index=data.index)
 
     def get_state_probability(self, states: dict[Hashable, Hashable]) -> float:
@@ -1101,7 +1081,10 @@ class DiscreteBayesianNetwork(DAG):
         model_copy.add_edges_from(self.edges())
         if self.cpds:
             model_copy.add_cpds(*[cpd.copy() for cpd in self.cpds])
-        model_copy.latents = self.latents
+
+        for role, var in self.get_role_dict().copy().items():
+            model_copy.with_role(role=role, variables=var, inplace=True)
+
         return model_copy
 
     def get_markov_blanket(self, node: Hashable) -> list[Hashable]:
@@ -1294,16 +1277,32 @@ class DiscreteBayesianNetwork(DAG):
         else:
             return cpds
 
-    def do(self, nodes: Hashable | list[Hashable], inplace: bool = False) -> DiscreteBayesianNetwork | None:
+    def do(
+        self,
+        nodes: Hashable | Iterable[Hashable] | dict[Hashable, Hashable | TabularCPD | None],
+        inplace: bool = False,
+    ) -> DiscreteBayesianNetwork:
         """
-        Applies the do operation. The do operation removes all incoming edges
-        to variables in `nodes` and marginalizes their CPDs to only contain the
-        variable itself.
+        Applies the do-operator: removes all incoming edges of the intervened
+        variables and replaces their CPDs with the intervention distribution.
+
+        Three kinds of interventions are supported, and can be mixed in one call:
+
+        - ``do("X")`` / ``do(["X", "Y"])`` / ``do({"X": None})``: the intervention
+          distribution is left unspecified and the CPD of ``X`` is set to the uniform
+          distribution over its states.
+        - ``do({"X": x})``: atomic (hard) intervention do(X = x). The CPD of ``X``
+          becomes a point mass at state ``x``.
+        - ``do({"X": cpd})`` with a ``TabularCPD`` defined on ``X`` alone: soft
+          (stochastic) intervention. The CPD of ``X`` is replaced by ``cpd``.
 
         Parameters
         ----------
-        nodes : list, array-like
-            The names of the nodes to apply the do-operator for.
+        nodes : Hashable, iterable of Hashable, or dict
+            The variable(s) to intervene on; all must be present in the model. A ``str``, ``int``
+            or ``tuple`` is one node; a list, set or frozenset is a collection. A dict maps each
+            variable to its intervention: a state, a ``TabularCPD`` over the variable alone (using
+            the model's state names), or None.
 
         inplace: boolean (default: False)
             If inplace=True, makes the changes to the current object,
@@ -1311,34 +1310,80 @@ class DiscreteBayesianNetwork(DAG):
 
         Returns
         -------
-        Modified network: pgmpy.models.DiscreteBayesianNetwork or None
-            If inplace=True, modifies the object itself else returns an instance of
-            DiscreteBayesianNetwork modified by the do operation.
+        Modified network: pgmpy.models.DiscreteBayesianNetwork
+            The post-intervention model: `self` if `inplace=True`, otherwise a modified copy.
+
+        Raises
+        ------
+        ValueError
+            If a variable is not present in the model, has no CPD to intervene on, the state is not
+            a state of the variable, or the intervention CPD is not over the variable alone with the
+            model's state names.
 
         Examples
         --------
         >>> from pgmpy.example_models import load_model
+        >>> from pgmpy.factors.discrete import TabularCPD
         >>> asia = load_model("bnlearn/asia")
         >>> asia.edges()  # doctest: +NORMALIZE_WHITESPACE
         OutEdgeView([('asia', 'tub'), ('tub', 'either'), ('smoke', 'lung'), ('smoke', 'bronc'),
                      ('lung', 'either'), ('bronc', 'dysp'), ('either', 'xray'), ('either', 'dysp')])
-        >>> do_bronc = asia.do(["bronc"])
+        >>> do_bronc = asia.do({"bronc": "yes"})
+        >>> do_bronc.get_parents("bronc")
+        []
+        >>> do_bronc.get_cpds("bronc").values
+        array([1., 0.])
+        >>> soft = asia.do({"bronc": TabularCPD("bronc", 2, [[0.3], [0.7]], state_names={"bronc": ["yes", "no"]})})
+        >>> soft.get_cpds("bronc").values
+        array([0.3, 0.7])
+        >>> asia.do(["bronc", "smoke"]).get_cpds("bronc").values
+        array([0.5, 0.5])
+
+        References
+        ----------
+        - :footcite:t:`pearl_2009` (page 70).
         """
-        if isinstance(nodes, (str, int)):
-            nodes = [nodes]
+        if isinstance(nodes, dict):
+            interventions = nodes
         else:
-            nodes = list(nodes)
+            interventions = dict.fromkeys(nodes if isinstance(nodes, (list, set, frozenset)) else [nodes])
 
-        if not set(nodes).issubset(set(self.nodes())):
-            raise ValueError(f"Nodes not found in the model: {set(nodes) - set(self.nodes)}")
+        adj_model = super().do(list(interventions), inplace=inplace)
 
-        model = self if inplace else self.copy()
-        adj_model = DAG.do(model, nodes, inplace=inplace)
+        for node, intervention in interventions.items():
+            old_cpd = adj_model.get_cpds(node)
+            if old_cpd is None:
+                if intervention is None:
+                    continue
+                raise ValueError(f"No CPD associated with {node!r}; add one before intervening on it.")
+            states = old_cpd.state_names[node]
 
-        if adj_model.cpds:
-            for node in nodes:
-                cpd = adj_model.get_cpds(node=node)
-                cpd.marginalize(cpd.variables[1:], inplace=True)
+            if isinstance(intervention, TabularCPD):
+                if intervention.variables != [node]:
+                    raise ValueError(
+                        f"The intervention CPD for {node!r} must be defined on {node!r} alone; "
+                        f"got scope {intervention.variables}."
+                    )
+                if intervention.state_names[node] != states:
+                    raise ValueError(
+                        f"The intervention CPD for {node!r} has states {intervention.state_names[node]}, "
+                        f"but the model has states {states}."
+                    )
+                new_cpd = intervention
+            elif intervention is None:
+                new_cpd = TabularCPD(node, len(states), [[1 / len(states)]] * len(states), state_names={node: states})
+            else:
+                if intervention not in states:
+                    raise ValueError(f"State {intervention!r} is not a state of {node!r}; valid states: {states}.")
+                new_cpd = TabularCPD(
+                    node,
+                    len(states),
+                    [[1.0 if state == intervention else 0.0] for state in states],
+                    state_names={node: states},
+                )
+
+            adj_model.remove_cpds(old_cpd)
+            adj_model.add_cpds(new_cpd)
         return adj_model
 
     def simulate(
@@ -1466,7 +1511,7 @@ class DiscreteBayesianNetwork(DAG):
         ...     )
         ... ]
         >>> model.simulate(n_samples=10, virtual_intervention=virt_intervention).shape
-        (10, 38)
+        (10, 37)
 
 
         Simulation with missing values:
@@ -1518,15 +1563,15 @@ class DiscreteBayesianNetwork(DAG):
         virtual_intervention = [] if virtual_intervention is None else virtual_intervention
         virtual_evidence = [] if virtual_evidence is None else virtual_evidence
 
+        virt_nodes = [cpd.variables[0] for cpd in virtual_intervention]
         if set(do.keys()).intersection(set(evidence.keys())):
             raise ValueError("Variable can't be in both do and evidence")
+        if set(do.keys()).intersection(virt_nodes):
+            raise ValueError("Variable can't be in both do and virtual_intervention")
 
-        # Step 1: If do or virtual_intervention is specified, modify the network structure.
-        if (do != {}) or (virtual_intervention != []):
-            virt_nodes = [cpd.variables[0] for cpd in virtual_intervention]
-            model = model.do(list(do.keys()) + virt_nodes)
-            evidence = {**evidence, **do}
-            virtual_evidence = [*virtual_evidence, *virtual_intervention]
+        # Step 1: If do or virtual_intervention is specified, apply the interventions to the model.
+        if do or virtual_intervention:
+            model.do({**do, **dict(zip(virt_nodes, virtual_intervention))}, inplace=True)
 
         # Step 2: If virtual_evidence; modify the network structure
         if virtual_evidence != []:

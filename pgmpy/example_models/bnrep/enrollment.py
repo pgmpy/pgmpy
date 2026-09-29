@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Enrollment(BIFMixin, _BaseExampleModel):
+class Enrollment(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/enrollment",
         "n_nodes": 8,

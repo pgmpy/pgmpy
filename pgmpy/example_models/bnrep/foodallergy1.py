@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Foodallergy1(BIFMixin, _BaseExampleModel):
+class Foodallergy1(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/foodallergy1",
         "n_nodes": 8,

@@ -1,7 +1,7 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class CysticFibrosis(_BaseDataset):
+class CysticFibrosis(BaseDataset):
     _tags = {
         "name": "cystic_fibrosis",
         "n_variables": 44,

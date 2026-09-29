@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Realestate3(BIFMixin, _BaseExampleModel):
+class Realestate3(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/realestate3",
         "n_nodes": 27,

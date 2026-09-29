@@ -1,7 +1,7 @@
-from .._base import ContinuousMixin, _BaseExampleModel
+from .._base import BaseExampleModel, ContinuousMixin
 
 
-class Liquefaction(ContinuousMixin, _BaseExampleModel):
+class Liquefaction(ContinuousMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/liquefaction",
         "n_nodes": 10,

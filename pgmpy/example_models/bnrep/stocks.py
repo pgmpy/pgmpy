@@ -1,7 +1,7 @@
-from .._base import ContinuousMixin, _BaseExampleModel
+from .._base import BaseExampleModel, ContinuousMixin
 
 
-class Stocks(ContinuousMixin, _BaseExampleModel):
+class Stocks(ContinuousMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/stocks",
         "n_nodes": 13,

@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Gonorrhoeae(BIFMixin, _BaseExampleModel):
+class Gonorrhoeae(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/gonorrhoeae",
         "n_nodes": 10,

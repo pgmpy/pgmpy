@@ -3,7 +3,6 @@ import pandas as pd
 import statsmodels.api as sm
 
 from pgmpy import config
-from pgmpy.inference import CausalInference
 from pgmpy.models import SEM, SEMAlg, SEMGraph
 from pgmpy.utils import compat_fns, optimize, pinverse
 
@@ -89,7 +88,12 @@ class SEMEstimator:
         method after each iteration with updated params to compute the new loss.
 
         The fitting function for ML is:
-        .. math:: F_{ML} = \log |\Sigma(\theta)| + tr(S \Sigma^{-1}(\theta)) - \log S - (p+q)
+
+        .. math::
+
+            F_{ML} = \log \lvert\Sigma(\theta)\rvert
+            + \operatorname{tr}(S \Sigma^{-1}(\theta))
+            - \log \lvert S \rvert - (p + q)
 
         Parameters
         ----------
@@ -167,10 +171,9 @@ class SEMEstimator:
         """
         Computes the starting values for the optimizer.
 
-        Reference
-        ---------
-        .. [1] Table 4C.1: Bollen, K. (2014). Structural Equations with Latent Variables.
-                New York, NY: John Wiley & Sons.
+        References
+        ----------
+        - :footcite:t:`bollen_2014` (Table 4C.1).
 
         """
         # Initialize all the values even if the edge doesn't exist, masks would take care of that.
@@ -238,20 +241,19 @@ class SEMEstimator:
             dict: dictionary with keys `B` and `zeta`.
 
         **kwargs: dict
-            Extra parameters required in case of some estimators.
-            GLS:
-                W: np.array (n x n) where n is the number of observe variables.
-            2sls:
-                x:
-                y:
+            Extra parameters required by some estimators. For GLS, ``W`` is an
+            ``n x n`` array where ``n`` is the number of observed variables.
+            For 2SLS, specify ``x`` and ``y``.
 
         Returns
         -------
-            pgmpy.model.SEM instance: Instance of the model with estimated parameters
+        summary : dict
+            Goodness-of-fit statistics for the fitted model. The estimator updates
+            ``self.model`` with the learned parameters in place.
 
         References
         ----------
-        .. [1] Bollen, K. A. (2010). Structural equations with latent variables. New York: Wiley.
+        - :footcite:t:`thoemmes_2013`
         """
         # Check if given arguments are valid
         if not isinstance(data, pd.DataFrame):
@@ -455,6 +457,8 @@ class IVEstimator:
         >>> estimator = IVEstimator(model)
         >>> param, results = estimator.fit(X="X", Y="Y", data=data)
         """
+        from pgmpy.inference import CausalInference
+
         if (ivs is None) and (civs is None):
             inference = CausalInference(self.model)
             ivs = inference.get_ivs(X, Y)

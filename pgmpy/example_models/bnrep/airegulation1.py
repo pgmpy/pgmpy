@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Airegulation1(BIFMixin, _BaseExampleModel):
+class Airegulation1(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/airegulation1",
         "n_nodes": 22,
