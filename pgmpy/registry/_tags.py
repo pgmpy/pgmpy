@@ -119,6 +119,29 @@ class default_for(_BaseTag):
 # ---------------------------
 
 
+class identifiable_graph(_BaseTag):
+    """
+    How far the causal discovery algorithm can identify the causal graph.
+
+    - ``"dag"``: Every edge is oriented, e.g. by relying on functional or noise assumptions (``ANM``), on patterns in
+      the data (``VarSort``), or on an expert (``ExpertInLoop``).
+    - ``"cpdag"``: The graph is identified only up to its Markov equivalence class, e.g. ``PC`` and ``GES``. With
+      expert knowledge, more edges can be oriented (a maximally oriented PDAG).
+    - ``"pag"``: The graph is identified only up to a partial ancestral graph, for methods that allow latent
+      variables.
+
+    This describes the method, not the type of ``causal_graph_``: an algorithm with a ``return_type`` parameter can
+    convert its result, e.g. ``PC(return_type="dag")`` returns one arbitrary DAG from the equivalence class.
+    """
+
+    _tags = {
+        "tag_name": "identifiable_graph",
+        "parent_type": ["causal_discovery"],
+        "tag_type": ("str", ["dag", "cpdag", "pag"]),
+        "short_descr": "How far the algorithm can identify the causal graph: 'dag', 'cpdag', or 'pag'.",
+    }
+
+
 class requires_target(_BaseTag):
     """Whether the causal discovery algorithm requires a target variable to be specified, e.g. ``TAN``."""
 

@@ -67,6 +67,7 @@ class VarSort(BaseOrderDiscovery):
     _tags = {
         "name": "var_sort",
         "data_types": ["continuous"],
+        "identifiable_graph": "dag",
         "requires_target": False,
         "capability:multivariate": True,
         "capability:expert_knowledge": [],

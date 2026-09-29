@@ -133,6 +133,7 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
     _tags = {
         "name": "hill_climb_search",
         "data_types": ["discrete", "continuous", "mixed"],
+        "identifiable_graph": "cpdag",
         "requires_target": False,
         "capability:multivariate": True,
         "capability:expert_knowledge": ["forbidden_edges", "required_edges", "search_space", "temporal_order"],

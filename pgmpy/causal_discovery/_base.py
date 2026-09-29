@@ -40,6 +40,7 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         "object_type": "causal_discovery",
         "name": None,
         "data_types": None,
+        "identifiable_graph": None,
         "requires_target": None,
         "capability:multivariate": None,
         "capability:expert_knowledge": None,
@@ -140,7 +141,6 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         discovery algorithm inheriting from `BaseCausalDiscovery`.
         """
         X = self._check_fit_data(X)
-
         return self._fit(X)
 
     def score(

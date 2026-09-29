@@ -84,6 +84,7 @@ class IGCI(BaseCausalDiscovery):
     _tags = {
         "name": "igci",
         "data_types": ["continuous"],
+        "identifiable_graph": "dag",
         "requires_target": False,
         "capability:multivariate": False,
         "capability:expert_knowledge": [],

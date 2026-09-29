@@ -93,6 +93,7 @@ class ChowLiu(_TreeSearchMixin, BaseCausalDiscovery):
     _tags = {
         "name": "chow_liu",
         "data_types": ["discrete"],
+        "identifiable_graph": "cpdag",
         "requires_target": False,
         "capability:multivariate": True,
         "capability:expert_knowledge": [],

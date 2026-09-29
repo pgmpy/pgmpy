@@ -91,6 +91,7 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
     _tags = {
         "name": "ges",
         "data_types": ["discrete", "continuous", "mixed"],
+        "identifiable_graph": "cpdag",
         "requires_target": False,
         "capability:multivariate": True,
         "capability:expert_knowledge": [],

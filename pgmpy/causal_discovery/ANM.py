@@ -104,6 +104,7 @@ class ANM(BaseCausalDiscovery):
     _tags = {
         "name": "anm",
         "data_types": ["continuous"],
+        "identifiable_graph": "dag",
         "requires_target": False,
         "capability:multivariate": False,
         "capability:expert_knowledge": [],

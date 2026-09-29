@@ -63,6 +63,7 @@ class MyCausalDiscoveryAlgo(BaseCausalDiscovery):
     _tags = {
         "name": "my_causal_discovery_algo",  # Unique lowercase name.
         "data_types": ["continuous"],  # Subset of ["discrete", "continuous", "mixed"].
+        "identifiable_graph": "dag",  # One of "dag", "cpdag", or "pag": how far the method identifies the graph.
         "requires_target": False,  # True if the algorithm needs a target variable.
         "capability:multivariate": True,  # False if the algorithm only handles exactly two variables.
         # Subset of ["forbidden_edges", "required_edges", "search_space", "temporal_order"].

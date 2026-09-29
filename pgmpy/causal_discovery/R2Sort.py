@@ -75,6 +75,7 @@ class R2Sort(BaseOrderDiscovery):
     _tags = {
         "name": "r2_sort",
         "data_types": ["continuous"],
+        "identifiable_graph": "dag",
         "requires_target": False,
         "capability:multivariate": True,
         "capability:expert_knowledge": [],

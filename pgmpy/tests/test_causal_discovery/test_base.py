@@ -68,3 +68,14 @@ def test_filter_algorithms_by_tags():
     }
     assert {"PC", "GES"} <= names
     assert not names & {"ANM", "IGCI", "VarSort", "R2Sort"}
+
+    dag_learners = {
+        cls.__name__
+        for cls in all_objects(
+            object_types=BaseCausalDiscovery,
+            package_name="pgmpy.causal_discovery",
+            return_names=False,
+            filter_tags={"identifiable_graph": "dag", "capability:multivariate": True},
+        )
+    }
+    assert dag_learners == {"ExpertInLoop", "VarSort", "R2Sort"}

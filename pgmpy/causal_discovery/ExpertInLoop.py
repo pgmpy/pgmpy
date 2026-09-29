@@ -145,6 +145,7 @@ class ExpertInLoop(BaseCausalDiscovery):
     _tags = {
         "name": "expert_in_loop",
         "data_types": ["discrete", "continuous", "mixed"],
+        "identifiable_graph": "dag",
         "requires_target": False,
         "capability:multivariate": True,
         "capability:expert_knowledge": ["forbidden_edges", "required_edges", "temporal_order"],

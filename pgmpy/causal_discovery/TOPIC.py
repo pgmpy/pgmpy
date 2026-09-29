@@ -87,6 +87,7 @@ class TOPIC(BaseCausalDiscovery):
     _tags = {
         "name": "topic",
         "data_types": ["discrete", "continuous", "mixed"],
+        "identifiable_graph": "cpdag",
         "requires_target": False,
         "capability:multivariate": True,
         "capability:expert_knowledge": [],

@@ -98,6 +98,7 @@ class LLMPairwise(BaseCausalDiscovery):
     _tags = {
         "name": "llm_pairwise",
         "data_types": ["discrete", "continuous", "mixed"],
+        "identifiable_graph": "dag",
         "requires_target": False,
         "capability:multivariate": False,
         "capability:expert_knowledge": [],
