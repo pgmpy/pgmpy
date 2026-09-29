@@ -9,6 +9,7 @@ ALL_DATASETS = [
     "abalone_continuous",
     "abalone_mixed",
     "adult",
+    "acic_2016",
     "airfoil",
     "angrist_krueger_qob",
     "algerian_forest",
