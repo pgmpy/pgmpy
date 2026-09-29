@@ -1,3 +1,4 @@
+import sys
 from collections.abc import Hashable
 from numbers import Real
 
@@ -7,7 +8,7 @@ from numpy.typing import ArrayLike
 from skbase.utils.dependencies import _safe_import
 from sklearn.linear_model import LinearRegression
 
-from pgmpy.parameterization._base import BaseParameter, _check_names, _parent_order
+from pgmpy.parameterization._base import BaseParameter, _checked_evidence, _parent_order
 
 Normal = _safe_import("skpro.distributions.Normal")
 
@@ -95,7 +96,7 @@ class LinearGaussianCPD(BaseParameter):
 
     @classmethod
     def from_values(
-        cls, variable: Hashable, beta: ArrayLike, std: float, evidence: list | None = None
+        cls, variable: Hashable, beta: ArrayLike, std: float, evidence: list | tuple | None = None
     ) -> "LinearGaussianCPD":
         """Create a fitted LinearGaussianCPD from known coefficients.
 
@@ -106,10 +107,10 @@ class LinearGaussianCPD(BaseParameter):
         variable : hashable
             Name of the target variable.
         beta : array-like of shape (1 + len(evidence),)
-            Intercept, then one coefficient per parent in ``evidence`` order. All finite.
+            Intercept, then one coefficient per parent in ``evidence`` order. All real and finite.
         std : float
             Standard deviation of ``variable`` given its parents: positive and finite.
-        evidence : list, optional
+        evidence : list or tuple, optional
             Names of the parent variables. ``None`` for a root variable.
 
         Returns
@@ -117,15 +118,16 @@ class LinearGaussianCPD(BaseParameter):
         LinearGaussianCPD
             A fitted instance. Its parents are sorted by name, with ``beta`` reordered to match.
         """
-        evidence = [] if evidence is None else list(evidence)
-        _check_names(variable, evidence)
+        evidence = _checked_evidence(variable, evidence)
+        if np.iscomplexobj(beta):
+            raise ValueError(f"beta must hold real numbers, but is {beta!r}.")
         beta = np.array(beta, dtype=float)
         if beta.shape != (1 + len(evidence),) or not np.isfinite(beta).all():
             raise ValueError(
                 f"beta must hold a finite intercept and a finite coefficient per parent in {evidence}, shape "
                 f"({1 + len(evidence)},), but is {beta.tolist()}."
             )
-        if not isinstance(std, Real) or not 0 < std < np.inf:
+        if not isinstance(std, Real) or not 0 < std <= sys.float_info.max:
             raise ValueError(f"std must be a positive, finite number, but is {std!r}.")
 
         order = _parent_order(evidence)
@@ -142,12 +144,22 @@ class LinearGaussianCPD(BaseParameter):
     def _fit(self, X: pd.DataFrame, y: pd.DataFrame, sample_weight: np.ndarray | None) -> None:
         if self.std_estimator not in ("unbiased", "mle"):
             raise ValueError(f"std_estimator must be 'unbiased' or 'mle', but is {self.std_estimator!r}.")
-        target = y.iloc[:, 0].to_numpy(dtype=float)
-        weights = np.ones(len(target)) if sample_weight is None else sample_weight
+        # Rows without weight don't count, and dropping them keeps their values out of the sums of squares below,
+        # where they could overflow.
+        weights = np.ones(len(y)) if sample_weight is None else sample_weight
+        positive = weights > 0
+        parents, target = X.to_numpy(dtype=float)[positive], y.iloc[:, 0].to_numpy(dtype=float)[positive]
+        weights = weights[positive]
+        if np.ptp(target) == 0:
+            raise ValueError(
+                f"{self.variable_!r} is constant, so its std is 0, but a LinearGaussianCPD needs a positive std."
+            )
 
         if self.evidence_:
             # An array, not the DataFrame, so that sklearn accepts any hashable column names.
-            regression = LinearRegression().fit(X.to_numpy(dtype=float), target, sample_weight=sample_weight)
+            regression = LinearRegression().fit(
+                parents, target, sample_weight=None if sample_weight is None else weights
+            )
             self.beta_ = np.concatenate([[regression.intercept_], regression.coef_])
             # rank_ is the rank of the centred parent data, which leaves out the intercept.
             n_coefficients = 1 + regression.rank_
@@ -156,12 +168,13 @@ class LinearGaussianCPD(BaseParameter):
             n_coefficients = 1
 
         total = weights.sum()
-        if self.std_estimator == "unbiased" and total <= n_coefficients:
+        # Weights meant to total n_coefficients can sum to just above it, so allow for rounding.
+        if self.std_estimator == "unbiased" and total <= n_coefficients * (1 + 1e-9):
             raise ValueError(
                 f"The unbiased std needs a total weight, or number of rows, above the {n_coefficients} independent "
                 f"coefficients, but it is {total:g}. Fit more data, or use std_estimator='mle'."
             )
-        means = self._mean(X)
+        means = self.beta_[0] + parents @ self.beta_[1:]
         ddof, marginal_ddof = (0, 0) if self.std_estimator == "mle" else (n_coefficients, 1)
         self.std_ = float(np.sqrt(np.sum(weights * (target - means) ** 2) / (total - ddof)))
         if not 0 < self.std_ < np.inf:

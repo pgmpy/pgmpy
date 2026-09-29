@@ -1,4 +1,6 @@
 import importlib
+from enum import Enum
+from importlib.util import find_spec
 
 import numpy as np
 import pandas as pd
@@ -59,15 +61,32 @@ class TestBaseParameter:
         assert parameter.is_fitted
         assert (parameter.variable_, parameter.evidence_, parameter.variable_type_) == ("t", ["a", "b"], "discrete")
         assert (parameter.columns_, parameter.n_rows_, parameter.total_weight_) == (["a", "b"], 4, 4.0)
+        cyclic = CountParameter().fit(X.assign(c=X["a"])[["c", "a", "b"]], y)
+        assert cyclic.evidence_ == cyclic.columns_ == ["a", "b", "c"]
 
         # A root has no parents: X is None or has no columns, and y can be a Series.
         for X_root in (None, pd.DataFrame(index=X.index)):
             root = CountParameter().fit(X_root, y["t"])
             assert (root.variable_, root.evidence_) == ("t", [])
 
-        # Node names can be any hashable value. Names of different types are sorted by the name of their type first.
-        renamed = CountParameter().fit(X.set_axis([("B", 1), 0], axis=1), y.set_axis([("T", 0)], axis=1))
-        assert (renamed.variable_, renamed.evidence_) == (("T", 0), [0, ("B", 1)])
+        # Node names can be any hashable value. Numbers of any type sort by value, then strings, then tuples element by
+        # element, then any other name by its type and repr, so names that compare equal sort the same way.
+        class Color(Enum):
+            RED = 1
+            BLUE = 2
+
+        names = [Color.RED, Color.BLUE, ("B", "x"), ("B", 1), "b", np.str_("a"), 2.5, np.int64(1)]
+        X_named = pd.DataFrame(np.zeros((4, 8)), index=X.index, columns=pd.Index(names, tupleize_cols=False))
+        renamed = CountParameter().fit(X_named, y.set_axis([("T", 0)], axis=1))
+        sorted_names = [1, 2.5, "a", "b", ("B", 1), ("B", "x"), Color.BLUE, Color.RED]
+        assert (renamed.variable_, renamed.evidence_) == (("T", 0), sorted_names)
+        assert list(renamed.predict_proba(X_named.iloc[:, ::-1]).columns) == sorted_names
+
+        # Parents named False and True, as from pd.get_dummies on a boolean column, are selected as columns, not rows.
+        dummies = pd.get_dummies(pd.Series([True, False, True, True], index=X.index))
+        boolean = CountParameter().fit(dummies, y)
+        assert boolean.evidence_ == boolean.columns_ == [False, True]
+        assert list(boolean.predict_proba(dummies.iloc[:, ::-1]).columns) == [False, True]
 
         # A failed refit leaves the object unfitted instead of half-updated.
         with pytest.raises(ValueError):
@@ -79,6 +98,7 @@ class TestBaseParameter:
         assert repr(CountParameter(pseudo_count=1)) == "CountParameter(pseudo_count=1)"
         assert CountParameter(pseudo_count=1).clone().get_params() == {"pseudo_count": 1}
 
+        ratio = pd.array([0.0, 1.0, 1.0, 1.0], dtype="Float64")
         rejected = [
             (X, pd.concat([y, y.set_axis(["u"], axis=1)], axis=1)),  # y with two columns
             (X, y["t"].tolist()),  # y as a list
@@ -89,8 +109,11 @@ class TestBaseParameter:
             (X, y.assign(t=["0", np.nan, "1", "1"])),  # NaN in y
             (X.astype("string").assign(b=pd.array(["u", pd.NA, "u", "v"], dtype="string")), y),  # pd.NA in X
             (X.assign(c=[0.0, np.inf, 0.0, 0.0]), y),  # inf in X
+            (X.assign(c=np.array([0.0, np.inf, 0.0, 0.0], dtype=np.float32)), y),  # inf in a float32 column
             (X, y.assign(t=[0.0, 1.0, -np.inf, 1.0])),  # -inf in y
+            (X.assign(c=ratio / ratio), y),  # NaN from 0/0 in a Float64 column, which isna() doesn't flag
             (X.assign(c=[1j, 0, 0, 0]), y),  # complex values in X
+            (X, y.assign(t=[1j, 0, 0, 0])),  # complex values in y
             (X.iloc[:0], y.iloc[:0]),  # no rows
             (pd.concat([X, X[["a"]]], axis=1), y),  # duplicate column names in X
         ]
@@ -123,11 +146,14 @@ class TestBaseParameter:
         assert AnyParameter().fit(X, ordered).variable_type_ == "discrete"
 
         # Continuous parents must be numeric, in fit and at prediction, where discrete ones can have any labels.
+        # Booleans of every kind count as numeric.
         class LinearParameter(CountParameter):
             _tags = {"variable_type": "continuous", "parent_type": "continuous"}
 
         numeric = pd.DataFrame({"a": [0.5, 1, 2, 3], "b": [True, False, True, True]}, index=X.index)
         linear = LinearParameter().fit(numeric, y.astype(float))
+        for dtype in ["boolean", "Sparse[bool]"] + (["bool[pyarrow]"] if find_spec("pyarrow") else []):
+            LinearParameter().fit(numeric.astype({"b": dtype}), y.astype(float).astype(bool).astype(dtype))
         for column in (X["a"], X["a"].astype("category"), pd.Categorical([1, 2, 1, 2]), pd.to_datetime(["2020"] * 4)):
             with pytest.raises(ValueError, match="numeric"):
                 LinearParameter().fit(numeric.assign(a=column), y.astype(float))
@@ -169,12 +195,14 @@ class TestBaseParameter:
         # Columns are matched by name and passed on in evidence_ order, so their order doesn't matter.
         parameter = CountParameter().fit(X, y)
         pd.testing.assert_frame_equal(parameter.predict_proba(X), X[["a", "b"]])
+        ratio = pd.array([0.0, 1.0, 1.0, 1.0], dtype="Float64")
         for X_bad in (
             X[["a"]],
             X.assign(c=1),
             X.rename(columns={"a": "z"}),
             X.assign(a=["x", None, "y", "y"]),
             X.assign(a=[0.0, np.inf, 0.0, 0.0]),
+            X.assign(a=ratio / ratio),
             X.assign(a=[1j, 0, 0, 0]),
         ):
             with pytest.raises(ValueError):
@@ -222,14 +250,33 @@ class TestBaseParameter:
                     return distributions.Normal(mu=1.0, sigma=2.0)
                 return distributions.Normal(mu=np.arange(len(X))[:, None], sigma=2.0, index=X.index, columns=["t"])
 
+        # Rows are matched by position, so repeated labels and a MultiIndex, like a parent's own draws, keep them apart.
         X, y = data
         parameter = NormalParameter().fit(X, y)
-        for n_samples in (None, 2, 0):
-            samples = parameter.sample(X, n_samples=n_samples, random_state=0)
-            uniform = np.random.default_rng(0).random((1 if n_samples is None else n_samples, len(X)))
-            np.testing.assert_allclose(samples["t"], (np.arange(len(X)) + 2 * norm.ppf(uniform)).ravel())
-            nominal = NominalDistribution(probs=np.full((len(X), 2), 0.5), categories=["u", "v"], index=X.index)
-            pd.testing.assert_index_equal(samples.index, nominal.sample(n_samples, random_state=0).index, exact=True)
+        multi = pd.MultiIndex.from_arrays([[0, 0, 1, 1], ["p", "q", "p", "q"]], names=["draw", None])
+        for X_test in (X, X.iloc[[0, 0, 1, 2]], X.set_axis(multi)):
+            for n_samples in (None, 1, 2, 0):
+                samples = parameter.sample(X_test, n_samples=n_samples, random_state=0)
+                uniform = np.random.default_rng(0).random((1 if n_samples is None else n_samples, len(X_test)))
+                np.testing.assert_allclose(samples["t"], (np.arange(len(X_test)) + 2 * norm.ppf(uniform)).ravel())
+                nominal = NominalDistribution(np.full((len(X_test), 2), 0.5), ["u", "v"], index=X_test.index)
+                expected_index = nominal.sample(n_samples, random_state=0).index
+                pd.testing.assert_index_equal(samples.index, expected_index, exact=True)
+        assert parameter.sample(X, n_samples=1).index.equals(pd.MultiIndex.from_arrays([[0] * len(X), X.index]))
+
+        # Distributions that look rows up by label, such as skpro's Empirical, still draw each row from its own values:
+        # row r of X can only take the values r, r + len(X) and r + 2 * len(X).
+        class EmpiricalParameter(NormalParameter):
+            def _predict_proba(self, X):
+                values = pd.DataFrame(
+                    {"t": np.arange(3.0 * len(X))}, index=pd.MultiIndex.from_product([range(3), X.index])
+                )
+                return distributions.Empirical(spl=values, index=X.index, columns=["t"])
+
+        empirical = EmpiricalParameter().fit(X, y)
+        for X_test in (X.iloc[[0, 0, 1, 2]], X.set_axis(multi)):
+            samples = empirical.sample(X_test, n_samples=20, random_state=0)["t"].to_numpy().reshape(20, len(X_test))
+            np.testing.assert_array_equal(samples % len(X_test), np.tile(np.arange(len(X_test)), (20, 1)))
 
         for n_samples in (3, 0):
             samples = parameter.sample(n_samples=n_samples, random_state=0)
@@ -248,6 +295,8 @@ class TestBaseParameter:
         assert fitted != other
         assert other != CountParameter()
 
-        # Floats compare with numpy.allclose's tolerance, as arrays do.
+        # Floats compare with numpy.allclose's tolerance, as arrays do, but names compare exactly.
         assert CountParameter().fit(X, y, sample_weight=[1, 1, 1, 1 + 1e-12]) == fitted
         assert CountParameter().fit(X, y, sample_weight=[1, 1, 1, 1.1]) != fitted
+        named = {name: CountParameter().fit(X, y.set_axis([name], axis=1)) for name in (1000.0, 1000.01, "t")}
+        assert named[1000.0] != named["t"] and named["t"] != named[1000.0] and named[1000.0] != named[1000.01]

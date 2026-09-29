@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
 
-from pgmpy.parameterization._base import BaseParameter, _check_names, _parent_order
+from pgmpy.parameterization._base import BaseParameter, _checked_evidence, _parent_order
 from pgmpy.parameterization.distributions import NominalDistribution
 from pgmpy.utils import build_state_names, encode_columns, get_state_counts
 
@@ -86,7 +86,7 @@ class TabularCPD(BaseParameter):
         variable: Hashable,
         variable_card: int,
         values: ArrayLike,
-        evidence: list | None = None,
+        evidence: list | tuple | None = None,
         evidence_card: list | None = None,
         state_names: dict | None = None,
     ) -> "TabularCPD":
@@ -104,7 +104,7 @@ class TabularCPD(BaseParameter):
             Probability of each state of ``variable`` (rows) for each combination of parent states (columns). The
             combinations follow the product of the parents' states in ``evidence`` order, with the last parent varying
             fastest. Each column must sum to 1, within 0.01.
-        evidence : list, optional
+        evidence : list or tuple, optional
             Names of the parent variables. ``None`` for a root variable.
         evidence_card : list, optional
             Number of states of each parent, in ``evidence`` order.
@@ -117,11 +117,10 @@ class TabularCPD(BaseParameter):
         TabularCPD
             A fitted instance. Its parents are sorted by name, with the table reordered to match.
         """
-        evidence = [] if evidence is None else list(evidence)
+        evidence = _checked_evidence(variable, evidence)
         evidence_card = [] if evidence_card is None else list(evidence_card)
         if len(evidence_card) != len(evidence):
             raise ValueError(f"evidence_card must have one entry per parent in {evidence}, but is {evidence_card}.")
-        _check_names(variable, evidence)
         given = _checked_state_names(state_names)
         cardinalities = dict(zip([variable, *evidence], [variable_card, *evidence_card]))
         states = {name: given.get(name, list(range(card))) for name, card in cardinalities.items()}

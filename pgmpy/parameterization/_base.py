@@ -1,6 +1,6 @@
 import inspect
 from collections.abc import Hashable
-from numbers import Integral
+from numbers import Integral, Real
 from typing import Any
 
 import numpy as np
@@ -30,16 +30,16 @@ class BaseParameter(BaseEstimator):
     or both); continuous-only parents must be numeric, while discrete ones can have any labels. They also set
     ``supports_weighted_data`` if ``_fit`` uses sample weights, and ``python_dependencies`` to the packages checked at
     construction. The default ``_sample`` passes ``random_state`` to the ``sample`` method of the predicted
-    distribution. If that method doesn't take it, as for skpro's distributions, it samples as skpro does, by applying
-    the distribution's ``ppf`` to uniform values, drawn from ``numpy.random.default_rng(random_state)``.
+    distribution. If that method doesn't take it, as for skpro's distributions, it applies the distribution's ``ppf`` to
+    uniform values drawn from ``numpy.random.default_rng(random_state)``.
 
     Attributes
     ----------
     variable_ : hashable
         Name of the target variable.
     evidence_ : list
-        Names of the parent variables, sorted; empty for a root variable. Names of different types are sorted by the
-        name of their type first.
+        Names of the parent variables, sorted; empty for a root variable. Numbers of any type sort by value, then
+        strings, then tuples element by element, then any other name by its type and repr.
     variable_type_ : str
         Type of the target, ``"discrete"`` or ``"continuous"``.
 
@@ -110,7 +110,7 @@ class BaseParameter(BaseEstimator):
             variable_type = "discrete"
         if variable_type not in supported_types:
             raise ValueError(f"{type(self).__name__} supports {supported_types} targets, but y is {variable_type}.")
-        if variable_type == "continuous" and not is_numeric_dtype(y.iloc[:, 0]):
+        if variable_type == "continuous" and not _is_numeric(y.dtypes.iloc[0]):
             raise ValueError(f"{type(self).__name__} needs a numeric target, but y has dtype {y.dtypes.iloc[0]}.")
         self._check_parent_types(X)
 
@@ -127,10 +127,13 @@ class BaseParameter(BaseEstimator):
             if not np.isfinite(sample_weight).all() or (sample_weight < 0).any() or not sample_weight.any():
                 raise ValueError("sample_weight must be finite and non-negative, with at least one positive value.")
 
+        # Select columns by position: X[names] would read a list of boolean names, e.g. [False, True], as a row mask.
+        columns = list(X.columns)
+        order = _parent_order(columns)
         self.variable_ = y.columns[0]
-        self.evidence_ = [X.columns[position] for position in _parent_order(list(X.columns))]
+        self.evidence_ = [columns[position] for position in order]
         self.variable_type_ = variable_type
-        self._fit(X[self.evidence_], y, sample_weight)
+        self._fit(X.iloc[:, order], y, sample_weight)
         self._is_fitted = True
         return self
 
@@ -196,12 +199,13 @@ class BaseParameter(BaseEstimator):
             raise ValueError(f"X must have the columns seen in fit, {self.evidence_}, but has {list(X.columns)}.")
         _check_values(X, "X")
         self._check_parent_types(X)
-        return X[self.evidence_]
+        positions = {name: position for position, name in enumerate(X.columns)}
+        return X.iloc[:, [positions[name] for name in self.evidence_]]
 
     def _check_parent_types(self, X: pd.DataFrame) -> None:
         if "discrete" in _as_list(self.get_tag("parent_type")):
             return
-        non_numeric = {column: str(dtype) for column, dtype in X.dtypes.items() if not is_numeric_dtype(dtype)}
+        non_numeric = {column: str(dtype) for column, dtype in X.dtypes.items() if not _is_numeric(dtype)}
         if non_numeric:
             raise ValueError(f"{type(self).__name__} needs numeric parents, but X has other columns: {non_numeric}.")
 
@@ -214,12 +218,21 @@ class BaseParameter(BaseEstimator):
     def _sample(
         self, X: pd.DataFrame | None, n_samples: int | None, random_state: int | np.random.Generator | None
     ) -> pd.DataFrame:
-        distribution = self._predict_proba(X)
+        # Sample on a RangeIndex and put X's index back afterwards: skpro matches values to rows by label, which mixes
+        # up rows with repeated labels, and fails for some distributions with a MultiIndex.
+        distribution = self._predict_proba(None if X is None else X.set_axis(pd.RangeIndex(len(X))))
         if "random_state" in inspect.signature(distribution.sample).parameters:
             samples = distribution.sample(n_samples, random_state=random_state)
         else:
-            samples = _sample_from_ppf(distribution, n_samples, np.random.default_rng(random_state))
-        # Without X the distribution is scalar, and its samples come in a column named 0.
+            rng = np.random.default_rng(random_state)
+            if X is None:
+                values = [distribution.ppf(p) for p in rng.random(n_samples)]
+            else:
+                uniform = rng.random((1 if n_samples is None else n_samples, *distribution.shape))
+                values = [distribution.ppf(u).to_numpy() for u in uniform]
+            samples = pd.DataFrame(np.reshape(values, (-1, 1)), dtype=float)
+        if X is not None:
+            samples = samples.set_axis(X.index if n_samples is None else _sample_index(X.index, n_samples))
         return samples.set_axis([self.variable_], axis=1)
 
     def __sklearn_tags__(self) -> Tags:
@@ -233,13 +246,20 @@ class BaseParameter(BaseEstimator):
             return False
         if not self.is_fitted:
             return super().__eq__(other)
+        if (self.variable_, self.evidence_) != (other.variable_, other.evidence_):
+            return False
 
         fitted, other_fitted = self.get_fitted_params(deep=False), other.get_fitted_params(deep=False)
         if fitted.keys() != other_fitted.keys():
             return False
         for name, value in fitted.items():
+            if name in ("variable_", "evidence_"):
+                continue
             other_value = other_fitted[name]
-            if isinstance(value, (np.ndarray, float, np.floating)):
+            if all(
+                isinstance(v, (np.ndarray, float, np.floating)) and np.issubdtype(np.asarray(v).dtype, np.number)
+                for v in (value, other_value)
+            ):
                 if np.shape(value) != np.shape(other_value) or not np.allclose(value, other_value):
                     return False
             elif value != other_value:
@@ -257,35 +277,47 @@ def _as_list(types: str | list[str]) -> list[str]:
     return [types] if isinstance(types, str) else types
 
 
+def _is_numeric(dtype: Any) -> bool:
+    """Return whether a column of this dtype counts as numeric: numbers, and booleans of any kind."""
+    return is_numeric_dtype(dtype) or dtype.kind == "b"
+
+
 def _check_values(data: pd.DataFrame, name: str) -> None:
-    """Raise a ValueError if ``data`` has missing, complex or infinite values."""
+    """Raise a ValueError if ``data`` has missing, complex, NaN or infinite values."""
     if data.isna().to_numpy().any():
         raise ValueError(f"{name} must not contain missing values.")
     if any(is_complex_dtype(dtype) for dtype in data.dtypes):
         raise ValueError(f"{name} must not contain complex values.")
-    floats = data.loc[:, [is_float_dtype(dtype) for dtype in data.dtypes]]
-    if np.isinf(floats.to_numpy(dtype=float)).any():
-        raise ValueError(f"{name} must not contain infinite values.")
+    # isna() misses a NaN stored as a value, e.g. from 0/0 in a nullable Float64 column, so the values are checked too.
+    for position, dtype in enumerate(data.dtypes):
+        if is_float_dtype(dtype) and not np.isfinite(data.iloc[:, position].to_numpy(dtype=float)).all():
+            raise ValueError(f"{name} must not contain NaN or infinite values.")
 
 
-def _check_names(variable: Hashable, evidence: list) -> None:
-    """Raise a TypeError if a name isn't hashable, and a ValueError if the variable and its parents share a name."""
+def _checked_evidence(variable: Hashable, evidence: list | tuple | None) -> list:
+    """Return the parents as a list, checking that the variable and its parents have different, hashable names."""
+    evidence = [] if evidence is None else evidence
+    if not isinstance(evidence, (list, tuple)):
+        raise TypeError(f"evidence must be a list or tuple of parent names, but is a {type(evidence).__name__}.")
+    evidence = list(evidence)
     if len({variable, *evidence}) != 1 + len(evidence):
         raise ValueError(
             f"The variable and its parents must have different names, but got {variable!r} and {evidence}."
         )
+    return evidence
+
+
+def _name_key(name: Hashable) -> tuple:
+    """Return a sort key for any name: numbers by value, then strings, then tuples, then others by type and repr."""
+    if isinstance(name, Real):
+        return 0, name
+    if isinstance(name, str):
+        return 1, name
+    if isinstance(name, tuple):
+        return 2, tuple(_name_key(part) for part in name)
+    return 3, type(name).__name__, repr(name)
 
 
 def _parent_order(evidence: list) -> list[int]:
-    """Return the positions of the parents in sorted order, sorting names of different types by type name first."""
-    return sorted(range(len(evidence)), key=lambda position: (type(evidence[position]).__name__, evidence[position]))
-
-
-def _sample_from_ppf(distribution: Any, n_samples: int | None, rng: np.random.Generator) -> pd.DataFrame:
-    """Sample as skpro's default ``sample`` does, by applying the ``ppf`` to uniform values, but drawn from ``rng``."""
-    if distribution.ndim == 0:
-        return pd.DataFrame([distribution.ppf(p) for p in rng.random(n_samples)], columns=[0], dtype=float)
-    uniform = rng.random((1 if n_samples is None else n_samples, *distribution.shape))
-    values = [distribution.ppf(pd.DataFrame(u, distribution.index, distribution.columns)).to_numpy() for u in uniform]
-    index = distribution.index if n_samples is None else _sample_index(distribution.index, n_samples)
-    return pd.DataFrame(np.reshape(values, (-1, distribution.shape[1])), index=index, columns=distribution.columns)
+    """Return the positions of the parents in sorted order."""
+    return sorted(range(len(evidence)), key=lambda position: _name_key(evidence[position]))

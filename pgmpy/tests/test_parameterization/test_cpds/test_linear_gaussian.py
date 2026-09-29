@@ -3,6 +3,7 @@ import pandas as pd
 import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
 
+import pgmpy.parameterization
 from pgmpy.example_models import load_model
 from pgmpy.factors.continuous import LinearGaussianCPD as LegacyLinearGaussianCPD
 from pgmpy.models import LinearGaussianBayesianNetwork
@@ -35,6 +36,7 @@ class TestLinearGaussianCPD:
         assert LinearGaussianCPD.get_class_tag("parent_type") == "continuous"
         assert LinearGaussianCPD.get_class_tag("supports_weighted_data") is True
         assert LinearGaussianCPD.get_class_tag("python_dependencies") == "skpro"
+        assert pgmpy.parameterization.LinearGaussianCPD is LinearGaussianCPD
 
     def test_fit(self, data):
         X, y = data
@@ -70,6 +72,11 @@ class TestLinearGaussianCPD:
                 assert marginal.var() == pytest.approx(expected_marginal.var())
         assert_same_fit(LinearGaussianCPD("mle").fit(X, y, weights / 1000), LinearGaussianCPD("mle").fit(X, y, weights))
 
+        # Rows with zero weight don't count, even when their squares would overflow.
+        overflowing, first_dropped = y.where(y.index != 0, 1e155), np.r_[0.0, np.ones(len(y) - 1)]
+        weighted = LinearGaussianCPD().fit(X, overflowing, sample_weight=first_dropped)
+        assert_same_fit(weighted, LinearGaussianCPD().fit(X.iloc[1:], y.iloc[1:]))
+
         # The unbiased std counts independent coefficients, so a repeated or a constant parent doesn't change it.
         X_extra = X.assign(C=X["A"], D=5.0)
         extra = LinearGaussianCPD().fit(X_extra, y)
@@ -77,12 +84,16 @@ class TestLinearGaussianCPD:
         np.testing.assert_allclose(extra.predict_proba(X_extra).mean(), cpd.predict_proba(X).mean())
 
         constant = pd.Series(5.0, index=y.index, name="y")
+        four = pd.Series([1.0, 2.0, 4.0, 3.0], name="y")
         rejected = [
             (LinearGaussianCPD(std_estimator="unbias"), X, y, None, "std_estimator"),
             (LinearGaussianCPD(), X[:3], y[:3], None, "total weight"),  # as many rows as coefficients
             (LinearGaussianCPD(), X, y, weights / 1000, "total weight"),  # frequencies below the coefficients
-            (LinearGaussianCPD(), None, constant, None, "positive"),  # a constant root has std 0
-            (LinearGaussianCPD(), X, constant, None, "positive"),  # so does a constant child
+            (LinearGaussianCPD(), None, four, [0.2, 0.4, 0.3, 0.1], "total weight"),  # a total of 1 up to rounding
+            (LinearGaussianCPD(), None, constant, None, "constant"),  # a constant root has std 0
+            (LinearGaussianCPD(), X, constant, None, "constant"),  # so does a constant child
+            (LinearGaussianCPD(), None, pd.Series(0.1, index=range(12), name="y"), None, "constant"),  # mean rounds
+            (LinearGaussianCPD(), None, pd.Series([1e200, -1e200, 3e200], name="y"), None, "finite"),  # std overflows
             (LinearGaussianCPD(), None, y.where(y.index != 3, np.inf), None, "infinite"),
             (LinearGaussianCPD(), X, y.astype(str), None, "numeric"),
             (LinearGaussianCPD(), X.assign(A=X["A"].astype(str)), y, None, "numeric"),
@@ -90,7 +101,7 @@ class TestLinearGaussianCPD:
             (LinearGaussianCPD(), X.assign(A=pd.Timestamp("2020-01-01")), y, None, "numeric"),
         ]
         for cpd_bad, X_bad, y_bad, weights_bad, match in rejected:
-            with pytest.raises(ValueError, match=match):
+            with pytest.raises(ValueError, match=match), np.errstate(over="ignore"):
                 cpd_bad.fit(X_bad, y_bad, sample_weight=weights_bad)
 
     def test_predict_proba(self, data):
@@ -103,6 +114,11 @@ class TestLinearGaussianCPD:
         assert (dist.index.tolist(), dist.columns.tolist()) == (["a", "b", "c", "d"], ["y"])
         np.testing.assert_allclose(dist.mean()["y"], cpd.beta_[0] + rows[["A", "B"]].to_numpy() @ cpd.beta_[1:])
         np.testing.assert_allclose(dist.var()["y"], cpd.std_**2)
+
+        # Parents of any numeric dtype, such as booleans and nullable integers, give float means.
+        X_mixed = X.assign(A=X["A"].round().astype("Int64"), B=X["B"] > 0)
+        mixed = LinearGaussianCPD().fit(X_mixed, y).predict_proba(X_mixed)
+        assert mixed.mean()["y"].dtype == np.float64 and np.isfinite(mixed.log_pdf(y.to_frame())).all().all()
 
         # A root gives its own distribution for every row, or as a single distribution without X.
         root = LinearGaussianCPD().fit(None, y)
@@ -118,13 +134,21 @@ class TestLinearGaussianCPD:
                 cpd.predict_proba(X_bad)
 
     def test_marginal(self):
-        # Without X, a child gives the marginal distribution that the model implies for the parent data seen in fit. For
-        # a network with every edge, fitted with "mle", that is the network's own joint Gaussian. With "unbiased", the
-        # parents' covariance divides by the number of rows minus one, so it matches for parents that are roots.
+        # Without X, a child gives the marginal distribution that the model implies for the parent data seen in fit,
+        # from the parents' sample mean and covariance. The covariance divides by the number of rows for "mle", and by
+        # the number of rows minus one for "unbiased".
         rng = np.random.default_rng(0)
         A = rng.exponential(2, size=300)
         B = 1 - A + rng.normal(size=300)
         data = pd.DataFrame({"A": A, "B": B, "C": 2 + 0.5 * A - B + rng.normal(size=300)})
+        for std_estimator, ddof in (("mle", 0), ("unbiased", 1)):
+            cpd = LinearGaussianCPD(std_estimator).fit(data[["A", "B"]], data["C"])
+            b, marginal = cpd.beta_[1:], cpd.predict_proba()
+            assert marginal.mean() == pytest.approx(cpd.beta_[0] + b @ data[["A", "B"]].mean())
+            assert marginal.var() == pytest.approx(b @ np.cov(data[["A", "B"]].T, ddof=ddof) @ b + cpd.std_**2)
+
+        # For a network with every edge, fitted with "mle", that is the network's own joint Gaussian. With "unbiased" it
+        # still is for a child whose only parent is a root.
         parents = {"A": [], "B": ["A"], "C": ["A", "B"]}
         for std_estimator, checked in (("mle", ["A", "B", "C"]), ("unbiased", ["A", "B"])):
             cpds = {
@@ -160,6 +184,14 @@ class TestLinearGaussianCPD:
         assert not cpd.sample(rows, random_state=rng).equals(cpd.sample(rows, random_state=rng))
         assert not cpd.sample(rows).equals(cpd.sample(rows))
 
+        # Rows are matched by position, so repeated labels and a MultiIndex, like a parent's own draws, keep them apart.
+        repeated = cpd.sample(X.iloc[[0, 0, 1]], n_samples=2, random_state=0)
+        assert repeated.index.tolist() == [(0, 0), (0, 0), (0, 1), (1, 0), (1, 0), (1, 1)]
+        by_position = cpd.sample(X.iloc[[0, 0, 1]].reset_index(drop=True), n_samples=2, random_state=0)
+        np.testing.assert_array_equal(repeated["y"], by_position["y"])
+        multi = X.iloc[:3].set_axis(pd.MultiIndex.from_tuples([(0, "a"), (0, "b"), (1, "a")]))
+        np.testing.assert_array_equal(cpd.sample(multi, random_state=0)["y"], samples["y"])
+
         # The values follow the predicted distribution: given X, here A = 1 and B = 0 in every row, or without X, the
         # marginal distribution.
         n = 20000
@@ -184,6 +216,15 @@ class TestLinearGaussianCPD:
         assert cpd == fitted and hash(cpd) == hash(fitted)
         np.testing.assert_array_equal(cpd.predict_proba(X).mean(), fitted.predict_proba(X).mean())
 
+        # Parents are sorted, also from a cyclic order, and numbers come before strings.
+        for evidence, sorted_evidence, sorted_beta in (
+            (["c", "a", "b"], ["a", "b", "c"], [0, 2, 3, 1]),
+            (["b", 0], [0, "b"], [0, 2, 1]),
+            ([10, 9], [9, 10], [0, 2, 1]),
+        ):
+            reordered = LinearGaussianCPD.from_values("y", range(len(evidence) + 1), 1.0, evidence)
+            assert (reordered.evidence_, reordered.beta_.tolist()) == (sorted_evidence, sorted_beta)
+
         # Without data, only a root has a marginal distribution.
         with pytest.raises(ValueError, match="from_values"):
             cpd.predict_proba()
@@ -207,6 +248,8 @@ class TestLinearGaussianCPD:
             ("y", [0.0], np.inf, None),
             ("y", [0.0], np.nan, None),
             ("y", [0.0], np.array([1.0]), None),
+            ("y", [0.0], 10**400, None),  # too large for a float
+            ("y", np.array([1 + 1j]), 1.0, None),  # complex beta
             ("y", [0.0, 1.0], 1.0, ["y"]),  # the variable as its own parent
             ("y", [0.0, 1.0, 2.0], 1.0, ["A", "A"]),  # a repeated parent
         ]
@@ -215,6 +258,8 @@ class TestLinearGaussianCPD:
                 LinearGaussianCPD.from_values(variable, beta_bad, std_bad, evidence)
         with pytest.raises(TypeError):
             LinearGaussianCPD.from_values(["y"], [0.0], 1.0)
+        with pytest.raises(TypeError, match="list or tuple"):
+            LinearGaussianCPD.from_values("y", [0.0, 1.0, 2.0], 1.0, {"a", "b"})
 
     def test_equality(self, data):
         X, y = data
