@@ -17,6 +17,7 @@ ALL_DATASETS = [
     "blue_driver",
     "boston_housing",
     "cities",
+    "coat",
     "college_plans",
     "contraceptive_method",
     "cover_type",
@@ -177,6 +178,24 @@ def test_population_threshold_rdd_italy_tags():
     assert tags["is_simulated"] is False
     assert PopulationThresholdRDDItaly.categorical_variables == ["macro_area"]
     assert PopulationThresholdRDDItaly.missing_values_marker == "NA"
+
+
+def test_coat_tags():
+    from pgmpy.datasets.coat import Coat
+
+    assert "coat" in list_datasets()
+    assert "coat" in list_datasets(is_discrete=True)
+    assert "coat" not in list_datasets(is_continuous=True)
+
+    tags = Coat.get_class_tags()
+    assert tags["name"] == "coat"
+    assert tags["n_samples"] == 290
+    assert tags["n_variables"] == 300
+    assert tags["has_missing_data"] is True
+    assert tags["is_discrete"] is True
+    assert tags["has_ground_truth"] is False
+    assert tags["is_simulated"] is False
+    assert Coat.missing_values_marker == "NA"
 
 
 def test_invalid_input():
