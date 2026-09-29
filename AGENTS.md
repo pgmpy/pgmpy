@@ -190,6 +190,10 @@ Evaluation metrics for causal discovery and models against given dataset.
 - **Graph comparison**: `SHD`, `AdjacencyConfusionMatrix`, `OrientationConfusionMatrix`
 - `get_metrics` looks up metric classes by tag filters.
 
+### Tags and Registry (`pgmpy/registry/`)
+Every skbase tag used by pgmpy objects is registered and documented as a `_BaseTag` subclass in
+`pgmpy/registry/_tags.py`; add new tags there. Multi-valued tags must be lists, not tuples.
+
 ### Other Subpackages
 - **Independencies (`pgmpy/independencies/`)** — `Independencies` for representing sets of conditional independence
   assertions

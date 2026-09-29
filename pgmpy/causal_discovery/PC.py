@@ -142,11 +142,19 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
     """
 
     _tags = {
-        "data_types": ("depends_on_ci_test"),
-        "assumed_relationship": (),
-        "supports_expert_knowledge": ("forbidden_edges", "required_edges", "search_space", "temporal_order"),
-        "noise_term": "",
+        "name": "pc",
+        "data_types": ["discrete", "continuous", "mixed"],
         "requires_target": False,
+        "capability:multivariate": True,
+        "capability:expert_knowledge": ["forbidden_edges", "required_edges", "search_space", "temporal_order"],
+        "assumption:causal_sufficiency": True,
+        "assumption:acyclicity": True,
+        "assumption:faithfulness": True,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
     }
 
     def __init__(
@@ -189,6 +197,7 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
 
         # CI test
         self.ci_test_ = get_ci_test(test=self.ci_test, data=X)
+        self._set_component_tags(self.ci_test_)
 
         # Check if expert knowledge was specified
         if self.expert_knowledge is None:

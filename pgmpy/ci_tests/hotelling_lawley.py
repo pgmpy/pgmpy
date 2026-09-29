@@ -66,7 +66,7 @@ class HotellingLawley(_ResidualMixin, BaseCITest):
 
     _tags = {
         "name": "hotelling_lawley",
-        "data_types": ("discrete", "continuous", "mixed"),
+        "data_types": ["discrete", "continuous", "mixed"],
         "default_for": None,
         "requires_data": True,
     }

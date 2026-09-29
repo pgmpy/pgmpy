@@ -81,6 +81,22 @@ class IGCI(BaseCausalDiscovery):
 
     """
 
+    _tags = {
+        "name": "igci",
+        "data_types": ["continuous"],
+        "requires_target": False,
+        "capability:multivariate": False,
+        "capability:expert_knowledge": [],
+        "assumption:causal_sufficiency": True,
+        "assumption:acyclicity": True,
+        "assumption:faithfulness": False,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": True,
+    }
+
     def __init__(
         self,
         scoring_method: str

@@ -131,11 +131,19 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
     """
 
     _tags = {
-        "data_types": ("depends_on_scoring_method"),
-        "assumed_relationship": (),
-        "supports_expert_knowledge": ("forbidden_edges", "required_edges", "search_space", "temporal_order"),
-        "noise_term": "",
+        "name": "hill_climb_search",
+        "data_types": ["discrete", "continuous", "mixed"],
         "requires_target": False,
+        "capability:multivariate": True,
+        "capability:expert_knowledge": ["forbidden_edges", "required_edges", "search_space", "temporal_order"],
+        "assumption:causal_sufficiency": True,
+        "assumption:acyclicity": True,
+        "assumption:faithfulness": True,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
     }
 
     def __init__(
@@ -180,6 +188,7 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
         # Step 1: Initial checks and setup for arguments
         # Step 1.1: Check score
         score = get_scoring_method(self.scoring_method, X)
+        self._set_component_tags(score)
 
         # Step 1.2: Check the start_dag
         if self.start_dag is None:

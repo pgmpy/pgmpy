@@ -84,6 +84,22 @@ class TOPIC(BaseCausalDiscovery):
 
     """
 
+    _tags = {
+        "name": "topic",
+        "data_types": ["discrete", "continuous", "mixed"],
+        "requires_target": False,
+        "capability:multivariate": True,
+        "capability:expert_knowledge": [],
+        "assumption:causal_sufficiency": True,
+        "assumption:acyclicity": True,
+        "assumption:faithfulness": True,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
+    }
+
     def __init__(
         self,
         scoring_method: str | BaseStructureScore | None = None,
@@ -106,6 +122,7 @@ class TOPIC(BaseCausalDiscovery):
         """
         # Step 0: Initialize scoring method and data structures
         score = get_scoring_method(scoring_method=self.scoring_method, data=X)
+        self._set_component_tags(score)
 
         dag_current = DAG()
         dag_current.add_nodes_from(list(X.columns))

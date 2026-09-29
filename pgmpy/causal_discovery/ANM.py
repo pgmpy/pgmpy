@@ -101,6 +101,22 @@ class ANM(BaseCausalDiscovery):
 
     """
 
+    _tags = {
+        "name": "anm",
+        "data_types": ["continuous"],
+        "requires_target": False,
+        "capability:multivariate": False,
+        "capability:expert_knowledge": [],
+        "assumption:causal_sufficiency": True,
+        "assumption:acyclicity": True,
+        "assumption:faithfulness": False,
+        "assumption:linearity": False,
+        "assumption:additive_noise": True,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
+    }
+
     def __init__(
         self,
         regressor: BaseEstimator | None = None,

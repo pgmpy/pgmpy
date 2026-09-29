@@ -51,13 +51,23 @@ class YourCITest(BaseCITest):
     .. [1] Add reference for the CI test
     """
 
-    # TODO: Required: Metadata used for registering the CI test.
+    # TODO: Required: Metadata used for registering the CI test. Set every tag. `pgmpy.registry.all_tags("ci_test")`
+    #       lists them, and the tag classes in `pgmpy/registry/_tags.py` document each tag and its allowed values. A
+    #       new tag must be added there too.
     _tags = {
         "name": "your_ci_test",  # Unique name allowing users to find this test by name.
-        "data_types": ("continuous",),  # Can be combination of ("discrete", "continuous", "mixed").
+        # Subset of ["discrete", "continuous", "mixed"]. Must be a list: skbase `filter_tags` only matches single
+        # elements of list-valued tags.
+        "data_types": ["continuous"],
         "default_for": None,  # If specified, this test becomes the default for the specified data type.
         "requires_data": True,  # False for tests that don’t use data.
         "is_symmetric": True,  # Set to False only if swapping X and Y can change the result.
+        # Assumptions the test's validity requires (True/False). If the answer depends on a hyperparameter (e.g. a
+        # user-supplied estimator), set the most permissive value here and update it in `__init__` with `set_tags`.
+        # Causal discovery algorithms that use this test combine these values with their own.
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
     }
 
     def __init__(self, data: pd.DataFrame = None, param1=None, param2=None, use_cache: bool = True):

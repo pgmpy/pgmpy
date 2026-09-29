@@ -20,7 +20,7 @@ from tqdm.auto import tqdm
 
 from pgmpy import config, logger
 from pgmpy.base import DAG, UndirectedGraph
-from pgmpy.ci_tests import IndependenceMatch, get_ci_test
+from pgmpy.ci_tests import BaseCITest, IndependenceMatch, get_ci_test
 from pgmpy.independencies import Independencies
 from pgmpy.metrics import get_metrics
 from pgmpy.structure_score import BaseStructureScore
@@ -31,14 +31,26 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
     Base class for all causal discovery estimators in pgmpy.
 
     Sets the sklearn tags and defines a method to check the input data for fitting.
+
+    Every causal discovery algorithm sets all of the tags listed by
+    ``pgmpy.registry.all_tags("causal_discovery")``. See :doc:`/api/tags` for what each tag means.
     """
 
     _tags = {
-        "data_types": (),
-        "assumed_relationship": (),
-        "supports_expert_knowledge": (),
-        "noise_term": "",
-        "requires_target": False,
+        "object_type": "causal_discovery",
+        "name": None,
+        "data_types": None,
+        "requires_target": None,
+        "capability:multivariate": None,
+        "capability:expert_knowledge": None,
+        "assumption:causal_sufficiency": None,
+        "assumption:acyclicity": None,
+        "assumption:faithfulness": None,
+        "assumption:linearity": None,
+        "assumption:additive_noise": None,
+        "assumption:gaussian_noise": None,
+        "assumption:non_gaussian_noise": None,
+        "assumption:low_noise": None,
     }
 
     def __sklearn_tags__(self):
@@ -91,6 +103,36 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
 
         self.n_features_in_ = len(X.columns)
         return X
+
+    def _set_component_tags(self, component: BaseCITest | BaseStructureScore | Callable) -> None:
+        """Narrow the union-valued tags to the CI test or scoring method used in ``fit``.
+
+        Sets ``data_types`` to the component's data types and each ``assumption:*`` tag to ``True`` if either the
+        algorithm or the component requires it. A plain callable CI test carries no tags, so the class-level values are
+        kept.
+
+        Parameters
+        ----------
+        component : BaseCITest, BaseStructureScore, or callable
+            The resolved CI test or scoring method.
+        """
+        class_tags = type(self).get_class_tags()
+        if isinstance(component, BaseStructureScore):
+            data_types = [component.get_tag("supported_datatype")]
+            component_tags = component.get_tags()
+        elif isinstance(component, BaseCITest):
+            data_types = component.get_tag("data_types")
+            component_tags = component.get_tags()
+        else:
+            data_types = class_tags["data_types"]
+            component_tags = {}
+
+        assumptions = {
+            key: value or component_tags.get(key, False)
+            for key, value in class_tags.items()
+            if key.startswith("assumption:")
+        }
+        self.set_tags(data_types=data_types, **assumptions)
 
     def fit(self, X: pd.DataFrame, y=None):
         """Fit data (`X`) to a causal graph. The method

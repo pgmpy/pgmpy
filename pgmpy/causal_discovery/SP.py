@@ -88,6 +88,22 @@ class SP(BaseCausalDiscovery):
     - :footcite:t:`raskutti2019learningdirectedacyclicgraphs`
     """
 
+    _tags = {
+        "name": "sp",
+        "data_types": ["discrete", "continuous", "mixed"],
+        "requires_target": False,
+        "capability:multivariate": True,
+        "capability:expert_knowledge": [],
+        "assumption:causal_sufficiency": True,
+        "assumption:acyclicity": True,
+        "assumption:faithfulness": False,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
+    }
+
     def __init__(
         self,
         ci_test: str | Callable | None = None,
@@ -173,6 +189,7 @@ class SP(BaseCausalDiscovery):
 
         # Step 1: Initialize variables and data structures.
         self.ci_test_ = get_ci_test(test=self.ci_test, data=X)
+        self._set_component_tags(self.ci_test_)
         nodes = list(self.feature_names_in_)
 
         rng = np.random.default_rng(self.seed)

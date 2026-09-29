@@ -68,6 +68,9 @@ class LogLikelihoodCondGauss(BaseStructureScore):
         "supported_datatype": "mixed",
         "default_for": None,
         "is_parameteric": False,
+        "assumption:linearity": True,
+        "assumption:additive_noise": True,
+        "assumption:gaussian_noise": True,
     }
 
     def __init__(self, data, state_names=None, max_cache_size=10000):

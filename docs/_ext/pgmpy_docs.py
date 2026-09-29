@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import json
 import os
 import re
@@ -863,7 +864,51 @@ def skip_sklearn_metadata_request_method(
     return None
 
 
+def _format_tag_type(tag_type: str | tuple) -> str:
+    if isinstance(tag_type, str):
+        return f"``{tag_type}``"
+    choices = ", ".join(f"``{choice!r}``" for choice in tag_type[1])
+    return f"one of {choices}" if tag_type[0] == "str" else f"list with elements from {choices}"
+
+
+def render_tag_reference(object_type: str) -> list[str]:
+    """Render the tags of ``object_type`` from :mod:`pgmpy.registry` as an RST definition list.
+
+    Each entry shows the tag name, its value type, and the docstring of its tag class.
+    """
+    from pgmpy.registry import _tags as tag_module
+
+    lines: list[str] = []
+    for tag_name, _, tag_type, _ in tag_module.all_tags(object_type):
+        doc = inspect.cleandoc(getattr(tag_module, tag_name.replace(":", "__")).__doc__)
+        lines += [f"``{tag_name}``", f"   **Type:** {_format_tag_type(tag_type)}", ""]
+        lines += [f"   {line}" if line else "" for line in doc.splitlines()]
+        lines.append("")
+    return lines
+
+
+def _tag_reference_directive() -> type:
+    from docutils import nodes
+    from docutils.statemachine import StringList
+    from sphinx.util.docutils import SphinxDirective
+    from sphinx.util.nodes import nested_parse_with_titles
+
+    class TagReferenceDirective(SphinxDirective):
+        """``.. pgmpy-tags:: <object_type>`` renders the registered tags of an object type."""
+
+        required_arguments = 1
+
+        def run(self) -> list[Any]:
+            container = nodes.container()
+            content = StringList(render_tag_reference(self.arguments[0]), source="pgmpy.registry")
+            nested_parse_with_titles(self.state, content, container)
+            return container.children
+
+    return TagReferenceDirective
+
+
 def setup(app: Any) -> dict[str, Any]:
+    app.add_directive("pgmpy-tags", _tag_reference_directive())
     app.connect("builder-inited", on_builder_inited)
     app.connect("html-page-context", on_html_page_context)
     app.connect("build-finished", on_build_finished)

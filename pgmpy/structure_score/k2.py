@@ -64,6 +64,9 @@ class K2(BaseStructureScore):
         "supported_datatype": "discrete",
         "default_for": None,
         "is_parameteric": False,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
     }
 
     def __init__(self, data, state_names=None, max_cache_size=10000):
