@@ -31,10 +31,8 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
     """
     Base class for all causal discovery estimators in pgmpy.
 
-    Sets the sklearn tags and defines a method to check the input data for fitting.
-
-    Every causal discovery algorithm sets all of the tags listed by
-    ``pgmpy.registry.all_tags("causal_discovery")``. See :doc:`/api/tags` for what each tag means.
+    Sets the sklearn tags and defines methods common to all causal discovery methods, such as checks for input data.
+    Every causal discovery method in pgmpy inherits this class.
     """
 
     _tags = {
@@ -107,11 +105,12 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         return X
 
     def _set_component_tags(self, component: BaseCITest | BaseStructureScore | BaseBivariateScore | Callable) -> None:
-        """Narrow the union-valued tags to the CI test or scoring method used in ``fit``.
+        """
+        A helper method to narrow down the ``data_types`` and ``assumption:*`` tags for causal discovery method.
 
-        Sets ``data_types`` to the component's data types and each ``assumption:*`` tag to ``True`` if either the
-        algorithm or the component requires it. A plain callable CI test carries no tags, so the class-level values are
-        kept.
+        Causal methods that depend on arguments that have their own assumptions (for e.g., CI tests or scoring methods)
+        or support specific data types, call this method during fit so that the causal discovery method's assumptions
+        can be updated based on the argument specified.
 
         Parameters
         ----------
@@ -119,25 +118,13 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
             The resolved CI test or scoring method.
         """
         class_tags = type(self).get_class_tags()
-        if isinstance(component, BaseStructureScore):
-            data_types = [component.get_tag("supported_datatype")]
-            component_tags = component.get_tags()
-        elif isinstance(component, BaseCITest):
-            data_types = component.get_tag("data_types")
-            component_tags = component.get_tags()
-        elif isinstance(component, BaseBivariateScore):
-            data_types = class_tags["data_types"]
-            component_tags = component.get_tags()
-        else:
-            data_types = class_tags["data_types"]
-            component_tags = {}
-
+        component_tags = component.get_tags() if isinstance(component, BaseObject) else {}
         assumptions = {
             key: value or component_tags.get(key, False)
             for key, value in class_tags.items()
             if key.startswith("assumption:")
         }
-        self.set_tags(data_types=data_types, **assumptions)
+        self.set_tags(data_types=component_tags.get("data_types", class_tags["data_types"]), **assumptions)
 
     def fit(self, X: pd.DataFrame, y=None):
         """Fit data (`X`) to a causal graph. The method

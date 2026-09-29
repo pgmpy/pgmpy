@@ -35,6 +35,7 @@ class BaseStructureScore(BaseObject):
     _tags = {
         "object_type": "structure_score",
         "name": None,
+        "data_types": [],
         "supported_datatype": None,
         "default_for": None,
         "is_parameteric": False,

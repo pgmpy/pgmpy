@@ -75,13 +75,16 @@ class MyStructureScore(BaseStructureScore):
     _tags = {
         # Unique lowercase string key. Passed as scoring_method="my-score" by users.
         "name": "my-score",
-        # Data type this score supports. One of: "discrete", "continuous", "mixed".
+        # Subset of ["discrete", "continuous", "mixed"]. Must be a list: skbase `filter_tags` only matches single
+        # elements of list-valued tags.
+        "data_types": ["discrete"],
+        # Deprecated alias of `data_types`, kept for backwards compatibility. One of: "discrete", "continuous", "mixed".
         "supported_datatype": "discrete",
         # Set to "discrete", "continuous", or "mixed" to make this the default score
         # for that data type. Set to None if this should not be a default.
         "default_for": None,
         # Set to True if this score estimates parameters (e.g., MLE-based penalties).
-        "is_parametric": False,
+        "is_parameteric": False,
         # Assumptions the score's validity requires (True/False). Causal discovery algorithms that use this score
         # combine these values with their own.
         "assumption:linearity": False,

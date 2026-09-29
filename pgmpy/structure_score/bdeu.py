@@ -71,6 +71,7 @@ class BDeu(BaseStructureScore):
 
     _tags = {
         "name": "bdeu",
+        "data_types": ["discrete"],
         "supported_datatype": "discrete",
         "default_for": None,
         "is_parameteric": True,

@@ -54,6 +54,7 @@ class AICGauss(LogLikelihoodGauss):
 
     _tags = {
         "name": "aic-g",
+        "data_types": ["continuous"],
         "supported_datatype": "continuous",
         "default_for": None,
         "is_parameteric": False,

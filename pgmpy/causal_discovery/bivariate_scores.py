@@ -41,6 +41,7 @@ class BaseBivariateScore(BaseObject):
         "object_type": "bivariate_score",
         "name": None,
         "input_type": None,
+        "data_types": [],
         "assumption:linearity": None,
         "assumption:additive_noise": None,
         "assumption:gaussian_noise": None,
@@ -74,6 +75,7 @@ class IndependenceScore(BaseBivariateScore):
     _tags = {
         "name": "independence",
         "input_type": "cause_residual",
+        "data_types": ["continuous"],
         "assumption:linearity": False,
         "assumption:additive_noise": False,
         "assumption:gaussian_noise": False,
@@ -95,7 +97,11 @@ class IndependenceScore(BaseBivariateScore):
             )
             test_tags = test_classes[0].get_class_tags() if test_classes else {}
         self.set_tags(
-            **{key: test_tags[key] for key in self.get_tags() if key.startswith("assumption:") and key in test_tags}
+            **{
+                key: test_tags[key]
+                for key in self.get_tags()
+                if (key == "data_types" or key.startswith("assumption:")) and key in test_tags
+            }
         )
 
     def __call__(self, x: np.typing.ArrayLike, y: np.typing.ArrayLike) -> float:
@@ -141,6 +147,7 @@ class EntropyScore(BaseBivariateScore):
     _tags = {
         "name": "entropy",
         "input_type": "cause_residual",
+        "data_types": ["continuous"],
         "assumption:linearity": False,
         "assumption:additive_noise": False,
         "assumption:gaussian_noise": False,
@@ -187,6 +194,7 @@ class EntropyDifferenceScore(BaseBivariateScore):
     _tags = {
         "name": "entropy_difference",
         "input_type": "cause_effect",
+        "data_types": ["continuous"],
         "assumption:linearity": False,
         "assumption:additive_noise": False,
         "assumption:gaussian_noise": False,
@@ -230,6 +238,7 @@ class GaussScore(BaseBivariateScore):
     _tags = {
         "name": "gauss",
         "input_type": "cause_residual",
+        "data_types": ["continuous"],
         "assumption:linearity": False,
         "assumption:additive_noise": False,
         "assumption:gaussian_noise": True,
@@ -251,6 +260,7 @@ class SlopeScore(BaseBivariateScore):
     _tags = {
         "name": "slope",
         "input_type": "cause_effect",
+        "data_types": ["continuous"],
         "assumption:linearity": False,
         "assumption:additive_noise": False,
         "assumption:gaussian_noise": False,

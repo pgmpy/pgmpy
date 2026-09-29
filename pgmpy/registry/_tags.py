@@ -96,8 +96,9 @@ class data_types(_BaseTag):
     """
     Data types the object can be applied to.
 
-    For causal discovery algorithms that use a CI test or a structure score, the class-level value is every data type
-    supported by some available component. ``fit`` narrows it to the data types of the component that was used.
+    For causal discovery algorithms that use a CI test, a structure score, or a bivariate score, the class-level value
+    is every data type supported by some available component. ``fit`` narrows it to the data types of the component
+    that was used.
 
     The value is a list rather than a tuple because ``skbase.lookup.all_objects`` only matches single elements of a
     tag value in ``filter_tags`` when the value is a list.
@@ -105,7 +106,7 @@ class data_types(_BaseTag):
 
     _tags = {
         "tag_name": "data_types",
-        "parent_type": ["causal_discovery", "ci_test"],
+        "parent_type": ["causal_discovery", "ci_test", "structure_score", "bivariate_score"],
         "tag_type": ("list", DATA_TYPES),
         "short_descr": "Data types the object can be applied to.",
     }
@@ -335,13 +336,18 @@ class assumption__low_noise(_BaseTag):
 
 
 class supported_datatype(_BaseTag):
-    """Data type the structure score can be applied to."""
+    """
+    Deprecated: use ``data_types`` instead.
+
+    The single data type the structure score was designed for. Kept for backwards compatibility and will be removed in
+    a future release.
+    """
 
     _tags = {
         "tag_name": "supported_datatype",
         "parent_type": ["structure_score"],
         "tag_type": ("str", DATA_TYPES),
-        "short_descr": "Data type the structure score can be applied to.",
+        "short_descr": "Deprecated, use ``data_types``. Data type the structure score was designed for.",
     }
 
 

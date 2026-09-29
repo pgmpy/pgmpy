@@ -3,8 +3,9 @@ import pandas as pd
 import pytest
 from skbase.lookup import all_objects
 
-from pgmpy.causal_discovery import GES, PC, ChowLiu
+from pgmpy.causal_discovery import ANM, GES, PC, ChowLiu
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
+from pgmpy.causal_discovery.bivariate_scores import IndependenceScore
 from pgmpy.ci_tests import GCM
 
 
@@ -54,6 +55,12 @@ def test_fit_narrows_union_tags_to_component():
     ges = GES(scoring_method="bic-g").fit(data)
     assert ges.get_tag("assumption:gaussian_noise") is True
     assert ges.get_tag("data_types") == ["continuous"]
+    ges.set_params(scoring_method="bic-cg").fit(data)
+    assert ges.get_tag("data_types") == ["discrete", "continuous", "mixed"]
+
+    assert IndependenceScore(ci_test="chi_square").get_tag("data_types") == ["discrete"]
+    anm = ANM().fit(data[["x", "y"]])
+    assert anm.get_tag("data_types") == ["continuous"]
 
 
 def test_filter_algorithms_by_tags():
