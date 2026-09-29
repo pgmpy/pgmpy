@@ -41,6 +41,11 @@ Structure Scores
 
 .. pgmpy-tags:: structure_score
 
+Bivariate Scores
+----------------
+
+.. pgmpy-tags:: bivariate_score
+
 Supervised Metrics
 ------------------
 

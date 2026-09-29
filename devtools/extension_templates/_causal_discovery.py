@@ -58,12 +58,13 @@ class MyCausalDiscoveryAlgo(BaseCausalDiscovery):
     .. [2] Citation2
     """
 
-    # TODO: Set every tag. `pgmpy.registry.all_tags("causal_discovery")` lists them, and the tag classes in
-    #       `pgmpy/registry/_tags.py` document each tag and its allowed values. A new tag must be added there too.
+    # TODO: Set every tag. Use `pgmpy.registry.all_tags("causal_discovery")` to list all tags, and the  tags in
+    # `pgmpy/registry/_tags.py` document each tag and its allowed values. A new tag must be added there too.
     _tags = {
         "name": "my_causal_discovery_algo",  # Unique lowercase name.
         "data_types": ["continuous"],  # Subset of ["discrete", "continuous", "mixed"].
-        "identifiable_graph": "dag",  # One of "dag", "cpdag", or "pag": how far the method identifies the graph.
+        "identifiable_graph": "dag",  # One of "dag", "cpdag", or "pag": how far the
+        # method identifies the graph.
         "requires_target": False,  # True if the algorithm needs a target variable.
         "capability:multivariate": True,  # False if the algorithm only handles exactly two variables.
         # Subset of ["forbidden_edges", "required_edges", "search_space", "temporal_order"].

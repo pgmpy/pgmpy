@@ -20,6 +20,7 @@ from tqdm.auto import tqdm
 
 from pgmpy import config, logger
 from pgmpy.base import DAG, UndirectedGraph
+from pgmpy.causal_discovery.bivariate_scores import BaseBivariateScore
 from pgmpy.ci_tests import BaseCITest, IndependenceMatch, get_ci_test
 from pgmpy.independencies import Independencies
 from pgmpy.metrics import get_metrics
@@ -105,7 +106,7 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         self.n_features_in_ = len(X.columns)
         return X
 
-    def _set_component_tags(self, component: BaseCITest | BaseStructureScore | Callable) -> None:
+    def _set_component_tags(self, component: BaseCITest | BaseStructureScore | BaseBivariateScore | Callable) -> None:
         """Narrow the union-valued tags to the CI test or scoring method used in ``fit``.
 
         Sets ``data_types`` to the component's data types and each ``assumption:*`` tag to ``True`` if either the
@@ -114,7 +115,7 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
 
         Parameters
         ----------
-        component : BaseCITest, BaseStructureScore, or callable
+        component : BaseCITest, BaseStructureScore, BaseBivariateScore, or callable
             The resolved CI test or scoring method.
         """
         class_tags = type(self).get_class_tags()
@@ -123,6 +124,9 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
             component_tags = component.get_tags()
         elif isinstance(component, BaseCITest):
             data_types = component.get_tag("data_types")
+            component_tags = component.get_tags()
+        elif isinstance(component, BaseBivariateScore):
+            data_types = class_tags["data_types"]
             component_tags = component.get_tags()
         else:
             data_types = class_tags["data_types"]

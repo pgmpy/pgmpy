@@ -19,7 +19,7 @@ def test_init():
     assert est.get_params() == {"regressor": None, "scoring_method": "independence"}
 
 
-def test_score_algorithm_tags():
+def test_score_tags():
     from pgmpy.causal_discovery.bivariate_scores import EntropyScore, GaussScore, IndependenceScore
 
     scores = {
@@ -29,7 +29,26 @@ def test_score_algorithm_tags():
     }
     for name, score in scores.items():
         assert score.get_tag("name") == name
-        assert score.get_tag("supported_algorithms") == ["anm"]
+        assert score.get_tag("input_type") == "cause_residual"
+
+    assert IndependenceScore().get_tag("assumption:linearity") is True
+    assert IndependenceScore(ci_test="gcm").get_tag("assumption:linearity") is False
+    assert IndependenceScore.get_class_tag("assumption:linearity") is False
+
+
+def test_fit_sets_score_assumption_tags(nonlinear_data):
+    from pgmpy.causal_discovery.bivariate_scores import EntropyScore, GaussScore
+
+    assert ANM.get_class_tag("assumption:gaussian_noise") is False
+    assert ANM(scoring_method=GaussScore()).fit(nonlinear_data).get_tag("assumption:gaussian_noise") is True
+    est = ANM(scoring_method=EntropyScore()).fit(nonlinear_data)
+    assert est.get_tag("assumption:gaussian_noise") is False
+    assert est.get_tag("assumption:additive_noise") is True
+
+
+def test_unknown_score_name_lists_valid_scores(nonlinear_data):
+    with pytest.raises(ValueError, match="Use one of: entropy, gauss, independence"):
+        ANM(scoring_method="slope").fit(nonlinear_data)
 
 
 def test_fit_recovers_direction(nonlinear_data):
@@ -111,7 +130,7 @@ def test_clone_preserves_scoring_method_instance():
 def test_incompatible_score_instance_raises(nonlinear_data):
     from pgmpy.causal_discovery.bivariate_scores import SlopeScore
 
-    with pytest.raises(ValueError, match="SlopeScore does not support ANM"):
+    with pytest.raises(ValueError, match=r"SlopeScore takes \(cause, effect\) inputs, but \(cause, residual\)"):
         ANM(scoring_method=SlopeScore()).fit(nonlinear_data)
 
 

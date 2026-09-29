@@ -28,7 +28,14 @@ from skbase.base import BaseObject
 
 from pgmpy.base import ADMG, DAG, MAG, PDAG
 
-OBJECT_TYPES = ["causal_discovery", "ci_test", "structure_score", "supervised_metric", "unsupervised_metric"]
+OBJECT_TYPES = [
+    "causal_discovery",
+    "ci_test",
+    "structure_score",
+    "bivariate_score",
+    "supervised_metric",
+    "unsupervised_metric",
+]
 
 METRIC_TYPES = ["supervised_metric", "unsupervised_metric"]
 
@@ -72,8 +79,9 @@ class name(_BaseTag):
     """
     Unique lowercase name of the object.
 
-    CI tests, structure scores, and metrics can be selected by this name, e.g. ``PC(ci_test="pearsonr")``,
-    ``GES(scoring_method="bic-g")``, or ``PC().fit(data).score(X=data, metric="correlation_score")``.
+    CI tests, structure scores, bivariate scores, and metrics can be selected by this name, e.g.
+    ``PC(ci_test="pearsonr")``, ``GES(scoring_method="bic-g")``, or
+    ``PC().fit(data).score(X=data, metric="correlation_score")``.
     """
 
     _tags = {
@@ -271,7 +279,7 @@ class assumption__linearity(_BaseTag):
 
     _tags = {
         "tag_name": "assumption:linearity",
-        "parent_type": ["causal_discovery", "ci_test", "structure_score"],
+        "parent_type": ["causal_discovery", "ci_test", "structure_score", "bivariate_score"],
         "tag_type": "bool",
         "short_descr": "Assumes each variable is a linear function of its parents.",
     }
@@ -282,7 +290,7 @@ class assumption__additive_noise(_BaseTag):
 
     _tags = {
         "tag_name": "assumption:additive_noise",
-        "parent_type": ["causal_discovery", "ci_test", "structure_score"],
+        "parent_type": ["causal_discovery", "ci_test", "structure_score", "bivariate_score"],
         "tag_type": "bool",
         "short_descr": "Assumes independent, additive noise.",
     }
@@ -293,7 +301,7 @@ class assumption__gaussian_noise(_BaseTag):
 
     _tags = {
         "tag_name": "assumption:gaussian_noise",
-        "parent_type": ["causal_discovery", "ci_test", "structure_score"],
+        "parent_type": ["causal_discovery", "ci_test", "structure_score", "bivariate_score"],
         "tag_type": "bool",
         "short_descr": "Assumes Gaussian noise.",
     }
@@ -345,6 +353,31 @@ class is_parameteric(_BaseTag):
         "parent_type": ["structure_score"],
         "tag_type": "bool",
         "short_descr": "Whether the structure score estimates parameters.",
+    }
+
+
+# ----------------
+# Bivariate scores
+# ----------------
+
+
+class input_type(_BaseTag):
+    """
+    What the two inputs of the bivariate score are.
+
+    - ``"cause_residual"``: A candidate cause and the residuals of regressing the effect on it, as passed by ``ANM``.
+      The score measures how dependent the residuals are on the cause.
+    - ``"cause_effect"``: A candidate cause and effect, as passed by ``IGCI``. The score must be asymmetric, since the
+      algorithm compares ``score(x, y)`` with ``score(y, x)``.
+
+    Algorithms only accept built-in scores of the input type they pass.
+    """
+
+    _tags = {
+        "tag_name": "input_type",
+        "parent_type": ["bivariate_score"],
+        "tag_type": ("str", ["cause_residual", "cause_effect"]),
+        "short_descr": "What the two inputs of the bivariate score are.",
     }
 
 

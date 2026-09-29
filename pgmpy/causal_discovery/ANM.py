@@ -157,7 +157,8 @@ class ANM(BaseCausalDiscovery):
         x, y = self.feature_names_in_
 
         # Step 1: Fit models in both directions and compute the residual-dependence scores.
-        score_fn = get_bivariate_score(self.scoring_method, algorithm="anm")
+        score_fn = get_bivariate_score(self.scoring_method, input_type="cause_residual")
+        self._set_component_tags(score_fn)
         forward_score = self._direction_score(cause=X[[x]], effect=X[y], score_fn=score_fn)
         backward_score = self._direction_score(cause=X[[y]], effect=X[x], score_fn=score_fn)
 
