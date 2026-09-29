@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Hashable
 from functools import lru_cache
 
 import pandas as pd
@@ -50,11 +51,11 @@ class BaseStructureScore(BaseObject):
 
         self._cached_local_score = lru_cache(maxsize=max_cache_size)(self._local_score)
 
-    def local_score(self, variable: str, parents: tuple[str, ...]) -> float:
+    def local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         """Compute the cached local score for `variable` given `parents`."""
-        return self._cached_local_score(variable, parents)
+        return self._cached_local_score(variable, tuple(parents))
 
-    def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
+    def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         """Compute the uncached local score for `variable` given `parents`."""
         raise NotImplementedError
 
@@ -87,12 +88,10 @@ def get_scoring_method(
     scoring_method : str or BaseStructureScore or None
         The scoring method whose instance is to be returned.
 
-        - If a string is provided, the corresponding scoring method is
-        instantiated with default parameters.
-        - If a ``BaseStructureScore`` instance is provided, it is returned
-        unchanged.
-        - If ``None``, the default scoring method for the data type is
-        selected automatically.
+        A string selects the corresponding scoring method with default
+        parameters. A ``BaseStructureScore`` instance is returned unchanged.
+        If ``None``, the default scoring method for the data type is selected
+        automatically.
 
     data : pandas.DataFrame
         Dataset used to determine the default scoring method and to

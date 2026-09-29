@@ -5,7 +5,7 @@ class Hepar2(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`onisko_thesis`
+    - :footcite:t:`onisko_thesis`
     """
 
     _tags = {

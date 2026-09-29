@@ -88,7 +88,7 @@ class _GraphAlgorithms:
 
         References
         ----------
-        - :cite:p:`richardson_2003`
+        - :footcite:t:`richardson_2003`
         """
         if not self.SUPPORTED_EDGE_TYPES <= {"->", "<-", "<>"}:
             raise TypeError(
@@ -140,7 +140,7 @@ class _GraphAlgorithms:
         Such a path is a dependence between `u` and `v` that no subset of `w` can block: `u` and
         `v` cannot be m-separated using only variables from `w`. With the default
         ``w = self.observed``, an inducing path exists exactly when `u` and `v` must be adjacent
-        in the MAG over the observed variables :cite:p:`zhang_2008`.
+        in the MAG over the observed variables :footcite:t:`zhang_2008`.
 
         Parameters
         ----------
@@ -206,7 +206,7 @@ class _GraphAlgorithms:
         A walk m-connects two nodes given a conditioning set `Z` when every collider on the walk
         (a node with an arrowhead on both the entering and the leaving edge) is in `Z`, and every
         non-collider is not in `Z`. This walk criterion is equivalent to the standard path
-        criterion with colliders in ``An(Z)`` :cite:p:`richardson_2003`; conditioning on a
+        criterion with colliders in ``An(Z)`` :footcite:t:`richardson_2003`; conditioning on a
         descendant of a collider opens it because the walk can detour down to the descendant and
         back. On a purely directed graph this is exactly d-connection.
 
@@ -438,7 +438,7 @@ class _GraphAlgorithms:
         Return a topological ordering of the nodes consistent with the directed edges.
 
         A topological order is an ordering of the nodes in which every directed edge ``u -> v`` has
-        ``u`` before ``v``. Following the standard definition for mixed graphs [1]_, bidirected
+        ``u`` before ``v``. Following the standard definition for mixed graphs [1], bidirected
         (``"<>"``) and undirected (``"--"``) edges impose *no* ordering constraint: a bidirected
         edge encodes latent confounding (no ancestral relation), and undirected edges form chain
         components that are ordered only through their directed edges. The order is therefore well
@@ -460,7 +460,7 @@ class _GraphAlgorithms:
 
         References
         ----------
-        - :cite:p:`richardson_2003`
+        - :footcite:t:`richardson_2003`
 
         Examples
         --------

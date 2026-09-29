@@ -1,5 +1,3 @@
-import logging
-
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -7,7 +5,7 @@ import pytest
 from sklearn.exceptions import NotFittedError
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
-from pgmpy.base import UndirectedGraph
+from pgmpy.base import PDAG, UndirectedGraph
 from pgmpy.causal_discovery import PC, ExpertKnowledge
 from pgmpy.example_models import load_model
 from pgmpy.independencies import Independencies
@@ -210,13 +208,15 @@ def test_skeleton_to_pdag():
     pc.separating_sets_ = {frozenset({"A", "C"}): ("B",)}
     pdag = pc._orient_colliders()
     pdag = pdag.apply_meeks_rules(apply_r4=False)
-    assert set(pdag.get_edges(data=True)) == {
-        ("A", "B", "--"),
-        ("A", "D", "->"),
-        ("B", "D", "->"),
-        ("C", "B", "--"),
-        ("C", "D", "->"),
-    }
+    assert pdag == PDAG(
+        edge_list=[
+            ("A", "D", "->"),
+            ("B", "D", "->"),
+            ("C", "D", "->"),
+            ("A", "B", "--"),
+            ("B", "C", "--"),
+        ]
+    )
 
     # A - B - C - D: two conflicting colliders at B and C.
     # A->B<-C and B->C<-D conflict on the B-C edge. The second
@@ -229,6 +229,27 @@ def test_skeleton_to_pdag():
     }
     pdag = pc._orient_colliders()
     assert set(pdag.get_edges(data=True)) == {("A", "B", "->"), ("C", "B", "->"), ("C", "D", "--")}
+
+    # Three colliders A->B<-E, B->C<-F, C->A<-G would orient A->B->C->A into a directed
+    # cycle. The third collider closes the cycle, so it is skipped entirely and both of
+    # its edges (C-A and G-A) are left undirected instead of crashing PDAG construction.
+    pc.skeleton_ = nx.Graph([("A", "B"), ("E", "B"), ("B", "C"), ("F", "C"), ("C", "A"), ("G", "A")])
+    pc.separating_sets_ = {
+        frozenset({"A", "E"}): tuple(),
+        frozenset({"B", "F"}): tuple(),
+        frozenset({"C", "G"}): tuple(),
+    }
+    pdag = pc._orient_colliders()
+    assert pdag == PDAG(
+        edge_list=[
+            ("A", "B", "->"),
+            ("E", "B", "->"),
+            ("B", "C", "->"),
+            ("F", "C", "->"),
+            ("C", "A", "--"),
+            ("G", "A", "--"),
+        ]
+    )
 
 
 @pytest.mark.parametrize("variant", ["orig", "stable", "parallel"])
@@ -518,7 +539,7 @@ def test_pc_alarm():
     est.fit(X=data)
 
 
-def test_pc_asia(caplog):
+def test_pc_asia():
     asia_model = load_model("bnlearn/asia")
     data = asia_model.simulate(n_samples=int(1e5), seed=42)
     req_edges = [("xray", "either")]
@@ -531,18 +552,8 @@ def test_pc_asia(caplog):
         show_progress=False,
     )
 
-    pgmpy_logger = logging.getLogger("pgmpy")
-    pgmpy_logger.addHandler(caplog.handler)
-    try:
-        with caplog.at_level("WARNING", logger="pgmpy"):
-            est.fit(X=data)
-    finally:
-        pgmpy_logger.removeHandler(caplog.handler)
-    expected_warning = (
-        "Specified expert knowledge conflicts with learned structure. Ignoring edge xray->either from required edges"
-    )
-
-    assert any(expected_warning in message for message in caplog.messages)
+    with pytest.warns(UserWarning, match="Required edge xray->either is absent or oppositely oriented"):
+        est.fit(X=data)
 
 
 def test_pc_asia_expert():

@@ -5,7 +5,7 @@ class Child(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`spiegelhalter_cowell_1992`
+    - :footcite:t:`spiegelhalter_cowell_1992`
     """
 
     _tags = {

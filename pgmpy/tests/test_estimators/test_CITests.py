@@ -10,12 +10,10 @@ from pgmpy.estimators.CITests import (
     chi_square,
     ci_registry,
     g_sq,
-    gcm,
     log_likelihood,
     modified_log_likelihood,
     pearsonr,
     pearsonr_equivalence,
-    pillai_trace,
 )
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.models import LinearGaussianBayesianNetwork
@@ -373,150 +371,10 @@ class TestResidualMethods(unittest.TestCase):
         _check_soft_dependencies("xgboost", severity="none"),
         reason="execute only if required dependency present",
     )
-    def test_pillai_no_cond(self):
-        dep_coefs = [0.2038, 0.2038, 0.1733, 0.1527, 0.1733]
-        dep_pvalues = [0, 0, 0, 0, 0]
-
-        computed_coefs = []
-        computed_pvalues = []
-        for i, df_indep in enumerate(
-            [
-                self.df_indep,
-                self.df_indep_cont_cont,
-                self.df_indep_cat_cont,
-                self.df_indep_cat_cat,
-                self.df_indep_ord_cont,
-            ]
-        ):
-            coef, p_value = pillai_trace(
-                X="X",
-                Y="Y",
-                Z=[],
-                data=df_indep,
-                boolean=False,
-                seed=42,
-            )
-            computed_coefs.append(coef)
-            computed_pvalues.append(p_value)
-
-        self.assertTrue(
-            np.allclose(computed_coefs, dep_coefs, rtol=1e-2, atol=1e-2),
-            msg=f"Non-conditional coefs mismatch at index {i}: {computed_coefs} != {dep_coefs}",
-        )
-        self.assertTrue(
-            np.allclose(computed_pvalues, dep_pvalues, rtol=1e-2, atol=1e-2),
-            msg=f"Non-conditional p-values mismatch at index {i}: {computed_pvalues} != {dep_pvalues}",
-        )
-
-    @unittest.skipUnless(
-        _check_soft_dependencies("xgboost", severity="none"),
-        reason="execute only if required dependency present",
-    )
-    def test_pillai_indep(self):
-        indep_coefs = [0.0014, 0.0023, 0.0041, 0.0213, 0.0041]
-        indep_pvalues = [0.2430, 0.0161, 0.0522, 0.0184, 0.0522]
-
-        computed_coefs = []
-        computed_pvalues = []
-        for i, df_indep in enumerate(
-            [
-                self.df_indep,
-                self.df_indep_cont_cont,
-                self.df_indep_cat_cont,
-                self.df_indep_cat_cat,
-                self.df_indep_ord_cont,
-            ]
-        ):
-            coef, p_value = pillai_trace(
-                X="X",
-                Y="Y",
-                Z=["Z1", "Z2", "Z3"],
-                data=df_indep,
-                boolean=False,
-                seed=42,
-            )
-            computed_coefs.append(coef)
-            computed_pvalues.append(p_value)
-
-        self.assertTrue(
-            np.allclose(computed_coefs, indep_coefs, rtol=1e-2, atol=1e-2),
-            msg=f"Conditional (indep) coefs mismatch at index {i}: {computed_coefs} != {indep_coefs}",
-        )
-        self.assertTrue(
-            np.allclose(computed_pvalues, indep_pvalues, rtol=1e-2, atol=1e-2),
-            msg=f"Conditional (indep) p-values mismatch at index {i}: {computed_pvalues} != {indep_pvalues}",
-        )
-
-    @unittest.skipUnless(
-        _check_soft_dependencies("xgboost", severity="none"),
-        reason="execute only if required dependency present",
-    )
-    def test_pillai_dependent(self):
-        dep_coefs = np.array([0.1322, 0.1609, 0.1182, 0.1330, 0.1182])
-        dep_pvalues = np.array([0, 0, 0, 0, 0])
-
-        computed_coefs = []
-        computed_pvalues = []
-        for i, df_dep in enumerate(
-            [
-                self.df_dep,
-                self.df_dep_cont_cont,
-                self.df_dep_cat_cont,
-                self.df_dep_cat_cat,
-                self.df_dep_ord_cont,
-            ]
-        ):
-            coef, p_value = pillai_trace(
-                X="X",
-                Y="Y",
-                Z=["Z1", "Z2", "Z3"],
-                data=df_dep,
-                boolean=False,
-                seed=42,
-            )
-            computed_coefs.append(coef)
-            computed_pvalues.append(p_value)
-
-        self.assertTrue(
-            np.allclose(computed_coefs, dep_coefs, rtol=1e-2, atol=1e-2),
-            msg=f"Conditional (dep) coefs mismatch at index {i}: {computed_coefs} != {dep_coefs}",
-        )
-        self.assertTrue(
-            np.allclose(computed_pvalues, dep_pvalues, rtol=1e-2, atol=1e-2),
-            msg=f"Conditional (dep) p-values mismatch at index {i}: {computed_pvalues} != {dep_pvalues}",
-        )
-
-    def test_gcm(self):
-        # Non-conditional tests
-        coef, p_value = gcm(
-            X="X",
-            Y="Y",
-            Z=[],
-            data=self.df_indep,
-            boolean=False,
-            seed=42,
-        )
-        self.assertAlmostEqual(round(coef, 3), 13.693)
-        self.assertAlmostEqual(p_value, 0.0)
-
-        # Conditional tests
-        coef, p_value = gcm(
-            X="X",
-            Y="Y",
-            Z=["Z1", "Z2", "Z3"],
-            data=self.df_indep,
-            boolean=False,
-            seed=42,
-        )
-
-        self.assertAlmostEqual(round(coef, 3), 0.097)
-        self.assertEqual(round(p_value, 4), 0.9228)
-
-        # Conditional tests
-        coef, p_value = gcm(X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=self.df_dep, boolean=False, seed=42)
-
-        self.assertAlmostEqual(round(coef, 3), 11.69)
-        self.assertAlmostEqual(p_value, 0.0)
+    # NOTE: the pillai/gcm expected-value tests were removed: they pinned the
+    # residualization values of the legacy XGBoost-based implementation. The
+    # canonical `pgmpy.ci_tests` classes residualize with a RandomForest by
+    # default; their values are asserted in `pgmpy/tests/test_ci_tests/`.
 
     def test_pearsonr_equivalence(self):
         is_independent = pearsonr_equivalence(

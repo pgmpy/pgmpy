@@ -29,7 +29,7 @@ dependencies = [
   "networkx>=3.0",
   "numpy>=2.0",
   "scipy>=1.10",
-  "scikit-learn>=1.2",
+  "scikit-learn>=1.6",
   "pandas>=1.5",
   "statsmodels>=0.14.5",
   "tqdm>=4.64",
@@ -53,6 +53,7 @@ optional = [
   "pygraphviz",
   "matplotlib",
   "pygam",
+  "skpro>=2.12.0",
 ]
 tests = [
   "xdoctest>=0.11.0",

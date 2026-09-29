@@ -312,9 +312,10 @@ def test_combined_expert_knowledge(adult_data_small):
     assert ("Age", "Income") not in estimator.causal_graph_.edges()
 
     # Every edge respects the temporal order.
+    tier_of = {node: tier for tier, nodes in enumerate(expert_knowledge.temporal_order) for node in nodes}
     for u, v in estimator.causal_graph_.edges():
-        u_order = expert_knowledge.temporal_ordering[u]
-        v_order = expert_knowledge.temporal_ordering[v]
+        u_order = tier_of[u]
+        v_order = tier_of[v]
         assert u_order <= v_order, f"Edge {u}->{v} violates temporal order"
 
 

@@ -10,6 +10,7 @@ from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.base import PDAG
 from pgmpy.causal_discovery import GES
+from pgmpy.example_models import load_model
 from pgmpy.structure_score import K2
 
 
@@ -282,3 +283,29 @@ class TestParityGES:
 def test_expert_knowledge_not_supported():
     with pytest.raises(TypeError, match="expert_knowledge"):
         GES(expert_knowledge=None)
+
+
+def test_cancer_model():
+    cancer_model = load_model("bnlearn/cancer")
+    data = cancer_model.simulate(3000, seed=0)
+
+    dag = GES().fit(data).causal_graph_
+
+    # A true directed edge may be recovered as a directed or an undirected
+    # edge, so treat an undirected edge as present in both orders.
+    learned_edges = set()
+    for u, v, edge_type in dag.get_edges(data=True):
+        learned_edges.add((u, v))
+        if edge_type == "--":
+            learned_edges.add((v, u))
+    assert set(cancer_model.edges) <= learned_edges
+
+
+def test_estimate_gaussian():
+    rng = np.random.default_rng(42)
+    gaussian_data = pd.DataFrame(rng.normal(size=(500, 3)), columns=["A", "B", "C"])
+    gaussian_data["C"] += gaussian_data["A"] + gaussian_data["B"]
+
+    for score in ["aic-g", "bic-g"]:
+        dag = GES(scoring_method=score).fit(gaussian_data).causal_graph_
+        assert set(dag.nodes()) == {"A", "B", "C"}
