@@ -1,7 +1,7 @@
 Installation
 ============
 
-pgmpy supports Python 3.10 through 3.14. For most users, the base PyPI install is enough:
+pgmpy supports Python 3.10 through 3.15. For most users, the base PyPI install is enough:
 
 .. code-block:: bash
 
