@@ -76,8 +76,10 @@ class TestSkproAdapter:
         assert calls == [len(X)]
 
         # Predictions whose moments aren't finite have no Normal marginal, and predictions must have a row per row of X.
+        # skpro 2.14 renamed ResidualDouble's distr_type to dist, and 2.16 removed distr_type.
+        dist = "dist" if "dist" in ResidualDouble.get_param_names() else "distr_type"
         with pytest.raises(ValueError, match="ResidualDouble"), np.errstate(invalid="ignore"):
-            SkproAdapter(ResidualDouble(LinearRegression(), distr_type="Cauchy")).fit(X, y).predict_proba()
+            SkproAdapter(ResidualDouble(LinearRegression(), **{dist: "Cauchy"})).fit(X, y).predict_proba()
         binned = SkproAdapter(HistBinnedProbaRegressor.create_test_instance()).fit(X, y)
         with pytest.raises(ValueError, match="HistBinnedProbaRegressor"):
             binned.predict_proba(X_test.iloc[[3]])

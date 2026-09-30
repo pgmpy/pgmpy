@@ -95,12 +95,13 @@ class TestDistributionAdapter:
         np.testing.assert_allclose(adapter.predict_proba(ROWS).mean()["y"], 1.5)
 
     def test_every_skpro_distribution(self):
-        # Every test case of every skpro distribution, as a scalar, is given to each row with the same cdf and pmf. A
-        # 2-D test case gives its first entry, except where skpro's iat can't (IID, LeftTruncated, QPD_Empirical).
-        # skpro's IID, which repeats distributions that can't be rebuilt, e.g. ZeroInflated, has no pmf though its tags
-        # say so.
+        # Every scalar test case of every skpro distribution is given to each row with the same cdf and pmf. The
+        # distributions below have only 2-D test cases, so they give their first entry, by skpro's iat, which fails for
+        # some other distributions, e.g. QPD_Empirical, and HistogramQPD in skpro 2.16. skpro's IID, which repeats
+        # distributions that can't be rebuilt, e.g. ZeroInflated, has no pmf though its tags say so.
         from skpro.registry import all_objects
 
+        only_2d = {"Histogram", "NegativeBinomial", "Poisson", "QPD_B", "QPD_S", "QPD_U"}
         with np.errstate(divide="ignore", invalid="ignore"):
             for _, cls in all_objects(object_types="distribution"):
                 if not _check_estimator_deps(cls, severity="none"):
@@ -109,7 +110,7 @@ class TestDistributionAdapter:
                 for case in params if isinstance(params, list) else [params]:
                     distribution = cls(**case)
                     if distribution.ndim != 0:
-                        if cls.__name__ in ("IID", "LeftTruncated", "QPD_Empirical"):
+                        if cls.__name__ not in only_2d:
                             continue
                         distribution = distribution.iat[0, 0]
                     dist = DistributionAdapter.from_values("y", distribution).predict_proba(ROWS)
