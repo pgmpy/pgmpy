@@ -7,8 +7,9 @@ import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
 from pandas.api.types import is_complex_dtype, is_float_dtype, is_numeric_dtype
-from skbase.base import BaseEstimator
+from skbase.base import BaseEstimator, BaseObject
 from skbase.utils.dependencies import _check_estimator_deps
+from sklearn.base import BaseEstimator as SklearnEstimator
 from sklearn.utils import Tags, TargetTags
 from sklearn.utils.validation import check_consistent_length, check_is_fitted
 
@@ -87,6 +88,8 @@ class BaseParameter(BaseEstimator):
             y = y.to_frame()
         if not isinstance(y, pd.DataFrame) or y.shape[1] != 1:
             raise ValueError("y must be a pandas Series or a DataFrame with exactly one column.")
+        # A copy, so that estimators that keep a view of y don't change when the caller edits their data.
+        y = y.copy()
         if X is None:
             X = pd.DataFrame(index=y.index)
         if not isinstance(X, pd.DataFrame):
@@ -225,10 +228,21 @@ class BaseParameter(BaseEstimator):
             samples = distribution.sample(n_samples, random_state=random_state)
         else:
             rng = np.random.default_rng(random_state)
-            if X is None:
-                values = [distribution.ppf(p) for p in rng.random(n_samples)]
+            uniform = rng.random(
+                n_samples if X is None else (1 if n_samples is None else n_samples, *distribution.shape)
+            )
+            # A plain distribution is repeated to one row per draw, which takes a single ppf call. Any other, e.g. a
+            # sample-based one like Empirical, gets one ppf call per draw.
+            if uniform.size and _plain(distribution):
+                if X is None:
+                    params = {**distribution.get_params(deep=False), "index": pd.RangeIndex(n_samples), "columns": [0]}
+                    draws = type(distribution)(**params)
+                else:
+                    draws = distribution.iloc[np.tile(np.arange(len(X)), len(uniform))]
+                values = draws.ppf(uniform.reshape(-1, 1)).to_numpy()
+            elif X is None:
+                values = [distribution.ppf(p) for p in uniform]
             else:
-                uniform = rng.random((1 if n_samples is None else n_samples, *distribution.shape))
                 values = [distribution.ppf(u).to_numpy() for u in uniform]
             samples = pd.DataFrame(np.reshape(values, (-1, 1)), dtype=float)
         if X is not None:
@@ -245,26 +259,10 @@ class BaseParameter(BaseEstimator):
         if type(other) is not type(self) or self.is_fitted != other.is_fitted:
             return False
         if not self.is_fitted:
-            return super().__eq__(other)
+            return _equal(self.get_params(deep=False), other.get_params(deep=False), fitted=False)
         if (self.variable_, self.evidence_) != (other.variable_, other.evidence_):
             return False
-
-        fitted, other_fitted = self.get_fitted_params(deep=False), other.get_fitted_params(deep=False)
-        if fitted.keys() != other_fitted.keys():
-            return False
-        for name, value in fitted.items():
-            if name in ("variable_", "evidence_"):
-                continue
-            other_value = other_fitted[name]
-            if all(
-                isinstance(v, (np.ndarray, float, np.floating)) and np.issubdtype(np.asarray(v).dtype, np.number)
-                for v in (value, other_value)
-            ):
-                if np.shape(value) != np.shape(other_value) or not np.allclose(value, other_value):
-                    return False
-            elif value != other_value:
-                return False
-        return True
+        return _equal(self.get_fitted_params(deep=False), other.get_fitted_params(deep=False))
 
     def __hash__(self) -> int:
         if not self.is_fitted:
@@ -275,6 +273,45 @@ class BaseParameter(BaseEstimator):
 def _as_list(types: str | list[str]) -> list[str]:
     """Return the value of a type tag, a type or a list of types, as a list."""
     return [types] if isinstance(types, str) else types
+
+
+def _equal(value: Any, other: Any, fitted: bool = True) -> bool:
+    """Return whether two values are equal, comparing numbers and numeric arrays with numpy.allclose's tolerance, other
+    arrays and pandas objects exactly, dicts, lists and tuples item by item, and skbase objects such as distributions by
+    type and parameters. Estimators compare by identity when ``fitted``, and otherwise by their parameters."""
+    if all(
+        isinstance(v, (Real, np.number, np.ndarray)) and np.issubdtype(np.asarray(v).dtype, np.number)
+        for v in (value, other)
+    ):
+        return np.shape(value) == np.shape(other) and bool(np.allclose(value, other))
+    if type(value) is not type(other):
+        return False
+    if isinstance(value, np.ndarray):
+        return np.array_equal(value, other)
+    if isinstance(value, (pd.Index, pd.Series, pd.DataFrame, pd.api.extensions.ExtensionArray)):
+        return value.equals(other)
+    if isinstance(value, dict):
+        return value.keys() == other.keys() and all(_equal(value[key], other[key], fitted) for key in value)
+    if isinstance(value, (list, tuple)):
+        return len(value) == len(other) and all(_equal(a, b, fitted) for a, b in zip(value, other))
+    # Fitted estimators hold what they learned in attributes that skbase and sklearn don't compare.
+    if fitted and isinstance(value, (BaseEstimator, SklearnEstimator)):
+        return value is other
+    if isinstance(value, (BaseObject, SklearnEstimator)):
+        return _equal(value.get_params(deep=False), other.get_params(deep=False), fitted)
+    return value == other
+
+
+def _plain(distribution: Any) -> bool:
+    """Return whether a skpro distribution's parameters are numbers or numeric arrays broadcast to its rows, so that its
+    rows can be repeated or relabelled by position."""
+    return distribution.get_tag("broadcast_init", "off", raise_error=False) == "on" and all(
+        name in ("index", "columns")
+        or isinstance(value, Real)
+        or (isinstance(value, np.ndarray) and np.issubdtype(value.dtype, np.number))
+        or (isinstance(value, pd.DataFrame) and all(is_numeric_dtype(dtype) for dtype in value.dtypes))
+        for name, value in distribution.get_params(deep=False).items()
+    )
 
 
 def _is_numeric(dtype: Any) -> bool:
