@@ -44,6 +44,7 @@ class TestTabularCPD:
     def test_tags(self):
         assert TabularCPD.get_class_tag("object_type") == "parameterization"
         assert TabularCPD.get_class_tag("variable_type") == "discrete"
+        assert TabularCPD.get_class_tag("parent_type") == "discrete"
         assert TabularCPD.get_class_tag("supports_weighted_data") is True
         assert TabularCPD.get_class_tag("python_dependencies") == "skpro"
 
@@ -196,12 +197,16 @@ class TestTabularCPD:
         X, y = discrete_data
         fitted = TabularCPD().fit(X, y)
 
-        # The arguments follow pgmpy.factors.discrete.TabularCPD. A table given with the parents in another order is
-        # reordered to the sorted order.
+        # The arguments follow pgmpy.factors.discrete.TabularCPD. A table given with the parents in another order,
+        # cyclic ones too, is reordered to the sorted order.
         swapped = fitted.CPT_.reshape(2, 3, 2).transpose(0, 2, 1).reshape(2, 6)
         cpd = TabularCPD.from_values("y", 2, swapped, ["x2", "x1"], [2, 3], fitted.state_names_)
         assert cpd.is_fitted and cpd == fitted and hash(cpd) == hash(fitted)
         np.testing.assert_allclose(np.asarray(cpd.predict_proba(X).probs), np.asarray(fitted.predict_proba(X).probs))
+        values = np.random.default_rng(0).dirichlet([1, 1], size=24).T
+        cyclic = TabularCPD.from_values("y", 2, values, ["c", "a", "b"], [2, 3, 4])
+        assert cyclic.evidence_ == ["a", "b", "c"]
+        np.testing.assert_allclose(cyclic.CPT_, values.reshape(2, 2, 3, 4).transpose(0, 2, 3, 1).reshape(2, 24))
 
         # Without data, a table with parents has no marginal distribution.
         with pytest.raises(ValueError, match="from_values"):
@@ -240,3 +245,5 @@ class TestTabularCPD:
         for evidence in (["y"], ["x", "x"]):
             with pytest.raises(ValueError, match="different names"):
                 TabularCPD.from_values("y", 2, np.full((2, 2 ** len(evidence)), 0.5), evidence, [2] * len(evidence))
+        with pytest.raises(TypeError, match="list or tuple"):
+            TabularCPD.from_values("y", 2, [[0.5], [0.5]], {"x"}, [1])
