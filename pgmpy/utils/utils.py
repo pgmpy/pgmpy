@@ -289,7 +289,7 @@ def manual_pairwise_orient(x, y):
         return None
 
 
-def preprocess_data(df):
+def preprocess_data(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     """
     Tries to figure out the data type of each variable `df`.
 
@@ -308,19 +308,15 @@ def preprocess_data(df):
     df = df.copy()
     dtypes = {}
     for col in df.columns:
-        if pd.api.types.is_integer_dtype(df[col]):
-            df[col] = df[col].astype("int")
+        dtype = df[col].dtype
+
+        if isinstance(dtype, pd.CategoricalDtype):
+            dtypes[col] = "O" if dtype.ordered else "C"
+        elif pd.api.types.is_numeric_dtype(dtype):
             dtypes[col] = "N"
-        elif pd.api.types.is_numeric_dtype(df[col]):
-            dtypes[col] = "N"
-        elif pd.api.types.is_object_dtype(df[col]) or pd.api.types.is_string_dtype(df[col]):
-            dtypes[col] = "C"
+        elif pd.api.types.is_object_dtype(dtype) or pd.api.types.is_string_dtype(dtype):
             df[col] = df[col].astype("category")
-        elif isinstance(df[col].dtype, pd.CategoricalDtype):
-            if df[col].dtype.ordered:
-                dtypes[col] = "O"
-            else:
-                dtypes[col] = "C"
+            dtypes[col] = "C"
         else:
             raise ValueError(
                 f"Couldn't infer datatype of column: {col} from data. "
