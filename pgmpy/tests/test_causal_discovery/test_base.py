@@ -34,6 +34,13 @@ def test_fit_warns_on_constant_column(data):
         ChowLiu().fit(data)
 
 
+def test_estimators_use_identity_equality_and_hash():
+    pc = PC()
+    assert pc == pc
+    assert PC() != PC()
+    assert len({pc, PC()}) == 2
+
+
 def test_fit_narrows_union_tags_to_component():
     rng = np.random.default_rng(42)
     x = rng.normal(size=200)

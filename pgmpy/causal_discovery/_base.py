@@ -53,6 +53,11 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         "assumption:low_noise": None,
     }
 
+    # skbase's BaseObject defines parameter-based equality, which also makes instances unhashable. Use sklearn's
+    # identity-based semantics instead.
+    __eq__ = BaseEstimator.__eq__
+    __hash__ = BaseEstimator.__hash__
+
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
         tags.input_tags.categorical = True
