@@ -1,4 +1,3 @@
-import warnings
 from collections.abc import Iterable
 from itertools import chain, pairwise, product
 
@@ -7,7 +6,7 @@ import numpy as np
 from networkx.algorithms.dag import descendants
 from tqdm.auto import tqdm
 
-from pgmpy import config, logger
+from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators.LinearModel import LinearEstimator
 from pgmpy.factors.discrete import DiscreteFactor
@@ -17,6 +16,7 @@ from pgmpy.models import (
     LinearGaussianBayesianNetwork,
     SEMGraph,
 )
+from pgmpy.utils._warnings import _warn_external
 from pgmpy.utils.sets import _powerset, _variable_or_iterable_to_set
 
 
@@ -122,13 +122,15 @@ class CausalInference:
         >>> inference.is_valid_backdoor_adjustment_set("X", "Y")
         True
         """
-        warnings.warn(
-            """`is_valid_backdoor_adjustment_set` is deprecated and will be removed in v2.0. Please use
-            pgmpy.identification.Adjustment instead.""",
+        _warn_external(
+            "`CausalInference.is_valid_backdoor_adjustment_set` is deprecated since v1.1.0 and will be removed in "
+            "v2.0. Use `pgmpy.identification.Adjustment().validate(causal_graph)` with the `exposures`, `outcomes`, "
+            "and `adjustment` roles set instead.",
             FutureWarning,
-            stacklevel=2,
         )
+        return self._is_valid_backdoor_adjustment_set(X, Y, Z)
 
+    def _is_valid_backdoor_adjustment_set(self, X, Y, Z=[]):
         Z_ = _variable_or_iterable_to_set(Z)
 
         observed = [X] + list(Z_)
@@ -168,20 +170,22 @@ class CausalInference:
         >>> inference.get_all_backdoor_adjustment_sets("X", "Y")
         frozenset()
         """
-        warnings.warn(
-            """`get_all_backdoor_adjustment_sets` is deprecated and will be removed in v2.0. Please use
-            pgmpy.identification.Adjustment instead.""",
+        _warn_external(
+            "`CausalInference.get_all_backdoor_adjustment_sets` is deprecated since v1.1.0 and will be removed in "
+            'v2.0. Use `pgmpy.identification.Adjustment(variant="all").identify(causal_graph)` with the `exposures` '
+            "and `outcomes` roles set instead.",
             FutureWarning,
-            stacklevel=2,
         )
+        return self._get_all_backdoor_adjustment_sets(X, Y)
 
+    def _get_all_backdoor_adjustment_sets(self, X, Y):
         try:
             assert X in self.observed_variables
             assert Y in self.observed_variables
         except AssertionError:
             raise AssertionError("Make sure both X and Y are observed.")
 
-        if self.is_valid_backdoor_adjustment_set(X, Y, Z=frozenset()):
+        if self._is_valid_backdoor_adjustment_set(X, Y, Z=frozenset()):
             return frozenset()
 
         possible_adjustment_variables = set(self.observed_variables) - {X} - {Y} - set(nx.descendants(self.dag, X))
@@ -193,7 +197,7 @@ class CausalInference:
                 super_of_complete.append(vs.intersection(set(s)) == vs)
             if any(super_of_complete):
                 continue
-            if self.is_valid_backdoor_adjustment_set(X, Y, s):
+            if self._is_valid_backdoor_adjustment_set(X, Y, s):
                 valid_adjustment_sets.append(frozenset(s))
 
         if len(valid_adjustment_sets) == 0:
@@ -222,12 +226,15 @@ class CausalInference:
         Is valid frontdoor adjustment: bool
             True if Z is a valid frontdoor adjustment set.
         """
-        warnings.warn(
-            """`is_valid_frontdoor_adjustment_set` is deprecated and will be removed in v2.0. Please use
-            pgmpy.identification.Frontdoor instead.""",
+        _warn_external(
+            "`CausalInference.is_valid_frontdoor_adjustment_set` is deprecated since v1.1.0 and will be removed in "
+            "v2.0. Use `pgmpy.identification.Frontdoor().validate(causal_graph)` with the `exposures`, `outcomes`, and "
+            "`frontdoor` roles set instead.",
             FutureWarning,
-            stacklevel=2,
         )
+        return self._is_valid_frontdoor_adjustment_set(X, Y, Z)
+
+    def _is_valid_frontdoor_adjustment_set(self, X, Y, Z=None):
         Z = _variable_or_iterable_to_set(Z)
 
         # 0. Get all directed paths from X to Y.  Don't check further if there aren't any.
@@ -243,7 +250,7 @@ class CausalInference:
             return False
 
         # 2. there is no backdoor path from X to Z
-        unblocked_backdoor_paths_X_Z = [zz for zz in Z if not self.is_valid_backdoor_adjustment_set(X, zz)]
+        unblocked_backdoor_paths_X_Z = [zz for zz in Z if not self._is_valid_backdoor_adjustment_set(X, zz)]
 
         if unblocked_backdoor_paths_X_Z:
             return False
@@ -251,7 +258,7 @@ class CausalInference:
         # 3. All back-door paths from Z to Y are blocked by X
         valid_backdoor_sets = []
         for zz in Z:
-            valid_backdoor_sets.append(self.is_valid_backdoor_adjustment_set(zz, Y, X))
+            valid_backdoor_sets.append(self._is_valid_backdoor_adjustment_set(zz, Y, X))
         if not all(valid_backdoor_sets):
             return False
 
@@ -278,12 +285,15 @@ class CausalInference:
         -------
         frozenset: a frozenset of frozensets
         """
-        warnings.warn(
-            """`get_all_frontdoor_adjustment_sets` is deprecated and will be removed in v2.0. Please use
-            pgmpy.identification.Frontdoor instead.""",
+        _warn_external(
+            "`CausalInference.get_all_frontdoor_adjustment_sets` is deprecated since v1.1.0 and will be removed in "
+            'v2.0. Use `pgmpy.identification.Frontdoor(variant="all").identify(causal_graph)` with the `exposures` '
+            "and `outcomes` roles set instead.",
             FutureWarning,
-            stacklevel=2,
         )
+        return self._get_all_frontdoor_adjustment_sets(X, Y)
+
+    def _get_all_frontdoor_adjustment_sets(self, X, Y):
         assert X in self.observed_variables
         assert Y in self.observed_variables
 
@@ -293,7 +303,7 @@ class CausalInference:
             [
                 frozenset(s)
                 for s in _powerset(possible_adjustment_variables)
-                if self.is_valid_frontdoor_adjustment_set(X, Y, s)
+                if self._is_valid_frontdoor_adjustment_set(X, Y, s)
             ]
         )
 
@@ -400,7 +410,7 @@ class CausalInference:
 
         return full_graph, dependent_var
 
-    def get_ivs(self, X, Y, scaling_indicators={}):
+    def get_ivs(self, X: str, Y: str, scaling_indicators: dict[str, str] = {}) -> set[str]:
         """
         Returns the Instrumental variables(IVs) for the relation X -> Y
 
@@ -423,6 +433,12 @@ class CausalInference:
         set: {str}
             The set of Instrumental Variables for X -> Y.
 
+        Warns
+        -----
+        UserWarning
+            If Y is the scaling indicator for X, whether explicitly supplied or
+            selected automatically.
+
         Examples
         --------
         >>> from pgmpy.models import SEMGraph
@@ -437,7 +453,13 @@ class CausalInference:
             scaling_indicators = self.get_scaling_indicators()
 
         if (X in scaling_indicators.keys()) and (scaling_indicators[X] == Y):
-            logger.warning(f"{Y} is the scaling indicator of {X}. Please specify `scaling_indicators`")
+            _warn_external(
+                f"{Y} is the scaling indicator for {X}. "
+                f"Specify a different scaling indicator for {X} in "
+                f"`scaling_indicators` to search for instrumental variables "
+                f"for the edge {X} -> {Y}.",
+                UserWarning,
+            )
 
         transformed_graph, dependent_var = self._iv_transformations(X, Y, scaling_indicators=scaling_indicators)
 
@@ -456,7 +478,9 @@ class CausalInference:
         # Remove {X, Y} because they can't be IV for X -> Y
         return d_connected_x - d_connected_y - {dependent_var, explanatory_var}
 
-    def get_conditional_ivs(self, X, Y, scaling_indicators={}):
+    def get_conditional_ivs(
+        self, X: str, Y: str, scaling_indicators: dict[str, str] = {}
+    ) -> list[tuple[str, set[str]]]:
         """
         Returns the conditional IVs for the relation X -> Y
 
@@ -478,6 +502,12 @@ class CausalInference:
         -------
         set: Set of 2-tuples representing tuple[0] is an IV for X -> Y given tuple[1].
 
+        Warns
+        -----
+        UserWarning
+            If Y is the scaling indicator for X, whether explicitly supplied or
+            selected automatically.
+
         References
         ----------
         - :footcite:t:`vanderzander_2015`
@@ -498,7 +528,13 @@ class CausalInference:
             scaling_indicators = self.get_scaling_indicators()
 
         if (X in scaling_indicators.keys()) and (scaling_indicators[X] == Y):
-            logger.warning(f"{Y} is the scaling indicator of {X}. Please specify `scaling_indicators`")
+            _warn_external(
+                f"{Y} is the scaling indicator for {X}. "
+                f"Specify a different scaling indicator for {X} in "
+                f"`scaling_indicators` to search for instrumental variables "
+                f"for the edge {X} -> {Y}.",
+                UserWarning,
+            )
 
         transformed_graph, dependent_var = self._iv_transformations(X, Y, scaling_indicators=scaling_indicators)
         if (X, Y) in transformed_graph.edges:
@@ -567,14 +603,14 @@ class CausalInference:
         result = {}
 
         try:
-            backdoor_sets = self.get_all_backdoor_adjustment_sets(X, Y)
+            backdoor_sets = self._get_all_backdoor_adjustment_sets(X, Y)
             if len(backdoor_sets) > 0:
                 result["backdoor set"] = backdoor_sets
         except ValueError:
             pass
 
         try:
-            frontdoor_sets = self.get_all_frontdoor_adjustment_sets(X, Y)
+            frontdoor_sets = self._get_all_frontdoor_adjustment_sets(X, Y)
             if len(frontdoor_sets) > 0:
                 result["frontdoor set"] = frontdoor_sets
         except ValueError:
@@ -752,9 +788,9 @@ class CausalInference:
             for x1, x2 in pairwise(path):
                 if isinstance(estimand_strategy, frozenset):
                     adjustment_set = frozenset({estimand_strategy})
-                    assert self.is_valid_backdoor_adjustment_set(x1, x2, Z=adjustment_set)
+                    assert self._is_valid_backdoor_adjustment_set(x1, x2, Z=adjustment_set)
                 elif estimand_strategy in ["smallest", "all"]:
-                    adjustment_sets = self.get_all_backdoor_adjustment_sets(x1, x2)
+                    adjustment_sets = self._get_all_backdoor_adjustment_sets(x1, x2)
                     if estimand_strategy == "smallest":
                         adjustment_sets = frozenset({self._simple_decision(adjustment_sets)})
 

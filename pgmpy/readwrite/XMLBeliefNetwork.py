@@ -1,11 +1,11 @@
 import itertools
-import warnings
 import xml.etree.ElementTree as etree
 
 import numpy as np
 
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
+from pgmpy.utils._warnings import _warn_external
 
 
 class XBNReader:
@@ -513,9 +513,9 @@ class XBNWriter:
             fout.write(writer)
 
     def write_xbn(self, filename):
-        warnings.warn(
-            "`XBNWriter.write_xbn` is deprecated and will be removed in v2.0. Please use `XBNWriter.write` instead.",
+        _warn_external(
+            "`XBNWriter.write_xbn` is deprecated since v1.1.0 and will be removed in v2.0. "
+            "Use `XBNWriter.write` instead.",
             FutureWarning,
-            stacklevel=2,
         )
         self.write(filename)

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import io
 import re
-import warnings
 from dataclasses import dataclass
 from typing import Any
 
@@ -13,6 +12,7 @@ from skbase.lookup import all_objects
 
 from pgmpy.base import ADMG, DAG, MAG, PDAG
 from pgmpy.causal_discovery import ExpertKnowledge
+from pgmpy.utils._warnings import _warn_external
 from pgmpy.utils.hf_hub import read_hf_file
 
 
@@ -158,8 +158,9 @@ class BaseDataset(BaseObject):
                 df[col] = df[col].astype(cat_type)
         if n_samples is not None:
             if n_samples > len(df):
-                warnings.warn(
-                    f"Requested {n_samples} samples but dataset only has {len(df)}. Returning all {len(df)} rows."
+                _warn_external(
+                    f"Requested {n_samples} samples but dataset only has {len(df)}. Returning all {len(df)} rows.",
+                    UserWarning,
                 )
             else:
                 df = df.sample(n=n_samples, random_state=seed).reset_index(drop=True)
@@ -330,8 +331,9 @@ def load_dataset(
             if not (1 <= pair_id <= 108):
                 raise ValueError(f"Tubingen pair ID must be between 1 and 108. Got {pair_id}.")
             if sim_kwargs:
-                warnings.warn(
-                    "Tubingen datasets ignore simulator kwargs.",
+                _warn_external(
+                    "The following simulator keyword arguments are ignored for Tubingen datasets: "
+                    f"{', '.join(sorted(sim_kwargs))}.",
                     UserWarning,
                 )
             target_cls = next(
@@ -343,8 +345,9 @@ def load_dataset(
 
             if n_samples is not None:
                 if n_samples > len(df):
-                    warnings.warn(
-                        f"Requested {n_samples} samples but dataset only has {len(df)}. Returning all {len(df)} rows."
+                    _warn_external(
+                        f"Requested {n_samples} samples but dataset only has {len(df)}. Returning all {len(df)} rows.",
+                        UserWarning,
                     )
                 else:
                     df = df.sample(n=n_samples, random_state=seed).reset_index(drop=True)

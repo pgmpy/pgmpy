@@ -1,6 +1,5 @@
 """Deprecated compatibility shim for :class:`pgmpy.causal_discovery.HillClimbSearch`."""
 
-import warnings
 from types import SimpleNamespace
 
 import pandas as pd
@@ -10,6 +9,7 @@ from pgmpy.causal_discovery import HillClimbSearch as _HillClimbSearch
 from pgmpy.estimators import StructureEstimator
 from pgmpy.estimators.ExpertKnowledge import ExpertKnowledge
 from pgmpy.structure_score import BaseStructureScore
+from pgmpy.utils._warnings import _warn_external
 
 
 class HillClimbSearch(StructureEstimator):
@@ -31,11 +31,10 @@ class HillClimbSearch(StructureEstimator):
     """
 
     def __init__(self, data: pd.DataFrame, use_cache: bool = True, **kwargs):
-        warnings.warn(
-            """HillClimbSearch is deprecated and will be removed in v2.0. Please use
-            pgmpy.causal_discovery.HillClimbSearch instead.""",
+        _warn_external(
+            "`pgmpy.estimators.HillClimbSearch` is deprecated since v1.1.0 and will be removed in v2.0. "
+            "Use `pgmpy.causal_discovery.HillClimbSearch` instead.",
             FutureWarning,
-            stacklevel=2,
         )
         super().__init__(data, **kwargs)
 

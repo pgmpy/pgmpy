@@ -1,15 +1,15 @@
 import random
-import warnings
 import xml.dom.minidom as md
 import xml.etree.ElementTree as etree
+from collections.abc import Hashable
 from itertools import chain
 
 import networkx as nx
 
-from pgmpy import logger
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import compat_fns
+from pgmpy.utils._warnings import _warn_external
 
 
 class XDSLReader:
@@ -278,13 +278,19 @@ class XDSLWriter:
         self.cpds = self.get_cpds()
         self._create_extensions()
 
-    def get_variables(self):
+    def get_variables(self) -> dict[Hashable, etree.Element]:
         """
         Add variables and their XML elements/representation to XDSL
 
         Returns
         -------
         dict: dict of type {variable: variable tags}
+
+        Warns
+        -----
+        UserWarning
+            If a node name contains a literal space, which is not supported by
+            pgmpy's XDSLReader or in GeNIe/SMILE node IDs.
 
         Examples
         --------
@@ -299,18 +305,30 @@ class XDSLWriter:
 
         for var in self.model.nodes:
             if isinstance(var, str) and " " in var:
-                logger.warning(f" Node '{var}' contains whitespaces. This can create issues when loading the model. ")
+                _warn_external(
+                    f"Node name {var!r} contains a space. pgmpy's XDSLReader "
+                    "cannot read the resulting model, and GeNIe/SMILE node IDs do not "
+                    "support spaces. Rename the node before exporting for these readers.",
+                    UserWarning,
+                )
             variable_tag[var] = etree.SubElement(nodes_elem, "cpt", {"id": var})
 
         return variable_tag
 
-    def get_cpds(self):
+    def get_cpds(self) -> dict[Hashable, TabularCPD]:
         """
         Add the complete CPT element (with states and probabilities) to XDSL.
 
         Returns
         -------
-        dict: dict of type {variable: table tag}
+        dict
+            Mapping of variables to their TabularCPD objects.
+
+        Warns
+        -----
+        UserWarning
+            If a state name contains a comma, which is not supported in GeNIe
+            state IDs. pgmpy's XDSLReader can still read these state names back.
 
         Examples
         --------
@@ -334,9 +352,11 @@ class XDSLWriter:
             for st in states:
                 st_str = str(st)
                 if "," in st_str:
-                    logger.warning(
-                        f"State name '{st_str}' for variable '{var}' contains commas. "
-                        "This may cause issues when loading the file. Consider removing any special characters."
+                    _warn_external(
+                        f"State name {st_str!r} for variable {var!r} contains a comma "
+                        "and is serialized as an XDSL state ID. GeNIe state IDs do not "
+                        "support commas. Rename the state if GeNIe interoperability is required.",
+                        UserWarning,
                     )
                 etree.SubElement(cpt_elem, "state", {"id": st_str})
 
@@ -426,10 +446,9 @@ class XDSLWriter:
                 f.write(pretty_xml_str)
 
     def write_xdsl(self, filename):
-        warnings.warn(
-            """`XDSLWriter.write_xdsl` is deprecated and will be removed in v2.0. Please use `XDSLWriter.write`
-            instead.""",
+        _warn_external(
+            "`XDSLWriter.write_xdsl` is deprecated since v1.1.0 and will be removed in v2.0. "
+            "Use `XDSLWriter.write` instead.",
             FutureWarning,
-            stacklevel=2,
         )
         self.write(filename)
