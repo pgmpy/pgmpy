@@ -213,3 +213,84 @@ class TestMAG:
         assert not new.has_edge("A", "X")
         assert not new.has_edge("X", "Y")
         assert m.has_edge("A", "X")  # original is unchanged
+
+
+class TestMAGDagitty:
+    def test_from_dagitty_edge_types(self):
+        mag = MAG.from_dagitty("mag { X -> Y Y <-> Z Z -- W }")
+        assert sorted(mag.get_edges(data=True)) == [
+            ("X", "Y", "->"),
+            ("Y", "Z", "<>"),
+            ("Z", "W", "--"),
+        ]
+
+    def test_from_dagitty_roles(self):
+        mag = MAG.from_dagitty("mag { X [exposure] Y [outcome] L [latent] X -> Y }")
+        assert mag.exposures == {"X"}
+        assert mag.outcomes == {"Y"}
+        assert mag.latents == {"L"}
+        assert set(mag.nodes()) == {"X", "Y", "L"}
+
+    def test_from_dagitty_isolated_nodes(self):
+        mag = MAG.from_dagitty("mag { A -> B C }")
+        assert set(mag.nodes()) == {"A", "B", "C"}
+        assert sorted(mag.get_edges(data=True)) == [("A", "B", "->")]
+
+    def test_from_dagitty_empty(self):
+        mag = MAG.from_dagitty("mag { }")
+        assert len(mag.nodes()) == 0
+        assert len(mag.get_edges(data=True)) == 0
+
+    def test_from_dagitty_no_input(self):
+        with pytest.raises(ValueError, match="Either `filename` or `string`"):
+            MAG.from_dagitty()
+
+    def test_from_dagitty_file(self, tmp_path):
+        dagitty_file = tmp_path / "model.dagitty"
+        dagitty_file.write_text("mag { X [exposure] X -> Y Y <-> Z }")
+        mag = MAG.from_dagitty(filename=str(dagitty_file))
+        assert sorted(mag.get_edges(data=True)) == [("X", "Y", "->"), ("Y", "Z", "<>")]
+        assert mag.exposures == {"X"}
+
+    def test_from_dagitty_multiline(self):
+        mag = MAG.from_dagitty(
+            """
+            mag {
+                X [exposure]
+                Y [outcome]
+                X -> Y
+                Y <-> Z
+            }
+            """
+        )
+        assert sorted(mag.get_edges(data=True)) == [("X", "Y", "->"), ("Y", "Z", "<>")]
+        assert mag.exposures == {"X"}
+        assert mag.outcomes == {"Y"}
+
+    def test_to_dagitty(self):
+        mag = MAG(edge_list=[("X", "Y", "->"), ("Y", "Z", "<>"), ("Z", "W", "--")])
+        assert mag.to_dagitty() == "mag {\nX -> Y\nY <-> Z\nZ -- W\n}"
+
+    def test_to_dagitty_with_roles_and_isolated_node(self):
+        mag = MAG(edge_list=[("A", "B", "->")], exposures={"A"}, outcomes={"B"})
+        mag.add_node("C")
+        assert mag.to_dagitty() == "mag {\nA -> B\nA [exposure]\nB [outcome]\nC\n}"
+
+    def test_to_dagitty_empty(self):
+        assert MAG().to_dagitty() == "mag {\n}"
+
+    def test_dagitty_roundtrip(self):
+        mag = MAG(
+            edge_list=[("X", "Y", "->"), ("Y", "Z", "<>"), ("Z", "W", "--")],
+            exposures={"X"},
+            outcomes={"Y"},
+        )
+        mag.add_node("L")
+        mag.latents = {"L"}
+        mag.add_node("Q")
+        restored = MAG.from_dagitty(mag.to_dagitty())
+        assert sorted(restored.get_edges(data=True)) == sorted(mag.get_edges(data=True))
+        assert set(restored.nodes()) == set(mag.nodes())
+        assert restored.exposures == mag.exposures
+        assert restored.outcomes == mag.outcomes
+        assert restored.latents == mag.latents
