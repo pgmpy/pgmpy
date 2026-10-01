@@ -1,6 +1,10 @@
 from itertools import combinations
+from os import PathLike
+
+import networkx as nx
 
 from pgmpy.base._base import _CoreGraph
+from pgmpy.utils.parser import parse_dagitty
 
 
 class MAG(_CoreGraph):
@@ -218,3 +222,157 @@ class MAG(_CoreGraph):
                 for v in self.get_neighbors(u, edge_type):
                     new_mag.remove_edge(u, v, edge_type)
         return new_mag
+
+    @classmethod
+    def from_dagitty(cls, string: str | None = None, filename: str | PathLike | None = None) -> "MAG":
+        """
+        Initializes a `MAG` instance using DAGitty syntax.
+
+        Creates a `MAG` from the dagitty string. The string should use the ``mag { ... }``
+        header; directed edges use ``->``, bidirected edges use ``<->``, and undirected
+        edges use ``--``. Variable roles are read from ``[exposure]``, ``[outcome]`` and
+        ``[latent]`` annotations on standalone node statements.
+
+        Parameters
+        ----------
+        string: str (default: None)
+            A `DAGitty` style multiline set of statements representing the model.
+            Refer https://cran.r-project.org/web/packages/dagitty/dagitty.pdf Page 10.
+
+        filename: str or PathLike (default: None)
+            The filename of the file containing the model in DAGitty syntax.
+
+        Returns
+        -------
+        MAG
+            The MAG described by the dagitty string, with variable roles set.
+
+        Examples
+        --------
+        >>> from pgmpy.base import MAG
+        >>> mag = MAG.from_dagitty("mag { X [exposure] Y [outcome] X -> Y Y <-> Z }")
+        >>> sorted(mag.get_edges(data=True))
+        [('X', 'Y', '->'), ('Y', 'Z', '<>')]
+        >>> mag.exposures, mag.outcomes
+        ({'X'}, {'Y'})
+
+        Notes
+        -----
+        - Coefficient annotations (``[beta=...]``) are ignored because MAGs do not carry parameters.
+        - Endpoint marks other than tails and arrowheads (e.g. circle endpoints used by PAGs)
+          can not be represented in a MAG and raise a ``ValueError``.
+
+        References
+        ----------
+        dagitty syntax: https://cran.r-project.org/web/packages/dagitty/dagitty.pdf
+        """
+        if filename:
+            with open(filename) as f:
+                dagitty_str = f.readlines()
+        elif string:
+            dagitty_str = string.split("\n")
+        else:
+            raise ValueError("Either `filename` or `string` need to be specified")
+
+        ebunch, roles, _, nodes = parse_dagitty(dagitty_str)
+
+        edge_tuples = []
+        for edge in ebunch:
+            if len(edge) == 4:
+                u, v, tail_mark, head_mark = edge
+                if (tail_mark, head_mark) == ("-", ">"):
+                    edge_tuples.append((u, v, "->"))
+                elif (tail_mark, head_mark) == (">", ">"):
+                    edge_tuples.append((u, v, "<>"))
+                elif (tail_mark, head_mark) == ("-", "-"):
+                    edge_tuples.append((u, v, "--"))
+                else:
+                    raise ValueError(
+                        f"Edge ({u}, {v}) with endpoint marks ({tail_mark}, {head_mark}) "
+                        "can not be represented in a MAG."
+                    )
+            else:
+                # 2-tuples come from a non-mag header; keep them as directed edges.
+                u, v = edge
+                edge_tuples.append((u, v, "->"))
+
+        mag = cls(edge_list=edge_tuples)
+        mag.add_nodes_from(nodes)
+        mag.latents = set(roles.get("latents", []))
+        mag.exposures = set(roles.get("exposures", []))
+        mag.outcomes = set(roles.get("outcomes", []))
+        for role, variables in roles.items():
+            if role not in ("latents", "exposures", "outcomes"):
+                mag.with_role(role=role, variables=variables, inplace=True)
+        return mag
+
+    def to_dagitty(self) -> str:
+        """
+        Convert the MAG to dagitty syntax representation.
+
+        The dagitty syntax represents the graph using the mag { statements } format with
+        ``->`` for directed edges, ``<->`` for bidirected edges and ``--`` for undirected
+        edges. Variable roles are written as ``[exposure]``, ``[outcome]`` and ``[latent]``
+        annotations on standalone node statements. Isolated nodes (nodes with no edges)
+        are included as standalone nodes.
+
+        Returns
+        -------
+        str
+            String representation of the MAG in dagitty syntax format.
+
+        Examples
+        --------
+        >>> from pgmpy.base import MAG
+        >>> mag = MAG(edge_list=[("X", "Y", "->"), ("Y", "Z", "<>")])
+        >>> print(mag.to_dagitty())
+        mag {
+        X -> Y
+        Y <-> Z
+        }
+
+        >>> mag2 = MAG(edge_list=[("A", "B", "->")], exposures={"A"}, outcomes={"B"})
+        >>> mag2.add_node("C")  # Isolated node
+        >>> print(mag2.to_dagitty())
+        mag {
+        A -> B
+        A [exposure]
+        B [outcome]
+        C
+        }
+
+        Notes
+        -----
+        - Node names are converted to string representations using str().
+        - If node names contain spaces or special characters, they will be used as-is.
+        - Users should ensure node names are valid in R/dagitty context if needed.
+
+        References
+        ----------
+        dagitty syntax: https://cran.r-project.org/web/packages/dagitty/dagitty.pdf
+        """
+        statements = []
+
+        edge_statements = {"->": "->", "<>": "<->", "--": "--"}
+        for u, v, edge_type in sorted(self.get_edges(data=True), key=lambda e: (str(e[0]), str(e[1]), e[2])):
+            statements.append(f"{u} {edge_statements[edge_type]} {v}")
+
+        role_dict = self.get_role_dict()
+        node_roles = {}
+        for role, marker in (("exposures", "exposure"), ("outcomes", "outcome"), ("latents", "latent")):
+            for node in set(role_dict.get(role, [])) | getattr(self, role):
+                node_roles.setdefault(node, []).append(marker)
+
+        for node in sorted(node_roles, key=str):
+            for marker in node_roles[node]:
+                statements.append(f"{node} [{marker}]")
+
+        for node in sorted(nx.isolates(self), key=str):
+            if node not in node_roles:
+                statements.append(str(node))
+
+        content = "\n".join(statements)
+        if content:
+            return f"mag {{\n{content}\n}}"
+        else:
+            return "mag {\n}"
