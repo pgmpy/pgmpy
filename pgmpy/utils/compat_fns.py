@@ -124,6 +124,8 @@ def flip(arr, axis=0):
     if isinstance(arr, np.ndarray):
         return np.flip(arr, axis=axis)
     else:
+        if isinstance(axis, int):
+            axis = (axis,)
         return torch.flip(arr, dims=axis)
 
 
