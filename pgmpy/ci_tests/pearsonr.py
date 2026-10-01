@@ -64,9 +64,12 @@ class Pearsonr(BaseCITest):
 
     _tags = {
         "name": "pearsonr",
-        "data_types": ("continuous",),
+        "data_types": ["continuous"],
         "default_for": "continuous",
         "requires_data": True,
+        "assumption:linearity": True,
+        "assumption:additive_noise": True,
+        "assumption:gaussian_noise": True,
     }
 
     def __init__(self, data: pd.DataFrame, use_cache: bool = True):

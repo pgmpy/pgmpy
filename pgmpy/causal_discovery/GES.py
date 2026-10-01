@@ -88,6 +88,23 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
     - https://github.com/juangamella/ges
     """
 
+    _tags = {
+        "name": "ges",
+        "data_types": ["discrete", "continuous", "mixed"],
+        "identifiable_graph": "cpdag",
+        "requires_target": False,
+        "capability:multivariate": True,
+        "capability:expert_knowledge": [],
+        "assumption:causal_sufficiency": True,
+        "assumption:acyclicity": True,
+        "assumption:faithfulness": True,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
+    }
+
     def __init__(
         self,
         scoring_method: str | BaseStructureScore | None = None,
@@ -259,6 +276,7 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
         # Step 1: Initial checks and setup for arguments
         # Step 1.1: Check score
         score = get_scoring_method(self.scoring_method, X)
+        self._set_component_tags(score)
         score_fn = score.local_score
 
         # Step 1.2: Initialize the starting PDAG

@@ -101,6 +101,23 @@ class ANM(BaseCausalDiscovery):
 
     """
 
+    _tags = {
+        "name": "anm",
+        "data_types": ["continuous"],
+        "identifiable_graph": "dag",
+        "requires_target": False,
+        "capability:multivariate": False,
+        "capability:expert_knowledge": [],
+        "assumption:causal_sufficiency": True,
+        "assumption:acyclicity": True,
+        "assumption:faithfulness": False,
+        "assumption:linearity": False,
+        "assumption:additive_noise": True,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
+    }
+
     def __init__(
         self,
         regressor: BaseEstimator | None = None,
@@ -140,7 +157,8 @@ class ANM(BaseCausalDiscovery):
         x, y = self.feature_names_in_
 
         # Step 1: Fit models in both directions and compute the residual-dependence scores.
-        score_fn = get_bivariate_score(self.scoring_method, algorithm="anm")
+        score_fn = get_bivariate_score(self.scoring_method, input_type="cause_residual")
+        self._set_component_tags(score_fn)
         forward_score = self._direction_score(cause=X[[x]], effect=X[y], score_fn=score_fn)
         backward_score = self._direction_score(cause=X[[y]], effect=X[x], score_fn=score_fn)
 

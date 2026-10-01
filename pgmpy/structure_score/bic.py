@@ -57,6 +57,7 @@ class BIC(LogLikelihood):
 
     _tags = {
         "name": "bic-d",
+        "data_types": ["discrete"],
         "supported_datatype": "discrete",
         "default_for": "discrete",
         "is_parameteric": False,

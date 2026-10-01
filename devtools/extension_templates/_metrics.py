@@ -67,14 +67,15 @@ class MyMetric(BaseSupervisedMetric):
     .. [1] TODO: Add citation for the metric
     """
 
-    # TODO: Fill in the tags for your metric. This is mandatory.
+    # TODO: Fill in the tags for your metric. This is mandatory. `pgmpy.registry.all_tags("supervised_metric")` lists
+    #       them, and the tag classes in `pgmpy/registry/_tags.py` document each tag and its allowed values.
+    #       `requires_true_graph=True` and `requires_data=False` are set by `BaseSupervisedMetric`.
     _tags = {
-        "name": "my_metric",  # Change to your metric name (lowercase, underscores allowed)
-        "requires_true_graph": True,  # Set to True for supervised metrics
-        "requires_data": False,  # Set to True if metric needs data in addition to graphs
-        "lower_is_better": True,  # Set to False if higher values are better
+        "name": "my_metric",  # Unique lowercase name.
         "is_symmetric": False,  # Set to True if metric(A, B) == metric(B, A)
-        "supported_graph_types": (DAG,),  # Add supported graph types (DAG, PDAG, etc.)
+        "supported_graph_types": [DAG],  # List of supported graph classes (DAG, PDAG, etc.).
+        "output_type": "scalar",  # One of "scalar", "tuple", "dict", "dataframe".
+        "lower_is_better": True,  # Set to False if higher values are better. Only used for scalar output.
     }
 
     # TODO: Add all parameters required for the metric in the init method.
@@ -160,13 +161,14 @@ class MyUnsupervisedMetric(BaseUnsupervisedMetric):
     .. [1] TODO: Add citation for the metric
     """
 
-    # TODO: Fill in the tags for your metric. This is mandatory.
+    # TODO: Fill in the tags for your metric. This is mandatory. `pgmpy.registry.all_tags("unsupervised_metric")`
+    #       lists them, and the tag classes in `pgmpy/registry/_tags.py` document each tag and its allowed values.
+    #       `requires_true_graph=False` and `requires_data=True` are set by `BaseUnsupervisedMetric`.
     _tags = {
-        "name": "my_unsupervised_metric",  # Change to your metric name
-        "requires_true_graph": False,  # Always False for unsupervised metrics
-        "requires_data": True,  # Always True for unsupervised metrics
-        "lower_is_better": False,  # Set based on your metric's interpretation
-        "supported_graph_types": (DAG,),  # Add supported graph types
+        "name": "my_unsupervised_metric",  # Unique lowercase name.
+        "supported_graph_types": [DAG],  # List of supported graph classes (DAG, PDAG, etc.).
+        "output_type": "scalar",  # One of "scalar", "tuple", "dict", "dataframe".
+        "lower_is_better": False,  # Set based on your metric's interpretation. Only used for scalar output.
     }
 
     # TODO: Add all parameters required for the metric in the init method.

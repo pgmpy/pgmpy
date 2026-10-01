@@ -33,11 +33,19 @@ class BaseBivariateScore(BaseObject):
     """Base class for scores that compare two one-dimensional samples.
 
     Subclasses are called as ``score(x, y)`` and return a float. A smaller score indicates the
-    preferred direction. Each subclass defines ``name`` and ``supported_algorithms`` tags for
-    built-in lookup.
+    preferred direction. Every bivariate score sets all of the tags listed by
+    ``pgmpy.registry.all_tags("bivariate_score")``. See :doc:`/api/tags` for what each tag means.
     """
 
-    _tags = {"name": None, "supported_algorithms": []}
+    _tags = {
+        "object_type": "bivariate_score",
+        "name": None,
+        "input_type": None,
+        "data_types": [],
+        "assumption:linearity": None,
+        "assumption:additive_noise": None,
+        "assumption:gaussian_noise": None,
+    }
 
     def __call__(self, x: np.typing.ArrayLike, y: np.typing.ArrayLike) -> float:
         raise NotImplementedError
@@ -64,12 +72,37 @@ class IndependenceScore(BaseBivariateScore):
         - ``"p_value"`` returns the negative p-value.
     """
 
-    _tags = {"name": "independence", "supported_algorithms": ["anm"]}
+    _tags = {
+        "name": "independence",
+        "input_type": "cause_residual",
+        "data_types": ["continuous"],
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+    }
 
     def __init__(self, ci_test: str | BaseCITest = "pearsonr", criterion: str = "effect_size") -> None:
         self.ci_test = ci_test
         self.criterion = criterion
         super().__init__()
+
+        if isinstance(ci_test, BaseCITest):
+            test_tags = ci_test.get_tags()
+        else:
+            test_classes = all_objects(
+                object_types=BaseCITest,
+                package_name="pgmpy.ci_tests",
+                return_names=False,
+                filter_tags={"name": ci_test.lower()},
+            )
+            test_tags = test_classes[0].get_class_tags() if test_classes else {}
+        self.set_tags(
+            **{
+                key: test_tags[key]
+                for key in self.get_tags()
+                if (key == "data_types" or key.startswith("assumption:")) and key in test_tags
+            }
+        )
 
     def __call__(self, x: np.typing.ArrayLike, y: np.typing.ArrayLike) -> float:
         data = pd.DataFrame({"_x": np.asarray(x), "_y": np.asarray(y)})
@@ -111,7 +144,14 @@ class EntropyScore(BaseBivariateScore):
         Logarithm base for the entropy. The default uses the natural logarithm.
     """
 
-    _tags = {"name": "entropy", "supported_algorithms": ["anm"]}
+    _tags = {
+        "name": "entropy",
+        "input_type": "cause_residual",
+        "data_types": ["continuous"],
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+    }
 
     def __init__(
         self,
@@ -151,7 +191,14 @@ class EntropyDifferenceScore(BaseBivariateScore):
         Logarithm base for the entropy. The default uses the natural logarithm.
     """
 
-    _tags = {"name": "entropy", "supported_algorithms": ["igci"]}
+    _tags = {
+        "name": "entropy_difference",
+        "input_type": "cause_effect",
+        "data_types": ["continuous"],
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+    }
 
     def __init__(
         self,
@@ -188,7 +235,14 @@ class GaussScore(BaseBivariateScore):
     :class:`EntropyScore` or :class:`IndependenceScore` in that case.
     """
 
-    _tags = {"name": "gauss", "supported_algorithms": ["anm"]}
+    _tags = {
+        "name": "gauss",
+        "input_type": "cause_residual",
+        "data_types": ["continuous"],
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": True,
+    }
 
     def __call__(self, x: np.typing.ArrayLike, y: np.typing.ArrayLike) -> float:
         return np.log(np.var(x)) + np.log(np.var(y))
@@ -203,7 +257,14 @@ class SlopeScore(BaseBivariateScore):
     weighted by the multiplicity of its left ``x`` value. Zero ``y`` spacings are ignored.
     """
 
-    _tags = {"name": "slope", "supported_algorithms": ["igci"]}
+    _tags = {
+        "name": "slope",
+        "input_type": "cause_effect",
+        "data_types": ["continuous"],
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+    }
 
     def __call__(self, x: np.typing.ArrayLike, y: np.typing.ArrayLike) -> float:
         x = np.asarray(x)
@@ -232,16 +293,17 @@ class SlopeScore(BaseBivariateScore):
 
 def get_bivariate_score(
     score: str | BaseBivariateScore | Callable[[np.typing.ArrayLike, np.typing.ArrayLike], float],
-    algorithm: str,
+    input_type: str,
 ) -> BaseBivariateScore | Callable[[np.typing.ArrayLike, np.typing.ArrayLike], float]:
     """Return a score selected by name or supplied by the user.
 
     Parameters
     ----------
-    score : str or callable
-        Built-in score name, configured score object, or custom callable.
-    algorithm : {"anm", "igci"}
-        Causal discovery algorithm that will use the score.
+    score : str, BaseBivariateScore, or callable
+        Built-in score name, configured score object, or custom callable. Custom callables are returned unchanged.
+
+    input_type : {"cause_residual", "cause_effect"}
+        What the caller passes to the score. Built-in scores must have a matching ``input_type`` tag.
 
     Returns
     -------
@@ -251,30 +313,33 @@ def get_bivariate_score(
     Raises
     ------
     ValueError
-        If ``score`` is an unknown name or is not callable.
+        If ``score`` is an unknown name, a built-in score of a different input type, or not callable.
     """
-    algorithm = algorithm.lower()
+    input_descr = {"cause_residual": "(cause, residual)", "cause_effect": "(cause, effect)"}
+    valid_scores = all_objects(
+        object_types=BaseBivariateScore,
+        package_name="pgmpy.causal_discovery",
+        return_names=False,
+        filter_tags={"input_type": input_type},
+    )
+    valid_names = ", ".join(sorted(cls.get_class_tag("name") for cls in valid_scores))
 
     if isinstance(score, BaseBivariateScore):
-        if algorithm not in score.get_tag("supported_algorithms"):
-            raise ValueError(f"{type(score).__name__} does not support {algorithm.upper()}.")
+        score_input_type = score.get_tag("input_type")
+        if score_input_type != input_type:
+            raise ValueError(
+                f"{type(score).__name__} takes {input_descr[score_input_type]} inputs, but {input_descr[input_type]} "
+                f"inputs are required. Use one of: {valid_names}."
+            )
         return score
 
     if isinstance(score, str):
-        score_classes = all_objects(
-            object_types=BaseBivariateScore,
-            package_name="pgmpy.causal_discovery",
-            return_names=False,
-            filter_tags={
-                "name": score.lower(),
-                "supported_algorithms": algorithm,
-            },
-        )
-        if score_classes:
-            return score_classes[0]()
-        raise ValueError(f"Unknown {algorithm.upper()} score: {score!r}.")
+        for cls in valid_scores:
+            if cls.get_class_tag("name") == score.lower():
+                return cls()
+        raise ValueError(f"Unknown score for {input_descr[input_type]} inputs: {score!r}. Use one of: {valid_names}.")
 
     if callable(score) and not isinstance(score, type):
         return score
 
-    raise ValueError(f"Invalid {algorithm.upper()} score: {score!r}. Pass a built-in name or callable.")
+    raise ValueError(f"Invalid score: {score!r}. Pass a built-in name, a BaseBivariateScore instance, or a callable.")

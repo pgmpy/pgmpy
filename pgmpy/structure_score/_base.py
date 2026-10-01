@@ -33,10 +33,15 @@ class BaseStructureScore(BaseObject):
     """
 
     _tags = {
+        "object_type": "structure_score",
         "name": None,
+        "data_types": [],
         "supported_datatype": None,
         "default_for": None,
         "is_parameteric": False,
+        "assumption:linearity": None,
+        "assumption:additive_noise": None,
+        "assumption:gaussian_noise": None,
     }
 
     def __init__(self, data, state_names=None, max_cache_size=10000):

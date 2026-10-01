@@ -7,6 +7,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
+from skbase.base import BaseObject
 from sklearn.base import BaseEstimator, clone
 from sklearn.linear_model import LassoLarsIC, LinearRegression
 from sklearn.metrics import (
@@ -19,18 +20,43 @@ from tqdm.auto import tqdm
 
 from pgmpy import config, logger
 from pgmpy.base import DAG, UndirectedGraph
-from pgmpy.ci_tests import IndependenceMatch, get_ci_test
+from pgmpy.causal_discovery.bivariate_scores import BaseBivariateScore
+from pgmpy.ci_tests import BaseCITest, IndependenceMatch, get_ci_test
 from pgmpy.independencies import Independencies
 from pgmpy.metrics import get_metrics
 from pgmpy.structure_score import BaseStructureScore
 
 
-class BaseCausalDiscovery(BaseEstimator):
+class BaseCausalDiscovery(BaseEstimator, BaseObject):
     """
     Base class for all causal discovery estimators in pgmpy.
 
-    Sets the sklearn tags and defines a method to check the input data for fitting.
+    Sets the sklearn tags and defines methods common to all causal discovery methods, such as checks for input data.
+    Every causal discovery method in pgmpy inherits this class.
     """
+
+    _tags = {
+        "object_type": "causal_discovery",
+        "name": None,
+        "data_types": None,
+        "identifiable_graph": None,
+        "requires_target": None,
+        "capability:multivariate": None,
+        "capability:expert_knowledge": None,
+        "assumption:causal_sufficiency": None,
+        "assumption:acyclicity": None,
+        "assumption:faithfulness": None,
+        "assumption:linearity": None,
+        "assumption:additive_noise": None,
+        "assumption:gaussian_noise": None,
+        "assumption:non_gaussian_noise": None,
+        "assumption:low_noise": None,
+    }
+
+    # skbase's BaseObject defines parameter-based equality, which also makes instances unhashable. Use sklearn's
+    # identity-based semantics instead.
+    __eq__ = BaseEstimator.__eq__
+    __hash__ = BaseEstimator.__hash__
 
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
@@ -83,13 +109,34 @@ class BaseCausalDiscovery(BaseEstimator):
         self.n_features_in_ = len(X.columns)
         return X
 
+    def _set_component_tags(self, component: BaseCITest | BaseStructureScore | BaseBivariateScore | Callable) -> None:
+        """
+        A helper method to narrow down the ``data_types`` and ``assumption:*`` tags for causal discovery method.
+
+        Causal methods that depend on arguments that have their own assumptions (for e.g., CI tests or scoring methods)
+        or support specific data types, call this method during fit so that the causal discovery method's assumptions
+        can be updated based on the argument specified.
+
+        Parameters
+        ----------
+        component : BaseCITest, BaseStructureScore, BaseBivariateScore, or callable
+            The resolved CI test or scoring method.
+        """
+        class_tags = type(self).get_class_tags()
+        component_tags = component.get_tags() if isinstance(component, BaseObject) else {}
+        assumptions = {
+            key: value or component_tags.get(key, False)
+            for key, value in class_tags.items()
+            if key.startswith("assumption:")
+        }
+        self.set_tags(data_types=component_tags.get("data_types", class_tags["data_types"]), **assumptions)
+
     def fit(self, X: pd.DataFrame, y=None):
         """Fit data (`X`) to a causal graph. The method
         calls the `_fit` method, which must be implemented separately in any causal
         discovery algorithm inheriting from `BaseCausalDiscovery`.
         """
         X = self._check_fit_data(X)
-
         return self._fit(X)
 
     def score(
@@ -153,7 +200,7 @@ class BaseCausalDiscovery(BaseEstimator):
                 X = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
 
             if metric is None:
-                scoring_class = get_metrics(requires_data=True, is_default=True)[0]
+                scoring_class = get_metrics(default_for="unsupervised")[0]
                 metric = scoring_class()
 
             elif isinstance(metric, str):
@@ -168,7 +215,7 @@ class BaseCausalDiscovery(BaseEstimator):
         # Case 2: When true graph is provided.
         elif true_graph is not None:
             if metric is None:
-                scoring_class = get_metrics(requires_true_graph=True, is_default=True)
+                scoring_class = get_metrics(default_for="supervised")
                 metric = scoring_class[0]()
             elif isinstance(metric, str):
                 scoring_class = get_metrics(name=metric)
@@ -438,7 +485,12 @@ class _ConstraintMixin:
                         sep_vars = set()
                         found_independence = False
                         for separating_set in self._get_potential_sepsets(
-                            u, v, temporal_ordering, graph, lim_neighbors, neighbors=neighbors
+                            u,
+                            v,
+                            temporal_ordering,
+                            graph,
+                            lim_neighbors,
+                            neighbors=neighbors,
                         ):
                             if ci_test(
                                 u,

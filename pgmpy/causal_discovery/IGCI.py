@@ -29,7 +29,7 @@ class IGCI(BaseCausalDiscovery):
     Parameters
     ----------
     scoring_method : str, BaseBivariateScore instance, or callable, default="slope"
-        Score used to compare the two directions. Use ``"slope"``, ``"entropy"``, a configured
+        Score used to compare the two directions. Use ``"slope"``, ``"entropy_difference"``, a configured
         score object, or a callable of the form ``score(x, y) -> float``.
 
     ref_measure : {"uniform", "gaussian"}, default="uniform"
@@ -71,7 +71,7 @@ class IGCI(BaseCausalDiscovery):
     0.22245
     >>> round(float(igci.backward_score_), 5)
     1.66886
-    >>> round(float(IGCI(scoring_method="entropy").fit(df).forward_score_), 5)
+    >>> round(float(IGCI(scoring_method="entropy_difference").fit(df).forward_score_), 5)
     -0.70337
 
     References
@@ -80,6 +80,23 @@ class IGCI(BaseCausalDiscovery):
     - :cite:p:`janzing_2012`
 
     """
+
+    _tags = {
+        "name": "igci",
+        "data_types": ["continuous"],
+        "identifiable_graph": "dag",
+        "requires_target": False,
+        "capability:multivariate": False,
+        "capability:expert_knowledge": [],
+        "assumption:causal_sufficiency": True,
+        "assumption:acyclicity": True,
+        "assumption:faithfulness": False,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": True,
+    }
 
     def __init__(
         self,
@@ -114,7 +131,8 @@ class IGCI(BaseCausalDiscovery):
         # Step 1: Validate hyperparameters and resolve the score function.
         if self.ref_measure not in ("uniform", "gaussian"):
             raise ValueError(f"ref_measure must be one of ('uniform', 'gaussian'). Got: {self.ref_measure!r}")
-        score = get_bivariate_score(self.scoring_method, algorithm="igci")
+        score = get_bivariate_score(self.scoring_method, input_type="cause_effect")
+        self._set_component_tags(score)
 
         # Step 2: Validate the input data.
         if X.shape[1] != 2:

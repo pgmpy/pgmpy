@@ -142,6 +142,23 @@ class ExpertInLoop(BaseCausalDiscovery):
     and the GES algorithm.
     """
 
+    _tags = {
+        "name": "expert_in_loop",
+        "data_types": ["discrete", "continuous", "mixed"],
+        "identifiable_graph": "dag",
+        "requires_target": False,
+        "capability:multivariate": True,
+        "capability:expert_knowledge": ["forbidden_edges", "required_edges", "temporal_order"],
+        "assumption:causal_sufficiency": True,
+        "assumption:acyclicity": True,
+        "assumption:faithfulness": True,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
+    }
+
     def __init__(
         self,
         pval_threshold: float = 0.05,
@@ -283,6 +300,7 @@ class ExpertInLoop(BaseCausalDiscovery):
         dag.add_nodes_from(self.variables_)
         dag.add_edges_from(required_edges)
         ci_test = get_ci_test(test=self.ci_test, data=X)
+        self._set_component_tags(ci_test)
 
         while True:
             # Step 1: Compute effects and p-values between every combination of variables

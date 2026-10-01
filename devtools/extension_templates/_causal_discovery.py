@@ -58,6 +58,31 @@ class MyCausalDiscoveryAlgo(BaseCausalDiscovery):
     .. [2] Citation2
     """
 
+    # TODO: Set every tag. Use `pgmpy.registry.all_tags("causal_discovery")` to list all tags, and the  tags in
+    # `pgmpy/registry/_tags.py` document each tag and its allowed values. A new tag must be added there too.
+    _tags = {
+        "name": "my_causal_discovery_algo",  # Unique lowercase name.
+        "data_types": ["continuous"],  # Subset of ["discrete", "continuous", "mixed"].
+        "identifiable_graph": "dag",  # One of "dag", "cpdag", or "pag": how far the
+        # method identifies the graph.
+        "requires_target": False,  # True if the algorithm needs a target variable.
+        "capability:multivariate": True,  # False if the algorithm only handles exactly two variables.
+        # Subset of ["forbidden_edges", "required_edges", "search_space", "temporal_order"].
+        "capability:expert_knowledge": [],
+        # Assumptions: True if the algorithm's guarantees require it, False otherwise. If the algorithm uses a CI test
+        # or scoring method, set the union over all components (e.g. every data type some component supports, False
+        # if some component doesn't require the assumption) and call `self._set_component_tags(component)` in `_fit`
+        # once the component is resolved.
+        "assumption:causal_sufficiency": True,
+        "assumption:acyclicity": True,
+        "assumption:faithfulness": False,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
+    }
+
     # TODO: Add all hyperparameters required for the algorithm in the init method.
     def __init__(self, hyperparam1=None, hyperparam2=None):
 

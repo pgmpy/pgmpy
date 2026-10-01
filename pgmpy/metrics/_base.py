@@ -6,7 +6,22 @@ from skbase.lookup import all_objects
 class BaseSupervisedMetric(BaseObject):
     """
     Base class for all metric classes in pgmpy that require ground truth causal graph.
+
+    Every supervised metric sets all of the tags listed by ``pgmpy.registry.all_tags("supervised_metric")``. See
+    :doc:`/api/tags` for what each tag means.
     """
+
+    _tags = {
+        "object_type": "supervised_metric",
+        "name": None,
+        "default_for": None,
+        "requires_data": False,
+        "is_symmetric": None,
+        "requires_true_graph": True,
+        "supported_graph_types": None,
+        "output_type": None,
+        "lower_is_better": None,
+    }
 
     def evaluate(self, true_causal_graph, est_causal_graph, **kwargs):
         """
@@ -20,17 +35,16 @@ class BaseSupervisedMetric(BaseObject):
         est_causal_graph: Instance of type pgmpy.base
             The estimated causal graph.
         """
-        if not isinstance(true_causal_graph, self._tags["supported_graph_types"]):
+        supported_graph_types = tuple(self.get_tag("supported_graph_types"))
+        if not isinstance(true_causal_graph, supported_graph_types):
             raise ValueError(
-                f"The true_causal_graph must be one of the following types: "
-                f"{self._tags['supported_graph_types']}, "
+                f"The true_causal_graph must be one of the following types: {supported_graph_types}, "
                 f"but got {type(true_causal_graph)} instead."
             )
 
-        if not isinstance(est_causal_graph, self._tags["supported_graph_types"]):
+        if not isinstance(est_causal_graph, supported_graph_types):
             raise ValueError(
-                f"The est_causal_graph must be one of the following types: "
-                f"{self._tags['supported_graph_types']}, "
+                f"The est_causal_graph must be one of the following types: {supported_graph_types}, "
                 f"but got {type(est_causal_graph)} instead."
             )
 
@@ -54,7 +68,21 @@ class BaseSupervisedMetric(BaseObject):
 class BaseUnsupervisedMetric(BaseObject):
     """
     Base class for all metric classes in pgmpy that do not require ground truth causal graph.
+
+    Every unsupervised metric sets all of the tags listed by ``pgmpy.registry.all_tags("unsupervised_metric")``. See
+    :doc:`/api/tags` for what each tag means.
     """
+
+    _tags = {
+        "object_type": "unsupervised_metric",
+        "name": None,
+        "default_for": None,
+        "requires_data": True,
+        "requires_true_graph": False,
+        "supported_graph_types": None,
+        "output_type": None,
+        "lower_is_better": None,
+    }
 
     def evaluate(self, X, causal_graph, **kwargs):
         """
@@ -68,10 +96,10 @@ class BaseUnsupervisedMetric(BaseObject):
         causal_graph: Instance of type pgmpy.base
             The causal graph to be evaluated.
         """
-        if not isinstance(causal_graph, self._tags["supported_graph_types"]):
+        supported_graph_types = tuple(self.get_tag("supported_graph_types"))
+        if not isinstance(causal_graph, supported_graph_types):
             raise ValueError(
-                f"The causal_graph must be one of the following types: "
-                f"{self._tags['supported_graph_types']}, "
+                f"The causal_graph must be one of the following types: {supported_graph_types}, "
                 f"but got {type(causal_graph)} instead."
             )
 
@@ -89,26 +117,32 @@ class BaseUnsupervisedMetric(BaseObject):
         return self.evaluate(X=X, causal_graph=causal_graph, **kwargs)
 
 
-def get_metrics(**kwargs):
+def get_metrics(**kwargs) -> list[type]:
     """
     Get metric classes matching the given tag filters.
 
     Parameters
     ----------
     **kwargs
-        Keyword arguments specifying tag filters to be passed to
-        :func:`skbase.lookup.all_objects` via its ``filter_tags`` parameter.
+        Tag filters passed to :func:`skbase.lookup.all_objects` via its ``filter_tags`` parameter. See
+        :doc:`/api/tags` for the tags of metrics. ``name`` is matched case-insensitively.
 
     Returns
     -------
-    Type[BaseObject] or list[Type[BaseObject]]
-        Metric class(es) corresponding to the given tag filters.
+    list[type]
+        Metric classes matching all the given tag filters. Empty if none match.
 
-    Raises
-    ------
-    ValueError
-        If no metric class matching the given tag filters is found.
+    Examples
+    --------
+    >>> from pgmpy.metrics import get_metrics
+    >>> get_metrics(default_for="supervised")
+    [<class 'pgmpy.metrics.shd.SHD'>]
+    >>> get_metrics(name="SHD")
+    [<class 'pgmpy.metrics.shd.SHD'>]
     """
+    if isinstance(kwargs.get("name"), str):
+        kwargs["name"] = kwargs["name"].lower()
+
     return all_objects(
         object_types=[BaseSupervisedMetric, BaseUnsupervisedMetric],
         package_name="pgmpy.metrics",
