@@ -40,7 +40,7 @@ def test_copy_numpy():
 
 @pytest.mark.skipif(not _check_soft_dependencies("torch", severity="none"), reason="requires torch")
 def test_copy_torch():
-    config.set_backend("torch")
+    config.set_backend("torch", device="cpu")
     arr = torch.tensor([1, 2, 3])
     arr_copy = compat_fns.copy(arr)
     assert torch.equal(arr, arr_copy)
@@ -160,7 +160,7 @@ def test_ones_numpy():
 
 @pytest.mark.skipif(not _check_soft_dependencies("torch", severity="none"), reason="requires torch")
 def test_ones_torch():
-    config.set_backend("torch")
+    config.set_backend("torch", device="cpu")
     ones_arr = compat_fns.ones(3)
     assert torch.equal(ones_arr, torch.tensor([1.0, 1.0, 1.0], dtype=torch.float64))
 
