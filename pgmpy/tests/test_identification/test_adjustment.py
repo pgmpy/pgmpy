@@ -85,6 +85,10 @@ def test_is_valid_adjustment_set():
     )
     assert not Adjustment(variant="minimal").validate(dag)
 
+    # {z2} alone is NOT a valid adjustment set: conditioning on the collider
+    # z2 opens the proper non-causal path x1 -> z1 -> z2 <- y2. The paper this
+    # model is taken from uses it for exactly this point. It was previously
+    # accepted because the cross pair (x1, y2) was never tested.
     dag = DAG(
         [("x1", "y1"), ("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")],
         roles={
@@ -93,7 +97,51 @@ def test_is_valid_adjustment_set():
             "adjustment": {"z2"},
         },
     )
-    assert Adjustment(variant="minimal").validate(dag)
+    assert not Adjustment(variant="minimal").validate(dag)
+
+
+def test_validate_rejects_forbidden_sets():
+    # Regression tests for #3553: validate() accepted adjustment sets that
+    # violate the forbidden-set condition of the adjustment criterion.
+
+    # Mediator: X -> M -> Y. M sits on the causal path.
+    dag = DAG(
+        [("X", "M"), ("M", "Y")],
+        roles={"exposures": "X", "outcomes": "Y", "adjustment": ["M"]},
+    )
+    assert not Adjustment().validate(dag)
+
+    # Collider: X -> Y, X -> C <- Y. Conditioning on C opens a spurious path.
+    dag = DAG(
+        [("X", "Y"), ("X", "C"), ("Y", "C")],
+        roles={"exposures": "X", "outcomes": "Y", "adjustment": ["C"]},
+    )
+    assert not Adjustment().validate(dag)
+
+    # A genuine confounder A plus the mediator M.
+    dag = DAG(
+        [("A", "X"), ("A", "Y"), ("X", "M"), ("M", "Y")],
+        roles={"exposures": "X", "outcomes": "Y", "adjustment": ["A", "M"]},
+    )
+    assert not Adjustment().validate(dag)
+
+    # Sanity: the valid set {A} alone stays accepted.
+    dag = DAG(
+        [("A", "X"), ("A", "Y"), ("X", "M"), ("M", "Y")],
+        roles={"exposures": "X", "outcomes": "Y", "adjustment": ["A"]},
+    )
+    assert Adjustment().validate(dag)
+
+
+def test_validate_admg_bidirected_confounding():
+    # X <-> Y is unblockable latent confounding: no adjustment set is valid.
+    # The pre-fix parents shortcut was vacuously true here (X has no parents).
+    admg = ADMG(
+        edge_list=[("X", "Y", "->"), ("X", "Y", "<>")],
+        exposures={"X"},
+        outcomes={"Y"},
+    )
+    assert Adjustment(variant="all").validate(admg) is False
 
 
 def test_get_minimal_adjustment_set():
