@@ -1,9 +1,16 @@
 #!/usr/bin/env python3
+from collections.abc import Hashable, Iterable
+
+from pgmpy.utils.types import Self
+
 __all__ = ["_GraphRolesMixin"]
 
 
 class _GraphRolesMixin:
-    """Mixin class for handling roles in a causal graph."""
+    """Mixin class for handling roles in a causal graph.
+
+    Graph classes use ``SUPPORTS_LATENTS`` to control whether nodes can be assigned the ``latents`` role.
+    """
 
     def get_role(self, role: str):
         """Return list of nodes in graph G with a specific role.
@@ -65,7 +72,7 @@ class _GraphRolesMixin:
         """
         return role in self.get_roles()
 
-    def with_role(self, role: str, variables, inplace=False):
+    def with_role(self, role: str, variables: str | Iterable[Hashable], inplace: bool = False) -> Self | None:
         """Return a new graph with the specified role assignment.
 
         Parameters
@@ -81,9 +88,23 @@ class _GraphRolesMixin:
         -------
         graph of same type as self
             A new instance with the specified role assigned, to the variables provided.
+
+        Raises
+        ------
+        ValueError
+            If variables are assigned the "latents" role in a graph class with ``SUPPORTS_LATENTS = False``.
         """
         if isinstance(variables, str):
             variables = {variables}
+
+        if role == "latents" and not self.SUPPORTS_LATENTS:
+            variables = list(variables)
+            if variables:
+                raise ValueError(
+                    f"Every vertex of a {type(self).__name__} is observed; latent variables are represented by its "
+                    "edges, so the 'latents' role cannot be assigned. Use DAG.to_admg() to project the latent "
+                    "variables of a DAG into bidirected edges."
+                )
 
         if not inplace:
             new_graph = self.copy()

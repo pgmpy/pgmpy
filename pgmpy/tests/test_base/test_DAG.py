@@ -9,7 +9,7 @@ import pandas as pd
 from skbase.utils.dependencies import _check_soft_dependencies
 
 import pgmpy.tests.help_functions as hf
-from pgmpy.base import DAG
+from pgmpy.base import ADMG, DAG
 from pgmpy.ci_tests import Pearsonr
 from pgmpy.example_models import load_model
 from pgmpy.models import LinearGaussianBayesianNetwork as LGBN
@@ -982,6 +982,57 @@ class TestDAGConversion(unittest.TestCase):
         result = dag.to_dagitty()
         expected = "dag {\nA -> B\nC -> D\nE\n}"
         self.assertEqual(result, expected)
+
+    def test_to_admg(self):
+        # Front-door graph.
+        dag = DAG([("U", "X"), ("U", "Y"), ("X", "M"), ("M", "Y")], latents={"U"}, exposures={"X"}, outcomes={"Y"})
+        expected = ADMG(
+            edge_list=[("X", "M", "->"), ("M", "Y", "->"), ("X", "Y", "<>")], exposures={"X"}, outcomes={"Y"}
+        )
+        self.assertEqual(dag.to_admg(), expected)
+
+        # Without latents every edge and isolated node is kept.
+        dag = DAG([("A", "B"), ("B", "C")])
+        dag.add_node("D")
+        expected = ADMG(edge_list=[("A", "B", "->"), ("B", "C", "->")])
+        expected.add_node("D")
+        self.assertEqual(dag.to_admg(), expected)
+
+        edges = [
+            # latent mediator: X -> L -> Y becomes X -> Y
+            ("X", "L"),
+            ("L", "Y"),
+            # latent collider: P -> C <- Q adds no edge between P and Q, but C -> Z gives P -> Z and Q -> Z
+            ("P", "C"),
+            ("Q", "C"),
+            ("C", "Z"),
+            # the latent chain U1 -> U2 -> A with U1 -> B confounds A and B, and so does V: a single A <> B,
+            # alongside the direct A -> B
+            ("U1", "U2"),
+            ("U2", "A"),
+            ("U1", "B"),
+            ("V", "A"),
+            ("V", "B"),
+            ("A", "B"),
+            # a latent with three observed children confounds every pair of them
+            ("W", "B"),
+            ("W", "D"),
+            ("W", "E"),
+        ]
+        dag = DAG(edges, latents={"L", "C", "U1", "U2", "V", "W"})
+        expected = ADMG(
+            edge_list=[
+                ("X", "Y", "->"),
+                ("P", "Z", "->"),
+                ("Q", "Z", "->"),
+                ("A", "B", "->"),
+                ("A", "B", "<>"),
+                ("B", "D", "<>"),
+                ("B", "E", "<>"),
+                ("D", "E", "<>"),
+            ]
+        )
+        self.assertEqual(dag.to_admg(), expected)
 
     def test_numeric_node_names(self):
         """Test conversion with numeric node names"""
