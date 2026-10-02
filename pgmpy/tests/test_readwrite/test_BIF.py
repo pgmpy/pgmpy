@@ -11,7 +11,6 @@ from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.readwrite import BIFReader, BIFWriter
 
-
 DOG_PROBLEM_BIF = """
                 // Bayesian Network in the Interchange Format
                 // Produced by BayesianNetworks package in JavaBayes
@@ -186,9 +185,7 @@ def reader():
 
 @pytest.fixture
 def water_model():
-    return BIFReader(
-        "pgmpy/tests/test_readwrite/testdata/water.bif", include_properties=True
-    )
+    return BIFReader("pgmpy/tests/test_readwrite/testdata/water.bif", include_properties=True)
 
 
 @pytest.fixture
@@ -257,9 +254,7 @@ def bif_model():
             len(states[var]),
             values,
             evidence=parents[var],
-            evidence_card=[
-                len(states[evidence_var]) for evidence_var in parents[var]
-            ],
+            evidence_card=[len(states[evidence_var]) for evidence_var in parents[var]],
         )
         tabular_cpds.append(cpd)
     model.add_cpds(*tabular_cpds)
