@@ -1,15 +1,20 @@
 from __future__ import annotations
 
 import numbers
+from collections.abc import Hashable, Iterable
 from itertools import chain
 from typing import Any
 
 import numpy as np
+import pandas as pd
 from joblib import Parallel, delayed
+from numpy.typing import ArrayLike
 
-from pgmpy import logger
+from pgmpy.base import DAG
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import get_state_counts
+from pgmpy.utils._warnings import _warn_external
 
 from .base import DiscreteParameterEstimator
 
@@ -90,6 +95,22 @@ class DiscreteBayesianEstimator(DiscreteParameterEstimator):
         super().__init__(state_names=state_names)
 
     @staticmethod
+    def _has_ignored_pseudo_counts(
+        nodes: Iterable[Hashable],
+        prior_type: str,
+        pseudo_counts: ArrayLike | dict[Hashable, ArrayLike | None] | None,
+    ) -> bool:
+        """Check whether pseudo-counts for any requested node will be ignored."""
+        if prior_type.lower() == "dirichlet":
+            return False
+
+        for node in nodes:
+            node_pseudo_counts = pseudo_counts.get(node) if isinstance(pseudo_counts, dict) else pseudo_counts
+            if node_pseudo_counts is not None and np.array(node_pseudo_counts).size > 0:
+                return True
+        return False
+
+    @staticmethod
     def _resolve_pseudo_counts(
         model,
         state_names: dict,
@@ -107,12 +128,6 @@ class DiscreteBayesianEstimator(DiscreteParameterEstimator):
         node_pseudo_counts = pseudo_counts
         if isinstance(pseudo_counts, dict) and not isinstance(pseudo_counts, numbers.Real):
             node_pseudo_counts = pseudo_counts.get(node)
-
-        if node_pseudo_counts is not None and np.array(node_pseudo_counts).size > 0 and (prior_type != "dirichlet"):
-            logger.warning(
-                f"pseudo count specified with {prior_type} prior. It will be ignored, "
-                "use dirichlet prior for specifying pseudo_counts"
-            )
 
         if prior_type == "k2":
             resolved_pseudo_counts = np.ones(cpd_shape, dtype=int)
@@ -183,7 +198,12 @@ class DiscreteBayesianEstimator(DiscreteParameterEstimator):
         cpd.normalize()
         return cpd
 
-    def fit(self, model, data, sample_weight=None):
+    def fit(
+        self,
+        model: DAG | DiscreteBayesianNetwork,
+        data: pd.DataFrame,
+        sample_weight: ArrayLike | None = None,
+    ) -> DiscreteBayesianEstimator:
         """
         Estimate model parameters using Bayesian Parameter Estimation.
 
@@ -203,6 +223,11 @@ class DiscreteBayesianEstimator(DiscreteParameterEstimator):
         self: DiscreteBayesianEstimator
             Fitted estimator with learned CPDs stored in `parameters_`.
 
+        Warns
+        -----
+        UserWarning
+            If nonempty `pseudo_counts` for a model node are ignored because the prior is not Dirichlet.
+
         Examples
         --------
         >>> from pgmpy.datasets import load_dataset
@@ -221,6 +246,13 @@ class DiscreteBayesianEstimator(DiscreteParameterEstimator):
          <TabularCPD representing P(cp:2 | iq:4, pe:2) at 0x...>]
         """
         self._initialize_fit(model, data, sample_weight=sample_weight)
+
+        if self._has_ignored_pseudo_counts(self._model.nodes(), self.prior_type, self.pseudo_counts):
+            _warn_external(
+                f"pseudo_counts is ignored with prior_type={self.prior_type.lower()!r}. "
+                "Use prior_type='dirichlet' to specify pseudo_counts.",
+                UserWarning,
+            )
 
         parameters = Parallel(n_jobs=self.n_jobs)(
             delayed(DiscreteBayesianEstimator._estimate_cpd)(

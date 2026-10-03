@@ -5,7 +5,7 @@ class DryBean(BaseDataset):
     """
     References
     ----------
-    - :cite:p:`uci_dry_bean`
+    - :footcite:t:`uci_dry_bean`
     """
 
     _tags = {

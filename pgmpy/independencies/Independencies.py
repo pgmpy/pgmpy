@@ -35,15 +35,6 @@ class Independencies:
     >>> independencies = Independencies(
     ...     ["X", "Y", "Z"], ["a", ["b", "c"], "d"], ["l", ["m", "n"], "o"]
     ... )
-
-    Public Methods
-    --------------
-    add_assertions
-    get_assertions
-    get_factorized_product
-    closure
-    entails
-    is_equivalent
     """
 
     def __init__(self, *assertions):
@@ -407,11 +398,6 @@ class IndependenceAssertion:
     >>> assertion = IndependenceAssertion("U", ["X", "Y"])
     >>> assertion = IndependenceAssertion("U", ["X", "Y"], "Z")
     >>> assertion = IndependenceAssertion(["U", "V"], ["X", "Y"], ["Z", "A"])
-
-
-    Public Methods
-    --------------
-    get_assertion
     """
 
     def __init__(self, event1=[], event2=[], event3=[]):

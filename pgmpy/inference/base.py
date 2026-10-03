@@ -171,7 +171,7 @@ class Inference:
 
         References
         ----------
-        - :cite:p:`baker_boult_2013`
+        - :footcite:t:`baker_boult_2013`
         """
         evidence = {} if evidence is None else evidence
         variables = list(self.model.nodes()) if len(variables) == 0 else list(variables)
@@ -261,7 +261,7 @@ class Inference:
 
         References
         ----------
-        - :cite:p:`benmrad_2012`
+        - :footcite:t:`benmrad_2012`
         """
         self._check_virtual_evidence(virtual_evidence)
 

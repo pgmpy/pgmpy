@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 from collections import defaultdict
+from collections.abc import Hashable
 
 import numpy as np
 from pandas import DataFrame
 from scipy.linalg import eig
 
-from pgmpy import logger
 from pgmpy.factors.discrete import State
 from pgmpy.utils import sample_discrete
+from pgmpy.utils._warnings import _warn_external
 
 
 class MarkovChain:
@@ -126,7 +127,7 @@ class MarkovChain:
                 raise ValueError(f"Assignment {val} to {var} invalid.")
         return True
 
-    def add_variable(self, variable, card=0):
+    def add_variable(self, variable: Hashable, card: int = 0) -> None:
         """
         Add a variable to the model.
 
@@ -137,6 +138,11 @@ class MarkovChain:
         card: int
             Representing the cardinality of the variable to be added.
 
+        Warns
+        -----
+        UserWarning
+            If the variable already exists. Its cardinality is set to card and its transition model is cleared.
+
         Examples
         --------
         >>> from pgmpy.models import MarkovChain as MC
@@ -146,7 +152,11 @@ class MarkovChain:
         if variable not in self.variables:
             self.variables.append(variable)
         else:
-            logger.warning(f"Variable {variable} already exists.")
+            _warn_external(
+                f"Variable {variable!r} already exists. Its cardinality will be set to {card}, "
+                "and its transition model will be cleared.",
+                UserWarning,
+            )
         self.cardinalities[variable] = card
         self.transition_models[variable] = {}
 

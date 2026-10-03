@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import io
 import re
-import warnings
 from dataclasses import dataclass
 from typing import Any
 
@@ -13,6 +12,7 @@ from skbase.lookup import all_objects
 
 from pgmpy.base import ADMG, DAG, MAG, PDAG
 from pgmpy.causal_discovery import ExpertKnowledge
+from pgmpy.utils._warnings import _warn_external
 from pgmpy.utils.hf_hub import read_hf_file
 
 
@@ -158,8 +158,9 @@ class BaseDataset(BaseObject):
                 df[col] = df[col].astype(cat_type)
         if n_samples is not None:
             if n_samples > len(df):
-                warnings.warn(
-                    f"Requested {n_samples} samples but dataset only has {len(df)}. Returning all {len(df)} rows."
+                _warn_external(
+                    f"Requested {n_samples} samples but dataset only has {len(df)}. Returning all {len(df)} rows.",
+                    UserWarning,
                 )
             else:
                 df = df.sample(n=n_samples, random_state=seed).reset_index(drop=True)
@@ -269,21 +270,20 @@ class BaseSimulatedDataset(BaseDataset):
     """
     Base class for simulated datasets.
 
-    Concrete subclasses generate data and the corresponding ground-truth graph programmatically instead of
-    loading static files, and must implement ``load_dataframe()`` and ``load_ground_truth()``.
+    Concrete subclasses build the model and its ground-truth graph once in ``__init__`` and expose them through the
+    instance methods ``load_dataframe()`` and ``load_ground_truth()``, so a single ``load_dataset`` call reuses one
+    model for both the data and the graph.
     """
 
     _tags = {"is_simulated": True}
 
-    @classmethod
-    def load_dataframe(cls, n_samples=None, seed=None, **sim_kwargs) -> pd.DataFrame:
+    def load_dataframe(self, n_samples=None) -> pd.DataFrame:
         """Generate and return simulated data. Must be implemented by each simulator."""
-        raise NotImplementedError(f"{cls.__name__} must implement load_dataframe().")
+        raise NotImplementedError(f"{type(self).__name__} must implement load_dataframe().")
 
-    @classmethod
-    def load_ground_truth(cls, **sim_kwargs) -> DAG | PDAG | ADMG | MAG:
+    def load_ground_truth(self) -> DAG | PDAG | ADMG | MAG:
         """Construct and return the ground-truth graph. Must be implemented by each simulator."""
-        raise NotImplementedError(f"{cls.__name__} must implement load_ground_truth().")
+        raise NotImplementedError(f"{type(self).__name__} must implement load_ground_truth().")
 
 
 def load_dataset(
@@ -331,8 +331,9 @@ def load_dataset(
             if not (1 <= pair_id <= 108):
                 raise ValueError(f"Tubingen pair ID must be between 1 and 108. Got {pair_id}.")
             if sim_kwargs:
-                warnings.warn(
-                    "Tubingen datasets ignore simulator kwargs.",
+                _warn_external(
+                    "The following simulator keyword arguments are ignored for Tubingen datasets: "
+                    f"{', '.join(sorted(sim_kwargs))}.",
                     UserWarning,
                 )
             target_cls = next(
@@ -344,8 +345,9 @@ def load_dataset(
 
             if n_samples is not None:
                 if n_samples > len(df):
-                    warnings.warn(
-                        f"Requested {n_samples} samples but dataset only has {len(df)}. Returning all {len(df)} rows."
+                    _warn_external(
+                        f"Requested {n_samples} samples but dataset only has {len(df)}. Returning all {len(df)} rows.",
+                        UserWarning,
                     )
                 else:
                     df = df.sample(n=n_samples, random_state=seed).reset_index(drop=True)
@@ -372,6 +374,20 @@ def load_dataset(
     if target_cls is None:
         raise ValueError(f"Dataset with name '{name}' not found. Please use list_datasets() to see available datasets.")
 
+    if issubclass(target_cls, BaseSimulatedDataset):
+        # Build the model once and reuse it for both the data and the ground-truth graph.
+        simulator = target_cls(seed=seed, **sim_kwargs)
+        df = simulator.load_dataframe(n_samples=n_samples)
+        tags = target_cls.get_class_tags()
+        tags["n_samples"], tags["n_variables"] = df.shape
+        return Dataset(
+            name=name,
+            data=df,
+            expert_knowledge=None,
+            ground_truth=simulator.load_ground_truth(),
+            tags=tags,
+        )
+
     return Dataset(
         name=name,
         data=target_cls.load_dataframe(n_samples=n_samples, seed=seed, **sim_kwargs),
@@ -390,6 +406,7 @@ def list_datasets(**filter_tags) -> list[str]:
     **filter_tags : optional arguments
         If specified, returns only datasets matching the provided tag filters. Any dataset tag can be used as a filter.
         Available tags:
+
             - n_variables
             - n_samples
             - has_ground_truth

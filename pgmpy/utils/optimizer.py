@@ -1,8 +1,10 @@
 from math import isclose
 
 from skbase.utils.dependencies import _safe_import
+from sklearn.exceptions import ConvergenceWarning
 
 from pgmpy import logger
+from pgmpy.utils._warnings import _warn_external
 
 torch = _safe_import("torch")
 optim = _safe_import("torch.optim")
@@ -69,6 +71,11 @@ def optimize(loss_fn, params={}, loss_args={}, opt="adam", max_iter=10000, exit_
     -------
     dict: The values that were given in params in the same format.
 
+    Warns
+    -----
+    ConvergenceWarning
+        If optimization does not converge within `max_iter` iterations.
+
     Examples
     --------
     """
@@ -101,12 +108,14 @@ def optimize(loss_fn, params={}, loss_args={}, opt="adam", max_iter=10000, exit_
         opt.step(closure=closure)
 
         if isclose(init_loss, closure().item(), abs_tol=exit_delta):
-            logger.info(f"Converged after {t} iterations.")
+            logger.info(f"Converged after {t + 1} iterations.")
             return params
         else:
             init_loss = closure().item()
 
-    logger.info(
-        f"Couldn't converge after {max_iter} iterations. Try increasing max_iter or change optimizer parameters"
+    _warn_external(
+        f"Optimization did not converge after {max_iter} iterations. "
+        "Try increasing max_iter or changing optimizer parameters.",
+        ConvergenceWarning,
     )
     return params

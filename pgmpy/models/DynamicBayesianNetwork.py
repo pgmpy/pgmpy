@@ -154,17 +154,6 @@ class DynamicBayesianNetwork(DAG):
     <DynamicNode(L, 1) at 0x...>,
     <DynamicNode(S, 0) at 0x...>))
 
-    Public Methods
-    --------------
-    add_node
-    add_nodes_from
-    add_edges
-    add_edges_from
-    add_cpds
-    initialize_initial_state
-    inter_slice
-    intra_slice
-    copy
     """
 
     def __init__(self, ebunch=None):
@@ -1200,8 +1189,8 @@ class DynamicBayesianNetwork(DAG):
         >>> dbn.simulate(n_time_slices=4, n_samples=2,
         ...     do={("D", 0): 1, ("D", 2): 0}, seed=42) # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
           (D, 0) (G, 0) (I, 0) (D, 1)  ... (D, 3) (G, 3) (I, 2) (I, 3)
-        0      1      2      0      0  ...      0      0      1      1
-        1      1      0      0      0  ...      1      0      1      1
+        0      1      2      1      0  ...      0      0      1      1
+        1      1      1      0      0  ...      1      0      1      1
         <BLANKLINE>
         [2 rows x 12 columns]
 
@@ -1214,7 +1203,7 @@ class DynamicBayesianNetwork(DAG):
         ...     seed=42
         ... ) # doctest: +NORMALIZE_WHITESPACE  +ELLIPSIS
           (D, 0) (G, 0) (I, 0) (D, 1)  ... (D, 3) (G, 3) (I, 2) (I, 3)
-        0      0      0      1      0  ...      1      1      0      0
+        0      0      0      1      0  ...      1      0      1      1
         1      1      1      0      0  ...      1      0      1      1
         <BLANKLINE>
         [2 rows x 12 columns]

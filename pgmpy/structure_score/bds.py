@@ -1,3 +1,4 @@
+from collections.abc import Hashable
 from math import lgamma, log
 
 import numpy as np
@@ -68,7 +69,7 @@ class BDs(BDeu):
 
     References
     ----------
-    - :cite:p:`scutari_2016a`
+    - :footcite:t:`scutari_2016a`
     """
 
     _tags = {
@@ -94,7 +95,7 @@ class BDs(BDeu):
         score = -(nedges + possible_edges) * log(2.0)
         return score
 
-    def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
+    def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         counts = get_state_counts_array(self._codes, self._cardinalities, variable, parents)
         num_parents_states = counts.shape[1]
         var_cardinality = self._cardinalities[variable]
