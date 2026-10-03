@@ -135,7 +135,7 @@ class TestStateNameInit:
         assert cpd2.state_names == sn2
 
 
-class StateNameDecorator:
+class TestStateNameDecorator:
     def test_assignment_statename(self, phi1, phi2):
         req_op1 = [
             [("speed", "low"), ("switch", "on"), ("time", "night")],
