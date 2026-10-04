@@ -52,8 +52,7 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         "assumption:low_noise": None,
     }
 
-    # skbase's BaseObject defines parameter-based equality, which also makes instances unhashable. Use sklearn's
-    # identity-based semantics instead.
+    # Use sklearn's identity-based semantics instead for eq and hash.
     __eq__ = BaseEstimator.__eq__
     __hash__ = BaseEstimator.__hash__
 
@@ -109,16 +108,14 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         return X
 
     def fit(self, X: pd.DataFrame, y=None, **fit_params):
-        """Fit data (`X`) to a causal graph. The method
-        calls the `_fit` method, which must be implemented separately in any causal
-        discovery algorithm inheriting from `BaseCausalDiscovery`. Additional keyword arguments are passed to `_fit`.
-
-        If `_fit` stores the CI test or structure score it used as ``ci_test_`` or ``scoring_method_``, the
-        ``data_types`` and ``assumption:*`` tags are narrowed to that component after fitting.
+        """Fit data (`X`) to a causal graph. The method calls the `_fit` method, which must be implemented separately in
+        any causal discovery algorithm inheriting from `BaseCausalDiscovery`. Additional keyword arguments are passed to
+        `_fit`.
         """
         X = self._check_fit_data(X)
         result = self._fit(X, **fit_params)
 
+        # Extract any assumptions from components (e.g., ci_test_, scoring_method_) and set them as estimator tags.
         component = getattr(self, "ci_test_", getattr(self, "scoring_method_", None))
         if component is not None:
             class_tags = type(self).get_class_tags()
