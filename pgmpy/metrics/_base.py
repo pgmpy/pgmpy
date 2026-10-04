@@ -117,35 +117,68 @@ class BaseUnsupervisedMetric(BaseObject):
         return self.evaluate(X=X, causal_graph=causal_graph, **kwargs)
 
 
-def get_metrics(**kwargs) -> list[type]:
+def get_metric(
+    metric: str | BaseSupervisedMetric | BaseUnsupervisedMetric | None = None,
+    requires_true_graph: bool | None = None,
+) -> BaseSupervisedMetric | BaseUnsupervisedMetric:
     """
-    Get metric classes matching the given tag filters.
+    Return a metric instance given a metric name, instance, or the kind of metric needed.
 
     Parameters
     ----------
-    **kwargs
-        Tag filters passed to :func:`skbase.lookup.all_objects` via its ``filter_tags`` parameter. See
-        :doc:`/api/tags` for the tags of metrics. ``name`` is matched case-insensitively.
+    metric : str, BaseSupervisedMetric, BaseUnsupervisedMetric, or None, default=None
+        The metric to return. A string selects the metric whose ``name`` tag matches (case-insensitive), instantiated
+        with default parameters. A metric instance is returned unchanged. If ``None``, the default metric for
+        ``requires_true_graph`` is returned.
+
+    requires_true_graph : bool or None, default=None
+        Whether the metric must compare against a true graph (``True``) or against data (``False``). Used to select
+        the default metric when ``metric`` is ``None``, and to check the kind of the returned metric otherwise. If
+        ``None``, the kind isn't checked.
 
     Returns
     -------
-    list[type]
-        Metric classes matching all the given tag filters. Empty if none match.
+    BaseSupervisedMetric or BaseUnsupervisedMetric
+        A metric instance ready to call.
+
+    Raises
+    ------
+    ValueError
+        If ``metric`` is an unknown name or not a string, metric instance, or ``None``; if both ``metric`` and
+        ``requires_true_graph`` are ``None``; or if the metric's kind doesn't match ``requires_true_graph``.
 
     Examples
     --------
-    >>> from pgmpy.metrics import get_metrics
-    >>> get_metrics(default_for="supervised")
-    [<class 'pgmpy.metrics.shd.SHD'>]
-    >>> get_metrics(name="SHD")
-    [<class 'pgmpy.metrics.shd.SHD'>]
+    >>> from pgmpy.metrics import get_metric
+    >>> get_metric("SHD")
+    SHD()
+    >>> get_metric(requires_true_graph=False)
+    CorrelationScore()
     """
-    if isinstance(kwargs.get("name"), str):
-        kwargs["name"] = kwargs["name"].lower()
+    if metric is None or isinstance(metric, str):
+        if metric is None:
+            if requires_true_graph is None:
+                raise ValueError("Cannot select a default metric: both `metric` and `requires_true_graph` are None.")
+            filter_tags = {"default_for": "supervised" if requires_true_graph else "unsupervised"}
+        else:
+            filter_tags = {"name": metric.lower()}
 
-    return all_objects(
-        object_types=[BaseSupervisedMetric, BaseUnsupervisedMetric],
-        package_name="pgmpy.metrics",
-        return_names=False,
-        filter_tags=kwargs,
-    )
+        metric_classes = all_objects(
+            object_types=[BaseSupervisedMetric, BaseUnsupervisedMetric],
+            package_name="pgmpy.metrics",
+            return_names=False,
+            filter_tags=filter_tags,
+        )
+        if not metric_classes:
+            raise ValueError(f"Unknown metric: {metric!r}.")
+        metric = metric_classes[0]()
+    elif not isinstance(metric, (BaseSupervisedMetric, BaseUnsupervisedMetric)):
+        raise ValueError(f"Invalid `metric` argument: {metric!r}. Pass a metric name, a metric instance, or None.")
+
+    compares_against = {True: "a true graph", False: "data"}
+    if requires_true_graph is not None and metric.get_tag("requires_true_graph") != requires_true_graph:
+        raise ValueError(
+            f"Metric {metric.get_tag('name')!r} compares against {compares_against[not requires_true_graph]}, but a "
+            f"metric that compares against {compares_against[requires_true_graph]} is required."
+        )
+    return metric

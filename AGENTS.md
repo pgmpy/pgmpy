@@ -188,7 +188,7 @@ Set of example models. The `list_models(**filter_tags)` function lists all avail
 Evaluation metrics for causal discovery and models against given dataset.
 - **Model evaluation**: `CorrelationScore`, `FisherC`, `ImpliedCIs`, `StructureScore`
 - **Graph comparison**: `SHD`, `AdjacencyConfusionMatrix`, `OrientationConfusionMatrix`
-- `get_metrics` looks up metric classes by tag filters.
+- `get_metric` returns a metric instance by name, or the default for supervised/unsupervised comparison.
 
 ### Tags and Registry (`pgmpy/registry/`)
 Every skbase tag used by pgmpy objects is registered and documented as a `_BaseTag` subclass in

@@ -22,7 +22,7 @@ from pgmpy import config, logger
 from pgmpy.base import DAG, UndirectedGraph
 from pgmpy.ci_tests import IndependenceMatch, get_ci_test
 from pgmpy.independencies import Independencies
-from pgmpy.metrics import get_metrics
+from pgmpy.metrics import get_metric
 from pgmpy.structure_score import BaseStructureScore
 
 
@@ -144,17 +144,16 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         Parameters
         ----------
         X : pandas.DataFrame, optional
-            Test data used for scoring the learned causal model. If provided, `metric` should be a metric that
-            can operate on data. You can find all such metrics using: `pgmpy.metrics.get_metrics(requires_data=True)`
+            Test data used for scoring the learned causal model. If provided, `metric` must be a metric that
+            compares against data, i.e. one with ``requires_true_graph=False``.
 
         true_graph : pgmpy.base.DAG, optional
-            The true model graph for scoring the learned causal model. If provided, `metric` should be a metric
-            that compares graphs. You can find all such metrics using:
-            `pgmpy.metrics.get_metrics(requires_true_graph=True)`
+            The true model graph for scoring the learned causal model. If provided, `metric` must be a metric
+            that compares graphs, i.e. one with ``requires_true_graph=True``.
 
         metric : str or pgmpy.metrics._Base.*Metric instance, optional
-            Method to be used for calculating the score. If ``None``, a default metric appropriate for the
-            provided argument (`X` or `true_graph`) will be selected internally.
+            Method to be used for calculating the score, resolved via :func:`pgmpy.metrics.get_metric`. If
+            ``None``, a default metric appropriate for the provided argument (`X` or `true_graph`) is used.
 
         Returns
         -------
@@ -166,7 +165,6 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         Examples
         --------
         >>> from pgmpy.causal_discovery import PC
-        >>> from pgmpy.metrics import get_metrics
         >>> from pgmpy.datasets import load_dataset
         >>> dataset = load_dataset("lead")
         >>> data = dataset.data
@@ -188,32 +186,13 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
             if isinstance(X, np.ndarray):
                 X = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
 
-            if metric is None:
-                scoring_class = get_metrics(default_for="unsupervised")[0]
-                metric = scoring_class()
-
-            elif isinstance(metric, str):
-                scoring_class = get_metrics(name=metric)
-                if len(scoring_class) == 0:
-                    raise ValueError(f"No scoring method found with name: {metric}")
-
-                metric = scoring_class[0]()
-
-            return metric.evaluate(X, self.causal_graph_)
+            return get_metric(metric, requires_true_graph=False).evaluate(X, self.causal_graph_)
 
         # Case 2: When true graph is provided.
         elif true_graph is not None:
-            if metric is None:
-                scoring_class = get_metrics(default_for="supervised")
-                metric = scoring_class[0]()
-            elif isinstance(metric, str):
-                scoring_class = get_metrics(name=metric)
-                if len(scoring_class) == 0:
-                    raise ValueError(f"No scoring method found with name: {metric}")
-
-                metric = scoring_class[0]()
-
-            return metric.evaluate(true_causal_graph=true_graph, est_causal_graph=self.causal_graph_)
+            return get_metric(metric, requires_true_graph=True).evaluate(
+                true_causal_graph=true_graph, est_causal_graph=self.causal_graph_
+            )
         else:
             raise ValueError("Either `X` or `true_graph` needs to be specified")
 
