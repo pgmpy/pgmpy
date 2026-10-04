@@ -81,7 +81,7 @@ class name(_BaseTag):
 
     CI tests, structure scores, bivariate scores, and metrics can be selected by this name, e.g.
     ``PC(ci_test="pearsonr")``, ``GES(scoring_method="bic-g")``, or
-    ``PC().fit(data).score(X=data, metric="correlation_score")``.
+    ``PC(return_type="dag").fit(data).score(X=data, metric="correlation_score")``.
     """
 
     _tags = {
@@ -96,9 +96,9 @@ class data_types(_BaseTag):
     """
     Data types the object can be applied to.
 
-    For causal discovery algorithms that use a CI test, a structure score, or a bivariate score, the class-level value
-    is every data type supported by some available component. ``fit`` narrows it to the data types of the component
-    that was used.
+    For causal discovery algorithms that use a CI test, a structure score, a bivariate score, or a pairwise estimator,
+    the class-level value is every data type supported by some available component. ``fit`` narrows it to the data
+    types that every component used for fitting also supports.
 
     The value is a list rather than a tuple because ``skbase.lookup.all_objects`` only matches single elements of a
     tag value in ``filter_tags`` when the value is a list.
@@ -231,10 +231,11 @@ class capability__expert_knowledge(_BaseTag):
 # -----------
 #
 # Each assumption tag is True if the method's guarantees require the assumption and False otherwise. For causal
-# discovery algorithms that use a CI test or a structure score, the class-level value is the union over all available
-# components (False if some component doesn't require it). `fit` sets it to True if either the algorithm or the
-# component that was used requires it. Assumptions that can't be expressed this way (for example, an assumption that
-# holds if either of two conditions does) are described in the method's docstring.
+# discovery algorithms that use a CI test, a structure score, a bivariate score, or a pairwise estimator, the
+# class-level value is the union over all available components (False if some component doesn't require it). `fit`
+# sets it to True if the algorithm or any component used for fitting requires it. Assumptions that can't be expressed
+# this way (for example, an assumption that holds if either of two conditions does) are described in the method's
+# docstring.
 
 
 class assumption__causal_sufficiency(_BaseTag):

@@ -115,17 +115,23 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         X = self._check_fit_data(X)
         result = self._fit(X, **fit_params)
 
-        # Extract any assumptions from components (e.g., ci_test_, scoring_method_) and set them as estimator tags.
-        component = getattr(self, "ci_test_", getattr(self, "scoring_method_", None))
-        if component is not None:
+        # Narrow the tags to the components used for fitting: keep the data types that every component supports and add
+        # the assumptions that any component makes.
+        components = [getattr(self, name, None) for name in ("ci_test_", "scoring_method_", "pairwise_estimator_")]
+        components = [component for component in components if component is not None]
+        if components:
             class_tags = type(self).get_class_tags()
-            component_tags = component.get_tags() if isinstance(component, BaseObject) else {}
-            assumptions = {
-                key: value or component_tags.get(key, False)
-                for key, value in class_tags.items()
-                if key.startswith("assumption:")
-            }
-            self.set_tags(data_types=component_tags.get("data_types", class_tags["data_types"]), **assumptions)
+            data_types = class_tags["data_types"]
+            assumptions = {key: bool(value) for key, value in class_tags.items() if key.startswith("assumption:")}
+            for component in components:
+                component_tags = component.get_tags() if isinstance(component, BaseObject) else {}
+                component_types = component_tags.get("data_types")
+                if component_types:
+                    data_types = (
+                        list(component_types) if data_types is None else [t for t in data_types if t in component_types]
+                    )
+                assumptions = {key: value or bool(component_tags.get(key)) for key, value in assumptions.items()}
+            self.set_tags(data_types=data_types, **assumptions)
         return result
 
     def score(

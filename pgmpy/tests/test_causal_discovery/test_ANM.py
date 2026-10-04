@@ -31,9 +31,11 @@ def test_score_tags():
         assert score.get_tag("name") == name
         assert score.get_tag("input_type") == "cause_residual"
 
-    assert IndependenceScore().get_tag("assumption:linearity") is True
-    assert IndependenceScore(ci_test="gcm").get_tag("assumption:linearity") is False
-    assert IndependenceScore.get_class_tag("assumption:linearity") is False
+    # The CI test only checks residual independence, so its tags don't describe the causal model.
+    for ci_test in ("pearsonr", "chi_square", None):
+        score = IndependenceScore(ci_test=ci_test)
+        assert score.get_tag("data_types") == ["continuous"]
+        assert score.get_tag("assumption:linearity") is False
 
 
 def test_fit_sets_score_assumption_tags(nonlinear_data):
@@ -44,6 +46,9 @@ def test_fit_sets_score_assumption_tags(nonlinear_data):
     est = ANM(scoring_method=EntropyScore()).fit(nonlinear_data)
     assert est.get_tag("assumption:gaussian_noise") is False
     assert est.get_tag("assumption:additive_noise") is True
+    est = ANM().fit(nonlinear_data)
+    assert est.get_tag("assumption:linearity") is False
+    assert est.get_tag("assumption:gaussian_noise") is False
 
 
 def test_unknown_score_name_lists_valid_scores(nonlinear_data):
@@ -84,6 +89,7 @@ def test_score_instance_is_used(nonlinear_data):
     for score in (
         EntropyScore(method="vasicek"),
         IndependenceScore(ci_test="pearsonr"),
+        IndependenceScore(ci_test=None),
         IndependenceScore(criterion="p_value"),
     ):
         est = ANM(scoring_method=score).fit(nonlinear_data)

@@ -7,7 +7,7 @@ from sklearn.base import clone
 from pgmpy.base import PDAG
 from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.causal_discovery._base import BaseCausalDiscovery, _ConstraintMixin
-from pgmpy.ci_tests import get_ci_test
+from pgmpy.ci_tests import IndependenceMatch, get_ci_test
 
 
 class PC(_ConstraintMixin, BaseCausalDiscovery):
@@ -105,7 +105,8 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
             conditionally independent. (needed for edge orientation procedures)
 
     ci_test_ : BaseCITest or callable
-        The CI test used for learning, resolved from ``ci_test``.
+        The CI test used for learning, resolved from ``ci_test``. If ``independencies`` are passed to ``fit``, an
+        :class:`~pgmpy.ci_tests.IndependenceMatch` over them instead.
 
     n_features_in_ : int
         The number of features in the data used to learn the causal graph.
@@ -200,7 +201,10 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
         """
 
         # CI test
-        self.ci_test_ = get_ci_test(test=self.ci_test, data=X)
+        if independencies is not None:
+            self.ci_test_ = IndependenceMatch(independencies=independencies)
+        else:
+            self.ci_test_ = get_ci_test(test=self.ci_test, data=X)
 
         # Check if expert knowledge was specified
         if self.expert_knowledge is None:
@@ -215,7 +219,6 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
         # Step 1: Build the skeleton
         self.skeleton_, self.separating_sets_ = self._build_skeleton(
             data=X,
-            independencies=independencies,
             variant=self.variant,
             ci_test=self.ci_test_,
             significance_level=self.significance_level,

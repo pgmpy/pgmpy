@@ -77,6 +77,9 @@ class ExpertInLoop(BaseCausalDiscovery):
     ci_test_ : BaseCITest or callable
         The CI test used for learning, resolved from ``ci_test``.
 
+    pairwise_estimator_ : BaseCausalDiscovery
+        The pairwise estimator used to orient edges, i.e. ``pairwise_estimator``.
+
     n_features_in_ : int
         The number of features in the data used to learn the causal graph.
 
@@ -283,6 +286,7 @@ class ExpertInLoop(BaseCausalDiscovery):
                 "`pairwise_estimator` must be provided to orient edges, "
                 "e.g. `ExpertInLoop(pairwise_estimator=LLMPairwise(...))`."
             )
+        self.pairwise_estimator_ = self.pairwise_estimator
 
         self.variables_ = list(X.columns)
 

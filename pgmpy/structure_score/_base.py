@@ -28,8 +28,8 @@ class BaseStructureScore(BaseObject):
         Dictionary mapping each variable name to its allowed states. If not specified, the
         observed values in the data are used.
     max_cache_size : int or None, default=10000
-        Maximum number of local scores to cache. When the cache is full, the oldest entry is evicted. If None, the
-        cache is unlimited. Increase this for large datasets to avoid cache thrashing.
+        Maximum number of local scores to cache. When the cache is full, the least recently used entry is evicted. If
+        None, the cache is unlimited. Increase this for large datasets to avoid cache thrashing.
     """
 
     _tags = {
@@ -44,9 +44,9 @@ class BaseStructureScore(BaseObject):
 
     def __init__(self, data, state_names=None, max_cache_size=10000):
         self.data, self.dtypes = preprocess_data(data)
-        self.cache_size = max_cache_size
+        self.max_cache_size = max_cache_size
         if max_cache_size is not None and max_cache_size <= 0:
-            raise ValueError(f"cache_size must be a positive integer or None. Got: {max_cache_size}")
+            raise ValueError(f"max_cache_size must be a positive integer or None. Got: {max_cache_size}")
 
         if self.data is not None:
             self.variables = list(self.data.columns.values)
@@ -61,8 +61,10 @@ class BaseStructureScore(BaseObject):
         if score is None:
             score = self._local_score(*key)
             self._cache[key] = score
-            if self.cache_size is not None and len(self._cache) > self.cache_size:
+            if self.max_cache_size is not None and len(self._cache) > self.max_cache_size:
                 self._cache.popitem(last=False)
+        else:
+            self._cache.move_to_end(key)
         return score
 
     def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:

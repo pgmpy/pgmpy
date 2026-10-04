@@ -86,24 +86,6 @@ class IndependenceScore(BaseBivariateScore):
         self.criterion = criterion
         super().__init__()
 
-        if isinstance(ci_test, BaseCITest):
-            test_tags = ci_test.get_tags()
-        else:
-            test_classes = all_objects(
-                object_types=BaseCITest,
-                package_name="pgmpy.ci_tests",
-                return_names=False,
-                filter_tags={"name": ci_test.lower()},
-            )
-            test_tags = test_classes[0].get_class_tags() if test_classes else {}
-        self.set_tags(
-            **{
-                key: test_tags[key]
-                for key in self.get_tags()
-                if (key == "data_types" or key.startswith("assumption:")) and key in test_tags
-            }
-        )
-
     def __call__(self, x: np.typing.ArrayLike, y: np.typing.ArrayLike) -> float:
         data = pd.DataFrame({"_x": np.asarray(x), "_y": np.asarray(y)})
         if isinstance(self.ci_test, BaseCITest):
