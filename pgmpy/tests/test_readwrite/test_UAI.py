@@ -109,7 +109,7 @@ class TestUAIReader:
         assert reader_string_with_comment.tables == tables_expected
 
     def test_get_model(self, reader_string):
-        model = reader_string.get_model()
+        model = reader_string.read()
         edge_expected = {
             "var_2": {"var_0": {"weight": None}, "var_1": {"weight": None}},
             "var_0": {"var_2": {"weight": None}, "var_1": {"weight": None}},
@@ -120,7 +120,7 @@ class TestUAIReader:
         assert dict(model.adj) == edge_expected
 
     def test_read_file(self, reader_file):
-        model = reader_file.get_model()
+        model = reader_file.read()
         node_expected = {
             "var_3": {},
             "var_8": {},
@@ -343,7 +343,7 @@ class TestUAIReaderTorch:
         assert reader_string_with_comment.tables == tables_expected
 
     def test_get_model(self, reader_string):
-        model = reader_string.get_model()
+        model = reader_string.read()
         edge_expected = {
             "var_2": {"var_0": {"weight": None}, "var_1": {"weight": None}},
             "var_0": {"var_2": {"weight": None}, "var_1": {"weight": None}},
@@ -354,7 +354,7 @@ class TestUAIReaderTorch:
         assert dict(model.adj) == edge_expected
 
     def test_read_file(self, reader_file):
-        model = reader_file.get_model()
+        model = reader_file.read()
         node_expected = {
             "var_3": {},
             "var_8": {},

@@ -187,7 +187,7 @@ potential (xray | either){
 
                 # Verify that loading fails due to commas in state names
                 with self.assertRaises(ValueError):
-                    NETReader(tmp_path).get_model()
+                    NETReader(tmp_path).read()
             finally:
                 if os.path.exists(tmp_path):
                     os.unlink(tmp_path)
