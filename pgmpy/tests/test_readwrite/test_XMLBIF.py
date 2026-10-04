@@ -204,7 +204,7 @@ class TestXMLBIFReaderMethods(unittest.TestCase):
             self.assertListEqual(property_expected[variable], prop[variable])
 
     def test_model(self):
-        self.reader.get_model().check_model()
+        self.reader.read().check_model()
 
     def tearDown(self):
         del self.reader
@@ -305,7 +305,7 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
             self.assertListEqual(property_expected[variable], prop[variable])
 
     def test_model(self):
-        self.reader.get_model().check_model()
+        self.reader.read().check_model()
 
     def tearDown(self):
         del self.reader
@@ -315,7 +315,7 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
 class TestXMLBIFWriterMethodsString(unittest.TestCase):
     def setUp(self):
         reader = XMLBIFReader(string=TEST_FILE)
-        self.expected_model = reader.get_model()
+        self.expected_model = reader.read()
         self.writer = XMLBIFWriter(self.expected_model)
 
         self.model_stateless = DiscreteBayesianNetwork([("D", "G"), ("I", "G"), ("G", "L"), ("I", "S")])
@@ -357,16 +357,16 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
         self.writer.write_xmlbif("dog_problem_output.xbif")
         with open("dog_problem_output.xbif") as f:
             file_text = f.read()
-        reader = XMLBIFReader(string=file_text)
-        model = reader.get_model(state_name_type=str)
+        reader = XMLBIFReader(string=file_text, state_name_type=str)
+        model = reader.read()
         self.assert_models_equivelent(self.expected_model, model)
         os.remove("dog_problem_output.xbif")
 
     def test_write_xmlbif_stateless(self):
         self.writer_stateless.write_xmlbif("grade_problem_output.xbif")
         with open("grade_problem_output.xbif") as f:
-            reader = XMLBIFReader(f)
-        model = reader.get_model(state_name_type=int)
+            reader = XMLBIFReader(f, state_name_type=int)
+        model = reader.read()
         self.assert_models_equivelent(self.model_stateless, model)
         self.assertDictEqual({"D": [0, 1]}, model.get_cpds("D").state_names)
         os.remove("grade_problem_output.xbif")
@@ -463,7 +463,7 @@ class TestXMLBIFReaderMethodsTorch(unittest.TestCase):
             self.assertListEqual(property_expected[variable], prop[variable])
 
     def test_model(self):
-        self.reader.get_model().check_model()
+        self.reader.read().check_model()
 
     def tearDown(self):
         del self.reader
@@ -555,7 +555,7 @@ class TestXMLBIFReaderMethodsFileTorch(unittest.TestCase):
             self.assertListEqual(property_expected[variable], prop[variable])
 
     def test_model(self):
-        self.reader.get_model().check_model()
+        self.reader.read().check_model()
 
     def tearDown(self):
         del self.reader
@@ -572,7 +572,7 @@ class TestXMLBIFWriterMethodsStringTorch(unittest.TestCase):
         config.set_backend("torch")
 
         reader = XMLBIFReader(string=TEST_FILE)
-        self.expected_model = reader.get_model()
+        self.expected_model = reader.read()
         self.writer = XMLBIFWriter(self.expected_model)
 
         self.model_stateless = DiscreteBayesianNetwork([("D", "G"), ("I", "G"), ("G", "L"), ("I", "S")])
@@ -614,16 +614,16 @@ class TestXMLBIFWriterMethodsStringTorch(unittest.TestCase):
         self.writer.write_xmlbif("dog_problem_output.xbif")
         with open("dog_problem_output.xbif") as f:
             file_text = f.read()
-        reader = XMLBIFReader(string=file_text)
-        model = reader.get_model(state_name_type=str)
+        reader = XMLBIFReader(string=file_text, state_name_type=str)
+        model = reader.read()
         self.assert_models_equivelent(self.expected_model, model)
         os.remove("dog_problem_output.xbif")
 
     def test_write_xmlbif_stateless(self):
         self.writer_stateless.write_xmlbif("grade_problem_output.xbif")
         with open("grade_problem_output.xbif") as f:
-            reader = XMLBIFReader(f)
-        model = reader.get_model(state_name_type=int)
+            reader = XMLBIFReader(f, state_name_type=int)
+        model = reader.read()
         self.assert_models_equivelent(self.model_stateless, model)
         self.assertDictEqual({"D": [0, 1]}, model.get_cpds("D").state_names)
         os.remove("grade_problem_output.xbif")
@@ -666,7 +666,7 @@ class TestXMLBIFWriterMethodsStringTorch(unittest.TestCase):
 
             # The file should still be loadable but with modified state names
             reader = XMLBIFReader(tmp_path)
-            loaded_model = reader.get_model()
+            loaded_model = reader.read()
 
             # Check that the state names were modified to be valid XMLBIF identifiers
             # Commas should be replaced with underscores, but no leading underscore needed

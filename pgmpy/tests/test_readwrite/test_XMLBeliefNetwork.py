@@ -218,8 +218,8 @@ class TestXBNReader(unittest.TestCase):
         np_test.assert_array_equal(distribution["c"]["DPIS"], np.array([[0.2, 0.05], [0.8, 0.95]]))
         np_test.assert_array_equal(distribution["c"]["CARDINALITY"], np.array([2]))
 
-    def test_get_model(self):
-        model = self.reader_string.get_model()
+    def test_read(self):
+        model = self.reader_string.read()
         node_expected = {
             "c": {
                 "STATES": ["Present", "Absent"],
@@ -702,8 +702,8 @@ class TestXBNReaderTorch(unittest.TestCase):
         np_test.assert_array_equal(distribution["c"]["DPIS"], np.array([[0.2, 0.05], [0.8, 0.95]]))
         np_test.assert_array_equal(distribution["c"]["CARDINALITY"], np.array([2]))
 
-    def test_get_model(self):
-        model = self.reader_string.get_model()
+    def test_read(self):
+        model = self.reader_string.read()
         node_expected = {
             "c": {
                 "STATES": ["Present", "Absent"],
