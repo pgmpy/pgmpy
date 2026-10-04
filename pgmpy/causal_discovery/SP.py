@@ -58,6 +58,9 @@ class SP(BaseCausalDiscovery):
     optimal_permutations_ : list[tuple]
         All permutations that produce a DAG with the minimum number of edges.
 
+    ci_test_ : BaseCITest or callable
+        The CI test used for learning, resolved from ``ci_test``.
+
     n_features_in_ : int
         The number of features in the data used to learn the causal graph.
 
@@ -190,7 +193,6 @@ class SP(BaseCausalDiscovery):
 
         # Step 1: Initialize variables and data structures.
         self.ci_test_ = get_ci_test(test=self.ci_test, data=X)
-        self._set_component_tags(self.ci_test_)
         nodes = list(self.feature_names_in_)
 
         rng = np.random.default_rng(self.seed)

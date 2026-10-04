@@ -74,6 +74,9 @@ class ExpertInLoop(BaseCausalDiscovery):
     adjacency_matrix_ : pd.DataFrame
         Adjacency matrix representation of the learned causal graph.
 
+    ci_test_ : BaseCITest or callable
+        The CI test used for learning, resolved from ``ci_test``.
+
     n_features_in_ : int
         The number of features in the data used to learn the causal graph.
 
@@ -299,12 +302,11 @@ class ExpertInLoop(BaseCausalDiscovery):
         dag = DAG()
         dag.add_nodes_from(self.variables_)
         dag.add_edges_from(required_edges)
-        ci_test = get_ci_test(test=self.ci_test, data=X)
-        self._set_component_tags(ci_test)
+        self.ci_test_ = get_ci_test(test=self.ci_test, data=X)
 
         while True:
             # Step 1: Compute effects and p-values between every combination of variables
-            all_effects = self._test_all(dag=dag, ci_test=ci_test, data=X)
+            all_effects = self._test_all(dag=dag, ci_test=self.ci_test_, data=X)
 
             # Edge case: if only 1 feature, no combinations exist
             if all_effects.empty:
@@ -377,7 +379,7 @@ class ExpertInLoop(BaseCausalDiscovery):
                     dag,
                     edge_direction[0],
                     edge_direction[1],
-                    ci_test=ci_test,
+                    ci_test=self.ci_test_,
                     data=X,
                     effect_size_threshold=self.effect_size_threshold,
                     pval_threshold=self.pval_threshold,

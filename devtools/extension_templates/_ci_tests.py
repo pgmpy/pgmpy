@@ -72,6 +72,11 @@ class YourCITest(BaseCITest):
 
         super().__init__(use_cache=use_cache)
 
+        # TODO: If an assumption depends on a hyperparameter (e.g. a user-supplied estimator), set the most permissive
+        #       value in `_tags` and update it here with `set_tags`, after `super().__init__`. For example:
+        # if isinstance(self.param1, LinearRegression):
+        #     self.set_tags(**{"assumption:linearity": True})
+
     def _compute_result(
         self,
         X: str,

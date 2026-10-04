@@ -6,7 +6,8 @@ from skbase.lookup import all_objects
 from pgmpy.causal_discovery import ANM, GES, PC, ChowLiu
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
 from pgmpy.causal_discovery.bivariate_scores import IndependenceScore
-from pgmpy.ci_tests import GCM
+from pgmpy.ci_tests import GCM, get_ci_test
+from pgmpy.structure_score import get_scoring_method
 
 
 @pytest.mark.parametrize(
@@ -68,6 +69,20 @@ def test_fit_narrows_union_tags_to_component():
     assert IndependenceScore(ci_test="chi_square").get_tag("data_types") == ["discrete"]
     anm = ANM().fit(data[["x", "y"]])
     assert anm.get_tag("data_types") == ["continuous"]
+
+    # Storing the resolved component as `ci_test_` or `scoring_method_` is enough; `fit` narrows the tags.
+    class MinimalPC(PC):
+        def _fit(self, X, independencies=None):
+            self.ci_test_ = get_ci_test(test=self.ci_test, data=X)
+            return self
+
+    class MinimalGES(GES):
+        def _fit(self, X):
+            self.scoring_method_ = get_scoring_method(self.scoring_method, X)
+            return self
+
+    assert MinimalPC(ci_test="pearsonr").fit(data).get_tag("assumption:linearity") is True
+    assert MinimalGES(scoring_method="bic-g").fit(data).get_tag("assumption:gaussian_noise") is True
 
 
 def test_filter_algorithms_by_tags():

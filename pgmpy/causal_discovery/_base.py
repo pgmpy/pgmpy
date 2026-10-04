@@ -20,8 +20,7 @@ from tqdm.auto import tqdm
 
 from pgmpy import config, logger
 from pgmpy.base import DAG, UndirectedGraph
-from pgmpy.causal_discovery.bivariate_scores import BaseBivariateScore
-from pgmpy.ci_tests import BaseCITest, IndependenceMatch, get_ci_test
+from pgmpy.ci_tests import IndependenceMatch, get_ci_test
 from pgmpy.independencies import Independencies
 from pgmpy.metrics import get_metrics
 from pgmpy.structure_score import BaseStructureScore
@@ -109,35 +108,28 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         self.n_features_in_ = len(X.columns)
         return X
 
-    def _set_component_tags(self, component: BaseCITest | BaseStructureScore | BaseBivariateScore | Callable) -> None:
-        """
-        A helper method to narrow down the ``data_types`` and ``assumption:*`` tags for causal discovery method.
-
-        Causal methods that depend on arguments that have their own assumptions (for e.g., CI tests or scoring methods)
-        or support specific data types, call this method during fit so that the causal discovery method's assumptions
-        can be updated based on the argument specified.
-
-        Parameters
-        ----------
-        component : BaseCITest, BaseStructureScore, BaseBivariateScore, or callable
-            The resolved CI test or scoring method.
-        """
-        class_tags = type(self).get_class_tags()
-        component_tags = component.get_tags() if isinstance(component, BaseObject) else {}
-        assumptions = {
-            key: value or component_tags.get(key, False)
-            for key, value in class_tags.items()
-            if key.startswith("assumption:")
-        }
-        self.set_tags(data_types=component_tags.get("data_types", class_tags["data_types"]), **assumptions)
-
-    def fit(self, X: pd.DataFrame, y=None):
+    def fit(self, X: pd.DataFrame, y=None, **fit_params):
         """Fit data (`X`) to a causal graph. The method
         calls the `_fit` method, which must be implemented separately in any causal
-        discovery algorithm inheriting from `BaseCausalDiscovery`.
+        discovery algorithm inheriting from `BaseCausalDiscovery`. Additional keyword arguments are passed to `_fit`.
+
+        If `_fit` stores the CI test or structure score it used as ``ci_test_`` or ``scoring_method_``, the
+        ``data_types`` and ``assumption:*`` tags are narrowed to that component after fitting.
         """
         X = self._check_fit_data(X)
-        return self._fit(X)
+        result = self._fit(X, **fit_params)
+
+        component = getattr(self, "ci_test_", getattr(self, "scoring_method_", None))
+        if component is not None:
+            class_tags = type(self).get_class_tags()
+            component_tags = component.get_tags() if isinstance(component, BaseObject) else {}
+            assumptions = {
+                key: value or component_tags.get(key, False)
+                for key, value in class_tags.items()
+                if key.startswith("assumption:")
+            }
+            self.set_tags(data_types=component_tags.get("data_types", class_tags["data_types"]), **assumptions)
+        return result
 
     def score(
         self,
@@ -326,8 +318,7 @@ class _ConstraintMixin:
         calls the `_fit` method, which must be implemented separately in any causal
         discovery algorithm inheriting from `BaseConstraintCausalDiscovery`.
         """
-        X = self._check_fit_data(X)
-        return self._fit(X, independencies)
+        return super().fit(X, y, independencies=independencies)
 
     def _build_skeleton(
         self,

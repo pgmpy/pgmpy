@@ -86,6 +86,11 @@ class MyCausalDiscoveryAlgo(BaseCausalDiscovery):
 
     def _fit(self, X: pd.DataFrame):
 
+        # TODO: If the algorithm uses a CI test or a structure score, store the resolved one as self.ci_test_ (from
+        #       pgmpy.ci_tests.get_ci_test) or self.scoring_method_ (from pgmpy.structure_score.get_scoring_method).
+        #       `fit` uses it to narrow the algorithm's tags. Remove this block otherwise.
+        # self.ci_test_ = get_ci_test(test=self.ci_test, data=X)
+
         # TODO: Add logic to learn the causal graph from the data X. Methods from mixin classes can be used here if
         #       applicable.
 

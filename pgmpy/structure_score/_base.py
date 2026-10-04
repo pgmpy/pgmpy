@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections import OrderedDict
 from collections.abc import Hashable
-from functools import lru_cache
 
 import pandas as pd
 from skbase.base import BaseObject
@@ -28,8 +28,8 @@ class BaseStructureScore(BaseObject):
         Dictionary mapping each variable name to its allowed states. If not specified, the
         observed values in the data are used.
     max_cache_size : int or None, default=10000
-        Maximum number of local scores to cache. If None, the cache is unlimited.
-        Increase this for large datasets to avoid cache thrashing.
+        Maximum number of local scores to cache. When the cache is full, the oldest entry is evicted. If None, the
+        cache is unlimited. Increase this for large datasets to avoid cache thrashing.
     """
 
     _tags = {
@@ -54,11 +54,18 @@ class BaseStructureScore(BaseObject):
             self.variables = list(self.data.columns.values)
             self.state_names = build_state_names(self.data, state_names=state_names)
 
-        self._cached_local_score = lru_cache(maxsize=max_cache_size)(self._local_score)
+        self._cache = OrderedDict()
 
     def local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         """Compute the cached local score for `variable` given `parents`."""
-        return self._cached_local_score(variable, tuple(parents))
+        key = (variable, tuple(parents))
+        score = self._cache.get(key)
+        if score is None:
+            score = self._local_score(*key)
+            self._cache[key] = score
+            if self.cache_size is not None and len(self._cache) > self.cache_size:
+                self._cache.popitem(last=False)
+        return score
 
     def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         """Compute the uncached local score for `variable` given `parents`."""

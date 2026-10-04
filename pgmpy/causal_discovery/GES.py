@@ -55,6 +55,9 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
     adjacency_matrix_ : pd.DataFrame
         Adjacency matrix representation of the learned causal graph.
 
+    scoring_method_ : BaseStructureScore
+        The structure score used for learning, resolved from ``scoring_method``.
+
     n_features_in_ : int
         The number of features in the data used to learn the causal graph.
 
@@ -275,9 +278,8 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
 
         # Step 1: Initial checks and setup for arguments
         # Step 1.1: Check score
-        score = get_scoring_method(self.scoring_method, X)
-        self._set_component_tags(score)
-        score_fn = score.local_score
+        self.scoring_method_ = get_scoring_method(self.scoring_method, X)
+        score_fn = self.scoring_method_.local_score
 
         # Step 1.2: Initialize the starting PDAG
         current_model = PDAG()

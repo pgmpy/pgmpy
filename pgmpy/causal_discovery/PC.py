@@ -104,6 +104,9 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
             separating set ("witnessing set") of variables that makes them
             conditionally independent. (needed for edge orientation procedures)
 
+    ci_test_ : BaseCITest or callable
+        The CI test used for learning, resolved from ``ci_test``.
+
     n_features_in_ : int
         The number of features in the data used to learn the causal graph.
 
@@ -198,7 +201,6 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
 
         # CI test
         self.ci_test_ = get_ci_test(test=self.ci_test, data=X)
-        self._set_component_tags(self.ci_test_)
 
         # Check if expert knowledge was specified
         if self.expert_knowledge is None:
@@ -315,7 +317,6 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
                     if Z not in sepset:
                         colliders.append((X, Y, Z))
         else:
-            ci_test = self.ci_test_
             significance_level = self.significance_level
             max_cond_vars = self.max_cond_vars
 
@@ -338,8 +339,8 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
                 results = []
                 for size in range(min(len(potential), max_cond_vars) + 1):
                     for subset in combinations(potential, size):
-                        ci_test(X, Y, list(subset), significance_level=significance_level)
-                        results.append((subset, ci_test.p_value_, ci_test.effect_size_))
+                        self.ci_test_(X, Y, list(subset), significance_level=significance_level)
+                        results.append((subset, self.ci_test_.p_value_, self.ci_test_.effect_size_))
 
                 for Z in common_neighbors:
                     if orient_rule == "pvalue":
