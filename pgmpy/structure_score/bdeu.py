@@ -71,9 +71,11 @@ class BDeu(BaseStructureScore):
 
     _tags = {
         "name": "bdeu",
-        "supported_datatype": "discrete",
+        "data_types": ["discrete"],
         "default_for": None,
-        "is_parameteric": True,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
     }
 
     def __init__(self, data, equivalent_sample_size=10, state_names=None, max_cache_size=10000):
