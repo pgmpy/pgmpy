@@ -169,7 +169,7 @@ def get_example_model(model: str):
             with gzip.open(ref) as f:
                 content = f.read()
             reader = BIFReader(string=content.decode("utf-8"))
-            return reader.get_model()
+            return reader.read()
 
     elif model in cont_models:
         from pgmpy.models import LinearGaussianBayesianNetwork

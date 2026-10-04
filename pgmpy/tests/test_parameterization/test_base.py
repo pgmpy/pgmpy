@@ -7,6 +7,7 @@ import pandas as pd
 import pytest
 from scipy.stats import norm
 from sklearn.exceptions import NotFittedError
+from sklearn.linear_model import LinearRegression
 
 import pgmpy.parameterization
 from pgmpy.parameterization import BaseParameter
@@ -87,6 +88,17 @@ class TestBaseParameter:
         boolean = CountParameter().fit(dummies, y)
         assert boolean.evidence_ == boolean.columns_ == [False, True]
         assert list(boolean.predict_proba(dummies.iloc[:, ::-1]).columns) == [False, True]
+
+        # fit copies y, so an estimator that keeps a view of it doesn't change when the caller edits their data.
+        class KeepingParameter(CountParameter):
+            def _fit(self, X, y, sample_weight):
+                super()._fit(X, y, sample_weight)
+                self.y_ = y
+
+        target = y.copy()
+        kept = KeepingParameter().fit(X, target)
+        target.iloc[0, 0] = "9"
+        assert kept.y_.iloc[0, 0] == "0"
 
         # A failed refit leaves the object unfitted instead of half-updated.
         with pytest.raises(ValueError):
@@ -244,11 +256,12 @@ class TestBaseParameter:
 
         class NormalParameter(CountParameter):
             _sample = BaseParameter._sample
+            normal = distributions.Normal
 
             def _predict_proba(self, X):
                 if X is None:
-                    return distributions.Normal(mu=1.0, sigma=2.0)
-                return distributions.Normal(mu=np.arange(len(X))[:, None], sigma=2.0, index=X.index, columns=["t"])
+                    return self.normal(mu=1.0, sigma=2.0)
+                return self.normal(mu=np.arange(len(X))[:, None], sigma=2.0, index=X.index, columns=["t"])
 
         # Rows are matched by position, so repeated labels and a MultiIndex, like a parent's own draws, keep them apart.
         X, y = data
@@ -273,6 +286,17 @@ class TestBaseParameter:
                 )
                 return distributions.Empirical(spl=values, index=X.index, columns=["t"])
 
+        # A distribution with ragged parameters, e.g. a Histogram with different bins per row, gets the per-draw loop.
+        class HistogramParameter(NormalParameter):
+            def _predict_proba(self, X):
+                sizes = [2 + position % 2 for position in range(len(X))]
+                bins = [[np.arange(size + 1.0)] for size in sizes]
+                masses = [[np.full(size, 1 / size)] for size in sizes]
+                return distributions.Histogram(bins=bins, bin_mass=masses, index=X.index, columns=["t"])
+
+        drawn = HistogramParameter().fit(X, y).sample(X, n_samples=5, random_state=0)["t"].to_numpy().reshape(5, -1)
+        assert ((drawn >= 0) & (drawn <= [2, 3, 2, 3])).all()
+
         empirical = EmpiricalParameter().fit(X, y)
         for X_test in (X.iloc[[0, 0, 1, 2]], X.set_axis(multi)):
             samples = empirical.sample(X_test, n_samples=20, random_state=0)["t"].to_numpy().reshape(20, len(X_test))
@@ -282,6 +306,29 @@ class TestBaseParameter:
             samples = parameter.sample(n_samples=n_samples, random_state=0)
             expected = 1 + 2 * norm.ppf(np.random.default_rng(0).random(n_samples))
             pd.testing.assert_frame_equal(samples, pd.DataFrame({"t": expected}), rtol=1e-10)
+
+        # A distribution whose parameters broadcast to its rows, like the Normal, gets one ppf call for all the draws.
+        # It gives the same values as the one call per draw that any other distribution gets.
+        calls = []
+
+        class CountingNormal(distributions.Normal):
+            def ppf(self, p):
+                calls.append(np.shape(p))
+                return super().ppf(p)
+
+        class CountingParameter(NormalParameter):
+            normal = CountingNormal
+
+        class LoopParameter(CountingParameter):
+            def _predict_proba(self, X):
+                return super()._predict_proba(X).set_tags(broadcast_init="off")
+
+        for X_test, n_samples in ((X, 3), (None, 5)):
+            calls.clear()
+            vectorised = CountingParameter().fit(X, y).sample(X_test, n_samples=n_samples, random_state=0)
+            assert calls == [(n_samples * (1 if X_test is None else len(X)), 1)]
+            looped = LoopParameter().fit(X, y).sample(X_test, n_samples=n_samples, random_state=0)
+            pd.testing.assert_frame_equal(vectorised, looped)
 
     def test_equality(self, data):
         X, y = data
@@ -300,3 +347,43 @@ class TestBaseParameter:
         assert CountParameter().fit(X, y, sample_weight=[1, 1, 1, 1.1]) != fitted
         named = {name: CountParameter().fit(X, y.set_axis([name], axis=1)) for name in (1000.0, 1000.01, "t")}
         assert named[1000.0] != named["t"] and named["t"] != named[1000.0] and named[1000.0] != named[1000.01]
+
+        # Other fitted values compare by type and content: numbers and numeric arrays within numpy.allclose's tolerance,
+        # other arrays exactly, dicts and lists item by item, skbase objects such as distributions by their parameters,
+        # and fitted estimators by identity.
+        class ObjectParameter(CountParameter):
+            def __init__(self, value=None):
+                self.value = value
+                super().__init__()
+
+            def _fit(self, X, y, sample_weight):
+                self.value_ = self.value
+
+        def equal(first, second):
+            return ObjectParameter(first).fit(X, y) == ObjectParameter(second).fit(X, y)
+
+        assert equal(np.array(["u", "v"]), np.array(["u", "v"])) and not equal(
+            np.array(["u", "v"]), np.array(["u", "w"])
+        )
+        assert equal({"a": [1.0, "x"]}, {"a": [1.0 + 1e-12, "x"]}) and not equal({"a": [1.0, "x"]}, {"a": [1.0, "y"]})
+        for make in (lambda values: pd.array(values, dtype="string"), pd.Categorical):
+            assert equal(make(["a", "b"]), make(["a", "b"])) and not equal(make(["a", "b"]), make(["a", "c"]))
+            assert len({ObjectParameter(make(["a", "b"])).fit(X, y), ObjectParameter(make(["a", "c"])).fit(X, y)}) == 2
+        estimator = LinearRegression()
+        assert equal(estimator, estimator) and not equal(estimator, LinearRegression())
+
+        # Unfitted objects compare their parameters the same way, except that estimators compare by their parameters.
+        assert ObjectParameter(LinearRegression()) == ObjectParameter(LinearRegression())
+        assert ObjectParameter(np.array(["u", "v"], dtype=object)) != ObjectParameter(
+            np.array(["u", "w"], dtype=object)
+        )
+        if find_spec("skpro"):
+            from skpro.distributions import LogNormal, Normal
+
+            from pgmpy.parameterization.distributions import NominalDistribution
+
+            assert equal(Normal(mu=0.0, sigma=1.0), Normal(mu=0.0, sigma=1.0))
+            assert not equal(Normal(mu=0.0, sigma=1.0), LogNormal(mu=0.0, sigma=1.0))
+            strings, objects = np.unique(["v", "u"]), np.array(["u", "w"], dtype=object)
+            assert equal(NominalDistribution([0.3, 0.7], strings), NominalDistribution([0.3, 0.7], strings))
+            assert not equal(NominalDistribution([0.3, 0.7], strings), NominalDistribution([0.3, 0.7], objects))
