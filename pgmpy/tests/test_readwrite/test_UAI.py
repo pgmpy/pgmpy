@@ -93,8 +93,8 @@ class TestUAIReader(unittest.TestCase):
         self.assertListEqual(self.reader_string.tables, tables_expected)
         self.assertListEqual(self.reader_string_with_comment.tables, tables_expected)
 
-    def test_get_model(self):
-        model = self.reader_string.get_model()
+    def test_read(self):
+        model = self.reader_string.read()
         edge_expected = {
             "var_2": {"var_0": {"weight": None}, "var_1": {"weight": None}},
             "var_0": {"var_2": {"weight": None}, "var_1": {"weight": None}},
@@ -105,7 +105,7 @@ class TestUAIReader(unittest.TestCase):
         self.assertDictEqual(dict(model.adj), edge_expected)
 
     def test_read_file(self):
-        model = self.reader_file.get_model()
+        model = self.reader_file.read()
         node_expected = {
             "var_3": {},
             "var_8": {},
@@ -350,8 +350,8 @@ class TestUAIReaderTorch(unittest.TestCase):
         self.assertListEqual(self.reader_string.tables, tables_expected)
         self.assertListEqual(self.reader_string_with_comment.tables, tables_expected)
 
-    def test_get_model(self):
-        model = self.reader_string.get_model()
+    def test_read(self):
+        model = self.reader_string.read()
         edge_expected = {
             "var_2": {"var_0": {"weight": None}, "var_1": {"weight": None}},
             "var_0": {"var_2": {"weight": None}, "var_1": {"weight": None}},
@@ -362,7 +362,7 @@ class TestUAIReaderTorch(unittest.TestCase):
         self.assertDictEqual(dict(model.adj), edge_expected)
 
     def test_read_file(self):
-        model = self.reader_file.get_model()
+        model = self.reader_file.read()
         node_expected = {
             "var_3": {},
             "var_8": {},
