@@ -57,7 +57,6 @@ class LogLikelihoodGauss(BaseStructureScore):
     _tags = {
         "name": "ll-g",
         "data_types": ["continuous"],
-        "supported_datatype": "continuous",
         "default_for": None,
         "is_parameteric": False,
         "assumption:linearity": True,

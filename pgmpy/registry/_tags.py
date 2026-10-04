@@ -335,22 +335,6 @@ class assumption__low_noise(_BaseTag):
 # ----------------
 
 
-class supported_datatype(_BaseTag):
-    """
-    Deprecated: use ``data_types`` instead.
-
-    The single data type the structure score was designed for. Kept for backwards compatibility and will be removed in
-    a future release.
-    """
-
-    _tags = {
-        "tag_name": "supported_datatype",
-        "parent_type": ["structure_score"],
-        "tag_type": ("str", DATA_TYPES),
-        "short_descr": "Deprecated, use ``data_types``. Data type the structure score was designed for.",
-    }
-
-
 class is_parameteric(_BaseTag):
     """Whether the structure score estimates parameters, e.g. through a Dirichlet prior."""
 

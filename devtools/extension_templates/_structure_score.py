@@ -75,7 +75,6 @@ class MyStructureScore(BaseStructureScore):
     _tags = {
         "name": "my-score",
         "data_types": ["discrete"],
-        "supported_datatype": "discrete",
         "default_for": None,
         "is_parameteric": False,
         "assumption:linearity": False,

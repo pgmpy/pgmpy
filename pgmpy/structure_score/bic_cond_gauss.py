@@ -57,7 +57,6 @@ class BICCondGauss(LogLikelihoodCondGauss):
     _tags = {
         "name": "bic-cg",
         "data_types": ["discrete", "continuous", "mixed"],
-        "supported_datatype": "mixed",
         "default_for": "mixed",
         "is_parameteric": False,
     }

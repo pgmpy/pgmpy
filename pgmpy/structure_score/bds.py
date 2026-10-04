@@ -75,7 +75,6 @@ class BDs(BDeu):
     _tags = {
         "name": "bds",
         "data_types": ["discrete"],
-        "supported_datatype": "discrete",
         "default_for": None,
         "is_parameteric": True,
     }

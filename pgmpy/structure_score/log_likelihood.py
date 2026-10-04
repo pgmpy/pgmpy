@@ -54,7 +54,6 @@ class LogLikelihood(BaseStructureScore):
     _tags = {
         "name": "ll-d",
         "data_types": ["discrete"],
-        "supported_datatype": "discrete",
         "default_for": None,
         "is_parameteric": False,
         "assumption:linearity": False,

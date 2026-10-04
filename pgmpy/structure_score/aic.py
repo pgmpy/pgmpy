@@ -55,7 +55,6 @@ class AIC(LogLikelihood):
     _tags = {
         "name": "aic-d",
         "data_types": ["discrete"],
-        "supported_datatype": "discrete",
         "default_for": None,
         "is_parameteric": False,
     }

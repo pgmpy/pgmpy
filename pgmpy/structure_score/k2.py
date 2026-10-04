@@ -62,7 +62,6 @@ class K2(BaseStructureScore):
     _tags = {
         "name": "k2",
         "data_types": ["discrete"],
-        "supported_datatype": "discrete",
         "default_for": None,
         "is_parameteric": False,
         "assumption:linearity": False,

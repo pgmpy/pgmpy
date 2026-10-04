@@ -55,7 +55,6 @@ class BICGauss(LogLikelihoodGauss):
     _tags = {
         "name": "bic-g",
         "data_types": ["continuous"],
-        "supported_datatype": "continuous",
         "default_for": "continuous",
         "is_parameteric": False,
     }

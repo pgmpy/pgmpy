@@ -55,7 +55,6 @@ class AICCondGauss(LogLikelihoodCondGauss):
     _tags = {
         "name": "aic-cg",
         "data_types": ["discrete", "continuous", "mixed"],
-        "supported_datatype": "mixed",
         "default_for": None,
         "is_parameteric": False,
     }

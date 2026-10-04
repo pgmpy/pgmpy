@@ -55,7 +55,7 @@ def test_check_tag_is_valid():
     with pytest.raises(ValueError, match="must be a bool"):
         check_tag_is_valid("assumption:linearity", None)
     with pytest.raises(ValueError, match="must be one of"):
-        check_tag_is_valid("supported_datatype", "text")
+        check_tag_is_valid("identifiable_graph", "text")
 
 
 def test_all_tags():
