@@ -983,6 +983,52 @@ class TestDAGConversion(unittest.TestCase):
         expected = "dag {\nA -> B\nC -> D\nE\n}"
         self.assertEqual(result, expected)
 
+    def test_to_dagitty_variable_roles(self):
+        """Test that exposure, outcome, and latent roles are written to dagitty syntax"""
+        dag = DAG([("X", "Y")], exposures={"X"}, outcomes={"Y"})
+        dag.add_node("U")
+        dag.latents = {"U"}
+        result = dag.to_dagitty()
+        expected = "dag {\nX -> Y\nU [latent]\nX [exposure]\nY [outcome]\n}"
+        self.assertEqual(result, expected)
+
+    def test_to_dagitty_roles_set_with_with_role(self):
+        """Test dagitty conversion with roles assigned through with_role"""
+        dag = DAG([("X", "Y")])
+        dag.with_role(role="exposures", variables="X", inplace=True)
+        dag.with_role(role="outcomes", variables="Y", inplace=True)
+        result = dag.to_dagitty()
+        expected = "dag {\nX -> Y\nX [exposure]\nY [outcome]\n}"
+        self.assertEqual(result, expected)
+
+    def test_to_dagitty_role_on_isolated_node(self):
+        """Test that an isolated node with a role is written once, as a role statement"""
+        dag = DAG([("X", "Y")])
+        dag.add_node("Z")
+        dag.with_role(role="exposures", variables="Z", inplace=True)
+        result = dag.to_dagitty()
+        expected = "dag {\nX -> Y\nZ [exposure]\n}"
+        self.assertEqual(result, expected)
+
+    def test_dagitty_variable_role_roundtrip(self):
+        """Test that variable roles survive a to_dagitty -> from_dagitty round trip"""
+        dag = DAG([("X", "Y"), ("Z", "Y")], exposures={"X"}, outcomes={"Y"})
+        dag.add_node("U")
+        dag.latents = {"U"}
+        dag_roundtrip = DAG.from_dagitty(string=dag.to_dagitty())
+        self.assertEqual(dag_roundtrip.exposures, {"X"})
+        self.assertEqual(dag_roundtrip.outcomes, {"Y"})
+        self.assertEqual(dag_roundtrip.latents, {"U"})
+        self.assertEqual(set(dag_roundtrip.edges()), set(dag.edges()))
+        self.assertEqual(set(dag_roundtrip.nodes()), set(dag.nodes()))
+
+    def test_from_dagitty_standalone_role_node(self):
+        """Test that from_dagitty reads role annotations on standalone nodes"""
+        dag = DAG.from_dagitty("dag {\nX -> Y\nU [latent]\nV [exposure]\n}")
+        self.assertEqual(dag.latents, {"U"})
+        self.assertEqual(dag.exposures, {"V"})
+        self.assertEqual(set(dag.nodes()), {"X", "Y", "U", "V"})
+
     def test_numeric_node_names(self):
         """Test conversion with numeric node names"""
         dag = DAG([(1, 2), (3, 2)])
