@@ -1,6 +1,5 @@
-import unittest
-
 import numpy as np
+import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
@@ -9,9 +8,9 @@ from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork
 from pgmpy.readwrite import UAIReader, UAIWriter
 
 
-class TestUAIReader(unittest.TestCase):
-    def setUp(self):
-        string = """MARKOV
+@pytest.fixture
+def uai_string():
+    return """MARKOV
 3
 2 2 3
 2
@@ -28,7 +27,10 @@ class TestUAIReader(unittest.TestCase):
  1.8750 4.0000 3.3330
  2.0000 2.0000 3.4000"""
 
-        string_with_comment = """MARKOV
+
+@pytest.fixture
+def uai_string_with_comment():
+    return """MARKOV
 3
 2 2 3
 2 # comment
@@ -44,32 +46,45 @@ class TestUAIReader(unittest.TestCase):
  0.0000 0.0000 10.0000
  1.8750 4.0000 3.3330
  2.0000 2.0000 3.4000"""
-        self.maxDiff = None
-        self.reader_string = UAIReader(string=string)
-        self.reader_string_with_comment = UAIReader(string=string_with_comment)
-        self.reader_file = UAIReader("pgmpy/tests/test_readwrite/testdata/grid4x4.uai")
 
-    def test_get_network_type(self):
+
+@pytest.fixture
+def reader_string(uai_string):
+    return UAIReader(string=uai_string)
+
+
+@pytest.fixture
+def reader_string_with_comment(uai_string_with_comment):
+    return UAIReader(string=uai_string_with_comment)
+
+
+@pytest.fixture
+def reader_file():
+    return UAIReader("pgmpy/tests/test_readwrite/testdata/grid4x4.uai")
+
+
+class TestUAIReader:
+    def test_get_network_type(self, reader_string, reader_string_with_comment):
         network_type_expected = "MARKOV"
-        self.assertEqual(self.reader_string.network_type, network_type_expected)
-        self.assertEqual(self.reader_string_with_comment.network_type, network_type_expected)
+        assert reader_string.network_type == network_type_expected
+        assert reader_string_with_comment.network_type == network_type_expected
 
-    def test_get_variables(self):
+    def test_get_variables(self, reader_string, reader_string_with_comment):
         variables_expected = ["var_0", "var_1", "var_2"]
-        self.assertListEqual(self.reader_string.variables, variables_expected)
-        self.assertListEqual(self.reader_string_with_comment.variables, variables_expected)
+        assert reader_string.variables == variables_expected
+        assert reader_string_with_comment.variables == variables_expected
 
-    def test_get_domain(self):
+    def test_get_domain(self, reader_string, reader_string_with_comment):
         domain_expected = {"var_1": "2", "var_2": "3", "var_0": "2"}
-        self.assertDictEqual(self.reader_string.domain, domain_expected)
-        self.assertDictEqual(self.reader_string_with_comment.domain, domain_expected)
+        assert reader_string.domain == domain_expected
+        assert reader_string_with_comment.domain == domain_expected
 
-    def test_get_edges(self):
+    def test_get_edges(self, reader_string, reader_string_with_comment):
         edges_expected = {("var_0", "var_1"), ("var_0", "var_2"), ("var_1", "var_2")}
-        self.assertSetEqual(self.reader_string.edges, edges_expected)
-        self.assertSetEqual(self.reader_string_with_comment.edges, edges_expected)
+        assert reader_string.edges == edges_expected
+        assert reader_string_with_comment.edges == edges_expected
 
-    def test_get_tables(self):
+    def test_get_tables(self, reader_string, reader_string_with_comment):
         tables_expected = [
             (["var_0", "var_1"], ["4.000", "2.400", "1.000", "0.000"]),
             (
@@ -90,22 +105,22 @@ class TestUAIReader(unittest.TestCase):
                 ],
             ),
         ]
-        self.assertListEqual(self.reader_string.tables, tables_expected)
-        self.assertListEqual(self.reader_string_with_comment.tables, tables_expected)
+        assert reader_string.tables == tables_expected
+        assert reader_string_with_comment.tables == tables_expected
 
-    def test_read(self):
-        model = self.reader_string.read()
+    def test_get_model(self, reader_string):
+        model = reader_string.read()
         edge_expected = {
             "var_2": {"var_0": {"weight": None}, "var_1": {"weight": None}},
             "var_0": {"var_2": {"weight": None}, "var_1": {"weight": None}},
             "var_1": {"var_2": {"weight": None}, "var_0": {"weight": None}},
         }
 
-        self.assertListEqual(sorted(model.nodes()), sorted(["var_0", "var_2", "var_1"]))
-        self.assertDictEqual(dict(model.adj), edge_expected)
+        assert sorted(model.nodes()) == sorted(["var_0", "var_2", "var_1"])
+        assert dict(model.adj) == edge_expected
 
-    def test_read_file(self):
-        model = self.reader_file.read()
+    def test_read_file(self, reader_file):
+        model = reader_file.read()
         node_expected = {
             "var_3": {},
             "var_8": {},
@@ -124,103 +139,115 @@ class TestUAIReader(unittest.TestCase):
             "var_2": {},
             "var_4": {},
         }
-        self.assertDictEqual(dict(model.nodes), node_expected)
+        assert dict(model.nodes) == node_expected
 
 
-class TestUAIWriter(unittest.TestCase):
-    def setUp(self):
-        self.maxDiff = None
-        variables = [
-            "kid",
-            "bowel-problem",
-            "dog-out",
-            "family-out",
-            "hear-bark",
-            "light-on",
-        ]
-        edges = [
-            ["family-out", "dog-out"],
-            ["bowel-problem", "dog-out"],
-            ["family-out", "light-on"],
-            ["dog-out", "hear-bark"],
-        ]
-        cpds = {
-            "kid": np.array([[0.3], [0.7]]),
-            "bowel-problem": np.array([[0.01], [0.99]]),
-            "dog-out": np.array([[0.99, 0.01, 0.97, 0.03], [0.9, 0.1, 0.3, 0.7]]),
-            "family-out": np.array([[0.15], [0.85]]),
-            "hear-bark": np.array([[0.7, 0.3], [0.01, 0.99]]),
-            "light-on": np.array([[0.6, 0.4], [0.05, 0.95]]),
-        }
-        states = {
-            "kid": ["true", "false"],
-            "bowel-problem": ["true", "false"],
-            "dog-out": ["true", "false"],
-            "family-out": ["true", "false"],
-            "hear-bark": ["true", "false"],
-            "light-on": ["true", "false"],
-        }
-        parents = {
-            "kid": [],
-            "bowel-problem": [],
-            "dog-out": ["bowel-problem", "family-out"],
-            "family-out": [],
-            "hear-bark": ["dog-out"],
-            "light-on": ["family-out"],
-        }
+@pytest.fixture
+def bayes_model():
+    variables = [
+        "kid",
+        "bowel-problem",
+        "dog-out",
+        "family-out",
+        "hear-bark",
+        "light-on",
+    ]
+    edges = [
+        ["family-out", "dog-out"],
+        ["bowel-problem", "dog-out"],
+        ["family-out", "light-on"],
+        ["dog-out", "hear-bark"],
+    ]
+    cpds = {
+        "kid": np.array([[0.3], [0.7]]),
+        "bowel-problem": np.array([[0.01], [0.99]]),
+        "dog-out": np.array([[0.99, 0.01, 0.97, 0.03], [0.9, 0.1, 0.3, 0.7]]),
+        "family-out": np.array([[0.15], [0.85]]),
+        "hear-bark": np.array([[0.7, 0.3], [0.01, 0.99]]),
+        "light-on": np.array([[0.6, 0.4], [0.05, 0.95]]),
+    }
+    states = {
+        "kid": ["true", "false"],
+        "bowel-problem": ["true", "false"],
+        "dog-out": ["true", "false"],
+        "family-out": ["true", "false"],
+        "hear-bark": ["true", "false"],
+        "light-on": ["true", "false"],
+    }
+    parents = {
+        "kid": [],
+        "bowel-problem": [],
+        "dog-out": ["bowel-problem", "family-out"],
+        "family-out": [],
+        "hear-bark": ["dog-out"],
+        "light-on": ["family-out"],
+    }
 
-        self.bayesmodel = DiscreteBayesianNetwork()
-        self.bayesmodel.add_nodes_from(variables)
-        self.bayesmodel.add_edges_from(edges)
+    bayesmodel = DiscreteBayesianNetwork()
+    bayesmodel.add_nodes_from(variables)
+    bayesmodel.add_edges_from(edges)
 
-        tabular_cpds = []
-        for var, values in cpds.items():
-            cpd = TabularCPD(
-                var,
-                len(states[var]),
-                values,
-                evidence=parents[var],
-                evidence_card=[len(states[evidence_var]) for evidence_var in parents[var]],
-            )
-            tabular_cpds.append(cpd)
-        self.bayesmodel.add_cpds(*tabular_cpds)
-        self.bayeswriter = UAIWriter(self.bayesmodel)
+    tabular_cpds = []
+    for var, values in cpds.items():
+        cpd = TabularCPD(
+            var,
+            len(states[var]),
+            values,
+            evidence=parents[var],
+            evidence_card=[len(states[evidence_var]) for evidence_var in parents[var]],
+        )
+        tabular_cpds.append(cpd)
+    bayesmodel.add_cpds(*tabular_cpds)
+    return bayesmodel
 
-        edges = {("var_0", "var_1"), ("var_0", "var_2"), ("var_1", "var_2")}
-        self.markovmodel = DiscreteMarkovNetwork(edges)
-        tables = [
-            (["var_0", "var_1"], ["4.000", "2.400", "1.000", "0.000"]),
-            (
-                ["var_0", "var_1", "var_2"],
-                [
-                    "2.2500",
-                    "3.2500",
-                    "3.7500",
-                    "0.0000",
-                    "0.0000",
-                    "10.0000",
-                    "1.8750",
-                    "4.0000",
-                    "3.3330",
-                    "2.0000",
-                    "2.0000",
-                    "3.4000",
-                ],
-            ),
-        ]
-        domain = {"var_1": "2", "var_2": "3", "var_0": "2"}
-        factors = []
-        for table in tables:
-            variables = table[0]
-            cardinality = [int(domain[var]) for var in variables]
-            values = list(map(float, table[1]))
-            factor = DiscreteFactor(variables, cardinality, values)
-            factors.append(factor)
-        self.markovmodel.add_factors(*factors)
-        self.markovwriter = UAIWriter(self.markovmodel)
 
-    def test_bayes_model(self):
-        self.expected_bayes_file = """BAYES
+@pytest.fixture
+def markov_model():
+    edges = {("var_0", "var_1"), ("var_0", "var_2"), ("var_1", "var_2")}
+    markovmodel = DiscreteMarkovNetwork(edges)
+    tables = [
+        (["var_0", "var_1"], ["4.000", "2.400", "1.000", "0.000"]),
+        (
+            ["var_0", "var_1", "var_2"],
+            [
+                "2.2500",
+                "3.2500",
+                "3.7500",
+                "0.0000",
+                "0.0000",
+                "10.0000",
+                "1.8750",
+                "4.0000",
+                "3.3330",
+                "2.0000",
+                "2.0000",
+                "3.4000",
+            ],
+        ),
+    ]
+    domain = {"var_1": "2", "var_2": "3", "var_0": "2"}
+    factors = []
+    for table in tables:
+        variables = table[0]
+        cardinality = [int(domain[var]) for var in variables]
+        values = list(map(float, table[1]))
+        factor = DiscreteFactor(variables, cardinality, values)
+        factors.append(factor)
+    markovmodel.add_factors(*factors)
+    return markovmodel
+
+
+class TestUAIWriter:
+    @pytest.fixture
+    def bayes_writer(self, bayes_model):
+        return UAIWriter(bayes_model)
+
+    @pytest.fixture
+    def markov_writer(self, markov_model):
+        return UAIWriter(markov_model)
+
+    def test_bayes_model(self, bayes_writer):
+        expected_bayes_file = """BAYES
 6
 2 2 2 2 2 2
 6
@@ -243,10 +270,10 @@ class TestUAIWriter(unittest.TestCase):
 0.3 0.7
 4
 0.6 0.4 0.05 0.95"""
-        self.assertEqual(str(self.bayeswriter.__str__()), str(self.expected_bayes_file))
+        assert str(bayes_writer) == str(expected_bayes_file)
 
-    def test_markov_model(self):
-        self.expected_markov_file = """MARKOV
+    def test_markov_model(self, markov_writer):
+        expected_markov_file = """MARKOV
 3
 2 2 3
 2
@@ -257,76 +284,41 @@ class TestUAIWriter(unittest.TestCase):
 4.0 2.4 1.0 0.0
 12
 2.25 3.25 3.75 0.0 0.0 10.0 1.875 4.0 3.333 2.0 2.0 3.4"""
-        self.assertEqual(str(self.markovwriter.__str__()), str(self.expected_markov_file))
+        assert str(markov_writer) == str(expected_markov_file)
 
 
-@unittest.skipUnless(
-    _check_soft_dependencies("torch", severity="none"),
+@pytest.mark.skipif(
+    not _check_soft_dependencies("torch", severity="none"),
     reason="execute only if required dependency present",
 )
-class TestUAIReaderTorch(unittest.TestCase):
-    def setUp(self):
+class TestUAIReaderTorch:
+    @pytest.fixture(autouse=True)
+    def set_torch_backend(self):
         config.set_backend("torch")
+        yield
+        config.set_backend("numpy")
 
-        string = """MARKOV
-3
-2 2 3
-2
-2 0 1
-3 0 1 2
-
-4
- 4.000 2.400
- 1.000 0.000
-
-12
- 2.2500 3.2500 3.7500
- 0.0000 0.0000 10.0000
- 1.8750 4.0000 3.3330
- 2.0000 2.0000 3.4000"""
-
-        string_with_comment = """MARKOV
-3
-2 2 3
-2 # comment
-2 0 1
-3 0 1 2
-# comment
-4
- 4.000 2.400
- 1.000 0.000
-
-12 #another comment
- 2.2500 3.2500 3.7500
- 0.0000 0.0000 10.0000
- 1.8750 4.0000 3.3330
- 2.0000 2.0000 3.4000"""
-        self.maxDiff = None
-        self.reader_string = UAIReader(string=string)
-        self.reader_string_with_comment = UAIReader(string=string_with_comment)
-        self.reader_file = UAIReader("pgmpy/tests/test_readwrite/testdata/grid4x4.uai")
-
-    def test_get_network_type(self):
+    def test_get_network_type(self, reader_string, reader_string_with_comment):
         network_type_expected = "MARKOV"
-        self.assertEqual(self.reader_string.network_type, network_type_expected)
-        self.assertEqual(self.reader_string_with_comment.network_type, network_type_expected)
+        assert reader_string.network_type == network_type_expected
+        assert reader_string_with_comment.network_type == network_type_expected
 
-    def test_get_variables(self):
+    def test_get_variables(self, reader_string, reader_string_with_comment):
         variables_expected = ["var_0", "var_1", "var_2"]
-        self.assertListEqual(self.reader_string.variables, variables_expected)
-        self.assertListEqual(self.reader_string_with_comment.variables, variables_expected)
+        assert reader_string.variables == variables_expected
+        assert reader_string_with_comment.variables == variables_expected
 
-    def test_get_domain(self):
+    def test_get_domain(self, reader_string, reader_string_with_comment):
         domain_expected = {"var_1": "2", "var_2": "3", "var_0": "2"}
-        self.assertDictEqual(self.reader_string.domain, domain_expected)
-        self.assertDictEqual(self.reader_string_with_comment.domain, domain_expected)
+        assert reader_string.domain == domain_expected
+        assert reader_string_with_comment.domain == domain_expected
 
-    def test_get_edges(self):
+    def test_get_edges(self, reader_string, reader_string_with_comment):
         edges_expected = {("var_0", "var_1"), ("var_0", "var_2"), ("var_1", "var_2")}
-        self.assertSetEqual(self.reader_string.edges, edges_expected)
-        self.assertSetEqual(self.reader_string_with_comment.edges, edges_expected)
+        assert reader_string.edges == edges_expected
+        assert reader_string_with_comment.edges == edges_expected
 
-    def test_get_tables(self):
+    def test_get_tables(self, reader_string, reader_string_with_comment):
         tables_expected = [
             (["var_0", "var_1"], ["4.000", "2.400", "1.000", "0.000"]),
             (
@@ -347,22 +339,22 @@ class TestUAIReaderTorch(unittest.TestCase):
                 ],
             ),
         ]
-        self.assertListEqual(self.reader_string.tables, tables_expected)
-        self.assertListEqual(self.reader_string_with_comment.tables, tables_expected)
+        assert reader_string.tables == tables_expected
+        assert reader_string_with_comment.tables == tables_expected
 
-    def test_read(self):
-        model = self.reader_string.read()
+    def test_get_model(self, reader_string):
+        model = reader_string.read()
         edge_expected = {
             "var_2": {"var_0": {"weight": None}, "var_1": {"weight": None}},
             "var_0": {"var_2": {"weight": None}, "var_1": {"weight": None}},
             "var_1": {"var_2": {"weight": None}, "var_0": {"weight": None}},
         }
 
-        self.assertListEqual(sorted(model.nodes()), sorted(["var_0", "var_2", "var_1"]))
-        self.assertDictEqual(dict(model.adj), edge_expected)
+        assert sorted(model.nodes()) == sorted(["var_0", "var_2", "var_1"])
+        assert dict(model.adj) == edge_expected
 
-    def test_read_file(self):
-        model = self.reader_file.read()
+    def test_read_file(self, reader_file):
+        model = reader_file.read()
         node_expected = {
             "var_3": {},
             "var_8": {},
@@ -381,112 +373,30 @@ class TestUAIReaderTorch(unittest.TestCase):
             "var_2": {},
             "var_4": {},
         }
-        self.assertDictEqual(dict(model.nodes), node_expected)
-
-    def tearDown(self):
-        config.set_backend("numpy")
+        assert dict(model.nodes) == node_expected
 
 
-@unittest.skipUnless(
-    _check_soft_dependencies("pyro-ppl", severity="none"),
+@pytest.mark.skipif(
+    not _check_soft_dependencies("pyro-ppl", severity="none"),
     reason="execute only if required dependency present",
 )
-class TestUAIWriterTorch(unittest.TestCase):
-    def setUp(self):
+class TestUAIWriterTorch:
+    @pytest.fixture(autouse=True)
+    def set_torch_backend(self):
         config.set_backend("torch")
+        yield
+        config.set_backend("numpy")
 
-        self.maxDiff = None
-        variables = [
-            "kid",
-            "bowel-problem",
-            "dog-out",
-            "family-out",
-            "hear-bark",
-            "light-on",
-        ]
-        edges = [
-            ["family-out", "dog-out"],
-            ["bowel-problem", "dog-out"],
-            ["family-out", "light-on"],
-            ["dog-out", "hear-bark"],
-        ]
-        cpds = {
-            "kid": np.array([[0.3], [0.7]]),
-            "bowel-problem": np.array([[0.01], [0.99]]),
-            "dog-out": np.array([[0.99, 0.01, 0.97, 0.03], [0.9, 0.1, 0.3, 0.7]]),
-            "family-out": np.array([[0.15], [0.85]]),
-            "hear-bark": np.array([[0.7, 0.3], [0.01, 0.99]]),
-            "light-on": np.array([[0.6, 0.4], [0.05, 0.95]]),
-        }
-        states = {
-            "kid": ["true", "false"],
-            "bowel-problem": ["true", "false"],
-            "dog-out": ["true", "false"],
-            "family-out": ["true", "false"],
-            "hear-bark": ["true", "false"],
-            "light-on": ["true", "false"],
-        }
-        parents = {
-            "kid": [],
-            "bowel-problem": [],
-            "dog-out": ["bowel-problem", "family-out"],
-            "family-out": [],
-            "hear-bark": ["dog-out"],
-            "light-on": ["family-out"],
-        }
+    @pytest.fixture
+    def bayes_writer(self, bayes_model):
+        return UAIWriter(bayes_model, round_values=4)
 
-        self.bayesmodel = DiscreteBayesianNetwork()
-        self.bayesmodel.add_nodes_from(variables)
-        self.bayesmodel.add_edges_from(edges)
+    @pytest.fixture
+    def markov_writer(self, markov_model):
+        return UAIWriter(markov_model, round_values=4)
 
-        tabular_cpds = []
-        for var, values in cpds.items():
-            cpd = TabularCPD(
-                var,
-                len(states[var]),
-                values,
-                evidence=parents[var],
-                evidence_card=[len(states[evidence_var]) for evidence_var in parents[var]],
-            )
-            tabular_cpds.append(cpd)
-        self.bayesmodel.add_cpds(*tabular_cpds)
-        self.bayeswriter = UAIWriter(self.bayesmodel, round_values=4)
-
-        edges = {("var_0", "var_1"), ("var_0", "var_2"), ("var_1", "var_2")}
-        self.markovmodel = DiscreteMarkovNetwork(edges)
-        tables = [
-            (["var_0", "var_1"], ["4.000", "2.400", "1.000", "0.000"]),
-            (
-                ["var_0", "var_1", "var_2"],
-                [
-                    "2.2500",
-                    "3.2500",
-                    "3.7500",
-                    "0.0000",
-                    "0.0000",
-                    "10.0000",
-                    "1.8750",
-                    "4.0000",
-                    "3.3330",
-                    "2.0000",
-                    "2.0000",
-                    "3.4000",
-                ],
-            ),
-        ]
-        domain = {"var_1": "2", "var_2": "3", "var_0": "2"}
-        factors = []
-        for table in tables:
-            variables = table[0]
-            cardinality = [int(domain[var]) for var in variables]
-            values = list(map(float, table[1]))
-            factor = DiscreteFactor(variables, cardinality, values)
-            factors.append(factor)
-        self.markovmodel.add_factors(*factors)
-        self.markovwriter = UAIWriter(self.markovmodel, round_values=4)
-
-    def test_bayes_model(self):
-        self.expected_bayes_file = """BAYES
+    def test_bayes_model(self, bayes_writer):
+        expected_bayes_file = """BAYES
 6
 2 2 2 2 2 2
 6
@@ -509,10 +419,10 @@ class TestUAIWriterTorch(unittest.TestCase):
 0.3 0.7
 4
 0.6 0.4 0.05 0.95"""
-        self.assertEqual(str(self.bayeswriter.__str__()), str(self.expected_bayes_file))
+        assert str(bayes_writer) == str(expected_bayes_file)
 
-    def test_markov_model(self):
-        self.expected_markov_file = """MARKOV
+    def test_markov_model(self, markov_writer):
+        expected_markov_file = """MARKOV
 3
 2 2 3
 2
@@ -523,7 +433,4 @@ class TestUAIWriterTorch(unittest.TestCase):
 4.0 2.4 1.0 0.0
 12
 2.25 3.25 3.75 0.0 0.0 10.0 1.875 4.0 3.333 2.0 2.0 3.4"""
-        self.assertEqual(str(self.markovwriter.__str__()), str(self.expected_markov_file))
-
-    def tearDown(self):
-        config.set_backend("numpy")
+        assert str(markov_writer) == str(expected_markov_file)
