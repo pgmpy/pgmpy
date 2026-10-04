@@ -331,22 +331,6 @@ class assumption__low_noise(_BaseTag):
 
 
 # ----------------
-# Structure scores
-# ----------------
-
-
-class is_parameteric(_BaseTag):
-    """Whether the structure score estimates parameters, e.g. through a Dirichlet prior."""
-
-    _tags = {
-        "tag_name": "is_parameteric",
-        "parent_type": ["structure_score"],
-        "tag_type": "bool",
-        "short_descr": "Whether the structure score estimates parameters.",
-    }
-
-
-# ----------------
 # Bivariate scores
 # ----------------
 

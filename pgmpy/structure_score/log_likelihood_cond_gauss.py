@@ -67,7 +67,6 @@ class LogLikelihoodCondGauss(BaseStructureScore):
         "name": "ll-cg",
         "data_types": ["discrete", "continuous", "mixed"],
         "default_for": None,
-        "is_parameteric": False,
         "assumption:linearity": True,
         "assumption:additive_noise": True,
         "assumption:gaussian_noise": True,

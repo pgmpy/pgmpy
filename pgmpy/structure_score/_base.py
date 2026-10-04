@@ -37,7 +37,6 @@ class BaseStructureScore(BaseObject):
         "name": None,
         "data_types": [],
         "default_for": None,
-        "is_parameteric": False,
         "assumption:linearity": None,
         "assumption:additive_noise": None,
         "assumption:gaussian_noise": None,

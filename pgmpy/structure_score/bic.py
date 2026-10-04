@@ -59,7 +59,6 @@ class BIC(LogLikelihood):
         "name": "bic-d",
         "data_types": ["discrete"],
         "default_for": "discrete",
-        "is_parameteric": False,
     }
 
     def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:

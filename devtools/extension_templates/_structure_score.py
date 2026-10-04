@@ -76,7 +76,6 @@ class MyStructureScore(BaseStructureScore):
         "name": "my-score",
         "data_types": ["discrete"],
         "default_for": None,
-        "is_parameteric": False,
         "assumption:linearity": False,
         "assumption:additive_noise": False,
         "assumption:gaussian_noise": False,

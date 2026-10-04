@@ -56,7 +56,6 @@ class AICGauss(LogLikelihoodGauss):
         "name": "aic-g",
         "data_types": ["continuous"],
         "default_for": None,
-        "is_parameteric": False,
     }
 
     def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
