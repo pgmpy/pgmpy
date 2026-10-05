@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 from skbase.lookup import all_objects
 
-from pgmpy.causal_discovery import ANM, GES, IGCI, PC, ChowLiu, ExpertInLoop
+from pgmpy.causal_discovery import ANM, GES, IGCI, PC, BootstrapEstimator, ChowLiu, ExpertInLoop
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
 from pgmpy.causal_discovery.bivariate_scores import BaseBivariateScore
 from pgmpy.ci_tests import GCM, BaseCITest, IndependenceMatch, get_ci_test
@@ -112,9 +112,17 @@ def test_fit_narrowing_handles_untagged_and_wider_objects():
     class UntaggedAlgorithm(BaseCausalDiscovery):
         def _fit(self, X):
             self.ci_test_ = get_ci_test(test="pearsonr", data=X)
+            self.adjacency_matrix_ = pd.DataFrame(0, index=X.columns, columns=X.columns)
             return self
 
     assert UntaggedAlgorithm().fit(data).get_tag("data_types") == ["continuous"]
+
+    # Tags that the wrapped estimator leaves unset go back to the class-level value on refit.
+    bootstrap = BootstrapEstimator(PC(show_progress=False), n_bootstraps=2, n_jobs=1, show_progress=False).fit(data)
+    assert bootstrap.get_tag("identifiable_graph") == "cpdag"
+    bootstrap.set_params(estimator=UntaggedAlgorithm()).fit(data)
+    assert bootstrap.get_tag("data_types") == ["continuous"]
+    assert bootstrap.get_tag("identifiable_graph") == BootstrapEstimator.get_class_tag("identifiable_graph")
 
 
 def test_fit_narrows_tags_to_components_used():
@@ -130,6 +138,13 @@ def test_fit_narrows_tags_to_components_used():
     expert_in_loop = ExpertInLoop(pairwise_estimator=IGCI(), show_progress=False).fit(data)
     assert expert_in_loop.get_tag("assumption:low_noise") is True
     assert expert_in_loop.get_tag("data_types") == ["continuous"]
+    assert expert_in_loop.get_tag("capability:multivariate") is True
+
+    # A wrapped estimator determines every tag except the name.
+    pc = PC(ci_test="pearsonr", show_progress=False)
+    bootstrap = BootstrapEstimator(pc, n_bootstraps=2, n_jobs=1, show_progress=False).fit(data)
+    assert bootstrap.get_tags() == {**pc.fit(data).get_tags(), "name": "bootstrap_estimator"}
+    assert bootstrap.get_tag("identifiable_graph") == "cpdag"
 
 
 def test_filter_algorithms_by_tags():
@@ -154,4 +169,4 @@ def test_filter_algorithms_by_tags():
             filter_tags={"identifiable_graph": "dag", "capability:multivariate": True},
         )
     }
-    assert dag_learners == {"ExpertInLoop", "VarSort", "R2Sort"}
+    assert dag_learners == {"BootstrapEstimator", "ExpertInLoop", "VarSort", "R2Sort"}
