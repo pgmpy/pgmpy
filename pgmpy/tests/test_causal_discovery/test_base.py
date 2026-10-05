@@ -146,6 +146,19 @@ def test_fit_narrows_tags_to_components_used():
     assert bootstrap.get_tags() == {**pc.fit(data).get_tags(), "name": "bootstrap_estimator"}
     assert bootstrap.get_tag("identifiable_graph") == "cpdag"
 
+    # Components narrow the tags taken over from a wrapped estimator.
+    class BootstrapWithCITest(BootstrapEstimator):
+        def _fit(self, X):
+            self.ci_test_ = get_ci_test(test="pearsonr", data=X)
+            return super()._fit(X)
+
+    pc = PC(ci_test=lambda X, Y, Z, **kwargs: True, show_progress=False)
+    wrapper = BootstrapWithCITest(pc, n_bootstraps=2, n_jobs=1, show_progress=False).fit(data)
+    assert wrapper.get_tag("identifiable_graph") == "cpdag"
+    assert wrapper.get_tag("assumption:faithfulness") is True
+    assert wrapper.get_tag("assumption:linearity") is True
+    assert wrapper.get_tag("data_types") == ["continuous"]
+
 
 def test_filter_algorithms_by_tags():
     names = {

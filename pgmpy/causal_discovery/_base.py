@@ -117,37 +117,37 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         bivariate score (`scoring_method_`), or a pairwise estimator (`pairwise_estimator_`) narrows `data_types` and
         the `assumption:*` tags.
         """
+        # Step 1: Run checks on the dataset.
         X = self._check_fit_data(X)
+
+        # Step 2: Run the fitting algorithm.
         result = self._fit(X, **fit_params)
 
+        # Step 3: Take over the tags of a wrapped causal discovery estimator.
         estimator = getattr(self, "estimator_", None)
+        if estimator is not None:
+            tags = type(self).get_class_tags()
+            tags.update(
+                {key: value for key, value in estimator.get_tags().items() if key != "name" and value is not None}
+            )
+            self.set_tags(**tags)
+
+        # Step 4: Narrow the data types and the assumptions to the components used for fitting.
         components = [getattr(self, name, None) for name in ("ci_test_", "scoring_method_", "pairwise_estimator_")]
         components = [component for component in components if component is not None]
-        if estimator is not None or components:
-            tags = type(self).get_class_tags()
-
-            # The wrapped estimator is fitted on the same input, so its tags hold for the algorithm as well. Tags that
-            # it leaves unset keep the class-level value.
-            if estimator is not None:
-                tags.update(
-                    {key: value for key, value in estimator.get_tags().items() if key != "name" and value is not None}
-                )
-
-            # Components only see parts of the problem, e.g. a pairwise estimator never sees more than two variables.
-            # Keep the data types that every component supports and add the assumptions that any component makes.
+        if components:
+            base_tags = self.get_tags() if estimator is not None else type(self).get_class_tags()
+            data_types = base_tags["data_types"]
+            assumptions = {key: bool(value) for key, value in base_tags.items() if key.startswith("assumption:")}
             for component in components:
                 component_tags = component.get_tags() if isinstance(component, BaseObject) else {}
                 component_types = component_tags.get("data_types")
                 if component_types:
-                    tags["data_types"] = (
-                        list(component_types)
-                        if tags["data_types"] is None
-                        else [t for t in tags["data_types"] if t in component_types]
+                    data_types = (
+                        list(component_types) if data_types is None else [t for t in data_types if t in component_types]
                     )
-                for key in tags:
-                    if key.startswith("assumption:"):
-                        tags[key] = bool(tags[key]) or bool(component_tags.get(key))
-            self.set_tags(**tags)
+                assumptions = {key: value or bool(component_tags.get(key)) for key, value in assumptions.items()}
+            self.set_tags(data_types=data_types, **assumptions)
         return result
 
     def score(
