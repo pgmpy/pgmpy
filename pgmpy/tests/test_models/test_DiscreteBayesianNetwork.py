@@ -1094,6 +1094,39 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
         for var in model.nodes():
             self.assertTrue(model_copy.get_cpds(var).__eq__(model.get_cpds(var), atol=0.1))
 
+    def test_fit_update_aligns_prior_with_estimator_parent_order(self):
+        model = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
+        model.add_cpds(
+            TabularCPD("A", 2, [[0.5], [0.5]]),
+            TabularCPD("B", 2, [[0.5], [0.5]]),
+            TabularCPD(
+                "C",
+                2,
+                [
+                    [0.9, 0.8, 0.2, 0.1],
+                    [0.1, 0.2, 0.8, 0.9],
+                ],
+                evidence=["B", "A"],
+                evidence_card=[2, 2],
+            ),
+        )
+
+        data = pd.DataFrame(
+            {
+                "A": [0, 1] * 20,
+                "B": [0, 1] * 20,
+                "C": [0, 1] * 20,
+            }
+        )
+        model.fit_update(data, n_prev_samples=100000)
+
+        cpd_after = model.get_cpds("C")
+        self.assertEqual(list(cpd_after.variables[1:]), ["A", "B"])
+        values = cpd_after.get_values()
+        # Unobserved configs must keep the original prior, not the swapped columns.
+        self.assertAlmostEqual(values[0, 1], 0.2, places=3)
+        self.assertAlmostEqual(values[0, 2], 0.8, places=3)
+
     def test_dag_with_independent_node_fit(self):
         edge_list = [("A", "C"), ("B", "C")]
         model = DiscreteBayesianNetwork(edge_list)
