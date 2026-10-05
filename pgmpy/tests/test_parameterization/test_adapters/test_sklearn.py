@@ -1,0 +1,174 @@
+import numpy as np
+import pandas as pd
+import pytest
+from skbase.utils.dependencies import _check_soft_dependencies
+from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.dummy import DummyClassifier, DummyRegressor
+from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestRegressor
+from sklearn.isotonic import IsotonicRegression
+from sklearn.linear_model import LinearRegression, LogisticRegression, Ridge, RidgeClassifier
+from sklearn.model_selection import GridSearchCV
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
+from sklearn.pipeline import Pipeline
+
+from pgmpy.parameterization.adapters import SklearnAdapter
+from pgmpy.parameterization.cpds import LinearGaussianCPD, TabularCPD
+
+pytestmark = pytest.mark.skipif(
+    not _check_soft_dependencies("skpro", severity="none"), reason="execute only if required dependency present"
+)
+
+
+@pytest.fixture(scope="module")
+def data():
+    """Y = 1.25 + 2.5 sin(A) + 0.75 B^2 - 1.5 C + N(0, 0.2^2), on rows labelled with strings."""
+    rng = np.random.default_rng(42)
+    X, X_test = (
+        pd.DataFrame(rng.uniform(-2.5, 2.5, (n, 3)), columns=["A", "B", "C"], index=[f"{name}{i}" for i in range(n)])
+        for name, n in (("train", 1000), ("test", 200))
+    )
+    y = pd.Series(1.25 + 2.5 * np.sin(X["A"]) + 0.75 * X["B"] ** 2 - 1.5 * X["C"], name="Y")
+    return X, y + rng.normal(scale=0.2, size=len(y)), X_test
+
+
+class NanClassifier(ClassifierMixin, BaseEstimator):
+    """Predicts equal probabilities, except NaN for the first row."""
+
+    def fit(self, X, y):
+        self.classes_ = np.unique(y)
+        return self
+
+    def predict_proba(self, X):
+        probs = np.full((len(X), len(self.classes_)), 1 / len(self.classes_))
+        probs[0] = np.nan
+        return probs
+
+
+class TestSklearnAdapter:
+    def test_tags(self):
+        # The target's type comes from the estimator, as does support for sample weights: an estimator gets them if its
+        # fit takes sample_weight, or any keyword argument, as meta-estimators such as GridSearchCV do.
+        for estimator, variable_type, weighted in (
+            (LinearRegression(), "continuous", True),
+            (LogisticRegression(), "discrete", True),
+            (KNeighborsClassifier(), "discrete", False),
+            (GridSearchCV(LogisticRegression(), {"C": [1.0]}), "discrete", True),
+        ):
+            adapter = SklearnAdapter(estimator)
+            assert adapter.get_tag("variable_type") == variable_type
+            assert adapter.get_tag("supports_weighted_data") is weighted
+        assert SklearnAdapter.get_class_tag("python_dependencies") == "skpro"
+
+        # The tags follow the estimator after set_params, also a nested one.
+        adapter = SklearnAdapter(Pipeline([("model", LogisticRegression())]))
+        assert adapter.set_params(estimator__model=Ridge()).get_tag("variable_type") == "continuous"
+        assert adapter.set_params(estimator=LogisticRegression()).get_tag("variable_type") == "discrete"
+
+        for estimator in ("not an estimator", RidgeClassifier()):  # RidgeClassifier has no predict_proba
+            with pytest.raises(TypeError):
+                SklearnAdapter(estimator)
+
+    def test_regressor(self, data):
+        X, y, X_test = data
+        estimator = LinearRegression()
+        adapter = SklearnAdapter(estimator).fit(X, y)
+
+        # A clone is fitted. The Normal for each row has the prediction as mean and, as standard deviation, the RMS of
+        # the training residuals.
+        assert adapter.estimator_ is not estimator and not hasattr(estimator, "coef_")
+        assert adapter.estimator_.feature_names_in_.tolist() == ["A", "B", "C"]
+        dist = adapter.predict_proba(X_test)
+        assert (dist.index.tolist(), dist.columns.tolist()) == (X_test.index.tolist(), ["Y"])
+        np.testing.assert_allclose(dist.mean()["Y"], adapter.estimator_.predict(X_test))
+        np.testing.assert_allclose(dist.var()["Y"], adapter.std_**2)
+        assert adapter.std_ == pytest.approx(np.sqrt(np.mean((y - adapter.estimator_.predict(X)) ** 2)))
+
+        # Sample weights go to the estimator and weight the residuals.
+        weights = np.linspace(0.1, 2, len(y))
+        weighted = SklearnAdapter(LinearRegression()).fit(X, y, sample_weight=weights)
+        expected = LinearRegression().fit(X, y, sample_weight=weights)
+        np.testing.assert_allclose(weighted.estimator_.coef_, expected.coef_)
+        assert weighted.std_ == pytest.approx(np.sqrt(np.average((y - expected.predict(X)) ** 2, weights=weights)))
+
+        # Without X, the marginal is the Normal with the mean and variance of the training predictions plus the noise's.
+        # For a linear model, that's LinearGaussianCPD's "mle" marginal.
+        marginal, linear = adapter.predict_proba(), LinearGaussianCPD("mle").fit(X, y).predict_proba()
+        assert (marginal.mean(), marginal.var()) == pytest.approx((linear.mean(), linear.var()))
+
+        # A regressor that predicts a 1-D array, like a random forest, still gives one row per row of X. Parents whose
+        # names aren't all strings, which sklearn can't take as feature names, go in by position.
+        forest = SklearnAdapter(RandomForestRegressor(n_estimators=10, random_state=0)).fit(X, y)
+        assert forest.predict_proba(X_test).shape == (len(X_test), 1)
+        renamed = SklearnAdapter(LinearRegression()).fit(X.set_axis([0, "B", ("C", 1)], axis=1), y)
+        np.testing.assert_allclose(renamed.estimator_.coef_, adapter.estimator_.coef_)
+
+        # A root doesn't use the estimator: it gets the Normal with the weighted mean and standard deviation of y.
+        root = SklearnAdapter(LinearRegression()).fit(None, y, sample_weight=weights)
+        mean = np.average(y, weights=weights)
+        assert isinstance(root.estimator_, DummyRegressor)
+        assert (root.predict_proba().mean(), root.std_) == pytest.approx(
+            (mean, np.sqrt(np.average((y - mean) ** 2, weights=weights)))
+        )
+        np.testing.assert_allclose(root.predict_proba(pd.DataFrame(index=[7, 8])).mean()["Y"], [mean, mean])
+        assert adapter.sample(X_test.iloc[:0]).shape == root.sample(pd.DataFrame(index=[])).shape == (0, 1)
+
+        # Samples follow the Normals, and the seed matters.
+        samples = adapter.sample(X_test, n_samples=50, random_state=0)["Y"].to_numpy().reshape(50, -1)
+        z = (samples - dist.mean()["Y"].to_numpy()) / adapter.std_
+        assert abs(z.mean()) < 0.05 and z.std() == pytest.approx(1, abs=0.05)
+        pd.testing.assert_frame_equal(adapter.sample(X_test, random_state=0), adapter.sample(X_test, random_state=0))
+        assert not adapter.sample(X_test, random_state=0).equals(adapter.sample(X_test, random_state=1))
+
+        # Training residuals of 0, as from a model that interpolates its data, can't give a Normal, and neither can a
+        # prediction that isn't finite, e.g. from isotonic regression outside its training range.
+        with pytest.raises(ValueError, match="standard deviation"):
+            SklearnAdapter(KNeighborsRegressor(n_neighbors=1)).fit(X, y)
+        isotonic = SklearnAdapter(IsotonicRegression()).fit(X[["A"]], y)
+        with pytest.raises(ValueError, match="IsotonicRegression.*'out'"):
+            isotonic.predict_proba(pd.DataFrame({"A": [0.0, 5.0]}, index=["in", "out"]))
+
+        # A fitted estimator compares by identity, so a fitted adapter only equals itself.
+        assert adapter == adapter and len({adapter, adapter}) == 1
+        assert adapter != SklearnAdapter(LinearRegression()).fit(X, y)
+
+    def test_classifier(self, data):
+        X, y, X_test = data
+        labels = pd.Series(np.where(y > y.median(), "hi", "lo"), index=y.index, name="Y")
+        adapter = SklearnAdapter(LogisticRegression()).fit(X, labels)
+
+        # The classifier's probabilities for each row, over the original labels.
+        dist = adapter.predict_proba(X_test)
+        assert (dist.index.tolist(), dist.columns.tolist()) == (X_test.index.tolist(), ["Y"])
+        assert list(dist.categories) == list(adapter.classes_) == ["hi", "lo"]
+        np.testing.assert_allclose(np.asarray(dist.probs), adapter.estimator_.predict_proba(X_test))
+        samples = adapter.sample(X_test, n_samples=20, random_state=0)["Y"]
+        assert samples.isin(["hi", "lo"]).all() and not samples.equals(adapter.sample(X_test, 20, random_state=1)["Y"])
+
+        # Without X, the marginal averages the training predictions, and changing it leaves the adapter as it was.
+        marginal, expected = adapter.predict_proba(), adapter.estimator_.predict_proba(X).mean(axis=0)
+        np.testing.assert_allclose(np.asarray(marginal.probs), expected)
+        marginal.probs[:] = [1.0, 0.0]
+        np.testing.assert_allclose(np.asarray(adapter.predict_proba().probs), expected)
+
+        # The labels are encoded before fitting, so the estimator can't change them: nullable booleans stay booleans,
+        # and a TabularCPD child fitted on the original data takes the samples.
+        flag = (X["A"] > 0).astype("boolean").rename("F")
+        boolean = SklearnAdapter(LogisticRegression()).fit(X[["B"]], flag)
+        assert list(boolean.predict_proba().categories) == [False, True]
+        child = TabularCPD().fit(flag.to_frame(), labels)
+        child.predict_proba(boolean.sample(X_test[["B"]], random_state=0))
+
+        # A single observed class gets all the probability without the estimator, which some can't predict with.
+        single = SklearnAdapter(HistGradientBoostingClassifier()).fit(X, pd.Series("no", index=X.index, name="Y"))
+        assert isinstance(single.estimator_, DummyClassifier)
+        assert (single.sample(X_test)["Y"] == "no").all()
+
+        # A root gets the weighted frequencies of the labels.
+        weights = np.where(labels == "hi", 3.0, 1.0)
+        root = SklearnAdapter(LogisticRegression()).fit(None, labels, sample_weight=weights)
+        share = weights[labels == "hi"].sum() / weights.sum()
+        np.testing.assert_allclose(np.asarray(root.predict_proba().probs), [share, 1 - share])
+
+        # Probabilities that aren't a distribution, e.g. NaN, are reported with the estimator and the rows.
+        with pytest.raises(ValueError, match="NanClassifier.*'train0'"):
+            SklearnAdapter(NanClassifier()).fit(X, labels)

@@ -78,7 +78,7 @@ class PillaiTrace(_ResidualMixin, BaseCITest):
 
     _tags = {
         "name": "pillai",
-        "data_types": ("discrete", "continuous", "mixed"),
+        "data_types": ["discrete", "continuous", "mixed"],
         "default_for": "mixed",
         "requires_data": True,
     }

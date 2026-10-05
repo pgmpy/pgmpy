@@ -59,7 +59,7 @@ class GSq(PowerDivergence):
 
     _tags = {
         "name": "g_sq",
-        "data_types": ("discrete",),
+        "data_types": ["discrete"],
         "default_for": None,
         "requires_data": True,
     }

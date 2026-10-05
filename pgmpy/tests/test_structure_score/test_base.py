@@ -14,9 +14,9 @@ from pgmpy.structure_score._base import get_scoring_method
 
 
 class CountingScore(BaseStructureScore):
-    def __init__(self, data):
+    def __init__(self, data, max_cache_size=10000):
         self.call_count = 0
-        super().__init__(data)
+        super().__init__(data, max_cache_size=max_cache_size)
 
     def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         self.call_count += 1
@@ -32,6 +32,15 @@ class TestBaseStructureScore:
 
         with pytest.raises(TypeError, match=r"unexpected keyword argument 'foo'"):
             K2(data, foo=1)
+
+    def test_max_cache_size_evicts_least_recently_used(self, small_df):
+        score = CountingScore(small_df.astype("category"), max_cache_size=2)
+        assert score.get_params()["max_cache_size"] == 2
+
+        for variable in ["A", "B", "A", "C", "A"]:
+            score.local_score(variable, ())
+        # Scoring "C" evicts "B", the least recently used entry, so the final "A" is still cached.
+        assert score.call_count == 3
 
 
 class TestGetScoringMethod:
