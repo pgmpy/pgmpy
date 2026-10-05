@@ -298,15 +298,19 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         ebunch, roles, coefs, nodes = parse_dagitty(dagitty_str)
         if len(coefs) == 0:
-            dag = cls(ebunch=ebunch, roles=roles)
+            dag = cls(ebunch=ebunch)
             dag.add_nodes_from(nodes)
+            for role, variables in roles.items():
+                dag.with_role(role=role, variables=variables, inplace=True)
             return dag
         else:
             from pgmpy.factors.continuous import LinearGaussianCPD
             from pgmpy.models import LinearGaussianBayesianNetwork
 
-            lgbn = LinearGaussianBayesianNetwork(ebunch=ebunch, roles=roles)
+            lgbn = LinearGaussianBayesianNetwork(ebunch=ebunch)
             lgbn.add_nodes_from(nodes)
+            for role, variables in roles.items():
+                lgbn.with_role(role=role, variables=variables, inplace=True)
 
             std = 1
             intercept = 0
@@ -1602,7 +1606,9 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         The dagitty syntax represents directed acyclic graphs using
         the dag { statements } format with -> for directed edges.
-        Isolated nodes (nodes with no edges) are included as standalone nodes.
+        Variable roles are written as annotations on standalone node
+        statements, e.g. `X [exposure]`. Isolated nodes without roles
+        are included as standalone nodes.
 
         Returns
         -------
@@ -1637,11 +1643,25 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         C
         }
 
+        >>> # DAG with variable roles
+        >>> dag4 = DAG([("X", "Y")], exposures={"X"}, outcomes={"Y"})
+        >>> dag4.add_node("U")
+        >>> dag4.latents = {"U"}
+        >>> print(dag4.to_dagitty())
+        dag {
+        X -> Y
+        U [latent]
+        X [exposure]
+        Y [outcome]
+        }
+
         Notes
         -----
         - Node names are converted to string representations using str().
         - If node names contain spaces or special characters, they will be used as-is.
         - Users should ensure node names are valid in R/dagitty context if needed.
+        - Variable roles written by this method are read back by `from_dagitty`,
+          so a round trip preserves exposure, outcome, and latent roles.
 
         References
         ----------
@@ -1649,7 +1669,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         """
         statements = []
 
-        # Create edge statements in "X -> Y" format and add isolated nodes
+        # Create edge statements in "X -> Y" format
         if self.edges():
             edge_statements = []
             for parent, child in sorted(self.edges(), key=lambda x: (str(x[0]), str(x[1]))):
@@ -1658,8 +1678,22 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
                 edge_statements.append(f"{parent_str} -> {child_str}")
             statements.extend(edge_statements)
 
+        # Write variable roles (exposure, outcome, latent) as node annotations.
+        # Roles are picked up from both the latents/exposures/outcomes attributes
+        # and the node-level role annotations set through with_role.
+        node_roles = {}
+        for role, marker in (("exposures", "exposure"), ("outcomes", "outcome"), ("latents", "latent")):
+            for node in set(self.get_role_dict().get(role, [])) | getattr(self, role):
+                node_roles.setdefault(node, []).append(marker)
+
+        for node in sorted(node_roles, key=str):
+            for marker in node_roles[node]:
+                statements.append(f"{node} [{marker}]")
+
+        # Isolated nodes without roles are written as standalone node statements
         for node in sorted(nx.isolates(self), key=str):
-            statements.append(str(node))
+            if node not in node_roles:
+                statements.append(str(node))
 
         content = "\n".join(statements)
         if content:
