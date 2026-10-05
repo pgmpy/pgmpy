@@ -70,7 +70,7 @@ class RoysLargestRoot(_ResidualMixin, BaseCITest):
 
     _tags = {
         "name": "roys_largest_root",
-        "data_types": ("discrete", "continuous", "mixed"),
+        "data_types": ["discrete", "continuous", "mixed"],
         "default_for": None,
         "requires_data": True,
         "is_symmetric": False,

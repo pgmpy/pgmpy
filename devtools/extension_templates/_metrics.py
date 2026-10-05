@@ -67,14 +67,14 @@ class MyMetric(BaseSupervisedMetric):
     .. [1] TODO: Add citation for the metric
     """
 
-    # TODO: Fill in the tags for your metric. This is mandatory.
+    # TODO: Set every tag. `pgmpy.registry.all_tags("supervised_metric")` lists them, and the tag classes in
+    #       `pgmpy/registry/_tags.py` document each tag and its allowed values.
     _tags = {
-        "name": "my_metric",  # Change to your metric name (lowercase, underscores allowed)
-        "requires_true_graph": True,  # Set to True for supervised metrics
-        "requires_data": False,  # Set to True if metric needs data in addition to graphs
-        "lower_is_better": True,  # Set to False if higher values are better
-        "is_symmetric": False,  # Set to True if metric(A, B) == metric(B, A)
-        "supported_graph_types": (DAG,),  # Add supported graph types (DAG, PDAG, etc.)
+        "name": "my_metric",
+        "is_symmetric": False,
+        "supported_graph_types": [DAG],
+        "output_type": "scalar",
+        "lower_is_better": True,
     }
 
     # TODO: Add all parameters required for the metric in the init method.
@@ -160,13 +160,13 @@ class MyUnsupervisedMetric(BaseUnsupervisedMetric):
     .. [1] TODO: Add citation for the metric
     """
 
-    # TODO: Fill in the tags for your metric. This is mandatory.
+    # TODO: Set every tag. `pgmpy.registry.all_tags("unsupervised_metric")` lists them, and the tag classes in
+    #       `pgmpy/registry/_tags.py` document each tag and its allowed values.
     _tags = {
-        "name": "my_unsupervised_metric",  # Change to your metric name
-        "requires_true_graph": False,  # Always False for unsupervised metrics
-        "requires_data": True,  # Always True for unsupervised metrics
-        "lower_is_better": False,  # Set based on your metric's interpretation
-        "supported_graph_types": (DAG,),  # Add supported graph types
+        "name": "my_unsupervised_metric",
+        "supported_graph_types": [DAG],
+        "output_type": "scalar",
+        "lower_is_better": False,
     }
 
     # TODO: Add all parameters required for the metric in the init method.

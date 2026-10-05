@@ -68,11 +68,10 @@ class OrientationConfusionMatrix(BaseSupervisedMetric):
 
     _tags = {
         "name": "orientation_confusion_matrix",
-        "requires_true_graph": True,
-        "requires_data": False,
-        "lower_is_better": False,
         "is_symmetric": False,
-        "supported_graph_types": (DAG,),
+        "supported_graph_types": [DAG],
+        "output_type": "dict",
+        "lower_is_better": False,
     }
 
     def __init__(self, metrics: list[str] | None = None):

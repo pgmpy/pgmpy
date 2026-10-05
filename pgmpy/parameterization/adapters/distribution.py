@@ -1,0 +1,133 @@
+from collections.abc import Hashable
+from copy import deepcopy
+from numbers import Real
+from typing import TYPE_CHECKING, Any
+
+import numpy as np
+import pandas as pd
+from skbase.utils.dependencies import _safe_import
+
+from pgmpy.parameterization._base import BaseParameter, _checked_evidence, _parent_order
+from pgmpy.parameterization.distributions import NominalDistribution
+
+BaseDistribution = _safe_import("skpro.distributions.base.BaseDistribution")
+IID = _safe_import("skpro.distributions.IID")
+
+if TYPE_CHECKING:
+    from skpro.distributions.base import BaseDistribution  # noqa: F811
+
+
+class DistributionAdapter(BaseParameter):
+    """Parameterization with a fixed distribution, such as that of a root or of a variable set by an intervention.
+
+    The distribution is given, not learned: ``from_values`` creates a fitted instance without data, e.g. for ``do()``,
+    and ``fit`` only records the target and its parents, ignoring their values. ``predict_proba`` gives the distribution
+    to every row of ``X``, and without ``X`` the distribution itself. A distribution whose parameters are numbers is
+    rebuilt for the rows; any other, e.g. ``Empirical`` or ``ZeroInflated``, is repeated by skpro's ``IID``, which has
+    no ``pmf``. The target is discrete for a ``NominalDistribution`` and continuous for any other distribution, whatever
+    skpro's measure type of it.
+
+    Requires the optional dependency ``skpro``.
+
+    Parameters
+    ----------
+    distribution : skpro distribution
+        A scalar distribution, e.g. ``skpro.distributions.Normal(mu=0, sigma=1)`` or a ``NominalDistribution``. An
+        ``IID`` distribution stands for the scalar distribution it repeats.
+
+    Attributes
+    ----------
+    distribution_ : skpro distribution
+        A copy of the scalar distribution.
+
+    Warnings
+    --------
+    Experimental: the API of ``pgmpy.parameterization`` may change in any release without a deprecation period.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> from skpro.distributions import Normal
+    >>> from pgmpy.parameterization.adapters import DistributionAdapter
+    >>> cpd = DistributionAdapter.from_values("A", Normal(mu=0.0, sigma=1.0))
+    >>> dist = cpd.predict_proba(pd.DataFrame(index=[10, 11, 12]))
+    >>> type(dist).__name__, dist.index.tolist(), dist.columns.tolist()
+    ('Normal', [10, 11, 12], ['A'])
+    >>> cpd.sample(n_samples=4, random_state=0).shape
+    (4, 1)
+    """
+
+    _tags = {
+        "variable_type": ["discrete", "continuous"],
+        # The data is ignored, so weights change nothing.
+        "supports_weighted_data": True,
+        "python_dependencies": "skpro",
+    }
+
+    def __init__(self, distribution: "BaseDistribution") -> None:
+        self.distribution = distribution
+        super().__init__()
+
+        if not isinstance(distribution, BaseDistribution):
+            raise TypeError(f"distribution must be a skpro distribution, but is a {type(distribution).__name__}.")
+        self._scalar = distribution.distribution if isinstance(distribution, IID) else distribution
+        if self._scalar.ndim != 0:
+            raise ValueError(f"distribution must be scalar, but has shape {self._scalar.shape}.")
+        self.set_tags(variable_type="discrete" if isinstance(self._scalar, NominalDistribution) else "continuous")
+
+    def set_params(self, **params: Any) -> "DistributionAdapter":
+        """Set the parameters, and check the updated distribution and take the tags from it."""
+        # skbase resets before it sets nested parameters, such as distribution__mu, so reset again.
+        return super().set_params(**params).reset()
+
+    @classmethod
+    def from_values(
+        cls, variable: Hashable, distribution: "BaseDistribution", evidence: list | tuple | None = None
+    ) -> "DistributionAdapter":
+        """Create a fitted DistributionAdapter without data.
+
+        Parameters
+        ----------
+        variable : hashable
+            Name of the target variable.
+        distribution : skpro distribution
+            The target's distribution, as for ``DistributionAdapter``.
+        evidence : list or tuple, optional
+            Names of the parent variables, whose values are ignored. ``None`` for a root variable.
+
+        Returns
+        -------
+        DistributionAdapter
+            A fitted instance. Its parents are sorted by name.
+        """
+        evidence = _checked_evidence(variable, evidence)
+        cpd = cls(distribution)
+        cpd.variable_ = variable
+        cpd.evidence_ = [evidence[position] for position in _parent_order(evidence)]
+        cpd.variable_type_ = cpd.get_tag("variable_type")
+        cpd.distribution_ = deepcopy(cpd._scalar)
+        cpd._is_fitted = True
+        return cpd
+
+    def _fit(self, X: pd.DataFrame, y: pd.DataFrame, sample_weight: np.ndarray | None) -> None:
+        self.distribution_ = deepcopy(self._scalar)
+
+    def _predict_proba(self, X: pd.DataFrame | None) -> Any:
+        scalar = self.distribution_
+        if X is None:
+            return deepcopy(scalar)
+        if isinstance(scalar, NominalDistribution):
+            return NominalDistribution(
+                probs=np.tile(np.asarray(scalar.probs, dtype=float), (len(X), 1)),
+                categories=list(scalar.categories),
+                index=X.index,
+                columns=[self.variable_],
+            )
+        params = {
+            name: value for name, value in scalar.get_params(deep=False).items() if name not in ("index", "columns")
+        }
+        # A distribution whose parameters are numbers is rebuilt with them for the rows; any other is repeated by IID.
+        if all(isinstance(value, Real) and not isinstance(value, bool) for value in params.values()):
+            numbers = {name: float(value) for name, value in params.items()}
+            return type(scalar)(**numbers, index=X.index, columns=[self.variable_])
+        return IID(deepcopy(scalar), index=X.index, columns=[self.variable_])

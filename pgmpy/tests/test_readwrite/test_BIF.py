@@ -182,7 +182,7 @@ class TestBIFReader(unittest.TestCase):
         ]
         self.assertListEqual(sorted(self.reader.variable_edges), sorted(edges_expected))
 
-    def test_get_model(self):
+    def test_read(self):
         edges_expected = [
             ("family-out", "dog-out"),
             ("bowel-problem", "dog-out"),
@@ -258,7 +258,7 @@ class TestBIFReader(unittest.TestCase):
                 },
             ),
         ]
-        model = self.reader.get_model()
+        model = self.reader.read()
         model_cpds = model.get_cpds()
         for cpd_index in range(5):
             self.assertEqual(model_cpds[cpd_index], cpds_expected[cpd_index])
@@ -270,7 +270,7 @@ class TestBIFReader(unittest.TestCase):
         self.assertListEqual(sorted(model.edges()), sorted(edges_expected))
 
     def test_water_model(self):
-        model = self.water_model.get_model()
+        model = self.water_model.read()
         self.assertEqual(len(model.nodes()), 32)
         self.assertEqual(len(model.edges()), 66)
         self.assertEqual(len(model.get_cpds()), 32)
@@ -322,8 +322,8 @@ class TestBIFReader(unittest.TestCase):
                 """,
             include_properties=True,
         )
-        table_model = self.reader.get_model()
-        default_model = default_reader.get_model()
+        table_model = self.reader.read()
+        default_model = default_reader.read()
         self.assertEqual(sorted(table_model.nodes()), sorted(default_model.nodes()))
         self.assertEqual(sorted(table_model.edges()), sorted(default_model.edges()))
         for var in table_model.nodes():
@@ -495,8 +495,8 @@ probability ( light-on | family-out ) {
 
     def test_write_read_equal(self):
         self.writer.write_bif("test_bif.bif")
-        reader = BIFReader("test_bif.bif")
-        read_model = reader.get_model(state_name_type=int)
+        reader = BIFReader("test_bif.bif", state_name_type=int)
+        read_model = reader.read()
         self.assertEqual(sorted(self.model.nodes()), sorted(read_model.nodes()))
         self.assertEqual(sorted(self.model.edges()), sorted(read_model.edges()))
         for var in self.model.nodes():
@@ -527,20 +527,13 @@ probability ( light-on | family-out ) {
             tmp_path = tmp.name
 
         try:
-            with self.assertLogs("pgmpy", level="WARNING") as cm:
+            with self.assertWarnsRegex(UserWarning, "State name 'state,1' for variable 'A' contains a comma"):
                 writer = BIFWriter(model)
                 writer.write_bif(tmp_path)
 
-                # Verify the warning was logged
-                self.assertIn(
-                    "State name 'state,1' for variable 'A' contains commas. "
-                    "This may cause issues when loading the file. Consider removing any special characters.",
-                    cm.output[0],
-                )
-
             # Verify that loading fails due to commas in state names
             with self.assertRaises(ValueError):
-                BIFReader(tmp_path).get_model()
+                BIFReader(tmp_path).read()
         finally:
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
@@ -722,7 +715,7 @@ class TestBIFReaderTorch(unittest.TestCase):
         ]
         self.assertListEqual(sorted(self.reader.variable_edges), sorted(edges_expected))
 
-    def test_get_model(self):
+    def test_read(self):
         edges_expected = [
             ("family-out", "dog-out"),
             ("bowel-problem", "dog-out"),
@@ -798,7 +791,7 @@ class TestBIFReaderTorch(unittest.TestCase):
                 },
             ),
         ]
-        model = self.reader.get_model()
+        model = self.reader.read()
         model_cpds = model.get_cpds()
         for cpd_index in range(5):
             self.assertEqual(model_cpds[cpd_index], cpds_expected[cpd_index])
@@ -810,7 +803,7 @@ class TestBIFReaderTorch(unittest.TestCase):
         self.assertListEqual(sorted(model.edges()), sorted(edges_expected))
 
     def test_water_model(self):
-        model = self.water_model.get_model()
+        model = self.water_model.read()
         self.assertEqual(len(model.nodes()), 32)
         self.assertEqual(len(model.edges()), 66)
         self.assertEqual(len(model.get_cpds()), 32)
@@ -859,8 +852,8 @@ class TestBIFReaderTorch(unittest.TestCase):
                 """,
             include_properties=True,
         )
-        table_model = self.reader.get_model()
-        default_model = default_reader.get_model()
+        table_model = self.reader.read()
+        default_model = default_reader.read()
         self.assertEqual(sorted(table_model.nodes()), sorted(default_model.nodes()))
         self.assertEqual(sorted(table_model.edges()), sorted(default_model.edges()))
         for var in table_model.nodes():
@@ -1042,8 +1035,8 @@ probability ( light-on | family-out ) {
 
     def test_write_read_equal(self):
         self.writer.write_bif("test_bif.bif")
-        reader = BIFReader("test_bif.bif")
-        read_model = reader.get_model(state_name_type=int)
+        reader = BIFReader("test_bif.bif", state_name_type=int)
+        read_model = reader.read()
         self.assertEqual(sorted(self.model.nodes()), sorted(read_model.nodes()))
         self.assertEqual(sorted(self.model.edges()), sorted(read_model.edges()))
         for var in self.model.nodes():

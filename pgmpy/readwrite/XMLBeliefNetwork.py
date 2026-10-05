@@ -1,14 +1,15 @@
 import itertools
-import warnings
 import xml.etree.ElementTree as etree
 
 import numpy as np
 
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
+from pgmpy.readwrite._base import BaseReader, BaseWriter
+from pgmpy.utils._warnings import _warn_external
 
 
-class XBNReader:
+class XBNReader(BaseReader):
     """
     Initializer for XBNReader class.
 
@@ -34,13 +35,15 @@ class XBNReader:
     - :footcite:t:`msr_xmlbn`
     """
 
+    format_name = "xbn"
+    file_extensions = ["xbn"]
+
     def __init__(self, path=None, string=None):
-        if path:
+        super().__init__(path=path, string=string)
+        if path is not None:
             self.network = etree.parse(path).getroot()
-        elif string:
-            self.network = etree.fromstring(string)
         else:
-            raise ValueError("Must specify either path or string")
+            self.network = etree.fromstring(string)
 
         self.bnmodel = self.network.find("BNMODEL")
         self.analysisnotebook = self.get_analysisnotebook_values()
@@ -160,17 +163,17 @@ class XBNReader:
 
         The ndarray is stored in the standard way such that the rightmost variable
         changes most often. Consider a CPD of variable 'd' which has parents 'b' and
-        'c' (distribution['CONDSET'] = ['b', 'c'])
+        'c' (distribution['CONDSET'] = ['b', 'c'])::
 
-                  |  d_0     d_1
-        ---------------------------
-        b_0, c_0  |  0.8     0.2
-        b_0, c_1  |  0.9     0.1
-        b_1, c_0  |  0.7     0.3
-        b_1, c_1  |  0.05    0.95
+            Parent states    d_0     d_1
+            b_0, c_0         0.8     0.2
+            b_0, c_1         0.9     0.1
+            b_1, c_0         0.7     0.3
+            b_1, c_1         0.05    0.95
 
-        The value of distribution['d']['DPIS'] for the above example will be:
-        array([[ 0.8 ,  0.2 ], [ 0.9 ,  0.1 ], [ 0.7 ,  0.3 ], [ 0.05,  0.95]])
+        The value of distribution['d']['DPIS'] for the above example will be::
+
+            array([[ 0.8 ,  0.2 ], [ 0.9 ,  0.1 ], [ 0.7 ,  0.3 ], [ 0.05,  0.95]])
 
         Examples
         --------
@@ -219,7 +222,7 @@ class XBNReader:
 
         return distribution
 
-    def get_model(self):
+    def read(self):
         """
         Returns an instance of Bayesian Model.
         """
@@ -244,7 +247,7 @@ class XBNReader:
         return model
 
 
-class XBNWriter:
+class XBNWriter(BaseWriter):
     """
     Initializer for XBNWriter class
 
@@ -269,10 +272,12 @@ class XBNWriter:
     >>> writer = XBNWriter(asia)
     """
 
+    format_name = "xbn"
+    file_extensions = ["xbn"]
+    supported_models = (DiscreteBayesianNetwork,)
+
     def __init__(self, model, encoding="utf-8", prettyprint=True):
-        if not isinstance(model, DiscreteBayesianNetwork):
-            raise TypeError("Model must be an instance of Bayesian Model.")
-        self.model = model
+        super().__init__(model)
 
         self.encoding = encoding
         self.prettyprint = prettyprint
@@ -290,6 +295,9 @@ class XBNWriter:
         """
         Return the XML as string.
         """
+        return self._to_bytes().decode(self.encoding)
+
+    def _to_bytes(self):
         if self.prettyprint:
             self.indent(self.network)
         return etree.tostring(self.network, encoding=self.encoding)
@@ -500,22 +508,21 @@ class XBNWriter:
         ----------
         filename : Name of the file
 
-        Example
-        -------
+        Examples
+        --------
         >>> from pgmpy.example_models import load_model
         >>> from pgmpy.readwrite import XBNWriter
         >>> asia = load_model("bnlearn/asia")
         >>> writer = XBNWriter(asia)
         >>> writer.write(filename="asia.xbn")
         """
-        writer = self.__str__()
         with open(filename, "wb") as fout:
-            fout.write(writer)
+            fout.write(self._to_bytes())
 
     def write_xbn(self, filename):
-        warnings.warn(
-            "`XBNWriter.write_xbn` is deprecated and will be removed in v2.0. Please use `XBNWriter.write` instead.",
+        _warn_external(
+            "`XBNWriter.write_xbn` is deprecated since v1.1.0 and will be removed in v2.0. "
+            "Use `XBNWriter.write` instead.",
             FutureWarning,
-            stacklevel=2,
         )
         self.write(filename)

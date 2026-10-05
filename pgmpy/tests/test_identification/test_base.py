@@ -2,6 +2,7 @@ import pytest
 
 from pgmpy.base import ADMG, DAG, PDAG
 from pgmpy.identification import BaseFormulaIdentification, BaseGraphicalIdentification
+from pgmpy.identification.probability_expression import ProbabilityExpressionTree, ProbabilityNode
 
 
 @pytest.fixture
@@ -12,10 +13,10 @@ def cg():
 
 
 @pytest.fixture
-def admg_bowarc():
-    """ADMG with a bow-arc (X->Z<->X, Z->Y). Standard identifiable structure."""
+def admg_frontdoor():
+    """ADMG with X->Z->Y and X<->Y, identifiable by the frontdoor criterion."""
     return ADMG(
-        edge_list=[("X", "Z", "->"), ("Z", "Y", "->"), ("X", "Z", "<>")],
+        edge_list=[("X", "Z", "->"), ("Z", "Y", "->"), ("X", "Y", "<>")],
         roles={"exposures": "X", "outcomes": "Y"},
     )
 
@@ -91,33 +92,36 @@ class TestBaseGraphicalIdentification:
 
 
 class DummyFormulaIdentification(BaseFormulaIdentification):
-    """Mimics a successful identification - returns a sentinel string."""
+    """Returns a query expression to exercise the base-class wrapper."""
 
     supported_graph_types = (ADMG, DAG)
 
     def _identify(self, causal_graph):
-        return "identified"
+        return ProbabilityExpressionTree(
+            ProbabilityNode(
+                causal_graph.get_role("outcomes"),
+                do=causal_graph.get_role("exposures"),
+                cond=causal_graph.get_role("conditioning"),
+            )
+        )
 
 
-class DummyFailingFormulaIdentification(BaseFormulaIdentification):
-    """Mimics a failed identification - sets hedge_ and returns False."""
+class DummyFailingFormulaIdentification(DummyFormulaIdentification):
+    """Fails for the bow-arc effect and succeeds for observational queries."""
 
-    supported_graph_types = (ADMG, DAG)
-
-    def _identify(self, causal_graph):
-        # In a real algorithm, hedge_ would be the witness c-component subgraph.
-        self.hedge_ = causal_graph
-        return False
-
-
-class DummyConditionalFormulaIdentification(BaseFormulaIdentification):
-    """Requires a 'conditioning' role in addition to exposures/outcomes, mirroring IDC."""
-
-    supported_graph_types = (ADMG, DAG)
-    required_roles = ("exposures", "outcomes", "conditioning")
+    supported_graph_types = (ADMG,)
 
     def _identify(self, causal_graph):
-        return "identified"
+        if causal_graph.get_role("exposures"):
+            self.hedge_ = (causal_graph, causal_graph.get_subgraph(causal_graph.get_role("outcomes")))
+            return False
+        return super()._identify(causal_graph)
+
+
+class DummyRequiredRoleFormulaIdentification(DummyFormulaIdentification):
+    """Exercises subclass-specific requirements for an additional role."""
+
+    required_roles = ("outcomes", "conditioning")
 
 
 class IncompleteFormulaIdentification(BaseFormulaIdentification):
@@ -127,39 +131,47 @@ class IncompleteFormulaIdentification(BaseFormulaIdentification):
 
 
 class TestBaseFormulaIdentification:
-    def test_identify_success(self, admg_bowarc):
+    def test_identify_success(self, admg_frontdoor, cg):
         identifier = DummyFormulaIdentification()
-        assert identifier.identify(admg_bowarc) == "identified"
-        assert identifier(admg_bowarc) == "identified"
+        expected = ProbabilityExpressionTree(ProbabilityNode({"Y"}, do={"X"}))
+        assert identifier.identify(admg_frontdoor) == expected
+        assert identifier(cg) == expected
+        assert identifier(admg_frontdoor.without_role("exposures")) == ProbabilityExpressionTree(ProbabilityNode({"Y"}))
         assert identifier.hedge_ is None
 
-    def test_identify_failure_sets_hedge(self, admg_bowarc):
+    def test_identify_failure_sets_hedge(self):
+        admg = ADMG(
+            edge_list=[("X", "Y", "->"), ("X", "Y", "<>")],
+            roles={"exposures": "X", "outcomes": "Y"},
+        )
         identifier = DummyFailingFormulaIdentification()
-        result = identifier.identify(admg_bowarc)
+        result = identifier.identify(admg)
 
         assert result is False
-        assert identifier.hedge_ is admg_bowarc
+        assert identifier.hedge_[0] is admg
+        assert set(identifier.hedge_[1]) == {"Y"}
+        assert identifier(admg.without_role("exposures")) == ProbabilityExpressionTree(ProbabilityNode({"Y"}))
+        assert identifier.hedge_ is None
 
-    def test_identify_wrong_graph_type(self, admg_bowarc):
-        class DAGOnly(BaseFormulaIdentification):
+    def test_identify_wrong_graph_type(self, admg_frontdoor):
+        class DAGOnly(DummyFormulaIdentification):
             supported_graph_types = (DAG,)
 
-            def _identify(self, causal_graph):
-                return "ok"
-
         with pytest.raises(ValueError, match="must be an instance of"):
-            DAGOnly().identify(admg_bowarc)
+            DAGOnly().identify(admg_frontdoor)
 
-    def test_identify_missing_roles(self, admg_no_roles, admg_bowarc):
-        with pytest.raises(ValueError, match="exposures"):
+    def test_identify_missing_roles(self, admg_no_roles, admg_frontdoor):
+        with pytest.raises(ValueError, match="outcomes"):
             DummyFormulaIdentification().identify(admg_no_roles)
 
         with pytest.raises(ValueError, match="conditioning"):
-            DummyConditionalFormulaIdentification().identify(admg_bowarc)
+            DummyRequiredRoleFormulaIdentification().identify(admg_frontdoor)
 
     def test_identify_with_all_required_roles(self, admg_with_conditioning):
-        assert DummyConditionalFormulaIdentification().identify(admg_with_conditioning) == "identified"
+        expected = ProbabilityExpressionTree(ProbabilityNode({"Y"}, do={"X"}, cond={"Z"}))
+        assert DummyRequiredRoleFormulaIdentification().identify(admg_with_conditioning) == expected
+        assert DummyFormulaIdentification().identify(admg_with_conditioning) == expected
 
-    def test_identify_not_implemented(self, admg_bowarc):
+    def test_identify_not_implemented(self, admg_frontdoor):
         with pytest.raises(NotImplementedError):
-            IncompleteFormulaIdentification().identify(admg_bowarc)
+            IncompleteFormulaIdentification().identify(admg_frontdoor)

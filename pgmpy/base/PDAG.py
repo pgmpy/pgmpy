@@ -1,9 +1,14 @@
 import itertools
+from typing import TYPE_CHECKING
 
 import networkx as nx
 
 from pgmpy import logger
 from pgmpy.base._base import _CoreGraph
+from pgmpy.utils._warnings import _warn_external
+
+if TYPE_CHECKING:
+    from pgmpy.base import DAG
 
 
 class PDAG(_CoreGraph):
@@ -167,7 +172,7 @@ class PDAG(_CoreGraph):
                             pdag.orient_undirected_edge(y, z, inplace=True)
                             changed = True
                             if debug:
-                                logger.info(f"Applying Rule 1: {x} -> {y} - {z} => {x} -> {y} -> {z}")
+                                logger.debug(f"Applying Rule 1: {x} -> {y} - {z} => {x} -> {y} -> {z}")
 
             # Rule 2: X -> Z -> Y and X - Y  =>  X -> Y
             for z in pdag.nodes():
@@ -177,7 +182,7 @@ class PDAG(_CoreGraph):
                             pdag.orient_undirected_edge(x, y, inplace=True)
                             changed = True
                             if debug:
-                                logger.info(f"Applying Rule 2: {x} -> {z} -> {y} and {x} - {y} => {x} -> {y}")
+                                logger.debug(f"Applying Rule 2: {x} -> {z} -> {y} and {x} - {y} => {x} -> {y}")
 
             # Rule 3: X - {Y, Z, W} and {Z, Y} -> W  =>  X -> W
             for x in pdag.nodes():
@@ -194,7 +199,7 @@ class PDAG(_CoreGraph):
                         pdag.orient_undirected_edge(x, w, inplace=True)
                         changed = True
                         if debug:
-                            logger.info(f"Applying Rule 3: {x} - {y}, {z}, {w} and {y}, {z} -> {w} => {x} -> {w}")
+                            logger.debug(f"Applying Rule 3: {x} - {y}, {z}, {w} and {y}, {z} -> {w} => {x} -> {w}")
                         break
 
             # Rule 4: d -> c -> b, a - {b, c, d}, b not adj d  =>  a -> b
@@ -234,13 +239,20 @@ class PDAG(_CoreGraph):
             cpdag.with_role(role=role, variables=variables, inplace=True)
         return cpdag
 
-    def to_dag(self):
+    def to_dag(self) -> "DAG":
         """
         Returns one possible DAG represented by this PDAG.
 
         Returns
         -------
         pgmpy.base.DAG
+
+        Warns
+        -----
+        UserWarning
+            If no consistent extension exists. Remaining undirected edges are
+            oriented arbitrarily, preserving the skeleton and directed edges
+            but potentially changing the v-structures.
 
         References
         ----------
@@ -272,9 +284,11 @@ class PDAG(_CoreGraph):
                     break
 
             if not found:
-                logger.warning(
-                    "PDAG has no faithful extension (= no oriented DAG with the same v-structures as "
-                    "PDAG). Remaining undirected PDAG edges oriented arbitrarily."
+                _warn_external(
+                    "PDAG has no consistent extension preserving its directed edges "
+                    "and v-structures. Remaining undirected edges are being oriented "
+                    "arbitrarily; the returned DAG may have different v-structures.",
+                    UserWarning,
                 )
                 for x, y in pdag.get_edges(data=False):
                     if dag.has_edge(x, y) or dag.has_edge(y, x):

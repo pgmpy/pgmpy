@@ -3,6 +3,7 @@ import unittest
 import networkx as nx
 import numpy as np
 
+from pgmpy.example_models import load_model
 from pgmpy.factors import factor_product
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.independencies import Independencies
@@ -241,12 +242,32 @@ class TestMarkovNetworkMethods(unittest.TestCase):
         phi4 = DiscreteFactor(["d", "a"], [5, 2], np.random.random(10))
         self.graph.add_factors(phi1, phi2, phi3, phi4)
 
+        # default (MinFill): every node has one fill-in edge, so the first node (a) is eliminated first -> chord b-d
         junction_tree = self.graph.to_junction_tree()
         self.assertListEqual(
             hf.recursive_sorted(junction_tree.nodes()),
             [["a", "b", "d"], ["b", "c", "d"]],
         )
         self.assertEqual(len(junction_tree.edges()), 1)
+        # the heuristic / elimination order are forwarded to triangulate: H1 eliminates b first -> chord a-c
+        for kwargs in ({"heuristic": "H1"}, {"order": ["b", "a", "c", "d"]}):
+            junction_tree = self.graph.to_junction_tree(**kwargs)
+            self.assertListEqual(
+                hf.recursive_sorted(junction_tree.nodes()),
+                [["a", "b", "c"], ["a", "c", "d"]],
+            )
+            self.assertTrue(junction_tree.check_model())
+        with self.assertRaises(ValueError):
+            self.graph.to_junction_tree(heuristic="bogus")
+
+    def test_junction_tree_disconnected_model_raises(self):
+        self.graph.add_edges_from([("a", "b"), ("c", "d")])
+        self.graph.add_factors(
+            DiscreteFactor(["a", "b"], [2, 2], np.random.rand(4)),
+            DiscreteFactor(["c", "d"], [2, 2], np.random.rand(4)),
+        )
+        with self.assertRaisesRegex(ValueError, "connected"):
+            self.graph.to_junction_tree()
 
     def test_junction_tree_single_clique(self):
         self.graph.add_edges_from([("x1", "x2"), ("x2", "x3"), ("x1", "x3")])
@@ -400,89 +421,87 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
         self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "a")])
         self.assertTrue(self.graph.is_triangulated())
 
-    def test_triangulation_h1_inplace(self):
-        self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "d"), ("d", "a")])
-        phi1 = DiscreteFactor(["a", "b"], [2, 3], np.random.rand(6))
-        phi2 = DiscreteFactor(["b", "c"], [3, 4], np.random.rand(12))
-        phi3 = DiscreteFactor(["c", "d"], [4, 5], np.random.rand(20))
-        phi4 = DiscreteFactor(["d", "a"], [5, 2], np.random.random(10))
-        self.graph.add_factors(phi1, phi2, phi3, phi4)
-        self.graph.triangulate(heuristic="H1", inplace=True)
-        self.assertTrue(self.graph.is_triangulated())
+    def _add_four_cycle(self, graph=None):
+        graph = self.graph if graph is None else graph
+        graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "d"), ("d", "a")])
+        graph.add_factors(
+            DiscreteFactor(["a", "b"], [2, 3], np.random.rand(6)),
+            DiscreteFactor(["b", "c"], [3, 4], np.random.rand(12)),
+            DiscreteFactor(["c", "d"], [4, 5], np.random.rand(20)),
+            DiscreteFactor(["d", "a"], [5, 2], np.random.random(10)),
+        )
+        return graph
+
+    def test_triangulation_heuristics(self):
+        # 4-cycle a-b-c-d with cardinalities a=2, b=3, c=4, d=5. Eliminating a or c first adds the chord b-d,
+        # eliminating b or d first adds a-c. MinFill / MinNeighbors: all nodes tie, the first node in graph
+        # order (a) goes first. H1 / MinWeight (size of the created clique {a,c}=8 vs {b,d}=15) and
+        # WeightedMinFill: b (tie with d, first in order). H2-H6 pick d (highest cardinality, cheap
+        # created clique).
+        expected_chord = {
+            "MinFill": ["b", "d"],
+            "MinNeighbors": ["b", "d"],
+            "MinWeight": ["a", "c"],
+            "WeightedMinFill": ["a", "c"],
+            "H1": ["a", "c"],
+            "H2": ["a", "c"],
+            "H3": ["a", "c"],
+            "H4": ["a", "c"],
+            "H5": ["a", "c"],
+            "H6": ["a", "c"],
+        }
+        for heuristic, chord in expected_chord.items():
+            with self.subTest(heuristic=heuristic):
+                graph = self._add_four_cycle(DiscreteMarkovNetwork())
+                expected_edges = hf.recursive_sorted([["a", "b"], ["b", "c"], ["c", "d"], ["d", "a"], chord])
+                # inplace=False: a new triangulated graph, the original untouched
+                H = graph.triangulate(heuristic=heuristic)
+                self.assertTrue(H.is_triangulated())
+                self.assertListEqual(hf.recursive_sorted(H.edges()), expected_edges)
+                self.assertEqual(len(graph.edges()), 4)
+                # the ordering is deterministic
+                self.assertListEqual(
+                    hf.recursive_sorted(graph.triangulate(heuristic=heuristic).edges()), expected_edges
+                )
+                # inplace=True: modifies and returns the graph itself
+                self.assertIs(graph.triangulate(heuristic=heuristic, inplace=True), graph)
+                self.assertTrue(graph.is_triangulated())
+                self.assertListEqual(hf.recursive_sorted(graph.edges()), expected_edges)
+        # the default heuristic is MinFill; unknown heuristics raise
+        graph = self._add_four_cycle(DiscreteMarkovNetwork())
         self.assertListEqual(
-            hf.recursive_sorted(self.graph.edges()),
-            [["a", "b"], ["a", "c"], ["a", "d"], ["b", "c"], ["c", "d"]],
+            hf.recursive_sorted(graph.triangulate().edges()),
+            hf.recursive_sorted([["a", "b"], ["b", "c"], ["c", "d"], ["d", "a"], ["b", "d"]]),
+        )
+        with self.assertRaises(ValueError):
+            graph.triangulate(heuristic="H7")
+
+    def test_triangulation_given_order(self):
+        self._add_four_cycle()
+        H = self.graph.triangulate(order=["b", "d", "a", "c"])
+        self.assertListEqual(
+            hf.recursive_sorted(H.edges()),
+            hf.recursive_sorted([["a", "b"], ["b", "c"], ["c", "d"], ["d", "a"], ["a", "c"]]),
         )
 
-    def test_triangulation_h2_inplace(self):
-        self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "d"), ("d", "a")])
-        phi1 = DiscreteFactor(["a", "b"], [2, 3], np.random.rand(6))
-        phi2 = DiscreteFactor(["b", "c"], [3, 4], np.random.rand(12))
-        phi3 = DiscreteFactor(["c", "d"], [4, 5], np.random.rand(20))
-        phi4 = DiscreteFactor(["d", "a"], [5, 2], np.random.random(10))
-        self.graph.add_factors(phi1, phi2, phi3, phi4)
-        self.graph.triangulate(heuristic="H2", inplace=True)
-        self.assertTrue(self.graph.is_triangulated())
-        self.assertListEqual(
-            hf.recursive_sorted(self.graph.edges()),
-            [["a", "b"], ["a", "c"], ["a", "d"], ["b", "c"], ["c", "d"]],
-        )
+    def test_triangulation_keeps_isolated_nodes(self):
+        self._add_four_cycle()
+        self.graph.add_node("e")
+        self.graph.add_factors(DiscreteFactor(["e"], [2], [0.4, 0.6]))
+        H = self.graph.triangulate()
+        self.assertTrue(H.is_triangulated())
+        self.assertIn("e", H.nodes())
+        self.assertEqual(len(H.edges()), 5)
 
-    def test_triangulation_h3_inplace(self):
-        self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "d"), ("d", "a")])
-        phi1 = DiscreteFactor(["a", "b"], [2, 3], np.random.rand(6))
-        phi2 = DiscreteFactor(["b", "c"], [3, 4], np.random.rand(12))
-        phi3 = DiscreteFactor(["c", "d"], [4, 5], np.random.rand(20))
-        phi4 = DiscreteFactor(["d", "a"], [5, 2], np.random.random(10))
-        self.graph.add_factors(phi1, phi2, phi3, phi4)
-        self.graph.triangulate(heuristic="H3", inplace=True)
-        self.assertTrue(self.graph.is_triangulated())
-        self.assertListEqual(
-            hf.recursive_sorted(self.graph.edges()),
-            [["a", "b"], ["a", "d"], ["b", "c"], ["b", "d"], ["c", "d"]],
-        )
-
-    def test_triangulation_h4_inplace(self):
-        self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "d"), ("d", "a")])
-        phi1 = DiscreteFactor(["a", "b"], [2, 3], np.random.rand(6))
-        phi2 = DiscreteFactor(["b", "c"], [3, 4], np.random.rand(12))
-        phi3 = DiscreteFactor(["c", "d"], [4, 5], np.random.rand(20))
-        phi4 = DiscreteFactor(["d", "a"], [5, 2], np.random.random(10))
-        self.graph.add_factors(phi1, phi2, phi3, phi4)
-        self.graph.triangulate(heuristic="H4", inplace=True)
-        self.assertTrue(self.graph.is_triangulated())
-        self.assertListEqual(
-            hf.recursive_sorted(self.graph.edges()),
-            [["a", "b"], ["a", "d"], ["b", "c"], ["b", "d"], ["c", "d"]],
-        )
-
-    def test_triangulation_h5_inplace(self):
-        self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "d"), ("d", "a")])
-        phi1 = DiscreteFactor(["a", "b"], [2, 3], np.random.rand(6))
-        phi2 = DiscreteFactor(["b", "c"], [3, 4], np.random.rand(12))
-        phi3 = DiscreteFactor(["c", "d"], [4, 5], np.random.rand(20))
-        phi4 = DiscreteFactor(["d", "a"], [5, 2], np.random.random(10))
-        self.graph.add_factors(phi1, phi2, phi3, phi4)
-        self.graph.triangulate(heuristic="H4", inplace=True)
-        self.assertTrue(self.graph.is_triangulated())
-        self.assertListEqual(
-            hf.recursive_sorted(self.graph.edges()),
-            [["a", "b"], ["a", "d"], ["b", "c"], ["b", "d"], ["c", "d"]],
-        )
-
-    def test_triangulation_h6_inplace(self):
-        self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "d"), ("d", "a")])
-        phi1 = DiscreteFactor(["a", "b"], [2, 3], np.random.rand(6))
-        phi2 = DiscreteFactor(["b", "c"], [3, 4], np.random.rand(12))
-        phi3 = DiscreteFactor(["c", "d"], [4, 5], np.random.rand(20))
-        phi4 = DiscreteFactor(["d", "a"], [5, 2], np.random.random(10))
-        self.graph.add_factors(phi1, phi2, phi3, phi4)
-        self.graph.triangulate(heuristic="H4", inplace=True)
-        self.assertTrue(self.graph.is_triangulated())
-        self.assertListEqual(
-            hf.recursive_sorted(self.graph.edges()),
-            [["a", "b"], ["a", "d"], ["b", "c"], ["b", "d"], ["c", "d"]],
-        )
+    def test_triangulation_of_larger_models_stays_small(self):
+        # regression: the old H6 default produced cliques of 19 variables on alarm (treewidth 4)
+        markov_model = load_model("bnlearn/alarm").to_markov_model()
+        cardinality = markov_model.get_cardinality()
+        for heuristic in ["MinFill", "WeightedMinFill", "MinWeight", "H1"]:
+            with self.subTest(heuristic=heuristic):
+                cliques = list(nx.find_cliques(markov_model.triangulate(heuristic=heuristic)))
+                self.assertLessEqual(max(len(clique) for clique in cliques), 6)
+                self.assertLess(sum(int(np.prod([cardinality[v] for v in clique])) for clique in cliques), 5000)
 
     def test_cardinality_mismatch_raises_error(self):
         self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "d"), ("d", "a")])
@@ -490,84 +509,6 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
         self.graph.add_factors(*factor_list)
         self.graph.add_factors(DiscreteFactor(["a", "b"], [2, 3], np.random.rand(6)))
         self.assertRaises(ValueError, self.graph.triangulate)
-
-    def test_triangulation_h1_create_new(self):
-        self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "d"), ("d", "a")])
-        phi1 = DiscreteFactor(["a", "b"], [2, 3], np.random.rand(6))
-        phi2 = DiscreteFactor(["b", "c"], [3, 4], np.random.rand(12))
-        phi3 = DiscreteFactor(["c", "d"], [4, 5], np.random.rand(20))
-        phi4 = DiscreteFactor(["d", "a"], [5, 2], np.random.random(10))
-        self.graph.add_factors(phi1, phi2, phi3, phi4)
-        H = self.graph.triangulate(heuristic="H1", inplace=True)
-        self.assertListEqual(
-            hf.recursive_sorted(H.edges()),
-            [["a", "b"], ["a", "c"], ["a", "d"], ["b", "c"], ["c", "d"]],
-        )
-
-    def test_triangulation_h2_create_new(self):
-        self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "d"), ("d", "a")])
-        phi1 = DiscreteFactor(["a", "b"], [2, 3], np.random.rand(6))
-        phi2 = DiscreteFactor(["b", "c"], [3, 4], np.random.rand(12))
-        phi3 = DiscreteFactor(["c", "d"], [4, 5], np.random.rand(20))
-        phi4 = DiscreteFactor(["d", "a"], [5, 2], np.random.random(10))
-        self.graph.add_factors(phi1, phi2, phi3, phi4)
-        H = self.graph.triangulate(heuristic="H2", inplace=True)
-        self.assertListEqual(
-            hf.recursive_sorted(H.edges()),
-            [["a", "b"], ["a", "c"], ["a", "d"], ["b", "c"], ["c", "d"]],
-        )
-
-    def test_triangulation_h3_create_new(self):
-        self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "d"), ("d", "a")])
-        phi1 = DiscreteFactor(["a", "b"], [2, 3], np.random.rand(6))
-        phi2 = DiscreteFactor(["b", "c"], [3, 4], np.random.rand(12))
-        phi3 = DiscreteFactor(["c", "d"], [4, 5], np.random.rand(20))
-        phi4 = DiscreteFactor(["d", "a"], [5, 2], np.random.random(10))
-        self.graph.add_factors(phi1, phi2, phi3, phi4)
-        H = self.graph.triangulate(heuristic="H3", inplace=True)
-        self.assertListEqual(
-            hf.recursive_sorted(H.edges()),
-            [["a", "b"], ["a", "d"], ["b", "c"], ["b", "d"], ["c", "d"]],
-        )
-
-    def test_triangulation_h4_create_new(self):
-        self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "d"), ("d", "a")])
-        phi1 = DiscreteFactor(["a", "b"], [2, 3], np.random.rand(6))
-        phi2 = DiscreteFactor(["b", "c"], [3, 4], np.random.rand(12))
-        phi3 = DiscreteFactor(["c", "d"], [4, 5], np.random.rand(20))
-        phi4 = DiscreteFactor(["d", "a"], [5, 2], np.random.random(10))
-        self.graph.add_factors(phi1, phi2, phi3, phi4)
-        H = self.graph.triangulate(heuristic="H4", inplace=True)
-        self.assertListEqual(
-            hf.recursive_sorted(H.edges()),
-            [["a", "b"], ["a", "d"], ["b", "c"], ["b", "d"], ["c", "d"]],
-        )
-
-    def test_triangulation_h5_create_new(self):
-        self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "d"), ("d", "a")])
-        phi1 = DiscreteFactor(["a", "b"], [2, 3], np.random.rand(6))
-        phi2 = DiscreteFactor(["b", "c"], [3, 4], np.random.rand(12))
-        phi3 = DiscreteFactor(["c", "d"], [4, 5], np.random.rand(20))
-        phi4 = DiscreteFactor(["d", "a"], [5, 2], np.random.random(10))
-        self.graph.add_factors(phi1, phi2, phi3, phi4)
-        H = self.graph.triangulate(heuristic="H5", inplace=True)
-        self.assertListEqual(
-            hf.recursive_sorted(H.edges()),
-            [["a", "b"], ["a", "d"], ["b", "c"], ["b", "d"], ["c", "d"]],
-        )
-
-    def test_triangulation_h6_create_new(self):
-        self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "d"), ("d", "a")])
-        phi1 = DiscreteFactor(["a", "b"], [2, 3], np.random.rand(6))
-        phi2 = DiscreteFactor(["b", "c"], [3, 4], np.random.rand(12))
-        phi3 = DiscreteFactor(["c", "d"], [4, 5], np.random.rand(20))
-        phi4 = DiscreteFactor(["d", "a"], [5, 2], np.random.random(10))
-        self.graph.add_factors(phi1, phi2, phi3, phi4)
-        H = self.graph.triangulate(heuristic="H6", inplace=True)
-        self.assertListEqual(
-            hf.recursive_sorted(H.edges()),
-            [["a", "b"], ["a", "d"], ["b", "c"], ["b", "d"], ["c", "d"]],
-        )
 
     def test_copy(self):
         # Setup the original graph
