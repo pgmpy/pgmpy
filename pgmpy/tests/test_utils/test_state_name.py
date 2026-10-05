@@ -256,14 +256,15 @@ class TestStateNameDecorator:
     def test_inference_query_statename(self, model_with_state_names, model_no_state_names):
         inf_op1 = model_with_state_names.query(["grade"], evidence={"intel": "poor"})
         inf_op2 = model_no_state_names.query(["grade"], evidence={"intel": 0})
-        req_op = DiscreteFactor(
+        req_op1 = DiscreteFactor(
             ["grade"],
             [3],
             np.array([0.1, 0.1, 0.8]),
             state_names={"grade": ["A", "B", "F"]},
         )
-        assert inf_op1 == req_op
-        assert inf_op2 == req_op
+        req_op2 = DiscreteFactor(["grade"], [3], np.array([0.1, 0.1, 0.8]))
+        assert inf_op1 == req_op1
+        assert inf_op2 == req_op2
 
         inf_op1 = model_with_state_names.map_query(["grade"], evidence={"intel": "poor"})
         inf_op2 = model_no_state_names.map_query(["grade"], evidence={"intel": 0})
