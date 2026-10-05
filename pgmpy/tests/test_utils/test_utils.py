@@ -95,6 +95,14 @@ class TestPreprocessData(unittest.TestCase):
             },
         )
 
+    def test_preprocess_data_preserves_integer_dtype(self):
+        data = pd.DataFrame({"integer": pd.Series([1, 2, 3], dtype="int32")})
+
+        processed_data, dtypes = preprocess_data(data)
+
+        self.assertEqual(processed_data["integer"].dtype, data["integer"].dtype)
+        self.assertEqual(dtypes, {"integer": "N"})
+
 
 class TestGetExampleModel(unittest.TestCase):
     def test_get_categorical_models(self):
