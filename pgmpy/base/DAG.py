@@ -800,6 +800,12 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         """
         Finds the minimal d-separating set for `start` and `end`.
 
+        A set d-separates `start` and `end` exactly when it separates them in
+        the moralized ancestral graph of the two nodes, so the smallest such
+        set is the minimum node cut between `start` and `end` in that graph.
+        Latent variables are never part of the returned set unless
+        `include_latents` is true.
+
         Parameters
         ----------
         start: node
@@ -809,7 +815,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             The second node.
 
         include_latents: boolean (default: False)
-            If true, latent variables are consider for minimal d-seperator.
+            If true, latent variables are considered for the minimal d-separator.
 
         Examples
         --------
@@ -823,35 +829,37 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         """
         if (end in self.neighbors(start)) or (start in self.neighbors(end)):
             raise ValueError("No possible separators because start and end are adjacent")
-        an_graph = self.get_ancestral_graph([start, end])
-        separator = self.get_parents([start, end])
 
+        moral_graph = self.get_ancestral_graph([start, end]).moralize()
+
+        # The separator may not contain start, end, or (unless asked for)
+        # latent variables. Splitting every node into an in/out pair with unit
+        # capacity (infinite for forbidden nodes) turns the minimum node cut
+        # into a minimum s-t cut problem.
+        forbidden = {start, end}
         if not include_latents:
-            # If any of the parents were latents, take the latent's parent
-            while separator.intersection(self.latents):
-                separator_copy = separator.copy()
-                for u in separator:
-                    if u in self.latents:
-                        separator_copy.remove(u)
-                        separator_copy.update(set(self.predecessors(u)))
-                separator = separator_copy
+            forbidden = forbidden | set(self.latents)
 
-        # Remove the start and end nodes in case it reaches there while removing latents.
-        separator.difference_update({start, end})
+        inf_capacity = moral_graph.number_of_nodes() + 1
+        flow_graph = nx.DiGraph()
+        for node in moral_graph.nodes():
+            capacity = inf_capacity if node in forbidden else 1
+            flow_graph.add_edge((node, 0), (node, 1), capacity=capacity)
+        for u, v in moral_graph.edges():
+            flow_graph.add_edge((u, 1), (v, 0), capacity=inf_capacity)
+            flow_graph.add_edge((v, 1), (u, 0), capacity=inf_capacity)
 
-        # If the initial set is not able to d-separate, no d-separator is possible.
-        if an_graph.is_dconnected(start, end, observed=separator):
+        cut_value, (reachable, _) = nx.minimum_cut(flow_graph, (start, 1), (end, 0), capacity="capacity")
+
+        # No finite cut means every separator would need a forbidden node.
+        if cut_value >= inf_capacity:
             return None
 
-        # Go through the separator set, remove one element and check if it remains
-        # a dseparating set.
-        minimal_separator = separator.copy()
-
-        for u in separator:
-            if not an_graph.is_dconnected(start, end, observed=minimal_separator - {u}):
-                minimal_separator.remove(u)
-
-        return minimal_separator
+        return {
+            node
+            for node in moral_graph.nodes()
+            if node not in forbidden and (node, 0) in reachable and (node, 1) not in reachable
+        }
 
     def get_markov_blanket(self, node: Hashable) -> list[Hashable]:
         """
