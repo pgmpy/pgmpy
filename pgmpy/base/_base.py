@@ -1,6 +1,7 @@
 from collections import deque
 from collections.abc import Hashable, Iterable
 from itertools import combinations
+from os import PathLike
 from typing import Any
 
 import networkx as nx
@@ -9,6 +10,7 @@ import pandas as pd
 from pgmpy.base._algorithms import _GraphAlgorithms
 from pgmpy.base._mixin_roles import _GraphRolesMixin
 from pgmpy.base._plotting import _GraphPlotting
+from pgmpy.utils.parser import parse_dagitty
 
 
 class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotting):
@@ -152,6 +154,11 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
     """
 
     SUPPORTED_EDGE_TYPES = frozenset(["--", "-o", "o-", "->", "<-", "o>", "<o", "<>", "oo"])
+
+    # dagitty only defines `dag`, `mag`, and `pag` blocks. The MAG, ADMG, and PDAG edge
+    # vocabularies are all expressible in `mag` syntax, so every current subclass
+    # serializes under that header; a future subclass (e.g. PAG) can override it.
+    DAGITTY_HEADER = "mag"
 
     def __init__(
         self,
@@ -1605,6 +1612,167 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
 
         # Step 3: Return the decoded graph.
         return graph
+
+    @classmethod
+    def from_dagitty(cls, string: str | None = None, filename: str | PathLike | None = None):
+        """
+        Initialize a graph of this class from dagitty syntax.
+
+        Reads a dagitty block (``dag { ... }``, ``mag { ... }``, or ``pag { ... }``), converts
+        the parsed edges to this class's edge types, and applies the ``[exposure]``,
+        ``[outcome]``, and ``[latent]`` variable-role annotations.
+
+        Parameters
+        ----------
+        string : str, optional (default=None)
+            A dagitty-style multiline set of statements representing the model. Refer
+            https://cran.r-project.org/web/packages/dagitty/dagitty.pdf Page 10.
+
+        filename : str or PathLike, optional (default=None)
+            The filename of the file containing the model in dagitty syntax.
+
+        Returns
+        -------
+        graph
+            An instance of the calling class described by the dagitty input, with variable
+            roles set.
+
+        Raises
+        ------
+        ValueError
+            If neither `string` nor `filename` is given, or if the input contains an edge
+            whose endpoint marks can not be represented in this class (e.g. circle endpoints
+            in a MAG).
+
+        Examples
+        --------
+        >>> from pgmpy.base import MAG
+        >>> mag = MAG.from_dagitty("mag { X [exposure] Y [outcome] X -> Y Y <-> Z }")
+        >>> sorted(mag.get_edges(data=True))
+        [('X', 'Y', '->'), ('Y', 'Z', '<>')]
+        >>> mag.exposures, mag.outcomes
+        ({'X'}, {'Y'})
+
+        >>> from pgmpy.base import ADMG
+        >>> admg = ADMG.from_dagitty("mag { X -> Y Y <-> Z }")
+        >>> sorted(admg.get_edges(data=True))
+        [('X', 'Y', '->'), ('Y', 'Z', '<>')]
+
+        Notes
+        -----
+        - Coefficient annotations (``[beta=...]``) are ignored because these graph classes do
+          not carry parameters.
+        - A ``dag`` header yields plain 2-tuple edges, which are read as directed (``"->"``)
+          edges.
+
+        References
+        ----------
+        dagitty syntax: https://cran.r-project.org/web/packages/dagitty/dagitty.pdf
+        """
+        if filename:
+            with open(filename) as f:
+                dagitty_str = f.readlines()
+        elif string:
+            dagitty_str = string.split("\n")
+        else:
+            raise ValueError("Either `filename` or `string` need to be specified")
+
+        ebunch, roles, _, nodes = parse_dagitty(dagitty_str)
+
+        graph = cls()
+        for edge in ebunch:
+            if len(edge) == 4:
+                u, v, tail_mark, head_mark = edge
+                edge_type = graph._to_edge_type(u, v, {u: tail_mark, v: head_mark})
+                if edge_type not in cls.SUPPORTED_EDGE_TYPES:
+                    raise ValueError(
+                        f"Edge ({u}, {v}) with endpoint marks ({tail_mark}, {head_mark}) "
+                        f"can not be represented in a {cls.__name__}."
+                    )
+                graph.add_edge(u, v, edge_type=edge_type)
+            else:
+                # 2-tuples come from a `dag` header; read them as directed edges.
+                u, v = edge
+                graph.add_edge(u, v, edge_type="->")
+
+        graph.add_nodes_from(nodes)
+        graph.latents = set(roles.get("latents", []))
+        graph.exposures = set(roles.get("exposures", []))
+        graph.outcomes = set(roles.get("outcomes", []))
+        for role, variables in roles.items():
+            if role not in ("latents", "exposures", "outcomes"):
+                graph.with_role(role=role, variables=variables, inplace=True)
+        return graph
+
+    def to_dagitty(self) -> str:
+        """
+        Convert the graph to dagitty syntax representation.
+
+        Writes the graph as a ``mag { ... }`` block (see ``DAGITTY_HEADER``): directed edges
+        as ``X -> Y``, bidirected edges as ``X <-> Y``, undirected edges as ``X -- Y``, and
+        circle-endpoint edges with ``@`` marks (e.g. ``X @-> Y``). Variable roles are written
+        as ``[exposure]``, ``[outcome]``, and ``[latent]`` annotations on standalone node
+        statements. Isolated nodes (nodes with no edges) are included as standalone nodes.
+
+        Returns
+        -------
+        str
+            String representation of the graph in dagitty syntax format.
+
+        Examples
+        --------
+        >>> from pgmpy.base import MAG
+        >>> mag = MAG(edge_list=[("X", "Y", "->"), ("Y", "Z", "<>")])
+        >>> print(mag.to_dagitty())
+        mag {
+        X -> Y
+        Y <-> Z
+        }
+
+        >>> from pgmpy.base import ADMG
+        >>> admg = ADMG(edge_list=[("X", "Y", "->"), ("X", "Z", "<>")], exposures={"X"})
+        >>> print(admg.to_dagitty())
+        mag {
+        X -> Y
+        X <-> Z
+        X [exposure]
+        }
+
+        Notes
+        -----
+        - Node names are converted to string representations using str().
+        - If node names contain spaces or special characters, they will be used as-is.
+        - Users should ensure node names are valid in R/dagitty context if needed.
+
+        References
+        ----------
+        dagitty syntax: https://cran.r-project.org/web/packages/dagitty/dagitty.pdf
+        """
+        statements = []
+        # dagitty edge symbols for the canonical edge types; "@" is dagitty's circle-endpoint
+        # mark, matching what parse_dagitty reads back.
+        edge_symbols = {"--": "--", "->": "->", "<>": "<->", "o-": "@-", "o>": "@->", "oo": "@-@"}
+        for u, v, edge_type in sorted(self.get_edges(data=True), key=lambda e: (str(e[0]), str(e[1]), e[2])):
+            statements.append(f"{u} {edge_symbols[edge_type]} {v}")
+
+        node_roles = {}
+        for role, marker in (("exposures", "exposure"), ("outcomes", "outcome"), ("latents", "latent")):
+            for node in set(self.get_role_dict().get(role, [])) | getattr(self, role):
+                node_roles.setdefault(node, []).append(marker)
+
+        for node in sorted(node_roles, key=str):
+            for marker in node_roles[node]:
+                statements.append(f"{node} [{marker}]")
+
+        for node in sorted(nx.isolates(self), key=str):
+            if node not in node_roles:
+                statements.append(str(node))
+
+        content = "\n".join(statements)
+        if content:
+            return f"{self.DAGITTY_HEADER} {{\n{content}\n}}"
+        else:
+            return f"{self.DAGITTY_HEADER} {{\n}}"
 
     def is_collider(self, u: Hashable, w: Hashable, v: Hashable, shielded: bool = True) -> bool:
         """
