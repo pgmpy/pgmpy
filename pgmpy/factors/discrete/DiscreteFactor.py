@@ -1,4 +1,5 @@
 from collections import namedtuple
+from collections.abc import Hashable, Sequence
 from itertools import product
 
 import numpy as np
@@ -8,6 +9,7 @@ from pgmpy import config, logger
 from pgmpy.extern import tabulate
 from pgmpy.factors.base import BaseFactor
 from pgmpy.utils import StateNameMixin, compat_fns
+from pgmpy.utils._warnings import _warn_external
 
 State = namedtuple("State", ["var", "state"])
 
@@ -207,7 +209,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
                 try:
                     index.append(self.name_to_no[var][kwargs[var]])
                 except KeyError:
-                    logger.info(f"Using {var} state as number instead of name.")
+                    logger.debug(f"Using {var} state as number instead of name.")
                     index.append(kwargs[var])
         return self.values[tuple(index)]
 
@@ -251,7 +253,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             elif isinstance(kwargs[var], str):
                 index.append(self.name_to_no[var][kwargs[var]])
             else:
-                logger.info(f"Using {var} state as number instead of name.")
+                logger.debug(f"Using {var} state as number instead of name.")
                 index.append(kwargs[var])
 
         self.values[tuple(index)] = value
@@ -518,7 +520,12 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         if not inplace:
             return phi
 
-    def reduce(self, values, inplace=True, show_warnings=True):
+    def reduce(
+        self,
+        values: Sequence[tuple[Hashable, Hashable]],
+        inplace: bool = True,
+        show_warnings: bool = True,
+    ) -> "DiscreteFactor | None":
         """
         Reduces the factor to the context of given variable values. The variables which
         are reduced would be removed from the factor.
@@ -533,12 +540,18 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             a new factor.
 
         show_warnings: boolean
-            Whether to show warning when state name not found.
+            Whether to emit a UserWarning when a state name is not found.
 
         Returns
         -------
         Reduced factor: pgmpy.factors.discrete.DiscreteFactor or None
             If inplace=True (default) returns None else returns a new `DiscreteFactor` instance.
+
+        Warns
+        -----
+        UserWarning
+            If a state name is not found and ``show_warnings=True``. All supplied
+            state values are then used as positional indices.
 
         Examples
         --------
@@ -574,7 +587,11 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             values = [(var, self.get_state_no(var, state_name)) for var, state_name in values]
         except KeyError:
             if show_warnings:
-                logger.warning("Found unknown state name. Trying to switch to using all state names as state numbers")
+                _warn_external(
+                    "At least one state name was not found. "
+                    "Attempting to interpret all supplied state values as positional indices.",
+                    UserWarning,
+                )
 
         var_index_to_del = []
         slice_ = [slice(None)] * len(self.variables)

@@ -4,8 +4,8 @@ from typing import Any
 
 import numpy as np
 
-from pgmpy import logger
 from pgmpy.utils import compat_fns
+from pgmpy.utils._warnings import _warn_external
 
 State = namedtuple("State", ["var", "state"])
 
@@ -65,14 +65,21 @@ def cartesian(arrays: list[Any], out: np.ndarray | None = None) -> np.ndarray:
 
 def _adjusted_weights(weights: np.ndarray):
     """
-    Adjusts the weights such that it sums to 1. When the total weights is less
-    than or greater than 1 by 1e-3, add/subtracts the difference from the last
-    element of weights. If the difference is greater than 1e-3, throws an error.
+    Adjust the largest weight so that the weights sum to 1.
+
+    Corrections within the dtype- and length-dependent roundoff tolerance are
+    silent. Larger corrections up to 1e-3 emit a warning, and discrepancies
+    greater than 1e-3 raise an error.
 
     Parameters
     ----------
     weights: 1-D numpy array
         The array for which to do the adjustment.
+
+    Warns
+    -----
+    UserWarning
+        If the accepted correction is larger than floating-point roundoff for the weight dtype and array length.
 
     Example
     -------
@@ -83,11 +90,19 @@ def _adjusted_weights(weights: np.ndarray):
     >>> int(np.sum(result != 0.1111111))  # Exactly one element was adjusted
     1
     """
-    error = 1 - weights.sum()
+    weight_sum = weights.sum()
+    error = 1 - weight_sum
     if abs(error) > 1e-3:
         raise ValueError("The probability values do not sum to 1.")
     elif error != 0:
-        logger.warning(f"Probability values don't exactly sum to 1. Differ by: {error}. Adjusting values.")
+        roundoff_tolerance = (
+            len(weights) * np.finfo(weights.dtype).eps if np.issubdtype(weights.dtype, np.inexact) else 0
+        )
+        if abs(error) > roundoff_tolerance:
+            _warn_external(
+                f"Probability values sum to {weight_sum}, not 1; adjusting the largest probability by {error}.",
+                UserWarning,
+            )
         weights[compat_fns.argmax(weights)] += error
 
     return weights

@@ -165,7 +165,7 @@ class TestXDSLReaderMethodsString(unittest.TestCase):
             np_test.assert_array_equal(cpd_expected[variable], cpd[variable])
 
     def test_model(self):
-        self.reader.get_model().check_model()
+        self.reader.read().check_model()
 
     def tearDown(self):
         del self.reader
@@ -260,8 +260,8 @@ class TestXDSLWriterMethods(unittest.TestCase):
     def test_writer_cpds(self):
         self.writer_dummy.write_xdsl(filename="dummy_model.xdsl")
         with open("dummy_model.xdsl") as f:
-            reader = XDSLReader(f)
-        model = reader.get_model(state_name_type=int)
+            reader = XDSLReader(f, state_name_type=int)
+        model = reader.read()
         self.assert_models_equivalent(self.dummy_model, model)
         os.remove("dummy_model.xdsl")
 
@@ -270,7 +270,7 @@ class TestXDSLWriterMethods(unittest.TestCase):
 
         with open("alarm_model.xdsl") as f:
             file_text = f.read()
-        alarm_model_bn_test = XDSLReader(string=file_text).get_model()
+        alarm_model_bn_test = XDSLReader(string=file_text).read()
         self.assert_models_equivalent(self.alarm_model_bn, alarm_model_bn_test)
 
         os.remove("alarm_model.xdsl")
@@ -366,7 +366,7 @@ class TestXDSLReaderMethodsStringTorch(unittest.TestCase):
             np_test.assert_array_equal(cpd_expected[variable], cpd[variable])
 
     def test_model(self):
-        self.reader.get_model().check_model()
+        self.reader.read().check_model()
 
     def tearDown(self):
         del self.reader
@@ -438,8 +438,8 @@ class TestXDSLWriterMethodsTorch(unittest.TestCase):
     def test_writer_cpds(self):
         self.writer_dummy.write_xdsl(filename="dummy_model.xdsl")
         with open("dummy_model.xdsl") as f:
-            reader = XDSLReader(f)
-        model = reader.get_model(state_name_type=int)
+            reader = XDSLReader(f, state_name_type=int)
+        model = reader.read()
         self.assert_models_equivalent(self.dummy_model, model)
         os.remove("dummy_model.xdsl")
 
@@ -447,7 +447,7 @@ class TestXDSLWriterMethodsTorch(unittest.TestCase):
         XDSLWriter(self.alarm_model_bn).write_xdsl("alarm_model.xdsl")
         with open("alarm_model.xdsl") as f:
             file_text = f.read()
-        alarm_model_bn_test = XDSLReader(string=file_text).get_model()
+        alarm_model_bn_test = XDSLReader(string=file_text).read()
         self.assert_models_equivalent(self.alarm_model_bn, alarm_model_bn_test)
         os.remove("alarm_model.xdsl")
 
@@ -483,20 +483,13 @@ class TestXDSLCommaWarning(unittest.TestCase):
             tmp_path = tmp.name
 
         try:
-            with self.assertLogs("pgmpy", level="WARNING") as cm:
+            with self.assertWarnsRegex(UserWarning, "State name 'state,1' for variable 'A' contains a comma"):
                 writer = XDSLWriter(model)
                 writer.write_xdsl(tmp_path)
 
-                # Verify the warning was logged
-                self.assertIn(
-                    "State name 'state,1' for variable 'A' contains commas. "
-                    "This may cause issues when loading the file. Consider removing any special characters.",
-                    cm.output[0],
-                )
-
             # Verify that the file can be loaded back with the same state names
             reader = XDSLReader(tmp_path)
-            loaded_model = reader.get_model()
+            loaded_model = reader.read()
 
             # Check that the state names were preserved
             self.assertEqual(loaded_model.get_cpds("A").state_names["A"], ["state,1", "state,2"])

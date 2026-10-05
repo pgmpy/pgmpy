@@ -1,13 +1,12 @@
 import os
 import tempfile
 import unittest
-from unittest.mock import patch
 
 import numpy as np
 import numpy.testing as np_test
 from skbase.utils.dependencies import _check_soft_dependencies
 
-from pgmpy import config, logger
+from pgmpy import config
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.readwrite import XMLBIFReader, XMLBIFWriter
@@ -205,7 +204,7 @@ class TestXMLBIFReaderMethods(unittest.TestCase):
             self.assertListEqual(property_expected[variable], prop[variable])
 
     def test_model(self):
-        self.reader.get_model().check_model()
+        self.reader.read().check_model()
 
     def tearDown(self):
         del self.reader
@@ -217,18 +216,14 @@ class TestXMLBIFReaderMethods(unittest.TestCase):
         valid_state = "valid_state"
         self.assertEqual(writer._make_valid_state_name(valid_state), valid_state)
 
-        with patch.object(logger, "warning") as mock_warning:
-            invalid_state = "invalid-state@123"
-            expected_fixed = "invalid_state_123"
+        invalid_state = "invalid-state@123"
+        expected_fixed = "invalid_state_123"
+        with self.assertWarnsRegex(
+            UserWarning, f"State name '{invalid_state}' for variable 'unknown' was changed to '{expected_fixed}'"
+        ):
             result = writer._make_valid_state_name(invalid_state)
 
-            self.assertEqual(result, expected_fixed)
-            mock_warning.assert_called_once()
-            warning_msg = mock_warning.call_args[0][0]
-            self.assertIn(
-                f"State name '{invalid_state}' has been modified to '{expected_fixed}'",
-                warning_msg,
-            )
+        self.assertEqual(result, expected_fixed)
 
 
 class TestXMLBIFReaderMethodsFile(unittest.TestCase):
@@ -310,7 +305,7 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
             self.assertListEqual(property_expected[variable], prop[variable])
 
     def test_model(self):
-        self.reader.get_model().check_model()
+        self.reader.read().check_model()
 
     def tearDown(self):
         del self.reader
@@ -320,7 +315,7 @@ class TestXMLBIFReaderMethodsFile(unittest.TestCase):
 class TestXMLBIFWriterMethodsString(unittest.TestCase):
     def setUp(self):
         reader = XMLBIFReader(string=TEST_FILE)
-        self.expected_model = reader.get_model()
+        self.expected_model = reader.read()
         self.writer = XMLBIFWriter(self.expected_model)
 
         self.model_stateless = DiscreteBayesianNetwork([("D", "G"), ("I", "G"), ("G", "L"), ("I", "S")])
@@ -362,16 +357,16 @@ class TestXMLBIFWriterMethodsString(unittest.TestCase):
         self.writer.write_xmlbif("dog_problem_output.xbif")
         with open("dog_problem_output.xbif") as f:
             file_text = f.read()
-        reader = XMLBIFReader(string=file_text)
-        model = reader.get_model(state_name_type=str)
+        reader = XMLBIFReader(string=file_text, state_name_type=str)
+        model = reader.read()
         self.assert_models_equivelent(self.expected_model, model)
         os.remove("dog_problem_output.xbif")
 
     def test_write_xmlbif_stateless(self):
         self.writer_stateless.write_xmlbif("grade_problem_output.xbif")
         with open("grade_problem_output.xbif") as f:
-            reader = XMLBIFReader(f)
-        model = reader.get_model(state_name_type=int)
+            reader = XMLBIFReader(f, state_name_type=int)
+        model = reader.read()
         self.assert_models_equivelent(self.model_stateless, model)
         self.assertDictEqual({"D": [0, 1]}, model.get_cpds("D").state_names)
         os.remove("grade_problem_output.xbif")
@@ -468,7 +463,7 @@ class TestXMLBIFReaderMethodsTorch(unittest.TestCase):
             self.assertListEqual(property_expected[variable], prop[variable])
 
     def test_model(self):
-        self.reader.get_model().check_model()
+        self.reader.read().check_model()
 
     def tearDown(self):
         del self.reader
@@ -560,7 +555,7 @@ class TestXMLBIFReaderMethodsFileTorch(unittest.TestCase):
             self.assertListEqual(property_expected[variable], prop[variable])
 
     def test_model(self):
-        self.reader.get_model().check_model()
+        self.reader.read().check_model()
 
     def tearDown(self):
         del self.reader
@@ -577,7 +572,7 @@ class TestXMLBIFWriterMethodsStringTorch(unittest.TestCase):
         config.set_backend("torch")
 
         reader = XMLBIFReader(string=TEST_FILE)
-        self.expected_model = reader.get_model()
+        self.expected_model = reader.read()
         self.writer = XMLBIFWriter(self.expected_model)
 
         self.model_stateless = DiscreteBayesianNetwork([("D", "G"), ("I", "G"), ("G", "L"), ("I", "S")])
@@ -619,16 +614,16 @@ class TestXMLBIFWriterMethodsStringTorch(unittest.TestCase):
         self.writer.write_xmlbif("dog_problem_output.xbif")
         with open("dog_problem_output.xbif") as f:
             file_text = f.read()
-        reader = XMLBIFReader(string=file_text)
-        model = reader.get_model(state_name_type=str)
+        reader = XMLBIFReader(string=file_text, state_name_type=str)
+        model = reader.read()
         self.assert_models_equivelent(self.expected_model, model)
         os.remove("dog_problem_output.xbif")
 
     def test_write_xmlbif_stateless(self):
         self.writer_stateless.write_xmlbif("grade_problem_output.xbif")
         with open("grade_problem_output.xbif") as f:
-            reader = XMLBIFReader(f)
-        model = reader.get_model(state_name_type=int)
+            reader = XMLBIFReader(f, state_name_type=int)
+        model = reader.read()
         self.assert_models_equivelent(self.model_stateless, model)
         self.assertDictEqual({"D": [0, 1]}, model.get_cpds("D").state_names)
         os.remove("grade_problem_output.xbif")
@@ -665,19 +660,13 @@ class TestXMLBIFWriterMethodsStringTorch(unittest.TestCase):
             tmp_path = tmp.name
 
         try:
-            with self.assertLogs("pgmpy", level="WARNING") as cm:
+            with self.assertWarnsRegex(UserWarning, "State name 'state,1' for variable 'A' was changed to 'state_1'"):
                 writer = XMLBIFWriter(model)
                 writer.write_xmlbif(tmp_path)
 
-                # Verify the warning was logged with the correct variable name
-                self.assertTrue(
-                    any("State name 'state,1' for variable 'A' contains commas" in msg for msg in cm.output),
-                    f"Expected warning about commas in state names, got: {cm.output}",
-                )
-
             # The file should still be loadable but with modified state names
             reader = XMLBIFReader(tmp_path)
-            loaded_model = reader.get_model()
+            loaded_model = reader.read()
 
             # Check that the state names were modified to be valid XMLBIF identifiers
             # Commas should be replaced with underscores, but no leading underscore needed

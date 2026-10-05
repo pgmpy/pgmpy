@@ -1,7 +1,6 @@
 """Deprecated compatibility shims for :class:`pgmpy.causal_discovery.ExpertInLoop`
 and :class:`pgmpy.causal_discovery.LLMPairwise`."""
 
-import warnings
 from collections.abc import Callable, Hashable
 
 import pandas as pd
@@ -12,6 +11,7 @@ from pgmpy.causal_discovery import LLMPairwise as _LLMPairwise
 from pgmpy.ci_tests import BaseCITest, get_ci_test
 from pgmpy.estimators import StructureEstimator
 from pgmpy.estimators.ExpertKnowledge import ExpertKnowledge
+from pgmpy.utils._warnings import _warn_external
 
 
 def llm_pairwise_orient(
@@ -35,11 +35,10 @@ def llm_pairwise_orient(
         The suggested edge direction `(source, target)`, or None if the LLM
         response could not be parsed.
     """
-    warnings.warn(
-        """`llm_pairwise_orient` is deprecated and will be removed in v2.0. Please use
-        pgmpy.causal_discovery.LLMPairwise instead.""",
+    _warn_external(
+        "`llm_pairwise_orient` is deprecated and will be removed in v2.0. "
+        "Use `pgmpy.causal_discovery.LLMPairwise` instead.",
         FutureWarning,
-        stacklevel=2,
     )
     est = _LLMPairwise(
         descriptions=descriptions,
@@ -130,11 +129,10 @@ class ExpertInLoop(StructureEstimator):
     """
 
     def __init__(self, data: pd.DataFrame | None = None, **kwargs):
-        warnings.warn(
-            """ExpertInLoop is deprecated and will be removed in v2.0. Please use pgmpy.causal_discovery.ExpertInLoop
-            instead.""",
+        _warn_external(
+            "`pgmpy.estimators.ExpertInLoop` is deprecated since v1.1.0 and will be removed in v2.0. "
+            "Use `pgmpy.causal_discovery.ExpertInLoop` instead.",
             FutureWarning,
-            stacklevel=2,
         )
         super().__init__(data, **kwargs)
         self.orientation_cache = set()

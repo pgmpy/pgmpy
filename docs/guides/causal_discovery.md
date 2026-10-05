@@ -1,7 +1,8 @@
 # Causal Discovery and Structure Learning
 
-```{meta}
-:description: Learn causal graphs from data using the unified causal discovery APIs in pgmpy.
+```{eval-rst}
+.. meta::
+   :description: Learn causal graphs from data using the unified causal discovery APIs in pgmpy.
 ```
 
 Causal discovery recovers the causal graph from observational data — determining which
@@ -91,8 +92,8 @@ print(pc.score(X=data, metric="correlation_score"))
 ```
 
 You can score against data using unsupervised metrics, or against a known reference
-graph using supervised metrics. Use `pgmpy.metrics.get_metrics(...)` to discover
-available metrics programmatically.
+graph using supervised metrics. Pass a metric name, a metric instance, or `None` for the
+default; `pgmpy.metrics.get_metric(...)` resolves it the same way.
 
 ## Scikit-learn Compatibility
 

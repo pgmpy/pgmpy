@@ -1,11 +1,9 @@
 import collections
-import warnings
+from collections.abc import Hashable
 from math import prod
 from string import Template
 
 import numpy as np
-
-from pgmpy import logger
 
 try:
     from pyparsing import (
@@ -29,10 +27,12 @@ except ImportError as e:
 
 from pgmpy.factors.discrete.CPD import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
+from pgmpy.readwrite._base import BaseReader, BaseWriter
 from pgmpy.utils import compat_fns
+from pgmpy.utils._warnings import _warn_external
 
 
-class NETWriter:
+class NETWriter(BaseWriter):
     """
     Base class for writing network file in net format
 
@@ -41,7 +41,7 @@ class NETWriter:
     model: DiscreteBayesianNetwork Instance
 
     Examples
-    ----------
+    --------
     >>> from pgmpy.readwrite import NETWriter
     >>> from pgmpy.example_models import load_model
     >>> asia = load_model("bnlearn/asia")
@@ -55,11 +55,12 @@ class NETWriter:
     - :footcite:t:`hugin_format`
     """
 
-    def __init__(self, model):
-        if not isinstance(model, DiscreteBayesianNetwork):
-            raise TypeError("model must be an instance of DiscreteBayesianNetwork")
+    format_name = "net"
+    file_extensions = ["net"]
+    supported_models = (DiscreteBayesianNetwork,)
 
-        self.model = model
+    def __init__(self, model):
+        super().__init__(model)
 
         if not self.model.name:
             self.network_name = "unknown"
@@ -154,8 +155,8 @@ class NETWriter:
         -------
         list: a list containing names of variable
 
-        Example
-        -------
+        Examples
+        --------
         >>> from pgmpy.example_models import load_model
         >>> from pgmpy.readwrite import NETWriter
         >>> asia = load_model("bnlearn/asia")
@@ -174,8 +175,8 @@ class NETWriter:
         -------
         dict: dict of type {variable: array}
 
-        Example
-        -------
+        Examples
+        --------
         >>> from pgmpy.example_models import load_model
         >>> from pgmpy.readwrite import NETWriter
         >>> asia = load_model("bnlearn/asia")
@@ -207,8 +208,8 @@ class NETWriter:
         -------
         dict: dict of type {variable: list of properties }
 
-        Example
-        -------
+        Examples
+        --------
         >>> from pgmpy.example_models import load_model
         >>> from pgmpy.readwrite import NETWriter
         >>> asia = load_model("bnlearn/asia")
@@ -226,7 +227,7 @@ class NETWriter:
                 property_tag[variable].append(str(prop) + " = " + str(val))
         return property_tag
 
-    def get_states(self):
+    def get_states(self) -> dict[Hashable, list[str]]:
         """
         Add states to variable of NET
 
@@ -234,9 +235,14 @@ class NETWriter:
         -------
         dict: dict of type {variable: a list of states}
 
+        Warns
+        -----
+        UserWarning
+            If a state name contains a comma and cannot be read back correctly
+            by pgmpy's NETReader.
 
-        Example
-        -------
+        Examples
+        --------
         >>> from pgmpy.example_models import load_model
         >>> from pgmpy.readwrite import NETWriter
         >>> asia = load_model("bnlearn/asia")
@@ -255,9 +261,11 @@ class NETWriter:
             for state in cpd.state_names[variable]:
                 state_str = str(state)
                 if "," in state_str:
-                    logger.warning(
-                        f"State name '{state_str}' for variable '{variable}' contains commas. "
-                        "This may cause issues when loading the file. Consider removing any special characters."
+                    _warn_external(
+                        f"State name {state_str!r} for variable {variable!r} contains a comma "
+                        "and cannot be read back correctly by pgmpy's NETReader. "
+                        "Rename the state if pgmpy round-trip compatibility is required.",
+                        UserWarning,
                     )
                 variable_states[variable].append(state_str)
         return variable_states
@@ -270,8 +278,8 @@ class NETWriter:
         -------
         dict: dict of type {variable: a list of parents}
 
-        Example
-        -------
+        Examples
+        --------
         >>> from pgmpy.example_models import load_model
         >>> from pgmpy.readwrite import NETWriter
         >>> asia = load_model("bnlearn/asia")
@@ -287,36 +295,16 @@ class NETWriter:
             variable_parents[cpd.variable] = cpd.variables[1:]
         return variable_parents
 
-    def write(self, filename):
-        """
-        Writes the NET data into a file
-
-        Parameters
-        ----------
-        filename : Name of the file
-
-        Example
-        -------
-        >>> from pgmpy.example_models import load_model
-        >>> from pgmpy.readwrite import NETWriter
-        >>> asia = load_model("bnlearn/asia")
-        >>> writer = NETWriter(asia)
-        >>> writer.write(filename="asia.net")
-        """
-        writer = self.__str__()
-        with open(filename, "w") as fout:
-            fout.write(writer)
-
     def write_net(self, filename):
-        warnings.warn(
-            "`NETWriter.write_net` is deprecated and will be removed in v2.0. Please use `NETWriter.write` instead.",
+        _warn_external(
+            "`NETWriter.write_net` is deprecated since v1.1.0 and will be removed in v2.0. "
+            "Use `NETWriter.write` instead.",
             FutureWarning,
-            stacklevel=2,
         )
         self.write(filename)
 
 
-class NETReader:
+class NETReader(BaseReader):
     """
     Initializes a NETReader object.
 
@@ -334,6 +322,9 @@ class NETReader:
     defaultname: int (default: "bn_model")
         Default name for the network if a network name is not available in the net file.
 
+    state_name_type: int, str or bool (default: str)
+        The data type to which to convert the state names of the variables.
+
     Examples
     --------
     # asia.net file is present at
@@ -346,21 +337,22 @@ class NETReader:
     >>> reader = NETReader("asia.net")
     >>> reader # doctest: +ELLIPSIS
     <pgmpy.readwrite.NET.NETReader object at 0x...>
-    >>> model = reader.get_model()
+    >>> model = reader.read()
     """
 
-    def __init__(self, path=None, string=None, include_properties=False, defaultName="bn_model"):
-        if path:
+    format_name = "net"
+    file_extensions = ["net"]
+
+    def __init__(self, path=None, string=None, include_properties=False, defaultName="bn_model", state_name_type=str):
+        super().__init__(path=path, string=string)
+        if path is not None:
             with open(path) as network:
                 self.network = network.read()
-
-        elif string:
+        else:
             self.network = string
 
-        else:
-            raise ValueError("Must specify either path or string")
-
         self.include_properties = include_properties
+        self.state_name_type = state_name_type
 
         if "/*" in self.network or "//" in self.network:
             self.network = cppStyleComment.suppress().transform_string(self.network)  # removing comments from the file
@@ -438,8 +430,8 @@ class NETReader:
         """
         Returns the name of the network. Returns false if no network name is available
 
-        Example
-        ---------------
+        Examples
+        --------
         # asia.net file is present at
         # https://www.bnlearn.com/bnrepository/discrete-small.html#asia
         >>> from pgmpy.readwrite import NETReader
@@ -472,8 +464,8 @@ class NETReader:
         """
         Returns list of variables of the network
 
-        Example
-        ---------------
+        Examples
+        --------
         # asia.net file is present at
         # https://www.bnlearn.com/bnrepository/discrete-small.html#asia
         >>> from pgmpy.readwrite import NETReader
@@ -498,8 +490,8 @@ class NETReader:
         """
         Returns the states of each variable in the network
 
-        Example
-        ---------------
+        Examples
+        --------
         # asia.net file is present at
         # https://www.bnlearn.com/bnrepository/discrete-small.html#asia
         >>> from pgmpy.readwrite import NETReader
@@ -530,8 +522,8 @@ class NETReader:
         """
         Returns the property of the variable
 
-        Example
-        -------------
+        Examples
+        --------
         # asia.net file is present at
         # https://www.bnlearn.com/bnrepository/discrete-small.html#asia
         >>> from pgmpy.readwrite import NETReader
@@ -562,8 +554,8 @@ class NETReader:
         """
         Returns the parents of the variables present in the network
 
-        Example
-        -------------
+        Examples
+        --------
         # asia.net file is present at
         # https://www.bnlearn.com/bnrepository/discrete-small.html#asia
         >>> from pgmpy.readwrite import NETReader
@@ -589,8 +581,8 @@ class NETReader:
         """
         Returns the CPD of the variables present in the network
 
-        Example
-        -------------
+        Examples
+        --------
         # asia.net file is present at
         # https://www.bnlearn.com/bnrepository/discrete-small.html#asia
         >>> from pgmpy.readwrite import NETReader
@@ -599,16 +591,13 @@ class NETReader:
         >>> writer = NETWriter(asia)
         >>> writer.write("asia.net")
         >>> reader = NETReader("asia.net")
-        >>> reader.get_values() # doctest: +NORMALIZE_WHITESPACE
-        {'asia': array([[0.01],
-           [0.99]]), 'bronc': array([[0.6, 0.3],
-           [0.4, 0.7]]), 'dysp': array([[0.9, 0.8, 0.7, 0.1],
-           [0.1, 0.2, 0.3, 0.9]]), 'either': array([[1., 1., 1., 0.],
-           [0., 0., 0., 1.]]), 'lung': array([[0.1 , 0.01],
-           [0.9 , 0.99]]), 'smoke': array([[0.5],
-           [0.5]]), 'tub': array([[0.05, 0.01],
-           [0.95, 0.99]]), 'xray': array([[0.98, 0.05],
-           [0.02, 0.95]])}
+        >>> values = reader.get_values()
+        >>> values["dysp"].shape
+        (2, 4)
+        >>> values["dysp"].tolist()
+        [[0.9, 0.8, 0.7, 0.1], [0.1, 0.2, 0.3, 0.9]]
+        >>> values["asia"].tolist()
+        [[0.01], [0.99]]
         """
         variable_cpds = {}
 
@@ -636,8 +625,8 @@ class NETReader:
 
 
 
-        Example
-        -------------
+        Examples
+        --------
         # asia.net file is present at
         # https://www.bnlearn.com/bnrepository/discrete-small.html#asia
         >>> from pgmpy.readwrite import NETReader
@@ -654,17 +643,12 @@ class NETReader:
         edges = [[value, key] for key in self.variable_parents.keys() for value in self.variable_parents[key]]
         return edges
 
-    def get_model(self, state_name_type=str):
+    def read(self):
         """
         Returns the Bayesian Model read from the file/str.
 
-        Parameters
-        ----------
-        state_name_type: int, str or bool (default: str)
-            The data type to which to convert the state names of the variables.
-
-        Example
-        ----------
+        Examples
+        --------
         # asia.net file is present at
         # https://www.bnlearn.com/bnrepository/discrete-small.html#asia
         >>> from pgmpy.readwrite import NETReader
@@ -673,9 +657,10 @@ class NETReader:
         >>> writer = NETWriter(asia)
         >>> writer.write("asia.net")
         >>> reader = NETReader("asia.net")
-        >>> reader.get_model() # doctest: +ELLIPSIS
+        >>> reader.read() # doctest: +ELLIPSIS
         <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork object at 0x...>
         """
+        state_name_type = self.state_name_type
         try:
             model = DiscreteBayesianNetwork()
             model.add_nodes_from(self.variable_names)
