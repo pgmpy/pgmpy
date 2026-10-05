@@ -263,7 +263,7 @@ class TestStateNameDecorator:
             state_names={"grade": ["A", "B", "F"]},
         )
         assert inf_op1 == req_op
-        assert inf_op1 == req_op
+        assert inf_op2 == req_op
 
         inf_op1 = model_with_state_names.map_query(["grade"], evidence={"intel": "poor"})
         inf_op2 = model_no_state_names.map_query(["grade"], evidence={"intel": 0})
