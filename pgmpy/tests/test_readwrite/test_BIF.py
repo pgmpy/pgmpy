@@ -178,18 +178,28 @@ probability ( light-on | family-out ) {
 """
 
 
+@pytest.fixture(params=["numpy", "torch"])
+def backend(request):
+    if request.param == "torch":
+        if not _check_soft_dependencies("torch", severity="none"):
+            pytest.skip("torch not installed")
+        config.set_backend("torch")
+    yield request.param
+    config.set_backend("numpy")
+
+
 @pytest.fixture
-def reader():
+def reader(backend):
     return BIFReader(string=DOG_PROBLEM_BIF, include_properties=True)
 
 
 @pytest.fixture
-def water_model():
+def water_model(backend):
     return BIFReader("pgmpy/tests/test_readwrite/testdata/water.bif", include_properties=True)
 
 
 @pytest.fixture
-def bif_model():
+def bif_model(backend):
     variables = [
         "kid",
         "bowel-problem",
@@ -318,7 +328,7 @@ class TestBIFReader:
         for variable in cpd_expected:
             np_test.assert_array_equal(cpd_expected[variable], cpd[variable])
 
-    def test_variable_cpds_reordered(self):
+    def test_variable_cpds_reordered(self, backend):
         cancer_values1 = BIFReader(
             string="""
                 network unknown {
@@ -490,7 +500,7 @@ class TestBIFReader:
         for var in table_model.nodes():
             assert table_model.get_cpds(var) == default_model.get_cpds(var)
 
-    def test_cpp_style_comments(self):
+    def test_cpp_style_comments(self, backend):
         reader = BIFReader(
             string=CPP_STYLE_COMMENTS_BIF,
             include_properties=True,
@@ -501,14 +511,14 @@ class TestBIFReader:
 
 class TestBIFWriter:
     @pytest.fixture
-    def writer(self, bif_model):
-        return BIFWriter(model=bif_model, round_values=2)
+    def writer(self, bif_model, backend):
+        return BIFWriter(model=bif_model, round_values=4 if backend == "torch" else 2)
 
     def test_str(self, writer):
         assert str(writer) == EXPECTED_WRITER_STRING
 
     def test_write_read_equal(self, writer, bif_model):
-        writer.write_bif("test_bif.bif")
+        writer.write("test_bif.bif")
         reader = BIFReader("test_bif.bif", state_name_type=int)
         read_model = reader.read()
         assert sorted(bif_model.nodes()) == sorted(read_model.nodes())
@@ -546,7 +556,7 @@ class TestBIFWriter:
                 match="State name 'state,1' for variable 'A' contains a comma",
             ):
                 writer = BIFWriter(model)
-                writer.write_bif(tmp_path)
+                writer.write(tmp_path)
 
             # Verify that loading fails due to commas in state names
             with pytest.raises(ValueError):
@@ -554,274 +564,3 @@ class TestBIFWriter:
         finally:
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
-
-
-@pytest.mark.skipif(
-    not _check_soft_dependencies("torch", severity="none"),
-    reason="execute only if required dependency present",
-)
-class TestBIFReaderTorch:
-    @pytest.fixture(autouse=True)
-    def set_torch_backend(self):
-        config.set_backend("torch")
-        yield
-        config.set_backend("numpy")
-
-    def test_network_name(self, reader):
-        name_expected = "Dog-Problem"
-        assert reader.network_name == name_expected
-
-    def test_variable_names(self, reader):
-        var_expected = [
-            "light-on",
-            "bowel-problem",
-            "dog-out",
-            "hear-bark",
-            "family-out",
-        ]
-        assert reader.variable_names == var_expected
-
-    def test_variable_states(self, reader):
-        states_expected = {
-            "bowel-problem": ["true", "false"],
-            "dog-out": ["true", "false"],
-            "family-out": ["true", "false"],
-            "hear-bark": ["true", "false"],
-            "light-on": ["true", "false"],
-        }
-        states = reader.variable_states
-        for variable in states_expected:
-            assert states_expected[variable] == states[variable]
-
-    def test_variable_properties(self, reader):
-        property_expected = {
-            "bowel-problem": ["position = (335, 99)"],
-            "dog-out": ["position = (300, 195)"],
-            "family-out": ["position = (257, 99)"],
-            "hear-bark": ["position = (296, 268)"],
-            "light-on": ["position = (218, 195)"],
-        }
-        prop = reader.variable_properties
-        for variable in property_expected:
-            assert property_expected[variable] == prop[variable]
-
-    def test_variable_cpds(self, reader):
-        cpd_expected = {
-            "bowel-problem": np.array([[0.01], [0.99]]),
-            "dog-out": np.array([[0.99, 0.97, 0.9, 0.3], [0.01, 0.03, 0.1, 0.7]]),
-            "family-out": np.array([[0.15], [0.85]]),
-            "hear-bark": np.array([[0.7, 0.01], [0.3, 0.99]]),
-            "light-on": np.array([[0.6, 0.05], [0.4, 0.95]]),
-        }
-        cpd = reader.variable_cpds
-        for variable in cpd_expected:
-            np_test.assert_array_equal(cpd_expected[variable], cpd[variable])
-
-    def test_variable_cpds_reordered(self):
-        cancer_values1 = BIFReader(
-            string="""
-                network unknown {
-                }
-                variable Pollution {
-                  type discrete [ 2 ] { low, high };
-                }
-                variable Smoker {
-                  type discrete [ 2 ] { True, False };
-                }
-                variable Cancer {
-                  type discrete [ 2 ] { True, False };
-                }
-                probability ( Cancer | Pollution, Smoker ) {
-                  (low, True) 0.03, 0.97;
-                  (low, False) 0.001, 0.999;
-                  (high, True) 0.05, 0.95;
-                  (high, False) 0.02, 0.98;
-                }"""
-        ).variable_cpds
-
-        cancer_values2 = BIFReader(
-            string="""
-                network unknown {
-                }
-                variable Pollution {
-                  type discrete [ 2 ] { low, high };
-                }
-                variable Smoker {
-                  type discrete [ 2 ] { True, False };
-                }
-                variable Cancer {
-                  type discrete [ 2 ] { True, False };
-                }
-                probability ( Cancer | Pollution, Smoker ) {
-                  (low, True) 0.03, 0.97;
-                  (high, True) 0.05, 0.95;
-                  (low, False) 0.001, 0.999;
-                  (high, False) 0.02, 0.98;
-                }"""
-        ).variable_cpds
-
-        for var in cancer_values1:
-            np_test.assert_array_equal(cancer_values1[var], cancer_values2[var])
-
-    def test_variable_parents(self, reader):
-        parents_expected = {
-            "bowel-problem": [],
-            "dog-out": ["bowel-problem", "family-out"],
-            "family-out": [],
-            "hear-bark": ["dog-out"],
-            "light-on": ["family-out"],
-        }
-        parents = reader.variable_parents
-        for variable in parents_expected:
-            assert parents_expected[variable] == parents[variable]
-
-    def test_variable_edges(self, reader):
-        edges_expected = [
-            ["family-out", "dog-out"],
-            ["bowel-problem", "dog-out"],
-            ["family-out", "light-on"],
-            ["dog-out", "hear-bark"],
-        ]
-        assert sorted(reader.variable_edges) == sorted(edges_expected)
-
-    def test_read(self, reader):
-        edges_expected = [
-            ("family-out", "dog-out"),
-            ("bowel-problem", "dog-out"),
-            ("family-out", "light-on"),
-            ("dog-out", "hear-bark"),
-        ]
-        nodes_expected = [
-            "bowel-problem",
-            "hear-bark",
-            "light-on",
-            "dog-out",
-            "family-out",
-        ]
-        edge_expected = {
-            "bowel-problem": {"dog-out": {"weight": None}},
-            "dog-out": {"hear-bark": {"weight": None}},
-            "family-out": {"dog-out": {"weight": None}, "light-on": {"weight": None}},
-            "hear-bark": {},
-            "light-on": {},
-        }
-        node_expected = {
-            "bowel-problem": {"position": "(335, 99)"},
-            "dog-out": {"position": "(300, 195)"},
-            "family-out": {"position": "(257, 99)"},
-            "hear-bark": {"position": "(296, 268)"},
-            "light-on": {"position": "(218, 195)"},
-        }
-        cpds_expected = [
-            TabularCPD(
-                variable="bowel-problem",
-                variable_card=2,
-                values=np.array([[0.01], [0.99]]),
-                state_names={"bowel-problem": ["true", "false"]},
-            ),
-            TabularCPD(
-                variable="dog-out",
-                variable_card=2,
-                values=np.array([[0.99, 0.97, 0.9, 0.3], [0.01, 0.03, 0.1, 0.7]]),
-                evidence=["bowel-problem", "family-out"],
-                evidence_card=[2, 2],
-                state_names={
-                    "dog-out": ["true", "false"],
-                    "bowel-problem": ["true", "false"],
-                    "family-out": ["true", "false"],
-                },
-            ),
-            TabularCPD(
-                variable="family-out",
-                variable_card=2,
-                values=np.array([[0.15], [0.85]]),
-                state_names={"family-out": ["true", "false"]},
-            ),
-            TabularCPD(
-                variable="hear-bark",
-                variable_card=2,
-                values=np.array([[0.7, 0.01], [0.3, 0.99]]),
-                evidence=["dog-out"],
-                evidence_card=[2],
-                state_names={
-                    "hear-bark": ["true", "false"],
-                    "dog-out": ["true", "false"],
-                },
-            ),
-            TabularCPD(
-                variable="light-on",
-                variable_card=2,
-                values=np.array([[0.6, 0.05], [0.4, 0.95]]),
-                evidence=["family-out"],
-                evidence_card=[2],
-                state_names={
-                    "light-on": ["true", "false"],
-                    "family-out": ["true", "false"],
-                },
-            ),
-        ]
-        model = reader.read()
-        model_cpds = model.get_cpds()
-        for cpd_index in range(5):
-            assert model_cpds[cpd_index] == cpds_expected[cpd_index]
-
-        assert dict(model.nodes) == node_expected
-        assert dict(model.adj) == edge_expected
-
-        assert sorted(model.nodes()) == sorted(nodes_expected)
-        assert sorted(model.edges()) == sorted(edges_expected)
-
-    def test_water_model(self, water_model):
-        model = water_model.read()
-        assert len(model.nodes()) == 32
-        assert len(model.edges()) == 66
-        assert len(model.get_cpds()) == 32
-
-    def test_default_attribut_equal_table(self, reader):
-        default_reader = BIFReader(
-            string=DOG_PROBLEM_DEFAULT_BIF,
-            include_properties=True,
-        )
-        table_model = reader.read()
-        default_model = default_reader.read()
-        assert sorted(table_model.nodes()) == sorted(default_model.nodes())
-        assert sorted(table_model.edges()) == sorted(default_model.edges())
-        for var in table_model.nodes():
-            assert table_model.get_cpds(var) == default_model.get_cpds(var)
-
-    def test_cpp_style_comments(self):
-        reader = BIFReader(
-            string=CPP_STYLE_COMMENTS_BIF,
-            include_properties=True,
-        )
-        assert reader.network_name == "Cancer_Research"
-        assert "http://health-data.org/lung-cancer" in reader.network
-
-
-@pytest.mark.skipif(
-    not _check_soft_dependencies("torch", severity="none"),
-    reason="execute only if required dependency present",
-)
-class TestBIFWriterTorch:
-    @pytest.fixture(autouse=True)
-    def set_torch_backend(self):
-        config.set_backend("torch")
-        yield
-        config.set_backend("numpy")
-
-    @pytest.fixture
-    def writer(self, bif_model):
-        return BIFWriter(model=bif_model, round_values=4)
-
-    def test_str(self, writer):
-        assert str(writer) == EXPECTED_WRITER_STRING
-
-    def test_write_read_equal(self, writer, bif_model):
-        writer.write_bif("test_bif.bif")
-        reader = BIFReader("test_bif.bif", state_name_type=int)
-        read_model = reader.read()
-        assert sorted(bif_model.nodes()) == sorted(read_model.nodes())
-        assert sorted(bif_model.edges()) == sorted(read_model.edges())
-        for var in bif_model.nodes():
-            assert bif_model.get_cpds(var) == read_model.get_cpds(var)
-        os.remove("test_bif.bif")
