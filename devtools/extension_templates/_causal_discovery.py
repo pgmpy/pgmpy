@@ -58,6 +58,25 @@ class MyCausalDiscoveryAlgo(BaseCausalDiscovery):
     .. [2] Citation2
     """
 
+    # TODO: Set every tag. `pgmpy.registry.all_tags("causal_discovery")` lists them, and the tag classes in
+    #       `pgmpy/registry/_tags.py` document each tag and its allowed values.
+    _tags = {
+        "name": "my_causal_discovery_algo",
+        "data_types": ["continuous"],
+        "identifiable_graph": "dag",
+        "requires_target": False,
+        "capability:multivariate": True,
+        "capability:expert_knowledge": [],
+        "assumption:causal_sufficiency": True,
+        "assumption:acyclicity": True,
+        "assumption:faithfulness": False,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
+    }
+
     # TODO: Add all hyperparameters required for the algorithm in the init method.
     def __init__(self, hyperparam1=None, hyperparam2=None):
 
@@ -66,6 +85,12 @@ class MyCausalDiscoveryAlgo(BaseCausalDiscovery):
         self.hyperparam2 = hyperparam2
 
     def _fit(self, X: pd.DataFrame):
+
+        # TODO: If the algorithm uses a CI test, a structure score, or a pairwise estimator, store the resolved one as
+        #       self.ci_test_ (from pgmpy.ci_tests.get_ci_test), self.scoring_method_ (from
+        #       pgmpy.structure_score.get_scoring_method), or self.pairwise_estimator_. `fit` uses them to narrow the
+        #       algorithm's tags. Remove this block otherwise.
+        # self.ci_test_ = get_ci_test(test=self.ci_test, data=X)
 
         # TODO: Add logic to learn the causal graph from the data X. Methods from mixin classes can be used here if
         #       applicable.
