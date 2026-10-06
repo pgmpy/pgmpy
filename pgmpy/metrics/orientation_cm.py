@@ -132,19 +132,24 @@ class OrientationConfusionMatrix(BaseSupervisedMetric):
 
         if "precision" in self.metrics:
             results["precision"] = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+            self.precision_ = results["precision"]
 
         if "recall" in self.metrics:
             results["recall"] = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+            self.recall_ = results["recall"]
 
         if "f1" in self.metrics:
             prec = tp / (tp + fp) if (tp + fp) > 0 else 0.0
             rec = tp / (tp + fn) if (tp + fn) > 0 else 0.0
             results["f1"] = 2 * prec * rec / (prec + rec) if (prec + rec) > 0 else 0.0
+            self.f1_ = results["f1"]
 
         if "npv" in self.metrics:
             results["npv"] = tn / (tn + fn) if (tn + fn) > 0 else 0.0
+            self.npv_ = results["npv"]
 
         if "specificity" in self.metrics:
             results["specificity"] = tn / (tn + fp) if (tn + fp) > 0 else 0.0
+            self.specificity_ = results["specificity"]
 
         return results
