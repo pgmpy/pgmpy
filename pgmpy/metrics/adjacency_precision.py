@@ -27,7 +27,7 @@ class AdjacencyPrecision(AdjacencyConfusionMatrix):
     ... )
     >>> est_dag = DAG([("Smoking", "Lung_Cancer"), ("Age", "Heart_Disease")])
     >>> scorer = AdjacencyPrecision()
-    >>> scorer.evaluate(true_dag, est_dag)
+    >>> result = scorer.evaluate(true_dag, est_dag)
     >>> result
     1.0
     """
