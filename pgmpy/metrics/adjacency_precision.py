@@ -30,7 +30,6 @@ class AdjacencyPrecision(AdjacencyConfusionMatrix):
     >>> scorer.evaluate(true_dag, est_dag)
     >>> result
     1.0
-
     """
 
     _tags = {

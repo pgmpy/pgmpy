@@ -14,6 +14,7 @@ from .orientation_npv import OrientationNPV
 from .orientation_precision import OrientationPrecision
 from .orientation_recall import OrientationRecall
 from .orientation_specificity import OrientationSpecificity
+from .rmsea import RMSEA
 from .shd import SHD
 from .structure_score import StructureScore
 
@@ -37,5 +38,6 @@ __all__ = [
     "CorrelationScore",
     "ImpliedCIs",
     "FisherC",
+    "RMSEA",
     "StructureScore",
 ]

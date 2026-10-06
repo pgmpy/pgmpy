@@ -6,11 +6,9 @@ from pgmpy.metrics import BaseUnsupervisedMetric
 
 class RMSEA(BaseUnsupervisedMetric):
     _tags = {
-        "name": "RMSEA",
-        "requires_true_graph": False,
+        "name": "rmsea",
         "requires_data": False,
         "lower_is_better": True,
-        "is_symmetric": False,
         "supported_graph_types": [DAG],
         "output_type": "scalar",
     }
