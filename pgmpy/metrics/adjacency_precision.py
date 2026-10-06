@@ -39,7 +39,7 @@ class AdjacencyPrecision(AdjacencyConfusionMatrix):
         "requires_data": False,
         "lower_is_better": False,
         "is_symmetric": False,
-        "supported_graph_types": (DAG, PDAG),
+        "supported_graph_types": [DAG, PDAG],
         "output_type": "scalar",
     }
 

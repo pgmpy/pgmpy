@@ -33,7 +33,7 @@ class OrientationSpecificity(OrientationConfusionMatrix):
         "requires_data": False,
         "lower_is_better": False,
         "is_symmetric": False,
-        "supported_graph_types": (DAG,),
+        "supported_graph_types": [DAG],
         "output_type": "scalar",
     }
 
