@@ -6,41 +6,35 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
-from pandas.api.types import is_complex_dtype, is_float_dtype, is_numeric_dtype
+from pandas.api.types import is_numeric_dtype
 from skbase.base import BaseEstimator, BaseObject
 from skbase.utils.dependencies import _check_estimator_deps
 from sklearn.base import BaseEstimator as SklearnEstimator
 from sklearn.utils import Tags, TargetTags
-from sklearn.utils.validation import check_consistent_length, check_is_fitted
+from sklearn.utils.validation import check_is_fitted
 
 from pgmpy.parameterization.distributions.nominal import _sample_index
-from pgmpy.utils import get_dataset_type
+from pgmpy.utils import preprocess_data
 
 
 class BaseParameter(BaseEstimator):
-    """Base class for parameterizations: models of one variable given its parent variables.
+    """Base class for parameterizations: models of one variable given its parents.
 
-    ``fit(X, y)`` learns the distribution of the target ``y`` given the parents ``X``, ``predict_proba(X)`` returns that
-    distribution for each row of ``X``, and ``sample`` draws values of the target. A root variable has no parents: fit
-    it with ``X=None`` or with a DataFrame without columns. Parents are sorted by name, so the order of ``X``'s columns
-    doesn't matter.
+    ``fit(X, y)`` learns the distribution of the target ``y`` given the parents ``X``, ``predict_proba(X)`` returns it
+    for each row of ``X``, ``predict(X)`` a point prediction from it, ``log_likelihood(X, y)`` scores ``y`` under it,
+    and ``sample`` draws from it. A root is fitted with ``X=None``. Parents are sorted by name, so the order of ``X``'s
+    columns doesn't matter.
 
-    Subclasses implement ``_fit``, which gets ``X`` with its columns in ``evidence_`` order, and ``_predict_proba``,
-    where ``_predict_proba(None)`` returns the marginal distribution of the target. They set the ``variable_type`` and
-    ``parent_type`` tags to the types they support for the target and for the parents (``"discrete"``, ``"continuous"``
-    or both); continuous-only parents must be numeric, while discrete ones can have any labels. They also set
-    ``supports_weighted_data`` if ``_fit`` uses sample weights, and ``python_dependencies`` to the packages checked at
-    construction. The default ``_sample`` passes ``random_state`` to the ``sample`` method of the predicted
-    distribution. If that method doesn't take it, as for skpro's distributions, it applies the distribution's ``ppf`` to
-    uniform values drawn from ``numpy.random.default_rng(random_state)``.
+    Subclasses implement ``_fit``, which gets ``X`` in ``evidence_`` order, and ``_predict_proba``, which returns the
+    marginal for ``X=None``. They set a ``name`` and the other tags registered for parameterizations in
+    :mod:`pgmpy.registry`; ``variable_type`` must hold a single type by the time ``fit`` runs.
 
     Attributes
     ----------
     variable_ : hashable
-        Name of the target variable.
+        Name of the target.
     evidence_ : list
-        Names of the parent variables, sorted; empty for a root variable. Numbers of any type sort by value, then
-        strings, then tuples element by element, then any other name by its type and repr.
+        Names of the parents, sorted; empty for a root.
     variable_type_ : str
         Type of the target, ``"discrete"`` or ``"continuous"``.
 
@@ -51,9 +45,16 @@ class BaseParameter(BaseEstimator):
 
     _tags = {
         "object_type": "parameterization",
+        "name": None,
         "variable_type": ["discrete", "continuous"],
-        "parent_type": ["discrete", "continuous"],
+        "parent_data_types": ["discrete", "continuous", "mixed"],
         "supports_weighted_data": False,
+        "requires_data": True,
+        "capability:factor": False,
+        "capability:exact_inference": False,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
         "python_dependencies": None,
     }
 
@@ -69,54 +70,44 @@ class BaseParameter(BaseEstimator):
         Parameters
         ----------
         X : pandas.DataFrame or None
-            Values of the parent variables, one column per parent. ``None`` or a DataFrame without columns for a root
-            variable.
-        y : pandas.DataFrame or pandas.Series
-            Values of the target variable, as a single column with the same index as ``X``.
+            Parent values, one column per parent; ``None`` for a root. Continuous-only parents must be numeric.
+        y : pandas.Series or pandas.DataFrame
+            Target values, in a single column with ``X``'s index. A continuous target must be numeric.
         sample_weight : array-like of shape (n_samples,), optional
-            Weight of each row: finite, non-negative and not all zero. Only for classes with the
-            ``supports_weighted_data`` tag.
+            Non-negative weight of each row, for classes with the ``supports_weighted_data`` tag.
 
         Returns
         -------
         self
             The fitted instance.
         """
+        # Step 1: Reset any earlier fit, and check that X and y are DataFrames with the same index and no missing
+        # values.
         self.reset()
-
         if isinstance(y, pd.Series):
             y = y.to_frame()
         if not isinstance(y, pd.DataFrame) or y.shape[1] != 1:
             raise ValueError("y must be a pandas Series or a DataFrame with exactly one column.")
-        # A copy, so that estimators that keep a view of y don't change when the caller edits their data.
-        y = y.copy()
         if X is None:
             X = pd.DataFrame(index=y.index)
         if not isinstance(X, pd.DataFrame):
             raise ValueError("X must be a pandas DataFrame, or None for a root variable.")
-        if X.columns.has_duplicates:
-            raise ValueError(f"X has repeated column names: {X.columns[X.columns.duplicated()].unique().tolist()}.")
-        check_consistent_length(X, y)
-        if len(y) == 0:
-            raise ValueError("fit needs at least one row of data.")
         if not X.index.equals(y.index):
             raise ValueError("X and y must have the same index.")
-        if y.columns[0] in X.columns:
-            raise ValueError(f"The target {y.columns[0]!r} must not also be a column of X.")
-        _check_values(X, "X")
-        _check_values(y, "y")
+        for data, name in ((X, "X"), (y, "y")):
+            if data.isna().to_numpy().any():
+                raise ValueError(f"{name} must not contain missing values.")
 
-        supported_types = _as_list(self.get_tag("variable_type"))
-        variable_type = supported_types[0] if len(supported_types) == 1 else get_dataset_type(y)
-        # For one column, get_dataset_type says "mixed" only for an ordered categorical with non-string categories.
-        if variable_type == "mixed":
-            variable_type = "discrete"
-        if variable_type not in supported_types:
-            raise ValueError(f"{type(self).__name__} supports {supported_types} targets, but y is {variable_type}.")
-        if variable_type == "continuous" and not _is_numeric(y.dtypes.iloc[0]):
+        # Step 2: Check that a continuous target and continuous-only parents are numeric.
+        [variable_type] = self.get_tag("variable_type")
+        if variable_type == "continuous" and preprocess_data(y)[1][y.columns[0]] != "N":
             raise ValueError(f"{type(self).__name__} needs a numeric target, but y has dtype {y.dtypes.iloc[0]}.")
-        self._check_parent_types(X)
+        if self.get_tag("parent_data_types") == ["continuous"]:
+            non_numeric = [column for column, kind in preprocess_data(X)[1].items() if kind != "N"]
+            if non_numeric:
+                raise ValueError(f"{type(self).__name__} needs numeric parents, but {non_numeric} aren't numeric.")
 
+        # Step 3: Check the sample weights, if any.
         if sample_weight is not None:
             if not self.get_tag("supports_weighted_data"):
                 raise ValueError(f"{type(self).__name__} does not support sample_weight.")
@@ -130,7 +121,8 @@ class BaseParameter(BaseEstimator):
             if not np.isfinite(sample_weight).all() or (sample_weight < 0).any() or not sample_weight.any():
                 raise ValueError("sample_weight must be finite and non-negative, with at least one positive value.")
 
-        # Select columns by position: X[names] would read a list of boolean names, e.g. [False, True], as a row mask.
+        # Step 4: Sort the parents by name and fit the subclass's model on X in that order. Columns are selected by
+        # position, as X[names] would read a list of boolean names, e.g. [False, True], as a row mask.
         columns = list(X.columns)
         order = _parent_order(columns)
         self.variable_ = y.columns[0]
@@ -146,17 +138,73 @@ class BaseParameter(BaseEstimator):
         Parameters
         ----------
         X : pandas.DataFrame, optional
-            Values of the parent variables, with the columns seen in ``fit`` in any order. For a root variable, a
-            DataFrame without columns, whose index sets the rows. ``None`` for the marginal distribution of the target
-            over the parent values seen in ``fit``.
+            Parent values, with the columns seen in ``fit`` in any order; for a root, a DataFrame without columns.
+            ``None`` gives the marginal distribution over the parent values seen in ``fit``.
 
         Returns
         -------
         skpro distribution
-            The distribution of the target, with one row per row of ``X`` and the same index. Without ``X``, its
-            marginal distribution.
+            One row per row of ``X``, with ``X``'s index; a scalar distribution without ``X``.
         """
         return self._predict_proba(self._check_X(X))
+
+    def predict(self, X: pd.DataFrame) -> pd.DataFrame:
+        """Return a point prediction of the target for each row of ``X``.
+
+        The mean of the distribution from ``predict_proba`` for a continuous target, and its most probable state for a
+        discrete one, the first in category order on ties.
+
+        Parameters
+        ----------
+        X : pandas.DataFrame
+            Parent values, as for ``predict_proba``; for a root, a DataFrame without columns.
+
+        Returns
+        -------
+        pandas.DataFrame
+            One column named after the target, with ``X``'s index.
+        """
+        X = self._check_X(X)
+        if X is None:
+            raise ValueError("predict needs X; for a root variable, pass a DataFrame without columns.")
+        return self._predict(X)
+
+    def log_likelihood(self, X: pd.DataFrame | None, y: pd.DataFrame | pd.Series) -> pd.DataFrame:
+        """Return the log-likelihood of each row of ``y`` given the same row of ``X``, log p(y | x).
+
+        The log of the density for a distribution over a continuous measure, and of the probability for one over a
+        discrete measure, such as a ``NominalDistribution``.
+
+        Parameters
+        ----------
+        X : pandas.DataFrame or None
+            Parent values, as for ``predict``; ``None`` for a root.
+        y : pandas.Series or pandas.DataFrame
+            Target values, in a single column with ``X``'s index.
+
+        Returns
+        -------
+        pandas.DataFrame
+            One column named after the target, with ``X``'s index.
+        """
+        # Step 1: Check X and y as predict and fit do.
+        if isinstance(y, pd.Series):
+            y = y.to_frame()
+        if not isinstance(y, pd.DataFrame) or y.shape[1] != 1:
+            raise ValueError("y must be a pandas Series or a DataFrame with exactly one column.")
+        X = self._check_X(pd.DataFrame(index=y.index) if X is None else X)
+        if not X.index.equals(y.index):
+            raise ValueError("X and y must have the same index.")
+
+        # Step 2: Predict the distributions on a RangeIndex and put X's index back at the end, as skpro matches values
+        # to rows by label, which mixes up rows with repeated labels.
+        distribution = self._predict_proba(X.set_axis(pd.RangeIndex(len(X))))
+
+        # Step 3: Score y with the log-probability under a discrete measure, and the log-density under any other.
+        values = pd.DataFrame(y.to_numpy(), index=distribution.index, columns=distribution.columns)
+        discrete = distribution.get_tag("distr:measuretype", "continuous", raise_error=False) == "discrete"
+        scores = distribution.log_pmf(values) if discrete else distribution.log_pdf(values)
+        return pd.DataFrame(scores.to_numpy(), index=X.index, columns=[self.variable_])
 
     def sample(
         self,
@@ -164,24 +212,22 @@ class BaseParameter(BaseEstimator):
         n_samples: int | None = None,
         random_state: int | np.random.Generator | None = None,
     ) -> Any:
-        """Draw values of the target variable.
+        """Draw values of the target from its distribution given each row of ``X``.
 
         Parameters
         ----------
         X : pandas.DataFrame, optional
-            Values of the parent variables, as for ``predict_proba``. Without ``X``, values are drawn from the marginal
-            distribution of the target.
+            Parent values, as for ``predict_proba``; ``None`` draws from the marginal distribution.
         n_samples : int, optional
-            Number of values to draw for each row of ``X``, one if omitted. Without ``X``, the total number of values.
+            Number of draws per row of ``X``, one if omitted; without ``X``, the total number of draws.
         random_state : int, numpy.random.Generator or None, optional
-            Controls the randomness of this call. An ``int`` gives the same values on every call, a ``Generator`` is
-            used as-is and advances across calls, and ``None`` draws fresh values.
+            Seed or generator for this call; ``None`` draws fresh values.
 
         Returns
         -------
         pandas.DataFrame
-            One column named after the target. With ``X``, it has ``X``'s index, and with ``n_samples`` also an unnamed
-            first index level numbering the draws.
+            One column named after the target, with ``X``'s index, preceded by a level numbering the draws when
+            ``n_samples`` is given.
         """
         if n_samples is not None and (
             isinstance(n_samples, bool) or not isinstance(n_samples, Integral) or n_samples < 0
@@ -200,17 +246,7 @@ class BaseParameter(BaseEstimator):
             raise ValueError("X must be a pandas DataFrame.")
         if len(X.columns) != len(self.evidence_) or set(X.columns) != set(self.evidence_):
             raise ValueError(f"X must have the columns seen in fit, {self.evidence_}, but has {list(X.columns)}.")
-        _check_values(X, "X")
-        self._check_parent_types(X)
-        positions = {name: position for position, name in enumerate(X.columns)}
-        return X.iloc[:, [positions[name] for name in self.evidence_]]
-
-    def _check_parent_types(self, X: pd.DataFrame) -> None:
-        if "discrete" in _as_list(self.get_tag("parent_type")):
-            return
-        non_numeric = {column: str(dtype) for column, dtype in X.dtypes.items() if not _is_numeric(dtype)}
-        if non_numeric:
-            raise ValueError(f"{type(self).__name__} needs numeric parents, but X has other columns: {non_numeric}.")
+        return X.iloc[:, [X.columns.get_loc(name) for name in self.evidence_]]
 
     def _fit(self, X: pd.DataFrame, y: pd.DataFrame, sample_weight: np.ndarray | None) -> None:
         raise NotImplementedError
@@ -218,21 +254,39 @@ class BaseParameter(BaseEstimator):
     def _predict_proba(self, X: pd.DataFrame | None) -> Any:
         raise NotImplementedError
 
+    def _predict(self, X: pd.DataFrame) -> pd.DataFrame:
+        # Step 1: Predict the distribution of the target for each row.
+        distribution = self._predict_proba(X)
+
+        # Step 2: Reduce it to a point: the mean for a continuous target, and the most probable state for a discrete
+        # one. A Series keeps tuple labels whole, and gives the states' dtype as NominalDistribution.sample does.
+        if self.variable_type_ == "continuous":
+            return pd.DataFrame(distribution.mean().to_numpy(), index=X.index, columns=[self.variable_])
+        categories = pd.Series(distribution.categories)
+        values = categories.to_numpy()[np.argmax(distribution.probs, axis=1)]
+        dtype = categories.infer_objects().dtype
+        return pd.DataFrame(values.reshape(-1, 1), index=X.index, columns=[self.variable_]).astype(dtype)
+
     def _sample(
         self, X: pd.DataFrame | None, n_samples: int | None, random_state: int | np.random.Generator | None
     ) -> pd.DataFrame:
-        # Sample on a RangeIndex and put X's index back afterwards: skpro matches values to rows by label, which mixes
-        # up rows with repeated labels, and fails for some distributions with a MultiIndex.
+        # Step 1: Predict the distributions on a RangeIndex, to put X's index back at the end: skpro matches values to
+        # rows by label, which mixes up rows with repeated labels, and fails for some distributions with a MultiIndex.
         distribution = self._predict_proba(None if X is None else X.set_axis(pd.RangeIndex(len(X))))
+
+        # Step 2: Draw with the distribution's own sample() if it takes a random_state, as NominalDistribution's does.
         if "random_state" in inspect.signature(distribution.sample).parameters:
             samples = distribution.sample(n_samples, random_state=random_state)
         else:
+            # Step 3: Otherwise, as for skpro's distributions, apply the ppf to uniform values from the seeded
+            # generator.
+            # Step 3.1: Draw one uniform value per draw and row.
             rng = np.random.default_rng(random_state)
             uniform = rng.random(
                 n_samples if X is None else (1 if n_samples is None else n_samples, *distribution.shape)
             )
-            # A plain distribution is repeated to one row per draw, which takes a single ppf call. Any other, e.g. a
-            # sample-based one like Empirical, gets one ppf call per draw.
+            # Step 3.2: Repeat a plain distribution to one row per draw for a single ppf call; any other, e.g.
+            # Empirical, gets one ppf call per draw.
             if uniform.size and _plain(distribution):
                 if X is None:
                     params = {**distribution.get_params(deep=False), "index": pd.RangeIndex(n_samples), "columns": [0]}
@@ -245,6 +299,8 @@ class BaseParameter(BaseEstimator):
             else:
                 values = [distribution.ppf(u).to_numpy() for u in uniform]
             samples = pd.DataFrame(np.reshape(values, (-1, 1)), dtype=float)
+
+        # Step 4: Label the samples with X's index, and a level numbering the draws, and with the target's name.
         if X is not None:
             samples = samples.set_axis(X.index if n_samples is None else _sample_index(X.index, n_samples))
         return samples.set_axis([self.variable_], axis=1)
@@ -270,15 +326,10 @@ class BaseParameter(BaseEstimator):
         return hash((type(self).__name__, self.variable_, tuple(self.evidence_)))
 
 
-def _as_list(types: str | list[str]) -> list[str]:
-    """Return the value of a type tag, a type or a list of types, as a list."""
-    return [types] if isinstance(types, str) else types
-
-
 def _equal(value: Any, other: Any, fitted: bool = True) -> bool:
-    """Return whether two values are equal, comparing numbers and numeric arrays with numpy.allclose's tolerance, other
-    arrays and pandas objects exactly, dicts, lists and tuples item by item, and skbase objects such as distributions by
-    type and parameters. Estimators compare by identity when ``fitted``, and otherwise by their parameters."""
+    """Return whether two values are equal: numbers and numeric arrays within numpy.allclose's tolerance, containers
+    item by item, and skbase or sklearn objects by their parameters, except fitted estimators, which compare by
+    identity."""
     if all(
         isinstance(v, (Real, np.number, np.ndarray)) and np.issubdtype(np.asarray(v).dtype, np.number)
         for v in (value, other)
@@ -303,8 +354,8 @@ def _equal(value: Any, other: Any, fitted: bool = True) -> bool:
 
 
 def _plain(distribution: Any) -> bool:
-    """Return whether a skpro distribution's parameters are numbers or numeric arrays broadcast to its rows, so that its
-    rows can be repeated or relabelled by position."""
+    """Return whether a skpro distribution's parameters are numbers broadcast to its rows, so that its rows can be
+    repeated or relabelled by position."""
     return distribution.get_tag("broadcast_init", "off", raise_error=False) == "on" and all(
         name in ("index", "columns")
         or isinstance(value, Real)
@@ -314,25 +365,8 @@ def _plain(distribution: Any) -> bool:
     )
 
 
-def _is_numeric(dtype: Any) -> bool:
-    """Return whether a column of this dtype counts as numeric: numbers, and booleans of any kind."""
-    return is_numeric_dtype(dtype) or dtype.kind == "b"
-
-
-def _check_values(data: pd.DataFrame, name: str) -> None:
-    """Raise a ValueError if ``data`` has missing, complex, NaN or infinite values."""
-    if data.isna().to_numpy().any():
-        raise ValueError(f"{name} must not contain missing values.")
-    if any(is_complex_dtype(dtype) for dtype in data.dtypes):
-        raise ValueError(f"{name} must not contain complex values.")
-    # isna() misses a NaN stored as a value, e.g. from 0/0 in a nullable Float64 column, so the values are checked too.
-    for position, dtype in enumerate(data.dtypes):
-        if is_float_dtype(dtype) and not np.isfinite(data.iloc[:, position].to_numpy(dtype=float)).all():
-            raise ValueError(f"{name} must not contain NaN or infinite values.")
-
-
 def _checked_evidence(variable: Hashable, evidence: list | tuple | None) -> list:
-    """Return the parents as a list, checking that the variable and its parents have different, hashable names."""
+    """Return ``evidence`` as a list, checking that the variable and its parents have distinct names."""
     evidence = [] if evidence is None else evidence
     if not isinstance(evidence, (list, tuple)):
         raise TypeError(f"evidence must be a list or tuple of parent names, but is a {type(evidence).__name__}.")
@@ -345,7 +379,8 @@ def _checked_evidence(variable: Hashable, evidence: list | tuple | None) -> list
 
 
 def _name_key(name: Hashable) -> tuple:
-    """Return a sort key for any name: numbers by value, then strings, then tuples, then others by type and repr."""
+    """Return a sort key for any name: numbers by value, then strings, then tuples element by element, then other names
+    by type and repr."""
     if isinstance(name, Real):
         return 0, name
     if isinstance(name, str):
@@ -356,5 +391,5 @@ def _name_key(name: Hashable) -> tuple:
 
 
 def _parent_order(evidence: list) -> list[int]:
-    """Return the positions of the parents in sorted order."""
+    """Return the positions of ``evidence`` in sorted order."""
     return sorted(range(len(evidence)), key=lambda position: _name_key(evidence[position]))

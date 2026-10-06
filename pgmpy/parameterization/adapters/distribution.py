@@ -58,9 +58,11 @@ class DistributionAdapter(BaseParameter):
     """
 
     _tags = {
+        "name": "distribution_adapter",
         "variable_type": ["discrete", "continuous"],
         # The data is ignored, so weights change nothing.
         "supports_weighted_data": True,
+        "requires_data": False,
         "python_dependencies": "skpro",
     }
 
@@ -73,7 +75,7 @@ class DistributionAdapter(BaseParameter):
         self._scalar = distribution.distribution if isinstance(distribution, IID) else distribution
         if self._scalar.ndim != 0:
             raise ValueError(f"distribution must be scalar, but has shape {self._scalar.shape}.")
-        self.set_tags(variable_type="discrete" if isinstance(self._scalar, NominalDistribution) else "continuous")
+        self.set_tags(variable_type=["discrete" if isinstance(self._scalar, NominalDistribution) else "continuous"])
 
     def set_params(self, **params: Any) -> "DistributionAdapter":
         """Set the parameters, and check the updated distribution and take the tags from it."""
@@ -104,7 +106,7 @@ class DistributionAdapter(BaseParameter):
         cpd = cls(distribution)
         cpd.variable_ = variable
         cpd.evidence_ = [evidence[position] for position in _parent_order(evidence)]
-        cpd.variable_type_ = cpd.get_tag("variable_type")
+        [cpd.variable_type_] = cpd.get_tag("variable_type")
         cpd.distribution_ = deepcopy(cpd._scalar)
         cpd._is_fitted = True
         return cpd
@@ -113,9 +115,12 @@ class DistributionAdapter(BaseParameter):
         self.distribution_ = deepcopy(self._scalar)
 
     def _predict_proba(self, X: pd.DataFrame | None) -> Any:
+        # Step 1: Without X, return a copy of the distribution itself.
         scalar = self.distribution_
         if X is None:
             return deepcopy(scalar)
+
+        # Step 2: Repeat a NominalDistribution's probabilities for every row.
         if isinstance(scalar, NominalDistribution):
             return NominalDistribution(
                 probs=np.tile(np.asarray(scalar.probs, dtype=float), (len(X), 1)),
@@ -123,10 +128,10 @@ class DistributionAdapter(BaseParameter):
                 index=X.index,
                 columns=[self.variable_],
             )
+        # Step 3: Rebuild a distribution whose parameters are numbers with them for the rows; repeat any other by IID.
         params = {
             name: value for name, value in scalar.get_params(deep=False).items() if name not in ("index", "columns")
         }
-        # A distribution whose parameters are numbers is rebuilt with them for the rows; any other is repeated by IID.
         if all(isinstance(value, Real) and not isinstance(value, bool) for value in params.values()):
             numbers = {name: float(value) for name, value in params.items()}
             return type(scalar)(**numbers, index=X.index, columns=[self.variable_])

@@ -27,10 +27,12 @@ class TestDistributionAdapter:
     def test_init_and_from_values(self):
         normal = Normal(mu=1.5, sigma=2.0)
 
-        # The target is discrete only for a NominalDistribution, whatever skpro's measure type, e.g. of a Delta.
-        assert DistributionAdapter(normal).get_tag("variable_type") == "continuous"
-        assert DistributionAdapter(Delta(c=2.5)).get_tag("variable_type") == "continuous"
-        assert DistributionAdapter(NominalDistribution([0.3, 0.7], ["a", "b"])).get_tag("variable_type") == "discrete"
+        # The target is discrete only for a NominalDistribution, whatever skpro's measure type, e.g. of a Delta. The
+        # distribution is given, so the adapter needs no data.
+        assert DistributionAdapter(normal).get_tag("variable_type") == ["continuous"]
+        assert DistributionAdapter(Delta(c=2.5)).get_tag("variable_type") == ["continuous"]
+        assert DistributionAdapter(NominalDistribution([0.3, 0.7], ["a", "b"])).get_tag("variable_type") == ["discrete"]
+        assert DistributionAdapter.get_class_tag("requires_data") is False
 
         # from_values creates a fitted adapter without data, as do() needs. fit only records the target and parents.
         do = DistributionAdapter.from_values("X", Delta(c=2.5), ["b", "a"])
@@ -51,10 +53,9 @@ class TestDistributionAdapter:
 
         # The tags and the check follow the distribution after set_params, also a nested one.
         nominal = NominalDistribution([0.3, 0.7], ["a", "b"])
-        assert (
-            DistributionAdapter(iid).set_params(distribution__distribution=nominal).get_tag("variable_type")
-            == "discrete"
-        )
+        assert DistributionAdapter(iid).set_params(distribution__distribution=nominal).get_tag("variable_type") == [
+            "discrete"
+        ]
         with pytest.raises(ValueError, match="scalar"):
             DistributionAdapter(Normal(mu=0.0, sigma=1.0)).set_params(distribution__mu=[[0.0, 1.0]])
 
@@ -84,6 +85,21 @@ class TestDistributionAdapter:
             ["a", "b"],
         )
         np.testing.assert_allclose(np.asarray(nominal.probs), [[0.3, 0.7]] * 3)
+
+        # predict gives the mean of a continuous distribution and the most probable state of a nominal one.
+        normal = DistributionAdapter.from_values("y", Normal(mu=1.5, sigma=2.0))
+        pd.testing.assert_frame_equal(normal.predict(ROWS), pd.DataFrame({"y": [1.5] * 3}, index=ROWS.index))
+        nominal = DistributionAdapter.from_values("y", NominalDistribution([0.3, 0.7], ["a", "b"]))
+        pd.testing.assert_frame_equal(nominal.predict(ROWS), pd.DataFrame({"y": ["b"] * 3}, index=ROWS.index))
+
+        # log_likelihood uses the log-density of a continuous measure and the log-mass of a discrete one, such as a
+        # nominal distribution or a Delta.
+        y = pd.Series([0.0, 1.5], name="y")
+        np.testing.assert_allclose(normal.log_likelihood(None, y)["y"], [-1.8933, -1.6121], atol=1e-4)
+        labels = pd.Series(["a", "b"], name="y")
+        np.testing.assert_allclose(nominal.log_likelihood(None, labels)["y"], np.log([0.3, 0.7]))
+        delta = DistributionAdapter.from_values("y", Delta(c=1.5))
+        np.testing.assert_allclose(delta.log_likelihood(None, y)["y"], [-np.inf, 0.0])
 
         # The distribution is copied in and out, so changing the original or a returned one leaves the adapter as it
         # was.

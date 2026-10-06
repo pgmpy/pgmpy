@@ -6,8 +6,9 @@ from pandas.api.types import is_string_dtype
 from skbase.utils.dependencies import _safe_import
 from sklearn.base import clone
 
-from pgmpy.parameterization._base import BaseParameter, _is_numeric, _plain
+from pgmpy.parameterization._base import BaseParameter, _plain
 from pgmpy.parameterization.adapters.sklearn import _features
+from pgmpy.utils import preprocess_data
 
 DummyProbaRegressor = _safe_import("skpro.regression.dummy.DummyProbaRegressor")
 Empirical = _safe_import("skpro.distributions.Empirical")
@@ -32,7 +33,8 @@ class SkproAdapter(BaseParameter):
     is then the column of the predicted distributions; samples keep the name. skpro matches rows by their labels, so the
     estimator is fitted by position, and for an ``X`` whose index repeats labels or is a MultiIndex, it also predicts by
     position: the predicted distribution then has ``X``'s index only if its parameters are plain numbers, as for a
-    ``Normal``. A root doesn't use the estimator: every row gets the empirical distribution of ``y``. Without ``X``,
+    ``Normal``. A root doesn't use the estimator: every row gets the empirical distribution of ``y``, which has no
+    ``log_likelihood``, as skpro's ``Empirical`` has no ``log_pmf``. Without ``X``,
     ``predict_proba`` gives the marginal distribution over the rows seen in fit: for a root, the empirical distribution
     of ``y``, and otherwise the Normal with the mean and variance of the predicted distributions as a mixture, computed
     the first time it is needed.
@@ -69,7 +71,8 @@ class SkproAdapter(BaseParameter):
     """
 
     _tags = {
-        "variable_type": "continuous",
+        "name": "skpro_adapter",
+        "variable_type": ["continuous"],
         "python_dependencies": "skpro",
     }
 
@@ -84,30 +87,33 @@ class SkproAdapter(BaseParameter):
             raise TypeError(f"estimator must be a skpro probabilistic regressor, but is a {type(estimator).__name__}.")
 
     def _fit(self, X: pd.DataFrame, y: pd.DataFrame, sample_weight: np.ndarray | None) -> None:
+        # Step 1: Decide how each parent goes in: numbers and booleans as floats, and object and string columns, which
+        # skpro rejects, as categories, with the categories seen here.
         features = _features(X)
-        # skpro rejects object and string columns, so they go in as categories, with the categories seen here.
+        self._numbers = {name: "float64" for name, kind in preprocess_data(features)[1].items() if kind == "N"}
         self._categories = {
             name: features[name].astype("category").dtype
             for name, dtype in features.dtypes.items()
             if is_string_dtype(dtype)
         }
-        # skpro matches rows by label, so the regressor gets the rows by position.
+        # Step 2: Prepare the parents and the target, by position, as skpro matches rows by label. The target goes in as
+        # floats, under a string name.
         self._training = self._prepare(X).reset_index(drop=True)
         target = y.astype(float).reset_index(drop=True)
         target = target if isinstance(self.variable_, str) else target.set_axis([str(self.variable_)], axis=1)
         self._name = target.columns[0]
 
+        # Step 3: Fit a clone of the regressor; a root gets the empirical distribution of y. With parents, the
+        # marginal is computed when first needed, as predicting every training row can be slow.
         estimator = self.estimator if self.evidence_ else DummyProbaRegressor(strategy="empirical")
         self.estimator_ = clone(estimator).fit(self._training, target)
-        # With parents, the marginal is computed when first needed, as predicting every training row can be slow.
         self._marginal = None if self.evidence_ else Empirical(spl=target.iloc[:, 0])
 
     def _prepare(self, X: pd.DataFrame) -> pd.DataFrame:
         """Return the parents as skpro regressors take them: with string names, numbers and booleans as floats, and
         strings as the categories seen in fit."""
         features = _features(X)
-        numbers = {name: "float64" for name, dtype in features.dtypes.items() if _is_numeric(dtype)}
-        prepared = features.astype(numbers | self._categories)
+        prepared = features.astype(self._numbers | self._categories)
         for position, name in enumerate(features.columns):
             if name in self._categories and prepared[name].isna().any():
                 unseen = pd.unique(features[name][prepared[name].isna().to_numpy()]).tolist()
@@ -118,6 +124,8 @@ class SkproAdapter(BaseParameter):
         return prepared
 
     def _predict_proba(self, X: pd.DataFrame | None) -> Any:
+        # Step 1: Without X, return the marginal. With parents, it is the Normal with the mean and variance of the
+        # distributions predicted for the training rows as a mixture, computed once.
         if X is None:
             if self._marginal is None:
                 predicted = self.estimator_.predict_proba(self._training)
@@ -130,12 +138,12 @@ class SkproAdapter(BaseParameter):
                     )
                 self._marginal = Normal(mu=mean, sigma=float(np.sqrt(variance)))
             return self._marginal.clone()
+        # Step 2: skpro regressors can't predict for no rows, so an empty X gets an empty Normal.
         if len(X) == 0:
-            # skpro regressors can't predict for no rows.
             return Normal(mu=np.empty((0, 1)), sigma=1.0, index=X.index, columns=[self._name])
 
-        # skpro matches rows by label, so repeated labels and a MultiIndex are predicted by position. A distribution
-        # whose parameters are plain numbers then gets X's labels back.
+        # Step 3: Predict a distribution for each row. skpro matches rows by label, so repeated labels and a MultiIndex
+        # are predicted by position; a distribution whose parameters are plain numbers then gets X's labels back.
         by_position = not X.index.is_unique or isinstance(X.index, pd.MultiIndex)
         features = self._prepare(X)
         dist = self.estimator_.predict_proba(features.reset_index(drop=True) if by_position else features)

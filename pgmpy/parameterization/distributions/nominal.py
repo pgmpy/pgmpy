@@ -87,7 +87,8 @@ class NominalDistribution(BaseDistribution):
         self.probs = probs
         self.categories = categories
 
-        # Validate probs.
+        # Step 1: Check that probs has one or two dimensions, and holds non-negative probabilities with every row
+        # summing to 1, with the same tolerance as TabularCPD.
         probs_arr = np.asarray(probs, dtype=float)
         if probs_arr.ndim not in (1, 2):
             raise ValueError("probs must be a one- or two-dimensional array")
@@ -95,8 +96,6 @@ class NominalDistribution(BaseDistribution):
         probs_arr = np.atleast_2d(probs_arr)
         if np.any(probs_arr < 0):
             raise ValueError("probs must contain only non-negative probabilities")
-
-        # Same tolerance as TabularCPD.
         row_sums = probs_arr.sum(axis=1)
         invalid_rows = np.flatnonzero(~np.isclose(row_sums, 1.0, atol=0.01))
         if invalid_rows.size:
@@ -105,14 +104,15 @@ class NominalDistribution(BaseDistribution):
                 f"row sums: {row_sums[invalid_rows].tolist()}"
             )
 
-        # Validate categories. An object array keeps each label as given, including tuples and mixed types.
+        # Step 2: Check the categories, keeping each label as given, including tuples and mixed types, in an object
+        # array.
         if isinstance(categories, str):
             raise TypeError(f"categories must be an array-like of labels, not a single string: {categories!r}")
         categories_arr = np.fromiter(categories, dtype=object)
         if pd.isna(categories_arr).any():
             raise ValueError(f"Categories must not contain missing values: {categories}")
 
-        # Validate shape of categories and probs.
+        # Step 3: Check that the categories are unique, with one per column of probs.
         if len(categories_arr) != len(set(categories_arr)):
             raise ValueError(f"Categories must contain unique values: {categories}")
 
@@ -121,7 +121,7 @@ class NominalDistribution(BaseDistribution):
                 f"mismatch between the shape of categories and probs : {len(categories_arr)}, {probs_arr.shape[1]}"
             )
 
-        # Validate index, columns.
+        # Step 4: Check the index and columns of an array distribution, or give them defaults.
         if not is_scalar:
             n_rows = probs_arr.shape[0]
             if index is None:
@@ -133,6 +133,7 @@ class NominalDistribution(BaseDistribution):
             elif len(columns) != 1:
                 raise ValueError("columns must contain exactly one column name")
 
+        # Step 5: Store the probabilities, normalized to sum exactly to 1, and the categories.
         self._probs = probs_arr / row_sums[:, np.newaxis]
         self._categories = categories_arr
 
@@ -339,20 +340,24 @@ class NominalDistribution(BaseDistribution):
         scalar or pd.DataFrame
 
         """
+        # Step 1: Compute the cumulative probabilities of each row. Dividing by the total makes the last one exactly 1,
+        # as in numpy's Generator.choice, so rounding can never select a trailing zero-probability category.
         rng = np.random.default_rng(random_state)
         n_draws = 1 if n_samples is None else n_samples
         n_rows, n_states = self._probs.shape
-
-        # Dividing by the total makes the last cumulative value exactly 1, as in numpy's Generator.choice, so rounding
-        # can never select a trailing zero-probability category.
         cdf = np.cumsum(self._probs, axis=1)
         cdf /= cdf[:, -1:]
+
+        # Step 2: Draw one uniform value per draw and row, and look it up in the cumulative probabilities of its row.
         uniform = rng.random((n_draws, n_rows))
         state_idx = np.zeros((n_draws, n_rows), dtype=int)
         for j in range(n_states - 1):
             state_idx += uniform >= cdf[:, j]
         sampled = self._categories[state_idx]
-        # Take the dtype from the categories, not the drawn values, so it is the same for any number of draws.
+
+        # Step 3: Return the categories drawn, with the dtype of the categories rather than of the values drawn, so that
+        # it is the same for any number of draws: one category for a single draw from a scalar distribution, and a
+        # DataFrame otherwise.
         dtype = pd.Series(self._categories).infer_objects().dtype
 
         if self.ndim == 0:
@@ -409,11 +414,13 @@ class NominalDistribution(BaseDistribution):
         _check_soft_dependencies("matplotlib", obj="distribution plot")
         import matplotlib.pyplot as plt
 
+        # Step 1: Check the function to plot; only the pmf is supported.
         if fun is None:
             fun = "pmf"
         if fun != "pmf":
             raise NotImplementedError("`NominalDistribution` only supports `pmf` currently")
 
+        # Step 2: Create one subplot per row, or check that ax has one Axes per row.
         n_rows, n_states = self._probs.shape
         sharex = kwargs.pop("sharex", True)
         sharey = kwargs.pop("sharey", True)
@@ -431,6 +438,7 @@ class NominalDistribution(BaseDistribution):
                 )
             fig = axes[0, 0].figure
 
+        # Step 3: Draw one bar per category for each row, and label the axes.
         positions = np.arange(n_states)
         labels = [str(category) for category in self._categories]
         for i in range(n_rows):

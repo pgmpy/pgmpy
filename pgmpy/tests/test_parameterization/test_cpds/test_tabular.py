@@ -43,8 +43,10 @@ EXPECTED_CPT = np.array(
 class TestTabularCPD:
     def test_tags(self):
         assert TabularCPD.get_class_tag("object_type") == "parameterization"
-        assert TabularCPD.get_class_tag("variable_type") == "discrete"
-        assert TabularCPD.get_class_tag("parent_type") == "discrete"
+        assert TabularCPD.get_class_tag("variable_type") == ["discrete"]
+        assert TabularCPD.get_class_tag("parent_data_types") == ["discrete"]
+        assert TabularCPD.get_class_tag("capability:factor") is True
+        assert TabularCPD.get_class_tag("capability:exact_inference") is True
         assert TabularCPD.get_class_tag("supports_weighted_data") is True
         assert TabularCPD.get_class_tag("python_dependencies") == "skpro"
 
@@ -179,6 +181,33 @@ class TestTabularCPD:
         weights = np.where(y["y"] == "0", 1.0, 3.0)
         weighted = TabularCPD().fit(X, y, sample_weight=weights).predict_proba()
         assert weighted.pmf("0") == pytest.approx(56 / (56 + 3 * 44))
+
+    def test_predict(self, discrete_data):
+        # The most probable state of each row, with X's index. Ties go to the first state, and the states keep their
+        # dtype.
+        X, y = discrete_data
+        cpd = TabularCPD().fit(X, y)
+        expected = pd.DataFrame({"y": ["1", "0", "0", "0", "0"]}, index=list("abcde"))
+        pd.testing.assert_frame_equal(cpd.predict(X[:5].set_axis(list("abcde"))), expected)
+        tied = TabularCPD.from_values("y", 2, [[0.5], [0.5]], state_names={"y": [1, 0]})
+        pd.testing.assert_frame_equal(
+            tied.predict(pd.DataFrame(index=[7, 8])), pd.DataFrame({"y": [1, 1]}, index=[7, 8])
+        )
+
+    def test_log_likelihood(self, discrete_data):
+        # The log of each row's probability in the table, with X's index, also when labels repeat. A state the table
+        # doesn't have is impossible, and a root is scored with X=None.
+        X, y = discrete_data
+        cpd = TabularCPD().fit(X, y)
+        probs = np.asarray(cpd.predict_proba(X[:5]).probs)
+        expected = np.log(probs[np.arange(5), (y["y"][:5] == "1").astype(int)])
+        scores = cpd.log_likelihood(X[:5].set_axis(["r"] * 5), y[:5].set_axis(["r"] * 5))
+        assert (scores.index.tolist(), scores.columns.tolist()) == (["r"] * 5, ["y"])
+        np.testing.assert_allclose(scores["y"], expected)
+        assert cpd.log_likelihood(X[:1], pd.Series(["9"], index=X.index[:1], name="y"))["y"].iloc[0] == -np.inf
+        root = TabularCPD().fit(None, y)
+        expected = np.log(np.where(y["y"][:2] == "0", 0.56, 0.44))
+        np.testing.assert_allclose(root.log_likelihood(None, y[:2])["y"], expected)
 
     def test_sample(self, discrete_data):
         X, y = discrete_data

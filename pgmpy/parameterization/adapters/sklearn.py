@@ -3,32 +3,26 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-from skbase.utils.dependencies import _safe_import
 from sklearn.base import BaseEstimator, clone, is_classifier, is_regressor
 from sklearn.dummy import DummyClassifier, DummyRegressor
 
 from pgmpy.parameterization._base import BaseParameter
 from pgmpy.parameterization.distributions import NominalDistribution
 
-Normal = _safe_import("skpro.distributions.Normal")
-
 
 class SklearnAdapter(BaseParameter):
     """Parameterization from a scikit-learn classifier or regressor.
 
     A classifier models a discrete target: each row of ``X`` gets a ``NominalDistribution`` with the classifier's
-    probabilities of the target's labels. A regressor models a continuous target with Gaussian noise of constant
-    variance: each row gets a skpro ``Normal`` with the regressor's prediction as mean and, as standard deviation, the
-    root mean square of the (weighted) residuals on the training data. So a flexible model that fits its training data
-    closely, such as a random forest, gets distributions that are too narrow. For noise that changes with the parents,
-    use ``SkproAdapter`` with a skpro regressor that models it.
+    probabilities of the target's labels. A regressor gives point predictions only: ``predict`` returns them, while
+    ``predict_proba`` and ``sample`` raise a ``TypeError``, as a regressor has no distribution. For a distribution, use
+    ``SkproAdapter`` with a skpro probabilistic regressor.
 
     ``fit`` fits a clone of ``estimator``, with the sample weights if given. The estimator gets the parents as a
     DataFrame sorted by name, as in ``evidence_``, so a pipeline must select its columns by name, not position. If the
     parents' names aren't all strings, they are renamed ``x0``, ``x1``, .... A root, or a classifier that sees a single
-    label, doesn't use the estimator. Without ``X``, ``predict_proba`` gives the marginal distribution over the rows
-    seen in fit: for a classifier, the average predicted probabilities, and for a regressor, the Normal with the mean
-    and variance of the predicted Normals as a mixture.
+    label, doesn't use the estimator. Without ``X``, a classifier's ``predict_proba`` gives the marginal distribution
+    over the rows seen in fit, the average predicted probabilities.
 
     Requires the optional dependency ``skpro``.
 
@@ -44,8 +38,6 @@ class SklearnAdapter(BaseParameter):
         ``DummyRegressor`` or ``DummyClassifier``.
     classes_ : numpy.ndarray
         For a classifier, the target's labels, in the order of the predicted probabilities.
-    std_ : float
-        For a regressor, the standard deviation of the noise.
 
     Warnings
     --------
@@ -68,9 +60,7 @@ class SklearnAdapter(BaseParameter):
 
     >>> encode_rain = make_column_transformer((OneHotEncoder(drop="first"), ["rain"]), remainder="passthrough")
     >>> cpd = SklearnAdapter(make_pipeline(encode_rain, LinearRegression())).fit(X, y)
-    >>> round(cpd.std_, 1)
-    1.0
-    >>> cpd.predict_proba(pd.DataFrame({"temp": [20.0], "rain": ["yes"]})).mean().round(1)["sales"].tolist()
+    >>> cpd.predict(pd.DataFrame({"temp": [20.0], "rain": ["yes"]})).round(1)["sales"].tolist()
     [42.1]
 
     A classifier gives the probability of each label:
@@ -82,6 +72,7 @@ class SklearnAdapter(BaseParameter):
     """
 
     _tags = {
+        "name": "sklearn_adapter",
         "variable_type": ["discrete", "continuous"],
         "python_dependencies": "skpro",
     }
@@ -95,9 +86,9 @@ class SklearnAdapter(BaseParameter):
         if is_classifier(estimator):
             if not callable(getattr(estimator, "predict_proba", None)):
                 raise TypeError(f"A classifier must implement predict_proba, but {type(estimator).__name__} doesn't.")
-            self.set_tags(variable_type="discrete")
+            self.set_tags(variable_type=["discrete"])
         elif is_regressor(estimator):
-            self.set_tags(variable_type="continuous")
+            self.set_tags(variable_type=["continuous"])
         else:
             raise TypeError(
                 f"estimator must be a scikit-learn classifier or regressor, but is a {type(estimator).__name__}."
@@ -115,49 +106,25 @@ class SklearnAdapter(BaseParameter):
         return super().set_params(**params).reset()
 
     def _fit(self, X: pd.DataFrame, y: pd.DataFrame, sample_weight: np.ndarray | None) -> None:
+        # Step 1: Prepare the target, and the parents under names sklearn takes.
         target = y.iloc[:, 0]
-        weights = np.ones(len(target)) if sample_weight is None else sample_weight
         fit_params = {} if sample_weight is None else {"sample_weight": sample_weight}
         features = _features(X)
 
+        # Step 2: Fit a classifier on the labels, encoded first, as estimators may change them in classes_, e.g.
+        # nullable booleans to floats. The marginal averages its probabilities over the rows seen in fit.
         if self.variable_type_ == "discrete":
-            # The labels are encoded first, as estimators may change them in classes_, e.g. nullable booleans to floats.
             codes, labels = pd.factorize(target, sort=True)
             estimator = self.estimator if self.evidence_ and len(labels) > 1 else DummyClassifier(strategy="prior")
             self.estimator_ = clone(estimator).fit(features, codes, **fit_params)
             self.classes_ = np.asarray(labels)[self.estimator_.classes_]
-            self._marginal = np.average(self._probabilities(features), axis=0, weights=weights)
+            self._marginal = np.average(self._probabilities(features), axis=0, weights=sample_weight)
             return
 
+        # Step 3: Fit a regressor on a copy of y, so that one that keeps a view of y, such as KNeighborsRegressor,
+        # doesn't change when the caller edits their data.
         estimator = self.estimator if self.evidence_ else DummyRegressor()
-        self.estimator_ = clone(estimator).fit(features, target, **fit_params)
-        # Rows without weight don't count, and could overflow the sums of squares.
-        positive = weights > 0
-        predictions, weights = self._predictions(features)[positive], weights[positive]
-        residuals = target.to_numpy(dtype=float)[positive] - predictions
-        self.std_ = float(np.sqrt(np.average(residuals**2, weights=weights)))
-        if not 0 < self.std_ < np.inf:
-            raise ValueError(
-                f"The residuals of {type(self.estimator_).__name__} on its training data have a standard deviation of "
-                f"{self.std_:g}, but the Normal needs a positive, finite one. A model that reproduces its training "
-                "data, such as KNN with one neighbour, gives 0."
-            )
-        mean = np.average(predictions, weights=weights)
-        variance = np.average((predictions - mean) ** 2, weights=weights) + self.std_**2
-        self._marginal = (mean, float(np.sqrt(variance)))
-
-    def _predictions(self, features: pd.DataFrame) -> np.ndarray:
-        if len(features) == 0:
-            return np.empty(0)
-        # Some regressors predict a column, others a 1-D array.
-        predictions = np.asarray(self.estimator_.predict(features), dtype=float).reshape(-1)
-        invalid = ~np.isfinite(predictions)
-        if invalid.any():
-            raise ValueError(
-                f"{type(self.estimator_).__name__} predicted values that aren't finite for rows "
-                f"{features.index[invalid].tolist()}, e.g. outside the range of its training data."
-            )
-        return predictions
+        self.estimator_ = clone(estimator).fit(features, target.copy(), **fit_params)
 
     def _probabilities(self, features: pd.DataFrame) -> np.ndarray:
         if len(features) == 0:
@@ -172,19 +139,34 @@ class SklearnAdapter(BaseParameter):
         return probs
 
     def _predict_proba(self, X: pd.DataFrame | None) -> Any:
-        if self.variable_type_ == "discrete":
-            if X is None:
-                return NominalDistribution(probs=self._marginal.copy(), categories=list(self.classes_))
-            return NominalDistribution(
-                probs=self._probabilities(_features(X)),
-                categories=list(self.classes_),
-                index=X.index,
-                columns=[self.variable_],
+        if self.variable_type_ == "continuous":
+            raise TypeError(
+                f"{type(self.estimator).__name__} is a regressor, which gives point predictions, not a distribution: "
+                "use predict, or SkproAdapter with a skpro probabilistic regressor."
             )
         if X is None:
-            return Normal(mu=self._marginal[0], sigma=self._marginal[1])
-        mu = self._predictions(_features(X)).reshape(-1, 1)
-        return Normal(mu=mu, sigma=self.std_, index=X.index, columns=[self.variable_])
+            return NominalDistribution(probs=self._marginal.copy(), categories=list(self.classes_))
+        return NominalDistribution(
+            probs=self._probabilities(_features(X)),
+            categories=list(self.classes_),
+            index=X.index,
+            columns=[self.variable_],
+        )
+
+    def _predict(self, X: pd.DataFrame) -> pd.DataFrame:
+        if self.variable_type_ == "discrete":
+            return super()._predict(X)
+        if len(X) == 0:
+            return pd.DataFrame(np.empty((0, 1)), index=X.index, columns=[self.variable_])
+        # Some regressors predict a column, others a 1-D array.
+        predictions = np.asarray(self.estimator_.predict(_features(X)), dtype=float).reshape(-1, 1)
+        invalid = ~np.isfinite(predictions[:, 0])
+        if invalid.any():
+            raise ValueError(
+                f"{type(self.estimator_).__name__} predicted values that aren't finite for rows "
+                f"{X.index[invalid].tolist()}, e.g. outside the range of its training data."
+            )
+        return pd.DataFrame(predictions, index=X.index, columns=[self.variable_])
 
 
 def _features(X: pd.DataFrame) -> pd.DataFrame:

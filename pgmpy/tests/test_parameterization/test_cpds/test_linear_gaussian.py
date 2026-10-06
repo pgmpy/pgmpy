@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import pytest
+from scipy.stats import norm
 from skbase.utils.dependencies import _check_soft_dependencies
 
 import pgmpy.parameterization
@@ -32,8 +33,12 @@ def assert_same_fit(cpd, expected):
 class TestLinearGaussianCPD:
     def test_tags(self):
         assert LinearGaussianCPD.get_class_tag("object_type") == "parameterization"
-        assert LinearGaussianCPD.get_class_tag("variable_type") == "continuous"
-        assert LinearGaussianCPD.get_class_tag("parent_type") == "continuous"
+        assert LinearGaussianCPD.get_class_tag("variable_type") == ["continuous"]
+        assert LinearGaussianCPD.get_class_tag("parent_data_types") == ["continuous"]
+        assert LinearGaussianCPD.get_class_tag("capability:exact_inference") is True
+        assert LinearGaussianCPD.get_class_tag("capability:factor") is False
+        for assumption in ("linearity", "additive_noise", "gaussian_noise"):
+            assert LinearGaussianCPD.get_class_tag(f"assumption:{assumption}") is True
         assert LinearGaussianCPD.get_class_tag("supports_weighted_data") is True
         assert LinearGaussianCPD.get_class_tag("python_dependencies") == "skpro"
         assert pgmpy.parameterization.LinearGaussianCPD is LinearGaussianCPD
@@ -94,11 +99,11 @@ class TestLinearGaussianCPD:
             (LinearGaussianCPD(), X, constant, None, "constant"),  # so does a constant child
             (LinearGaussianCPD(), None, pd.Series(0.1, index=range(12), name="y"), None, "constant"),  # mean rounds
             (LinearGaussianCPD(), None, pd.Series([1e200, -1e200, 3e200], name="y"), None, "finite"),  # std overflows
-            (LinearGaussianCPD(), None, y.where(y.index != 3, np.inf), None, "infinite"),
+            (LinearGaussianCPD(), None, y.where(y.index != 3, np.inf), None, "finite"),  # inf in y gives a NaN std
             (LinearGaussianCPD(), X, y.astype(str), None, "numeric"),
             (LinearGaussianCPD(), X.assign(A=X["A"].astype(str)), y, None, "numeric"),
             (LinearGaussianCPD(), X.assign(A=X["A"].round().astype("category")), y, None, "numeric"),
-            (LinearGaussianCPD(), X.assign(A=pd.Timestamp("2020-01-01")), y, None, "numeric"),
+            (LinearGaussianCPD(), X.assign(A=pd.Timestamp("2020-01-01")), y, None, "datatype"),
         ]
         for cpd_bad, X_bad, y_bad, weights_bad, match in rejected:
             with pytest.raises(ValueError, match=match), np.errstate(over="ignore"):
@@ -129,9 +134,27 @@ class TestLinearGaussianCPD:
         assert marginal.shape == () and marginal.mean() == pytest.approx(y.mean())
         assert marginal.var() == pytest.approx(y.var(ddof=1))
 
-        for X_bad in (X.assign(A=np.inf), X.assign(A=X["A"].astype(str)), X[["A"]]):
-            with pytest.raises(ValueError):
-                cpd.predict_proba(X_bad)
+        with pytest.raises(ValueError):
+            cpd.predict_proba(X[["A"]])
+
+    def test_predict(self, data):
+        # The mean of each row, with X's index, whatever the order of X's columns; a root predicts its mean.
+        X, y = data
+        cpd = LinearGaussianCPD().fit(X, y)
+        rows = X.iloc[:4].set_axis(["a", "b", "c", "d"])
+        expected = pd.DataFrame({"y": cpd.beta_[0] + rows[["A", "B"]].to_numpy() @ cpd.beta_[1:]}, index=rows.index)
+        pd.testing.assert_frame_equal(cpd.predict(rows[["B", "A"]]), expected)
+        root = LinearGaussianCPD().fit(None, y)
+        pd.testing.assert_frame_equal(root.predict(pd.DataFrame(index=[7])), pd.DataFrame({"y": [y.mean()]}, index=[7]))
+
+    def test_log_likelihood(self, data):
+        # The Normal log-density of y around each row's mean; a root is scored with X=None.
+        X, y = data
+        cpd = LinearGaussianCPD().fit(X, y)
+        means = cpd.beta_[0] + X[["A", "B"]].to_numpy() @ cpd.beta_[1:]
+        np.testing.assert_allclose(cpd.log_likelihood(X, y)["y"], norm.logpdf(y, means, cpd.std_))
+        root = LinearGaussianCPD().fit(None, y)
+        np.testing.assert_allclose(root.log_likelihood(None, y)["y"], norm.logpdf(y, y.mean(), root.std_))
 
     def test_marginal(self):
         # Without X, a child gives the marginal distribution that the model implies for the parent data seen in fit,

@@ -68,6 +68,10 @@ class LinearGaussianCPD(BaseParameter):
     0.5
     >>> cpd.sample(pd.DataFrame({"A": [0.0], "B": [0.0]}), random_state=0).round(2)["y"].tolist()
     [1.19]
+    >>> cpd.predict(pd.DataFrame({"A": [0.0], "B": [1.0]})).round(1)["y"].tolist()
+    [-2.0]
+    >>> round(float(cpd.log_likelihood(X, y)["y"].mean()), 2)
+    -0.74
 
     Without ``X``, ``predict_proba`` gives the marginal distribution implied for the parent values seen in ``fit``:
 
@@ -84,9 +88,14 @@ class LinearGaussianCPD(BaseParameter):
     """
 
     _tags = {
-        "variable_type": "continuous",
-        "parent_type": "continuous",
+        "name": "linear_gaussian_cpd",
+        "variable_type": ["continuous"],
+        "parent_data_types": ["continuous"],
         "supports_weighted_data": True,
+        "capability:exact_inference": True,
+        "assumption:linearity": True,
+        "assumption:additive_noise": True,
+        "assumption:gaussian_noise": True,
         "python_dependencies": "skpro",
     }
 
@@ -118,6 +127,7 @@ class LinearGaussianCPD(BaseParameter):
         LinearGaussianCPD
             A fitted instance. Its parents are sorted by name, with ``beta`` reordered to match.
         """
+        # Step 1: Check the parents, the coefficients and the std.
         evidence = _checked_evidence(variable, evidence)
         if np.iscomplexobj(beta):
             raise ValueError(f"beta must hold real numbers, but is {beta!r}.")
@@ -130,6 +140,8 @@ class LinearGaussianCPD(BaseParameter):
         if not isinstance(std, Real) or not 0 < std <= sys.float_info.max:
             raise ValueError(f"std must be a positive, finite number, but is {std!r}.")
 
+        # Step 2: Sort the parents by name, reorder beta to match, and create the fitted instance. Only a root has a
+        # known marginal.
         order = _parent_order(evidence)
         cpd = cls()
         cpd.variable_ = variable
@@ -142,10 +154,10 @@ class LinearGaussianCPD(BaseParameter):
         return cpd
 
     def _fit(self, X: pd.DataFrame, y: pd.DataFrame, sample_weight: np.ndarray | None) -> None:
+        # Step 1: Check std_estimator, and drop the rows without weight: they don't count, and dropping them keeps their
+        # values out of the sums of squares below, where they could overflow. A constant target has no positive std.
         if self.std_estimator not in ("unbiased", "mle"):
             raise ValueError(f"std_estimator must be 'unbiased' or 'mle', but is {self.std_estimator!r}.")
-        # Rows without weight don't count, and dropping them keeps their values out of the sums of squares below,
-        # where they could overflow.
         weights = np.ones(len(y)) if sample_weight is None else sample_weight
         positive = weights > 0
         parents, target = X.to_numpy(dtype=float)[positive], y.iloc[:, 0].to_numpy(dtype=float)[positive]
@@ -155,6 +167,7 @@ class LinearGaussianCPD(BaseParameter):
                 f"{self.variable_!r} is constant, so its std is 0, but a LinearGaussianCPD needs a positive std."
             )
 
+        # Step 2: Estimate the coefficients by weighted least squares; a root has only its mean.
         if self.evidence_:
             # An array, not the DataFrame, so that sklearn accepts any hashable column names.
             regression = LinearRegression().fit(
@@ -167,8 +180,10 @@ class LinearGaussianCPD(BaseParameter):
             self.beta_ = np.array([np.average(target, weights=weights)])
             n_coefficients = 1
 
+        # Step 3: Estimate the std from the residuals. The unbiased estimate divides by the total weight minus the
+        # independent coefficients; weights meant to total n_coefficients can sum to just above it, so allow for
+        # rounding.
         total = weights.sum()
-        # Weights meant to total n_coefficients can sum to just above it, so allow for rounding.
         if self.std_estimator == "unbiased" and total <= n_coefficients * (1 + 1e-9):
             raise ValueError(
                 f"The unbiased std needs a total weight, or number of rows, above the {n_coefficients} independent "
@@ -183,17 +198,19 @@ class LinearGaussianCPD(BaseParameter):
                 "that is constant given its parents has a std of 0."
             )
 
-        # b @ mu and b @ Sigma @ b are the mean and variance of the fitted means, b @ X, over the rows seen in fit.
+        # Step 4: Compute the marginal over the rows seen in fit. b @ mu and b @ Sigma @ b are the mean and variance of
+        # the fitted means, b @ X, over those rows.
         mean = np.average(means, weights=weights)
         variance = np.sum(weights * (means - mean) ** 2) / (total - marginal_ddof) + self.std_**2
         self._marginal = (mean, float(np.sqrt(variance)))
 
-    def _mean(self, X: pd.DataFrame) -> np.ndarray:
-        return self.beta_[0] + X.to_numpy(dtype=float) @ self.beta_[1:]
-
     def _predict_proba(self, X: pd.DataFrame | None) -> "Normal":
+        # Step 1: With X, give each row the Normal around its fitted mean.
         if X is not None:
-            return Normal(mu=self._mean(X).reshape(-1, 1), sigma=self.std_, index=X.index, columns=[self.variable_])
+            means = self.beta_[0] + X.to_numpy(dtype=float) @ self.beta_[1:]
+            return Normal(mu=means.reshape(-1, 1), sigma=self.std_, index=X.index, columns=[self.variable_])
+
+        # Step 2: Without X, return the marginal, known after fit and for a root.
         if self._marginal is None:
             raise ValueError(
                 "A LinearGaussianCPD with parents created by from_values has no data on its parents, so its marginal "

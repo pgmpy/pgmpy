@@ -55,3 +55,8 @@ Unsupervised Metrics
 --------------------
 
 .. pgmpy-tags:: unsupervised_metric
+
+Parameterizations
+-----------------
+
+.. pgmpy-tags:: parameterization

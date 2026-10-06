@@ -5,6 +5,7 @@ from pgmpy.causal_discovery._base import BaseCausalDiscovery
 from pgmpy.causal_discovery.bivariate_scores import BaseBivariateScore
 from pgmpy.ci_tests import BaseCITest
 from pgmpy.metrics._base import BaseSupervisedMetric, BaseUnsupervisedMetric
+from pgmpy.parameterization import BaseParameter
 from pgmpy.registry import OBJECT_TYPES, TAG_REGISTER, all_tags, check_tag_is_valid
 from pgmpy.structure_score import BaseStructureScore
 
@@ -17,6 +18,7 @@ OBJECTS = [
         (BaseBivariateScore, "pgmpy.causal_discovery"),
         (BaseSupervisedMetric, "pgmpy.metrics"),
         (BaseUnsupervisedMetric, "pgmpy.metrics"),
+        (BaseParameter, "pgmpy.parameterization"),
     ]
     for cls in all_objects(object_types=base, package_name=package, return_names=False)
 ]

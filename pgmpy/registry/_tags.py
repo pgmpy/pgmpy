@@ -35,6 +35,7 @@ OBJECT_TYPES = [
     "bivariate_score",
     "supervised_metric",
     "unsupervised_metric",
+    "parameterization",
 ]
 
 METRIC_TYPES = ["supervised_metric", "unsupervised_metric"]
@@ -134,12 +135,13 @@ class requires_data(_BaseTag):
     """
     Whether the object needs data.
 
-    ``False`` for oracle CI tests such as ``IndependenceMatch`` and for metrics that only compare two graphs.
+    ``False`` for oracle CI tests such as ``IndependenceMatch``, for metrics that only compare two graphs, and for
+    parameterizations that are given rather than learned, such as ``DistributionAdapter``.
     """
 
     _tags = {
         "tag_name": "requires_data",
-        "parent_type": ["ci_test"] + METRIC_TYPES,
+        "parent_type": ["ci_test"] + METRIC_TYPES + ["parameterization"],
         "tag_type": "bool",
         "short_descr": "Whether the object needs data.",
     }
@@ -235,7 +237,8 @@ class capability__expert_knowledge(_BaseTag):
 # class-level value is the union over all available components (False if some component doesn't require it). `fit`
 # sets it to True if the algorithm or any component used for fitting requires it. Assumptions that can't be expressed
 # this way (for example, an assumption that holds if either of two conditions does) are described in the method's
-# docstring.
+# docstring. For parameterizations, the tag says whether the model of the target given its parents makes the
+# assumption; an adapter whose model depends on the estimator it wraps sets it in `__init__`.
 
 
 class assumption__causal_sufficiency(_BaseTag):
@@ -281,7 +284,7 @@ class assumption__linearity(_BaseTag):
 
     _tags = {
         "tag_name": "assumption:linearity",
-        "parent_type": ["causal_discovery", "ci_test", "structure_score", "bivariate_score"],
+        "parent_type": ["causal_discovery", "ci_test", "structure_score", "bivariate_score", "parameterization"],
         "tag_type": "bool",
         "short_descr": "Assumes each variable is a linear function of its parents.",
     }
@@ -292,7 +295,7 @@ class assumption__additive_noise(_BaseTag):
 
     _tags = {
         "tag_name": "assumption:additive_noise",
-        "parent_type": ["causal_discovery", "ci_test", "structure_score", "bivariate_score"],
+        "parent_type": ["causal_discovery", "ci_test", "structure_score", "bivariate_score", "parameterization"],
         "tag_type": "bool",
         "short_descr": "Assumes independent, additive noise.",
     }
@@ -303,7 +306,7 @@ class assumption__gaussian_noise(_BaseTag):
 
     _tags = {
         "tag_name": "assumption:gaussian_noise",
-        "parent_type": ["causal_discovery", "ci_test", "structure_score", "bivariate_score"],
+        "parent_type": ["causal_discovery", "ci_test", "structure_score", "bivariate_score", "parameterization"],
         "tag_type": "bool",
         "short_descr": "Assumes Gaussian noise.",
     }
@@ -416,6 +419,103 @@ class lower_is_better(_BaseTag):
         "parent_type": METRIC_TYPES,
         "tag_type": "bool",
         "short_descr": "Whether a lower value means a better graph (scalar output only).",
+    }
+
+
+# -----------------
+# Parameterizations
+# -----------------
+
+
+class variable_type(_BaseTag):
+    """
+    Types of target the parameterization can model.
+
+    The class-level value lists every type the class supports. An adapter whose type depends on what it wraps narrows
+    it to one in ``__init__``, e.g. ``SklearnAdapter`` to ``["discrete"]`` for a classifier. ``fit`` needs exactly one.
+    """
+
+    _tags = {
+        "tag_name": "variable_type",
+        "parent_type": ["parameterization"],
+        "tag_type": ("list", ["discrete", "continuous"]),
+        "short_descr": "Types of target the parameterization can model.",
+    }
+
+
+class parent_data_types(_BaseTag):
+    """
+    Data types of the parents the parameterization can condition on.
+
+    ``"mixed"`` means discrete and continuous parents together. Only a class that takes ``["continuous"]`` parents has
+    them checked in ``fit``, where they must be numeric: discrete parents can be integer-coded, so their dtype can't
+    tell them apart from continuous ones.
+    """
+
+    _tags = {
+        "tag_name": "parent_data_types",
+        "parent_type": ["parameterization"],
+        "tag_type": ("list", DATA_TYPES),
+        "short_descr": "Data types of the parents the parameterization can condition on.",
+    }
+
+
+class supports_weighted_data(_BaseTag):
+    """
+    Whether ``fit`` takes ``sample_weight``.
+
+    An adapter sets it in ``__init__`` from the estimator it wraps.
+    """
+
+    _tags = {
+        "tag_name": "supports_weighted_data",
+        "parent_type": ["parameterization"],
+        "tag_type": "bool",
+        "short_descr": "Whether fit takes sample_weight.",
+    }
+
+
+class capability__factor(_BaseTag):
+    """
+    Whether the parameterization can be turned into a discrete factor for exact inference.
+
+    A discrete factor is a table of probabilities over every combination of the states of the target and its parents,
+    as used by variable elimination and belief propagation, e.g. ``TabularCPD``.
+    """
+
+    _tags = {
+        "tag_name": "capability:factor",
+        "parent_type": ["parameterization"],
+        "tag_type": "bool",
+        "short_descr": "Whether it can be turned into a discrete factor for exact inference.",
+    }
+
+
+class capability__exact_inference(_BaseTag):
+    """
+    Whether the parameterization supports exact inference.
+
+    Either as a discrete factor (``capability:factor``), e.g. ``TabularCPD``, or as a linear Gaussian conditional that
+    combines with others into a joint Gaussian, e.g. ``LinearGaussianCPD``. A network supports exact inference only if
+    all its nodes support the same kind, which ``capability:factor`` and the ``assumption:*`` tags tell apart.
+    """
+
+    _tags = {
+        "tag_name": "capability:exact_inference",
+        "parent_type": ["parameterization"],
+        "tag_type": "bool",
+        "short_descr": "Whether it supports exact inference, as a discrete factor or a linear Gaussian.",
+    }
+
+
+class python_dependencies(_BaseTag):
+    """Python package the object needs, checked when it is constructed, as in skbase."""
+
+    _tags = {
+        "tag_name": "python_dependencies",
+        "parent_type": ["parameterization"],
+        "tag_type": "str",
+        "short_descr": "Python package the object needs, checked when it is constructed.",
     }
 
 

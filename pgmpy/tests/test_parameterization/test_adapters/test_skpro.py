@@ -34,7 +34,7 @@ def data():
 
 class TestSkproAdapter:
     def test_tags(self):
-        assert SkproAdapter.get_class_tag("variable_type") == "continuous"
+        assert SkproAdapter.get_class_tag("variable_type") == ["continuous"]
         assert SkproAdapter.get_class_tag("supports_weighted_data") is False
         assert SkproAdapter.get_class_tag("python_dependencies") == "skpro"
         for estimator in ("not an estimator", LogisticRegression()):
@@ -53,6 +53,9 @@ class TestSkproAdapter:
         assert type(dist).__name__ == "Normal"
         assert (dist.index.tolist(), dist.columns.tolist()) == (X_test.index.tolist(), ["Y"])
         pd.testing.assert_frame_equal(dist.mean(), adapter.estimator_.predict_proba(X_test).mean())
+        pd.testing.assert_frame_equal(adapter.predict(X_test), dist.mean())
+        expected = adapter.estimator_.predict_proba(X).log_pdf(y.to_frame())["Y"].to_numpy()
+        np.testing.assert_allclose(adapter.log_likelihood(X, y)["Y"], expected)
         assert np.sqrt(np.mean((dist.mean()["Y"] - mean) ** 2)) < 0.1
         np.testing.assert_allclose(np.sqrt(dist.var()["Y"]), 0.5, rtol=0.1)
 

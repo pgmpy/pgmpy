@@ -17,7 +17,7 @@ from pgmpy.utils import ExperimentalWarning
 class CountParameter(BaseParameter):
     """Records the data it was fitted on; `_predict_proba` and `_sample` return what the base passed them."""
 
-    _tags = {"variable_type": "discrete", "supports_weighted_data": True}
+    _tags = {"variable_type": ["discrete"], "supports_weighted_data": True}
 
     def __init__(self, pseudo_count=0):
         self.pseudo_count = pseudo_count
@@ -50,7 +50,7 @@ class TestBaseParameter:
     def test_tags(self):
         assert BaseParameter.get_class_tag("object_type") == "parameterization"
         assert BaseParameter.get_class_tag("variable_type") == ["discrete", "continuous"]
-        assert BaseParameter.get_class_tag("parent_type") == ["discrete", "continuous"]
+        assert BaseParameter.get_class_tag("parent_data_types") == ["discrete", "continuous", "mixed"]
         assert BaseParameter.get_class_tag("supports_weighted_data") is False
         assert BaseParameter.get_class_tag("python_dependencies") is None
 
@@ -89,17 +89,6 @@ class TestBaseParameter:
         assert boolean.evidence_ == boolean.columns_ == [False, True]
         assert list(boolean.predict_proba(dummies.iloc[:, ::-1]).columns) == [False, True]
 
-        # fit copies y, so an estimator that keeps a view of it doesn't change when the caller edits their data.
-        class KeepingParameter(CountParameter):
-            def _fit(self, X, y, sample_weight):
-                super()._fit(X, y, sample_weight)
-                self.y_ = y
-
-        target = y.copy()
-        kept = KeepingParameter().fit(X, target)
-        target.iloc[0, 0] = "9"
-        assert kept.y_.iloc[0, 0] == "0"
-
         # A failed refit leaves the object unfitted instead of half-updated.
         with pytest.raises(ValueError):
             parameter.fit(X, y.iloc[:3])
@@ -110,24 +99,14 @@ class TestBaseParameter:
         assert repr(CountParameter(pseudo_count=1)) == "CountParameter(pseudo_count=1)"
         assert CountParameter(pseudo_count=1).clone().get_params() == {"pseudo_count": 1}
 
-        ratio = pd.array([0.0, 1.0, 1.0, 1.0], dtype="Float64")
         rejected = [
             (X, pd.concat([y, y.set_axis(["u"], axis=1)], axis=1)),  # y with two columns
             (X, y["t"].tolist()),  # y as a list
             (X.to_numpy(), y),  # X as an array
             (X, y.set_axis([0, 1, 2, 3])),  # different index
-            (X.assign(t="x"), y),  # target also in X
             (X.assign(b=["u", None, "u", "v"]), y),  # None in X
             (X, y.assign(t=["0", np.nan, "1", "1"])),  # NaN in y
             (X.astype("string").assign(b=pd.array(["u", pd.NA, "u", "v"], dtype="string")), y),  # pd.NA in X
-            (X.assign(c=[0.0, np.inf, 0.0, 0.0]), y),  # inf in X
-            (X.assign(c=np.array([0.0, np.inf, 0.0, 0.0], dtype=np.float32)), y),  # inf in a float32 column
-            (X, y.assign(t=[0.0, 1.0, -np.inf, 1.0])),  # -inf in y
-            (X.assign(c=ratio / ratio), y),  # NaN from 0/0 in a Float64 column, which isna() doesn't flag
-            (X.assign(c=[1j, 0, 0, 0]), y),  # complex values in X
-            (X, y.assign(t=[1j, 0, 0, 0])),  # complex values in y
-            (X.iloc[:0], y.iloc[:0]),  # no rows
-            (pd.concat([X, X[["a"]]], axis=1), y),  # duplicate column names in X
         ]
         for X_bad, y_bad in rejected:
             with pytest.raises(ValueError):
@@ -142,35 +121,26 @@ class TestBaseParameter:
             assert fitted.variable_type_ == "discrete"
 
         class ContinuousParameter(CountParameter):
-            _tags = {"variable_type": "continuous"}
+            _tags = {"variable_type": ["continuous"]}
 
         assert ContinuousParameter().fit(X, y.astype(float)).variable_type_ == "continuous"
         with pytest.raises(ValueError, match="numeric"):
             ContinuousParameter().fit(X, y)
 
-        # A class that supports both types decides from the data.
-        class AnyParameter(CountParameter):
-            _tags = {"variable_type": ["discrete", "continuous"]}
-
-        assert AnyParameter().fit(X, y.astype(float) + 0.5).variable_type_ == "continuous"
-        assert AnyParameter().fit(X, y).variable_type_ == "discrete"
-        ordered = pd.Series(pd.Categorical([2, 1, 2, 2], categories=[1, 2], ordered=True), index=X.index, name="t")
-        assert AnyParameter().fit(X, ordered).variable_type_ == "discrete"
-
-        # Continuous parents must be numeric, in fit and at prediction, where discrete ones can have any labels.
-        # Booleans of every kind count as numeric.
+        # Continuous parents must be numeric in fit, where discrete ones can have any labels. Booleans of every kind
+        # count as numeric. A dtype that pgmpy.utils.preprocess_data can't classify, such as a date, is rejected too.
         class LinearParameter(CountParameter):
-            _tags = {"variable_type": "continuous", "parent_type": "continuous"}
+            _tags = {"variable_type": ["continuous"], "parent_data_types": ["continuous"]}
 
         numeric = pd.DataFrame({"a": [0.5, 1, 2, 3], "b": [True, False, True, True]}, index=X.index)
-        linear = LinearParameter().fit(numeric, y.astype(float))
+        LinearParameter().fit(numeric, y.astype(float))
         for dtype in ["boolean", "Sparse[bool]"] + (["bool[pyarrow]"] if find_spec("pyarrow") else []):
             LinearParameter().fit(numeric.astype({"b": dtype}), y.astype(float).astype(bool).astype(dtype))
-        for column in (X["a"], X["a"].astype("category"), pd.Categorical([1, 2, 1, 2]), pd.to_datetime(["2020"] * 4)):
+        for column in (X["a"], X["a"].astype("category"), pd.Categorical([1, 2, 1, 2])):
             with pytest.raises(ValueError, match="numeric"):
                 LinearParameter().fit(numeric.assign(a=column), y.astype(float))
-            with pytest.raises(ValueError, match="numeric"):
-                linear.predict_proba(numeric.assign(a=column))
+        with pytest.raises(ValueError, match="datatype"):
+            LinearParameter().fit(numeric.assign(a=pd.to_datetime(["2020"] * 4)), y.astype(float))
 
     def test_sample_weight(self, data):
         X, y = data
@@ -207,16 +177,7 @@ class TestBaseParameter:
         # Columns are matched by name and passed on in evidence_ order, so their order doesn't matter.
         parameter = CountParameter().fit(X, y)
         pd.testing.assert_frame_equal(parameter.predict_proba(X), X[["a", "b"]])
-        ratio = pd.array([0.0, 1.0, 1.0, 1.0], dtype="Float64")
-        for X_bad in (
-            X[["a"]],
-            X.assign(c=1),
-            X.rename(columns={"a": "z"}),
-            X.assign(a=["x", None, "y", "y"]),
-            X.assign(a=[0.0, np.inf, 0.0, 0.0]),
-            X.assign(a=ratio / ratio),
-            X.assign(a=[1j, 0, 0, 0]),
-        ):
+        for X_bad in (X[["a"]], X.assign(c=1), X.rename(columns={"a": "z"})):
             with pytest.raises(ValueError):
                 parameter.predict_proba(X_bad)
         with pytest.raises(ValueError):
@@ -228,6 +189,31 @@ class TestBaseParameter:
         root = CountParameter().fit(None, y)
         assert root.predict_proba(pd.DataFrame(index=[5, 6])).index.tolist() == [5, 6]
         assert root.predict_proba() is None
+
+    def test_predict(self, data):
+        # predict checks X as predict_proba does, but needs it: a root takes a DataFrame without columns.
+        X, y = data
+        with pytest.raises(NotFittedError):
+            CountParameter().predict(X)
+        parameter = CountParameter().fit(X, y)
+        for X_bad in (None, X[["a"]], X.to_numpy()):
+            with pytest.raises(ValueError):
+                parameter.predict(X_bad)
+
+    def test_log_likelihood(self, data):
+        # log_likelihood checks X as predict does, and y as fit does: a single column with X's index.
+        X, y = data
+        with pytest.raises(NotFittedError):
+            CountParameter().log_likelihood(X, y)
+        parameter = CountParameter().fit(X, y)
+        for X_bad, y_bad in (
+            (None, y),  # None is a root's X, but this variable has parents
+            (X[["a"]], y),
+            (X, y.set_axis([0, 1, 2, 3])),
+            (X, pd.concat([y, y.set_axis(["u"], axis=1)], axis=1)),
+        ):
+            with pytest.raises(ValueError):
+                parameter.log_likelihood(X_bad, y_bad)
 
     def test_sample(self, data):
         X, y = data

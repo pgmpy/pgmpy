@@ -53,6 +53,10 @@ class TabularCPD(BaseParameter):
     [[0.67, 0.0], [0.33, 1.0]]
     >>> cpd.sample(pd.DataFrame({"rain": ["yes", "yes"]}), random_state=0)["wet"].tolist()
     ['yes', 'yes']
+    >>> cpd.predict(pd.DataFrame({"rain": ["no", "yes"]}))["wet"].tolist()
+    ['no', 'yes']
+    >>> cpd.log_likelihood(data[["rain"]], data["wet"]).round(2)["wet"].tolist()
+    [-0.41, 0.0, -1.1, -0.41]
 
     Without ``X``, ``predict_proba`` gives the marginal distribution over the parent values seen in ``fit``:
 
@@ -70,9 +74,12 @@ class TabularCPD(BaseParameter):
     """
 
     _tags = {
-        "variable_type": "discrete",
-        "parent_type": "discrete",
+        "name": "tabular_cpd",
+        "variable_type": ["discrete"],
+        "parent_data_types": ["discrete"],
         "supports_weighted_data": True,
+        "capability:factor": True,
+        "capability:exact_inference": True,
         "python_dependencies": "skpro",
     }
 
@@ -117,6 +124,7 @@ class TabularCPD(BaseParameter):
         TabularCPD
             A fitted instance. Its parents are sorted by name, with the table reordered to match.
         """
+        # Step 1: Check the parents and their cardinalities, and give every variable its states.
         evidence = _checked_evidence(variable, evidence)
         evidence_card = [] if evidence_card is None else list(evidence_card)
         if len(evidence_card) != len(evidence):
@@ -129,6 +137,7 @@ class TabularCPD(BaseParameter):
                 raise ValueError(
                     f"{name!r} has {card} states, but state_names lists {len(states[name])}: {states[name]}."
                 )
+        # Step 2: Check that values is a table of probabilities of the right shape.
         values = np.array(values, dtype=float)
         shape = (variable_card, int(np.prod(evidence_card)))
         if values.shape != shape:
@@ -138,22 +147,28 @@ class TabularCPD(BaseParameter):
         if (values < 0).any() or not np.allclose(values.sum(axis=0), 1, atol=0.01):
             raise ValueError("values must be non-negative, and each column must sum to 1.")
 
+        # Step 3: Sort the parents by name, and reorder the table's columns to match.
         order = _parent_order(evidence)
         values = values.reshape(variable_card, *evidence_card).transpose(0, *(1 + position for position in order))
 
+        # Step 4: Create the fitted instance. Only a root has a known marginal.
         cpd = cls(state_names=state_names)
         cpd.variable_ = variable
         cpd.evidence_ = [evidence[position] for position in order]
         cpd.variable_type_ = "discrete"
-        cpd._set_table(values.reshape(shape), states)
+        cpd.CPT_ = values.reshape(shape)
+        cpd.state_names_ = {name: states[name] for name in [variable, *cpd.evidence_]}
         cpd._marginal = None if cpd.evidence_ else cpd.CPT_[:, 0]
         cpd._is_fitted = True
         return cpd
 
     def _fit(self, X: pd.DataFrame, y: pd.DataFrame, sample_weight: np.ndarray | None) -> None:
+        # Step 1: Find the states of every variable: the given ones, else the sorted states in the data.
         given = _checked_state_names(self.state_names)
         data = (pd.concat([y, X], axis=1) if self.evidence_ else y).reset_index(drop=True)
         state_names = build_state_names(data, given)
+
+        # Step 2: Count, with any weights, the rows of each state of the target for each combination of parent states.
         if sample_weight is not None:
             sample_weight = sample_weight / sample_weight.max()
         counts = get_state_counts(data, state_names, self.variable_, self.evidence_, sample_weight)
@@ -163,15 +178,15 @@ class TabularCPD(BaseParameter):
                 "Some values in the data don't match state_names, e.g. [0, 1] given for boolean data; list the states "
                 "with the data's own types."
             )
+        # Step 3: Normalize the counts into the marginal, and into the table, where parent combinations without data get
+        # a uniform distribution.
         self._marginal = counts.sum(axis=1) / counts.sum()
         counts[:, (counts == 0).all(axis=0)] = 1.0
-        self._set_table(counts / counts.sum(axis=0), state_names)
-
-    def _set_table(self, cpt: np.ndarray, state_names: dict) -> None:
-        self.CPT_ = cpt
-        self.state_names_ = {variable: list(state_names[variable]) for variable in [self.variable_, *self.evidence_]}
+        self.CPT_ = counts / counts.sum(axis=0)
+        self.state_names_ = state_names
 
     def _predict_proba(self, X: pd.DataFrame | None) -> NominalDistribution:
+        # Step 1: Without X, return the marginal, known after fit and for a root.
         if X is None:
             if self._marginal is None:
                 raise ValueError(
@@ -179,6 +194,8 @@ class TabularCPD(BaseParameter):
                     "distribution is unknown; pass X."
                 )
             return NominalDistribution(probs=self._marginal.copy(), categories=list(self.state_names_[self.variable_]))
+
+        # Step 2: Find each row's column of the table from its parent states, rejecting states not seen in fit.
         codes, cardinalities = encode_columns(X, self.state_names_)
         columns = np.zeros(len(X), dtype=int)
         for parent in self.evidence_:
@@ -189,6 +206,8 @@ class TabularCPD(BaseParameter):
                     f"states: {self.state_names_[parent]}."
                 )
             columns = columns * cardinalities[parent] + codes[parent]
+
+        # Step 3: Give each row the target's distribution in its column.
         return NominalDistribution(
             probs=self.CPT_.T.take(columns, axis=0),
             categories=list(self.state_names_[self.variable_]),

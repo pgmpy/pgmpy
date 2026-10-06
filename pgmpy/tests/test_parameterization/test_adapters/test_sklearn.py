@@ -12,7 +12,7 @@ from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 from sklearn.pipeline import Pipeline
 
 from pgmpy.parameterization.adapters import SklearnAdapter
-from pgmpy.parameterization.cpds import LinearGaussianCPD, TabularCPD
+from pgmpy.parameterization.cpds import TabularCPD
 
 pytestmark = pytest.mark.skipif(
     not _check_soft_dependencies("skpro", severity="none"), reason="execute only if required dependency present"
@@ -55,14 +55,14 @@ class TestSklearnAdapter:
             (GridSearchCV(LogisticRegression(), {"C": [1.0]}), "discrete", True),
         ):
             adapter = SklearnAdapter(estimator)
-            assert adapter.get_tag("variable_type") == variable_type
+            assert adapter.get_tag("variable_type") == [variable_type]
             assert adapter.get_tag("supports_weighted_data") is weighted
         assert SklearnAdapter.get_class_tag("python_dependencies") == "skpro"
 
         # The tags follow the estimator after set_params, also a nested one.
         adapter = SklearnAdapter(Pipeline([("model", LogisticRegression())]))
-        assert adapter.set_params(estimator__model=Ridge()).get_tag("variable_type") == "continuous"
-        assert adapter.set_params(estimator=LogisticRegression()).get_tag("variable_type") == "discrete"
+        assert adapter.set_params(estimator__model=Ridge()).get_tag("variable_type") == ["continuous"]
+        assert adapter.set_params(estimator=LogisticRegression()).get_tag("variable_type") == ["discrete"]
 
         for estimator in ("not an estimator", RidgeClassifier()):  # RidgeClassifier has no predict_proba
             with pytest.raises(TypeError):
@@ -73,59 +73,55 @@ class TestSklearnAdapter:
         estimator = LinearRegression()
         adapter = SklearnAdapter(estimator).fit(X, y)
 
-        # A clone is fitted. The Normal for each row has the prediction as mean and, as standard deviation, the RMS of
-        # the training residuals.
+        # A clone is fitted, and predict gives its predictions, with X's index.
         assert adapter.estimator_ is not estimator and not hasattr(estimator, "coef_")
         assert adapter.estimator_.feature_names_in_.tolist() == ["A", "B", "C"]
-        dist = adapter.predict_proba(X_test)
-        assert (dist.index.tolist(), dist.columns.tolist()) == (X_test.index.tolist(), ["Y"])
-        np.testing.assert_allclose(dist.mean()["Y"], adapter.estimator_.predict(X_test))
-        np.testing.assert_allclose(dist.var()["Y"], adapter.std_**2)
-        assert adapter.std_ == pytest.approx(np.sqrt(np.mean((y - adapter.estimator_.predict(X)) ** 2)))
+        expected = pd.DataFrame({"Y": adapter.estimator_.predict(X_test)}, index=X_test.index)
+        pd.testing.assert_frame_equal(adapter.predict(X_test), expected)
 
-        # Sample weights go to the estimator and weight the residuals.
+        # A regressor gives point predictions, not a distribution, so it has no probabilities, marginal or samples.
+        for call in (
+            adapter.predict_proba,
+            lambda: adapter.predict_proba(X_test),
+            lambda: adapter.sample(X_test),
+            lambda: adapter.log_likelihood(X, y),
+        ):
+            with pytest.raises(TypeError, match="point predictions"):
+                call()
+
+        # Sample weights go to the estimator.
         weights = np.linspace(0.1, 2, len(y))
         weighted = SklearnAdapter(LinearRegression()).fit(X, y, sample_weight=weights)
         expected = LinearRegression().fit(X, y, sample_weight=weights)
         np.testing.assert_allclose(weighted.estimator_.coef_, expected.coef_)
-        assert weighted.std_ == pytest.approx(np.sqrt(np.average((y - expected.predict(X)) ** 2, weights=weights)))
 
-        # Without X, the marginal is the Normal with the mean and variance of the training predictions plus the noise's.
-        # For a linear model, that's LinearGaussianCPD's "mle" marginal.
-        marginal, linear = adapter.predict_proba(), LinearGaussianCPD("mle").fit(X, y).predict_proba()
-        assert (marginal.mean(), marginal.var()) == pytest.approx((linear.mean(), linear.var()))
-
-        # A regressor that predicts a 1-D array, like a random forest, still gives one row per row of X. Parents whose
-        # names aren't all strings, which sklearn can't take as feature names, go in by position.
+        # A regressor that predicts a 1-D array, like a random forest, still gives one row per row of X, and one that
+        # reproduces its training data, like KNN with one neighbour, fits. Parents whose names aren't all strings, which
+        # sklearn can't take as feature names, go in by position.
         forest = SklearnAdapter(RandomForestRegressor(n_estimators=10, random_state=0)).fit(X, y)
-        assert forest.predict_proba(X_test).shape == (len(X_test), 1)
+        assert forest.predict(X_test).shape == (len(X_test), 1)
+        SklearnAdapter(KNeighborsRegressor(n_neighbors=1)).fit(X, y)
         renamed = SklearnAdapter(LinearRegression()).fit(X.set_axis([0, "B", ("C", 1)], axis=1), y)
         np.testing.assert_allclose(renamed.estimator_.coef_, adapter.estimator_.coef_)
 
-        # A root doesn't use the estimator: it gets the Normal with the weighted mean and standard deviation of y.
+        # The estimator gets a copy of y, so a regressor that keeps a view of it, like KNN, doesn't change when the
+        # caller edits their data.
+        target = y.copy()
+        knn = SklearnAdapter(KNeighborsRegressor(n_neighbors=2)).fit(X, target)
+        predictions = knn.predict(X_test)
+        target.iloc[:] = 0.0
+        pd.testing.assert_frame_equal(knn.predict(X_test), predictions)
+
+        # A root doesn't use the estimator: it predicts the weighted mean of y.
         root = SklearnAdapter(LinearRegression()).fit(None, y, sample_weight=weights)
-        mean = np.average(y, weights=weights)
         assert isinstance(root.estimator_, DummyRegressor)
-        assert (root.predict_proba().mean(), root.std_) == pytest.approx(
-            (mean, np.sqrt(np.average((y - mean) ** 2, weights=weights)))
-        )
-        np.testing.assert_allclose(root.predict_proba(pd.DataFrame(index=[7, 8])).mean()["Y"], [mean, mean])
-        assert adapter.sample(X_test.iloc[:0]).shape == root.sample(pd.DataFrame(index=[])).shape == (0, 1)
+        np.testing.assert_allclose(root.predict(pd.DataFrame(index=[7, 8]))["Y"], [np.average(y, weights=weights)] * 2)
+        assert adapter.predict(X_test.iloc[:0]).shape == root.predict(pd.DataFrame(index=[])).shape == (0, 1)
 
-        # Samples follow the Normals, and the seed matters.
-        samples = adapter.sample(X_test, n_samples=50, random_state=0)["Y"].to_numpy().reshape(50, -1)
-        z = (samples - dist.mean()["Y"].to_numpy()) / adapter.std_
-        assert abs(z.mean()) < 0.05 and z.std() == pytest.approx(1, abs=0.05)
-        pd.testing.assert_frame_equal(adapter.sample(X_test, random_state=0), adapter.sample(X_test, random_state=0))
-        assert not adapter.sample(X_test, random_state=0).equals(adapter.sample(X_test, random_state=1))
-
-        # Training residuals of 0, as from a model that interpolates its data, can't give a Normal, and neither can a
-        # prediction that isn't finite, e.g. from isotonic regression outside its training range.
-        with pytest.raises(ValueError, match="standard deviation"):
-            SklearnAdapter(KNeighborsRegressor(n_neighbors=1)).fit(X, y)
+        # A prediction that isn't finite, e.g. from isotonic regression outside its training range, raises.
         isotonic = SklearnAdapter(IsotonicRegression()).fit(X[["A"]], y)
         with pytest.raises(ValueError, match="IsotonicRegression.*'out'"):
-            isotonic.predict_proba(pd.DataFrame({"A": [0.0, 5.0]}, index=["in", "out"]))
+            isotonic.predict(pd.DataFrame({"A": [0.0, 5.0]}, index=["in", "out"]))
 
         # A fitted estimator compares by identity, so a fitted adapter only equals itself.
         assert adapter == adapter and len({adapter, adapter}) == 1
@@ -141,6 +137,12 @@ class TestSklearnAdapter:
         assert (dist.index.tolist(), dist.columns.tolist()) == (X_test.index.tolist(), ["Y"])
         assert list(dist.categories) == list(adapter.classes_) == ["hi", "lo"]
         np.testing.assert_allclose(np.asarray(dist.probs), adapter.estimator_.predict_proba(X_test))
+        rows = np.arange(len(X)), (labels == "lo").to_numpy().astype(int)
+        np.testing.assert_allclose(
+            adapter.log_likelihood(X, labels)["Y"], np.log(adapter.estimator_.predict_proba(X)[rows])
+        )
+        most_probable = adapter.classes_[adapter.estimator_.predict_proba(X_test).argmax(axis=1)]
+        pd.testing.assert_frame_equal(adapter.predict(X_test), pd.DataFrame({"Y": most_probable}, index=X_test.index))
         samples = adapter.sample(X_test, n_samples=20, random_state=0)["Y"]
         assert samples.isin(["hi", "lo"]).all() and not samples.equals(adapter.sample(X_test, 20, random_state=1)["Y"])
 
