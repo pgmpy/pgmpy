@@ -20,12 +20,17 @@ class AdjacencyConfusionMatrix(BaseSupervisedMetric):
     metrics : List[str], optional
         List of metrics to compute. If None, computes all available metrics.
 
-            cm          : Confusion matrix for skeleton edge presence.
-            precision   : Fraction of estimated skeleton edges that are correct (TP / (TP + FP)).
-            recall      : Fraction of true skeleton edges that are recovered (TP / (TP + FN)).
-            f1          : Harmonic mean of precision and recall.
-            npv         : Fraction of absent estimated edges that are truly absent (TN / (TN + FN)).
-            specificity : Fraction of truly absent edges correctly predicted absent (TN / (TN + FP)).
+    Attributes
+    -------
+    precision_: Fraction of correctly estimated skeleton edges (TP / (TP + FP)).
+
+    recall_: Fraction of true skeleton edges that are recovered (TP / (TP + FN)).
+
+    f1_: Harmonic mean of precision and recall
+
+    npv_: Fraction of absent estimated edges that are truly absent (TN / (TN + FN)).
+
+    specificity_: Fraction of truly absent edges correctly predicted absent (TN / (TN + FP)).
 
     Returns
     -------
@@ -79,7 +84,7 @@ class AdjacencyConfusionMatrix(BaseSupervisedMetric):
         "lower_is_better": False,
         "is_symmetric": False,
         "supported_graph_types": (DAG, PDAG),
-        "output_type": "report",
+        "output_type": "dict",
     }
 
     def __init__(self, metrics: list[str] | None = None):
@@ -130,19 +135,24 @@ class AdjacencyConfusionMatrix(BaseSupervisedMetric):
 
         if "precision" in self.metrics:
             results["precision"] = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+            self.precision_ = results["precision"]
 
         if "recall" in self.metrics:
             results["recall"] = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+            self.recall_ = results["recall"]
 
         if "f1" in self.metrics:
             prec = tp / (tp + fp) if (tp + fp) > 0 else 0.0
             rec = tp / (tp + fn) if (tp + fn) > 0 else 0.0
             results["f1"] = 2 * prec * rec / (prec + rec) if (prec + rec) > 0 else 0.0
+            self.f1_ = results["f1"]
 
         if "npv" in self.metrics:
             results["npv"] = tn / (tn + fn) if (tn + fn) > 0 else 0.0
+            self.npv_ = results["npv"]
 
         if "specificity" in self.metrics:
             results["specificity"] = tn / (tn + fp) if (tn + fp) > 0 else 0.0
+            self.specificity_ = results["specificity"]
 
         return results

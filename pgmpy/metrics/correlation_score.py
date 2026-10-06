@@ -84,7 +84,7 @@ class CorrelationScore(BaseUnsupervisedMetric):
         "lower_is_better": False,
         "supported_graph_types": (DAG,),
         "is_default": True,
-        "output_type": "report",
+        "output_type": "scalar",
     }
 
     def __init__(
@@ -137,6 +137,6 @@ class CorrelationScore(BaseUnsupervisedMetric):
 
         # Step 3: Return summary or metric
         if self.return_summary:
-            return results
+            self.metric_summary_ = results
         else:
             return self.score(y_true=results["stat_test"].values, y_pred=results["d_connected"].values)
