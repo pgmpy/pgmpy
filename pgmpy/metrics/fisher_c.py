@@ -59,18 +59,18 @@ class FisherC(BaseUnsupervisedMetric):
 
     _tags = {
         "name": "fisher_c",
-        "requires_true_graph": False,
-        "requires_data": True,
-        "lower_is_better": False,
-        "supported_graph_types": (DAG,),
-        "is_default": False,
+        "supported_graph_types": [DAG],
         "output_type": "scalar",
+        "lower_is_better": False,
     }
 
     def __init__(self, ci_test=None, compute_rmsea=False, show_progress=True):
         self.ci_test = ci_test
         self.compute_rmsea = compute_rmsea
         self.show_progress = show_progress
+        super().__init__()
+        if compute_rmsea:
+            self.set_tags(output_type="tuple")
 
     def _evaluate(self, X, causal_graph):
         if len(causal_graph.latents) > 0:

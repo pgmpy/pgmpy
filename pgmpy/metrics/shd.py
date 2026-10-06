@@ -51,14 +51,12 @@ class SHD(BaseSupervisedMetric):
     """
 
     _tags = {
-        "name": "SHD",
-        "requires_true_graph": True,
-        "requires_data": False,
-        "lower_is_better": True,
+        "name": "shd",
+        "default_for": "supervised",
         "is_symmetric": True,
-        "supported_graph_types": (DAG, PDAG),
-        "is_default": True,
+        "supported_graph_types": [DAG, PDAG],
         "output_type": "scalar",
+        "lower_is_better": True,
     }
 
     def __init__(self, edge_reverse_penalty=1):

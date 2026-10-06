@@ -52,12 +52,9 @@ class ImpliedCIs(BaseUnsupervisedMetric):
 
     _tags = {
         "name": "implied_cis",
-        "requires_true_graph": False,
-        "requires_data": True,
-        "lower_is_better": None,
-        "supported_graph_types": (DAG,),
-        "is_default": False,
-        "output_type": "report",
+        "supported_graph_types": [DAG],
+        "output_type": "dataframe",
+        "lower_is_better": False,
     }
 
     def __init__(self, ci_test=None, show_progress=True):

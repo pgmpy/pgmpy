@@ -1,4 +1,4 @@
-from ._base import BaseSupervisedMetric, BaseUnsupervisedMetric, get_metrics
+from ._base import BaseSupervisedMetric, BaseUnsupervisedMetric, get_metric
 from .adjacency_cm import AdjacencyConfusionMatrix
 from .adjacency_scores import AdjacencyF1Score, AdjacencyNPV, AdjacencyPrecision, AdjacencyRecall, AdjacencySpecificity
 from .correlation_score import CorrelationScore
@@ -18,7 +18,7 @@ from .structure_score import StructureScore
 __all__ = [
     "BaseSupervisedMetric",
     "BaseUnsupervisedMetric",
-    "get_metrics",
+    "get_metric",
     "AdjacencyConfusionMatrix",
     "AdjacencyRecall",
     "AdjacencyPrecision",

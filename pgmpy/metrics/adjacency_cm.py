@@ -74,12 +74,10 @@ class AdjacencyConfusionMatrix(BaseSupervisedMetric):
 
     _tags = {
         "name": "adjacency_confusion_matrix",
-        "requires_true_graph": True,
-        "requires_data": False,
-        "lower_is_better": False,
         "is_symmetric": False,
-        "supported_graph_types": (DAG, PDAG),
-        "output_type": "report",
+        "supported_graph_types": [DAG, PDAG],
+        "output_type": "dict",
+        "lower_is_better": False,
     }
 
     def __init__(self, metrics: list[str] | None = None):
