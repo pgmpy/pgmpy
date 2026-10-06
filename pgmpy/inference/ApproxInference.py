@@ -85,6 +85,53 @@ class ApproxInference:
                 for var in variables
             }
 
+    def get_weighted_distribution(self, samples, variables, state_names=None, joint=True):
+        """
+        Computes weighted distribution of `variables` from given weighted `samples`.
+        Uses the `_weight` column in the samples DataFrame to compute importance-weighted
+        probability distributions.
+
+        Parameters
+        ----------
+        samples: pandas.DataFrame
+            A dataframe of weighted samples with a `_weight` column.
+
+        variables: list (array-like)
+            A list of variables whose distribution needs to be computed.
+
+        state_names: dict (default: None)
+            A dict of state names for each variable in `variables` in the form {variable_name: list of states}.
+            If None, inferred from the data but is possible that the final distribution misses some states.
+
+        joint: boolean
+            If joint=True, computes the joint distribution over `variables`.
+            Else, returns a dict with marginal distribution of each variable in
+            `variables`.
+
+        Returns
+        -------
+        Probability distribution: pgmpy.factors.discrete.DiscreteFactor or dict
+            The weighted probability distribution.
+        """
+        if isinstance(variables, (set, tuple)):
+            variables = list(variables)
+
+        total_weight = samples["_weight"].sum()
+
+        if joint:
+            return self._get_factor_from_df(
+                samples.groupby(variables, observed=False)["_weight"].sum() / total_weight,
+                state_names,
+            )
+        else:
+            return {
+                var: self._get_factor_from_df(
+                    samples.groupby([var], observed=False)["_weight"].sum() / total_weight,
+                    state_names,
+                )
+                for var in variables
+            }
+
     def query(
         self,
         variables,
@@ -96,6 +143,7 @@ class ApproxInference:
         state_names=None,
         show_progress=True,
         seed=None,
+        sampling_algorithm="rejection",
     ):
         """
         Method for doing approximate inference based on sampling in Bayesian
@@ -132,6 +180,12 @@ class ApproxInference:
         seed: int (default: None)
             Sets the seed for the random generators.
 
+        sampling_algorithm: str (default: 'rejection')
+            The sampling algorithm to use. Options:
+                - 'rejection': Uses rejection sampling via model.simulate(). Default and backwards-compatible.
+                - 'likelihood_weighting': Uses likelihood weighted sampling which is more efficient
+                  when evidence has low prior probability. Only supported for DiscreteBayesianNetwork.
+
         Returns
         -------
         Probability distribution: pgmpy.factors.discrete.TabularCPD
@@ -152,7 +206,37 @@ class ApproxInference:
         ... )  # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
         {'HISTORY': <DiscreteFactor representing phi(HISTORY:2) at 0x...>,
          'CVP': <DiscreteFactor representing phi(CVP:3) at 0x...>}
+        >>> infer.query(
+        ...     variables=["HISTORY"],
+        ...     evidence={"PVSAT": "LOW"},
+        ...     sampling_algorithm="likelihood_weighting",
+        ... )  # doctest: +ELLIPSIS
+        <DiscreteFactor representing phi(HISTORY:2) at 0x...>
         """
+        if sampling_algorithm not in ("rejection", "likelihood_weighting"):
+            raise ValueError(
+                f"sampling_algorithm must be one of 'rejection' or 'likelihood_weighting'. Got '{sampling_algorithm}'."
+            )
+
+        if sampling_algorithm == "likelihood_weighting":
+            if not isinstance(self.model, DiscreteBayesianNetwork):
+                raise ValueError("Likelihood weighting is only supported for DiscreteBayesianNetwork models.")
+            if virtual_evidence is not None:
+                raise ValueError(
+                    "virtual_evidence is not supported with likelihood_weighting. "
+                    "Use sampling_algorithm='rejection' instead."
+                )
+            return self._query_likelihood_weighting(
+                variables=variables,
+                n_samples=n_samples,
+                samples=samples,
+                evidence=evidence,
+                joint=joint,
+                state_names=state_names,
+                show_progress=show_progress,
+                seed=seed,
+            )
+
         # Step 1: If samples are not provided, generate samples for the query
         if samples is None:
             if isinstance(self.model, DiscreteBayesianNetwork):
@@ -198,6 +282,70 @@ class ApproxInference:
         # Step 3: Compute the distributions and return it.
         return self.get_distribution(samples, variables=variables, state_names=state_names, joint=joint)
 
+    def _query_likelihood_weighting(
+        self,
+        variables,
+        n_samples=int(1e4),
+        samples=None,
+        evidence=None,
+        joint=True,
+        state_names=None,
+        show_progress=True,
+        seed=None,
+    ):
+        """
+        Internal method to perform inference using likelihood weighted sampling.
+        Generates samples using the likelihood weighting algorithm (Koller & Friedman,
+        Algorithm 12.2) and computes weighted distributions.
+
+        Parameters
+        ----------
+        variables: list
+            List of variables for which the probability distribution needs to be calculated.
+
+        n_samples: int
+            The number of samples to generate.
+
+        samples: pd.DataFrame (default: None)
+            If provided, uses these weighted samples (must contain a `_weight` column).
+
+        evidence: dict (default: None)
+            The observed values. A dict key, value pair of the form {var: state_name}.
+
+        joint: boolean
+            If joint=True, computes the joint distribution over `variables`.
+
+        state_names: dict (default: None)
+            A dict of state names for each variable in `variables`.
+
+        show_progress: boolean (default: True)
+            If True, shows a progress bar when generating samples.
+
+        seed: int (default: None)
+            Sets the seed for the random generators.
+
+        Returns
+        -------
+        Probability distribution: pgmpy.factors.discrete.DiscreteFactor
+            The queried probability distribution.
+        """
+        from pgmpy.sampling import BayesianModelSampling
+
+        if samples is None:
+            evidence_list = [(var, state) for var, state in evidence.items()] if evidence else []
+            sampler = BayesianModelSampling(self.model)
+            samples = sampler.likelihood_weighted_sample(
+                evidence=evidence_list,
+                size=n_samples,
+                seed=seed,
+                show_progress=show_progress,
+            )
+
+        if state_names is None:
+            state_names = {var: list(samples.loc[:, var].unique()) for var in variables}
+
+        return self.get_weighted_distribution(samples, variables=variables, state_names=state_names, joint=joint)
+
     def map_query(
         self,
         variables,
@@ -208,6 +356,7 @@ class ApproxInference:
         state_names=None,
         show_progress=True,
         seed=None,
+        sampling_algorithm="rejection",
     ):
         """
         Finds the most probable state in the joint distribution of variables. Calculates the
@@ -243,6 +392,12 @@ class ApproxInference:
 
         seed: int (default: None)
             Sets the seed for the random generators.
+
+        sampling_algorithm: str (default: 'rejection')
+            The sampling algorithm to use. Options:
+                - 'rejection': Uses rejection sampling via model.simulate(). Default and backwards-compatible.
+                - 'likelihood_weighting': Uses likelihood weighted sampling which is more efficient
+                  when evidence has low prior probability. Only supported for DiscreteBayesianNetwork.
 
         Returns
         -------
@@ -284,6 +439,7 @@ class ApproxInference:
             state_names=state_names,
             show_progress=show_progress,
             seed=seed,
+            sampling_algorithm=sampling_algorithm,
         )
 
         argmax = compat_fns.argmax(final_distribution.values)
