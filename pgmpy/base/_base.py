@@ -152,6 +152,7 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
     """
 
     SUPPORTED_EDGE_TYPES = frozenset(["--", "-o", "o-", "->", "<-", "o>", "<o", "<>", "oo"])
+    SUPPORTS_LATENTS = True
 
     def __init__(
         self,
@@ -179,6 +180,100 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
 
         for role, vars in roles.items():
             self.with_role(role=role, variables=vars, inplace=True)
+
+    def add_node(self, node_for_adding: Hashable, **attr: Any) -> None:
+        """
+        Add a node or update the attributes of an existing node.
+
+        Parameters
+        ----------
+        node_for_adding : Hashable
+            The node to add. Nodes must be hashable and cannot be None.
+
+        attr : keyword arguments, optional
+            Attributes to set or update. The ``roles`` attribute is a set of role names; ``"latents"`` is only
+            allowed when the graph supports explicit latent variables.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the node is None or its roles include ``"latents"`` in a graph that does not support latent variables.
+
+        Examples
+        --------
+        >>> from pgmpy.base import ADMG
+        >>> graph = ADMG()
+        >>> graph.add_node("X", roles={"exposures"}, label="Treatment")
+        >>> graph.exposures
+        {'X'}
+        """
+        if not self.SUPPORTS_LATENTS and "latents" in attr.get("roles", ()):
+            raise ValueError(
+                f"Every vertex of a {type(self).__name__} is observed; latent variables are represented by its "
+                "edges, so the 'latents' role cannot be assigned. Use DAG.to_admg() to project the latent "
+                "variables of a DAG into bidirected edges."
+            )
+        super().add_node(node_for_adding, **attr)
+
+    def add_nodes_from(
+        self,
+        nodes_for_adding: Iterable[Hashable | tuple[Hashable, dict[str, Any]]],
+        **attr: Any,
+    ) -> None:
+        """
+        Add multiple nodes or update their attributes.
+
+        Parameters
+        ----------
+        nodes_for_adding : iterable
+            Nodes or ``(node, attribute_dict)`` pairs. Hashable tuples are treated as node identifiers.
+
+        attr : keyword arguments, optional
+            Shared attributes to set or update. Per-node attributes take precedence over these shared values.
+            The ``roles`` attribute is a set of role names.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If roles include ``"latents"`` in a graph that does not support latent variables. Role assignments
+            are validated for the entire batch before any nodes or attributes are modified.
+
+        Examples
+        --------
+        >>> from pgmpy.base import ADMG
+        >>> graph = ADMG()
+        >>> graph.add_nodes_from(["X", ("Y", {"roles": {"outcomes"}})], roles={"exposures"})
+        >>> graph.exposures
+        {'X'}
+        >>> graph.outcomes
+        {'Y'}
+        """
+        nodes_for_adding = list(nodes_for_adding)
+        for node in nodes_for_adding:
+            # NetworkX interprets unhashable entries as (node, attribute_dict) pairs.
+            try:
+                hash(node)
+            except TypeError:
+                node, node_attr = node
+                attributes = attr.copy()
+                attributes.update(node_attr)
+            else:
+                attributes = attr
+            if not self.SUPPORTS_LATENTS and "latents" in attributes.get("roles", ()):
+                raise ValueError(
+                    f"Every vertex of a {type(self).__name__} is observed; latent variables are represented by its "
+                    "edges, so the 'latents' role cannot be assigned. Use DAG.to_admg() to project the latent "
+                    "variables of a DAG into bidirected edges."
+                )
+        super().add_nodes_from(nodes_for_adding, **attr)
 
     def add_edge(
         self,
