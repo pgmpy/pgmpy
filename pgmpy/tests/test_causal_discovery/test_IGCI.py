@@ -25,10 +25,10 @@ def test_init():
 def test_slope_score(nonlinear_data):
     from pgmpy.causal_discovery.bivariate_scores import SlopeScore, get_bivariate_score
 
-    score = get_bivariate_score("slope", algorithm="igci")
+    score = get_bivariate_score("slope", input_type="cause_effect")
     assert isinstance(score, SlopeScore)
     assert score.get_tag("name") == "slope"
-    assert score.get_tag("supported_algorithms") == ["igci"]
+    assert score.get_tag("input_type") == "cause_effect"
 
     est = IGCI(scoring_method="slope").fit(nonlinear_data)
     assert list(est.causal_graph_.edges()) == [("X", "Y")]
@@ -52,13 +52,13 @@ def test_slope_score(nonlinear_data):
 def test_entropy_score(nonlinear_data):
     from pgmpy.causal_discovery.bivariate_scores import EntropyDifferenceScore, get_bivariate_score
 
-    score = get_bivariate_score("entropy", algorithm="igci")
+    score = get_bivariate_score("entropy_difference", input_type="cause_effect")
     assert isinstance(score, EntropyDifferenceScore)
     assert score.method == "spacing"
-    assert score.get_tag("name") == "entropy"
-    assert score.get_tag("supported_algorithms") == ["igci"]
+    assert score.get_tag("name") == "entropy_difference"
+    assert score.get_tag("input_type") == "cause_effect"
 
-    est = IGCI(scoring_method="entropy").fit(nonlinear_data)
+    est = IGCI(scoring_method="entropy_difference").fit(nonlinear_data)
     assert list(est.causal_graph_.edges()) == [("X", "Y")]
 
     x = np.linspace(0.1, 1, 100)
@@ -79,7 +79,7 @@ def test_custom_score():
     from pgmpy.causal_discovery.bivariate_scores import get_bivariate_score
 
     score = lambda x, y: np.mean(y) - np.mean(x)
-    assert get_bivariate_score(score, algorithm="igci") is score
+    assert get_bivariate_score(score, input_type="cause_effect") is score
 
 
 def test_nan_or_tied_direction_scores_raise(nonlinear_data):
@@ -107,14 +107,14 @@ def test_clone_preserves_scoring_method_instance():
 def test_incompatible_score_instance_raises(nonlinear_data):
     from pgmpy.causal_discovery.bivariate_scores import GaussScore
 
-    with pytest.raises(ValueError, match="GaussScore does not support IGCI"):
+    with pytest.raises(ValueError, match=r"GaussScore takes \(cause, residual\) inputs, but \(cause, effect\)"):
         IGCI(scoring_method=GaussScore()).fit(nonlinear_data)
 
 
 @pytest.mark.parametrize(
     ("estimator", "data", "match"),
     [
-        (IGCI(scoring_method="gauss"), pd.DataFrame({"X": [0, 1], "Y": [0, 1]}), "IGCI"),
+        (IGCI(scoring_method="gauss"), pd.DataFrame({"X": [0, 1], "Y": [0, 1]}), "Unknown score"),
         (IGCI(ref_measure="bogus"), pd.DataFrame({"X": [0, 1], "Y": [0, 1]}), "ref_measure"),
         (IGCI(), pd.DataFrame({"X": [0, 1], "Y": [1, 2], "Z": [2, 1]}), "exactly two"),
         (IGCI(), pd.DataFrame({"X": [0, 1, np.nan], "Y": [1, 2, 3]}), None),

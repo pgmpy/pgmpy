@@ -11,7 +11,7 @@ from shutil import get_terminal_size
 import numpy as np
 import pandas as pd
 
-from pgmpy import config, logger
+from pgmpy import config
 from pgmpy.extern import tabulate
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.utils import compat_fns
@@ -693,7 +693,6 @@ class TabularCPD(DiscreteFactor):
                         )
                     )
             else:
-                logger.warning("Same ordering provided as current")
                 return self.get_values()
 
     def get_evidence(self):

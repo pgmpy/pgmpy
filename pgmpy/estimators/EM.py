@@ -1,13 +1,11 @@
-import warnings
-
 import pandas as pd
 
-from pgmpy import logger
 from pgmpy.base import DAG
 from pgmpy.estimators import ParameterEstimator
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.parameter_estimator import DiscreteBayesianEstimator, DiscreteEM
+from pgmpy.utils._warnings import _warn_external
 
 
 class ExpectationMaximization(ParameterEstimator):
@@ -59,11 +57,10 @@ class ExpectationMaximization(ParameterEstimator):
         data: pd.DataFrame,
         **kwargs,
     ):
-        warnings.warn(
-            "`pgmpy.estimators.ExpectationMaximization` is deprecated and will be removed in v2.0. "
-            "Please use `pgmpy.parameter_estimator.DiscreteEM` instead.",
+        _warn_external(
+            "`pgmpy.estimators.ExpectationMaximization` is deprecated since v1.1.1 and will be removed in v2.0. "
+            "Use `pgmpy.parameter_estimator.DiscreteEM` instead.",
             FutureWarning,
-            stacklevel=2,
         )
 
         if not isinstance(model, (DAG, DiscreteBayesianNetwork)):
@@ -82,9 +79,10 @@ class ExpectationMaximization(ParameterEstimator):
         new_latents = [col for col in dropped_cols if col in model.nodes() and col not in model.latents]
 
         if new_latents:
-            logger.warning(
+            _warn_external(
                 f"Columns {new_latents} have all missing values and are not marked as latent. "
-                "Treating them as latent variables."
+                "Treating them as latent variables.",
+                UserWarning,
             )
             # `latents` is a role-derived property whose getter returns a fresh
             # set, so it must be assigned through the setter (mutating the
@@ -97,9 +95,10 @@ class ExpectationMaximization(ParameterEstimator):
         dropped_rows_count = original_rows_count - data.shape[0]
 
         if dropped_rows_count:
-            logger.warning(
+            _warn_external(
                 f"{dropped_rows_count} rows with missing values in partially "
-                "missing columns were dropped from the dataset."
+                "missing columns were dropped from the dataset.",
+                UserWarning,
             )
 
         super().__init__(model, data, **kwargs)

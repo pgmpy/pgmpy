@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import itertools
-import logging
 from collections import defaultdict
 from collections.abc import Hashable, Iterable
 from functools import reduce
@@ -24,11 +23,12 @@ from pgmpy.factors.discrete import (
     JointProbabilityDistribution,
     TabularCPD,
 )
+from pgmpy.models._file_io import _FileIOMixin
 from pgmpy.models.DiscreteMarkovNetwork import DiscreteMarkovNetwork
 from pgmpy.utils import compat_fns
 
 
-class DiscreteBayesianNetwork(DAG):
+class DiscreteBayesianNetwork(_FileIOMixin, DAG):
     """
     Initializes a Discrete Bayesian Network.
 
@@ -306,7 +306,7 @@ class DiscreteBayesianNetwork(DAG):
 
             for prev_cpd_index in range(len(self.cpds)):
                 if self.cpds[prev_cpd_index].variable == cpd.variable:
-                    logger.warning(f"Replacing existing CPD for {cpd.variable}")
+                    logger.debug(f"Replacing existing CPD for {cpd.variable}")
                     self.cpds[prev_cpd_index] = cpd
                     break
             else:
@@ -719,13 +719,7 @@ class DiscreteBayesianNetwork(DAG):
         _est.fit(self, data)
         cpds = _est.parameters_
 
-        # Temporarily suppress logger to stop giving warning about replacing CPDs.
-        _prev_level = logger.level
-        logger.setLevel(logging.CRITICAL)
-        try:
-            self.add_cpds(*cpds)
-        finally:
-            logger.setLevel(_prev_level)
+        self.add_cpds(*cpds)
 
     def predict(
         self,
@@ -923,7 +917,7 @@ class DiscreteBayesianNetwork(DAG):
             for k, v in states_dict.items():
                 for index in range(len(v.values)):
                     state = self.get_cpds(k).state_names[k][index]
-                    pred_values[k + "_" + str(state)].append(v.values[index])
+                    pred_values[f"{k}_{state}"].append(v.values[index])
         return pd.DataFrame(pred_values, index=data.index)
 
     def get_state_probability(self, states: dict[Hashable, Hashable]) -> float:
@@ -1088,7 +1082,10 @@ class DiscreteBayesianNetwork(DAG):
         model_copy.add_edges_from(self.edges())
         if self.cpds:
             model_copy.add_cpds(*[cpd.copy() for cpd in self.cpds])
-        model_copy.latents = self.latents
+
+        for role, var in self.get_role_dict().copy().items():
+            model_copy.with_role(role=role, variables=var, inplace=True)
+
         return model_copy
 
     def get_markov_blanket(self, node: Hashable) -> list[Hashable]:
@@ -1688,107 +1685,3 @@ class DiscreteBayesianNetwork(DAG):
             return samples.astype("category")
         else:
             return (samples.loc[:, list(set(samples.columns) - self.latents)]).astype("category")
-
-    def save(self, filename: str, filetype: str = "bif") -> None:
-        """
-        Writes the model to a file. Please avoid using any special characters or
-        spaces in variable names or state names in the model.
-
-        Parameters
-        ----------
-        filename: str
-            The path along with the filename where to write the file.
-
-        filetype: str (default: bif)
-            The format in which to write the model to file. Can be one of
-            the following: bif, uai, xmlbif, xdsl, net.
-
-        Examples
-        --------
-        >>> from pgmpy.example_models import load_model
-        >>> alarm = load_model("bnlearn/alarm")
-        >>> alarm.save("alarm.bif", filetype="bif")
-        """
-        from pgmpy.readwrite import (
-            BIFWriter,
-            NETWriter,
-            UAIWriter,
-            XDSLWriter,
-            XMLBIFWriter,
-        )
-
-        supported_formats_writer_map = {
-            "bif": BIFWriter,
-            "uai": UAIWriter,
-            "xmlbif": XMLBIFWriter,
-            "xdsl": XDSLWriter,
-            "net": NETWriter,
-        }
-        if filetype not in supported_formats_writer_map.keys():
-            raise ValueError(f"Unsupported file format: {filetype}")
-
-        parsed_filetype = filename.split(".")[-1].lower()
-        if parsed_filetype in supported_formats_writer_map.keys():
-            filetype = parsed_filetype
-
-        writer_class = supported_formats_writer_map[filetype]
-        writer_class(self).write(filename=filename)
-
-    @staticmethod
-    def load(filename: str, filetype: str = "bif", **kwargs: Any) -> DiscreteBayesianNetwork:
-        """
-        Read the model from a file.
-
-        Parameters
-        ----------
-        filename: str
-            The path along with the filename where to read the file.
-
-        filetype: str (default: bif)
-            The format of the model file. Can be one of
-            the following: bif, uai, xmlbif, xdsl, net.
-
-        kwargs: kwargs
-            Any additional arguments for the reader class or get_model method.
-            Please refer the file format class for details.
-
-        Examples
-        --------
-        >>> from pgmpy.example_models import load_model
-        >>> alarm = load_model("bnlearn/alarm")
-        >>> alarm.save("alarm.bif", filetype="bif")
-        >>> alarm_model = DiscreteBayesianNetwork.load("alarm.bif", filetype="bif")
-        """
-        from pgmpy.readwrite import (
-            BIFReader,
-            NETReader,
-            UAIReader,
-            XDSLReader,
-            XMLBIFReader,
-        )
-
-        supported_formats_reader_map = {
-            "bif": BIFReader,
-            "uai": UAIReader,
-            "xmlbif": XMLBIFReader,
-            "xdsl": XDSLReader,
-            "net": NETReader,
-        }
-
-        if filetype not in supported_formats_reader_map.keys():
-            raise ValueError(f"Unsupported file format: {filetype}")
-
-        parsed_filetype = filename.split(".")[-1].lower()
-        if parsed_filetype in supported_formats_reader_map.keys():
-            filetype = parsed_filetype
-
-        reader_class = supported_formats_reader_map[filetype]
-
-        if filetype == "bif":
-            state_name_type = kwargs.get("state_name_type", str)
-            reader = reader_class(path=filename)
-            return reader.get_model(state_name_type=state_name_type)
-
-        else:
-            reader = reader_class(path=filename)
-            return reader.get_model()

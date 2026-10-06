@@ -1,4 +1,3 @@
-import warnings
 from itertools import combinations
 
 import numpy as np
@@ -12,10 +11,12 @@ except ImportError as e:
 
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork
+from pgmpy.readwrite._base import BaseReader, BaseWriter
 from pgmpy.utils import compat_fns
+from pgmpy.utils._warnings import _warn_external
 
 
-class UAIReader:
+class UAIReader(BaseReader):
     """
     Initialize an instance of UAI reader class
 
@@ -35,7 +36,7 @@ class UAIReader:
     >>> writer = UAIWriter(model)
     >>> writer.write("asia.uai")
     >>> reader = UAIReader("asia.uai")
-    >>> model = reader.get_model()
+    >>> model = reader.read()
 
     References
     ----------
@@ -43,14 +44,16 @@ class UAIReader:
     - :footcite:t:`uai_2008_format`
     """
 
+    format_name = "uai"
+    file_extensions = ["uai"]
+
     def __init__(self, path=None, string=None):
-        if path:
+        super().__init__(path=path, string=string)
+        if path is not None:
             with open(path) as f:
                 self.network = f.read()
-        elif string:
-            self.network = string
         else:
-            raise ValueError("Must specify either path or string.")
+            self.network = string
 
         if "#" in self.network:
             self.network = Regex("#.*").suppress().transform_string(self.network)  # removing comments from the file
@@ -246,7 +249,7 @@ class UAIReader:
                 tables.append((function_variables, list(values)))
         return tables
 
-    def get_model(self):
+    def read(self):
         """
         Returns an instance of Bayesian Model or Markov Model.
         Variables are in the pattern var_0, var_1, var_2 where var_0 is
@@ -264,7 +267,7 @@ class UAIReader:
         >>> writer = UAIWriter(model)
         >>> writer.write("asia.uai")
         >>> reader = UAIReader("asia.uai")
-        >>> reader.get_model() # doctest: +ELLIPSIS
+        >>> reader.read() # doctest: +ELLIPSIS
         <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork object at 0x...>
         """
         if self.network_type == "BAYES":
@@ -309,7 +312,7 @@ class UAIReader:
             return model
 
 
-class UAIWriter:
+class UAIWriter(BaseWriter):
     """
     Initialize an instance of UAI writer class
 
@@ -330,15 +333,13 @@ class UAIWriter:
     >>> writer.write("asia.uai")
     """
 
-    def __init__(self, model, round_values=None):
-        if isinstance(model, DiscreteBayesianNetwork):
-            self.network = "BAYES\n"
-        elif isinstance(model, DiscreteMarkovNetwork):
-            self.network = "MARKOV\n"
-        else:
-            raise TypeError("Model must be an instance of Bayesian or Markov model.")
+    format_name = "uai"
+    file_extensions = ["uai"]
+    supported_models = (DiscreteBayesianNetwork, DiscreteMarkovNetwork)
 
-        self.model = model
+    def __init__(self, model, round_values=None):
+        super().__init__(model)
+        self.network_type = "BAYES" if isinstance(model, DiscreteBayesianNetwork) else "MARKOV"
         self.round_values = round_values
         self.no_nodes = self.get_nodes()
         self.domain = self.get_domain()
@@ -349,18 +350,19 @@ class UAIWriter:
         """
         Returns the UAI file as a string.
         """
-        self.network += self.no_nodes + "\n"
+        network = self.network_type + "\n"
+        network += self.no_nodes + "\n"
         domain = sorted(self.domain.items(), key=lambda x: (x[1], x[0]))
-        self.network += " ".join([var[1] for var in domain]) + "\n"
-        self.network += str(len(self.functions)) + "\n"
+        network += " ".join([var[1] for var in domain]) + "\n"
+        network += str(len(self.functions)) + "\n"
         for fun in self.functions:
-            self.network += str(len(fun)) + " "
-            self.network += " ".join(fun) + "\n"
-        self.network += "\n"
+            network += str(len(fun)) + " "
+            network += " ".join(fun) + "\n"
+        network += "\n"
         for table in self.tables:
-            self.network += str(len(table)) + "\n"
-            self.network += " ".join(table) + "\n"
-        return self.network[:-1]
+            network += str(len(table)) + "\n"
+            network += " ".join(table) + "\n"
+        return network[:-1]
 
     def get_nodes(self):
         """
@@ -493,30 +495,10 @@ class UAIWriter:
         else:
             raise TypeError("Model must be an instance of Markov or Bayesian model.")
 
-    def write(self, filename):
-        """
-        Write the xml data into the file.
-
-        Parameters
-        ----------
-        filename: Name of the file.
-
-        Examples
-        --------
-        >>> from pgmpy.readwrite import UAIWriter
-        >>> from pgmpy.example_models import load_model
-        >>> model = load_model("bnlearn/asia")
-        >>> writer = UAIWriter(model)
-        >>> writer.write("asia.uai")
-        """
-        writer = self.__str__()
-        with open(filename, "w") as fout:
-            fout.write(writer)
-
     def write_uai(self, filename):
-        warnings.warn(
-            "`UAIWriter.write_uai` is deprecated and will be removed in v2.0. Please use `UAIWriter.write` instead.",
+        _warn_external(
+            "`UAIWriter.write_uai` is deprecated since v1.1.0 and will be removed in v2.0. "
+            "Use `UAIWriter.write` instead.",
             FutureWarning,
-            stacklevel=2,
         )
         self.write(filename)
