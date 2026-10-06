@@ -67,8 +67,8 @@ def test_fisherc(models_and_data, model_name, graph_key, ndigits, expected):
 )
 def test_rmsea(models_and_data, model_name, graph_key, ndigits, expected_pval, expected_rmsea):
     bundle = models_and_data[model_name]
-    fisher_c = FisherC(ci_test="chi_square", compute_rmsea=True)
-    p_value = fisher_c.evaluate(X=bundle["data"], causal_graph=bundle[graph_key])
-    rmsea = fisher_c.rmsea_
+    p_value, rmsea = FisherC(ci_test="chi_square", compute_rmsea=True).evaluate(
+        X=bundle["data"], causal_graph=bundle[graph_key]
+    )
     assert round(p_value, ndigits) == expected_pval
     assert round(rmsea, ndigits) == expected_rmsea

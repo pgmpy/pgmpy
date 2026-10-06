@@ -103,5 +103,6 @@ class FisherC(BaseUnsupervisedMetric):
             if len(X) != 1 and len(cis) != 0:
                 rmsea = RMSEA.compute_rmsea(test_statistic=C, deg_of_freedom=(2 * len(cis)), data=X)
                 self.rmsea_ = rmsea
-
-        return p_value
+            return (p_value, rmsea)
+        else:
+            return p_value

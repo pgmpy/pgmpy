@@ -32,8 +32,8 @@ def test_discrete_network(model_and_data):
             assert isinstance(metric, float)
 
             corr_scorer = CorrelationScore(ci_test=test, score=score, return_summary=True)
-            corr_scorer(X=alarm_data, causal_graph=alarm_model)
-            assert isinstance(corr_scorer.metric_summary_, pd.DataFrame)
+            metric_summary = corr_scorer(X=alarm_data, causal_graph=alarm_model)
+            assert isinstance(metric_summary, pd.DataFrame)
 
 
 def test_input(model_and_data):
