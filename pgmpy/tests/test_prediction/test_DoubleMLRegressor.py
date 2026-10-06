@@ -202,7 +202,8 @@ def test_error_handling_missing_roles_and_multiple_exposure():
         model3.fit(incomplete, [5, 6])
 
 
-def test_sample_weight_support_and_shapes(dag):
+@pytest.mark.parametrize("n_folds", [1, 3])
+def test_sample_weight_support_and_shapes(dag, n_folds):
     """Test that sample_weight parameter is accepted and shape-validated."""
     X, y = make_simulated_plr(n=150, seed=5)
 
@@ -210,20 +211,23 @@ def test_sample_weight_support_and_shapes(dag):
         causal_graph=dag,
         nuisance_estimators=LinearRegression(),
         effect_estimator=LinearRegression(),
-        n_folds=1,
+        n_folds=n_folds,
+        seed=0,
     )
 
-    # list-like sample weight accepted
-    sw_list = [1.0] * X.shape[0]
-    _ = model.fit(X, y, sample_weight=sw_list)
+    weights = np.linspace(0.5, 2.0, len(X))
+    model.fit(X, y, sample_weight=weights)
+    expected_predictions = model.predict(X)
+    expected_coef = model.effect_est_.coef_.copy()
 
-    # pandas Series accepted
-    sw_ser = pd.Series([1.0] * X.shape[0])
-    _ = model.fit(X, y, sample_weight=sw_ser)
+    for sample_weight in [weights.tolist(), pd.Series(weights, index=np.arange(len(X)) + 100)]:
+        model.fit(X, y, sample_weight=sample_weight)
+        np.testing.assert_allclose(model.predict(X), expected_predictions)
+        np.testing.assert_allclose(model.effect_est_.coef_, expected_coef)
 
-    # wrong-length should raise
-    with pytest.raises(ValueError):
-        model.fit(X, y, sample_weight=[1.0] * (X.shape[0] - 1))
+    for sample_weight in [weights[:-1].tolist(), weights.reshape(-1, 1)]:
+        with pytest.raises(ValueError, match="sample_weight"):
+            model.fit(X, y, sample_weight=sample_weight)
 
 
 def test_dag_roles_validation_and_pretreatment_support():
