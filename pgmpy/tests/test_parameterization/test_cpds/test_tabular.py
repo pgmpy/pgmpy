@@ -162,25 +162,18 @@ class TestTabularCPD:
         columns = X_boolean["x"][:5].astype(int).to_numpy()
         np.testing.assert_allclose(np.asarray(boolean.predict_proba(X_boolean[:5]).probs), boolean.CPT_[:, columns].T)
 
-        # A root gives its marginal for every row, or as a single distribution without X.
+        # A root gives its own distribution for every row, or as a single distribution without X.
         root = TabularCPD().fit(None, y)
         rows = root.predict_proba(pd.DataFrame(index=[7, 8]))
         np.testing.assert_allclose(np.asarray(rows.probs), [[0.56, 0.44], [0.56, 0.44]])
         assert rows.index.tolist() == [7, 8]
-        marginal = root.predict_proba()
-        assert marginal.shape == () and marginal.pmf("0") == pytest.approx(0.56)
+        dist = root.predict_proba()
+        assert dist.shape == () and dist.pmf("0") == pytest.approx(0.56)
 
         # Returned distributions hold copies, so changing them leaves the CPD as it was.
-        marginal.probs[:] = 0.5
-        marginal.categories.reverse()
+        dist.probs[:] = 0.5
+        dist.categories.reverse()
         assert root.predict_proba().pmf("0") == pytest.approx(0.56) and root.state_names_["y"] == ["0", "1"]
-
-        # Any fitted variable gives its marginal over the parent combinations seen in fit, which for these estimates
-        # equals the frequencies of y, weighted by any sample weights.
-        assert cpd.predict_proba().pmf("0") == pytest.approx(0.56)
-        weights = np.where(y["y"] == "0", 1.0, 3.0)
-        weighted = TabularCPD().fit(X, y, sample_weight=weights).predict_proba()
-        assert weighted.pmf("0") == pytest.approx(56 / (56 + 3 * 44))
 
     def test_predict(self, discrete_data):
         # The most probable state of each row, with X's index. Ties go to the first state, and the states keep their
@@ -236,10 +229,6 @@ class TestTabularCPD:
         cyclic = TabularCPD.from_values("y", 2, values, ["c", "a", "b"], [2, 3, 4])
         assert cyclic.evidence_ == ["a", "b", "c"]
         np.testing.assert_allclose(cyclic.CPT_, values.reshape(2, 2, 3, 4).transpose(0, 2, 3, 1).reshape(2, 24))
-
-        # Without data, a table with parents has no marginal distribution.
-        with pytest.raises(ValueError, match="from_values"):
-            cpd.predict_proba()
 
         # The table is copied, so reusing the caller's array doesn't change the CPD.
         values = np.array([[0.56], [0.44]])

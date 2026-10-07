@@ -6,8 +6,6 @@ from skbase.utils.dependencies import _check_soft_dependencies
 
 import pgmpy.parameterization
 from pgmpy.example_models import load_model
-from pgmpy.factors.continuous import LinearGaussianCPD as LegacyLinearGaussianCPD
-from pgmpy.models import LinearGaussianBayesianNetwork
 from pgmpy.parameter_estimator import LinearGaussianMLE
 from pgmpy.parameterization.cpds import LinearGaussianCPD
 
@@ -63,18 +61,14 @@ class TestLinearGaussianCPD:
         assert root.std_ == pytest.approx(y.std(ddof=1))
         assert LinearGaussianCPD(std_estimator="mle").fit(None, y).std_ == pytest.approx(y.std(ddof=0))
 
-        # Sample weights count as frequencies: integer weights give the fit, and marginal, of each row repeated that
-        # many times. The "mle" std also doesn't change when all weights are scaled.
+        # Sample weights count as frequencies: integer weights give the fit of each row repeated that many times. The
+        # "mle" std also doesn't change when all weights are scaled.
         weights = np.random.default_rng(0).integers(0, 4, size=len(y))
         repeated = X.index.repeat(weights)
         for std_estimator in ("unbiased", "mle"):
             for X_fit, X_repeated in ((X, X.loc[repeated]), (None, None)):
                 weighted = LinearGaussianCPD(std_estimator).fit(X_fit, y, sample_weight=weights)
-                expected = LinearGaussianCPD(std_estimator).fit(X_repeated, y.loc[repeated])
-                assert_same_fit(weighted, expected)
-                marginal, expected_marginal = weighted.predict_proba(), expected.predict_proba()
-                assert marginal.mean() == pytest.approx(expected_marginal.mean())
-                assert marginal.var() == pytest.approx(expected_marginal.var())
+                assert_same_fit(weighted, LinearGaussianCPD(std_estimator).fit(X_repeated, y.loc[repeated]))
         assert_same_fit(LinearGaussianCPD("mle").fit(X, y, weights / 1000), LinearGaussianCPD("mle").fit(X, y, weights))
 
         # Rows with zero weight don't count, even when their squares would overflow.
@@ -130,9 +124,9 @@ class TestLinearGaussianCPD:
         rows = root.predict_proba(pd.DataFrame(index=[7, 8]))
         assert rows.index.tolist() == [7, 8]
         np.testing.assert_allclose(rows.mean()["y"], [y.mean()] * 2)
-        marginal = root.predict_proba()
-        assert marginal.shape == () and marginal.mean() == pytest.approx(y.mean())
-        assert marginal.var() == pytest.approx(y.var(ddof=1))
+        dist = root.predict_proba()
+        assert dist.shape == () and dist.mean() == pytest.approx(y.mean())
+        assert dist.var() == pytest.approx(y.var(ddof=1))
 
         with pytest.raises(ValueError):
             cpd.predict_proba(X[["A"]])
@@ -156,39 +150,6 @@ class TestLinearGaussianCPD:
         root = LinearGaussianCPD().fit(None, y)
         np.testing.assert_allclose(root.log_likelihood(None, y)["y"], norm.logpdf(y, y.mean(), root.std_))
 
-    def test_marginal(self):
-        # Without X, a child gives the marginal distribution that the model implies for the parent data seen in fit,
-        # from the parents' sample mean and covariance. The covariance divides by the number of rows for "mle", and by
-        # the number of rows minus one for "unbiased".
-        rng = np.random.default_rng(0)
-        A = rng.exponential(2, size=300)
-        B = 1 - A + rng.normal(size=300)
-        data = pd.DataFrame({"A": A, "B": B, "C": 2 + 0.5 * A - B + rng.normal(size=300)})
-        for std_estimator, ddof in (("mle", 0), ("unbiased", 1)):
-            cpd = LinearGaussianCPD(std_estimator).fit(data[["A", "B"]], data["C"])
-            b, marginal = cpd.beta_[1:], cpd.predict_proba()
-            assert marginal.mean() == pytest.approx(cpd.beta_[0] + b @ data[["A", "B"]].mean())
-            assert marginal.var() == pytest.approx(b @ np.cov(data[["A", "B"]].T, ddof=ddof) @ b + cpd.std_**2)
-
-        # For a network with every edge, fitted with "mle", that is the network's own joint Gaussian. With "unbiased" it
-        # still is for a child whose only parent is a root.
-        parents = {"A": [], "B": ["A"], "C": ["A", "B"]}
-        for std_estimator, checked in (("mle", ["A", "B", "C"]), ("unbiased", ["A", "B"])):
-            cpds = {
-                node: LinearGaussianCPD(std_estimator).fit(data[evidence] if evidence else None, data[node])
-                for node, evidence in parents.items()
-            }
-            network = LinearGaussianBayesianNetwork([("A", "B"), ("A", "C"), ("B", "C")])
-            network.add_cpds(
-                *(LegacyLinearGaussianCPD(node, cpd.beta_, cpd.std_, cpd.evidence_) for node, cpd in cpds.items())
-            )
-            mean, cov = network.to_joint_gaussian()
-            for position, node in enumerate(["A", "B", "C"]):
-                if node in checked:
-                    marginal = cpds[node].predict_proba()
-                    assert marginal.mean() == pytest.approx(mean[position])
-                    assert marginal.var() == pytest.approx(cov[position, position])
-
     def test_sample(self, data):
         X, y = data
         cpd = LinearGaussianCPD().fit(X, y)
@@ -199,7 +160,7 @@ class TestLinearGaussianCPD:
         assert (samples.index.tolist(), samples.columns.tolist()) == (["a", "b", "c"], ["y"])
         drawn = cpd.sample(rows, n_samples=2, random_state=0)
         assert drawn.index.tolist() == [(0, "a"), (0, "b"), (0, "c"), (1, "a"), (1, "b"), (1, "c")]
-        assert cpd.sample(rows, n_samples=0).shape == cpd.sample(n_samples=0).shape == (0, 1)
+        assert cpd.sample(rows, n_samples=0).shape == (0, 1)
 
         # An int seed gives the same values on every call, a Generator advances, and None draws fresh values.
         pd.testing.assert_frame_equal(samples, cpd.sample(rows, random_state=0))
@@ -215,14 +176,14 @@ class TestLinearGaussianCPD:
         multi = X.iloc[:3].set_axis(pd.MultiIndex.from_tuples([(0, "a"), (0, "b"), (1, "a")]))
         np.testing.assert_array_equal(cpd.sample(multi, random_state=0)["y"], samples["y"])
 
-        # The values follow the predicted distribution: given X, here A = 1 and B = 0 in every row, or without X, the
-        # marginal distribution.
+        # The values follow the predicted distribution: given X, here A = 1 and B = 0 in every row, or for a root
+        # without X, its own distribution.
         n = 20000
-        marginal = cpd.predict_proba()
+        root = LinearGaussianCPD().fit(None, y)
         X_one = pd.DataFrame({"A": np.ones(n), "B": np.zeros(n)})
         for values, mean, var in (
             (cpd.sample(X_one, random_state=0)["y"], cpd.beta_[0] + cpd.beta_[1], cpd.std_**2),
-            (cpd.sample(n_samples=n, random_state=0)["y"], marginal.mean(), marginal.var()),
+            (root.sample(n_samples=n, random_state=0)["y"], root.beta_[0], root.std_**2),
         ):
             assert values.mean() == pytest.approx(mean, abs=4 * np.sqrt(var / n))
             assert values.std() == pytest.approx(np.sqrt(var), rel=0.03)
@@ -248,9 +209,7 @@ class TestLinearGaussianCPD:
             reordered = LinearGaussianCPD.from_values("y", range(len(evidence) + 1), 1.0, evidence)
             assert (reordered.evidence_, reordered.beta_.tolist()) == (sorted_evidence, sorted_beta)
 
-        # Without data, only a root has a marginal distribution.
-        with pytest.raises(ValueError, match="from_values"):
-            cpd.predict_proba()
+        # A root has its own distribution without data.
         root = LinearGaussianCPD.from_values("A", [2.0], 0.5)
         assert (root.predict_proba().mean(), root.predict_proba().var()) == (2.0, 0.25)
 

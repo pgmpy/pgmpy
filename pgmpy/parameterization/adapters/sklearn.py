@@ -21,8 +21,7 @@ class SklearnAdapter(BaseParameter):
     ``fit`` fits a clone of ``estimator``, with the sample weights if given. The estimator gets the parents as a
     DataFrame sorted by name, as in ``evidence_``, so a pipeline must select its columns by name, not position. If the
     parents' names aren't all strings, they are renamed ``x0``, ``x1``, .... A root, or a classifier that sees a single
-    label, doesn't use the estimator. Without ``X``, a classifier's ``predict_proba`` gives the marginal distribution
-    over the rows seen in fit, the average predicted probabilities.
+    label, doesn't use the estimator: it gets the weighted mean of ``y``, or the weighted frequencies of its labels.
 
     Requires the optional dependency ``skpro``.
 
@@ -103,13 +102,12 @@ class SklearnAdapter(BaseParameter):
         features = _features(X)
 
         # Step 2: Fit a classifier on the labels, encoded first, as estimators may change them in classes_, e.g.
-        # nullable booleans to floats. The marginal averages its probabilities over the rows seen in fit.
+        # nullable booleans to floats.
         if self.variable_type_ == "discrete":
             codes, labels = pd.factorize(target, sort=True)
             estimator = self.estimator if self.evidence_ and len(labels) > 1 else DummyClassifier(strategy="prior")
             self.estimator_ = clone(estimator).fit(features, codes, **fit_params)
             self.classes_ = np.asarray(labels)[self.estimator_.classes_]
-            self._marginal = np.average(self._probabilities(features), axis=0, weights=sample_weight)
             return
 
         # Step 3: Fit a regressor on a copy of y, so that one that keeps a view of y, such as KNeighborsRegressor,
@@ -117,25 +115,18 @@ class SklearnAdapter(BaseParameter):
         estimator = self.estimator if self.evidence_ else DummyRegressor()
         self.estimator_ = clone(estimator).fit(features, target.copy(), **fit_params)
 
-    def _probabilities(self, features: pd.DataFrame) -> np.ndarray:
-        if len(features) == 0:
-            return np.empty((0, len(self.classes_)))
-        return self.estimator_.predict_proba(features)
-
     def _predict_proba(self, X: pd.DataFrame | None) -> Any:
         if self.variable_type_ == "continuous":
             raise TypeError(
                 f"{type(self.estimator).__name__} is a regressor, which gives point predictions, not a distribution: "
                 "use predict, or SkproAdapter with a skpro probabilistic regressor."
             )
+        # Only a root gets X=None, and its DummyClassifier holds the weighted frequencies of the labels.
         if X is None:
-            return NominalDistribution(probs=self._marginal.copy(), categories=list(self.classes_))
-        return NominalDistribution(
-            probs=self._probabilities(_features(X)),
-            categories=list(self.classes_),
-            index=X.index,
-            columns=[self.variable_],
-        )
+            return NominalDistribution(probs=self.estimator_.class_prior_.copy(), categories=list(self.classes_))
+        # sklearn estimators can't predict for no rows.
+        probs = np.empty((0, len(self.classes_))) if len(X) == 0 else self.estimator_.predict_proba(_features(X))
+        return NominalDistribution(probs=probs, categories=list(self.classes_), index=X.index, columns=[self.variable_])
 
     def _predict(self, X: pd.DataFrame) -> pd.DataFrame:
         if self.variable_type_ == "discrete":

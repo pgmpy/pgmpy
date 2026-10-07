@@ -59,30 +59,7 @@ class TestSkproAdapter:
         assert np.sqrt(np.mean((dist.mean()["Y"] - mean) ** 2)) < 0.1
         np.testing.assert_allclose(np.sqrt(dist.var()["Y"]), 0.5, rtol=0.1)
 
-        # Without X, the marginal is the Normal with the mean and variance of the training predictions, by the law of
-        # total variance. It is computed when first needed, once, as predicting every training row can be slow.
-        training = adapter.estimator_.predict_proba(X)
-        marginal, means = adapter.predict_proba(), training.mean()["Y"]
-        expected_variance = training.var()["Y"].mean() + means.var(ddof=0)
-        assert (marginal.mean(), marginal.var()) == pytest.approx((means.mean(), expected_variance))
-        calls = []
-
-        class CountingGLM(GLMRegressor):
-            def predict_proba(self, X):
-                calls.append(len(X))
-                return super().predict_proba(X)
-
-        counted = SkproAdapter(CountingGLM(add_constant=True)).fit(X, y)
-        assert calls == []
-        counted.predict_proba()
-        counted.predict_proba()
-        assert calls == [len(X)]
-
-        # Predictions whose moments aren't finite have no Normal marginal, and predictions must have a row per row of X.
-        # skpro 2.14 renamed ResidualDouble's distr_type to dist, and 2.16 removed distr_type.
-        dist = "dist" if "dist" in ResidualDouble.get_param_names() else "distr_type"
-        with pytest.raises(ValueError, match="ResidualDouble"), np.errstate(invalid="ignore"):
-            SkproAdapter(ResidualDouble(LinearRegression(), **{dist: "Cauchy"})).fit(X, y).predict_proba()
+        # Predictions must have a row per row of X.
         binned = SkproAdapter(HistBinnedProbaRegressor.create_test_instance()).fit(X, y)
         with pytest.raises(ValueError, match="HistBinnedProbaRegressor"):
             binned.predict_proba(X_test.iloc[[3]])
@@ -98,7 +75,7 @@ class TestSkproAdapter:
         with pytest.raises(ValueError, match="sample_weight"):
             SkproAdapter(GLMRegressor()).fit(X, y, sample_weight=np.ones(len(y)))
 
-        # A root doesn't use the estimator: it gets the empirical distribution of y.
+        # A root doesn't use the estimator: it gets the empirical distribution of y, for every row of X.
         root = SkproAdapter(GLMRegressor()).fit(None, y)
         assert type(root.predict_proba()).__name__ == "Empirical"
         assert root.predict_proba().mean() == pytest.approx(y.mean())
@@ -133,24 +110,28 @@ class TestSkproAdapter:
         root = SkproAdapter(GLMRegressor()).fit(None, y.astype("Float64"))
         assert root.predict_proba().mean() == pytest.approx(y.mean())
 
-        # skpro matches rows by label, so the adapter fits and predicts by position: a root fitted on a parent's draws,
-        # whose index is a MultiIndex, and data with repeated labels work. A Normal gets X's labels back.
-        draws = y.set_axis(pd.MultiIndex.from_arrays([np.arange(len(y)) % 5, np.arange(len(y)) // 5]))
-        root = SkproAdapter(GLMRegressor()).fit(None, draws)
-        np.testing.assert_allclose(root.predict_proba(pd.DataFrame(index=[0, 1, 2])).mean()["Y"], [y.mean()] * 3)
-        assert root.sample(pd.DataFrame(index=[0, 1, 2]), random_state=0).shape == (3, 1)
+        # skpro matches rows by label, so the adapter fits by position, and predict, sample and log_likelihood predict
+        # by position: data with repeated labels, or a MultiIndex like a parent's draws, works. predict_proba keeps X's
+        # labels, so it raises for repeated ones, except for a root, as its rows all get the same distribution.
+        multi = pd.MultiIndex.from_arrays([np.arange(len(y)) % 5, np.arange(len(y)) // 5])
+        root = SkproAdapter(GLMRegressor()).fit(None, y.set_axis(multi))
+        rows = pd.DataFrame(index=multi[[0, 0, 1]])
+        dist = root.predict_proba(rows)
+        assert dist.index.equals(rows.index)
+        np.testing.assert_allclose(dist.mean()["Y"], [y.mean()] * 3)
+        assert root.sample(rows, random_state=0).index.equals(rows.index)
         repeated = SkproAdapter(GLMRegressor(add_constant=True)).fit(
             X.set_axis(["r"] * len(X)), y.set_axis(["r"] * len(y))
         )
         X_repeated = X[:3].set_axis(["a", "a", "b"])
-        dist = repeated.predict_proba(X_repeated)
-        assert dist.index.tolist() == ["a", "a", "b"]
-        np.testing.assert_allclose(dist.mean()["Y"], plain.predict_proba(X[:3]).mean()["Y"])
+        with pytest.raises(ValueError, match="unique labels"):
+            repeated.predict_proba(X_repeated)
+        np.testing.assert_allclose(repeated.predict(X_repeated)["Y"], plain.predict(X[:3])["Y"])
+        assert repeated.sample(X_repeated, random_state=0).index.tolist() == ["a", "a", "b"]
         bootstrap = SkproAdapter(BootstrapRegressor(LinearRegression(), n_bootstrap_samples=20, random_state=0)).fit(
             X, y
         )
-        by_position = bootstrap.predict_proba(X_repeated).mean().to_numpy()
-        np.testing.assert_allclose(by_position, bootstrap.predict_proba(X[:3]).mean().to_numpy())
+        np.testing.assert_allclose(bootstrap.predict(X_repeated)["Y"], bootstrap.predict(X[:3])["Y"])
 
         # Names that aren't strings, which skpro regressors can't take, go in as strings. Samples keep the real name.
         X_named = X.set_axis([0, ("B", 1)], axis=1)

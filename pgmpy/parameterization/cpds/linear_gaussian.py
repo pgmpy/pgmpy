@@ -21,12 +21,6 @@ class LinearGaussianCPD(BaseParameter):
     that many times. Parents are sorted by name. Fit a root variable with ``X=None``; its ``beta_`` holds only its
     mean. ``from_values`` creates a fitted instance from known coefficients instead.
 
-    Without ``X``, ``predict_proba`` gives the marginal distribution of the target that the model implies for the parent
-    values seen in ``fit``: ``N(beta_[0] + b @ mu, b @ Sigma @ b + std_**2)`` with ``b = beta_[1:]``, where ``mu`` and
-    ``Sigma`` are the mean and covariance of those parent values. It is exact when the parents are jointly Gaussian. For
-    an instance from ``from_values``, only a root variable has one. Equality compares the conditional distributions, not
-    these marginals.
-
     Requires the optional dependency ``skpro``.
 
     Parameters
@@ -35,8 +29,7 @@ class LinearGaussianCPD(BaseParameter):
         Estimate of ``std_``, as in ``LinearGaussianMLE``. ``"unbiased"`` divides the sum of squared residuals by the
         number of rows minus the number of independent coefficients: the intercept plus the rank of the parent data,
         which differs from ``LinearGaussianMLE``'s count of the parents only for collinear parents. ``"mle"`` divides by
-        the number of rows. With sample weights, their total replaces the number of rows. The covariance ``Sigma`` of
-        the parents likewise divides by the number of rows minus one, or by the number of rows.
+        the number of rows. With sample weights, their total replaces the number of rows.
 
     Attributes
     ----------
@@ -68,12 +61,6 @@ class LinearGaussianCPD(BaseParameter):
     [-2.0]
     >>> round(float(cpd.log_likelihood(X, y)["y"].mean()), 2)
     -0.74
-
-    Without ``X``, ``predict_proba`` gives the marginal distribution implied for the parent values seen in ``fit``:
-
-    >>> marginal = cpd.predict_proba()
-    >>> round(float(marginal.mean()), 1), round(float(marginal.var()), 1)
-    (1.2, 13.7)
 
     A root variable is fitted without parents, or created from known values with the arguments of
     ``pgmpy.factors.continuous.LinearGaussianCPD``:
@@ -136,8 +123,7 @@ class LinearGaussianCPD(BaseParameter):
         if not isinstance(std, Real) or not 0 < std <= sys.float_info.max:
             raise ValueError(f"std must be a positive, finite number, but is {std!r}.")
 
-        # Step 2: Sort the parents by name, reorder beta to match, and create the fitted instance. Only a root has a
-        # known marginal.
+        # Step 2: Sort the parents by name, reorder beta to match, and create the fitted instance.
         order = _parent_order(evidence)
         cpd = cls()
         cpd.variable_ = variable
@@ -145,7 +131,6 @@ class LinearGaussianCPD(BaseParameter):
         cpd.variable_type_ = "continuous"
         cpd.beta_ = beta[[0, *(1 + position for position in order)]]
         cpd.std_ = float(std)
-        cpd._marginal = None if evidence else (cpd.beta_[0], cpd.std_)
         cpd._is_fitted = True
         return cpd
 
@@ -186,7 +171,7 @@ class LinearGaussianCPD(BaseParameter):
                 f"coefficients, but it is {total:g}. Fit more data, or use std_estimator='mle'."
             )
         means = self.beta_[0] + parents @ self.beta_[1:]
-        ddof, marginal_ddof = (0, 0) if self.std_estimator == "mle" else (n_coefficients, 1)
+        ddof = 0 if self.std_estimator == "mle" else n_coefficients
         self.std_ = float(np.sqrt(np.sum(weights * (target - means) ** 2) / (total - ddof)))
         if not 0 < self.std_ < np.inf:
             raise ValueError(
@@ -194,22 +179,11 @@ class LinearGaussianCPD(BaseParameter):
                 "that is constant given its parents has a std of 0."
             )
 
-        # Step 4: Compute the marginal over the rows seen in fit. b @ mu and b @ Sigma @ b are the mean and variance of
-        # the fitted means, b @ X, over those rows.
-        mean = np.average(means, weights=weights)
-        variance = np.sum(weights * (means - mean) ** 2) / (total - marginal_ddof) + self.std_**2
-        self._marginal = (mean, float(np.sqrt(variance)))
-
     def _predict_proba(self, X: pd.DataFrame | None) -> "Normal":
-        # Step 1: With X, give each row the Normal around its fitted mean.
-        if X is not None:
-            means = self.beta_[0] + X.to_numpy(dtype=float) @ self.beta_[1:]
-            return Normal(mu=means.reshape(-1, 1), sigma=self.std_, index=X.index, columns=[self.variable_])
+        # Step 1: Without X, return a root's distribution.
+        if X is None:
+            return Normal(mu=self.beta_[0], sigma=self.std_)
 
-        # Step 2: Without X, return the marginal, known after fit and for a root.
-        if self._marginal is None:
-            raise ValueError(
-                "A LinearGaussianCPD with parents created by from_values has no data on its parents, so its marginal "
-                "distribution is unknown; pass X."
-            )
-        return Normal(mu=self._marginal[0], sigma=self._marginal[1])
+        # Step 2: Give each row the Normal around its fitted mean.
+        means = self.beta_[0] + X.to_numpy(dtype=float) @ self.beta_[1:]
+        return Normal(mu=means.reshape(-1, 1), sigma=self.std_, index=X.index, columns=[self.variable_])

@@ -15,8 +15,7 @@ class TabularCPD(BaseParameter):
     ``fit(X, y)`` estimates, by maximum likelihood, the distribution of ``y`` for every combination of the parents'
     states in ``X``, with the same counts as ``DiscreteMLE``. Parents are sorted by name, and parent combinations
     without data get a uniform distribution. Fit a root variable with ``X=None``. ``from_values`` creates a fitted
-    instance from a known table instead. Without ``X``, ``predict_proba`` gives the marginal distribution of the target
-    over the parent combinations seen in ``fit``; for an instance from ``from_values``, only a root variable has one.
+    instance from a known table instead.
 
     Requires the optional dependency ``skpro``.
 
@@ -53,11 +52,6 @@ class TabularCPD(BaseParameter):
     ['no', 'yes']
     >>> cpd.log_likelihood(data[["rain"]], data["wet"]).round(2)["wet"].tolist()
     [-0.41, 0.0, -1.1, -0.41]
-
-    Without ``X``, ``predict_proba`` gives the marginal distribution over the parent values seen in ``fit``:
-
-    >>> float(cpd.predict_proba().pmf("yes"))
-    0.5
 
     A root variable is fitted without parents, or created from known probabilities with the arguments of
     ``pgmpy.factors.discrete.TabularCPD``:
@@ -147,14 +141,13 @@ class TabularCPD(BaseParameter):
         order = _parent_order(evidence)
         values = values.reshape(variable_card, *evidence_card).transpose(0, *(1 + position for position in order))
 
-        # Step 4: Create the fitted instance. Only a root has a known marginal.
+        # Step 4: Create the fitted instance.
         cpd = cls(state_names=state_names)
         cpd.variable_ = variable
         cpd.evidence_ = [evidence[position] for position in order]
         cpd.variable_type_ = "discrete"
         cpd.CPT_ = values.reshape(shape)
         cpd.state_names_ = {name: states[name] for name in [variable, *cpd.evidence_]}
-        cpd._marginal = None if cpd.evidence_ else cpd.CPT_[:, 0]
         cpd._is_fitted = True
         return cpd
 
@@ -174,22 +167,15 @@ class TabularCPD(BaseParameter):
                 "Some values in the data don't match state_names, e.g. [0, 1] given for boolean data; list the states "
                 "with the data's own types."
             )
-        # Step 3: Normalize the counts into the marginal, and into the table, where parent combinations without data get
-        # a uniform distribution.
-        self._marginal = counts.sum(axis=1) / counts.sum()
+        # Step 3: Normalize the counts into the table; parent combinations without data get a uniform distribution.
         counts[:, (counts == 0).all(axis=0)] = 1.0
         self.CPT_ = counts / counts.sum(axis=0)
         self.state_names_ = state_names
 
     def _predict_proba(self, X: pd.DataFrame | None) -> NominalDistribution:
-        # Step 1: Without X, return the marginal, known after fit and for a root.
+        # Step 1: Without X, return a root's distribution, the table's single column.
         if X is None:
-            if self._marginal is None:
-                raise ValueError(
-                    "A TabularCPD with parents created by from_values has no data on its parents, so its marginal "
-                    "distribution is unknown; pass X."
-                )
-            return NominalDistribution(probs=self._marginal.copy(), categories=list(self.state_names_[self.variable_]))
+            return NominalDistribution(probs=self.CPT_[:, 0].copy(), categories=list(self.state_names_[self.variable_]))
 
         # Step 2: Find each row's column of the table from its parent states, rejecting states not seen in fit.
         codes, cardinalities = encode_columns(X, self.state_names_)

@@ -22,10 +22,10 @@ class DistributionAdapter(BaseParameter):
 
     The distribution is given, not learned: ``from_values`` creates a fitted instance without data, e.g. for ``do()``,
     and ``fit`` only records the target and its parents, ignoring their values. ``predict_proba`` gives the distribution
-    to every row of ``X``, and without ``X`` the distribution itself. A distribution whose parameters are numbers is
-    rebuilt for the rows; any other, e.g. ``Empirical`` or ``ZeroInflated``, is repeated by skpro's ``IID``, which has
-    no ``pmf``. The target is discrete for a ``NominalDistribution`` and continuous for any other distribution, whatever
-    skpro's measure type of it.
+    to every row of ``X``, and, for a root without ``X``, the distribution itself. A distribution whose parameters are
+    numbers is rebuilt for the rows; any other, e.g. ``Empirical`` or ``ZeroInflated``, is repeated by skpro's ``IID``,
+    which has no ``pmf``. The target is discrete for a ``NominalDistribution`` and continuous for any other
+    distribution, whatever skpro's measure type of it.
 
     Requires the optional dependency ``skpro``.
 
@@ -106,7 +106,7 @@ class DistributionAdapter(BaseParameter):
         self.distribution_ = deepcopy(self._scalar)
 
     def _predict_proba(self, X: pd.DataFrame | None) -> Any:
-        # Step 1: Without X, return a copy of the distribution itself.
+        # Step 1: Without X, return a copy of a root's distribution itself.
         scalar = self.distribution_
         if X is None:
             return deepcopy(scalar)

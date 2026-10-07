@@ -183,9 +183,10 @@ class TestBaseParameter:
         with pytest.raises(ValueError):
             parameter.predict_proba(X.to_numpy())
 
-        # Without X, the subclass gives the marginal distribution, for a root or any other variable. A root also takes a
-        # DataFrame without columns, whose index sets the rows.
-        assert parameter.predict_proba() is None
+        # X=None stands for no parents: a root gets its own distribution from the subclass, and also takes a DataFrame
+        # without columns, whose index sets the rows. A variable with parents needs X.
+        with pytest.raises(ValueError, match="parents"):
+            parameter.predict_proba()
         root = CountParameter().fit(None, y)
         assert root.predict_proba(pd.DataFrame(index=[5, 6])).index.tolist() == [5, 6]
         assert root.predict_proba() is None
@@ -224,7 +225,8 @@ class TestBaseParameter:
         sampled_X, n_samples, random_state = parameter.sample(X, n_samples=2, random_state=0)
         pd.testing.assert_frame_equal(sampled_X, X[["a", "b"]])
         assert (n_samples, random_state) == (2, 0)
-        assert parameter.sample(n_samples=3) == (None, 3, None)
+        with pytest.raises(ValueError, match="parents"):
+            parameter.sample(n_samples=3)
 
         root = CountParameter().fit(None, y)
         assert root.sample(n_samples=0) == (None, 0, None)
@@ -241,30 +243,32 @@ class TestBaseParameter:
         from pgmpy.parameterization.distributions import NominalDistribution
 
         class NormalParameter(CountParameter):
+            """Each row's mean codes its parents, (a, b) = (x, u), (x, v), (y, u) and (y, v), as 0 to 3; a root's is
+            1."""
+
             _sample = BaseParameter._sample
-            normal = distributions.Normal
 
             def _predict_proba(self, X):
-                if X is None:
-                    return self.normal(mu=1.0, sigma=2.0)
-                return self.normal(mu=np.arange(len(X))[:, None], sigma=2.0, index=X.index, columns=["t"])
+                means = (2 * (X["a"] == "y") + (X["b"] == "v")).to_numpy(float) if self.evidence_ else np.ones(len(X))
+                return distributions.Normal(mu=means.reshape(-1, 1), sigma=2.0, index=X.index, columns=["t"])
 
-        # Rows are matched by position, so repeated labels and a MultiIndex, like a parent's own draws, keep them apart.
+        # Each row draws with its own parents' values, also under repeated labels or a MultiIndex, like a parent's own
+        # draws.
         X, y = data
         parameter = NormalParameter().fit(X, y)
         multi = pd.MultiIndex.from_arrays([[0, 0, 1, 1], ["p", "q", "p", "q"]], names=["draw", None])
-        for X_test in (X, X.iloc[[0, 0, 1, 2]], X.set_axis(multi)):
+        for X_test in (X, X.set_axis([10, 10, 11, 11]), X.set_axis(multi)):
             for n_samples in (None, 1, 2, 0):
                 samples = parameter.sample(X_test, n_samples=n_samples, random_state=0)
                 uniform = np.random.default_rng(0).random((1 if n_samples is None else n_samples, len(X_test)))
-                np.testing.assert_allclose(samples["t"], (np.arange(len(X_test)) + 2 * norm.ppf(uniform)).ravel())
+                np.testing.assert_allclose(samples["t"], (np.arange(4) + 2 * norm.ppf(uniform)).ravel())
                 nominal = NominalDistribution(np.full((len(X_test), 2), 0.5), ["u", "v"], index=X_test.index)
                 expected_index = nominal.sample(n_samples, random_state=0).index
                 pd.testing.assert_index_equal(samples.index, expected_index, exact=True)
         assert parameter.sample(X, n_samples=1).index.equals(pd.MultiIndex.from_arrays([[0] * len(X), X.index]))
 
         # Distributions that look rows up by label, such as skpro's Empirical, still draw each row from its own values:
-        # row r of X can only take the values r, r + len(X) and r + 2 * len(X).
+        # here every value of a row is its position modulo the number of rows of X.
         class EmpiricalParameter(NormalParameter):
             def _predict_proba(self, X):
                 values = pd.DataFrame(
@@ -272,7 +276,13 @@ class TestBaseParameter:
                 )
                 return distributions.Empirical(spl=values, index=X.index, columns=["t"])
 
-        # A distribution with ragged parameters, e.g. a Histogram with different bins per row, gets the per-draw loop.
+        empirical = EmpiricalParameter().fit(X, y)
+        for X_test in (X.set_axis([10, 10, 11, 11]), X.set_axis(multi)):
+            samples = empirical.sample(X_test, n_samples=20, random_state=0)["t"].to_numpy().reshape(20, len(X_test))
+            np.testing.assert_array_equal(samples % len(X_test), np.tile(np.arange(len(X_test)), (20, 1)))
+
+        # Distributions with ragged parameters, such as a Histogram with different bins per row, draw each row from its
+        # own bins.
         class HistogramParameter(NormalParameter):
             def _predict_proba(self, X):
                 sizes = [2 + position % 2 for position in range(len(X))]
@@ -283,38 +293,12 @@ class TestBaseParameter:
         drawn = HistogramParameter().fit(X, y).sample(X, n_samples=5, random_state=0)["t"].to_numpy().reshape(5, -1)
         assert ((drawn >= 0) & (drawn <= [2, 3, 2, 3])).all()
 
-        empirical = EmpiricalParameter().fit(X, y)
-        for X_test in (X.iloc[[0, 0, 1, 2]], X.set_axis(multi)):
-            samples = empirical.sample(X_test, n_samples=20, random_state=0)["t"].to_numpy().reshape(20, len(X_test))
-            np.testing.assert_array_equal(samples % len(X_test), np.tile(np.arange(len(X_test)), (20, 1)))
-
+        # Without X, a root draws n_samples values from its own distribution.
+        root = NormalParameter().fit(None, y)
         for n_samples in (3, 0):
-            samples = parameter.sample(n_samples=n_samples, random_state=0)
+            samples = root.sample(n_samples=n_samples, random_state=0)
             expected = 1 + 2 * norm.ppf(np.random.default_rng(0).random(n_samples))
             pd.testing.assert_frame_equal(samples, pd.DataFrame({"t": expected}), rtol=1e-10)
-
-        # A distribution whose parameters broadcast to its rows, like the Normal, gets one ppf call for all the draws.
-        # It gives the same values as the one call per draw that any other distribution gets.
-        calls = []
-
-        class CountingNormal(distributions.Normal):
-            def ppf(self, p):
-                calls.append(np.shape(p))
-                return super().ppf(p)
-
-        class CountingParameter(NormalParameter):
-            normal = CountingNormal
-
-        class LoopParameter(CountingParameter):
-            def _predict_proba(self, X):
-                return super()._predict_proba(X).set_tags(broadcast_init="off")
-
-        for X_test, n_samples in ((X, 3), (None, 5)):
-            calls.clear()
-            vectorised = CountingParameter().fit(X, y).sample(X_test, n_samples=n_samples, random_state=0)
-            assert calls == [(n_samples * (1 if X_test is None else len(X)), 1)]
-            looped = LoopParameter().fit(X, y).sample(X_test, n_samples=n_samples, random_state=0)
-            pd.testing.assert_frame_equal(vectorised, looped)
 
     def test_equality(self, data):
         X, y = data

@@ -79,9 +79,8 @@ class TestSklearnAdapter:
         expected = pd.DataFrame({"Y": adapter.estimator_.predict(X_test)}, index=X_test.index)
         pd.testing.assert_frame_equal(adapter.predict(X_test), expected)
 
-        # A regressor gives point predictions, not a distribution, so it has no probabilities, marginal or samples.
+        # A regressor gives point predictions, not a distribution, so it has no probabilities, samples or likelihood.
         for call in (
-            adapter.predict_proba,
             lambda: adapter.predict_proba(X_test),
             lambda: adapter.sample(X_test),
             lambda: adapter.log_likelihood(X, y),
@@ -146,17 +145,11 @@ class TestSklearnAdapter:
         samples = adapter.sample(X_test, n_samples=20, random_state=0)["Y"]
         assert samples.isin(["hi", "lo"]).all() and not samples.equals(adapter.sample(X_test, 20, random_state=1)["Y"])
 
-        # Without X, the marginal averages the training predictions, and changing it leaves the adapter as it was.
-        marginal, expected = adapter.predict_proba(), adapter.estimator_.predict_proba(X).mean(axis=0)
-        np.testing.assert_allclose(np.asarray(marginal.probs), expected)
-        marginal.probs[:] = [1.0, 0.0]
-        np.testing.assert_allclose(np.asarray(adapter.predict_proba().probs), expected)
-
         # The labels are encoded before fitting, so the estimator can't change them: nullable booleans stay booleans,
         # and a TabularCPD child fitted on the original data takes the samples.
         flag = (X["A"] > 0).astype("boolean").rename("F")
         boolean = SklearnAdapter(LogisticRegression()).fit(X[["B"]], flag)
-        assert list(boolean.predict_proba().categories) == [False, True]
+        assert list(boolean.predict_proba(X_test[["B"]]).categories) == [False, True]
         child = TabularCPD().fit(flag.to_frame(), labels)
         child.predict_proba(boolean.sample(X_test[["B"]], random_state=0))
 

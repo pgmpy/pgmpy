@@ -6,7 +6,6 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
-from pandas.api.types import is_numeric_dtype
 from skbase.base import BaseEstimator, BaseObject
 from skbase.utils.dependencies import _check_estimator_deps
 from sklearn.base import BaseEstimator as SklearnEstimator
@@ -20,12 +19,15 @@ class BaseParameter(BaseEstimator):
 
     ``fit(X, y)`` learns the distribution of the target ``y`` given the parents ``X``, ``predict_proba(X)`` returns it
     for each row of ``X``, ``predict(X)`` a point prediction from it, ``log_likelihood(X, y)`` scores ``y`` under it,
-    and ``sample`` draws from it. A root is fitted with ``X=None``. Parents are sorted by name, so the order of ``X``'s
-    columns doesn't matter.
+    and ``sample`` draws from it. Parents are sorted by name, so the order of ``X``'s columns doesn't matter. ``X=None``
+    stands for no parents: it fits a root, and gives a root's own distribution. A variable with parents needs ``X``, as
+    its marginal distribution depends on the rest of the network.
 
-    Subclasses implement ``_fit``, which gets ``X`` in ``evidence_`` order, and ``_predict_proba``, which returns the
-    marginal for ``X=None``. They set a ``name`` and the other tags registered for parameterizations in
-    :mod:`pgmpy.registry`; ``variable_type`` must hold a single type by the time ``fit`` runs.
+    Subclasses implement ``_fit``, which gets ``X`` in ``evidence_`` order, and ``_predict_proba``, which returns a
+    root's own distribution for ``X=None``. ``_predict_proba`` gets ``X`` with its own labels only from
+    ``predict_proba``; ``predict``, ``log_likelihood`` and ``sample`` pass it on a RangeIndex. Subclasses also set a
+    ``name`` and the other tags registered for parameterizations in :mod:`pgmpy.registry`; ``variable_type`` must hold a
+    single type by the time ``fit`` runs.
 
     Attributes
     ----------
@@ -135,13 +137,13 @@ class BaseParameter(BaseEstimator):
         Parameters
         ----------
         X : pandas.DataFrame, optional
-            Parent values, with the columns seen in ``fit`` in any order; for a root, a DataFrame without columns.
-            ``None`` gives the marginal distribution over the parent values seen in ``fit``.
+            Parent values, with the columns seen in ``fit`` in any order. For a root, a DataFrame without columns, or
+            ``None`` for the root's own distribution.
 
         Returns
         -------
         skpro distribution
-            One row per row of ``X``, with ``X``'s index; a scalar distribution without ``X``.
+            One row per row of ``X``, with ``X``'s index; a scalar distribution for a root without ``X``.
         """
         return self._predict_proba(self._check_X(X))
 
@@ -186,7 +188,9 @@ class BaseParameter(BaseEstimator):
         """
         # Step 1: Check X and y as predict and fit do.
         y = _as_frame(y)
-        X = self._check_X(pd.DataFrame(index=y.index) if X is None else X)
+        X = self._check_X(X)
+        if X is None:
+            X = pd.DataFrame(index=y.index)
         if not X.index.equals(y.index):
             raise ValueError("X and y must have the same index.")
 
@@ -194,8 +198,9 @@ class BaseParameter(BaseEstimator):
         # to rows by label, which mixes up rows with repeated labels.
         distribution = self._predict_proba(X.set_axis(pd.RangeIndex(len(X))))
 
-        # Step 3: Score y with the log-probability under a discrete measure, and the log-density under any other.
-        values = pd.DataFrame(y.to_numpy(), index=distribution.index, columns=distribution.columns)
+        # Step 3: Score y with the log-probability under a discrete measure, and the log-density under any other. y goes
+        # in as a numpy array, which skpro matches to rows by position.
+        values = y.to_numpy()
         discrete = distribution.get_tag("distr:measuretype", "continuous", raise_error=False) == "discrete"
         scores = distribution.log_pmf(values) if discrete else distribution.log_pdf(values)
         return pd.DataFrame(scores.to_numpy(), index=X.index, columns=[self.variable_])
@@ -211,7 +216,7 @@ class BaseParameter(BaseEstimator):
         Parameters
         ----------
         X : pandas.DataFrame, optional
-            Parent values, as for ``predict_proba``; ``None`` draws from the marginal distribution.
+            Parent values, as for ``predict_proba``; ``None`` draws from a root's own distribution.
         n_samples : int, optional
             Number of draws per row of ``X``, one if omitted; without ``X``, the total number of draws.
         random_state : int, numpy.random.Generator or None, optional
@@ -229,12 +234,17 @@ class BaseParameter(BaseEstimator):
             raise ValueError(f"n_samples must be a non-negative integer, but got {n_samples!r}.")
         X = self._check_X(X)
         if X is None and n_samples is None:
-            raise ValueError("Pass X, or n_samples to draw from the marginal distribution.")
+            raise ValueError("Pass X, or n_samples to draw that many values from the root's distribution.")
         return self._sample(X, n_samples, random_state)
 
     def _check_X(self, X: pd.DataFrame | None) -> pd.DataFrame | None:
         self.check_is_fitted()
         if X is None:
+            if self.evidence_:
+                raise ValueError(
+                    f"{self.variable_!r} has parents {self.evidence_}, so pass their values in X; X=None is only for a "
+                    "root. Its marginal distribution depends on its parents' distributions, so get it from the network."
+                )
             return None
         if not isinstance(X, pd.DataFrame):
             raise ValueError("X must be a pandas DataFrame.")
@@ -249,8 +259,8 @@ class BaseParameter(BaseEstimator):
         raise NotImplementedError
 
     def _predict(self, X: pd.DataFrame) -> pd.DataFrame:
-        # Step 1: Predict the distribution of the target for each row.
-        distribution = self._predict_proba(X)
+        # Step 1: Predict the distribution of the target for each row, on a RangeIndex, as skpro matches rows by label.
+        distribution = self._predict_proba(X.set_axis(pd.RangeIndex(len(X))))
 
         # Step 2: Reduce it to a point: the mean for a continuous target, and the most probable state for a discrete
         # one. A Series keeps tuple labels whole, and gives the states' dtype as NominalDistribution.sample does.
@@ -264,37 +274,25 @@ class BaseParameter(BaseEstimator):
     def _sample(
         self, X: pd.DataFrame | None, n_samples: int | None, random_state: int | np.random.Generator | None
     ) -> pd.DataFrame:
-        # Step 1: Predict the distributions on a RangeIndex, to put X's index back at the end: skpro matches values to
-        # rows by label, which mixes up rows with repeated labels, and fails for some distributions with a MultiIndex.
-        distribution = self._predict_proba(None if X is None else X.set_axis(pd.RangeIndex(len(X))))
-
-        # Step 2: Draw with the distribution's own sample() if it takes a random_state, as NominalDistribution's does.
-        if "random_state" in inspect.signature(distribution.sample).parameters:
-            samples = distribution.sample(n_samples, random_state=random_state)
+        # Step 1: Repeat X's rows once per draw, or for a root without X, take n_samples rows without columns, and
+        # predict their distributions on a RangeIndex: skpro matches values to rows by label, which mixes up rows with
+        # repeated labels.
+        if X is None:
+            rows = pd.DataFrame(index=pd.RangeIndex(n_samples))
         else:
-            # Step 3: Otherwise, as for skpro's distributions, apply the ppf to uniform values from the seeded
-            # generator.
-            # Step 3.1: Draw one uniform value per draw and row.
-            rng = np.random.default_rng(random_state)
-            uniform = rng.random(
-                n_samples if X is None else (1 if n_samples is None else n_samples, *distribution.shape)
-            )
-            # Step 3.2: Repeat a plain distribution to one row per draw for a single ppf call; any other, e.g.
-            # Empirical, gets one ppf call per draw.
-            if uniform.size and _plain(distribution):
-                if X is None:
-                    params = {**distribution.get_params(deep=False), "index": pd.RangeIndex(n_samples), "columns": [0]}
-                    draws = type(distribution)(**params)
-                else:
-                    draws = distribution.iloc[np.tile(np.arange(len(X)), len(uniform))]
-                values = draws.ppf(uniform.reshape(-1, 1)).to_numpy()
-            elif X is None:
-                values = [distribution.ppf(p) for p in uniform]
-            else:
-                values = [distribution.ppf(u).to_numpy() for u in uniform]
-            samples = pd.DataFrame(np.reshape(values, (-1, 1)), dtype=float)
+            rows = X.iloc[np.tile(np.arange(len(X)), 1 if n_samples is None else n_samples)]
+        distribution = self._predict_proba(rows.set_axis(pd.RangeIndex(len(rows))))
 
-        # Step 4: Label the samples with X's index, and a level numbering the draws, and with the target's name.
+        # Step 2: Draw one value per row, with the distribution's own sample() if it takes a random_state, as
+        # NominalDistribution's does, and otherwise, as for skpro's distributions, with the ppf of uniform values from
+        # the seeded generator.
+        if "random_state" in inspect.signature(distribution.sample).parameters:
+            samples = distribution.sample(random_state=random_state)
+        else:
+            uniform = np.random.default_rng(random_state).random((len(rows), 1))
+            samples = pd.DataFrame(distribution.ppf(uniform).to_numpy(), dtype=float)
+
+        # Step 3: Label the samples with X's index, and a level numbering the draws, and with the target's name.
         if X is not None:
             samples = samples.set_axis(X.index if n_samples is None else _sample_index(X.index, n_samples))
         return samples.set_axis([self.variable_], axis=1)
@@ -339,18 +337,6 @@ def _equal(value: Any, other: Any, fitted: bool = True) -> bool:
     if isinstance(value, (BaseObject, SklearnEstimator)):
         return _equal(value.get_params(deep=False), other.get_params(deep=False), fitted)
     return value == other
-
-
-def _plain(distribution: Any) -> bool:
-    """Return whether a skpro distribution's parameters are numbers broadcast to its rows, so that its rows can be
-    repeated or relabelled by position."""
-    return distribution.get_tag("broadcast_init", "off", raise_error=False) == "on" and all(
-        name in ("index", "columns")
-        or isinstance(value, Real)
-        or (isinstance(value, np.ndarray) and np.issubdtype(value.dtype, np.number))
-        or (isinstance(value, pd.DataFrame) and all(is_numeric_dtype(dtype) for dtype in value.dtypes))
-        for name, value in distribution.get_params(deep=False).items()
-    )
 
 
 def _as_frame(y: pd.DataFrame | pd.Series) -> pd.DataFrame:
