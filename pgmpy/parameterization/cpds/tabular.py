@@ -4,12 +4,12 @@ import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
 
-from pgmpy.parameterization._base import BaseParameter, _checked_evidence, _parent_order
+from pgmpy.parameterization._base import BaseParameterization, _checked_evidence, _parent_order
 from pgmpy.parameterization.distributions import NominalDistribution
 from pgmpy.utils import collect_state_names, encode_columns, get_state_counts_array
 
 
-class TabularCPD(BaseParameter):
+class TabularCPD(BaseParameterization):
     """Tabular conditional probability distribution of a discrete variable given discrete parents.
 
     ``fit(X, y)`` estimates, by maximum likelihood, the distribution of ``y`` for every combination of the parents'
@@ -41,7 +41,7 @@ class TabularCPD(BaseParameter):
     Examples
     --------
     >>> import pandas as pd
-    >>> from pgmpy.parameterization.cpds import TabularCPD
+    >>> from pgmpy.parameterization import TabularCPD
     >>> data = pd.DataFrame({"rain": ["no", "yes", "no", "no"], "wet": ["no", "yes", "yes", "no"]})
     >>> cpd = TabularCPD().fit(data[["rain"]], data["wet"])
     >>> cpd.CPT_.round(2).tolist()
@@ -217,7 +217,7 @@ class TabularCPD(BaseParameter):
         cardinalities = [len(self.state_names_[name]) for name in names]
         return np.allclose(self.CPT_, other.CPT_.reshape(cardinalities)[np.ix_(*positions)].reshape(self.CPT_.shape))
 
-    __hash__ = BaseParameter.__hash__
+    __hash__ = BaseParameterization.__hash__
 
 
 def _checked_state_names(state_names: dict | None) -> dict:

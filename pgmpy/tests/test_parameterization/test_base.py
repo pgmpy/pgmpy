@@ -12,11 +12,11 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 import pgmpy.parameterization
-from pgmpy.parameterization import BaseParameter
+from pgmpy.parameterization import BaseParameterization
 from pgmpy.utils import ExperimentalWarning
 
 
-class CountParameter(BaseParameter):
+class CountParameter(BaseParameterization):
     """Records the data it was fitted on; `_predict_proba` and `_sample` return what the base passed them."""
 
     _tags = {"variable_type": ["discrete"], "supports_weighted_data": True}
@@ -44,18 +44,18 @@ def data():
     return X, y
 
 
-class TestBaseParameter:
+class TestBaseParameterization:
     def test_experimental_warning(self):
         with pytest.warns(ExperimentalWarning, match="pgmpy.parameterization is experimental"):
             importlib.reload(pgmpy.parameterization)
 
     def test_tags(self):
-        assert BaseParameter.get_class_tag("object_type") == "parameterization"
-        assert BaseParameter.get_class_tag("variable_type") == ["discrete", "continuous"]
-        assert BaseParameter.get_class_tag("parent_data_types") == ["discrete", "continuous", "mixed"]
-        assert BaseParameter.get_class_tag("supports_weighted_data") is False
-        assert BaseParameter.get_class_tag("capability:distribution") is True
-        assert BaseParameter.get_class_tag("python_dependencies") is None
+        assert BaseParameterization.get_class_tag("object_type") == "parameterization"
+        assert BaseParameterization.get_class_tag("variable_type") == ["discrete", "continuous"]
+        assert BaseParameterization.get_class_tag("parent_data_types") == ["discrete", "continuous", "mixed"]
+        assert BaseParameterization.get_class_tag("supports_weighted_data") is False
+        assert BaseParameterization.get_class_tag("capability:distribution") is True
+        assert BaseParameterization.get_class_tag("python_dependencies") is None
 
     def test_fit(self, data):
         X, y = data
@@ -256,13 +256,13 @@ class TestBaseParameter:
         # skpro's sample() takes no random_state, so for its distributions the default _sample applies the ppf to
         # uniform values from numpy.random.default_rng(random_state), in the layout of NominalDistribution's samples.
         distributions = pytest.importorskip("skpro.distributions")
-        from pgmpy.parameterization.distributions import NominalDistribution
+        from pgmpy.parameterization import NominalDistribution
 
         class NormalParameter(CountParameter):
             """Each row's mean codes its parents, (a, b) = (x, u), (x, v), (y, u) and (y, v), as 0 to 3; a root's is
             1."""
 
-            _sample = BaseParameter._sample
+            _sample = BaseParameterization._sample
 
             def _predict_proba(self, X):
                 means = (2 * (X["a"] == "y") + (X["b"] == "v")).to_numpy(float) if self.evidence_ else np.ones(len(X))
@@ -339,7 +339,7 @@ class TestBaseParameter:
         if find_spec("skpro"):
             from skpro.distributions import LogNormal, Normal
 
-            from pgmpy.parameterization.distributions import NominalDistribution
+            from pgmpy.parameterization import NominalDistribution
 
             assert ObjectParameter(Normal(mu=0.0, sigma=1.0)) == ObjectParameter(Normal(mu=0.0, sigma=1.0))
             assert ObjectParameter(Normal(mu=0.0, sigma=1.0)) != ObjectParameter(LogNormal(mu=0.0, sigma=1.0))

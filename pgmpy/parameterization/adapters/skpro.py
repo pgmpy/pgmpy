@@ -6,7 +6,7 @@ from pandas.api.types import is_string_dtype
 from skbase.utils.dependencies import _safe_import
 from sklearn.base import clone
 
-from pgmpy.parameterization._base import BaseParameter
+from pgmpy.parameterization._base import BaseParameterization
 from pgmpy.parameterization.adapters.sklearn import _features
 from pgmpy.utils import preprocess_data
 
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from skpro.regression.base import BaseProbaRegressor
 
 
-class SkproAdapter(BaseParameter):
+class SkproAdapter(BaseParameterization):
     """Parameterization from a skpro probabilistic regressor.
 
     Each row of ``X`` gets the distribution the regressor predicts, e.g. a ``Normal`` whose mean and standard deviation
@@ -52,7 +52,7 @@ class SkproAdapter(BaseParameter):
     >>> import numpy as np
     >>> import pandas as pd
     >>> from skpro.regression.linear import GLMRegressor
-    >>> from pgmpy.parameterization.adapters import SkproAdapter
+    >>> from pgmpy.parameterization import SkproAdapter
     >>> rng = np.random.default_rng(seed=42)
     >>> X = pd.DataFrame({"A": rng.normal(size=1000), "B": rng.normal(size=1000)})
     >>> y = pd.Series(1 + 2 * X["A"] - 3 * X["B"] + rng.normal(scale=0.5, size=1000), name="y")
@@ -118,7 +118,8 @@ class SkproAdapter(BaseParameter):
         if X is None:
             return self.estimator_.predict_proba(_constant(1)).iat[0, 0]
 
-        # Step 2: skpro regressors can't predict for no rows, so an empty X gets an empty Normal.
+        # Step 2: skpro regressors that wrap sklearn estimators can't predict for no rows, so an empty X gets an empty
+        # Normal.
         if len(X) == 0:
             return Normal(mu=np.empty((0, 1)), sigma=1.0, index=X.index, columns=[self._name])
 

@@ -7,7 +7,7 @@ from skbase.utils.dependencies import _check_soft_dependencies
 import pgmpy.parameterization
 from pgmpy.example_models import load_model
 from pgmpy.parameter_estimator import LinearGaussianMLE
-from pgmpy.parameterization.cpds import LinearGaussianCPD
+from pgmpy.parameterization import LinearGaussianCPD
 
 pytestmark = pytest.mark.skipif(
     not _check_soft_dependencies("skpro", severity="none"), reason="execute only if required dependency present"

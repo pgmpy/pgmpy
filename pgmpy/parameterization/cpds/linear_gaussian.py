@@ -8,12 +8,12 @@ from numpy.typing import ArrayLike
 from skbase.utils.dependencies import _safe_import
 from sklearn.linear_model import LinearRegression
 
-from pgmpy.parameterization._base import BaseParameter, _checked_evidence, _parent_order
+from pgmpy.parameterization._base import BaseParameterization, _checked_evidence, _parent_order
 
 Normal = _safe_import("skpro.distributions.Normal")
 
 
-class LinearGaussianCPD(BaseParameter):
+class LinearGaussianCPD(BaseParameterization):
     """Linear Gaussian conditional probability distribution of a continuous variable given continuous parents.
 
     ``fit(X, y)`` estimates ``y | X ~ N(beta_[0] + X @ beta_[1:], std_**2)`` by least squares, with the same estimates
@@ -46,7 +46,7 @@ class LinearGaussianCPD(BaseParameter):
     --------
     >>> import numpy as np
     >>> import pandas as pd
-    >>> from pgmpy.parameterization.cpds import LinearGaussianCPD
+    >>> from pgmpy.parameterization import LinearGaussianCPD
     >>> rng = np.random.default_rng(seed=42)
     >>> X = pd.DataFrame({"A": rng.normal(size=1000), "B": rng.normal(size=1000)})
     >>> y = pd.Series(1 + 2 * X["A"] - 3 * X["B"] + rng.normal(scale=0.5, size=1000), name="y")
@@ -197,4 +197,4 @@ class LinearGaussianCPD(BaseParameter):
             and np.allclose(self.std_, other.std_)
         )
 
-    __hash__ = BaseParameter.__hash__
+    __hash__ = BaseParameterization.__hash__

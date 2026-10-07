@@ -6,7 +6,7 @@ from skbase.utils.dependencies import _check_soft_dependencies
 from pgmpy.factors.discrete import TabularCPD as LegacyTabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.parameter_estimator import DiscreteMLE
-from pgmpy.parameterization.cpds import TabularCPD
+from pgmpy.parameterization import TabularCPD
 
 pytestmark = pytest.mark.skipif(
     not _check_soft_dependencies("skpro", severity="none"), reason="execute only if required dependency present"

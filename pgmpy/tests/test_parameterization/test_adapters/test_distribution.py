@@ -3,8 +3,7 @@ import pandas as pd
 import pytest
 from skbase.utils.dependencies import _check_estimator_deps, _check_soft_dependencies, _safe_import
 
-from pgmpy.parameterization.adapters import DistributionAdapter
-from pgmpy.parameterization.distributions import NominalDistribution
+from pgmpy.parameterization import DistributionAdapter, NominalDistribution
 
 Delta = _safe_import("skpro.distributions.Delta")
 Empirical = _safe_import("skpro.distributions.Empirical")

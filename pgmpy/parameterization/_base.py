@@ -14,7 +14,7 @@ from pgmpy.parameterization.distributions.nominal import _sample_index
 from pgmpy.utils import preprocess_data
 
 
-class BaseParameter(BaseEstimator):
+class BaseParameterization(BaseEstimator):
     """Base class for parameterizations: models of one variable given its parents.
 
     ``fit(X, y)`` learns the distribution of the target ``y`` given the parents ``X``, ``predict_proba(X)`` returns it
@@ -65,7 +65,7 @@ class BaseParameter(BaseEstimator):
 
     def fit(
         self, X: pd.DataFrame | None, y: pd.DataFrame | pd.Series, sample_weight: ArrayLike | None = None
-    ) -> "BaseParameter":
+    ) -> "BaseParameterization":
         """Fit the distribution of ``y`` given ``X``.
 
         Parameters
@@ -134,7 +134,7 @@ class BaseParameter(BaseEstimator):
         self._is_fitted = True
         return self
 
-    def set_params(self, **params: Any) -> "BaseParameter":
+    def set_params(self, **params: Any) -> "BaseParameterization":
         """Set the parameters, as skbase does, and reset again so that tags taken from them, also from nested ones such
         as ``estimator__alpha``, follow the new values."""
         # skbase resets before it sets nested parameters, so the tags set in __init__ would follow the old ones.

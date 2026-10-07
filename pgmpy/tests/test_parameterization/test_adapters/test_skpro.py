@@ -9,7 +9,7 @@ from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import OneHotEncoder
 
-from pgmpy.parameterization.adapters import SkproAdapter
+from pgmpy.parameterization import SkproAdapter
 
 BootstrapRegressor = _safe_import("skpro.regression.bootstrap.BootstrapRegressor")
 GLMRegressor = _safe_import("skpro.regression.linear.GLMRegressor")

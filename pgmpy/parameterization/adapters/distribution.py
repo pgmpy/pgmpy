@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from skbase.utils.dependencies import _safe_import
 
-from pgmpy.parameterization._base import BaseParameter, _checked_evidence, _equal, _parent_order
+from pgmpy.parameterization._base import BaseParameterization, _checked_evidence, _equal, _parent_order
 from pgmpy.parameterization.distributions import NominalDistribution
 
 BaseDistribution = _safe_import("skpro.distributions.base.BaseDistribution")
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from skpro.distributions.base import BaseDistribution  # noqa: F811
 
 
-class DistributionAdapter(BaseParameter):
+class DistributionAdapter(BaseParameterization):
     """Parameterization with a fixed distribution, such as that of a root or of a variable set by an intervention.
 
     The distribution is given, not learned: ``from_values`` creates a fitted instance without data, e.g. for ``do()``,
@@ -46,7 +46,7 @@ class DistributionAdapter(BaseParameter):
     --------
     >>> import pandas as pd
     >>> from skpro.distributions import Normal
-    >>> from pgmpy.parameterization.adapters import DistributionAdapter
+    >>> from pgmpy.parameterization import DistributionAdapter
     >>> cpd = DistributionAdapter.from_values("A", Normal(mu=0.0, sigma=1.0))
     >>> dist = cpd.predict_proba(pd.DataFrame(index=[10, 11, 12]))
     >>> type(dist).__name__, dist.index.tolist(), dist.columns.tolist()
@@ -145,4 +145,4 @@ class DistributionAdapter(BaseParameter):
             self.distribution_, other.distribution_
         )
 
-    __hash__ = BaseParameter.__hash__
+    __hash__ = BaseParameterization.__hash__

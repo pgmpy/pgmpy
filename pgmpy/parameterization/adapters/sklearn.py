@@ -6,11 +6,11 @@ import pandas as pd
 from sklearn.base import BaseEstimator, clone, is_classifier, is_regressor
 from sklearn.dummy import DummyClassifier, DummyRegressor
 
-from pgmpy.parameterization._base import BaseParameter
+from pgmpy.parameterization._base import BaseParameterization
 from pgmpy.parameterization.distributions import NominalDistribution
 
 
-class SklearnAdapter(BaseParameter):
+class SklearnAdapter(BaseParameterization):
     """Parameterization from a scikit-learn classifier or regressor.
 
     A classifier models a discrete target: each row of ``X`` gets a ``NominalDistribution`` with the classifier's
@@ -47,7 +47,7 @@ class SklearnAdapter(BaseParameter):
     >>> from sklearn.linear_model import LinearRegression, LogisticRegression
     >>> from sklearn.pipeline import make_pipeline
     >>> from sklearn.preprocessing import OneHotEncoder
-    >>> from pgmpy.parameterization.adapters import SklearnAdapter
+    >>> from pgmpy.parameterization import SklearnAdapter
     >>> rng = np.random.default_rng(seed=42)
     >>> X = pd.DataFrame({"temp": rng.normal(20, 5, size=500), "rain": rng.choice(["no", "yes"], size=500)})
     >>> y = pd.Series(10 + 2 * X["temp"] - 8 * (X["rain"] == "yes") + rng.normal(size=500), name="sales")

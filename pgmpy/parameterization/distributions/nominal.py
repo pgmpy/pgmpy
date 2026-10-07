@@ -41,7 +41,7 @@ class NominalDistribution(BaseDistribution):
 
     Examples
     --------
-    >>> from pgmpy.parameterization.distributions import NominalDistribution
+    >>> from pgmpy.parameterization import NominalDistribution
     >>> scalar = NominalDistribution(probs=[0.2, 0.8], categories=["A", "B"])
     >>> scalar.shape
     ()

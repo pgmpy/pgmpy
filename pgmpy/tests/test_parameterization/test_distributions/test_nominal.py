@@ -21,16 +21,14 @@ class TestNominalDistribution:
         categories = ["A", "B"]
         dist = NominalDistribution(probs, categories)
 
-        # The tags pgmpy relies on: log_likelihood scores a discrete measure with log_pmf, and BaseParameter's sampling
-        # doesn't repeat rows of a distribution whose init isn't broadcast.
+        # The tags pgmpy relies on: log_likelihood scores a discrete measure with log_pmf.
         assert dist.name == "NominalDistribution"
         assert dist.get_class_tag("distr:measuretype") == "discrete"
         assert dist.get_class_tag("capabilities:exact") == ["pmf", "log_pmf"]
-        assert dist.get_class_tag("broadcast_init") == "off"
 
     def test_public_import(self):
-        """The class is importable from the package, not just the module."""
-        from pgmpy.parameterization.distributions import NominalDistribution as PublicCat
+        """The class is importable from pgmpy.parameterization, where users import every public name."""
+        from pgmpy.parameterization import NominalDistribution as PublicCat
 
         assert PublicCat is NominalDistribution
 

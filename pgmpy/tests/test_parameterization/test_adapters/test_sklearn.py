@@ -11,8 +11,7 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 from sklearn.pipeline import Pipeline
 
-from pgmpy.parameterization.adapters import SklearnAdapter
-from pgmpy.parameterization.cpds import TabularCPD
+from pgmpy.parameterization import SklearnAdapter, TabularCPD
 
 pytestmark = pytest.mark.skipif(
     not _check_soft_dependencies("skpro", severity="none"), reason="execute only if required dependency present"
