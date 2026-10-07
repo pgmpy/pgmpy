@@ -41,13 +41,25 @@ class TestDagittyReadWrite(unittest.TestCase):
         self.assertIn("a -- b", s_out)
 
     def test_edge_types(self):
-        # We'll use MAG for testing basic edges
-        s = "mag {\na -> b\na <- b\na <-> b\na -- b\n}"
-        m = MAG.from_dagitty(s)
-        s_out = m.to_dagitty()
-        # "<-" is reversed in out or preserved depending on sorting.
-        # But wait! MAG edge_type is strings.
-        self.assertTrue("a -> b" in s_out or "b <- a" in s_out)
+        # Test directed edge
+        s1 = "mag {\na -> b\n}"
+        m1 = MAG.from_dagitty(s1)
+        self.assertIn("a -> b", m1.to_dagitty())
+        
+        # Test reverse edge with different nodes
+        s2 = "mag {\nb <- a\n}"
+        m2 = MAG.from_dagitty(s2)
+        self.assertIn("b <- a", m2.to_dagitty())
+        
+        # Test bidirectional edge
+        s3 = "mag {\na <-> b\n}"
+        m3 = MAG.from_dagitty(s3)
+        self.assertIn("a <-> b", m3.to_dagitty())
+        
+        # Test undirected edge
+        s4 = "mag {\na -- b\n}"
+        m4 = MAG.from_dagitty(s4)
+        self.assertIn("a -- b", m4.to_dagitty())
 
 
 if __name__ == "__main__":
