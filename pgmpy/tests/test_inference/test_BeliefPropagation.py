@@ -3,13 +3,26 @@ import itertools
 import numpy as np
 import numpy.testing as np_test
 import pytest
+from skbase.utils.dependencies import _check_soft_dependencies
 
+from pgmpy import config
 from pgmpy.example_models import load_model
 from pgmpy.factors import factor_product
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.inference import BeliefPropagation, VariableElimination
 from pgmpy.inference.ExactInference import BeliefPropagationWithMessagePassing
 from pgmpy.models import DiscreteBayesianNetwork, FactorGraph, JunctionTree
+from pgmpy.utils import compat_fns
+
+
+@pytest.fixture(params=["numpy", "torch"])
+def backend(request):
+    if request.param == "torch":
+        if not _check_soft_dependencies("torch", severity="none"):
+            pytest.skip("torch not installed")
+        config.set_backend("torch")
+    yield request.param
+    config.set_backend("numpy")
 
 
 def build_junction_tree():
@@ -70,7 +83,7 @@ def build_factor_graph():
 
 
 @pytest.fixture
-def bp_data():
+def bp_data(backend):
     return build_junction_tree(), build_bayesian_model()
 
 
@@ -81,7 +94,7 @@ def factor_graph_bp():
 
 
 class TestBeliefPropagation:
-    def test_calibrate_clique_belief(self, bp_data):
+    def test_calibrate_clique_belief(self, bp_data, backend):
         junction_tree, _ = bp_data
         belief_propagation = BeliefPropagation(junction_tree)
         belief_propagation.calibrate()
@@ -99,7 +112,7 @@ class TestBeliefPropagation:
         assert clique_belief[("B", "C")] == b_B_C
         assert clique_belief[("C", "D")] == b_C_D
 
-    def test_calibrate_deeper_tree_single_pass(self):
+    def test_calibrate_deeper_tree_single_pass(self, backend):
         junction_tree = JunctionTree(
             [(("C", "D"), ("B", "C")), (("B", "C"), ("A", "B")), (("C", "D"), ("D", "E")), (("D", "E"), ("E", "F"))]
         )
@@ -126,7 +139,7 @@ class TestBeliefPropagation:
             for clique, belief in belief_propagation.get_clique_beliefs().items():
                 assert belief == getattr(joint, operation)(list(set(joint.scope()) - set(clique)), inplace=False)
 
-    def test_calibrate_sepset_belief(self, bp_data):
+    def test_calibrate_sepset_belief(self, bp_data, backend):
         junction_tree, _ = bp_data
         belief_propagation = BeliefPropagation(junction_tree)
         belief_propagation.calibrate()
@@ -144,10 +157,16 @@ class TestBeliefPropagation:
             ["B"], inplace=False
         )
 
-        np_test.assert_array_almost_equal(sepset_belief[frozenset((("A", "B"), ("B", "C")))].values, b_B.values)
-        np_test.assert_array_almost_equal(sepset_belief[frozenset((("B", "C"), ("C", "D")))].values, b_C.values)
+        np_test.assert_array_almost_equal(
+            compat_fns.to_numpy(sepset_belief[frozenset((("A", "B"), ("B", "C")))].values),
+            compat_fns.to_numpy(b_B.values),
+        )
+        np_test.assert_array_almost_equal(
+            compat_fns.to_numpy(sepset_belief[frozenset((("B", "C"), ("C", "D")))].values),
+            compat_fns.to_numpy(b_C.values),
+        )
 
-    def test_max_calibrate_clique_belief(self, bp_data):
+    def test_max_calibrate_clique_belief(self, bp_data, backend):
         junction_tree, _ = bp_data
         belief_propagation = BeliefPropagation(junction_tree)
         belief_propagation.max_calibrate()
@@ -165,7 +184,7 @@ class TestBeliefPropagation:
         assert clique_belief[("B", "C")] == b_B_C
         assert clique_belief[("C", "D")] == b_C_D
 
-    def test_max_calibrate_sepset_belief(self, bp_data):
+    def test_max_calibrate_sepset_belief(self, bp_data, backend):
         junction_tree, _ = bp_data
         belief_propagation = BeliefPropagation(junction_tree)
         belief_propagation.max_calibrate()
@@ -183,16 +202,22 @@ class TestBeliefPropagation:
             ["B"], inplace=False
         )
 
-        np_test.assert_array_almost_equal(sepset_belief[frozenset((("A", "B"), ("B", "C")))].values, b_B.values)
-        np_test.assert_array_almost_equal(sepset_belief[frozenset((("B", "C"), ("C", "D")))].values, b_C.values)
+        np_test.assert_array_almost_equal(
+            compat_fns.to_numpy(sepset_belief[frozenset((("A", "B"), ("B", "C")))].values),
+            compat_fns.to_numpy(b_B.values),
+        )
+        np_test.assert_array_almost_equal(
+            compat_fns.to_numpy(sepset_belief[frozenset((("B", "C"), ("C", "D")))].values),
+            compat_fns.to_numpy(b_C.values),
+        )
 
-    def test_query_single_variable(self, bp_data):
+    def test_query_single_variable(self, bp_data, backend):
         _, bayesian_model = bp_data
         belief_propagation = BeliefPropagation(bayesian_model)
         query_result = belief_propagation.query(["J"], show_progress=False)
         assert query_result == DiscreteFactor(variables=["J"], cardinality=[2], values=[0.416, 0.584])
 
-    def test_query_multiple_variable(self, bp_data):
+    def test_query_multiple_variable(self, bp_data, backend):
         _, bayesian_model = bp_data
         belief_propagation = BeliefPropagation(bayesian_model)
         query_result = belief_propagation.query(["Q", "J"], show_progress=False)
@@ -202,13 +227,13 @@ class TestBeliefPropagation:
             values=np.array([[0.3744, 0.0416], [0.1168, 0.4672]]),
         )
 
-    def test_query_single_variable_with_evidence(self, bp_data):
+    def test_query_single_variable_with_evidence(self, bp_data, backend):
         _, bayesian_model = bp_data
         belief_propagation = BeliefPropagation(bayesian_model)
         query_result = belief_propagation.query(variables=["J"], evidence={"A": 0, "R": 1}, show_progress=False)
         assert query_result == DiscreteFactor(variables=["J"], cardinality=[2], values=np.array([0.6, 0.4]))
 
-    def test_query_multiple_variable_with_evidence(self, bp_data):
+    def test_query_multiple_variable_with_evidence(self, bp_data, backend):
         _, bayesian_model = bp_data
         belief_propagation = BeliefPropagation(bayesian_model)
         query_result = belief_propagation.query(
@@ -222,31 +247,31 @@ class TestBeliefPropagation:
             values=np.array([[0.73636364, 0.08181818], [0.03636364, 0.14545455]]),
         )
 
-    def test_query_common_var(self, bp_data):
+    def test_query_common_var(self, bp_data, backend):
         _, bayesian_model = bp_data
         belief_propagation = BeliefPropagation(bayesian_model)
         with pytest.raises(ValueError):
             belief_propagation.query(variables=["J"], evidence=["J"])
 
-    def test_map_query(self, bp_data):
+    def test_map_query(self, bp_data, backend):
         _, bayesian_model = bp_data
         belief_propagation = BeliefPropagation(bayesian_model)
         map_query = belief_propagation.map_query(show_progress=False)
         assert map_query == {"A": 1, "R": 1, "J": 1, "Q": 1, "G": 0, "L": 0}
 
-    def test_map_query_with_evidence(self, bp_data):
+    def test_map_query_with_evidence(self, bp_data, backend):
         _, bayesian_model = bp_data
         belief_propagation = BeliefPropagation(bayesian_model)
         map_query = belief_propagation.map_query(["A", "R", "L"], {"J": 0, "Q": 1, "G": 0}, show_progress=False)
         assert map_query == {"A": 1, "R": 0, "L": 0}
 
-    def test_map_query_common_var(self, bp_data):
+    def test_map_query_common_var(self, bp_data, backend):
         _, bayesian_model = bp_data
         belief_propagation = BeliefPropagation(bayesian_model)
         with pytest.raises(ValueError):
             belief_propagation.map_query(variables=["J"], evidence=["J"])
 
-    def test_query_keeps_calibration_and_model(self, bp_data):
+    def test_query_keeps_calibration_and_model(self, bp_data, backend):
         junction_tree, bayesian_model = bp_data
         belief_propagation = BeliefPropagation(bayesian_model)
         junction_tree_ref = belief_propagation.junction_tree
@@ -279,7 +304,7 @@ class TestBeliefPropagation:
             junction_tree
         ).map_query(show_progress=False)
 
-    def test_query_matches_variable_elimination(self):
+    def test_query_matches_variable_elimination(self, backend):
         alarm, asia = load_model("bnlearn/alarm"), load_model("bnlearn/asia")
         virtual_evidence = [
             TabularCPD("smoke", 2, [[0.9], [0.1]], state_names={"smoke": asia.states["smoke"]}),
@@ -314,7 +339,7 @@ class TestBeliefPropagation:
             with pytest.raises(ValueError):
                 bp.query(["dysp"], virtual_evidence=[bad_cpd], show_progress=False)
 
-    def test_issue_1048(self):
+    def test_issue_1048(self, backend):
         model = DiscreteBayesianNetwork()
 
         parents = ["parent"]
@@ -346,7 +371,9 @@ class TestBeliefPropagation:
         for i, c in enumerate(children[:4]):
             assert evidence == expected_evidences[i]
             np_test.assert_almost_equal(
-                inf.query(["parent"], evidence, show_progress=False).normalize(inplace=False).values,
+                compat_fns.to_numpy(
+                    inf.query(["parent"], evidence, show_progress=False).normalize(inplace=False).values
+                ),
                 expected_values[i],
                 decimal=2,
             )

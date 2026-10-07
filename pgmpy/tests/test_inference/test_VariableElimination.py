@@ -8,6 +8,17 @@ from pgmpy.example_models import load_model
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.inference import BeliefPropagation, VariableElimination
 from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork, FunctionalBayesianNetwork
+from pgmpy.utils import compat_fns
+
+
+@pytest.fixture(params=["numpy", "torch"])
+def backend(request):
+    if request.param == "torch":
+        if not _check_soft_dependencies("torch", severity="none"):
+            pytest.skip("torch not installed")
+        config.set_backend("torch")
+    yield request.param
+    config.set_backend("numpy")
 
 
 def build_bayesian_model():
@@ -114,7 +125,7 @@ def build_snow_model():
 
 
 @pytest.fixture
-def bayesian_ve():
+def bayesian_ve(backend):
     model = build_bayesian_model()
     return model, VariableElimination(model)
 
@@ -132,12 +143,12 @@ def torch_models():
 
 
 @pytest.fixture
-def snow_model():
+def snow_model(backend):
     return build_snow_model()
 
 
 @pytest.fixture
-def duplicated_markov_ve():
+def duplicated_markov_ve(backend):
     markov_model = DiscreteMarkovNetwork([("A", "B"), ("A", "C")])
     f1 = DiscreteFactor(variables=["A", "B"], cardinality=[2, 2], values=np.eye(2) * 2)
     f2 = DiscreteFactor(variables=["A", "C"], cardinality=[2, 2], values=np.eye(2) * 2)
@@ -146,7 +157,7 @@ def duplicated_markov_ve():
 
 
 @pytest.fixture
-def markov_ve():
+def markov_ve(backend):
     model = build_markov_model()
     return model, VariableElimination(model)
 
@@ -160,7 +171,7 @@ ELIMINATION_ORDERS = ["greedy", "MinFill", "MinNeighbors", "MinWeight", "Weighte
 
 
 class TestVariableElimination:
-    def test_query_raises_for_empty_variables(self):
+    def test_query_raises_for_empty_variables(self, backend):
         model = load_model("bnlearn/earthquake")
         infer = VariableElimination(model)
 
@@ -169,13 +180,13 @@ class TestVariableElimination:
 
         assert "must contain at least one variable" in str(exc_info.value)
 
-    def test_query_single_variable(self, bayesian_ve):
+    def test_query_single_variable(self, bayesian_ve, backend):
         _, infer = bayesian_ve
         for order in ELIMINATION_ORDERS:
             query_result = infer.query(["J"], elimination_order=order, show_progress=False)
             assert query_result == DiscreteFactor(variables=["J"], cardinality=[2], values=[0.416, 0.584])
 
-    def test_query_multiple_variable(self, bayesian_ve):
+    def test_query_multiple_variable(self, bayesian_ve, backend):
         _, infer = bayesian_ve
         for order in ELIMINATION_ORDERS:
             query_result = infer.query(["Q", "J"], elimination_order=order, show_progress=False)
@@ -185,7 +196,7 @@ class TestVariableElimination:
                 values=np.array([[0.3744, 0.0416], [0.1168, 0.4672]]),
             )
 
-    def test_query_single_variable_with_evidence(self, bayesian_ve):
+    def test_query_single_variable_with_evidence(self, bayesian_ve, backend):
         _, infer = bayesian_ve
         for order in ELIMINATION_ORDERS:
             query_result = infer.query(
@@ -196,7 +207,7 @@ class TestVariableElimination:
             )
             assert query_result == DiscreteFactor(variables=["J"], cardinality=[2], values=[0.6, 0.4])
 
-    def test_query_multiple_variable_with_evidence(self, bayesian_ve):
+    def test_query_multiple_variable_with_evidence(self, bayesian_ve, backend):
         _, infer = bayesian_ve
         for order in ELIMINATION_ORDERS:
             query_result = infer.query(
@@ -211,7 +222,7 @@ class TestVariableElimination:
                 values=np.array([[0.73636364, 0.08181818], [0.03636364, 0.14545455]]),
             )
 
-    def test_query_multiple_times(self, bayesian_ve):
+    def test_query_multiple_times(self, bayesian_ve, backend):
         _, infer = bayesian_ve
         for order in ELIMINATION_ORDERS:
             query_result = infer.query(["J"], elimination_order=order, show_progress=False)
@@ -257,51 +268,51 @@ class TestVariableElimination:
                 values=np.array([[0.73636364, 0.08181818], [0.03636364, 0.14545455]]),
             )
 
-    def test_query_common_var(self, bayesian_ve):
+    def test_query_common_var(self, bayesian_ve, backend):
         _, infer = bayesian_ve
         for order in ELIMINATION_ORDERS:
             with pytest.raises(ValueError):
                 infer.query(variables=["J"], evidence=["J"], elimination_order=order)
 
-    def test_max_marginal(self, bayesian_ve):
+    def test_max_marginal(self, bayesian_ve, backend):
         _, infer = bayesian_ve
         np_test.assert_almost_equal(infer.max_marginal(), 0.1659, decimal=4)
 
-    def test_max_marginal_var(self, bayesian_ve):
+    def test_max_marginal_var(self, bayesian_ve, backend):
         _, infer = bayesian_ve
         np_test.assert_almost_equal(infer.max_marginal(["G"]), 0.6, decimal=4)
 
-    def test_max_marginal_var1(self, bayesian_ve):
+    def test_max_marginal_var1(self, bayesian_ve, backend):
         _, infer = bayesian_ve
         np_test.assert_almost_equal(infer.max_marginal(["G", "R"]), 0.36, decimal=4)
 
-    def test_max_marginal_var2(self, bayesian_ve):
+    def test_max_marginal_var2(self, bayesian_ve, backend):
         _, infer = bayesian_ve
         np_test.assert_almost_equal(infer.max_marginal(["G", "R", "A"]), 0.288, decimal=4)
 
-    def test_max_marginal_common_var(self, bayesian_ve):
+    def test_max_marginal_common_var(self, bayesian_ve, backend):
         _, infer = bayesian_ve
         with pytest.raises(ValueError):
             infer.max_marginal(variables=["J"], evidence=["J"])
 
-    def test_map_query(self, bayesian_ve):
+    def test_map_query(self, bayesian_ve, backend):
         _, infer = bayesian_ve
         for order in ELIMINATION_ORDERS:
             map_query = infer.map_query(elimination_order=order, show_progress=False)
             assert map_query == {"A": 1, "R": 1, "J": 1, "Q": 1, "G": 0, "L": 0}
 
-    def test_map_query_with_evidence(self, bayesian_ve):
+    def test_map_query_with_evidence(self, bayesian_ve, backend):
         _, infer = bayesian_ve
         map_query = infer.map_query(["A", "R", "L"], {"J": 0, "Q": 1, "G": 0}, show_progress=False)
         assert map_query == {"A": 1, "R": 0, "L": 0}
 
-    def test_map_query_common_var(self, bayesian_ve):
+    def test_map_query_common_var(self, bayesian_ve, backend):
         _, infer = bayesian_ve
         for order in ELIMINATION_ORDERS:
             with pytest.raises(ValueError):
                 infer.map_query(variables=["J"], evidence=["J"], elimination_order=order)
 
-    def test_elimination_order(self, bayesian_ve):
+    def test_elimination_order(self, bayesian_ve, backend):
         _, infer = bayesian_ve
         for elimination_order in ["WeightedMinFill", "MinNeighbors", "MinWeight", "MinFill"]:
             query_result = infer.query(["J"], elimination_order=elimination_order, show_progress=False)
@@ -316,7 +327,7 @@ class TestVariableElimination:
         with pytest.raises(ValueError):
             infer.query(variables=["J"], elimination_order=["A"])
 
-    def test_induced_graph(self, bayesian_ve):
+    def test_induced_graph(self, bayesian_ve, backend):
         _, infer = bayesian_ve
         induced_graph = infer.induced_graph(["G", "Q", "A", "J", "L", "R"])
         result_edges = sorted([sorted(x) for x in induced_graph.edges()])
@@ -331,39 +342,39 @@ class TestVariableElimination:
             ["L", "R"],
         ] == result_edges
 
-    def test_induced_width(self, bayesian_ve):
+    def test_induced_width(self, bayesian_ve, backend):
         _, infer = bayesian_ve
         result_width = infer.induced_width(["G", "Q", "A", "J", "L", "R"])
         assert 2 == result_width
 
-    def test_invalid_state_name(self, bayesian_ve):
+    def test_invalid_state_name(self, bayesian_ve, backend):
         _, infer = bayesian_ve
         with pytest.raises(KeyError):
             infer.query(variables=["J"], evidence={"A": -1}, show_progress=False)
 
-    def test_invalid_variable_name(self, bayesian_ve):
+    def test_invalid_variable_name(self, bayesian_ve, backend):
         _, infer = bayesian_ve
         with pytest.raises(ValueError):
             infer.query(variables=["J"], evidence={"wrong_variable": 0}, show_progress=False)
 
 
 class TestSnowNetwork:
-    def test_queries(self, snow_model):
+    def test_queries(self, snow_model, backend):
         for algo in [VariableElimination, BeliefPropagation]:
             infer = algo(snow_model)
             query1 = infer.query(["Snow"], evidence={"Traffic": "slow"}, show_progress=False)
-            np_test.assert_array_almost_equal(query1.values, [0.533333, 0.466667])
+            np_test.assert_array_almost_equal(compat_fns.to_numpy(query1.values), [0.533333, 0.466667])
 
             query2 = infer.query(["Risk"], evidence={"Traffic": "slow"}, show_progress=False)
-            np_test.assert_array_almost_equal(query2.values, [0.613333, 0.386667])
+            np_test.assert_array_almost_equal(compat_fns.to_numpy(query2.values), [0.613333, 0.386667])
 
             query3 = infer.query(["Late"], evidence={"Traffic": "slow"}, show_progress=False)
-            np_test.assert_array_almost_equal(query3.values, [0.7920, 0.2080])
+            np_test.assert_array_almost_equal(compat_fns.to_numpy(query3.values), [0.7920, 0.2080])
 
             with pytest.raises(ValueError):
                 infer.query(variables=["Traffic"], evidence={"Traffic": "slow"})
 
-    def test_elimination_order(self, snow_model):
+    def test_elimination_order(self, snow_model, backend):
         infer = VariableElimination(snow_model)
         for order in ["MinFill", "MinNeighbors", "MinWeight", "WeightedMinFill"]:
             computed_order = infer._get_elimination_order(variables=["Traffic"], evidence={}, elimination_order=order)
@@ -376,7 +387,7 @@ class TestSnowNetwork:
                 elimination_order=order,
                 show_progress=False,
             )
-            np_test.assert_array_almost_equal(query1.values, [0.533333, 0.466667])
+            np_test.assert_array_almost_equal(compat_fns.to_numpy(query1.values), [0.533333, 0.466667])
 
             query2 = infer.query(
                 ["Risk"],
@@ -384,7 +395,7 @@ class TestSnowNetwork:
                 elimination_order=order,
                 show_progress=False,
             )
-            np_test.assert_array_almost_equal(query2.values, [0.613333, 0.386667])
+            np_test.assert_array_almost_equal(compat_fns.to_numpy(query2.values), [0.613333, 0.386667])
 
             query3 = infer.query(
                 ["Late"],
@@ -392,9 +403,9 @@ class TestSnowNetwork:
                 elimination_order=order,
                 show_progress=False,
             )
-            np_test.assert_array_almost_equal(query3.values, [0.7920, 0.2080])
+            np_test.assert_array_almost_equal(compat_fns.to_numpy(query3.values), [0.7920, 0.2080])
 
-    def test_joint_distribution(self, snow_model):
+    def test_joint_distribution(self, snow_model, backend):
         infer = VariableElimination(snow_model)
         for order in ELIMINATION_ORDERS:
             query_expected = {}
@@ -405,32 +416,32 @@ class TestSnowNetwork:
             for var in ["Snow", "Risk"]:
                 assert query_joint[var] == query_expected[var]
 
-    def test_virt_evidence(self, snow_model):
+    def test_virt_evidence(self, snow_model, backend):
         virt_evidence_cpd = TabularCPD("Traffic", 2, [[0.3], [0.7]], state_names={"Traffic": ["normal", "slow"]})
         virt_evidence_factor = DiscreteFactor(["Traffic"], [2], [0.3, 0.7], state_names={"Traffic": ["normal", "slow"]})
         for virt_evidence in [virt_evidence_cpd, virt_evidence_factor]:
             for algo in [VariableElimination, BeliefPropagation]:
                 infer = algo(snow_model)
                 query1 = infer.query(["Snow"], virtual_evidence=[virt_evidence], show_progress=False)
-                np_test.assert_array_almost_equal(query1.values, [0.45, 0.55])
+                np_test.assert_array_almost_equal(compat_fns.to_numpy(query1.values), [0.45, 0.55])
 
                 map1 = infer.map_query(["Snow"], virtual_evidence=[virt_evidence], show_progress=False)
                 assert map1 == {"Snow": "no"}
 
                 query2 = infer.query(["Risk"], virtual_evidence=[virt_evidence], show_progress=False)
-                np_test.assert_array_almost_equal(query2.values, [0.58, 0.42])
+                np_test.assert_array_almost_equal(compat_fns.to_numpy(query2.values), [0.58, 0.42])
 
                 map2 = infer.map_query(["Risk"], virtual_evidence=[virt_evidence], show_progress=False)
                 assert map2 == {"Risk": "yes"}
 
                 query3 = infer.query(["Late"], virtual_evidence=[virt_evidence], show_progress=False)
-                np_test.assert_array_almost_equal(query3.values, [0.61625, 0.38375])
+                np_test.assert_array_almost_equal(compat_fns.to_numpy(query3.values), [0.61625, 0.38375])
 
                 map3 = infer.map_query(["Late"], virtual_evidence=[virt_evidence], show_progress=False)
                 assert map3 == {"Late": "yes"}
 
                 query4 = infer.query(["Traffic"], virtual_evidence=[virt_evidence], show_progress=False)
-                np_test.assert_array_almost_equal(query4.values, [0.34375, 0.65625])
+                np_test.assert_array_almost_equal(compat_fns.to_numpy(query4.values), [0.34375, 0.65625])
 
                 map4 = infer.map_query(["Traffic"], virtual_evidence=[virt_evidence], show_progress=False)
                 assert map4 in [{"Traffic": "slow"}, {"Traffic": 1}]
@@ -446,7 +457,7 @@ class TestSnowNetwork:
                         virtual_evidence=[virt_evidence, virt_evidence1],
                         show_progress=False,
                     )
-                    np_test.assert_array_almost_equal(query1.values, [0.52443609, 0.47556391])
+                    np_test.assert_array_almost_equal(compat_fns.to_numpy(query1.values), [0.52443609, 0.47556391])
 
                     map1 = infer.map_query(
                         ["Snow"],
@@ -460,7 +471,7 @@ class TestSnowNetwork:
                         virtual_evidence=[virt_evidence, virt_evidence1],
                         show_progress=False,
                     )
-                    np_test.assert_array_almost_equal(query2.values, [0.76315789, 0.23684211])
+                    np_test.assert_array_almost_equal(compat_fns.to_numpy(query2.values), [0.76315789, 0.23684211])
                     map2 = infer.map_query(
                         ["Risk"],
                         virtual_evidence=[virt_evidence, virt_evidence1],
@@ -473,7 +484,7 @@ class TestSnowNetwork:
                         virtual_evidence=[virt_evidence, virt_evidence1],
                         show_progress=False,
                     )
-                    np_test.assert_array_almost_equal(query3.values, [0.32730263, 0.67269737])
+                    np_test.assert_array_almost_equal(compat_fns.to_numpy(query3.values), [0.32730263, 0.67269737])
                     map3 = infer.map_query(
                         ["Traffic"],
                         virtual_evidence=[virt_evidence, virt_evidence1],
@@ -486,7 +497,7 @@ class TestSnowNetwork:
                         virtual_evidence=[virt_evidence, virt_evidence1],
                         show_progress=False,
                     )
-                    np_test.assert_array_almost_equal(query4.values, [0.66480263, 0.33519737])
+                    np_test.assert_array_almost_equal(compat_fns.to_numpy(query4.values), [0.66480263, 0.33519737])
                     map4 = infer.map_query(
                         ["Late"],
                         virtual_evidence=[virt_evidence, virt_evidence1],
@@ -496,19 +507,19 @@ class TestSnowNetwork:
 
 
 class TestVariableEliminationDuplicatedFactors:
-    def test_duplicated_factors(self, duplicated_markov_ve):
+    def test_duplicated_factors(self, duplicated_markov_ve, backend):
         _, infer = duplicated_markov_ve
         query_result = infer.query(["A"], show_progress=False)
         assert query_result == DiscreteFactor(variables=["A"], cardinality=[2], values=np.array([4, 4]))
 
 
 class TestVariableEliminationMarkov:
-    def test_query_single_variable(self, markov_ve):
+    def test_query_single_variable(self, markov_ve, backend):
         _, infer = markov_ve
         query_result = infer.query(["J"], show_progress=False)
         assert query_result == DiscreteFactor(variables=["J"], cardinality=[2], values=np.array([0.416, 0.584]))
 
-    def test_query_multiple_variable(self, markov_ve):
+    def test_query_multiple_variable(self, markov_ve, backend):
         _, infer = markov_ve
         query_result = infer.query(["Q", "J"], show_progress=False)
         assert query_result == DiscreteFactor(
@@ -517,12 +528,12 @@ class TestVariableEliminationMarkov:
             values=np.array([[0.3744, 0.1168], [0.0416, 0.4672]]),
         )
 
-    def test_query_single_variable_with_evidence(self, markov_ve):
+    def test_query_single_variable_with_evidence(self, markov_ve, backend):
         _, infer = markov_ve
         query_result = infer.query(variables=["J"], evidence={"A": 0, "R": 1}, show_progress=False)
         assert query_result == DiscreteFactor(variables=["J"], cardinality=[2], values=[0.072, 0.048])
 
-    def test_query_multiple_variable_with_evidence(self, markov_ve):
+    def test_query_multiple_variable_with_evidence(self, markov_ve, backend):
         _, infer = markov_ve
         query_result = infer.query(
             variables=["J", "Q"],
@@ -535,7 +546,7 @@ class TestVariableEliminationMarkov:
             values=np.array([[0.003888, 0.000432], [0.000192, 0.000768]]),
         )
 
-    def test_query_multiple_times(self, markov_ve):
+    def test_query_multiple_times(self, markov_ve, backend):
         _, infer = markov_ve
         query_result = infer.query(["J"], show_progress=False)
         query_result = infer.query(["J"], show_progress=False)
@@ -569,33 +580,33 @@ class TestVariableEliminationMarkov:
             values=np.array([[0.003888, 0.000432], [0.000192, 0.000768]]),
         )
 
-    def test_max_marginal(self, markov_ve):
+    def test_max_marginal(self, markov_ve, backend):
         _, infer = markov_ve
         np_test.assert_almost_equal(infer.max_marginal(), 0.1659, decimal=4)
 
-    def test_max_marginal_var(self, markov_ve):
+    def test_max_marginal_var(self, markov_ve, backend):
         _, infer = markov_ve
         np_test.assert_almost_equal(infer.max_marginal(["G"]), 0.1659, decimal=4)
 
-    def test_max_marginal_var1(self, markov_ve):
+    def test_max_marginal_var1(self, markov_ve, backend):
         _, infer = markov_ve
         np_test.assert_almost_equal(infer.max_marginal(["G", "R"]), 0.1659, decimal=4)
 
-    def test_max_marginal_var2(self, markov_ve):
+    def test_max_marginal_var2(self, markov_ve, backend):
         _, infer = markov_ve
         np_test.assert_almost_equal(infer.max_marginal(["G", "R", "A"]), 0.1659, decimal=4)
 
-    def test_map_query(self, markov_ve):
+    def test_map_query(self, markov_ve, backend):
         _, infer = markov_ve
         map_query = infer.map_query(show_progress=False)
         assert map_query == {"A": 1, "R": 1, "J": 1, "Q": 1, "G": 0, "L": 0}
 
-    def test_map_query_with_evidence(self, markov_ve):
+    def test_map_query_with_evidence(self, markov_ve, backend):
         _, infer = markov_ve
         map_query = infer.map_query(["A", "R", "L"], {"J": 0, "Q": 1, "G": 0}, show_progress=False)
         assert map_query == {"A": 1, "R": 0, "L": 0}
 
-    def test_induced_graph(self, markov_ve):
+    def test_induced_graph(self, markov_ve, backend):
         _, infer = markov_ve
         induced_graph = infer.induced_graph(["G", "Q", "A", "J", "L", "R"])
         result_edges = sorted([sorted(x) for x in induced_graph.edges()])
@@ -610,12 +621,12 @@ class TestVariableEliminationMarkov:
             ["L", "R"],
         ] == result_edges
 
-    def test_induced_width(self, markov_ve):
+    def test_induced_width(self, markov_ve, backend):
         _, infer = markov_ve
         result_width = infer.induced_width(["G", "Q", "A", "J", "L", "R"])
         assert 2 == result_width
 
-    def test_issue_1421(self):
+    def test_issue_1421(self, backend):
         model = DiscreteBayesianNetwork([("X", "Y"), ("Z", "X"), ("W", "Y")])
         cpd_z = TabularCPD(variable="Z", variable_card=2, values=[[0.5], [0.5]])
 
