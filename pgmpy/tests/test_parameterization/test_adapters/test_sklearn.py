@@ -171,6 +171,6 @@ class TestSklearnAdapter:
         share = weights[labels == "hi"].sum() / weights.sum()
         np.testing.assert_allclose(np.asarray(root.predict_proba().probs), [share, 1 - share])
 
-        # Probabilities that aren't a distribution, e.g. NaN, are reported with the estimator and the rows.
-        with pytest.raises(ValueError, match="NanClassifier.*'train0'"):
-            SklearnAdapter(NanClassifier()).fit(X, labels)
+        # Probabilities that aren't a distribution, e.g. NaN, are rejected by the NominalDistribution built from them.
+        with pytest.raises(ValueError, match="must sum to 1"):
+            SklearnAdapter(NanClassifier()).fit(X, labels).predict_proba(X)

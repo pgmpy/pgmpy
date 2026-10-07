@@ -51,10 +51,6 @@ class SkproAdapter(BaseParameter):
     estimator_ : skpro probabilistic regressor
         The fitted clone of ``estimator``, or, for a root, a fitted ``DummyProbaRegressor(strategy="empirical")``.
 
-    Warnings
-    --------
-    Experimental: the API of ``pgmpy.parameterization`` may change in any release without a deprecation period.
-
     Examples
     --------
     >>> import numpy as np

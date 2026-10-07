@@ -39,10 +39,6 @@ class SklearnAdapter(BaseParameter):
     classes_ : numpy.ndarray
         For a classifier, the target's labels, in the order of the predicted probabilities.
 
-    Warnings
-    --------
-    Experimental: the API of ``pgmpy.parameterization`` may change in any release without a deprecation period.
-
     Examples
     --------
     >>> import numpy as np
@@ -100,11 +96,6 @@ class SklearnAdapter(BaseParameter):
         )
         self.set_tags(supports_weighted_data=weighted)
 
-    def set_params(self, **params: Any) -> "SklearnAdapter":
-        """Set the parameters, and take the tags from the updated estimator."""
-        # skbase resets before it sets nested parameters, such as estimator__model, so reset again for the tags.
-        return super().set_params(**params).reset()
-
     def _fit(self, X: pd.DataFrame, y: pd.DataFrame, sample_weight: np.ndarray | None) -> None:
         # Step 1: Prepare the target, and the parents under names sklearn takes.
         target = y.iloc[:, 0]
@@ -129,14 +120,7 @@ class SklearnAdapter(BaseParameter):
     def _probabilities(self, features: pd.DataFrame) -> np.ndarray:
         if len(features) == 0:
             return np.empty((0, len(self.classes_)))
-        probs = self.estimator_.predict_proba(features)
-        invalid = ~(np.isfinite(probs).all(axis=1) & np.isclose(probs.sum(axis=1), 1, atol=0.01))
-        if invalid.any():
-            raise ValueError(
-                f"{type(self.estimator_).__name__} predicted probabilities that aren't a distribution for rows "
-                f"{features.index[invalid].tolist()}."
-            )
-        return probs
+        return self.estimator_.predict_proba(features)
 
     def _predict_proba(self, X: pd.DataFrame | None) -> Any:
         if self.variable_type_ == "continuous":

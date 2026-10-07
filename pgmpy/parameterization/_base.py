@@ -10,8 +10,6 @@ from pandas.api.types import is_numeric_dtype
 from skbase.base import BaseEstimator, BaseObject
 from skbase.utils.dependencies import _check_estimator_deps
 from sklearn.base import BaseEstimator as SklearnEstimator
-from sklearn.utils import Tags, TargetTags
-from sklearn.utils.validation import check_is_fitted
 
 from pgmpy.parameterization.distributions.nominal import _sample_index
 from pgmpy.utils import preprocess_data
@@ -37,10 +35,6 @@ class BaseParameter(BaseEstimator):
         Names of the parents, sorted; empty for a root.
     variable_type_ : str
         Type of the target, ``"discrete"`` or ``"continuous"``.
-
-    Warnings
-    --------
-    Experimental: the API of ``pgmpy.parameterization`` may change in any release without a deprecation period.
     """
 
     _tags = {
@@ -84,10 +78,7 @@ class BaseParameter(BaseEstimator):
         # Step 1: Reset any earlier fit, and check that X and y are DataFrames with the same index and no missing
         # values.
         self.reset()
-        if isinstance(y, pd.Series):
-            y = y.to_frame()
-        if not isinstance(y, pd.DataFrame) or y.shape[1] != 1:
-            raise ValueError("y must be a pandas Series or a DataFrame with exactly one column.")
+        y = _as_frame(y)
         if X is None:
             X = pd.DataFrame(index=y.index)
         if not isinstance(X, pd.DataFrame):
@@ -131,6 +122,12 @@ class BaseParameter(BaseEstimator):
         self._fit(X.iloc[:, order], y, sample_weight)
         self._is_fitted = True
         return self
+
+    def set_params(self, **params: Any) -> "BaseParameter":
+        """Set the parameters, as skbase does, and reset again so that tags taken from them, also from nested ones such
+        as ``estimator__alpha``, follow the new values."""
+        # skbase resets before it sets nested parameters, so the tags set in __init__ would follow the old ones.
+        return super().set_params(**params).reset()
 
     def predict_proba(self, X: pd.DataFrame | None = None) -> Any:
         """Return the distribution of the target for each row of ``X``.
@@ -188,10 +185,7 @@ class BaseParameter(BaseEstimator):
             One column named after the target, with ``X``'s index.
         """
         # Step 1: Check X and y as predict and fit do.
-        if isinstance(y, pd.Series):
-            y = y.to_frame()
-        if not isinstance(y, pd.DataFrame) or y.shape[1] != 1:
-            raise ValueError("y must be a pandas Series or a DataFrame with exactly one column.")
+        y = _as_frame(y)
         X = self._check_X(pd.DataFrame(index=y.index) if X is None else X)
         if not X.index.equals(y.index):
             raise ValueError("X and y must have the same index.")
@@ -239,7 +233,7 @@ class BaseParameter(BaseEstimator):
         return self._sample(X, n_samples, random_state)
 
     def _check_X(self, X: pd.DataFrame | None) -> pd.DataFrame | None:
-        check_is_fitted(self)
+        self.check_is_fitted()
         if X is None:
             return None
         if not isinstance(X, pd.DataFrame):
@@ -305,12 +299,6 @@ class BaseParameter(BaseEstimator):
             samples = samples.set_axis(X.index if n_samples is None else _sample_index(X.index, n_samples))
         return samples.set_axis([self.variable_], axis=1)
 
-    def __sklearn_tags__(self) -> Tags:
-        return Tags(estimator_type=None, target_tags=TargetTags(required=True))
-
-    def __sklearn_is_fitted__(self) -> bool:
-        return self.is_fitted
-
     def __eq__(self, other: object) -> bool:
         if type(other) is not type(self) or self.is_fitted != other.is_fitted:
             return False
@@ -363,6 +351,15 @@ def _plain(distribution: Any) -> bool:
         or (isinstance(value, pd.DataFrame) and all(is_numeric_dtype(dtype) for dtype in value.dtypes))
         for name, value in distribution.get_params(deep=False).items()
     )
+
+
+def _as_frame(y: pd.DataFrame | pd.Series) -> pd.DataFrame:
+    """Return the target values ``y`` as a DataFrame, checking that they are a Series or a one-column DataFrame."""
+    if isinstance(y, pd.Series):
+        y = y.to_frame()
+    if not isinstance(y, pd.DataFrame) or y.shape[1] != 1:
+        raise ValueError("y must be a pandas Series or a DataFrame with exactly one column.")
+    return y
 
 
 def _checked_evidence(variable: Hashable, evidence: list | tuple | None) -> list:

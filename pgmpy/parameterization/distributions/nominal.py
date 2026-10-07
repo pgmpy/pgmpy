@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, NoReturn
+from typing import Any, NoReturn
 
 import numpy as np
 import pandas as pd
@@ -6,10 +6,6 @@ from numpy.typing import ArrayLike
 from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 
 BaseDistribution = _safe_import("skpro.distributions.base.BaseDistribution")
-
-if TYPE_CHECKING:
-    from matplotlib.axes import Axes
-    from matplotlib.figure import Figure
 
 
 class NominalDistribution(BaseDistribution):
@@ -22,8 +18,7 @@ class NominalDistribution(BaseDistribution):
 
     The categories are treated as *nominal* (unordered, non-numeric) labels. Consequently, order-, arithmetic- and
     density-based summaries are undefined and raise ``NotImplementedError``: ``cdf``, ``ppf``, ``surv``, ``haz``,
-    ``mean``, ``var``, ``energy`` and ``pdfnorm``. The supported methods are ``pmf``, ``log_pmf``, ``sample`` and
-    ``plot``.
+    ``mean``, ``var``, ``energy`` and ``pdfnorm``. The supported methods are ``pmf``, ``log_pmf`` and ``sample``.
 
     Requires the optional dependency ``skpro``.
 
@@ -43,10 +38,6 @@ class NominalDistribution(BaseDistribution):
     columns : pd.Index or list, optional, default = None
         One column label for an array distribution, defaulting to ``["variable"]``. Scalar distributions have no column
         labels.
-
-    Warnings
-    --------
-    Experimental: the API of ``pgmpy.parameterization`` may change in any release without a deprecation period.
 
     Examples
     --------
@@ -140,21 +131,7 @@ class NominalDistribution(BaseDistribution):
         super().__init__(index=index, columns=columns)
 
     def _select_probs(self, x):
-        """Look up the probability of each queried value.
-
-        Parameters
-        ----------
-        x : scalar or 2D np.ndarray
-
-        Returns
-        -------
-        valid : 1D np.ndarray of bool
-            Whether each queried value matches one of ``categories``.
-        selected : 1D np.ndarray of float
-            Probability of the matched category. The value at non-matching positions is arbitrary and is masked out by
-            the callers.
-
-        """
+        """Return whether each queried value is a category, and its probability, which is arbitrary where it isn't."""
         x = np.atleast_2d(x)
         if pd.isna(x).any():
             raise ValueError("Queries must not contain missing values (None, NaN or pd.NA)")
@@ -167,35 +144,13 @@ class NominalDistribution(BaseDistribution):
         return valid, self._probs[row_idx, state_idx]
 
     def _pmf(self, x):
-        """Probability mass function.
-
-        Parameters
-        ----------
-        x : scalar or 2D np.ndarray
-
-        Returns
-        -------
-        0D or 2D np.ndarray
-
-        """
+        """Return the probability of each queried value, 0 for a value that isn't a category."""
         valid, selected = self._select_probs(x)
         res = np.where(valid, selected, 0.0)
         return res.reshape(self.shape)
 
     def _log_pmf(self, x):
-        """Logarithmic probability mass function.
-
-        Values that do not match any category, or that match a zero-probability category, map to ``-inf``.
-
-        Parameters
-        ----------
-        x : scalar or 2D np.ndarray
-
-        Returns
-        -------
-        0D or 2D np.ndarray
-
-        """
+        """Return the log-probability of each queried value, ``-inf`` for a value that isn't a category."""
         valid, selected = self._select_probs(x)
         with np.errstate(divide="ignore"):
             log_selected = np.log(selected)
@@ -203,119 +158,53 @@ class NominalDistribution(BaseDistribution):
         return res.reshape(self.shape)
 
     def cdf(self, x: ArrayLike) -> NoReturn:
-        """Not defined for a nominal categorical distribution.
-
-        Categories have no inherent order, so the cumulative distribution function is undefined.
-
-        Raises
-        ------
-        NotImplementedError
-
-        """
+        """Not defined: categories have no inherent order."""
         raise NotImplementedError("cdf is not defined for NominalDistribution: categories have no inherent order.")
 
     def ppf(self, p: ArrayLike) -> NoReturn:
-        """Not defined for a nominal categorical distribution.
-
-        Categories have no inherent order, so the quantile (inverse-cdf) function is undefined.
-
-        Raises
-        ------
-        NotImplementedError
-
-        """
+        """Not defined: categories have no inherent order."""
         raise NotImplementedError("ppf is not defined for NominalDistribution: categories have no inherent order.")
 
     def surv(self, x: ArrayLike) -> NoReturn:
-        """Not defined for a nominal categorical distribution.
-
-        Categories have no inherent order, so the survival function is undefined.
-
-        Raises
-        ------
-        NotImplementedError
-
-        """
+        """Not defined: categories have no inherent order."""
         raise NotImplementedError("surv is not defined for NominalDistribution: categories have no inherent order.")
 
     def haz(self, x: ArrayLike) -> NoReturn:
-        """Not defined for a nominal categorical distribution.
-
-        Categories have no inherent order, so the hazard function is undefined.
-
-        Raises
-        ------
-        NotImplementedError
-
-        """
+        """Not defined: categories have no inherent order."""
         raise NotImplementedError("haz is not defined for NominalDistribution: categories have no inherent order.")
 
     def mean(self) -> NoReturn:
-        """Not defined for a nominal categorical distribution.
-
-        Categories are not numeric, so the expectation is undefined.
-
-        Raises
-        ------
-        NotImplementedError
-
-        """
+        """Not defined: categories are not numeric."""
         raise NotImplementedError("mean is not defined for NominalDistribution: categories are not numeric.")
 
     def var(self) -> NoReturn:
-        """Not defined for a nominal categorical distribution.
-
-        Categories are not numeric, so the variance is undefined.
-
-        Raises
-        ------
-        NotImplementedError
-
-        """
+        """Not defined: categories are not numeric."""
         raise NotImplementedError("var is not defined for NominalDistribution: categories are not numeric.")
 
     def energy(self, x: ArrayLike | None = None) -> NoReturn:
-        """Not defined for a nominal categorical distribution.
-
-        Categories have no metric, so the energy distance is undefined.
-
-        Raises
-        ------
-        NotImplementedError
-
-        """
+        """Not defined: categories have no metric."""
         raise NotImplementedError("energy is not defined for NominalDistribution: categories have no metric.")
 
     def pdfnorm(self, a: float = 2) -> NoReturn:
-        """Not defined for a nominal categorical distribution.
-
-        The pdf norm is defined through a probability density, which a discrete distribution does not have.
-
-        Raises
-        ------
-        NotImplementedError
-
-        """
+        """Not defined: there is no probability density."""
         raise NotImplementedError("pdfnorm is not defined for NominalDistribution: it has no probability density.")
 
     def sample(self, n_samples: int | None = None, random_state: int | np.random.Generator | None = None) -> Any:
-        """Sample from the distribution.
+        """Draw categories from the distribution.
 
         Parameters
         ----------
-        n_samples : int, optional, default = None
-            Number of samples to draw. ``None`` draws a single sample.
-        random_state : int, np.random.Generator, or None, optional, default = None
-            Controls the randomness of this call. An ``int`` produces the same draws on every call. A
-            ``numpy.random.Generator`` is used as-is, advancing across calls. ``None`` draws fresh, non-reproducible
-            samples.
+        n_samples : int, optional
+            Number of draws, one if omitted.
+        random_state : int, numpy.random.Generator or None, optional
+            Seed or generator for this call; ``None`` draws fresh values.
 
         Returns
         -------
-        scalar or pd.DataFrame
-            A scalar distribution returns one category when ``n_samples`` is ``None``, and otherwise a ``pd.DataFrame``
-            with one row per sample. An array distribution returns a ``pd.DataFrame`` with the index and columns of
-            ``self``; multiple samples add an unnamed first index level numbering the samples.
+        scalar or pandas.DataFrame
+            For a scalar distribution, one category, or with ``n_samples`` a DataFrame with one row per draw. For an
+            array distribution, a DataFrame with its index and columns, preceded by a level numbering the draws when
+            ``n_samples`` is given.
 
         Examples
         --------
@@ -326,20 +215,6 @@ class NominalDistribution(BaseDistribution):
         return self._sample(n_samples=n_samples, random_state=random_state)
 
     def _sample(self, n_samples=None, random_state=None):
-        """Sample from the distribution.
-
-        Each sampled value looks up one uniform draw in the cumulative probabilities of its row (inverse-cdf sampling).
-
-        Parameters
-        ----------
-        n_samples : int, optional, default = None
-        random_state : int, np.random.Generator, or None, optional, default = None
-
-        Returns
-        -------
-        scalar or pd.DataFrame
-
-        """
         # Step 1: Compute the cumulative probabilities of each row. Dividing by the total makes the last one exactly 1,
         # as in numpy's Generator.choice, so rounding can never select a trailing zero-probability category.
         rng = np.random.default_rng(random_state)
@@ -368,102 +243,7 @@ class NominalDistribution(BaseDistribution):
         index = self.index if n_samples is None else _sample_index(self.index, n_samples)
         return pd.DataFrame(sampled.reshape(-1, 1), index=index, columns=self.columns).astype(dtype)
 
-    def plot(
-        self, fun: str | None = "pmf", ax: "Axes | np.ndarray | None" = None, **kwargs: Any
-    ) -> "Axes | tuple[Figure, np.ndarray]":
-        """Plot the nominal probability mass function.
-
-        A scalar distribution produces one bar plot. An array distribution produces one bar plot per row. Each category
-        gets one evenly spaced bar, in the order of ``categories`` and labelled with the category, and the height of
-        each bar represents the corresponding probability.
-
-        For an array distribution, each subplot is labeled using the corresponding entry in ``index``. The first entry
-        in ``columns`` is used as the figure title.
-
-        Parameters
-        ----------
-        fun : {"pmf"} or None, default="pmf"
-            Distribution function to plot. ``None`` means ``"pmf"``. Currently, only the probability mass function
-            (``"pmf"``) is supported.
-        ax : matplotlib Axes object or array of Axes, optional
-            Axes to plot in, one per row of the distribution. A scalar distribution defaults to the current axes
-            (``plt.gca()``). An array distribution creates one subplot per row when axes are not provided.
-        kwargs : keyword arguments
-            ``sharex`` and ``sharey`` (default ``True``) are used when creating the subplots, as in skpro. All other
-            keyword arguments are passed to ``Axes.bar``.
-
-        Returns
-        -------
-        matplotlib.Axes or tuple of (matplotlib.Figure, np.ndarray)
-            A scalar distribution returns its Axes. An array distribution returns the Figure and a one-dimensional array
-            containing one Axes per row.
-
-        Notes
-        -----
-        The `matplotlib` library must be installed to use this method.
-
-        Examples
-        --------
-        >>> probs = [[0.2, 0.4, 0.3, 0.1], [0.4, 0.4, 0.1, 0.1]]
-        >>> categories = ["A", "B", "C", "D"]
-        >>> index = ["studentA", "studentB"]
-        >>> columns = ["grade"]
-        >>> dist = NominalDistribution(probs=probs, categories=categories, index=index, columns=columns)
-        >>> fig, axes = dist.plot(fun="pmf")  # doctest: +SKIP
-        """
-        _check_soft_dependencies("matplotlib", obj="distribution plot")
-        import matplotlib.pyplot as plt
-
-        # Step 1: Check the function to plot; only the pmf is supported.
-        if fun is None:
-            fun = "pmf"
-        if fun != "pmf":
-            raise NotImplementedError("`NominalDistribution` only supports `pmf` currently")
-
-        # Step 2: Create one subplot per row, or check that ax has one Axes per row.
-        n_rows, n_states = self._probs.shape
-        sharex = kwargs.pop("sharex", True)
-        sharey = kwargs.pop("sharey", True)
-
-        if self.ndim == 0 and ax is None:
-            ax = plt.gca()
-
-        if ax is None:
-            fig, axes = plt.subplots(n_rows, 1, squeeze=False, sharex=sharex, sharey=sharey)
-        else:
-            axes = np.asarray(ax, dtype=object).reshape(-1, 1)
-            if axes.shape[0] != n_rows:
-                raise ValueError(
-                    f"ax must contain one Axes per row of the distribution: expected {n_rows}, got {axes.shape[0]}"
-                )
-            fig = axes[0, 0].figure
-
-        # Step 3: Draw one bar per category for each row, and label the axes.
-        positions = np.arange(n_states)
-        labels = [str(category) for category in self._categories]
-        for i in range(n_rows):
-            current_ax = axes[i, 0]
-            current_ax.bar(positions, self._probs[i], **kwargs)
-            current_ax.set_xticks(positions, labels)
-            current_ax.set_ylabel("probability" if self.ndim == 0 else str(self.index[i]))
-            current_ax.set_ylim(0, 1)
-
-        if self.ndim > 0:
-            axes[0, 0].set_title(str(self.columns[0]))
-        axes[-1, 0].set_xlabel("categories")
-
-        if self.ndim == 0:
-            return axes[0, 0]
-        return fig, axes[:, 0]
-
     def _subset_params(self, rowidx, colidx, coerce_scalar=False):
-        """Subset distribution parameters to given rows and columns.
-
-        Returns
-        -------
-        dict
-
-        """
         # There is only one column, so nothing to subset, but an out-of-range position must raise IndexError.
         if colidx is not None:
             self.columns[colidx]
@@ -478,21 +258,7 @@ class NominalDistribution(BaseDistribution):
 
     @classmethod
     def get_test_params(cls, parameter_set: str = "default") -> list[dict[str, Any]]:
-        """Return testing parameter settings for the estimator.
-
-        Parameters
-        ----------
-        parameter_set : str, default="default"
-            Name of the set of test parameters to return, for use in tests. If no special parameters are defined for a
-            value, will return `"default"` set.
-
-        Returns
-        -------
-        params : dict or list of dict, default = {}
-            Parameters to create testing instances of the class. Each dict are parameters to construct an "interesting"
-            test instance, i.e., `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
-            `create_test_instance` uses the first (or only) dictionary in `params`.
-        """
+        """Return the parameters of the instances that skbase's and skpro's estimator checks test."""
         params1 = {"probs": [[0.1, 0.9], [0.7, 0.3]], "categories": [1, 2]}
         params2 = {"probs": [[0.1, 0.7, 0.2], [0.5, 0.3, 0.2]], "categories": [1, 2, 3]}
         params3 = {"probs": [0.2, 0.8], "categories": ["A", "B"]}

@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from scipy.stats import norm
-from sklearn.exceptions import NotFittedError
+from skbase._exceptions import NotFittedError
 from sklearn.linear_model import LinearRegression
 
 import pgmpy.parameterization

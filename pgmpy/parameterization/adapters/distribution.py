@@ -40,10 +40,6 @@ class DistributionAdapter(BaseParameter):
     distribution_ : skpro distribution
         A copy of the scalar distribution.
 
-    Warnings
-    --------
-    Experimental: the API of ``pgmpy.parameterization`` may change in any release without a deprecation period.
-
     Examples
     --------
     >>> import pandas as pd
@@ -76,11 +72,6 @@ class DistributionAdapter(BaseParameter):
         if self._scalar.ndim != 0:
             raise ValueError(f"distribution must be scalar, but has shape {self._scalar.shape}.")
         self.set_tags(variable_type=["discrete" if isinstance(self._scalar, NominalDistribution) else "continuous"])
-
-    def set_params(self, **params: Any) -> "DistributionAdapter":
-        """Set the parameters, and check the updated distribution and take the tags from it."""
-        # skbase resets before it sets nested parameters, such as distribution__mu, so reset again.
-        return super().set_params(**params).reset()
 
     @classmethod
     def from_values(
