@@ -8,7 +8,7 @@ from pgmpy.readwrite import UAIReader
 @pytest.fixture
 def mplp_instance():
     reader_file = UAIReader("pgmpy/tests/test_readwrite/testdata/grid4x4_with_triplets.uai")
-    markov_model = reader_file.get_model()
+    markov_model = reader_file.read()
 
     for factor in markov_model.factors:
         factor.values = np.log(factor.values)
