@@ -63,7 +63,7 @@ class TestBaseParameterization:
         # Parents are sorted by name, and _fit gets X's columns in that order.
         parameter = CountParameter().fit(X, y)
         assert parameter.is_fitted
-        assert (parameter.variable_, parameter.evidence_, parameter.variable_type_) == ("t", ["a", "b"], "discrete")
+        assert (parameter.variable_, parameter.evidence_) == ("t", ["a", "b"])
         assert (parameter.columns_, parameter.n_rows_, parameter.total_weight_) == (["a", "b"], 4, 4.0)
         cyclic = CountParameter().fit(X.assign(c=X["a"])[["c", "a", "b"]], y)
         assert cyclic.evidence_ == cyclic.columns_ == ["a", "b", "c"]
@@ -133,13 +133,12 @@ class TestBaseParameterization:
 
         # A discrete-only class accepts any labels, such as the integer, boolean or categorical data from simulate().
         for labels in ([0, 1, 1, 1], [True, False, False, True], pd.Categorical([2, 1, 2, 2]), [1, "b", ("c", 3), 1]):
-            fitted = CountParameter().fit(X, pd.Series(labels, index=X.index, name="t"))
-            assert fitted.variable_type_ == "discrete"
+            assert CountParameter().fit(X, pd.Series(labels, index=X.index, name="t")).is_fitted
 
         class ContinuousParameter(CountParameter):
             _tags = {"variable_type": ["continuous"]}
 
-        assert ContinuousParameter().fit(X, y.astype(float)).variable_type_ == "continuous"
+        assert ContinuousParameter().fit(X, y.astype(float)).is_fitted
         with pytest.raises(ValueError, match="numeric"):
             ContinuousParameter().fit(X, y)
 

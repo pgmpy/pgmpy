@@ -85,7 +85,6 @@ class DeterministicAdapter(BaseParameterization):
         adapter = cls(function)
         adapter.variable_ = variable
         adapter.evidence_ = [evidence[position] for position in _parent_order(evidence)]
-        adapter.variable_type_ = "continuous"
         adapter._is_fitted = True
         return adapter
 

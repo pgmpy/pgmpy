@@ -105,7 +105,7 @@ class SklearnAdapter(BaseParameterization):
         # Step 2: Fit a classifier on the labels, encoded first, as estimators may change them in classes_, e.g.
         # nullable booleans to floats. Labels are sorted by value, as in TabularCPD, so a Categorical goes in as its
         # values: pd.factorize would order it by category.
-        if self.variable_type_ == "discrete":
+        if self.get_tag("variable_type") == ["discrete"]:
             codes, labels = pd.factorize(target.to_numpy(), sort=True)
             estimator = self.estimator if self.evidence_ and len(labels) > 1 else DummyClassifier(strategy="prior")
             self.estimator_ = clone(estimator).fit(features, codes, **fit_params)
@@ -118,7 +118,7 @@ class SklearnAdapter(BaseParameterization):
         self.estimator_ = clone(estimator).fit(features, target.copy(), **fit_params)
 
     def _predict_proba(self, X: pd.DataFrame | None) -> Any:
-        if self.variable_type_ == "continuous":
+        if self.get_tag("variable_type") == ["continuous"]:
             raise NotImplementedError(
                 f"{type(self.estimator).__name__} is a regressor, which gives point predictions, not a distribution: "
                 "use predict, AdditiveNoiseMechanism(SklearnAdapter(...)) for a regressor with noise, or SkproAdapter "
@@ -132,7 +132,7 @@ class SklearnAdapter(BaseParameterization):
         return NominalDistribution(probs=probs, categories=list(self.classes_), index=X.index, columns=[self.variable_])
 
     def _predict(self, X: pd.DataFrame) -> pd.DataFrame:
-        if self.variable_type_ == "discrete":
+        if self.get_tag("variable_type") == ["discrete"]:
             return super()._predict(X)
         if len(X) == 0:
             return pd.DataFrame(np.empty((0, 1)), index=X.index, columns=[self.variable_])

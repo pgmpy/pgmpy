@@ -55,29 +55,31 @@ class TestTabularCPD:
 
         # Case 1: root node
         root = TabularCPD().fit(None, y)
-        np.testing.assert_allclose(root.CPT_, [[0.56], [0.44]])
+        np.testing.assert_allclose(root.cpt_, [[0.56], [0.44]])
         assert (root.variable_, root.evidence_, root.state_names_) == ("y", [], {"y": ["0", "1"]})
+        assert (root.variable_card_, root.evidence_card_) == (2, [])
 
         # Case 2: root node with sample weights that balance the two states
         weights = np.where(y["y"] == "0", 0.44, 0.56)
-        np.testing.assert_allclose(TabularCPD().fit(None, y, sample_weight=weights).CPT_, [[0.5], [0.5]])
+        np.testing.assert_allclose(TabularCPD().fit(None, y, sample_weight=weights).cpt_, [[0.5], [0.5]])
 
         # Case 3: conditional distribution
         cpd = TabularCPD().fit(X, y)
-        np.testing.assert_allclose(cpd.CPT_, EXPECTED_CPT)
+        np.testing.assert_allclose(cpd.cpt_, EXPECTED_CPT)
         assert cpd.state_names_ == {"y": ["0", "1"], "x1": ["0", "1", "2"], "x2": ["0", "1"]}
+        assert (cpd.variable_card_, cpd.evidence_card_) == (2, [3, 2])
 
         # Case 4: conditional distribution with sample weights that balance every column
         weights = 1 / X.join(y).groupby(["x1", "x2", "y"])["y"].transform("size")
-        np.testing.assert_allclose(TabularCPD().fit(X, y, sample_weight=weights).CPT_, np.full((2, 6), 0.5))
+        np.testing.assert_allclose(TabularCPD().fit(X, y, sample_weight=weights).cpt_, np.full((2, 6), 0.5))
 
         # Rows pair up by position, so repeated index labels, e.g. from a bootstrap resample, don't mix them up.
         repeated = TabularCPD().fit(X.set_axis([0] * len(X)), y.set_axis([0] * len(y)), sample_weight=np.ones(len(y)))
-        np.testing.assert_allclose(repeated.CPT_, EXPECTED_CPT)
+        np.testing.assert_allclose(repeated.cpt_, EXPECTED_CPT)
 
         # Parents named False and True, as from pd.get_dummies, are counted like any others.
         dummies = TabularCPD().fit(X.set_axis([False, True], axis=1), y)
-        np.testing.assert_allclose(dummies.CPT_, EXPECTED_CPT)
+        np.testing.assert_allclose(dummies.cpt_, EXPECTED_CPT)
         assert dummies.state_names_ == {"y": ["0", "1"], False: ["0", "1", "2"], True: ["0", "1"]}
 
     def test_matches_discrete_mle(self):
@@ -100,7 +102,7 @@ class TestTabularCPD:
             for node in model.nodes:
                 parents = list(model.get_parents(node))[::-1]
                 cpd = TabularCPD().fit(data[parents] if parents else None, data[[node]], sample_weight=sample_weight)
-                np.testing.assert_allclose(cpd.CPT_, expected[node].get_values())
+                np.testing.assert_allclose(cpd.cpt_, expected[node].get_values())
                 assert cpd.evidence_ == expected[node].variables[1:]
                 assert cpd.state_names_ == expected[node].state_names
 
@@ -112,10 +114,11 @@ class TestTabularCPD:
         state_names = {"y": ["1", "0", "2"], "x1": ["0", "1", "2"], "x2": ["0", "1", "3"], "other": ["a"]}
         cpd = TabularCPD(state_names=state_names).fit(X, y)
         assert cpd.state_names_ == {"y": ["1", "0", "2"], "x1": ["0", "1", "2"], "x2": ["0", "1", "3"]}
+        assert (cpd.variable_card_, cpd.evidence_card_) == (3, [3, 3])
         seen = [0, 1, 3, 4, 6, 7]
-        np.testing.assert_allclose(cpd.CPT_[[1, 0]][:, seen], EXPECTED_CPT)
-        np.testing.assert_allclose(cpd.CPT_[2, seen], 0)
-        np.testing.assert_allclose(cpd.CPT_[:, [2, 5, 8]], 1 / 3)
+        np.testing.assert_allclose(cpd.cpt_[[1, 0]][:, seen], EXPECTED_CPT)
+        np.testing.assert_allclose(cpd.cpt_[2, seen], 0)
+        np.testing.assert_allclose(cpd.cpt_[:, [2, 5, 8]], 1 / 3)
 
         # The states are copied at fit.
         state_names["y"].append("9")
@@ -134,8 +137,8 @@ class TestTabularCPD:
             TabularCPD(state_names={"y": [0, 1]}).fit(None, pd.Series([True, True, False], name="y"))
 
         # Huge but finite weights don't overflow, and an index named like a parent doesn't clash with it.
-        np.testing.assert_allclose(TabularCPD().fit(X, y, sample_weight=np.full(len(y), 1e307)).CPT_, EXPECTED_CPT)
-        np.testing.assert_allclose(TabularCPD().fit(X.rename_axis("x1"), y.rename_axis("x1")).CPT_, EXPECTED_CPT)
+        np.testing.assert_allclose(TabularCPD().fit(X, y, sample_weight=np.full(len(y), 1e307)).cpt_, EXPECTED_CPT)
+        np.testing.assert_allclose(TabularCPD().fit(X.rename_axis("x1"), y.rename_axis("x1")).cpt_, EXPECTED_CPT)
 
     def test_predict_proba(self, discrete_data):
         X, y = discrete_data
@@ -160,12 +163,12 @@ class TestTabularCPD:
         # Categorical and boolean parents are looked up by value.
         X_categorical = X.assign(x1=X["x1"].astype(pd.CategoricalDtype(["2", "0", "1"])))
         categorical = TabularCPD().fit(X_categorical, y)
-        np.testing.assert_allclose(categorical.CPT_, EXPECTED_CPT)
+        np.testing.assert_allclose(categorical.cpt_, EXPECTED_CPT)
         np.testing.assert_allclose(np.asarray(categorical.predict_proba(X_categorical[:5]).probs), expected)
         X_boolean = pd.DataFrame({"x": pd.array(X["x2"] == "1", dtype="boolean")})
         boolean = TabularCPD().fit(X_boolean, y)
         columns = X_boolean["x"][:5].astype(int).to_numpy()
-        np.testing.assert_allclose(np.asarray(boolean.predict_proba(X_boolean[:5]).probs), boolean.CPT_[:, columns].T)
+        np.testing.assert_allclose(np.asarray(boolean.predict_proba(X_boolean[:5]).probs), boolean.cpt_[:, columns].T)
 
         # A root gives its own distribution for every row, or as a single distribution without X.
         root = TabularCPD().fit(None, y)
@@ -226,14 +229,14 @@ class TestTabularCPD:
 
         # The arguments follow pgmpy.factors.discrete.TabularCPD. A table given with the parents in another order,
         # cyclic ones too, is reordered to the sorted order.
-        swapped = fitted.CPT_.reshape(2, 3, 2).transpose(0, 2, 1).reshape(2, 6)
+        swapped = fitted.cpt_.reshape(2, 3, 2).transpose(0, 2, 1).reshape(2, 6)
         cpd = TabularCPD.from_values("y", 2, swapped, ["x2", "x1"], [2, 3], fitted.state_names_)
         assert cpd.is_fitted and cpd == fitted and hash(cpd) == hash(fitted)
         np.testing.assert_allclose(np.asarray(cpd.predict_proba(X).probs), np.asarray(fitted.predict_proba(X).probs))
         values = np.random.default_rng(0).dirichlet([1, 1], size=24).T
         cyclic = TabularCPD.from_values("y", 2, values, ["c", "a", "b"], [2, 3, 4])
-        assert cyclic.evidence_ == ["a", "b", "c"]
-        np.testing.assert_allclose(cyclic.CPT_, values.reshape(2, 2, 3, 4).transpose(0, 2, 3, 1).reshape(2, 24))
+        assert (cyclic.evidence_, cyclic.variable_card_, cyclic.evidence_card_) == (["a", "b", "c"], 2, [3, 4, 2])
+        np.testing.assert_allclose(cyclic.cpt_, values.reshape(2, 2, 3, 4).transpose(0, 2, 3, 1).reshape(2, 24))
 
         # The table is copied, so reusing the caller's array doesn't change the CPD.
         values = np.array([[0.56], [0.44]])
@@ -242,11 +245,11 @@ class TestTabularCPD:
         assert root == TabularCPD().fit(None, y)
 
         # CPDs compare by distribution, whatever the order of their states.
-        flipped = fitted.CPT_.reshape(2, 3, 2)[::-1, ::-1, :].reshape(2, 6)
+        flipped = fitted.cpt_.reshape(2, 3, 2)[::-1, ::-1, :].reshape(2, 6)
         state_names = {"y": ["1", "0"], "x1": ["2", "1", "0"], "x2": ["0", "1"]}
         reordered = TabularCPD.from_values("y", 2, flipped, ["x1", "x2"], [3, 2], state_names)
         assert reordered == fitted and hash(reordered) == hash(fitted)
-        assert TabularCPD.from_values("y", 2, fitted.CPT_, ["x1", "x2"], [3, 2], state_names) != fitted
+        assert TabularCPD.from_values("y", 2, fitted.cpt_, ["x1", "x2"], [3, 2], state_names) != fitted
 
         # As in pgmpy.factors.discrete.TabularCPD, variables without state names get the states 0, 1, ...
         legacy = LegacyTabularCPD("y", 2, [[0.2, 0.7], [0.8, 0.3]], ["x"], [2])

@@ -144,7 +144,6 @@ class AdditiveNoiseMechanism(BaseMechanism):
         _check_continuous(mechanism.noise_)
         mechanism.variable_ = variable
         mechanism.evidence_ = mechanism.function_.evidence_
-        mechanism.variable_type_ = "continuous"
         mechanism._is_fitted = True
         return mechanism
 

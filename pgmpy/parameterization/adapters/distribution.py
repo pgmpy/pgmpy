@@ -106,7 +106,6 @@ class DistributionAdapter(BaseParameterization):
         cpd = cls(distribution)
         cpd.variable_ = variable
         cpd.evidence_ = [evidence[position] for position in _parent_order(evidence)]
-        [cpd.variable_type_] = cpd.get_tag("variable_type")
         cpd.distribution_ = deepcopy(cpd._scalar)
         cpd._is_fitted = True
         return cpd

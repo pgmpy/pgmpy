@@ -39,8 +39,6 @@ class BaseParameterization(BaseEstimator):
         Name of the target.
     evidence_ : list
         Names of the parents, sorted; empty for a root.
-    variable_type_ : str
-        Type of the target, ``"discrete"`` or ``"continuous"``.
     """
 
     _tags = {
@@ -129,7 +127,6 @@ class BaseParameterization(BaseEstimator):
         order = _parent_order(columns)
         self.variable_ = y.columns[0]
         self.evidence_ = [columns[position] for position in order]
-        self.variable_type_ = variable_type
         self._fit(X.iloc[:, order], y, sample_weight)
         self._is_fitted = True
         return self
@@ -260,7 +257,7 @@ class BaseParameterization(BaseEstimator):
 
         # Step 2: Reduce it to a point: the mean for a continuous target, and the most probable state for a discrete
         # one. A Series keeps tuple labels whole, and gives the states' dtype as NominalDistribution.sample does.
-        if self.variable_type_ == "continuous":
+        if self.get_tag("variable_type") == ["continuous"]:
             return pd.DataFrame(distribution.mean().to_numpy(), index=X.index, columns=[self.variable_])
         categories = pd.Series(distribution.categories)
         values = categories.to_numpy()[np.argmax(distribution.probs, axis=1)]

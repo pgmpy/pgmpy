@@ -1,11 +1,3 @@
-"""Parameterizations: models of one variable given its parents, and the distributions they return.
-
-Import every public name from here. The subpackages, ``cpds``, ``adapters``, ``mechanisms`` and ``distributions``,
-only organize the source, and their paths may change.
-
-This module is experimental: its API may change in any release without a deprecation period.
-"""
-
 from pgmpy.parameterization._base import BaseParameterization
 from pgmpy.parameterization.adapters import (
     DeterministicAdapter,

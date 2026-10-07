@@ -128,7 +128,6 @@ class LinearGaussianCPD(BaseParameterization):
         cpd = cls()
         cpd.variable_ = variable
         cpd.evidence_ = [evidence[position] for position in order]
-        cpd.variable_type_ = "continuous"
         cpd.beta_ = beta[[0, *(1 + position for position in order)]]
         cpd.std_ = float(std)
         cpd._is_fitted = True

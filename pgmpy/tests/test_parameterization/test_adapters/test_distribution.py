@@ -44,7 +44,7 @@ class TestDistributionAdapter:
 
         # from_values creates a fitted adapter without data, as do() needs. fit only records the target and parents.
         do = DistributionAdapter.from_values("X", Delta(c=2.5), ["b", "a"])
-        assert do.is_fitted and (do.variable_, do.evidence_, do.variable_type_) == ("X", ["a", "b"], "continuous")
+        assert do.is_fitted and (do.variable_, do.evidence_) == ("X", ["a", "b"])
         assert (do.sample(pd.DataFrame({"a": [0, 1], "b": [1, 2]}), random_state=0)["X"] == 2.5).all()
         fitted = DistributionAdapter(normal).fit(None, pd.Series([0.3, -1.2], name="X"))
         assert fitted == DistributionAdapter.from_values("X", Normal(mu=1.5, sigma=2.0))
