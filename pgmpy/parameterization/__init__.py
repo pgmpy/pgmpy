@@ -7,7 +7,7 @@ This module is experimental: its API may change in any release without a depreca
 """
 
 from pgmpy.parameterization._base import BaseParameterization
-from pgmpy.parameterization.adapters import DistributionAdapter, SklearnAdapter, SkproAdapter
+from pgmpy.parameterization.adapters import DeterministicAdapter, DistributionAdapter, SklearnAdapter, SkproAdapter
 from pgmpy.parameterization.cpds import LinearGaussianCPD, TabularCPD
 from pgmpy.parameterization.distributions import NominalDistribution
 from pgmpy.utils._warnings import ExperimentalWarning, _warn_external
@@ -19,6 +19,7 @@ _warn_external(
 
 __all__ = [
     "BaseParameterization",
+    "DeterministicAdapter",
     "DistributionAdapter",
     "LinearGaussianCPD",
     "NominalDistribution",

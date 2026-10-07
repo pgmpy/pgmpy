@@ -195,24 +195,13 @@ class BaseParameterization(BaseEstimator):
         pandas.DataFrame
             One column named after the target, with ``X``'s index.
         """
-        # Step 1: Check X and y as predict and fit do.
         y = _as_frame(y)
         X = self._check_X(X)
         if X is None:
             X = pd.DataFrame(index=y.index)
         if not X.index.equals(y.index):
             raise ValueError("X and y must have the same index.")
-
-        # Step 2: Predict the distributions on a RangeIndex and put X's index back at the end, as skpro matches values
-        # to rows by label, which mixes up rows with repeated labels.
-        distribution = self._predict_proba(X.set_axis(pd.RangeIndex(len(X))))
-
-        # Step 3: Score y with the log-probability under a discrete measure, and the log-density under any other. y goes
-        # in as a numpy array, which skpro matches to rows by position.
-        values = y.to_numpy()
-        discrete = distribution.get_tag("distr:measuretype", "continuous", raise_error=False) == "discrete"
-        scores = distribution.log_pmf(values) if discrete else distribution.log_pdf(values)
-        return pd.DataFrame(scores.to_numpy(), index=X.index, columns=[self.variable_])
+        return self._log_likelihood(X, y)
 
     def sample(
         self,
@@ -279,6 +268,18 @@ class BaseParameterization(BaseEstimator):
         values = categories.to_numpy()[np.argmax(distribution.probs, axis=1)]
         dtype = categories.infer_objects().dtype
         return pd.DataFrame(values.reshape(-1, 1), index=X.index, columns=[self.variable_]).astype(dtype)
+
+    def _log_likelihood(self, X: pd.DataFrame, y: pd.DataFrame) -> pd.DataFrame:
+        # Step 1: Predict the distributions on a RangeIndex and put X's index back at the end, as skpro matches values
+        # to rows by label, which mixes up rows with repeated labels.
+        distribution = self._predict_proba(X.set_axis(pd.RangeIndex(len(X))))
+
+        # Step 2: Score y with the log-probability under a discrete measure, and the log-density under any other. y goes
+        # in as a numpy array, which skpro matches to rows by position.
+        values = y.to_numpy()
+        discrete = distribution.get_tag("distr:measuretype", "continuous", raise_error=False) == "discrete"
+        scores = distribution.log_pmf(values) if discrete else distribution.log_pdf(values)
+        return pd.DataFrame(scores.to_numpy(), index=X.index, columns=[self.variable_])
 
     def _sample(
         self, X: pd.DataFrame | None, n_samples: int | None, random_state: int | np.random.Generator | None
