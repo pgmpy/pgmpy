@@ -36,6 +36,7 @@ OBJECT_TYPES = [
     "supervised_metric",
     "unsupervised_metric",
     "parameterization",
+    "local_estimator",
 ]
 
 METRIC_TYPES = ["supervised_metric", "unsupervised_metric"]
@@ -462,14 +463,15 @@ class parent_data_types(_BaseTag):
 
 class supports_weighted_data(_BaseTag):
     """
-    Whether ``fit`` takes ``sample_weight``.
+    Whether ``fit`` takes ``sample_weight``, or for a local estimator, whether it can estimate from weighted data.
 
-    An adapter sets it in ``__init__`` from the estimator it wraps.
+    An adapter sets it in ``__init__`` from the estimator it wraps, and a ``TabularCPD`` takes it from its local
+    estimator.
     """
 
     _tags = {
         "tag_name": "supports_weighted_data",
-        "parent_type": ["parameterization"],
+        "parent_type": ["parameterization", "local_estimator"],
         "tag_type": "bool",
         "short_descr": "Whether fit takes sample_weight.",
     }
@@ -534,6 +536,27 @@ class python_dependencies(_BaseTag):
         "parent_type": ["parameterization"],
         "tag_type": "str or list",
         "short_descr": "Python packages the object needs, checked when it is constructed.",
+    }
+
+
+# ----------------
+# Local estimators
+# ----------------
+
+
+class parameterization(_BaseTag):
+    """
+    The parameterizations the local estimator can fit, by their ``name`` tag.
+
+    A local estimator is passed to a parameterization, e.g. ``TabularCPD(estimator=TabularBayesian())``, and estimates
+    its parameters from one node's data.
+    """
+
+    _tags = {
+        "tag_name": "parameterization",
+        "parent_type": ["local_estimator"],
+        "tag_type": ("list", ["tabular_cpd"]),
+        "short_descr": "The parameterizations the local estimator can fit, by their name tag.",
     }
 
 

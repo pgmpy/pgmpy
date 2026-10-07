@@ -60,3 +60,8 @@ Parameterizations
 -----------------
 
 .. pgmpy-tags:: parameterization
+
+Local Estimators
+----------------
+
+.. pgmpy-tags:: local_estimator

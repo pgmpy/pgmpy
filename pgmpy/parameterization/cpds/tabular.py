@@ -5,6 +5,7 @@ import pandas as pd
 from numpy.typing import ArrayLike
 
 from pgmpy.parameterization._base import BaseParameterization, _checked_evidence, _parent_order
+from pgmpy.parameterization.cpds.tabular_estimators import BaseTabularEstimator, TabularMLE
 from pgmpy.parameterization.distributions import NominalDistribution
 from pgmpy.utils import collect_state_names, encode_columns, get_state_counts_array
 
@@ -12,9 +13,11 @@ from pgmpy.utils import collect_state_names, encode_columns, get_state_counts_ar
 class TabularCPD(BaseParameterization):
     """Tabular conditional probability distribution of a discrete variable given discrete parents.
 
-    ``fit(X, y)`` estimates, by maximum likelihood, the distribution of ``y`` for every combination of the parents'
-    states in ``X``. Parents are sorted by name, and parent combinations without data get a uniform distribution. Fit
-    a root variable with ``X=None``. ``from_values`` creates a fitted instance from a known table instead.
+    ``fit(X, y)`` counts the rows with each state of ``y`` for every combination of the parents' states in ``X``, with
+    any sample weights, and ``estimator`` turns the counts into the table: by maximum likelihood by default, where
+    parent combinations without data get a uniform distribution, or with a Dirichlet prior with ``TabularBayesian``.
+    Parents are sorted by name. Fit a root variable with ``X=None``. ``from_values`` creates a fitted instance from a
+    known table instead.
 
     Requires the optional dependency ``skpro``.
 
@@ -23,6 +26,8 @@ class TabularCPD(BaseParameterization):
     state_names : dict, optional
         States of the target and of its parents, as ``{variable: [states]}``. The listed states must include every state
         in the data; variables that aren't listed get the sorted states seen in the data.
+    estimator : BaseTabularEstimator, optional
+        Turns the counts into the table, e.g. ``TabularBayesian(prior_type="BDeu")``. ``None`` for ``TabularMLE()``.
 
     Attributes
     ----------
@@ -77,9 +82,19 @@ class TabularCPD(BaseParameterization):
         "python_dependencies": "skpro",
     }
 
-    def __init__(self, state_names: dict | None = None) -> None:
+    def __init__(self, state_names: dict | None = None, estimator: BaseTabularEstimator | None = None) -> None:
         self.state_names = state_names
+        self.estimator = estimator
         super().__init__()
+
+        # The estimator decides whether the counts can be weighted.
+        if estimator is not None:
+            if not isinstance(estimator, BaseTabularEstimator):
+                raise TypeError(
+                    "estimator must be a tabular estimator, such as TabularMLE() or TabularBayesian(), but is a "
+                    f"{type(estimator).__name__}."
+                )
+            self.set_tags(supports_weighted_data=estimator.get_tag("supports_weighted_data"))
 
     @classmethod
     def from_values(
@@ -167,20 +182,22 @@ class TabularCPD(BaseParameterization):
             states[name] = given[name] if name in given else observed
 
         # Step 2: Count, with any weights, the rows of each state of the target for each combination of parent states.
-        # Positions label the columns here, as selecting columns by label fails for some names, e.g. booleans.
-        if sample_weight is not None:
-            sample_weight = sample_weight / sample_weight.max()
+        # The weights keep their scale, as it sets how much the data count against a prior. Positions label the
+        # columns here, as selecting columns by label fails for some names, e.g. booleans.
+        with np.errstate(over="ignore"):
+            total = len(data) if sample_weight is None else sample_weight.sum()
+        if not np.isfinite(total):
+            raise ValueError("sample_weight values sum to more than a float can hold; divide them by a constant.")
         codes, cardinalities = encode_columns(data, dict(enumerate(states.values())))
         counts = get_state_counts_array(codes, cardinalities, 0, range(1, len(names)), sample_weight).astype(float)
-        if not np.isclose(counts.sum(), len(data) if sample_weight is None else sample_weight.sum()):
+        if not np.isclose(counts.sum(), total):
             raise ValueError(
                 "Some values in the data don't match state_names, e.g. [0, 1] given for boolean data; list the states "
                 "with the data's own types."
             )
 
-        # Step 3: Normalize the counts into the table; parent combinations without data get a uniform distribution.
-        counts[:, (counts == 0).all(axis=0)] = 1.0
-        self.cpt_ = counts / counts.sum(axis=0)
+        # Step 3: Turn the counts into the table.
+        self.cpt_ = (TabularMLE() if self.estimator is None else self.estimator).estimate(counts)
         self.state_names_ = states
         self.variable_card_, *self.evidence_card_ = cardinalities.values()
 

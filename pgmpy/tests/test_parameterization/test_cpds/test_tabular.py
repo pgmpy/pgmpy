@@ -136,8 +136,10 @@ class TestTabularCPD:
         with pytest.raises(ValueError, match="don't match"):
             TabularCPD(state_names={"y": [0, 1]}).fit(None, pd.Series([True, True, False], name="y"))
 
-        # Huge but finite weights don't overflow, and an index named like a parent doesn't clash with it.
-        np.testing.assert_allclose(TabularCPD().fit(X, y, sample_weight=np.full(len(y), 1e307)).cpt_, EXPECTED_CPT)
+        # Weights whose sum a float can't hold raise rather than give a table of NaN; rescaling them would change how
+        # much a prior counts. An index named like a parent doesn't clash with it.
+        with pytest.raises(ValueError, match="sum to more than"):
+            TabularCPD().fit(X, y, sample_weight=np.full(len(y), 1e307))
         np.testing.assert_allclose(TabularCPD().fit(X.rename_axis("x1"), y.rename_axis("x1")).cpt_, EXPECTED_CPT)
 
     def test_predict_proba(self, discrete_data):

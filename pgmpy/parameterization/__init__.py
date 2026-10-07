@@ -6,7 +6,13 @@ from pgmpy.parameterization.adapters import (
     SklearnAdapter,
     SkproAdapter,
 )
-from pgmpy.parameterization.cpds import LinearGaussianCPD, TabularCPD
+from pgmpy.parameterization.cpds import (
+    BaseTabularEstimator,
+    LinearGaussianCPD,
+    TabularBayesian,
+    TabularCPD,
+    TabularMLE,
+)
 from pgmpy.parameterization.distributions import NominalDistribution, PosteriorPredictive
 from pgmpy.parameterization.mechanisms import AdditiveNoiseMechanism, BaseMechanism
 from pgmpy.utils._warnings import ExperimentalWarning, _warn_external
@@ -20,6 +26,7 @@ __all__ = [
     "AdditiveNoiseMechanism",
     "BaseMechanism",
     "BaseParameterization",
+    "BaseTabularEstimator",
     "DeterministicAdapter",
     "DistributionAdapter",
     "LinearGaussianCPD",
@@ -28,5 +35,7 @@ __all__ = [
     "PyroAdapter",
     "SklearnAdapter",
     "SkproAdapter",
+    "TabularBayesian",
     "TabularCPD",
+    "TabularMLE",
 ]
