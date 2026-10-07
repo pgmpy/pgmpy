@@ -1,7 +1,7 @@
-from .._base import BaseExampleModel, DAGMixin
+from .._base import ADMGMixin, BaseExampleModel
 
 
-class Paths(DAGMixin, BaseExampleModel):
+class Paths(ADMGMixin, BaseExampleModel):
     """
     Paths DAG from the example_models repository.
     """
