@@ -43,10 +43,11 @@ class PosteriorPredictive(BaseDistribution):
 
     >>> import pandas as pd
     >>> import pyro.distributions as dist
-    >>> from pgmpy.parameterization import PyroAdapter
+    >>> from pgmpy.parameterization import PyroAdapter, PyroSVI
     >>> X = pd.DataFrame({"a": [0.0, 1.0, 2.0]})
     >>> y = pd.Series([1.0, 3.0, 5.0], name="y")
-    >>> node = PyroAdapter(lambda parents: dist.Normal(1.0 + 2.0 * parents["a"], 0.5), num_steps=1).fit(X, y)
+    >>> line = lambda parents: dist.Normal(1.0 + 2.0 * parents["a"], 0.5)
+    >>> node = PyroAdapter(line, estimator=PyroSVI(num_steps=1)).fit(X, y)
     >>> predictive = node.predict_proba(pd.DataFrame({"a": [0.0, 1.0]}))
     >>> predictive.mean()["y"].tolist()
     [1.0, 3.0]

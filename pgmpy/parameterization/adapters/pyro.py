@@ -1,14 +1,12 @@
-import copy
 from collections.abc import Callable
-from numbers import Integral
-from typing import Any, Literal
+from typing import Any
 
 import numpy as np
 import pandas as pd
 from skbase.utils.dependencies import _safe_import
 
-from pgmpy import config
 from pgmpy.parameterization._base import BaseParameterization
+from pgmpy.parameterization.adapters.pyro_estimators import BasePyroEstimator, PyroSVI
 from pgmpy.parameterization.distributions import PosteriorPredictive
 
 torch = _safe_import("torch")
@@ -17,23 +15,23 @@ pyro = _safe_import("pyro", pkg_name="pyro-ppl")
 
 class PyroAdapter(BaseParameterization):
     """Parameterization from a Pyro function: the distribution of the target given its parents, with priors on its
-    parameters, fitted by SVI or by MCMC.
+    parameters, fitted by ``estimator``: SVI by default, or MCMC with ``PyroNUTS``.
 
     ``fn`` takes the parents' values, a dict that maps each parent's name to a 1-D tensor in torch's default dtype,
     empty for a root, and returns the target's Pyro distribution, with ``event_shape`` () and one batch element per row,
     or a single one. It declares its parameters with ``pyro.sample`` and a prior, or with ``pyro.param`` for a point
-    estimate, which only SVI fits; a vector-valued parameter takes ``.to_event(1)``, not a plate. Its sites can have any
-    name but the target's, which ``fit`` gives the target's observed values: in a plate over the rows, with each row's
-    log-likelihood multiplied by its weight. ``fit`` fits this model by SVI, with an ``AutoMultivariateNormal`` guide by
-    default, or by NUTS, and keeps ``num_samples`` posterior draws, which every prediction reuses.
+    estimate, which ``PyroSVI`` fits but ``PyroNUTS`` can't; a vector-valued parameter takes ``.to_event(1)``, not a
+    plate. Its sites can have any name but the target's, which ``fit`` gives the target's observed values: in a plate
+    over the rows, with each row's log-likelihood multiplied by its weight. The estimator fits this model, and the
+    adapter keeps its posterior draws, which every prediction reuses.
 
     Each node keeps its Pyro parameters in a store of its own, so nodes with the same parameter names don't overwrite
-    each other, and the global store is left as it was. Fitting draws from a copy of the torch random state, seeded from
-    ``random_state``, so the global random state doesn't change either.
+    each other, and the global store is left as it was. Neither fitting nor prediction changes the global torch random
+    state.
 
     Inference converges much faster when ``fn`` centers and scales the parents, and puts its priors on the data's scale:
-    on poorly scaled parents, SVI can stop far from the posterior, and NUTS takes far longer. ``losses_`` shows whether
-    SVI's loss has settled.
+    on poorly scaled parents, SVI can stop far from the posterior, and NUTS takes far longer. ``diagnostics_`` shows how
+    the inference went, e.g. whether SVI's loss has settled.
 
     Requires the optional dependencies ``pyro-ppl`` and ``skpro``.
 
@@ -42,29 +40,17 @@ class PyroAdapter(BaseParameterization):
     fn : callable
         The target's distribution given its parents: takes the parents' values, a dict of 1-D tensors by name, and
         returns a Pyro distribution.
-    inference : {"svi", "mcmc"}, default="svi"
-        Stochastic variational inference, or MCMC with NUTS.
-    num_samples : int, default=1000
-        Number of posterior draws to keep: drawn from the guide after SVI, or NUTS samples after as many warmup steps.
-    num_steps : int, default=1000
-        Number of SVI steps. Not used by MCMC.
-    guide : callable, optional
-        Takes the model and returns a guide, e.g. ``pyro.infer.autoguide.AutoNormal``. ``None`` for
-        ``AutoMultivariateNormal``. Not used by MCMC, nor when ``fn`` has no latent sites.
-    optim : pyro.optim.PyroOptim, optional
-        Optimizer for SVI, copied for each fit, so the object passed in doesn't change. ``None`` for
-        ``pyro.optim.ClippedAdam``, with a learning rate that decays from 0.1 to 0.001 over the steps. Not used by MCMC.
-    random_state : int, numpy.random.Generator or None, optional
-        Seed or generator for fitting; ``None`` draws fresh values.
+    estimator : BasePyroEstimator, optional
+        The inference algorithm and its settings, e.g. ``PyroNUTS(num_samples=500)``. ``None`` for ``PyroSVI()``.
 
     Attributes
     ----------
     posterior_samples_ : dict of str to torch.Tensor
-        ``num_samples`` draws of each of ``fn``'s latent sites, along the first dimension; empty without latent sites.
+        The estimator's draws of each of ``fn``'s latent sites, along the first dimension; empty without latent sites.
     params_ : dict of str to torch.Tensor
         The fitted values of ``fn``'s ``pyro.param`` sites.
-    losses_ : numpy.ndarray of shape (num_steps,)
-        SVI's loss after each step. Only for SVI.
+    diagnostics_ : dict
+        What the estimator reports about the inference, e.g. ``{"losses": ...}`` for ``PyroSVI``.
 
     Examples
     --------
@@ -72,7 +58,7 @@ class PyroAdapter(BaseParameterization):
     >>> import pandas as pd
     >>> import pyro
     >>> import pyro.distributions as dist
-    >>> from pgmpy.parameterization import PyroAdapter
+    >>> from pgmpy.parameterization import PyroAdapter, PyroSVI
     >>> rng = np.random.default_rng(seed=42)
     >>> X = pd.DataFrame({"temp": rng.normal(20, 5, size=300)})
     >>> y = pd.Series(10 + 2 * X["temp"] + rng.normal(scale=3, size=300), name="sales")
@@ -84,7 +70,7 @@ class PyroAdapter(BaseParameterization):
     ...     coef = pyro.sample("coef", dist.Normal(0.0, 20.0))
     ...     sigma = pyro.sample("sigma", dist.HalfNormal(10.0))
     ...     return dist.Normal(intercept + coef * (parents["temp"] - 20.0) / 5.0, sigma)
-    >>> cpd = PyroAdapter(sales, random_state=0).fit(X, y)
+    >>> cpd = PyroAdapter(sales, estimator=PyroSVI(random_state=0)).fit(X, y)
     >>> round(cpd.posterior_samples_["coef"].mean().item())
     10
     >>> new = pd.DataFrame({"temp": [15.0, 25.0]})
@@ -102,32 +88,21 @@ class PyroAdapter(BaseParameterization):
         "python_dependencies": ["pyro-ppl", "skpro"],
     }
 
-    def __init__(
-        self,
-        fn: Callable[[dict], Any],
-        inference: Literal["svi", "mcmc"] = "svi",
-        num_samples: int = 1000,
-        num_steps: int = 1000,
-        guide: Callable | None = None,
-        optim: Any | None = None,
-        random_state: int | np.random.Generator | None = None,
-    ) -> None:
+    def __init__(self, fn: Callable[[dict], Any], estimator: BasePyroEstimator | None = None) -> None:
         self.fn = fn
-        self.inference = inference
-        self.num_samples = num_samples
-        self.num_steps = num_steps
-        self.guide = guide
-        self.optim = optim
-        self.random_state = random_state
+        self.estimator = estimator
         super().__init__()
 
         if not callable(fn):
             raise TypeError(f"fn must be callable, but is a {type(fn).__name__}.")
-        if inference not in ("svi", "mcmc"):
-            raise ValueError(f"inference must be 'svi' or 'mcmc', but is {inference!r}.")
-        for name, value in (("num_samples", num_samples), ("num_steps", num_steps)):
-            if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
-                raise ValueError(f"{name} must be a positive integer, but is {value!r}.")
+        # The estimator decides whether the rows can be weighted.
+        if estimator is not None:
+            if not isinstance(estimator, BasePyroEstimator):
+                raise TypeError(
+                    "estimator must be a Pyro estimator, such as PyroSVI() or PyroNUTS(), but is a "
+                    f"{type(estimator).__name__}."
+                )
+            self.set_tags(supports_weighted_data=estimator.get_tag("supports_weighted_data"))
 
     def _fit(self, X: pd.DataFrame, y: pd.DataFrame, sample_weight: np.ndarray | None) -> None:
         # Step 1: Drop the rows with weight 0, which count for nothing, as Pyro only scales by positive weights. Convert
@@ -141,14 +116,12 @@ class PyroAdapter(BaseParameterization):
         weights = None if sample_weight is None else torch.as_tensor(sample_weight, dtype=dtype)
         model = self._model(len(y))
 
-        # Step 2: Work in a parameter store of the node's own, and in a copy of the torch random state seeded from
-        # random_state, so that neither the user's global store nor the global random state changes.
-        seed = int(np.random.default_rng(self.random_state).integers(2**63))
-        with pyro.get_param_store().scope() as state, torch.random.fork_rng(devices=[]):
-            torch.manual_seed(seed)
-
-            # Step 3: Trace fn once, to check the distribution it returns and find its latent and param sites.
-            trace = pyro.poutine.trace(self.fn).get_trace(parents)
+        # Step 2: Work in a parameter store of the node's own, so that neither the user's global store nor other nodes
+        # change. Trace fn once, in a copy of the torch random state, to check the distribution it returns and find its
+        # latent and param sites.
+        with pyro.get_param_store().scope() as state:
+            with torch.random.fork_rng(devices=[]):
+                trace = pyro.poutine.trace(self.fn).get_trace(parents)
             distribution = trace.nodes["_RETURN"]["value"]
             site = str(self.variable_)
             if not isinstance(distribution, torch.distributions.Distribution):
@@ -180,43 +153,9 @@ class PyroAdapter(BaseParameterization):
             ]
             params = [name for name, node in trace.nodes.items() if node["type"] == "param"]
 
-            # Step 4: Fit, and keep num_samples posterior draws of the latent sites. Without latent sites the guide is
-            # empty, as Pyro's continuous autoguides need one, and SVI fits fn's pyro.param values by maximum
-            # likelihood.
-            if self.inference == "svi":
-                if latent:
-                    guide = (pyro.infer.autoguide.AutoMultivariateNormal if self.guide is None else self.guide)(model)
-                else:
-                    guide = _empty_guide
-                # By default the learning rate decays from 0.1 to 0.001 over the steps: large steps reach the posterior
-                # from the priors, and small ones settle in it.
-                if self.optim is None:
-                    optim = pyro.optim.ClippedAdam({"lr": 0.1, "lrd": 0.01 ** (1 / self.num_steps)})
-                else:
-                    optim = copy.deepcopy(self.optim)
-                svi = pyro.infer.SVI(model, guide, optim, pyro.infer.Trace_ELBO())
-                self.losses_ = np.array([svi.step(parents, target, weights) for _ in range(self.num_steps)])
-                if not np.isfinite(self.losses_[-1]):
-                    raise ValueError(
-                        "SVI's loss isn't finite after the last step: lower the learning rate of optim, or check that "
-                        "fn's priors are on the data's scale."
-                    )
-                draws = pyro.infer.Predictive(guide, num_samples=self.num_samples)(parents, target, weights)
-            else:
-                if params:
-                    raise ValueError(
-                        f"NUTS can't fit pyro.param values, but fn has {params}: give them priors with pyro.sample, or "
-                        "use inference='svi'."
-                    )
-                if not latent:
-                    raise ValueError(
-                        "NUTS needs a latent site, a parameter with a prior from pyro.sample, but fn has none."
-                    )
-                mcmc = pyro.infer.MCMC(
-                    pyro.infer.NUTS(model), num_samples=self.num_samples, disable_progbar=not config.SHOW_PROGRESS
-                )
-                mcmc.run(parents, target, weights)
-                draws = mcmc.get_samples()
+            # Step 3: Fit with the estimator, and keep its posterior draws of the latent sites.
+            estimator = PyroSVI() if self.estimator is None else self.estimator
+            draws, self.diagnostics_ = estimator.estimate(model, (parents, target, weights), latent, params)
             self.posterior_samples_ = {name: draws[name].detach() for name in latent}
             self.params_ = {name: pyro.param(name).detach() for name in params}
         self._param_state = state
@@ -257,7 +196,3 @@ class PyroAdapter(BaseParameterization):
                 return pyro.sample(site, distribution, obs=target)
 
         return model
-
-
-def _empty_guide(*args: Any) -> None:
-    """The guide of a model without latent sites, which SVI fits by maximum likelihood."""

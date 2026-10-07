@@ -329,7 +329,12 @@ class BaseLocalEstimator(BaseObject):
         "name": None,
         "parameterization": [],
         "supports_weighted_data": False,
+        "python_dependencies": None,
     }
+
+    def __init__(self) -> None:
+        _check_estimator_deps(self)
+        super().__init__()
 
 
 def _equal(value: Any, other: Any) -> bool:

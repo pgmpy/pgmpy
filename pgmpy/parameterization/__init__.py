@@ -1,8 +1,11 @@
 from pgmpy.parameterization._base import BaseLocalEstimator, BaseParameterization
 from pgmpy.parameterization.adapters import (
+    BasePyroEstimator,
     DeterministicAdapter,
     DistributionAdapter,
     PyroAdapter,
+    PyroNUTS,
+    PyroSVI,
     SklearnAdapter,
     SkproAdapter,
 )
@@ -30,6 +33,7 @@ __all__ = [
     "BaseLocalEstimator",
     "BaseMechanism",
     "BaseParameterization",
+    "BasePyroEstimator",
     "BaseTabularEstimator",
     "DeterministicAdapter",
     "DistributionAdapter",
@@ -38,6 +42,8 @@ __all__ = [
     "NominalDistribution",
     "PosteriorPredictive",
     "PyroAdapter",
+    "PyroNUTS",
+    "PyroSVI",
     "SklearnAdapter",
     "SkproAdapter",
     "TabularBayesian",

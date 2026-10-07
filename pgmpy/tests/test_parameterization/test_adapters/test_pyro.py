@@ -5,7 +5,7 @@ from scipy import stats
 from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 from sklearn.linear_model import LinearRegression
 
-from pgmpy.parameterization import AdditiveNoiseMechanism, PyroAdapter, SklearnAdapter
+from pgmpy.parameterization import AdditiveNoiseMechanism, PyroAdapter, PyroNUTS, PyroSVI, SklearnAdapter
 
 pytestmark = pytest.mark.skipif(
     not _check_soft_dependencies(["pyro-ppl", "skpro"], severity="none"),
@@ -42,7 +42,7 @@ def sales_data():
 
 @pytest.fixture(scope="module")
 def sales_cpd(sales_data):
-    return PyroAdapter(sales, num_samples=500, random_state=0).fit(*sales_data)
+    return PyroAdapter(sales, estimator=PyroSVI(num_samples=500, random_state=0)).fit(*sales_data)
 
 
 class TestFit:
@@ -53,11 +53,6 @@ class TestFit:
         assert PyroAdapter.get_class_tag("python_dependencies") == ["pyro-ppl", "skpro"]
         with pytest.raises(TypeError, match="callable"):
             PyroAdapter("not a function")
-        with pytest.raises(ValueError, match="'svi' or 'mcmc'"):
-            PyroAdapter(sales, inference="vi")
-        for name in ("num_samples", "num_steps"):
-            with pytest.raises(ValueError, match=f"{name} must be a positive integer"):
-                PyroAdapter(sales, **{name: 0})
 
     def test_svi(self, sales_cpd, sales_data):
         # The posterior means match least squares on the scaled parent.
@@ -71,7 +66,7 @@ class TestFit:
         assert abs(draws["intercept"].mean().item() - intercept) < 0.2
         assert abs(draws["coef"].mean().item() - slope) < 0.2
         assert abs(draws["sigma"].mean().item() - residual_sd) < 0.2
-        assert sales_cpd.losses_.shape == (1000,)
+        assert sales_cpd.diagnostics_["losses"].shape == (1000,)
         assert sales_cpd.params_ == {}
 
     def test_mcmc_matches_the_conjugate_posterior(self):
@@ -90,7 +85,8 @@ class TestFit:
         mean = np.linalg.solve(precision, design.T @ y / 0.25)
         sd = np.sqrt(np.diag(np.linalg.inv(precision)))
 
-        draws = PyroAdapter(known_sigma, inference="mcmc", num_samples=300, random_state=0).fit(X, y).posterior_samples_
+        nuts = PyroNUTS(num_samples=300, random_state=0)
+        draws = PyroAdapter(known_sigma, estimator=nuts).fit(X, y).posterior_samples_
         np.testing.assert_allclose([draws["intercept"].mean().item(), draws["coef"].mean().item()], mean, atol=0.02)
         np.testing.assert_allclose([draws["intercept"].std().item(), draws["coef"].std().item()], sd, rtol=0.2)
 
@@ -103,8 +99,9 @@ class TestFit:
             pyro.param("user_value", torch.tensor(5.0))
             optim = pyro.optim.Adam({"lr": 0.05})
             spread = np.tile([-1.0, 1.0], 10)
-            first = PyroAdapter(location, num_steps=500, optim=optim).fit(None, pd.Series(3.0 + spread, name="a"))
-            second = PyroAdapter(location, num_steps=500, optim=optim).fit(None, pd.Series(-2.0 + spread, name="b"))
+            estimator = PyroSVI(num_steps=500, optim=optim)
+            first = PyroAdapter(location, estimator=estimator).fit(None, pd.Series(3.0 + spread, name="a"))
+            second = PyroAdapter(location, estimator=estimator).fit(None, pd.Series(-2.0 + spread, name="b"))
             assert abs(first.params_["mu"].item() - 3.0) < 0.05
             assert abs(second.params_["mu"].item() + 2.0) < 0.05
             assert list(store.keys()) == ["user_value"] and store["user_value"].item() == 5.0
@@ -136,21 +133,26 @@ class TestFit:
         # The same seed gives the same draws, and fitting leaves the global torch random state as it was.
         X, y = sales_data
         before = torch.random.get_rng_state().clone()
-        fits = [PyroAdapter(sales, num_steps=50, num_samples=20, random_state=7).fit(X, y) for _ in range(2)]
+        fits = [
+            PyroAdapter(sales, estimator=PyroSVI(num_steps=50, num_samples=20, random_state=7)).fit(X, y)
+            for _ in range(2)
+        ]
         assert torch.equal(torch.random.get_rng_state(), before)
         for name in ("intercept", "coef", "sigma"):
             assert torch.equal(fits[0].posterior_samples_[name], fits[1].posterior_samples_[name])
-        other = PyroAdapter(sales, num_steps=50, num_samples=20, random_state=8).fit(X, y)
+        other = PyroAdapter(sales, estimator=PyroSVI(num_steps=50, num_samples=20, random_state=8)).fit(X, y)
         assert not torch.equal(other.posterior_samples_["coef"], fits[0].posterior_samples_["coef"])
 
     def test_weights(self):
         # A weight multiplies its row's log-likelihood, so weighted rows give the fit of duplicated rows: the weighted
         # mean and standard deviation, by maximum likelihood.
-        settings = {"num_steps": 2000, "optim": pyro.optim.Adam({"lr": 0.05})}
-        weighted = PyroAdapter(location, **settings).fit(
+        estimator = PyroSVI(num_steps=2000, optim=pyro.optim.Adam({"lr": 0.05}))
+        weighted = PyroAdapter(location, estimator=estimator).fit(
             None, pd.Series([1.0, 2.0, 4.0, 7.0], name="y"), sample_weight=[1.0, 2.0, 0.0, 3.0]
         )
-        duplicated = PyroAdapter(location, **settings).fit(None, pd.Series([1.0, 2.0, 2.0, 7.0, 7.0, 7.0], name="y"))
+        duplicated = PyroAdapter(location, estimator=estimator).fit(
+            None, pd.Series([1.0, 2.0, 2.0, 7.0, 7.0, 7.0], name="y")
+        )
         for name in ("mu", "sigma"):
             assert abs(weighted.params_[name].item() - duplicated.params_[name].item()) < 1e-4
         assert abs(weighted.params_["mu"].item() - 26 / 6) < 0.05
@@ -176,7 +178,7 @@ class TestFit:
             scale = pyro.sample("scale", dist.HalfNormal(5.0))
             return dist.Laplace(loc, scale)
 
-        noise = PyroAdapter(laplace, num_steps=300, num_samples=100, random_state=0)
+        noise = PyroAdapter(laplace, estimator=PyroSVI(num_steps=300, num_samples=100, random_state=0))
         mechanism = AdditiveNoiseMechanism(SklearnAdapter(LinearRegression()), noise=noise).fit(X, y)
         new = X.iloc[:3]
         expected = mechanism.function_.predict(new)["sales"] + mechanism.noise_.predict_proba().mean()
@@ -195,16 +197,16 @@ class TestFit:
         ]
         for fn, error, match in cases:
             with pytest.raises(error, match=match):
-                PyroAdapter(fn, num_steps=1).fit(X, y)
+                PyroAdapter(fn, estimator=PyroSVI(num_steps=1)).fit(X, y)
 
         # NUTS needs latent sites, and can't fit pyro.param values.
         with pytest.raises(ValueError, match="pyro.param"):
-            PyroAdapter(location, inference="mcmc").fit(None, y)
+            PyroAdapter(location, estimator=PyroNUTS()).fit(None, y)
         with pytest.raises(ValueError, match="latent"):
-            PyroAdapter(lambda parents: dist.Normal(0.0, 1.0), inference="mcmc").fit(None, y)
+            PyroAdapter(lambda parents: dist.Normal(0.0, 1.0), estimator=PyroNUTS()).fit(None, y)
 
         # A location far beyond float32's range of squares makes the first loss infinite.
         with pytest.raises(ValueError, match="isn't finite"):
-            PyroAdapter(lambda parents: dist.Normal(pyro.param("mu", torch.tensor(1e30)), 1.0), num_steps=1).fit(
-                None, y
-            )
+            PyroAdapter(
+                lambda parents: dist.Normal(pyro.param("mu", torch.tensor(1e30)), 1.0), estimator=PyroSVI(num_steps=1)
+            ).fit(None, y)

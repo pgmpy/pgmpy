@@ -7,7 +7,7 @@ from scipy import stats
 from scipy.special import logsumexp
 from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 
-from pgmpy.parameterization import PosteriorPredictive, PyroAdapter
+from pgmpy.parameterization import PosteriorPredictive, PyroAdapter, PyroSVI
 
 pytestmark = pytest.mark.skipif(
     not _check_soft_dependencies(["pyro-ppl", "skpro"], severity="none"),
@@ -46,7 +46,7 @@ def X():
 class TestPosteriorPredictive:
     def test_exact_normal(self, train, X):
         # Without latent sites the mixture is fn's distribution itself: N(1 + 2a, 0.5) for each row.
-        dist_ = PyroAdapter(line, num_steps=1).fit(*train).predict_proba(X)
+        dist_ = PyroAdapter(line, estimator=PyroSVI(num_steps=1)).fit(*train).predict_proba(X)
         assert isinstance(dist_, PosteriorPredictive)
         assert (dist_.index.tolist(), dist_.columns.tolist()) == (["u", "v", "w"], ["y"])
         assert dist_.get_tag("distr:measuretype") == "continuous"
@@ -60,7 +60,7 @@ class TestPosteriorPredictive:
     def test_mixture_over_draws(self, train, X):
         # Each row's density is the average of fn's densities over the posterior draws, its mean the average of their
         # means, and its variance the average variance plus the variance of the means.
-        node = PyroAdapter(regression, num_steps=300, num_samples=50, random_state=0).fit(*train)
+        node = PyroAdapter(regression, estimator=PyroSVI(num_steps=300, num_samples=50, random_state=0)).fit(*train)
         draws = {name: values.numpy().astype(float) for name, values in node.posterior_samples_.items()}
         locs = draws["intercept"][:, None] + draws["coef"][:, None] * X["a"].to_numpy()
         scales = np.broadcast_to(draws["sigma"][:, None], locs.shape)
@@ -78,7 +78,7 @@ class TestPosteriorPredictive:
 
     def test_support(self):
         # Outside its support a distribution has density and probability 0, and its cdf is 0 below the support.
-        counts = PyroAdapter(lambda parents: dist.Poisson(torch.tensor(2.0)), num_steps=1)
+        counts = PyroAdapter(lambda parents: dist.Poisson(torch.tensor(2.0)), estimator=PyroSVI(num_steps=1))
         counts.fit(None, pd.Series([0, 1, 2, 5], name="k"))
         poisson = counts.predict_proba(pd.DataFrame(index=range(3)))
         assert poisson.get_tag("distr:measuretype") == "discrete"
@@ -92,7 +92,7 @@ class TestPosteriorPredictive:
         with pytest.raises(NotImplementedError, match="Poisson"):
             poisson.cdf(np.zeros((3, 1)))
 
-        waiting = PyroAdapter(lambda parents: dist.Gamma(2.0, 1.0), num_steps=1).fit(
+        waiting = PyroAdapter(lambda parents: dist.Gamma(2.0, 1.0), estimator=PyroSVI(num_steps=1)).fit(
             None, pd.Series([1.0, 2.0], name="t")
         )
         gamma = waiting.predict_proba(pd.DataFrame(index=range(2)))
@@ -102,7 +102,7 @@ class TestPosteriorPredictive:
 
     def test_subsetting(self, train, X):
         # Subsets keep their rows' parents, so composites such as AdditiveNoiseMechanism's MeanScale can take them.
-        dist_ = PyroAdapter(line, num_steps=1).fit(*train).predict_proba(X)
+        dist_ = PyroAdapter(line, estimator=PyroSVI(num_steps=1)).fit(*train).predict_proba(X)
         assert dist_.iloc[[1, 2]].mean()["y"].tolist() == pytest.approx([1.0, 5.0])
         assert dist_.loc[["w", "u"]].mean()["y"].tolist() == pytest.approx([5.0, -1.0])
         cell = dist_.iat[2, 0]
@@ -112,14 +112,14 @@ class TestPosteriorPredictive:
 
     def test_scalar_and_empty(self, train, X):
         # A root without X gives a scalar distribution, and no rows give empty results without evaluating fn.
-        root = PyroAdapter(lambda parents: dist.Normal(3.0, 2.0), num_steps=1).fit(
+        root = PyroAdapter(lambda parents: dist.Normal(3.0, 2.0), estimator=PyroSVI(num_steps=1)).fit(
             None, pd.Series([1.0, 5.0], name="r")
         )
         scalar = root.predict_proba()
         assert scalar.shape == () and scalar.mean() == pytest.approx(3.0) and scalar.var() == pytest.approx(4.0)
         assert scalar.log_pdf(3.0) == pytest.approx(stats.norm.logpdf(3.0, 3.0, 2.0))
 
-        node = PyroAdapter(line, num_steps=1).fit(*train)
+        node = PyroAdapter(line, estimator=PyroSVI(num_steps=1)).fit(*train)
         empty = node.predict_proba(X.iloc[:0])
         assert empty.mean().shape == (0, 1) and empty.log_pdf(np.empty((0, 1))).shape == (0, 1)
         assert node.predict(X.iloc[:0]).shape == (0, 1)
@@ -128,7 +128,7 @@ class TestPosteriorPredictive:
     def test_sample(self, train, X):
         # Without latent sites the values come from fn's distribution itself, N(1 + 2a, 0.5) for each row. Sampling uses
         # the distribution's own sampler, without skpro's approximations, and leaves the global random state as it was.
-        dist_ = PyroAdapter(line, num_steps=1).fit(*train).predict_proba(X)
+        dist_ = PyroAdapter(line, estimator=PyroSVI(num_steps=1)).fit(*train).predict_proba(X)
         before = torch.random.get_rng_state().clone()
         with warnings.catch_warnings():
             warnings.simplefilter("error")
@@ -147,7 +147,8 @@ class TestPosteriorPredictive:
         # From two observations the posterior of mu is wide, so the mixture's variance, 1 plus the posterior variance of
         # mu, is clearly larger than that of any one draw. Only picking a draw for each value reproduces it.
         root = PyroAdapter(
-            lambda parents: dist.Normal(pyro.sample("mu", dist.Normal(0.0, 10.0)), 1.0), num_samples=200, random_state=0
+            lambda parents: dist.Normal(pyro.sample("mu", dist.Normal(0.0, 10.0)), 1.0),
+            estimator=PyroSVI(num_samples=200, random_state=0),
         ).fit(None, pd.Series([0.0, 1.0], name="r"))
         mu = root.posterior_samples_["mu"].numpy().astype(float)
         values = root.sample(n_samples=20000, random_state=0)["r"]
@@ -157,7 +158,7 @@ class TestPosteriorPredictive:
 
     def test_sample_discrete(self):
         # A Poisson has no cdf in torch, so only its own sampler works; its values are counts.
-        counts = PyroAdapter(lambda parents: dist.Poisson(torch.tensor(2.0)), num_steps=1)
+        counts = PyroAdapter(lambda parents: dist.Poisson(torch.tensor(2.0)), estimator=PyroSVI(num_steps=1))
         values = counts.fit(None, pd.Series([0, 1, 2, 5], name="k")).sample(n_samples=20000, random_state=0)["k"]
         assert (values == np.round(values)).all()
         assert abs(values.mean() - 2) < 0.05 and abs(values.var() - 2) < 0.1

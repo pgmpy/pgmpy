@@ -529,12 +529,12 @@ class capability__exact_inference(_BaseTag):
 
 
 class python_dependencies(_BaseTag):
-    """Python packages the object needs, checked when it is constructed, as in skbase: one package, or a list."""
+    """Python packages the object needs, checked when it is constructed, as in skbase: one package, a list, or None."""
 
     _tags = {
         "tag_name": "python_dependencies",
-        "parent_type": ["parameterization"],
-        "tag_type": "str or list",
+        "parent_type": ["parameterization", "local_estimator"],
+        "tag_type": "str, list or None",
         "short_descr": "Python packages the object needs, checked when it is constructed.",
     }
 
@@ -555,7 +555,7 @@ class parameterization(_BaseTag):
     _tags = {
         "tag_name": "parameterization",
         "parent_type": ["local_estimator"],
-        "tag_type": ("list", ["tabular_cpd", "linear_gaussian_cpd"]),
+        "tag_type": ("list", ["tabular_cpd", "linear_gaussian_cpd", "pyro_adapter"]),
         "short_descr": "The parameterizations the local estimator can fit, by their name tag.",
     }
 
@@ -647,11 +647,13 @@ def check_tag_is_valid(tag_name: str, tag_value) -> None:
         valid, expected = isinstance(tag_value, bool), "a bool"
     elif tag_type == "str":
         valid, expected = isinstance(tag_value, str), "a str"
-    elif tag_type == "str or list":
-        valid = isinstance(tag_value, str) or (
-            isinstance(tag_value, list) and all(isinstance(value, str) for value in tag_value)
+    elif tag_type == "str, list or None":
+        valid = (
+            tag_value is None
+            or isinstance(tag_value, str)
+            or (isinstance(tag_value, list) and all(isinstance(value, str) for value in tag_value))
         )
-        expected = "a str or a list of str"
+        expected = "a str, a list of str or None"
     elif tag_type[0] == "str":
         valid, expected = tag_value in tag_type[1], f"one of {tag_type[1]}"
     else:
