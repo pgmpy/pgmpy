@@ -1,27 +1,5 @@
 import re
 
-try:
-    from pyparsing import (
-        Combine,
-        Group,
-        Literal,
-        OneOrMore,
-        Or,
-        ParseResults,
-        QuotedString,
-        Suppress,
-        Word,
-        ZeroOrMore,
-        alphanums,
-        nestedExpr,
-        pyparsing_common,
-    )
-    from pyparsing import Optional as PyOptional
-except ImportError as e:
-    raise ImportError(
-        f"{e}. pyparsing is required for using dagitty syntax. Please install using: pip install pyparsing"
-    ) from None
-
 # Map dagitty edge characters to _CoreGraph edge types
 # dagitty: <->, ->, <-, --, @->, <-@, @-@, @--, --@
 EDGE_MAP = {
@@ -39,6 +17,46 @@ EDGE_MAP = {
 
 class DagittyReader:
     def __init__(self, string: str | None = None, filename: str | None = None):
+        # Lazy import so the module can be imported without pyparsing installed
+        try:
+            from pyparsing import (
+                Combine,
+                Group,
+                Literal,
+                OneOrMore,
+                Or,
+                ParseResults,
+                QuotedString,
+                Suppress,
+                Word,
+                ZeroOrMore,
+                alphanums,
+                nestedExpr,
+                pyparsing_common,
+            )
+            from pyparsing import Optional as PyOptional
+        except ImportError as e:
+            raise ImportError(
+                f"{e}. pyparsing is required for dagitty syntax. Please install using: pip install pyparsing"
+            ) from None
+
+        self._ParseResults = ParseResults
+        self._pyparsing_symbols = {
+            "Combine": Combine,
+            "Group": Group,
+            "Literal": Literal,
+            "OneOrMore": OneOrMore,
+            "Or": Or,
+            "QuotedString": QuotedString,
+            "Suppress": Suppress,
+            "Word": Word,
+            "ZeroOrMore": ZeroOrMore,
+            "alphanums": alphanums,
+            "nestedExpr": nestedExpr,
+            "pyparsing_common": pyparsing_common,
+            "PyOptional": PyOptional,
+        }
+
         if filename:
             with open(filename) as f:
                 self.string = f.read()
@@ -48,13 +66,19 @@ class DagittyReader:
             raise ValueError("Either `string` or `filename` must be provided.")
 
         self.ebunch = []
-        self.roles = {"exposures": set(), "outcomes": set(), "latents": set(), "adjusted": set(), "selected": set()}
+        self.roles = {
+            "exposures": set(),
+            "outcomes": set(),
+            "latents": set(),
+            "adjusted": set(),
+            "selected": set(),
+        }
         self.betas = {}
         self.nodes = set()
 
         self._parse()
 
-    def _split_at_betas(self, lines: list[str]) -> list[str]:
+    def _split_at_betas(self, lines: list) -> list:
         split_regex = r'(?<=\])\s+(?=[\w"\'`]+\s*(?:->|<-|<->|--|@->|<-@|@-@|@--|--@))'
         new_lines = []
         for line in lines:
@@ -62,6 +86,9 @@ class DagittyReader:
         return new_lines
 
     def _parse(self):
+        s = self._pyparsing_symbols
+        ParseResults = self._ParseResults
+
         content = self.string.strip()
 
         # Strip header and outer braces if present
@@ -75,6 +102,20 @@ class DagittyReader:
 
         lines = [line.strip() for line in content.split("\n")]
         lines = self._split_at_betas(lines)
+
+        alphanums = s["alphanums"]
+        QuotedString = s["QuotedString"]
+        nestedExpr = s["nestedExpr"]
+        Literal = s["Literal"]
+        Or = s["Or"]
+        Word = s["Word"]
+        Group = s["Group"]
+        Suppress = s["Suppress"]
+        pyparsing_common = s["pyparsing_common"]
+        OneOrMore = s["OneOrMore"]
+        PyOptional = s["PyOptional"]
+        ZeroOrMore = s["ZeroOrMore"]
+        Combine = s["Combine"]
 
         var = Word(alphanums + "_" + ".") ^ QuotedString('"') ^ QuotedString("'") ^ QuotedString("`")
         option = nestedExpr("[", "]")
@@ -132,11 +173,11 @@ class DagittyReader:
 
                             src_vars = handle_edge_stat(source, betas)
                             tgt_vars = handle_edge_stat(target, betas)
-                            for s in src_vars:
-                                for t in tgt_vars:
-                                    if t not in betas:
-                                        betas[t] = {}
-                                    betas[t][s] = beta_val
+                            for sv in src_vars:
+                                for tv in tgt_vars:
+                                    if tv not in betas:
+                                        betas[tv] = {}
+                                    betas[tv][sv] = beta_val
 
                             all_vars.update(handle_edge_stat(edge_stat[start_i : end_i + 1], betas))
                             start_i = end_i + 2
@@ -161,9 +202,9 @@ class DagittyReader:
 
             mapped_edge = EDGE_MAP[token]
 
-            for l in left_vars:
-                for r in right_vars:
-                    self.ebunch.append((l, r, mapped_edge))
+            for lv in left_vars:
+                for rv in right_vars:
+                    self.ebunch.append((lv, rv, mapped_edge))
 
             return all_vars
 
@@ -193,13 +234,6 @@ class DagittyReader:
             for edge_s in results.get("edge_stat", []):
                 handle_edge_stat(edge_s, self.betas)
 
-            # If there's an annotation on a top level edge_relation length 3
-            annotation = results.get("annotation")
-            if annotation and isinstance(annotation, ParseResults):
-                if annotation[0] == "beta":
-                    # apply to the last edge processed?
-                    pass
-
         for u, v, _ in self.ebunch:
             self.nodes.add(u)
             self.nodes.add(v)
@@ -223,16 +257,9 @@ class DagittyWriter:
 
         lines = [f"{model_type} {{"]
 
-        # Extract roles
-        # Support mixed usage
         node_statements = []
         nodes_written = set()
         for node in self.model.nodes():
-            if getattr(self.model, "get_role", None):
-                # We can dynamically fetch roles from model
-                pass
-
-            # Use data dict
             data = self.model.nodes[node]
             roles = data.get("roles", set())
 
@@ -257,7 +284,7 @@ class DagittyWriter:
 
         lines.extend(node_statements)
 
-        # Betas
+        # Betas from LinearGaussianCPDs if present
         betas = {}
         if hasattr(self.model, "cpds"):
             from pgmpy.factors.continuous import LinearGaussianCPD
@@ -270,8 +297,6 @@ class DagittyWriter:
                             betas[tgt] = {}
                         betas[tgt][ev] = cpd.beta[i + 1]
 
-        # Edges
-        # reverse map
         REVERSE_MAP = {v: k for k, v in EDGE_MAP.items()}
 
         if type(self.model).__name__ in ("DAG", "LinearGaussianBayesianNetwork"):
@@ -282,7 +307,8 @@ class DagittyWriter:
                 lines.append(edge_str)
         else:
             for u, v, edge_type in sorted(
-                self.model.get_edges(data=True), key=lambda x: (str(x[0]), str(x[1]), str(x[2]))
+                self.model.get_edges(data=True),
+                key=lambda x: (str(x[0]), str(x[1]), str(x[2])),
             ):
                 token = REVERSE_MAP.get(edge_type, "->")
                 lines.append(f"{self._quote(u)} {token} {self._quote(v)}")
