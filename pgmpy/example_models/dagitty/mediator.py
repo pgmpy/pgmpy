@@ -1,7 +1,7 @@
-from .._base import BaseExampleModel, DAGMixin
+from .._base import ADMGMixin, BaseExampleModel
 
 
-class Mediator(DAGMixin, BaseExampleModel):
+class Mediator(ADMGMixin, BaseExampleModel):
     """
     Simple mediator DAG (X -> I -> Y, X <- Z -> I .
     """

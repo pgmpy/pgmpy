@@ -1,7 +1,7 @@
-from .._base import BaseExampleModel, DAGMixin
+from .._base import ADMGMixin, BaseExampleModel
 
 
-class Polzer2012(DAGMixin, BaseExampleModel):
+class Polzer2012(ADMGMixin, BaseExampleModel):
     """
     References
     ----------

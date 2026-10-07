@@ -13,7 +13,7 @@ from pgmpy.base._mixin_roles import _GraphRolesMixin
 from pgmpy.ci_tests import BaseCITest, get_ci_test
 from pgmpy.independencies import Independencies
 from pgmpy.utils._warnings import _warn_external
-from pgmpy.utils.parser import parse_dagitty, parse_lavaan
+from pgmpy.utils.parser import parse_lavaan
 
 
 class DAG(_GraphRolesMixin, nx.DiGraph):
@@ -267,46 +267,31 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         filename: str (default: None)
             The filename of the file containing the model in DAGitty syntax.
-
-        Examples
-        --------
-        >>> from pgmpy.base import DAG
-        >>> dag = DAG.from_dagitty(
-        ...     "dag{'carry matches' [latent] cancer [outcome] smoking -> 'carry matches' [beta=0.2] "
-        ...     "smoking -> cancer [beta=0.5] 'carry matches' -> cancer }"
-        ... )
-
-        Creating a Linear Gaussian Bayesian network from dagitty:
-
-        >>> from pgmpy.base import DAG
-        >>> from pgmpy.models import LinearGaussianBayesianNetwork as LGBN
-
-        # Specifying beta creates a LinearGaussianBayesianNetwork instance
-        >>> dag = DAG.from_dagitty("dag{X -> Y [beta=0.3] Y -> Z [beta=0.1]}")
-        >>> data = dag.simulate(n_samples=int(1e4))
-
-        >>> from pgmpy.base import DAG
-        >>> from pgmpy.models import LinearGaussianBayesianNetwork as LGBN
         """
-        if filename:
-            with open(filename) as f:
-                dagitty_str = f.readlines()
-        elif string:
-            dagitty_str = string.split("\n")
-        else:
-            raise ValueError("Either `filename` or `string` need to be specified")
+        from pgmpy.readwrite.dagitty import DagittyReader
 
-        ebunch, roles, coefs, nodes = parse_dagitty(dagitty_str)
-        if len(coefs) == 0:
-            dag = cls(ebunch=ebunch, roles=roles)
-            dag.add_nodes_from(nodes)
+        reader = DagittyReader(string=string, filename=filename)
+        ebunch = []
+        for u, v, edge_type in reader.ebunch:
+            if edge_type == "->":
+                ebunch.append((u, v))
+            elif edge_type == "<-":
+                ebunch.append((v, u))
+            else:
+                raise ValueError(f"DAG only supports directed edges '->' and '<-'. Found '{edge_type}'.")
+
+        if not reader.betas:
+            dag = cls(ebunch=ebunch, roles=reader.roles)
+            dag.add_nodes_from(reader.nodes)
             return dag
         else:
+            import numpy as np
+
             from pgmpy.factors.continuous import LinearGaussianCPD
             from pgmpy.models import LinearGaussianBayesianNetwork
 
-            lgbn = LinearGaussianBayesianNetwork(ebunch=ebunch, roles=roles)
-            lgbn.add_nodes_from(nodes)
+            lgbn = LinearGaussianBayesianNetwork(ebunch=ebunch, roles=reader.roles)
+            lgbn.add_nodes_from(reader.nodes)
 
             std = 1
             intercept = 0
@@ -314,8 +299,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             cpds = []
             for i, var in enumerate(lgbn.nodes()):
                 parents = lgbn.get_parents(var)
-                if var not in coefs:
-                    coefs[var] = {}
+                if var not in reader.betas:
+                    reader.betas[var] = {}
 
                 rng = np.random.default_rng()
 
@@ -323,8 +308,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
                 beta[0] = intercept
 
                 for i, ev in enumerate(parents):
-                    if ev in coefs[var]:
-                        beta[i + 1] = coefs[var][ev]
+                    if ev in reader.betas[var]:
+                        beta[i + 1] = reader.betas[var][ev]
 
                 cpd = LinearGaussianCPD(
                     variable=var,
@@ -1600,72 +1585,15 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         """
         Convert the DAG to dagitty syntax representation.
 
-        The dagitty syntax represents directed acyclic graphs using
-        the dag { statements } format with -> for directed edges.
-        Isolated nodes (nodes with no edges) are included as standalone nodes.
-
         Returns
         -------
         str
             String representation of the DAG in dagitty syntax format.
-
-        Examples
-        --------
-        >>> from pgmpy.base import DAG
-        >>> dag = DAG([("X", "Y"), ("Z", "Y")])
-        >>> print(dag.to_dagitty())
-        dag {
-        X -> Y
-        Z -> Y
-        }
-
-        >>> dag2 = DAG([("A", "B"), ("B", "C")])
-        >>> print(dag2.to_dagitty())
-        dag {
-        A -> B
-        B -> C
-        }
-
-        >>> # DAG with isolated node
-        >>> dag3 = DAG()
-        >>> dag3.add_nodes_from(["A", "B"])
-        >>> dag3.add_edge("A", "B")
-        >>> dag3.add_node("C")  # Isolated node
-        >>> print(dag3.to_dagitty())
-        dag {
-        A -> B
-        C
-        }
-
-        Notes
-        -----
-        - Node names are converted to string representations using str().
-        - If node names contain spaces or special characters, they will be used as-is.
-        - Users should ensure node names are valid in R/dagitty context if needed.
-
-        References
-        ----------
-        dagitty syntax: https://cran.r-project.org/web/packages/dagitty/dagitty.pdf
         """
-        statements = []
+        from pgmpy.readwrite.dagitty import DagittyWriter
 
-        # Create edge statements in "X -> Y" format and add isolated nodes
-        if self.edges():
-            edge_statements = []
-            for parent, child in sorted(self.edges(), key=lambda x: (str(x[0]), str(x[1]))):
-                parent_str = str(parent)
-                child_str = str(child)
-                edge_statements.append(f"{parent_str} -> {child_str}")
-            statements.extend(edge_statements)
-
-        for node in sorted(nx.isolates(self), key=str):
-            statements.append(str(node))
-
-        content = "\n".join(statements)
-        if content:
-            return f"dag {{\n{content}\n}}"
-        else:
-            return "dag {\n}"
+        writer = DagittyWriter(self)
+        return writer.write()
 
     def _variable_name_contains_non_string(self):
         """
