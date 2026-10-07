@@ -44,14 +44,14 @@ class ADMG(_CoreGraph):
         Initializes a `ADMG` instance using DAGitty syntax.
         """
         from pgmpy.readwrite.dagitty import DagittyReader
-        
+
         reader = DagittyReader(string=string, filename=filename)
         ebunch = []
         for u, v, edge_type in reader.ebunch:
             if edge_type not in cls.SUPPORTED_EDGE_TYPES:
-                raise ValueError(f"ADMG doesn't support edge type '{{edge_type}}'.")
+                raise ValueError("ADMG doesn't support edge type '{edge_type}'.")
             ebunch.append((u, v, edge_type))
-            
+
         graph = cls(edge_list=ebunch, roles=reader.roles)
         graph.add_nodes_from(reader.nodes)
         return graph
@@ -61,5 +61,6 @@ class ADMG(_CoreGraph):
         Convert the ADMG to dagitty syntax representation.
         """
         from pgmpy.readwrite.dagitty import DagittyWriter
+
         writer = DagittyWriter(self)
         return writer.write()

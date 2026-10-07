@@ -50,5 +50,3 @@ def parse_lavaan(lines):
                 latents.append(results["latent"])
                 ebunch.extend([(results["latent"], obs) for obs in results["obs"]])
     return ebunch, latents, err_corr, err_var
-
-

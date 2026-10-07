@@ -731,11 +731,7 @@ class TestDAGParser(unittest.TestCase):
         model_from_file = DAG.from_dagitty(filename="test_model.dagitty")
         os.remove("test_model.dagitty")
 
-        expected_edges = {
-            ("smoking", "cancer"),
-            ("smoking", "carry matches"),
-            ("carry matches", "cancer")
-        }
+        expected_edges = {("smoking", "cancer"), ("smoking", "carry matches"), ("carry matches", "cancer")}
 
         self.assertEqual(set(model_from_str.edges()), expected_edges)
         self.assertEqual(set(model_from_file.edges()), expected_edges)

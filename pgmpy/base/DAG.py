@@ -251,7 +251,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         return cls(ebunch=ebunch, latents=latents)
 
     @classmethod
-    def from_dagitty(cls, string=None, filename=None) -> "DAG":
+    def from_dagitty(cls, string=None, filename=None) -> DAG:
         """
         Initializes a `DAG` instance using DAGitty syntax.
 
@@ -269,22 +269,23 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             The filename of the file containing the model in DAGitty syntax.
         """
         from pgmpy.readwrite.dagitty import DagittyReader
-        
+
         reader = DagittyReader(string=string, filename=filename)
         ebunch = []
         for u, v, edge_type in reader.ebunch:
             if edge_type != "->":
                 raise ValueError(f"DAG only supports directed edges '->'. Found '{edge_type}'.")
             ebunch.append((u, v))
-            
+
         if not reader.betas:
             dag = cls(ebunch=ebunch, roles=reader.roles)
             dag.add_nodes_from(reader.nodes)
             return dag
         else:
+            import numpy as np
+
             from pgmpy.factors.continuous import LinearGaussianCPD
             from pgmpy.models import LinearGaussianBayesianNetwork
-            import numpy as np
 
             lgbn = LinearGaussianBayesianNetwork(ebunch=ebunch, roles=reader.roles)
             lgbn.add_nodes_from(reader.nodes)
@@ -1587,6 +1588,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             String representation of the DAG in dagitty syntax format.
         """
         from pgmpy.readwrite.dagitty import DagittyWriter
+
         writer = DagittyWriter(self)
         return writer.write()
 
