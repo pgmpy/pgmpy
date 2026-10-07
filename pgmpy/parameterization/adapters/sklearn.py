@@ -15,8 +15,9 @@ class SklearnAdapter(BaseParameter):
 
     A classifier models a discrete target: each row of ``X`` gets a ``NominalDistribution`` with the classifier's
     probabilities of the target's labels. A regressor gives point predictions only: ``predict`` returns them, while
-    ``predict_proba`` and ``sample`` raise a ``TypeError``, as a regressor has no distribution. For a distribution, use
-    ``SkproAdapter`` with a skpro probabilistic regressor.
+    ``predict_proba``, ``sample`` and ``log_likelihood`` raise a ``NotImplementedError``, as a regressor has no
+    distribution, and its ``capability:distribution`` tag is False. For a distribution, use ``SkproAdapter`` with a
+    skpro probabilistic regressor.
 
     ``fit`` fits a clone of ``estimator``, with the sample weights if given. The estimator gets the parents as a
     DataFrame sorted by name, as in ``evidence_``, so a pipeline must select its columns by name, not position. If the
@@ -83,7 +84,7 @@ class SklearnAdapter(BaseParameter):
                 raise TypeError(f"A classifier must implement predict_proba, but {type(estimator).__name__} doesn't.")
             self.set_tags(variable_type=["discrete"])
         elif is_regressor(estimator):
-            self.set_tags(variable_type=["continuous"])
+            self.set_tags(**{"variable_type": ["continuous"], "capability:distribution": False})
         else:
             raise TypeError(
                 f"estimator must be a scikit-learn classifier or regressor, but is a {type(estimator).__name__}."
@@ -118,7 +119,7 @@ class SklearnAdapter(BaseParameter):
 
     def _predict_proba(self, X: pd.DataFrame | None) -> Any:
         if self.variable_type_ == "continuous":
-            raise TypeError(
+            raise NotImplementedError(
                 f"{type(self.estimator).__name__} is a regressor, which gives point predictions, not a distribution: "
                 "use predict, or SkproAdapter with a skpro probabilistic regressor."
             )

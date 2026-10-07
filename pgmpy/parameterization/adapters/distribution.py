@@ -7,11 +7,12 @@ import numpy as np
 import pandas as pd
 from skbase.utils.dependencies import _safe_import
 
-from pgmpy.parameterization._base import BaseParameter, _checked_evidence, _parent_order
+from pgmpy.parameterization._base import BaseParameter, _checked_evidence, _equal, _parent_order
 from pgmpy.parameterization.distributions import NominalDistribution
 
 BaseDistribution = _safe_import("skpro.distributions.base.BaseDistribution")
 IID = _safe_import("skpro.distributions.IID")
+Normal = _safe_import("skpro.distributions.Normal")
 
 if TYPE_CHECKING:
     from skpro.distributions.base import BaseDistribution  # noqa: F811
@@ -25,7 +26,8 @@ class DistributionAdapter(BaseParameter):
     to every row of ``X``, and, for a root without ``X``, the distribution itself. A distribution whose parameters are
     numbers is rebuilt for the rows; any other, e.g. ``Empirical`` or ``ZeroInflated``, is repeated by skpro's ``IID``,
     which has no ``pmf``. The target is discrete for a ``NominalDistribution`` and continuous for any other
-    distribution, whatever skpro's measure type of it.
+    distribution, whatever skpro's measure type of it. A ``NominalDistribution`` is a fixed table and a ``Normal`` a
+    linear Gaussian with zero coefficients, so both have the ``capability:exact_inference`` tag.
 
     Requires the optional dependency ``skpro``.
 
@@ -71,7 +73,14 @@ class DistributionAdapter(BaseParameter):
         self._scalar = distribution.distribution if isinstance(distribution, IID) else distribution
         if self._scalar.ndim != 0:
             raise ValueError(f"distribution must be scalar, but has shape {self._scalar.shape}.")
-        self.set_tags(variable_type=["discrete" if isinstance(self._scalar, NominalDistribution) else "continuous"])
+        if isinstance(self._scalar, NominalDistribution):
+            table = {"capability:factor": True, "capability:exact_inference": True}
+            self.set_tags(**{"variable_type": ["discrete"], **table})
+        else:
+            self.set_tags(variable_type=["continuous"])
+        if isinstance(self._scalar, Normal):
+            gaussian = ("linearity", "additive_noise", "gaussian_noise")
+            self.set_tags(**{"capability:exact_inference": True, **{f"assumption:{name}": True for name in gaussian}})
 
     @classmethod
     def from_values(
@@ -127,3 +136,13 @@ class DistributionAdapter(BaseParameter):
             numbers = {name: float(value) for name, value in params.items()}
             return type(scalar)(**numbers, index=X.index, columns=[self.variable_])
         return IID(deepcopy(scalar), index=X.index, columns=[self.variable_])
+
+    def __eq__(self, other: object) -> bool:
+        if type(other) is not type(self) or not (self.is_fitted and other.is_fitted):
+            return super().__eq__(other)
+        # skbase's == ignores the distributions' types, which _equal checks.
+        return (self.variable_, self.evidence_) == (other.variable_, other.evidence_) and _equal(
+            self.distribution_, other.distribution_
+        )
+
+    __hash__ = BaseParameter.__hash__

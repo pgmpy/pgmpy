@@ -47,7 +47,8 @@ class NanClassifier(ClassifierMixin, BaseEstimator):
 class TestSklearnAdapter:
     def test_tags(self):
         # The target's type comes from the estimator, as does support for sample weights: an estimator gets them if its
-        # fit takes sample_weight, or any keyword argument, as meta-estimators such as GridSearchCV do.
+        # fit takes sample_weight, or any keyword argument, as meta-estimators such as GridSearchCV do. A regressor
+        # gives point predictions, not a distribution.
         for estimator, variable_type, weighted in (
             (LinearRegression(), "continuous", True),
             (LogisticRegression(), "discrete", True),
@@ -57,6 +58,7 @@ class TestSklearnAdapter:
             adapter = SklearnAdapter(estimator)
             assert adapter.get_tag("variable_type") == [variable_type]
             assert adapter.get_tag("supports_weighted_data") is weighted
+            assert adapter.get_tag("capability:distribution") is (variable_type == "discrete")
         assert SklearnAdapter.get_class_tag("python_dependencies") == "skpro"
 
         # The tags follow the estimator after set_params, also a nested one.
@@ -85,7 +87,7 @@ class TestSklearnAdapter:
             lambda: adapter.sample(X_test),
             lambda: adapter.log_likelihood(X, y),
         ):
-            with pytest.raises(TypeError, match="point predictions"):
+            with pytest.raises(NotImplementedError, match="point predictions"):
                 call()
 
         # Sample weights go to the estimator.

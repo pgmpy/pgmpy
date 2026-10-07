@@ -8,6 +8,8 @@ import pytest
 from scipy.stats import norm
 from skbase._exceptions import NotFittedError
 from sklearn.linear_model import LinearRegression
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 
 import pgmpy.parameterization
 from pgmpy.parameterization import BaseParameter
@@ -52,6 +54,7 @@ class TestBaseParameter:
         assert BaseParameter.get_class_tag("variable_type") == ["discrete", "continuous"]
         assert BaseParameter.get_class_tag("parent_data_types") == ["discrete", "continuous", "mixed"]
         assert BaseParameter.get_class_tag("supports_weighted_data") is False
+        assert BaseParameter.get_class_tag("capability:distribution") is True
         assert BaseParameter.get_class_tag("python_dependencies") is None
 
     def test_fit(self, data):
@@ -316,47 +319,20 @@ class TestBaseParameter:
     def test_equality(self, data):
         X, y = data
 
-        assert CountParameter() == CountParameter()
-        assert CountParameter(pseudo_count=1) != CountParameter()
-
-        # Fitted parameters compare by what they learned, and equal ones hash equally.
-        fitted, same, other = CountParameter().fit(X, y), CountParameter().fit(X, y), CountParameter().fit(X[:3], y[:3])
-        assert fitted == same and hash(fitted) == hash(same)
-        assert fitted != other
-        assert other != CountParameter()
-
-        # Floats compare with numpy.allclose's tolerance, as arrays do, but names compare exactly.
-        assert CountParameter().fit(X, y, sample_weight=[1, 1, 1, 1 + 1e-12]) == fitted
-        assert CountParameter().fit(X, y, sample_weight=[1, 1, 1, 1.1]) != fitted
-        named = {name: CountParameter().fit(X, y.set_axis([name], axis=1)) for name in (1000.0, 1000.01, "t")}
-        assert named[1000.0] != named["t"] and named["t"] != named[1000.0] and named[1000.0] != named[1000.01]
-
-        # Other fitted values compare by type and content: numbers and numeric arrays within numpy.allclose's tolerance,
-        # other arrays exactly, dicts and lists item by item, skbase objects such as distributions by their parameters,
-        # and fitted estimators by identity.
+        # Unfitted objects compare their class and parameters. Nested estimators and skbase objects compare by their
+        # type and parameters too, at any depth.
         class ObjectParameter(CountParameter):
             def __init__(self, value=None):
                 self.value = value
                 super().__init__()
 
-            def _fit(self, X, y, sample_weight):
-                self.value_ = self.value
-
-        def equal(first, second):
-            return ObjectParameter(first).fit(X, y) == ObjectParameter(second).fit(X, y)
-
-        assert equal(np.array(["u", "v"]), np.array(["u", "v"])) and not equal(
-            np.array(["u", "v"]), np.array(["u", "w"])
+        assert CountParameter() == CountParameter()
+        assert CountParameter(pseudo_count=1) != CountParameter() and ObjectParameter() != CountParameter()
+        pipeline = make_pipeline(StandardScaler(), LinearRegression())
+        assert ObjectParameter(pipeline) == ObjectParameter(make_pipeline(StandardScaler(), LinearRegression()))
+        assert ObjectParameter(pipeline) != ObjectParameter(
+            make_pipeline(StandardScaler(), LinearRegression(fit_intercept=False))
         )
-        assert equal({"a": [1.0, "x"]}, {"a": [1.0 + 1e-12, "x"]}) and not equal({"a": [1.0, "x"]}, {"a": [1.0, "y"]})
-        for make in (lambda values: pd.array(values, dtype="string"), pd.Categorical):
-            assert equal(make(["a", "b"]), make(["a", "b"])) and not equal(make(["a", "b"]), make(["a", "c"]))
-            assert len({ObjectParameter(make(["a", "b"])).fit(X, y), ObjectParameter(make(["a", "c"])).fit(X, y)}) == 2
-        estimator = LinearRegression()
-        assert equal(estimator, estimator) and not equal(estimator, LinearRegression())
-
-        # Unfitted objects compare their parameters the same way, except that estimators compare by their parameters.
-        assert ObjectParameter(LinearRegression()) == ObjectParameter(LinearRegression())
         assert ObjectParameter(np.array(["u", "v"], dtype=object)) != ObjectParameter(
             np.array(["u", "w"], dtype=object)
         )
@@ -365,8 +341,19 @@ class TestBaseParameter:
 
             from pgmpy.parameterization.distributions import NominalDistribution
 
-            assert equal(Normal(mu=0.0, sigma=1.0), Normal(mu=0.0, sigma=1.0))
-            assert not equal(Normal(mu=0.0, sigma=1.0), LogNormal(mu=0.0, sigma=1.0))
-            strings, objects = np.unique(["v", "u"]), np.array(["u", "w"], dtype=object)
-            assert equal(NominalDistribution([0.3, 0.7], strings), NominalDistribution([0.3, 0.7], strings))
-            assert not equal(NominalDistribution([0.3, 0.7], strings), NominalDistribution([0.3, 0.7], objects))
+            assert ObjectParameter(Normal(mu=0.0, sigma=1.0)) == ObjectParameter(Normal(mu=0.0, sigma=1.0))
+            assert ObjectParameter(Normal(mu=0.0, sigma=1.0)) != ObjectParameter(LogNormal(mu=0.0, sigma=1.0))
+            # String arrays, on which skbase's deep_equals raises.
+            strings = np.unique(["v", "u"])
+            nominal = ObjectParameter(NominalDistribution([0.3, 0.7], strings))
+            assert nominal == ObjectParameter(NominalDistribution([0.3, 0.7], strings.copy()))
+
+        # A fitted object equals only itself, unless its class compares what it learned, as the CPDs do.
+        fitted = CountParameter().fit(X, y)
+        assert fitted == fitted and fitted != CountParameter().fit(X, y) and fitted != CountParameter()
+
+        # The hash is constant per class, so fit doesn't change it, and equal objects hash equally.
+        parameter = CountParameter()
+        lookup = {parameter: 1}
+        parameter.fit(X, y)
+        assert lookup[parameter] == 1 and hash(parameter) == hash(CountParameter())

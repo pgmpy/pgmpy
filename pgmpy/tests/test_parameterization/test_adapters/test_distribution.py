@@ -34,6 +34,15 @@ class TestDistributionAdapter:
         assert DistributionAdapter(NominalDistribution([0.3, 0.7], ["a", "b"])).get_tag("variable_type") == ["discrete"]
         assert DistributionAdapter.get_class_tag("requires_data") is False
 
+        # A NominalDistribution is a fixed table, and a Normal a linear Gaussian with zero coefficients, so both support
+        # exact inference; other distributions don't.
+        table = DistributionAdapter(NominalDistribution([0.3, 0.7], ["a", "b"]))
+        assert table.get_tag("capability:factor") and table.get_tag("capability:exact_inference")
+        gaussian = DistributionAdapter(IID(normal, index=pd.Index([0]), columns=pd.Index(["X"])))
+        assert gaussian.get_tag("capability:exact_inference") and not gaussian.get_tag("capability:factor")
+        assert all(gaussian.get_tag(f"assumption:{name}") for name in ("linearity", "additive_noise", "gaussian_noise"))
+        assert not DistributionAdapter(Delta(c=2.5)).get_tag("capability:exact_inference")
+
         # from_values creates a fitted adapter without data, as do() needs. fit only records the target and parents.
         do = DistributionAdapter.from_values("X", Delta(c=2.5), ["b", "a"])
         assert do.is_fitted and (do.variable_, do.evidence_, do.variable_type_) == ("X", ["a", "b"], "continuous")

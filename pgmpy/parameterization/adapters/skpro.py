@@ -10,8 +10,6 @@ from pgmpy.parameterization._base import BaseParameter
 from pgmpy.parameterization.adapters.sklearn import _features
 from pgmpy.utils import preprocess_data
 
-DummyProbaRegressor = _safe_import("skpro.regression.dummy.DummyProbaRegressor")
-IID = _safe_import("skpro.distributions.IID")
 Normal = _safe_import("skpro.distributions.Normal")
 
 if TYPE_CHECKING:
@@ -32,9 +30,10 @@ class SkproAdapter(BaseParameter):
     where a value not seen in fit raises an error. A target whose name isn't a string is passed as ``str(name)``, which
     is then the column of the predicted distributions; samples keep the name. skpro matches rows by their labels, so the
     estimator is fitted by position, and ``predict_proba`` raises for an ``X`` with repeated labels; ``predict``,
-    ``sample`` and ``log_likelihood`` take any index. A root doesn't use the estimator: every row gets the empirical
-    distribution of ``y``, repeated by skpro's ``IID``, which has no ``log_likelihood``, as skpro's ``Empirical`` has no
-    ``log_pmf``.
+    ``sample`` and ``log_likelihood`` take any index. A root fits the estimator on a constant column, so that it is the
+    same model without parents and can be scored like one. An estimator that adds its own intercept, such as
+    ``GLMRegressor(add_constant=True)``, then has two: least squares still fits exactly, but the iterative fit of e.g. a
+    Poisson GLM can end slightly off.
 
     Requires the optional dependency ``skpro``.
 
@@ -46,7 +45,7 @@ class SkproAdapter(BaseParameter):
     Attributes
     ----------
     estimator_ : skpro probabilistic regressor
-        The fitted clone of ``estimator``, or, for a root, a fitted ``DummyProbaRegressor(strategy="empirical")``.
+        The fitted clone of ``estimator``; a root's is fitted on a constant column.
 
     Examples
     --------
@@ -89,16 +88,16 @@ class SkproAdapter(BaseParameter):
             for name, dtype in features.dtypes.items()
             if is_string_dtype(dtype)
         }
-        # Step 2: Prepare the parents and the target, by position, as skpro matches rows by label. The target goes in as
+        # Step 2: Prepare the parents and the target, by position, as skpro matches rows by label. A root gets a
+        # constant column instead, so that its estimator is the same model without parents. The target goes in as
         # floats, under a string name.
-        training = self._prepare(X).reset_index(drop=True)
+        training = self._prepare(X).reset_index(drop=True) if self.evidence_ else _constant(len(y))
         target = y.astype(float).reset_index(drop=True)
         target = target if isinstance(self.variable_, str) else target.set_axis([str(self.variable_)], axis=1)
         self._name = target.columns[0]
 
-        # Step 3: Fit a clone of the regressor; a root gets the empirical distribution of y.
-        estimator = self.estimator if self.evidence_ else DummyProbaRegressor(strategy="empirical")
-        self.estimator_ = clone(estimator).fit(training, target)
+        # Step 3: Fit a clone of the regressor.
+        self.estimator_ = clone(self.estimator).fit(training, target)
 
     def _prepare(self, X: pd.DataFrame) -> pd.DataFrame:
         """Return the parents as skpro regressors take them: with string names, numbers and booleans as floats, and
@@ -115,27 +114,31 @@ class SkproAdapter(BaseParameter):
         return prepared
 
     def _predict_proba(self, X: pd.DataFrame | None) -> Any:
-        # Step 1: A root's DummyProbaRegressor holds the empirical distribution of y: return it without X, and repeat it
-        # for every row of X by IID, as the regressor's own prediction copies y for every row.
-        if not self.evidence_:
-            distribution = self.estimator_.distribution_.clone()
-            return distribution if X is None else IID(distribution, index=X.index, columns=[self._name])
+        # Step 1: Without X, which only a root gets, return the distribution predicted for one constant row.
+        if X is None:
+            return self.estimator_.predict_proba(_constant(1)).iat[0, 0]
 
         # Step 2: skpro regressors can't predict for no rows, so an empty X gets an empty Normal.
         if len(X) == 0:
             return Normal(mu=np.empty((0, 1)), sigma=1.0, index=X.index, columns=[self._name])
 
-        # Step 3: Predict a distribution for each row. skpro matches rows by label, which mixes up rows with repeated
-        # labels.
+        # Step 3: Predict a distribution for each row, from the parents, or from the constant column for a root. skpro
+        # matches rows by label, which mixes up rows with repeated labels.
         if not X.index.is_unique:
             raise ValueError(
                 "SkproAdapter.predict_proba needs X with unique labels, as skpro matches rows by label: pass "
                 "X.reset_index(drop=True). predict, sample and log_likelihood take any index."
             )
-        dist = self.estimator_.predict_proba(self._prepare(X))
+        features = self._prepare(X) if self.evidence_ else _constant(len(X)).set_axis(X.index)
+        dist = self.estimator_.predict_proba(features)
         if dist.shape != (len(X), 1):
             raise ValueError(
                 f"{type(self.estimator_).__name__} predicted a distribution of shape {dist.shape} for {len(X)} rows, "
                 f"but SkproAdapter needs one of shape ({len(X)}, 1)."
             )
         return dist
+
+
+def _constant(n_rows: int) -> pd.DataFrame:
+    """Return the constant column that a root's estimator is fitted and predicts on, as its only feature."""
+    return pd.DataFrame({"constant": np.ones(n_rows)})

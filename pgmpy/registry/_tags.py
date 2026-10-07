@@ -475,6 +475,24 @@ class supports_weighted_data(_BaseTag):
     }
 
 
+class capability__distribution(_BaseTag):
+    """
+    Whether the parameterization gives a distribution: whether ``predict_proba``, ``sample`` and ``log_likelihood``
+    work.
+
+    False for a point predictor, such as ``SklearnAdapter`` wrapping a regressor, whose only prediction is
+    ``predict``; those methods then raise ``NotImplementedError``. ``log_likelihood`` can still raise it for a
+    distribution that skpro can't score, e.g. an ``Empirical``.
+    """
+
+    _tags = {
+        "tag_name": "capability:distribution",
+        "parent_type": ["parameterization"],
+        "tag_type": "bool",
+        "short_descr": "Whether it gives a distribution, so that predict_proba, sample and log_likelihood work.",
+    }
+
+
 class capability__factor(_BaseTag):
     """
     Whether the parameterization can be turned into a discrete factor for exact inference.

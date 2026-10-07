@@ -30,6 +30,9 @@ class BaseParameter(BaseEstimator):
     tags registered for parameterizations in :mod:`pgmpy.registry`; ``variable_type`` must hold a single type by the
     time ``fit`` runs.
 
+    Unfitted objects compare their class and parameters. A fitted object equals only itself, unless its class compares
+    what it learned, as the CPDs and ``DistributionAdapter`` do. The hash is constant per class.
+
     Attributes
     ----------
     variable_ : hashable
@@ -47,6 +50,7 @@ class BaseParameter(BaseEstimator):
         "parent_data_types": ["discrete", "continuous", "mixed"],
         "supports_weighted_data": False,
         "requires_data": True,
+        "capability:distribution": True,
         "capability:factor": False,
         "capability:exact_inference": False,
         "assumption:linearity": False,
@@ -305,22 +309,20 @@ class BaseParameter(BaseEstimator):
     def __eq__(self, other: object) -> bool:
         if type(other) is not type(self) or self.is_fitted != other.is_fitted:
             return False
-        if not self.is_fitted:
-            return _equal(self.get_params(deep=False), other.get_params(deep=False), fitted=False)
-        if (self.variable_, self.evidence_) != (other.variable_, other.evidence_):
-            return False
-        return _equal(self.get_fitted_params(deep=False), other.get_fitted_params(deep=False))
+        if self.is_fitted:
+            return self is other
+        return _equal(self.get_params(deep=False), other.get_params(deep=False))
 
     def __hash__(self) -> int:
-        if not self.is_fitted:
-            return hash(type(self).__name__)
-        return hash((type(self).__name__, self.variable_, tuple(self.evidence_)))
+        # Constant per class, as fit changes the object but must not change its hash.
+        return hash(type(self))
 
 
-def _equal(value: Any, other: Any, fitted: bool = True) -> bool:
-    """Return whether two values are equal: numbers and numeric arrays within numpy.allclose's tolerance, containers
-    item by item, and skbase or sklearn objects by their parameters, except fitted estimators, which compare by
-    identity."""
+def _equal(value: Any, other: Any) -> bool:
+    """Return whether two parameter values are equal: numbers and numeric arrays within numpy.allclose's tolerance,
+    other values of the same type, containers item by item, and skbase objects and sklearn estimators by their
+    parameters. skbase's ``deep_equals`` would compare sklearn estimators by identity, and mishandles object and string
+    arrays."""
     if all(
         isinstance(v, (Real, np.number, np.ndarray)) and np.issubdtype(np.asarray(v).dtype, np.number)
         for v in (value, other)
@@ -333,14 +335,11 @@ def _equal(value: Any, other: Any, fitted: bool = True) -> bool:
     if isinstance(value, (pd.Index, pd.Series, pd.DataFrame, pd.api.extensions.ExtensionArray)):
         return value.equals(other)
     if isinstance(value, dict):
-        return value.keys() == other.keys() and all(_equal(value[key], other[key], fitted) for key in value)
+        return value.keys() == other.keys() and all(_equal(value[key], other[key]) for key in value)
     if isinstance(value, (list, tuple)):
-        return len(value) == len(other) and all(_equal(a, b, fitted) for a, b in zip(value, other))
-    # Fitted estimators hold what they learned in attributes that skbase and sklearn don't compare.
-    if fitted and isinstance(value, (BaseEstimator, SklearnEstimator)):
-        return value is other
+        return len(value) == len(other) and all(_equal(a, b) for a, b in zip(value, other))
     if isinstance(value, (BaseObject, SklearnEstimator)):
-        return _equal(value.get_params(deep=False), other.get_params(deep=False), fitted)
+        return _equal(value.get_params(deep=False), other.get_params(deep=False))
     return value == other
 
 

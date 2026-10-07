@@ -3,6 +3,7 @@ from importlib.util import find_spec
 import numpy as np
 import pandas as pd
 import pytest
+from scipy.stats import norm, poisson
 from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.pipeline import make_pipeline
@@ -75,12 +76,18 @@ class TestSkproAdapter:
         with pytest.raises(ValueError, match="sample_weight"):
             SkproAdapter(GLMRegressor()).fit(X, y, sample_weight=np.ones(len(y)))
 
-        # A root doesn't use the estimator: it gets the empirical distribution of y, for every row of X.
+        # A root is the estimator fitted on a constant column, the same model without parents, so it can be scored. This
+        # GLM gives the Normal with y's mean and standard deviation, and a Poisson GLM the Poisson with the mean count.
         root = SkproAdapter(GLMRegressor()).fit(None, y)
-        assert type(root.predict_proba()).__name__ == "Empirical"
-        assert root.predict_proba().mean() == pytest.approx(y.mean())
+        dist = root.predict_proba()
+        assert type(dist).__name__ == "Normal" and dist.ndim == 0
+        assert (dist.mean(), dist.var()) == pytest.approx((y.mean(), y.var(ddof=1)))
         np.testing.assert_allclose(root.predict_proba(pd.DataFrame(index=["p", "q"])).mean()["Y"], [y.mean()] * 2)
-        assert root.sample(n_samples=10, random_state=0)["Y"].isin(y).all()
+        np.testing.assert_allclose(root.log_likelihood(None, y)["Y"], norm.logpdf(y, y.mean(), y.std(ddof=1)))
+        assert root.sample(n_samples=10, random_state=0).shape == (10, 1)
+        counts = pd.Series(np.random.default_rng(0).poisson(3.0, size=200).astype(float), name="C")
+        counted = SkproAdapter(GLMRegressor(family="Poisson")).fit(None, counts)
+        np.testing.assert_allclose(counted.log_likelihood(None, counts)["C"], poisson.logpmf(counts, counts.mean()))
 
         # A fitted estimator compares by identity, so a fitted adapter only equals itself.
         assert adapter == adapter and len({adapter, adapter}) == 1
@@ -112,14 +119,16 @@ class TestSkproAdapter:
 
         # skpro matches rows by label, so the adapter fits by position, and predict, sample and log_likelihood predict
         # by position: data with repeated labels, or a MultiIndex like a parent's draws, works. predict_proba keeps X's
-        # labels, so it raises for repeated ones, except for a root, as its rows all get the same distribution.
+        # labels, so it raises for repeated ones.
         multi = pd.MultiIndex.from_arrays([np.arange(len(y)) % 5, np.arange(len(y)) // 5])
         root = SkproAdapter(GLMRegressor()).fit(None, y.set_axis(multi))
-        rows = pd.DataFrame(index=multi[[0, 0, 1]])
+        rows, repeated_rows = pd.DataFrame(index=multi[:3]), pd.DataFrame(index=multi[[0, 0, 1]])
         dist = root.predict_proba(rows)
         assert dist.index.equals(rows.index)
         np.testing.assert_allclose(dist.mean()["Y"], [y.mean()] * 3)
-        assert root.sample(rows, random_state=0).index.equals(rows.index)
+        assert root.sample(repeated_rows, random_state=0).index.equals(repeated_rows.index)
+        with pytest.raises(ValueError, match="unique labels"):
+            root.predict_proba(repeated_rows)
         repeated = SkproAdapter(GLMRegressor(add_constant=True)).fit(
             X.set_axis(["r"] * len(X)), y.set_axis(["r"] * len(y))
         )

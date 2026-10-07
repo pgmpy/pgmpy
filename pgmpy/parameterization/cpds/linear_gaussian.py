@@ -187,3 +187,14 @@ class LinearGaussianCPD(BaseParameter):
         # Step 2: Give each row the Normal around its fitted mean.
         means = self.beta_[0] + X.to_numpy(dtype=float) @ self.beta_[1:]
         return Normal(mu=means.reshape(-1, 1), sigma=self.std_, index=X.index, columns=[self.variable_])
+
+    def __eq__(self, other: object) -> bool:
+        if type(other) is not type(self) or not (self.is_fitted and other.is_fitted):
+            return super().__eq__(other)
+        return (
+            (self.variable_, self.evidence_) == (other.variable_, other.evidence_)
+            and np.allclose(self.beta_, other.beta_)
+            and np.allclose(self.std_, other.std_)
+        )
+
+    __hash__ = BaseParameter.__hash__
