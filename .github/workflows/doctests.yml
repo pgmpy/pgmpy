@@ -39,3 +39,6 @@ jobs:
 
       - name: Run doctests
         run: pytest --doctest-modules --ignore=pgmpy/tests pgmpy/ -v
+
+      - name: Run README examples
+        run: pytest --doctest-glob="README.md" README.md -v
