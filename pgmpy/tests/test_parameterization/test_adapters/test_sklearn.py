@@ -86,7 +86,7 @@ class TestSklearnAdapter:
             lambda: adapter.sample(X_test),
             lambda: adapter.log_likelihood(X, y),
         ):
-            with pytest.raises(NotImplementedError, match="point predictions"):
+            with pytest.raises(NotImplementedError, match="point predictions.*AdditiveNoiseMechanism"):
                 call()
 
         # Sample weights go to the estimator.

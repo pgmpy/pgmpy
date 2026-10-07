@@ -16,8 +16,8 @@ class SklearnAdapter(BaseParameterization):
     A classifier models a discrete target: each row of ``X`` gets a ``NominalDistribution`` with the classifier's
     probabilities of the target's labels. A regressor gives point predictions only: ``predict`` returns them, while
     ``predict_proba``, ``sample`` and ``log_likelihood`` raise a ``NotImplementedError``, as a regressor has no
-    distribution, and its ``capability:distribution`` tag is False. For a distribution, use ``SkproAdapter`` with a
-    skpro probabilistic regressor.
+    distribution, and its ``capability:distribution`` tag is False. For a distribution, wrap the adapter in an
+    ``AdditiveNoiseMechanism``, or use ``SkproAdapter`` with a skpro probabilistic regressor.
 
     ``fit`` fits a clone of ``estimator``, with the sample weights if given. The estimator gets the parents as a
     DataFrame sorted by name, as in ``evidence_``, so a pipeline must select its columns by name, not position. If the
@@ -121,7 +121,8 @@ class SklearnAdapter(BaseParameterization):
         if self.variable_type_ == "continuous":
             raise NotImplementedError(
                 f"{type(self.estimator).__name__} is a regressor, which gives point predictions, not a distribution: "
-                "use predict, or SkproAdapter with a skpro probabilistic regressor."
+                "use predict, AdditiveNoiseMechanism(SklearnAdapter(...)) for a regressor with noise, or SkproAdapter "
+                "with a skpro probabilistic regressor."
             )
         # Only a root gets X=None, and its DummyClassifier holds the weighted frequencies of the labels.
         if X is None:

@@ -226,10 +226,8 @@ class BaseParameterization(BaseEstimator):
             One column named after the target, with ``X``'s index, preceded by a level numbering the draws when
             ``n_samples`` is given.
         """
-        if n_samples is not None and (
-            isinstance(n_samples, bool) or not isinstance(n_samples, Integral) or n_samples < 0
-        ):
-            raise ValueError(f"n_samples must be a non-negative integer, but got {n_samples!r}.")
+        if n_samples is not None:
+            _check_n_samples(n_samples)
         X = self._check_X(X)
         if X is None and n_samples is None:
             raise ValueError("Pass X, or n_samples to draw that many values from the root's distribution.")
@@ -342,6 +340,12 @@ def _equal(value: Any, other: Any) -> bool:
     if isinstance(value, (BaseObject, SklearnEstimator)):
         return _equal(value.get_params(deep=False), other.get_params(deep=False))
     return value == other
+
+
+def _check_n_samples(n_samples: Any) -> None:
+    """Check that ``n_samples`` is a non-negative integer, and not a bool."""
+    if isinstance(n_samples, bool) or not isinstance(n_samples, Integral) or n_samples < 0:
+        raise ValueError(f"n_samples must be a non-negative integer, but got {n_samples!r}.")
 
 
 def _as_frame(y: pd.DataFrame | pd.Series) -> pd.DataFrame:

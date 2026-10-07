@@ -527,13 +527,13 @@ class capability__exact_inference(_BaseTag):
 
 
 class python_dependencies(_BaseTag):
-    """Python package the object needs, checked when it is constructed, as in skbase."""
+    """Python packages the object needs, checked when it is constructed, as in skbase: one package, or a list."""
 
     _tags = {
         "tag_name": "python_dependencies",
         "parent_type": ["parameterization"],
-        "tag_type": "str",
-        "short_descr": "Python package the object needs, checked when it is constructed.",
+        "tag_type": "str or list",
+        "short_descr": "Python packages the object needs, checked when it is constructed.",
     }
 
 
@@ -624,6 +624,11 @@ def check_tag_is_valid(tag_name: str, tag_value) -> None:
         valid, expected = isinstance(tag_value, bool), "a bool"
     elif tag_type == "str":
         valid, expected = isinstance(tag_value, str), "a str"
+    elif tag_type == "str or list":
+        valid = isinstance(tag_value, str) or (
+            isinstance(tag_value, list) and all(isinstance(value, str) for value in tag_value)
+        )
+        expected = "a str or a list of str"
     elif tag_type[0] == "str":
         valid, expected = tag_value in tag_type[1], f"one of {tag_type[1]}"
     else:

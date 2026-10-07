@@ -28,7 +28,9 @@ def test_tag_register_is_well_formed():
     for tag_name, object_type, tag_type, description in TAG_REGISTER:
         assert isinstance(tag_name, str) and isinstance(description, str) and description
         assert object_type in OBJECT_TYPES
-        assert tag_type in ("bool", "str") or (tag_type[0] in ("str", "list") and isinstance(tag_type[1], list))
+        assert tag_type in ("bool", "str", "str or list") or (
+            tag_type[0] in ("str", "list") and isinstance(tag_type[1], list)
+        )
 
     pairs = [(tag[0], tag[1]) for tag in TAG_REGISTER]
     assert len(pairs) == len(set(pairs))
@@ -52,6 +54,11 @@ def test_object_names_are_unique(object_type):
 def test_check_tag_is_valid():
     check_tag_is_valid("assumption:linearity", False)
     check_tag_is_valid("default_for", None)
+    # As in skbase, an object needs one package or several.
+    check_tag_is_valid("python_dependencies", "skpro")
+    check_tag_is_valid("python_dependencies", ["pyro-ppl", "skpro"])
+    with pytest.raises(ValueError, match="a str or a list of str"):
+        check_tag_is_valid("python_dependencies", ["skpro", 2])
     with pytest.raises(KeyError):
         check_tag_is_valid("not_a_tag", True)
     with pytest.raises(ValueError, match="must be a bool"):
