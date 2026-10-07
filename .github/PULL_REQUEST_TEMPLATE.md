@@ -1,4 +1,4 @@
-We are currently experimenting with doing **only** live PR reviews. To get feedback/review on this PR please join one of our PR review events on Discord.
+We are currently experimenting with doing **only** live PR reviews. To get feedback/review on this PR please join one of our PR review events on Discord. 
 
 **The following checklist is mandatory**
 
