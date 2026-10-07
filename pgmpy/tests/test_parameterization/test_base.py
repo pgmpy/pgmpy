@@ -112,6 +112,19 @@ class TestBaseParameter:
             with pytest.raises(ValueError):
                 CountParameter().fit(X_bad, y_bad)
 
+        # Parents need unique names, none of them the target's, as from_values requires. A class that needs data needs
+        # at least one row; one that doesn't, such as DistributionAdapter, fits without rows.
+        for X_bad in (X.set_axis(["a", "a"], axis=1), X.rename(columns={"a": "t"})):
+            with pytest.raises(ValueError, match="different names"):
+                CountParameter().fit(X_bad, y)
+        with pytest.raises(ValueError, match="at least one row"):
+            CountParameter().fit(X.iloc[:0], y.iloc[:0])
+
+        class DatalessParameter(CountParameter):
+            _tags = {"requires_data": False}
+
+        assert DatalessParameter().fit(X.iloc[:0], y.iloc[:0]).n_rows_ == 0
+
     def test_types(self, data):
         X, y = data
 

@@ -36,7 +36,7 @@ class SklearnAdapter(BaseParameter):
         The fitted clone of ``estimator``, or, for a root and for a classifier that saw a single label, a fitted
         ``DummyRegressor`` or ``DummyClassifier``.
     classes_ : numpy.ndarray
-        For a classifier, the target's labels, in the order of the predicted probabilities.
+        For a classifier, the target's labels, sorted, in the order of the predicted probabilities.
 
     Examples
     --------
@@ -102,9 +102,10 @@ class SklearnAdapter(BaseParameter):
         features = _features(X)
 
         # Step 2: Fit a classifier on the labels, encoded first, as estimators may change them in classes_, e.g.
-        # nullable booleans to floats.
+        # nullable booleans to floats. Labels are sorted by value, as in TabularCPD, so a Categorical goes in as its
+        # values: pd.factorize would order it by category.
         if self.variable_type_ == "discrete":
-            codes, labels = pd.factorize(target, sort=True)
+            codes, labels = pd.factorize(target.to_numpy(), sort=True)
             estimator = self.estimator if self.evidence_ and len(labels) > 1 else DummyClassifier(strategy="prior")
             self.estimator_ = clone(estimator).fit(features, codes, **fit_params)
             self.classes_ = np.asarray(labels)[self.estimator_.classes_]

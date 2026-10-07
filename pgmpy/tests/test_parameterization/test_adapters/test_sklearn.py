@@ -136,6 +136,10 @@ class TestSklearnAdapter:
         assert (dist.index.tolist(), dist.columns.tolist()) == (X_test.index.tolist(), ["Y"])
         assert list(dist.categories) == list(adapter.classes_) == ["hi", "lo"]
         np.testing.assert_allclose(np.asarray(dist.probs), adapter.estimator_.predict_proba(X_test))
+
+        # Labels are sorted by value, as in TabularCPD, also for a Categorical that orders them otherwise.
+        reordered = labels.astype(pd.CategoricalDtype(["mid", "lo", "hi"]))
+        assert SklearnAdapter(LogisticRegression()).fit(X, reordered).classes_.tolist() == ["hi", "lo"]
         rows = np.arange(len(X)), (labels == "lo").to_numpy().astype(int)
         np.testing.assert_allclose(
             adapter.log_likelihood(X, labels)["Y"], np.log(adapter.estimator_.predict_proba(X)[rows])

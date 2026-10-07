@@ -24,10 +24,11 @@ class BaseParameter(BaseEstimator):
     its marginal distribution depends on the rest of the network.
 
     Subclasses implement ``_fit``, which gets ``X`` in ``evidence_`` order, and ``_predict_proba``, which returns a
-    root's own distribution for ``X=None``. ``_predict_proba`` gets ``X`` with its own labels only from
-    ``predict_proba``; ``predict``, ``log_likelihood`` and ``sample`` pass it on a RangeIndex. Subclasses also set a
-    ``name`` and the other tags registered for parameterizations in :mod:`pgmpy.registry`; ``variable_type`` must hold a
-    single type by the time ``fit`` runs.
+    root's own distribution for ``X=None``. Both select ``X``'s columns by position, as selecting them by label fails
+    for some names, e.g. booleans. ``_predict_proba`` gets ``X`` with its own labels only from ``predict_proba``;
+    ``predict``, ``log_likelihood`` and ``sample`` pass it on a RangeIndex. Subclasses also set a ``name`` and the other
+    tags registered for parameterizations in :mod:`pgmpy.registry`; ``variable_type`` must hold a single type by the
+    time ``fit`` runs.
 
     Attributes
     ----------
@@ -70,7 +71,8 @@ class BaseParameter(BaseEstimator):
         y : pandas.Series or pandas.DataFrame
             Target values, in a single column with ``X``'s index. A continuous target must be numeric.
         sample_weight : array-like of shape (n_samples,), optional
-            Non-negative weight of each row, for classes with the ``supports_weighted_data`` tag.
+            Non-negative frequency of each row: weight 2 counts a row twice. For classes with the
+            ``supports_weighted_data`` tag.
 
         Returns
         -------
@@ -78,7 +80,7 @@ class BaseParameter(BaseEstimator):
             The fitted instance.
         """
         # Step 1: Reset any earlier fit, and check that X and y are DataFrames with the same index and no missing
-        # values.
+        # values, with at least one row if the class needs data.
         self.reset()
         y = _as_frame(y)
         if X is None:
@@ -90,6 +92,8 @@ class BaseParameter(BaseEstimator):
         for data, name in ((X, "X"), (y, "y")):
             if data.isna().to_numpy().any():
                 raise ValueError(f"{name} must not contain missing values.")
+        if len(y) == 0 and self.get_tag("requires_data"):
+            raise ValueError(f"{type(self).__name__} needs at least one row of data.")
 
         # Step 2: Check that a continuous target and continuous-only parents are numeric.
         [variable_type] = self.get_tag("variable_type")
@@ -114,9 +118,10 @@ class BaseParameter(BaseEstimator):
             if not np.isfinite(sample_weight).all() or (sample_weight < 0).any() or not sample_weight.any():
                 raise ValueError("sample_weight must be finite and non-negative, with at least one positive value.")
 
-        # Step 4: Sort the parents by name and fit the subclass's model on X in that order. Columns are selected by
-        # position, as X[names] would read a list of boolean names, e.g. [False, True], as a row mask.
-        columns = list(X.columns)
+        # Step 4: Check the parents' names as from_values does, sort the parents by name and fit the subclass's model on
+        # X in that order. Columns are selected by position, as X[names] would read a list of boolean names, e.g.
+        # [False, True], as a row mask.
+        columns = _checked_evidence(y.columns[0], list(X.columns))
         order = _parent_order(columns)
         self.variable_ = y.columns[0]
         self.evidence_ = [columns[position] for position in order]

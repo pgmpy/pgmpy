@@ -75,6 +75,11 @@ class TestTabularCPD:
         repeated = TabularCPD().fit(X.set_axis([0] * len(X)), y.set_axis([0] * len(y)), sample_weight=np.ones(len(y)))
         np.testing.assert_allclose(repeated.CPT_, EXPECTED_CPT)
 
+        # Parents named False and True, as from pd.get_dummies, are counted like any others.
+        dummies = TabularCPD().fit(X.set_axis([False, True], axis=1), y)
+        np.testing.assert_allclose(dummies.CPT_, EXPECTED_CPT)
+        assert dummies.state_names_ == {"y": ["0", "1"], False: ["0", "1", "2"], True: ["0", "1"]}
+
     def test_matches_discrete_mle(self):
         # A random table over three parents shows any column mix-up. Rows with (x1, x2) = (2, 1) are dropped so that
         # combination is never seen, and zero weights on (x1, x3) = (0, 1) leave another combination without data.

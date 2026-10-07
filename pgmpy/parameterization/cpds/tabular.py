@@ -6,7 +6,7 @@ from numpy.typing import ArrayLike
 
 from pgmpy.parameterization._base import BaseParameter, _checked_evidence, _parent_order
 from pgmpy.parameterization.distributions import NominalDistribution
-from pgmpy.utils import build_state_names, encode_columns, get_state_counts
+from pgmpy.utils import collect_state_names, encode_columns, get_state_counts_array
 
 
 class TabularCPD(BaseParameter):
@@ -152,16 +152,23 @@ class TabularCPD(BaseParameter):
         return cpd
 
     def _fit(self, X: pd.DataFrame, y: pd.DataFrame, sample_weight: np.ndarray | None) -> None:
-        # Step 1: Find the states of every variable: the given ones, else the sorted states in the data.
+        # Step 1: Find the states of every variable: the given ones, else the sorted states in the data. Positions label
+        # the columns here, as selecting columns by label fails for some names, e.g. booleans.
+        names = [self.variable_, *self.evidence_]
         given = _checked_state_names(self.state_names)
-        data = (pd.concat([y, X], axis=1) if self.evidence_ else y).reset_index(drop=True)
-        state_names = build_state_names(data, given)
+        data = pd.concat([y, X], axis=1, ignore_index=True)
+        states = {}
+        for position, name in enumerate(names):
+            observed = collect_state_names(data, position)
+            if name in given and not set(observed) <= set(given[name]):
+                raise ValueError(f"Data contains unexpected states for variable: {name!r}.")
+            states[position] = given[name] if name in given else observed
 
         # Step 2: Count, with any weights, the rows of each state of the target for each combination of parent states.
         if sample_weight is not None:
             sample_weight = sample_weight / sample_weight.max()
-        counts = get_state_counts(data, state_names, self.variable_, self.evidence_, sample_weight)
-        counts = counts.to_numpy(dtype=float, copy=True)
+        codes, cardinalities = encode_columns(data, states)
+        counts = get_state_counts_array(codes, cardinalities, 0, range(1, len(names)), sample_weight).astype(float)
         if not np.isclose(counts.sum(), len(data) if sample_weight is None else sample_weight.sum()):
             raise ValueError(
                 "Some values in the data don't match state_names, e.g. [0, 1] given for boolean data; list the states "
@@ -170,7 +177,7 @@ class TabularCPD(BaseParameter):
         # Step 3: Normalize the counts into the table; parent combinations without data get a uniform distribution.
         counts[:, (counts == 0).all(axis=0)] = 1.0
         self.CPT_ = counts / counts.sum(axis=0)
-        self.state_names_ = state_names
+        self.state_names_ = {name: states[position] for position, name in enumerate(names)}
 
     def _predict_proba(self, X: pd.DataFrame | None) -> NominalDistribution:
         # Step 1: Without X, return a root's distribution, the table's single column.
