@@ -7,7 +7,7 @@ from skbase.utils.dependencies import _check_soft_dependencies
 import pgmpy.parameterization
 from pgmpy.example_models import load_model
 from pgmpy.parameter_estimator import LinearGaussianMLE
-from pgmpy.parameterization import LinearGaussianCPD
+from pgmpy.parameterization import LinearGaussianCPD, LinearGaussianOLS
 
 pytestmark = pytest.mark.skipif(
     not _check_soft_dependencies("skpro", severity="none"), reason="execute only if required dependency present"
@@ -21,6 +21,10 @@ def data():
     X = pd.DataFrame({"B": rng.normal(size=500), "A": rng.normal(1, 2, size=500)})
     y = pd.Series(1 + 2 * X["A"] - 3 * X["B"] + rng.normal(scale=0.5, size=500), name="y")
     return X, y
+
+
+def ols_cpd(std_estimator="unbiased"):
+    return LinearGaussianCPD(estimator=LinearGaussianOLS(std_estimator=std_estimator))
 
 
 def assert_same_fit(cpd, expected):
@@ -53,13 +57,13 @@ class TestLinearGaussianCPD:
         assert (cpd.variable_, cpd.evidence_) == ("y", ["A", "B"])
         np.testing.assert_allclose(cpd.beta_, beta, rtol=1e-10)
         assert cpd.std_ == pytest.approx(np.sqrt(rss / (len(y) - 3)))
-        assert LinearGaussianCPD(std_estimator="mle").fit(X, y).std_ == pytest.approx(np.sqrt(rss / len(y)))
+        assert ols_cpd("mle").fit(X, y).std_ == pytest.approx(np.sqrt(rss / len(y)))
 
         # A root variable has its mean and standard deviation.
         root = LinearGaussianCPD().fit(None, y)
         np.testing.assert_allclose(root.beta_, [y.mean()])
         assert root.std_ == pytest.approx(y.std(ddof=1))
-        assert LinearGaussianCPD(std_estimator="mle").fit(None, y).std_ == pytest.approx(y.std(ddof=0))
+        assert ols_cpd("mle").fit(None, y).std_ == pytest.approx(y.std(ddof=0))
 
         # Sample weights count as frequencies: integer weights give the fit of each row repeated that many times. The
         # "mle" std also doesn't change when all weights are scaled.
@@ -67,9 +71,9 @@ class TestLinearGaussianCPD:
         repeated = X.index.repeat(weights)
         for std_estimator in ("unbiased", "mle"):
             for X_fit, X_repeated in ((X, X.loc[repeated]), (None, None)):
-                weighted = LinearGaussianCPD(std_estimator).fit(X_fit, y, sample_weight=weights)
-                assert_same_fit(weighted, LinearGaussianCPD(std_estimator).fit(X_repeated, y.loc[repeated]))
-        assert_same_fit(LinearGaussianCPD("mle").fit(X, y, weights / 1000), LinearGaussianCPD("mle").fit(X, y, weights))
+                weighted = ols_cpd(std_estimator).fit(X_fit, y, sample_weight=weights)
+                assert_same_fit(weighted, ols_cpd(std_estimator).fit(X_repeated, y.loc[repeated]))
+        assert_same_fit(ols_cpd("mle").fit(X, y, weights / 1000), ols_cpd("mle").fit(X, y, weights))
 
         # Rows with zero weight don't count, even when their squares would overflow.
         overflowing, first_dropped = y.where(y.index != 0, 1e155), np.r_[0.0, np.ones(len(y) - 1)]
@@ -85,7 +89,6 @@ class TestLinearGaussianCPD:
         constant = pd.Series(5.0, index=y.index, name="y")
         four = pd.Series([1.0, 2.0, 4.0, 3.0], name="y")
         rejected = [
-            (LinearGaussianCPD(std_estimator="unbias"), X, y, None, "std_estimator"),
             (LinearGaussianCPD(), X[:3], y[:3], None, "total weight"),  # as many rows as coefficients
             (LinearGaussianCPD(), X, y, weights / 1000, "total weight"),  # frequencies below the coefficients
             (LinearGaussianCPD(), None, four, [0.2, 0.4, 0.3, 0.1], "total weight"),  # a total of 1 up to rounding
@@ -265,7 +268,7 @@ class TestLinearGaussianCPD:
             expected = LinearGaussianMLE(std_estimator=std_estimator).fit(model, data).parameters_
             assert len(expected) == 46
             for legacy in expected:
-                cpd = LinearGaussianCPD(std_estimator).fit(
+                cpd = ols_cpd(std_estimator).fit(
                     data[legacy.evidence] if legacy.evidence else None, data[legacy.variable]
                 )
                 reference = LinearGaussianCPD.from_values(legacy.variable, legacy.beta, legacy.std, legacy.evidence)

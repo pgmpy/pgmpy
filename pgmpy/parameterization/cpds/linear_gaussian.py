@@ -6,9 +6,9 @@ import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
 from skbase.utils.dependencies import _safe_import
-from sklearn.linear_model import LinearRegression
 
 from pgmpy.parameterization._base import BaseParameterization, _checked_evidence, _parent_order
+from pgmpy.parameterization.cpds.linear_gaussian_estimators import BaseLinearGaussianEstimator, LinearGaussianOLS
 
 Normal = _safe_import("skpro.distributions.Normal")
 
@@ -16,20 +16,18 @@ Normal = _safe_import("skpro.distributions.Normal")
 class LinearGaussianCPD(BaseParameterization):
     """Linear Gaussian conditional probability distribution of a continuous variable given continuous parents.
 
-    ``fit(X, y)`` estimates ``y | X ~ N(beta_[0] + X @ beta_[1:], std_**2)`` by least squares, with the same estimates
-    as ``LinearGaussianMLE``. Sample weights count as frequencies, so integer weights give the fit of each row repeated
-    that many times. Parents are sorted by name. Fit a root variable with ``X=None``; its ``beta_`` holds only its
-    mean. ``from_values`` creates a fitted instance from known coefficients instead.
+    ``fit(X, y)`` estimates ``y | X ~ N(beta_[0] + X @ beta_[1:], std_**2)`` with ``estimator``, by least squares by
+    default. Sample weights count as frequencies, so integer weights give the fit of each row repeated that many times.
+    Parents are sorted by name. Fit a root variable with ``X=None``; its ``beta_`` holds only its mean.
+    ``from_values`` creates a fitted instance from known coefficients instead.
 
     Requires the optional dependency ``skpro``.
 
     Parameters
     ----------
-    std_estimator : {"unbiased", "mle"}, default="unbiased"
-        Estimate of ``std_``, as in ``LinearGaussianMLE``. ``"unbiased"`` divides the sum of squared residuals by the
-        number of rows minus the number of independent coefficients: the intercept plus the rank of the parent data,
-        which differs from ``LinearGaussianMLE``'s count of the parents only for collinear parents. ``"mle"`` divides by
-        the number of rows. With sample weights, their total replaces the number of rows.
+    estimator : BaseLinearGaussianEstimator, optional
+        Estimates the coefficients and the standard deviation from the data, e.g.
+        ``LinearGaussianOLS(std_estimator="mle")``. ``None`` for ``LinearGaussianOLS()``.
 
     Attributes
     ----------
@@ -62,8 +60,7 @@ class LinearGaussianCPD(BaseParameterization):
     >>> round(float(cpd.log_likelihood(X, y)["y"].mean()), 2)
     -0.74
 
-    A root variable is fitted without parents, or created from known values with the arguments of
-    ``pgmpy.factors.continuous.LinearGaussianCPD``:
+    A root variable is fitted without parents, or created from known values:
 
     >>> root = LinearGaussianCPD.from_values("A", [0.0], 1.0)
     >>> float(root.predict_proba().mean())
@@ -82,17 +79,24 @@ class LinearGaussianCPD(BaseParameterization):
         "python_dependencies": "skpro",
     }
 
-    def __init__(self, std_estimator: str = "unbiased") -> None:
-        self.std_estimator = std_estimator
+    def __init__(self, estimator: BaseLinearGaussianEstimator | None = None) -> None:
+        self.estimator = estimator
         super().__init__()
+
+        # The estimator decides whether the rows can be weighted.
+        if estimator is not None:
+            if not isinstance(estimator, BaseLinearGaussianEstimator):
+                raise TypeError(
+                    "estimator must be a linear Gaussian estimator, such as LinearGaussianOLS(), but is a "
+                    f"{type(estimator).__name__}."
+                )
+            self.set_tags(supports_weighted_data=estimator.get_tag("supports_weighted_data"))
 
     @classmethod
     def from_values(
         cls, variable: Hashable, beta: ArrayLike, std: float, evidence: list | tuple | None = None
     ) -> "LinearGaussianCPD":
         """Create a fitted LinearGaussianCPD from known coefficients.
-
-        The arguments are those of ``pgmpy.factors.continuous.LinearGaussianCPD``, in the same order.
 
         Parameters
         ----------
@@ -134,44 +138,20 @@ class LinearGaussianCPD(BaseParameterization):
         return cpd
 
     def _fit(self, X: pd.DataFrame, y: pd.DataFrame, sample_weight: np.ndarray | None) -> None:
-        # Step 1: Check std_estimator, and drop the rows without weight: they don't count, and dropping them keeps their
-        # values out of the sums of squares below, where they could overflow. A constant target has no positive std.
-        if self.std_estimator not in ("unbiased", "mle"):
-            raise ValueError(f"std_estimator must be 'unbiased' or 'mle', but is {self.std_estimator!r}.")
-        weights = np.ones(len(y)) if sample_weight is None else sample_weight
-        positive = weights > 0
-        parents, target = X.to_numpy(dtype=float)[positive], y.iloc[:, 0].to_numpy(dtype=float)[positive]
-        weights = weights[positive]
+        # Step 1: Drop the rows with weight 0: they don't count, and dropping them keeps their values out of the sums of
+        # squares, where they could overflow. A constant target has no positive std.
+        parents, target = X.to_numpy(dtype=float), y.iloc[:, 0].to_numpy(dtype=float)
+        if sample_weight is not None:
+            positive = sample_weight > 0
+            parents, target, sample_weight = parents[positive], target[positive], sample_weight[positive]
         if np.ptp(target) == 0:
             raise ValueError(
                 f"{self.variable_!r} is constant, so its std is 0, but a LinearGaussianCPD needs a positive std."
             )
 
-        # Step 2: Estimate the coefficients by weighted least squares; a root has only its mean.
-        if self.evidence_:
-            # An array, not the DataFrame, so that sklearn accepts any hashable column names.
-            regression = LinearRegression().fit(
-                parents, target, sample_weight=None if sample_weight is None else weights
-            )
-            self.beta_ = np.concatenate([[regression.intercept_], regression.coef_])
-            # rank_ is the rank of the centred parent data, which leaves out the intercept.
-            n_coefficients = 1 + regression.rank_
-        else:
-            self.beta_ = np.array([np.average(target, weights=weights)])
-            n_coefficients = 1
-
-        # Step 3: Estimate the std from the residuals. The unbiased estimate divides by the total weight minus the
-        # independent coefficients; weights meant to total n_coefficients can sum to just above it, so allow for
-        # rounding.
-        total = weights.sum()
-        if self.std_estimator == "unbiased" and total <= n_coefficients * (1 + 1e-9):
-            raise ValueError(
-                f"The unbiased std needs a total weight, or number of rows, above the {n_coefficients} independent "
-                f"coefficients, but it is {total:g}. Fit more data, or use std_estimator='mle'."
-            )
-        means = self.beta_[0] + parents @ self.beta_[1:]
-        ddof = 0 if self.std_estimator == "mle" else n_coefficients
-        self.std_ = float(np.sqrt(np.sum(weights * (target - means) ** 2) / (total - ddof)))
+        # Step 2: Estimate the coefficients and the std, which must be positive and finite.
+        estimator = LinearGaussianOLS() if self.estimator is None else self.estimator
+        self.beta_, self.std_ = estimator.estimate(parents, target, sample_weight)
         if not 0 < self.std_ < np.inf:
             raise ValueError(
                 f"The fitted std of {self.variable_!r} is {self.std_:g}, but must be positive and finite. A target "

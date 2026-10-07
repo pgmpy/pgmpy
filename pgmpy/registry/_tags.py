@@ -555,7 +555,7 @@ class parameterization(_BaseTag):
     _tags = {
         "tag_name": "parameterization",
         "parent_type": ["local_estimator"],
-        "tag_type": ("list", ["tabular_cpd"]),
+        "tag_type": ("list", ["tabular_cpd", "linear_gaussian_cpd"]),
         "short_descr": "The parameterizations the local estimator can fit, by their name tag.",
     }
 

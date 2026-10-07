@@ -314,6 +314,24 @@ class BaseParameterization(BaseEstimator):
         return hash(type(self))
 
 
+class BaseLocalEstimator(BaseObject):
+    """Base class for local estimators: estimators of one parameterization's parameters from one node's data.
+
+    A local estimator is passed to its parameterization, e.g. ``TabularCPD(estimator=TabularBayesian())``, whose
+    ``fit`` prepares the data and hands it to the estimator. Each parameterization has its own base class of local
+    estimators, which fixes what the estimator gets and returns: ``BaseTabularEstimator`` gets the weighted counts and
+    returns the table, ``BaseLinearGaussianEstimator`` gets the rows and returns the coefficients and the std.
+    Subclasses set a ``name`` and the other tags registered for local estimators in :mod:`pgmpy.registry`.
+    """
+
+    _tags = {
+        "object_type": "local_estimator",
+        "name": None,
+        "parameterization": [],
+        "supports_weighted_data": False,
+    }
+
+
 def _equal(value: Any, other: Any) -> bool:
     """Return whether two parameter values are equal: numbers and numeric arrays within numpy.allclose's tolerance,
     other values of the same type, containers item by item, and skbase objects and sklearn estimators by their

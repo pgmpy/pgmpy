@@ -1,4 +1,4 @@
-from pgmpy.parameterization._base import BaseParameterization
+from pgmpy.parameterization._base import BaseLocalEstimator, BaseParameterization
 from pgmpy.parameterization.adapters import (
     DeterministicAdapter,
     DistributionAdapter,
@@ -7,8 +7,10 @@ from pgmpy.parameterization.adapters import (
     SkproAdapter,
 )
 from pgmpy.parameterization.cpds import (
+    BaseLinearGaussianEstimator,
     BaseTabularEstimator,
     LinearGaussianCPD,
+    LinearGaussianOLS,
     TabularBayesian,
     TabularCPD,
     TabularMLE,
@@ -24,12 +26,15 @@ _warn_external(
 
 __all__ = [
     "AdditiveNoiseMechanism",
+    "BaseLinearGaussianEstimator",
+    "BaseLocalEstimator",
     "BaseMechanism",
     "BaseParameterization",
     "BaseTabularEstimator",
     "DeterministicAdapter",
     "DistributionAdapter",
     "LinearGaussianCPD",
+    "LinearGaussianOLS",
     "NominalDistribution",
     "PosteriorPredictive",
     "PyroAdapter",

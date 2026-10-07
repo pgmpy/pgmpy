@@ -2,25 +2,20 @@ from numbers import Real
 
 import numpy as np
 from numpy.typing import ArrayLike
-from skbase.base import BaseObject
+
+from pgmpy.parameterization._base import BaseLocalEstimator
 
 
-class BaseTabularEstimator(BaseObject):
+class BaseTabularEstimator(BaseLocalEstimator):
     """Base class for the estimators of a ``TabularCPD``'s table from its weighted counts.
 
     ``TabularCPD.fit`` counts the rows with each state of the target for each combination of parent states, with any
     sample weights, and passes the counts to ``estimate``, which returns the table. With complete data, every estimate
     of the table that uses only this node's data depends on the data only through these counts, so subclasses only
-    implement ``estimate``, and set a ``name`` and the other tags registered for local estimators in
-    :mod:`pgmpy.registry`.
+    implement ``estimate``, and set a ``name``.
     """
 
-    _tags = {
-        "object_type": "local_estimator",
-        "name": None,
-        "parameterization": ["tabular_cpd"],
-        "supports_weighted_data": True,
-    }
+    _tags = {"parameterization": ["tabular_cpd"], "supports_weighted_data": True}
 
     def estimate(self, counts: np.ndarray) -> np.ndarray:
         """Return the table estimated from the counts.
