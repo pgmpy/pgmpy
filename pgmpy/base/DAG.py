@@ -273,9 +273,12 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         reader = DagittyReader(string=string, filename=filename)
         ebunch = []
         for u, v, edge_type in reader.ebunch:
-            if edge_type != "->":
-                raise ValueError(f"DAG only supports directed edges '->'. Found '{edge_type}'.")
-            ebunch.append((u, v))
+            if edge_type == "->":
+                ebunch.append((u, v))
+            elif edge_type == "<-":
+                ebunch.append((v, u))
+            else:
+                raise ValueError(f"DAG only supports directed edges '->' and '<-'. Found '{edge_type}'.")
 
         if not reader.betas:
             dag = cls(ebunch=ebunch, roles=reader.roles)

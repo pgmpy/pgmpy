@@ -1008,7 +1008,7 @@ class TestDAGConversion(unittest.TestCase):
         self.assertEqual(lavaan_result, expected_lavaan)
 
         dagitty_result = dag.to_dagitty()
-        expected_dagitty = "dag {\nnode_1 -> node_2\nvar-3 -> node_2\n}"
+        expected_dagitty = 'dag {\nnode_1 -> node_2\n"var-3" -> node_2\n}'
         self.assertEqual(dagitty_result, expected_dagitty)
 
     def test_tuple_node_names(self):
@@ -1020,7 +1020,7 @@ class TestDAGConversion(unittest.TestCase):
         self.assertEqual(lavaan_result, expected_lavaan)
 
         dagitty_result = dag.to_dagitty()
-        expected_dagitty = "dag {\n(1, 2) -> (3, 4)\n(5, 6) -> (3, 4)\n}"
+        expected_dagitty = 'dag {\n"(1, 2)" -> "(3, 4)"\n"(5, 6)" -> "(3, 4)"\n}'
         self.assertEqual(dagitty_result, expected_dagitty)
 
     def test_deterministic_output(self):
@@ -1133,7 +1133,7 @@ class TestDAGConversion(unittest.TestCase):
         dagitty_result = dag_spaces.to_dagitty()
 
         self.assertEqual("target ~ node with spaces", lavaan_result)
-        self.assertEqual("dag {\nnode with spaces -> target\n}", dagitty_result)
+        self.assertEqual('dag {\n"node with spaces" -> target\n}', dagitty_result)
 
     def test_unicode_support(self):
         """Test that unicode characters in node names are supported"""
