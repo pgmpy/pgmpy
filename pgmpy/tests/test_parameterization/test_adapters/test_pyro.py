@@ -3,9 +3,9 @@ import pandas as pd
 import pytest
 from scipy import stats
 from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, LogisticRegression
 
-from pgmpy.parameterization import AdditiveNoiseMechanism, PyroAdapter, PyroNUTS, PyroSVI, SklearnAdapter
+from pgmpy.parameterization import AdditiveNoiseMechanism, PyroAdapter, PyroNUTS, PyroSVI, SklearnAdapter, TabularCPD
 
 pytestmark = pytest.mark.skipif(
     not _check_soft_dependencies(["pyro-ppl", "skpro"], severity="none"),
@@ -32,6 +32,21 @@ def location(parents):
     return dist.Normal(mu, sigma)
 
 
+def wet(parents):
+    # Logistic regression of the ground's state on the scaled humidity.
+    intercept = pyro.sample("intercept", dist.Normal(0.0, 2.0))
+    coef = pyro.sample("coef", dist.Normal(0.0, 2.0))
+    return dist.Bernoulli(logits=intercept + coef * (parents["humidity"] - 50.0) / 20.0)
+
+
+def weather(parents):
+    # One logit per season and weather state. The season comes as integer codes over its sorted states, and einsum
+    # with "..." also covers the draws that W gets in front of its event dimensions when predicting.
+    W = pyro.sample("W", dist.Normal(torch.zeros(4, 3), 2.0).to_event(2))
+    onehot = torch.nn.functional.one_hot(parents["season"], 4).to(W.dtype)
+    return dist.Categorical(logits=torch.einsum("nk,...kt->...nt", onehot, W))
+
+
 @pytest.fixture(scope="module")
 def sales_data():
     rng = np.random.default_rng(42)
@@ -48,7 +63,8 @@ def sales_cpd(sales_data):
 class TestFit:
     def test_tags_and_construction(self):
         assert PyroAdapter.get_class_tag("variable_type") == ["continuous"]
-        assert PyroAdapter.get_class_tag("parent_data_types") == ["continuous"]
+        assert PyroAdapter.get_class_tag("parent_data_types") == ["discrete", "continuous", "mixed"]
+        assert PyroAdapter(sales, variable_type="discrete").get_tag("variable_type") == ["discrete"]
         assert PyroAdapter.get_class_tag("supports_weighted_data") is True
         assert PyroAdapter.get_class_tag("python_dependencies") == ["pyro-ppl", "skpro"]
         with pytest.raises(TypeError, match="callable"):
@@ -210,3 +226,102 @@ class TestFit:
             PyroAdapter(
                 lambda parents: dist.Normal(pyro.param("mu", torch.tensor(1e30)), 1.0), estimator=PyroSVI(num_steps=1)
             ).fit(None, y)
+
+
+class TestDiscrete:
+    def test_logistic_regression(self):
+        # With weak priors and many rows, the posterior is close to the maximum likelihood fit. The labels are coded in
+        # sorted order, "dry" as 0 and "wet" as 1, and predictions come back as labels.
+        rng = np.random.default_rng(0)
+        X = pd.DataFrame({"humidity": rng.normal(50, 20, size=1000)})
+        scaled = ((X["humidity"] - 50) / 20).to_frame()
+        wet_probability = 1 / (1 + np.exp(0.5 - 1.5 * scaled["humidity"]))
+        y = pd.Series(np.where(rng.random(1000) < wet_probability, "wet", "dry"), name="ground")
+        reference = LogisticRegression(penalty=None).fit(scaled, y)
+        cpd = PyroAdapter(wet, estimator=PyroSVI(random_state=0), variable_type="discrete").fit(X, y)
+        assert abs(cpd.posterior_samples_["intercept"].mean().item() - reference.intercept_[0]) < 0.15
+        assert abs(cpd.posterior_samples_["coef"].mean().item() - reference.coef_[0, 0]) < 0.15
+
+        new, observed = X.iloc[:5], y.iloc[:5]
+        dist_ = cpd.predict_proba(new)
+        assert list(dist_.categories) == ["dry", "wet"] and dist_.index.equals(new.index)
+        probs = np.asarray(dist_.probs)
+        np.testing.assert_allclose(probs, reference.predict_proba(scaled.iloc[:5]), atol=0.03)
+        assert set(cpd.predict(new)["ground"]) <= {"dry", "wet"}
+        expected = np.log(probs[np.arange(5), (observed == "wet").astype(int)])
+        np.testing.assert_allclose(cpd.log_likelihood(new, observed)["ground"], expected)
+        assert set(cpd.sample(new, n_samples=3, random_state=0)["ground"]) <= {"dry", "wet"}
+
+    def test_categorical_with_a_discrete_parent(self):
+        # The season reaches fn as codes over its sorted states, so the posterior predictive is close to the weather's
+        # frequencies in each season, as TabularCPD counts them.
+        rng = np.random.default_rng(1)
+        seasons = ["autumn", "spring", "summer", "winter"]
+        states = ["cloudy", "rainy", "sunny"]
+        table = np.array([[0.6, 0.3, 0.1], [0.2, 0.5, 0.3], [0.1, 0.2, 0.7], [0.3, 0.3, 0.4]])
+        codes = rng.integers(0, 4, size=2000)
+        X = pd.DataFrame({"season": np.array(seasons)[codes]})
+        y = pd.Series([states[rng.choice(3, p=table[code])] for code in codes], name="weather")
+        cpd = PyroAdapter(weather, estimator=PyroSVI(random_state=0), variable_type="discrete").fit(X, y)
+        assert cpd.state_names_ == {"weather": states, "season": seasons}
+        probs = np.asarray(cpd.predict_proba(pd.DataFrame({"season": seasons})).probs)
+        np.testing.assert_allclose(probs, TabularCPD().fit(X, y).cpt_.T, atol=0.03)
+
+    def test_states(self):
+        # Given state_names fix the target's states, in their order: here "c" is coded 0, "a" 1 and "b" 2.
+        y = pd.Series(["a", "b", "a"], name="y")
+        fixed = lambda parents: dist.Categorical(probs=torch.tensor([0.5, 0.3, 0.2]))  # noqa: E731
+        settings = {"estimator": PyroSVI(num_steps=1), "variable_type": "discrete"}
+        root = PyroAdapter(fixed, state_names={"y": ["c", "a", "b"]}, **settings).fit(None, y).predict_proba()
+        assert root.shape == () and [float(root.pmf(state)) for state in "cab"] == pytest.approx([0.5, 0.3, 0.2])
+        with pytest.raises(ValueError, match="unexpected states"):
+            PyroAdapter(fixed, state_names={"y": ["a", "c"]}, **settings).fit(None, y)
+
+        # A discrete parent reaches fn as integer codes over its sorted states: "off" is 0 and "on" is 1. A parent
+        # listed in state_names is discrete even if it's numeric.
+        switch = lambda parents: dist.Bernoulli(probs=torch.tensor([0.1, 0.9])[parents["x"]])  # noqa: E731
+        z = pd.Series(["yes", "no", "yes"], name="z")
+        cpd = PyroAdapter(switch, **settings).fit(pd.DataFrame({"x": ["on", "off", "on"]}), z)
+        probs = np.asarray(cpd.predict_proba(pd.DataFrame({"x": ["off", "on"]})).probs)
+        np.testing.assert_allclose(probs, [[0.9, 0.1], [0.1, 0.9]], atol=1e-6)
+        with pytest.raises(ValueError, match="not seen in fit"):
+            cpd.predict(pd.DataFrame({"x": ["dim"]}))
+        numeric = PyroAdapter(switch, state_names={"x": [5, 7]}, **settings).fit(pd.DataFrame({"x": [7, 5, 7]}), z)
+        np.testing.assert_allclose(
+            np.asarray(numeric.predict_proba(pd.DataFrame({"x": [5]})).probs), [[0.9, 0.1]], atol=1e-6
+        )
+
+    def test_discrete_errors(self):
+        y = pd.Series(["a", "b", "c"], name="y")
+        with pytest.raises(ValueError, match="variable_type must be"):
+            PyroAdapter(sales, variable_type="categorical")
+        # A discrete target needs a distribution over the codes of its states, and data its distribution allows.
+        for fn, match in (
+            (lambda parents: dist.Normal(0.0, 1.0), "discrete support"),
+            (lambda parents: dist.Categorical(logits=torch.zeros(4)), "all its probability"),
+            (lambda parents: dist.Bernoulli(probs=torch.tensor(0.5)), "outside the support"),
+        ):
+            with pytest.raises(ValueError, match=match):
+                PyroAdapter(fn, estimator=PyroSVI(num_steps=1), variable_type="discrete").fit(None, y)
+
+    def test_discrete_weights(self):
+        # A weight of 3 counts a row three times: maximum likelihood gives the weighted frequencies 3/6, 2/6 and 1/6.
+        def frequencies(parents):
+            return dist.Categorical(logits=pyro.param("logits", torch.zeros(3)))
+
+        estimator = PyroSVI(num_steps=2000, optim=pyro.optim.Adam({"lr": 0.05}))
+        cpd = PyroAdapter(frequencies, estimator=estimator, variable_type="discrete")
+        cpd.fit(None, pd.Series(["a", "b", "b", "c"], name="y"), sample_weight=[3.0, 1.0, 1.0, 1.0])
+        np.testing.assert_allclose(np.asarray(cpd.predict_proba().probs), [3 / 6, 2 / 6, 1 / 6], atol=1e-3)
+
+    def test_continuous_target_with_a_discrete_parent(self):
+        # The group's codes index a vector of means, which maximum likelihood sets to the group means.
+        def group_means(parents):
+            return dist.Normal(pyro.param("mu", torch.zeros(2))[parents["group"]], 1.0)
+
+        X = pd.DataFrame({"group": ["x", "y", "x", "y"]})
+        y = pd.Series([1.0, 3.5, 1.5, 2.5], name="v")
+        estimator = PyroSVI(num_steps=2000, optim=pyro.optim.Adam({"lr": 0.05}))
+        cpd = PyroAdapter(group_means, estimator=estimator).fit(X, y)
+        np.testing.assert_allclose(cpd.params_["mu"], [1.25, 3.0], atol=1e-3)
+        np.testing.assert_allclose(cpd.predict(pd.DataFrame({"group": ["y", "x"]}))["v"], [3.0, 1.25], atol=1e-3)

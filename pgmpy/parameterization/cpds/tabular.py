@@ -4,7 +4,12 @@ import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
 
-from pgmpy.parameterization._base import BaseParameterization, _checked_evidence, _parent_order
+from pgmpy.parameterization._base import (
+    BaseParameterization,
+    _checked_evidence,
+    _checked_state_names,
+    _parent_order,
+)
 from pgmpy.parameterization.cpds.tabular_estimators import BaseTabularEstimator, TabularMLE
 from pgmpy.parameterization.distributions import NominalDistribution
 from pgmpy.utils import collect_state_names, encode_columns, get_state_counts_array
@@ -240,16 +245,3 @@ class TabularCPD(BaseParameterization):
         return np.allclose(self.cpt_, other.cpt_.reshape(cardinalities)[np.ix_(*positions)].reshape(self.cpt_.shape))
 
     __hash__ = BaseParameterization.__hash__
-
-
-def _checked_state_names(state_names: dict | None) -> dict:
-    """Return the given state names as lists, rejecting anything but a dict and repeated states."""
-    if state_names is None:
-        return {}
-    if not isinstance(state_names, dict):
-        raise TypeError(f"state_names must be a dict of {{variable: [states]}}, but is a {type(state_names).__name__}.")
-    state_names = {variable: list(states) for variable, states in state_names.items()}
-    for variable, states in state_names.items():
-        if len(set(states)) != len(states):
-            raise ValueError(f"Repeated state names for variable {variable!r}: {states}.")
-    return state_names

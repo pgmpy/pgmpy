@@ -390,6 +390,19 @@ def _checked_evidence(variable: Hashable, evidence: list | tuple | None) -> list
     return evidence
 
 
+def _checked_state_names(state_names: dict | None) -> dict:
+    """Return the given state names as lists, rejecting anything but a dict and repeated states."""
+    if state_names is None:
+        return {}
+    if not isinstance(state_names, dict):
+        raise TypeError(f"state_names must be a dict of {{variable: [states]}}, but is a {type(state_names).__name__}.")
+    state_names = {variable: list(states) for variable, states in state_names.items()}
+    for variable, states in state_names.items():
+        if len(set(states)) != len(states):
+            raise ValueError(f"Repeated state names for variable {variable!r}: {states}.")
+    return state_names
+
+
 def _name_key(name: Hashable) -> tuple:
     """Return a sort key for any name: numbers by value, then strings, then tuples element by element, then other names
     by type and repr."""
