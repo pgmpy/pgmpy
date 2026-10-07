@@ -1,3 +1,5 @@
+from functools import lru_cache
+
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -16,14 +18,25 @@ class AdjacencyConfusionMatrix(BaseSupervisedMetric):
     Parameters
     ----------
     metrics : List[str], optional
-        List of metrics to compute. If None, computes all available metrics.
-
+        List of metrics to compute, collated from returned attrbutes. If None, computes all available metrics.
             cm          : Confusion matrix for skeleton edge presence.
             precision   : Fraction of estimated skeleton edges that are correct (TP / (TP + FP)).
             recall      : Fraction of true skeleton edges that are recovered (TP / (TP + FN)).
             f1          : Harmonic mean of precision and recall.
             npv         : Fraction of absent estimated edges that are truly absent (TN / (TN + FN)).
             specificity : Fraction of truly absent edges correctly predicted absent (TN / (TN + FP)).
+
+    Attributes
+    -------
+    precision_: Fraction of correctly estimated skeleton edges (TP / (TP + FP)).
+
+    recall_: Fraction of true skeleton edges that are recovered (TP / (TP + FN)).
+
+    f1_: Harmonic mean of precision and recall
+
+    npv_: Fraction of absent estimated edges that are truly absent (TN / (TN + FN)).
+
+    specificity_: Fraction of truly absent edges correctly predicted absent (TN / (TN + FP)).
 
     Returns
     -------
@@ -89,8 +102,9 @@ class AdjacencyConfusionMatrix(BaseSupervisedMetric):
         ]
         super().__init__()
 
-    def _evaluate(self, true_causal_graph, est_causal_graph):
-        """Evaluate adjacency confusion matrix metrics."""
+    @staticmethod
+    @lru_cache(maxsize=1024)
+    def _compute_matrix_components(true_causal_graph, est_causal_graph):
         # Step 1: Get adjacency matrices for both graphs
         nodes_list = sorted(true_causal_graph.nodes())
         true_adj = nx.adjacency_matrix(true_causal_graph, nodelist=nodes_list, weight=None).todense()
@@ -108,8 +122,13 @@ class AdjacencyConfusionMatrix(BaseSupervisedMetric):
         fp = int(np.sum(~true_edges & est_edges))
         fn = int(np.sum(true_edges & ~est_edges))
         tn = int(np.sum(~true_edges & ~est_edges))
+        return tp, fp, fn, tn
+
+    def _evaluate(self, true_causal_graph, est_causal_graph):
+        """Evaluate adjacency confusion matrix metrics."""
 
         # Step 3: Compute specified metrics
+        tp, fp, fn, tn = self._compute_matrix_components(true_causal_graph, est_causal_graph)
         results = {}
         if "cm" in self.metrics:
             results["cm"] = pd.DataFrame(
@@ -119,20 +138,25 @@ class AdjacencyConfusionMatrix(BaseSupervisedMetric):
             )
 
         if "precision" in self.metrics:
-            results["precision"] = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+            self.precision_ = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+            results["precision"] = self.precision_
 
         if "recall" in self.metrics:
-            results["recall"] = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+            self.recall_ = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+            results["recall"] = self.recall_
 
         if "f1" in self.metrics:
             prec = tp / (tp + fp) if (tp + fp) > 0 else 0.0
             rec = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-            results["f1"] = 2 * prec * rec / (prec + rec) if (prec + rec) > 0 else 0.0
+            self.f1_ = 2 * prec * rec / (prec + rec) if (prec + rec) > 0 else 0.0
+            results["f1"] = self.f1_
 
         if "npv" in self.metrics:
-            results["npv"] = tn / (tn + fn) if (tn + fn) > 0 else 0.0
+            self.npv_ = tn / (tn + fn) if (tn + fn) > 0 else 0.0
+            results["npv"] = self.npv_
 
         if "specificity" in self.metrics:
-            results["specificity"] = tn / (tn + fp) if (tn + fp) > 0 else 0.0
+            self.specificity_ = tn / (tn + fp) if (tn + fp) > 0 else 0.0
+            results["specificity"] = self.specificity_
 
         return results
