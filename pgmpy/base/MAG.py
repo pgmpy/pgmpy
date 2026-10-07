@@ -218,3 +218,29 @@ class MAG(_CoreGraph):
                 for v in self.get_neighbors(u, edge_type):
                     new_mag.remove_edge(u, v, edge_type)
         return new_mag
+
+    @classmethod
+    def from_dagitty(cls, string=None, filename=None) -> "MAG":
+        """
+        Initializes a `MAG` instance using DAGitty syntax.
+        """
+        from pgmpy.readwrite.dagitty import DagittyReader
+        
+        reader = DagittyReader(string=string, filename=filename)
+        ebunch = []
+        for u, v, edge_type in reader.ebunch:
+            if edge_type not in cls.SUPPORTED_EDGE_TYPES:
+                raise ValueError(f"MAG doesn't support edge type '{{edge_type}}'.")
+            ebunch.append((u, v, edge_type))
+            
+        graph = cls(edge_list=ebunch, roles=reader.roles)
+        graph.add_nodes_from(reader.nodes)
+        return graph
+
+    def to_dagitty(self) -> str:
+        """
+        Convert the MAG to dagitty syntax representation.
+        """
+        from pgmpy.readwrite.dagitty import DagittyWriter
+        writer = DagittyWriter(self)
+        return writer.write()
