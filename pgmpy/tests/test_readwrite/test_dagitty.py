@@ -45,10 +45,11 @@ class TestDagittyReadWrite(unittest.TestCase):
         m1 = MAG.from_dagitty(s1)
         self.assertIn("a -> b", m1.to_dagitty())
 
-        # Test reverse edge with different nodes
+        # Test reverse edge -- `b <- a` is stored as `a -> b` in _CoreGraph
         s2 = "mag {\nb <- a\n}"
         m2 = MAG.from_dagitty(s2)
-        self.assertIn("b <- a", m2.to_dagitty())
+        out2 = m2.to_dagitty()
+        self.assertTrue("a -> b" in out2 or "b <- a" in out2)
 
         # Test bidirectional edge
         s3 = "mag {\na <-> b\n}"
