@@ -4,7 +4,6 @@ import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.factors.discrete import TabularCPD as LegacyTabularCPD
-from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.parameter_estimator import DiscreteMLE
 from pgmpy.parameterization import TabularCPD
 
@@ -82,21 +81,8 @@ class TestTabularCPD:
         np.testing.assert_allclose(dummies.cpt_, EXPECTED_CPT)
         assert dummies.state_names_ == {"y": ["0", "1"], False: ["0", "1", "2"], True: ["0", "1"]}
 
-    def test_matches_discrete_mle(self):
-        # A random table over three parents shows any column mix-up. Rows with (x1, x2) = (2, 1) are dropped so that
-        # combination is never seen, and zero weights on (x1, x3) = (0, 1) leave another combination without data.
-        rng = np.random.default_rng(0)
-        model = DiscreteBayesianNetwork([("x1", "y"), ("x2", "y"), ("x3", "y")])
-        model.add_cpds(
-            LegacyTabularCPD("x1", 3, [[0.3], [0.3], [0.4]]),
-            LegacyTabularCPD("x2", 2, [[0.5], [0.5]]),
-            LegacyTabularCPD("x3", 2, [[0.6], [0.4]]),
-            LegacyTabularCPD("y", 3, rng.dirichlet([1, 1, 1], size=12).T, ["x1", "x2", "x3"], [3, 2, 2]),
-        )
-        data = model.simulate(3000, seed=0, show_progress=False)
-        data = data[~((data["x1"] == 2) & (data["x2"] == 1))]
-        weights = np.where((data["x1"] == 0) & (data["x3"] == 1), 0.0, rng.uniform(0.5, 2, len(data)))
-
+    def test_matches_discrete_mle(self, legacy_network):
+        model, data, weights = legacy_network
         for sample_weight in (None, weights):
             expected = {cpd.variable: cpd for cpd in DiscreteMLE().fit(model, data, sample_weight).parameters_}
             for node in model.nodes:
@@ -130,7 +116,10 @@ class TestTabularCPD:
             TabularCPD(state_names={"y": ["0", "1", "1"]}).fit(X, y)
         with pytest.raises(TypeError, match="dict"):
             TabularCPD(state_names=["0", "1"]).fit(X, y)
-        assert TabularCPD(state_names={"y": iter(["0", "1"])}).fit(X, y).state_names_["y"] == ["0", "1"]
+
+        # Labels of several types, which can't be sorted, are fine when state_names lists them, in its order.
+        mixed = TabularCPD(state_names={"t": ["b", 1, ("c", 3)]}).fit(None, pd.Series([1, "b", ("c", 3), 1], name="t"))
+        assert mixed.state_names_["t"] == ["b", 1, ("c", 3)] and mixed.cpt_.ravel().tolist() == [0.25, 0.5, 0.25]
 
         # States that equal the data only under Python's == (here 0/1 for booleans) are caught instead of miscounted.
         with pytest.raises(ValueError, match="don't match"):
@@ -264,6 +253,14 @@ class TestTabularCPD:
             TabularCPD.from_values("y", 2, [[0.5, 0.5]])
         with pytest.raises(ValueError, match="sum to 1"):
             TabularCPD.from_values("y", 2, [[0.5], [0.4]])
+        # A table whose columns sum to 1 only within 0.01 is normalized, so cpt_ and predict_proba agree.
+        loose = TabularCPD.from_values("y", 2, [[0.509], [0.5]], state_names={"y": ["a", "b"]})
+        np.testing.assert_allclose(loose.cpt_.sum(axis=0), 1.0)
+        assert float(loose.predict_proba().pmf("a")) == pytest.approx(loose.cpt_[0, 0])
+        with pytest.raises(ValueError, match="variable_card must be an integer of at least 1"):
+            TabularCPD.from_values("y", 2.0, [[0.5], [0.5]], state_names={"y": ["a", "b"]})
+        with pytest.raises(ValueError, match=r"evidence_card\[0\] must be an integer of at least 1"):
+            TabularCPD.from_values("y", 2, np.empty((2, 0)), ["x"], [0])
         with pytest.raises(ValueError, match="states"):
             TabularCPD.from_values("y", 3, [[0.5], [0.5]], state_names={"y": ["0", "1"]})
         with pytest.raises(ValueError, match="evidence_card"):

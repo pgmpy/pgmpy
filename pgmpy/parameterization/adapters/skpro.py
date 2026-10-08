@@ -2,7 +2,6 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
-from pandas.api.types import is_string_dtype
 from skbase.utils.dependencies import _safe_import
 from sklearn.base import clone
 
@@ -26,14 +25,14 @@ class SkproAdapter(BaseParameterization):
 
     ``fit`` fits a clone of ``estimator``; skpro regressors take no sample weights. The estimator gets the parents as a
     DataFrame sorted by name, as in ``evidence_``. If the parents' names aren't all strings, they are renamed ``x0``,
-    ``x1``, .... Numbers and booleans are passed as floats, and object and string parents as the categories seen in fit,
-    where a value not seen in fit raises an error. A target whose name isn't a string is passed as ``str(name)``, which
-    is then the column of the predicted distributions; samples keep the name. skpro matches rows by their labels, so the
-    estimator is fitted by position, and ``predict_proba`` raises for an ``X`` with repeated labels; ``predict``,
-    ``sample`` and ``log_likelihood`` take any index. A root fits the estimator on a constant column, so that it is the
-    same model without parents and can be scored like one. An estimator that adds its own intercept, such as
-    ``GLMRegressor(add_constant=True)``, then has two: least squares still fits exactly, but the iterative fit of e.g. a
-    Poisson GLM can end slightly off.
+    ``x1``, .... Numbers and booleans are passed as floats, and other parents, e.g. strings or Categoricals, as the
+    categories seen in fit, where a value not seen in fit raises an error. A target whose name isn't a string is passed
+    as ``str(name)``, which is then the column of the predicted distributions; samples keep the name. skpro matches rows
+    by their labels, so the estimator is fitted by position, and ``predict_proba`` raises for an ``X`` with repeated
+    labels; ``predict``, ``sample`` and ``log_likelihood`` take any index. A root fits the estimator on a constant
+    column, so that it is the same model without parents and can be scored like one. An estimator that adds its own
+    intercept, such as ``GLMRegressor(add_constant=True)``, then has two: least squares still fits exactly, but the
+    iterative fit of e.g. a Poisson GLM can end slightly off.
 
     Requires the optional dependency ``skpro``.
 
@@ -79,14 +78,13 @@ class SkproAdapter(BaseParameterization):
             raise TypeError(f"estimator must be a skpro probabilistic regressor, but is a {type(estimator).__name__}.")
 
     def _fit(self, X: pd.DataFrame, y: pd.DataFrame, sample_weight: np.ndarray | None) -> None:
-        # Step 1: Decide how each parent goes in: numbers and booleans as floats, and object and string columns, which
-        # skpro rejects, as categories, with the categories seen here.
+        # Step 1: Decide how each parent goes in: numbers and booleans as floats, and the others, which skpro rejects as
+        # objects or strings, as categories, with the categories seen here rather than a Categorical's declared ones.
         features = _features(X)
-        self._numbers = {name: "float64" for name, kind in preprocess_data(features)[1].items() if kind == "N"}
+        kinds = preprocess_data(features)[1]
+        self._numbers = {name: "float64" for name, kind in kinds.items() if kind == "N"}
         self._categories = {
-            name: features[name].astype("category").dtype
-            for name, dtype in features.dtypes.items()
-            if is_string_dtype(dtype)
+            name: features[name].astype(object).astype("category").dtype for name, kind in kinds.items() if kind != "N"
         }
         # Step 2: Prepare the parents and the target, by position, as skpro matches rows by label. A root gets a
         # constant column instead, so that its estimator is the same model without parents. The target goes in as

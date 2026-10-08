@@ -14,6 +14,7 @@ docstring is the tag's documentation. The ``_tags`` of a tag class describe the 
   - ``("str", choices)``: Any element of ``choices``. ``None`` is valid only if it is in ``choices``.
   - ``("list", choices)``: A list whose elements are all in ``choices``. The choices can be classes, e.g. graph
     classes from :mod:`pgmpy.base`.
+  - ``"str, list or None"``: A string, a list of strings, or ``None``, as skbase's ``python_dependencies`` takes.
 
 - ``short_descr`` (str): One-line description of the tag.
 
@@ -465,15 +466,16 @@ class supports_weighted_data(_BaseTag):
     """
     Whether ``fit`` takes ``sample_weight``, or for a local estimator, whether it can estimate from weighted data.
 
-    An adapter sets it in ``__init__`` from the estimator it wraps, and a ``TabularCPD`` takes it from its local
-    estimator.
+    A parameterization that delegates fitting sets it in ``__init__``: an adapter from the estimator it wraps, a
+    ``TabularCPD``, ``LinearGaussianCPD`` or ``PyroAdapter`` from its local estimator, and an ``AdditiveNoiseMechanism``
+    from both of its slots.
     """
 
     _tags = {
         "tag_name": "supports_weighted_data",
         "parent_type": ["parameterization", "local_estimator"],
         "tag_type": "bool",
-        "short_descr": "Whether fit takes sample_weight.",
+        "short_descr": "Whether fit takes sample_weight, or a local estimator weighted data.",
     }
 
 

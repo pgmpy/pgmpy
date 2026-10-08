@@ -28,11 +28,11 @@ class AdditiveNoiseMechanism(BaseMechanism):
     deviation, or e.g. a ``SkproAdapter`` root for another family. The residuals are in-sample, or with ``cv`` out of
     fold, which a flexible function needs, as its in-sample residuals understate the noise.
 
-    ``predict_proba`` gives each row the noise's distribution shifted by f(x), ``predict`` gives f(x) + E[U], and
-    ``log_likelihood`` and ``sample`` follow from them. ``abduct`` returns y - f(x), and ``predict(X, noise=u)`` returns
-    f(x) + u. ``from_values`` creates a fitted mechanism from a known function and a known noise distribution, without
-    data. The tags follow the slots: the parent types come from ``function``, weights need both slots to take them, and
-    a linear function with Gaussian noise supports exact inference.
+    ``predict_proba`` gives each row the noise's distribution shifted by f(x), ``predict`` its mean f(x) + E[U], and
+    ``log_likelihood`` scores under it. ``sample`` draws noise and returns f(x) + u, as ``predict(X, noise=u)`` does,
+    and ``abduct`` returns y - f(x). ``from_values`` creates a fitted mechanism from a known function and a known noise
+    distribution, without data. The tags follow the slots: the parent types come from ``function``, weights need both
+    slots to take them, and a linear function with Gaussian noise supports exact inference.
 
     Requires the optional dependency ``skpro``.
 
@@ -44,8 +44,8 @@ class AdditiveNoiseMechanism(BaseMechanism):
         Parameterization of a continuous target that gives a continuous distribution, fitted as a root on the
         residuals. ``None`` for ``LinearGaussianCPD()``.
     cv : int, cross-validation generator or iterable, optional
-        How to split the rows for out-of-fold residuals, as in ``sklearn.model_selection.cross_val_predict``. ``None``
-        for in-sample residuals.
+        How to split the rows for out-of-fold residuals, as in ``sklearn.model_selection.cross_val_predict``: the folds
+        must test every row exactly once, as KFold's do. ``None`` for in-sample residuals.
 
     Attributes
     ----------
@@ -154,8 +154,14 @@ class AdditiveNoiseMechanism(BaseMechanism):
         if self.cv is None:
             fitted = self.function_.predict(X).iloc[:, 0].to_numpy(dtype=float)
         else:
+            folds = list(check_cv(self.cv).split(X))
+            if not np.array_equal(np.sort(np.concatenate([test for _, test in folds])), np.arange(len(y))):
+                raise ValueError(
+                    "cv must split the rows into folds that test every row exactly once, as KFold does, but "
+                    "TimeSeriesSplit and ShuffleSplit don't."
+                )
             fitted = np.empty(len(y))
-            for train, test in check_cv(self.cv).split(X):
+            for train, test in folds:
                 weights = None if sample_weight is None else sample_weight[train]
                 fold = self.function.clone().fit(X.iloc[train], y.iloc[train], weights)
                 fitted[test] = fold.predict(X.iloc[test]).iloc[:, 0].to_numpy(dtype=float)
@@ -180,9 +186,6 @@ class AdditiveNoiseMechanism(BaseMechanism):
         noise = self.noise_.predict_proba(pd.DataFrame(index=X.index))
         means = self.function_.predict(X).to_numpy(dtype=float)
         return MeanScale(d=noise, mu=means, sigma=1.0, index=X.index, columns=[self.variable_])
-
-    def _predict(self, X: pd.DataFrame) -> pd.DataFrame:
-        return self.function_.predict(X) + self.noise_.predict(pd.DataFrame(index=X.index)).to_numpy()
 
     def _forward(self, X: pd.DataFrame, noise: np.ndarray) -> pd.DataFrame:
         return self.function_.predict(X) + noise.reshape(-1, 1)

@@ -57,13 +57,10 @@ class NominalDistribution(BaseDistribution):
     """
 
     _tags = {
-        "python_version": None,
-        "python_dependencies": None,
         "distr:measuretype": "discrete",
         "distr:paramtype": "nonparametric",
         "capabilities:approx": [],
         "capabilities:exact": ["pmf", "log_pmf"],
-        "broadcast_init": "off",
     }
 
     def __init__(
@@ -143,6 +140,16 @@ class NominalDistribution(BaseDistribution):
 
         return valid, self._probs[row_idx, state_idx]
 
+    def pmf(self, x: Any) -> Any:
+        """Return the probability of each value in ``x``, 0 for a value that isn't a category. A scalar distribution
+        takes a tuple as one category."""
+        return super().pmf(_single(x) if self.ndim == 0 else x)
+
+    def log_pmf(self, x: Any) -> Any:
+        """Return the log-probability of each value in ``x``, ``-inf`` for a value that isn't a category. A scalar
+        distribution takes a tuple as one category."""
+        return super().log_pmf(_single(x) if self.ndim == 0 else x)
+
     def _pmf(self, x):
         """Return the probability of each queried value, 0 for a value that isn't a category."""
         valid, selected = self._select_probs(x)
@@ -212,9 +219,6 @@ class NominalDistribution(BaseDistribution):
         >>> dist.sample(3, random_state=42).equals(dist.sample(3, random_state=42))
         True
         """
-        return self._sample(n_samples=n_samples, random_state=random_state)
-
-    def _sample(self, n_samples=None, random_state=None):
         # Step 1: Compute the cumulative probabilities of each row. Dividing by the total makes the last one exactly 1,
         # as in numpy's Generator.choice, so rounding can never select a trailing zero-probability category.
         rng = np.random.default_rng(random_state)
@@ -263,6 +267,15 @@ class NominalDistribution(BaseDistribution):
         params2 = {"probs": [[0.1, 0.7, 0.2], [0.5, 0.3, 0.2]], "categories": [1, 2, 3]}
         params3 = {"probs": [0.2, 0.8], "categories": ["A", "B"]}
         return [params1, params2, params3]
+
+
+def _single(value: Any) -> Any:
+    """Return a tuple as a 0-d object array, so that skpro takes it for one category rather than an array."""
+    if not isinstance(value, tuple):
+        return value
+    single = np.empty((), dtype=object)
+    single[()] = value
+    return single
 
 
 def _sample_index(index: pd.Index, n_samples: int) -> pd.MultiIndex:

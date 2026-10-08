@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 
-from pgmpy.parameterization import PyroAdapter, PyroNUTS, PyroSVI, TabularMLE
+from pgmpy.parameterization import BasePyroEstimator, PyroAdapter, PyroNUTS, PyroSVI, TabularMLE
 
 pytestmark = pytest.mark.skipif(
     not _check_soft_dependencies(["pyro-ppl", "skpro"], severity="none"),
@@ -31,12 +31,30 @@ def test_tags():
 
 def test_construction_errors():
     for cls, name in ((PyroSVI, "num_samples"), (PyroSVI, "num_steps"), (PyroNUTS, "num_samples")):
-        with pytest.raises(ValueError, match=f"{name} must be a positive integer"):
+        with pytest.raises(ValueError, match=f"{name} must be an integer of at least 1"):
             cls(**{name: 0})
-    with pytest.raises(ValueError, match="warmup_steps must be"):
+    with pytest.raises(ValueError, match="warmup_steps must be an integer of at least 0"):
         PyroNUTS(warmup_steps=-1)
-    with pytest.raises(TypeError, match="Pyro estimator"):
+    with pytest.raises(TypeError, match="BasePyroEstimator"):
         PyroAdapter(unknown_mean, estimator=TabularMLE())
+
+    # An estimator must return draws of every latent site.
+    class NoDraws(BasePyroEstimator):
+        _tags = {"name": "no_draws"}
+
+        def estimate(self, model, args, latent, params):
+            return {}, {}
+
+    with pytest.raises(ValueError, match=r"NoDraws returned no draws of \['mu'\]"):
+        PyroAdapter(unknown_mean, estimator=NoDraws()).fit(None, Y)
+
+
+def test_guide():
+    # Another autoguide fits the same posterior, whose mean is the sum of the data over 4.01.
+    guide = _safe_import("pyro.infer.autoguide.AutoNormal", pkg_name="pyro-ppl")
+    estimator = PyroSVI(num_steps=500, guide=guide, random_state=0)
+    node = PyroAdapter(unknown_mean, estimator=estimator).fit(None, Y)
+    assert node.posterior_samples_["mu"].mean().item() == pytest.approx(5 / 4.01, abs=0.15)
 
 
 def test_diagnostics():
@@ -57,3 +75,5 @@ def test_weights_follow_the_estimator():
     assert adapter.get_tag("supports_weighted_data") is False
     with pytest.raises(ValueError, match="does not support sample_weight"):
         adapter.fit(None, Y, sample_weight=[1.0, 2.0, 1.0, 1.0])
+    # The tag follows the estimator when set_params changes it.
+    assert adapter.set_params(estimator=PyroSVI()).get_tag("supports_weighted_data") is True

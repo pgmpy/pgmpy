@@ -62,9 +62,11 @@ def sales_cpd(sales_data):
 
 class TestFit:
     def test_tags_and_construction(self):
-        assert PyroAdapter.get_class_tag("variable_type") == ["continuous"]
+        # The class models both types, and each instance one. The arguments say what the model is, then how to fit it.
+        assert PyroAdapter.get_class_tag("variable_type") == ["discrete", "continuous"]
         assert PyroAdapter.get_class_tag("parent_data_types") == ["discrete", "continuous", "mixed"]
-        assert PyroAdapter(sales, variable_type="discrete").get_tag("variable_type") == ["discrete"]
+        assert PyroAdapter(sales, "discrete").get_tag("variable_type") == ["discrete"]
+        assert PyroAdapter(sales).get_tag("variable_type") == ["continuous"]
         assert PyroAdapter.get_class_tag("supports_weighted_data") is True
         assert PyroAdapter.get_class_tag("python_dependencies") == ["pyro-ppl", "skpro"]
         with pytest.raises(TypeError, match="callable"):
@@ -159,6 +161,35 @@ class TestFit:
         other = PyroAdapter(sales, estimator=PyroSVI(num_steps=50, num_samples=20, random_state=8)).fit(X, y)
         assert not torch.equal(other.posterior_samples_["coef"], fits[0].posterior_samples_["coef"])
 
+    def test_global_random_state(self, monkeypatch, sales_cpd, sales_data):
+        # Predicting leaves the global torch random state as it was, as fitting and sampling do. Seeding touches only
+        # the CPU generator, which is restored: torch.manual_seed would also seed the GPU and MPS generators for good.
+        X, y = sales_data
+        new = X.iloc[:3]
+        before = torch.random.get_rng_state().clone()
+        sales_cpd.predict_proba(new).mean()
+        sales_cpd.predict(new)
+        sales_cpd.log_likelihood(new, y.iloc[:3])
+        assert torch.equal(torch.random.get_rng_state(), before)
+
+        seeded = []
+        monkeypatch.setattr(torch.cuda, "manual_seed_all", seeded.append)
+        monkeypatch.setattr(torch.mps, "manual_seed", seeded.append)
+        PyroAdapter(sales, estimator=PyroSVI(num_steps=2, num_samples=2, random_state=0)).fit(X, y).sample(new)
+        PyroAdapter(sales, estimator=PyroNUTS(num_samples=4, warmup_steps=2, random_state=0)).fit(X, y)
+        assert seeded == []
+
+    def test_predictive_keeps_its_fit(self):
+        # A returned distribution keeps the fit it came from, after a refit or a set_params of its adapter.
+        estimator = PyroSVI(num_steps=200, num_samples=50, random_state=0)
+        node = PyroAdapter(location, estimator=estimator).fit(None, pd.Series([0.0, 0.5, 1.0], name="y"))
+        distribution = node.predict_proba()
+        mean = float(distribution.mean())
+        node.fit(None, pd.Series([9.0, 9.5, 10.0], name="y"))
+        assert float(distribution.mean()) == mean != float(node.predict_proba().mean())
+        node.set_params(estimator=PyroSVI(num_steps=1))
+        assert float(distribution.mean()) == mean
+
     def test_weights(self):
         # A weight multiplies its row's log-likelihood, so weighted rows give the fit of duplicated rows: the weighted
         # mean and standard deviation, by maximum likelihood.
@@ -214,6 +245,10 @@ class TestFit:
         for fn, error, match in cases:
             with pytest.raises(error, match=match):
                 PyroAdapter(fn, estimator=PyroSVI(num_steps=1)).fit(X, y)
+
+        # Only discrete variables have states.
+        with pytest.raises(ValueError, match="continuous target"):
+            PyroAdapter(sales, state_names={"sales": [1.0, 2.0]}, estimator=PyroSVI(num_steps=1)).fit(X, y)
 
         # NUTS needs latent sites, and can't fit pyro.param values.
         with pytest.raises(ValueError, match="pyro.param"):
@@ -291,6 +326,21 @@ class TestDiscrete:
             np.asarray(numeric.predict_proba(pd.DataFrame({"x": [5]})).probs), [[0.9, 0.1]], atol=1e-6
         )
 
+        # Rows with weight 0 count for nothing but keep their states, as in TabularCPD: "c" of the target here, and
+        # "dim" of the parent.
+        weighted = PyroAdapter(fixed, **settings).fit(None, pd.Series(list("abc"), name="y"), sample_weight=[1, 1, 0])
+        assert weighted.state_names_ == {"y": ["a", "b", "c"]}
+        dimmer = lambda parents: dist.Bernoulli(probs=torch.tensor([0.5, 0.1, 0.9])[parents["x"]])  # noqa: E731
+        lamp = PyroAdapter(dimmer, **settings).fit(
+            pd.DataFrame({"x": ["on", "off", "dim"]}), z, sample_weight=[1, 1, 0]
+        )
+        assert lamp.state_names_ == {"z": ["no", "yes"], "x": ["dim", "off", "on"]}
+
+        # Labels of several types, which can't be sorted, are fine when state_names lists them, in its order.
+        mixed = pd.Series([1, "b", ("c", 3)], name="y")
+        root = PyroAdapter(fixed, state_names={"y": ["b", 1, ("c", 3)]}, **settings).fit(None, mixed).predict_proba()
+        assert [float(root.pmf(state)) for state in ("b", 1)] == pytest.approx([0.5, 0.3])
+
     def test_discrete_errors(self):
         y = pd.Series(["a", "b", "c"], name="y")
         with pytest.raises(ValueError, match="variable_type must be"):
@@ -303,6 +353,14 @@ class TestDiscrete:
         ):
             with pytest.raises(ValueError, match=match):
                 PyroAdapter(fn, estimator=PyroSVI(num_steps=1), variable_type="discrete").fit(None, y)
+
+        # Codes outside the support get probability 0, also in a family that wraps another, as mask does.
+        def binomial(parents):
+            return dist.Binomial(2, torch.tensor(0.5)).mask(True)
+
+        counts = pd.Series([0, 1, 2], name="k")
+        cpd = PyroAdapter(binomial, "discrete", {"k": [0, 1, 2, 3]}, PyroSVI(num_steps=1)).fit(None, counts)
+        np.testing.assert_allclose(np.asarray(cpd.predict_proba().probs), [0.25, 0.5, 0.25, 0.0])
 
     def test_discrete_weights(self):
         # A weight of 3 counts a row three times: maximum likelihood gives the weighted frequencies 3/6, 2/6 and 1/6.

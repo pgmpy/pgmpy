@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
 
-from pgmpy.parameterization import LinearGaussianCPD, LinearGaussianOLS, TabularMLE
+from pgmpy.parameterization import BaseLinearGaussianEstimator, LinearGaussianCPD, LinearGaussianOLS, TabularMLE
 
 pytestmark = pytest.mark.skipif(
     not _check_soft_dependencies("skpro", severity="none"), reason="execute only if required dependency present"
@@ -57,7 +57,7 @@ class TestLinearGaussianCPDEstimator:
         X, y = pd.DataFrame({"x": PARENTS[:, 0]}), pd.Series(TARGET, name="y")
         assert LinearGaussianCPD().fit(X, y) == LinearGaussianCPD(estimator=LinearGaussianOLS()).fit(X, y)
         assert LinearGaussianCPD(estimator=LinearGaussianOLS(std_estimator="mle")).fit(X, y).std_ == pytest.approx(0.5)
-        with pytest.raises(TypeError, match="linear Gaussian estimator"):
+        with pytest.raises(TypeError, match="BaseLinearGaussianEstimator"):
             LinearGaussianCPD(estimator=TabularMLE())
 
     def test_weights_follow_the_estimator(self):
@@ -69,3 +69,21 @@ class TestLinearGaussianCPDEstimator:
         assert cpd.get_tag("supports_weighted_data") is False
         with pytest.raises(ValueError, match="does not support sample_weight"):
             cpd.fit(None, pd.Series(TARGET, name="y"), sample_weight=np.ones(4))
+        # The tag follows the estimator when set_params changes it.
+        assert cpd.set_params(estimator=LinearGaussianOLS()).get_tag("supports_weighted_data") is True
+
+    def test_constant_target(self):
+        # A constant target has no positive least-squares std, which OLS reports. Another estimator, here one with a
+        # fixed std, can still fit it.
+        constant = np.full(4, 5.0)
+        with pytest.raises(ValueError, match="constant"):
+            LinearGaussianOLS().estimate(np.empty((4, 0)), constant, None)
+
+        class FixedStd(BaseLinearGaussianEstimator):
+            _tags = {"name": "fixed_std"}
+
+            def estimate(self, parents, target, sample_weight):
+                return np.array([target.mean()]), 1.0
+
+        cpd = LinearGaussianCPD(estimator=FixedStd()).fit(None, pd.Series(constant, name="y"))
+        assert (cpd.beta_.tolist(), cpd.std_) == ([5.0], 1.0)

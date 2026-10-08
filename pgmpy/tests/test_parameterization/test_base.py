@@ -49,6 +49,14 @@ class TestBaseParameterization:
         with pytest.warns(ExperimentalWarning, match="pgmpy.parameterization is experimental"):
             importlib.reload(pgmpy.parameterization)
 
+    def test_public_names(self):
+        # Every public name of the subpackages is imported from pgmpy.parameterization, as the same object.
+        for subpackage in ("adapters", "cpds", "distributions", "mechanisms"):
+            module = importlib.import_module(f"pgmpy.parameterization.{subpackage}")
+            for name in module.__all__:
+                assert name in pgmpy.parameterization.__all__
+                assert getattr(pgmpy.parameterization, name) is getattr(module, name)
+
     def test_tags(self):
         assert BaseParameterization.get_class_tag("object_type") == "parameterization"
         assert BaseParameterization.get_class_tag("variable_type") == ["discrete", "continuous"]
@@ -156,6 +164,9 @@ class TestBaseParameterization:
                 LinearParameter().fit(numeric.assign(a=column), y.astype(float))
         with pytest.raises(ValueError, match="datatype"):
             LinearParameter().fit(numeric.assign(a=pd.to_datetime(["2020"] * 4)), y.astype(float))
+        # Repeated parent names are reported as such, before any check of the columns' types.
+        with pytest.raises(ValueError, match="different names"):
+            LinearParameter().fit(numeric.set_axis(["a", "a"], axis=1), y.astype(float))
 
     def test_sample_weight(self, data):
         X, y = data

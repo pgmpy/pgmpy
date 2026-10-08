@@ -5,6 +5,7 @@ from scipy.stats import laplace
 from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.model_selection import TimeSeriesSplit
 from sklearn.neighbors import KNeighborsRegressor
 
 from pgmpy.parameterization import (
@@ -116,6 +117,10 @@ class TestAdditiveNoiseMechanism:
         # A function that reproduces its training data leaves no residuals to fit the noise on.
         with pytest.raises(ValueError, match="cv"):
             AdditiveNoiseMechanism(SklearnAdapter(KNeighborsRegressor(n_neighbors=1))).fit(X, y)
+
+        # Every row needs one out-of-fold residual, so the folds must partition the rows, which TimeSeriesSplit's don't.
+        with pytest.raises(ValueError, match="exactly once"):
+            AdditiveNoiseMechanism(SklearnAdapter(LinearRegression()), cv=TimeSeriesSplit(3)).fit(X, y)
 
     def test_structural_methods(self, data):
         X, y = data

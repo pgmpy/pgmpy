@@ -1,13 +1,13 @@
 import copy
 from collections.abc import Callable
-from numbers import Integral
 from typing import Any
 
 import numpy as np
 from skbase.utils.dependencies import _safe_import
 
 from pgmpy import config
-from pgmpy.parameterization._base import BaseLocalEstimator
+from pgmpy.parameterization._base import BaseLocalEstimator, _check_integer
+from pgmpy.parameterization.distributions.posterior_predictive import _seeded
 
 torch = _safe_import("torch")
 pyro = _safe_import("pyro", pkg_name="pyro-ppl")
@@ -109,16 +109,13 @@ class PyroSVI(BasePyroEstimator):
         self.random_state = random_state
         super().__init__()
 
-        _check_positive_integer("num_steps", num_steps)
-        _check_positive_integer("num_samples", num_samples)
+        _check_integer("num_steps", num_steps, 1)
+        _check_integer("num_samples", num_samples, 1)
 
     def estimate(
         self, model: Callable, args: tuple, latent: list[str], params: list[str]
     ) -> tuple[dict[str, Any], dict[str, Any]]:
-        seed = int(np.random.default_rng(self.random_state).integers(2**63))
-        with torch.random.fork_rng(devices=[]):
-            torch.manual_seed(seed)
-
+        with _seeded(self.random_state):
             # Step 1: Fit the guide and the pyro.param values. Without latent sites the guide is empty, as Pyro's
             # continuous autoguides need one. By default the learning rate decays from 0.1 to 0.001 over the steps:
             # large steps reach the posterior from the priors, and small ones settle in it.
@@ -188,11 +185,9 @@ class PyroNUTS(BasePyroEstimator):
         self.random_state = random_state
         super().__init__()
 
-        _check_positive_integer("num_samples", num_samples)
-        if warmup_steps is not None and (
-            isinstance(warmup_steps, bool) or not isinstance(warmup_steps, Integral) or warmup_steps < 0
-        ):
-            raise ValueError(f"warmup_steps must be a non-negative integer or None, but is {warmup_steps!r}.")
+        _check_integer("num_samples", num_samples, 1)
+        if warmup_steps is not None:
+            _check_integer("warmup_steps", warmup_steps, 0)
 
     def estimate(
         self, model: Callable, args: tuple, latent: list[str], params: list[str]
@@ -204,9 +199,7 @@ class PyroNUTS(BasePyroEstimator):
             )
         if not latent:
             raise ValueError("NUTS needs a latent site, a parameter with a prior from pyro.sample, but fn has none.")
-        seed = int(np.random.default_rng(self.random_state).integers(2**63))
-        with torch.random.fork_rng(devices=[]):
-            torch.manual_seed(seed)
+        with _seeded(self.random_state):
             mcmc = pyro.infer.MCMC(
                 pyro.infer.NUTS(model),
                 num_samples=self.num_samples,
@@ -215,12 +208,6 @@ class PyroNUTS(BasePyroEstimator):
             )
             mcmc.run(*args)
         return mcmc.get_samples(), mcmc.diagnostics()
-
-
-def _check_positive_integer(name: str, value: Any) -> None:
-    """Raise unless ``value`` is a positive integer, and not a bool."""
-    if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
-        raise ValueError(f"{name} must be a positive integer, but is {value!r}.")
 
 
 def _empty_guide(*args: Any) -> None:

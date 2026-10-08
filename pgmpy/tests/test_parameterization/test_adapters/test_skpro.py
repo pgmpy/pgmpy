@@ -105,6 +105,11 @@ class TestSkproAdapter:
         np.testing.assert_allclose(means, target.groupby(group).mean()[["yes", "no"]])
         with pytest.raises(ValueError, match="'maybe'"):
             model.predict_proba(pd.DataFrame({"G": ["no", "maybe"]}))
+        # So do pandas Categoricals, with the categories seen in fit, not the declared ones.
+        declared = pd.Categorical(group, categories=["no", "yes", "maybe"])
+        model.fit(pd.DataFrame({"G": declared}, index=X.index), target)
+        with pytest.raises(ValueError, match="not seen in fit"):
+            model.predict_proba(pd.DataFrame({"G": pd.Categorical(["no", "maybe"])}))
 
         # Numeric and boolean parents of any dtype go in as floats, as GLMRegressor needs, and so does the target.
         plain = SkproAdapter(GLMRegressor(add_constant=True)).fit(X, y)

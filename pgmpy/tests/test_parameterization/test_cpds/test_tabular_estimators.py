@@ -3,8 +3,6 @@ import pandas as pd
 import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
 
-from pgmpy.factors.discrete import TabularCPD as LegacyTabularCPD
-from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.parameter_estimator import DiscreteBayesianEstimator
 from pgmpy.parameterization import TabularBayesian, TabularCPD, TabularMLE
 
@@ -54,6 +52,8 @@ class TestTabularBayesian:
         for size in (0, -1, np.inf):
             with pytest.raises(ValueError, match="equivalent_sample_size must be"):
                 TabularBayesian(equivalent_sample_size=size)
+        # Only BDeu uses equivalent_sample_size, so the other priors don't check it.
+        assert TabularBayesian(prior_type="K2", equivalent_sample_size=None).prior_type == "K2"
         for pseudo_counts in (-1.0, [[1.0, -1.0]], [1.0, 2.0]):
             with pytest.raises(ValueError, match="pseudo_counts must be"):
                 TabularBayesian(prior_type="dirichlet", pseudo_counts=pseudo_counts)
@@ -62,21 +62,8 @@ class TestTabularBayesian:
 
 
 class TestTabularCPDEstimator:
-    def test_matches_discrete_bayesian_estimator(self):
-        # A random table over three parents shows any column mix-up. Rows with (x1, x2) = (2, 1) are dropped so that
-        # combination is never seen, and zero weights on (x1, x3) = (0, 1) leave another combination without data.
-        rng = np.random.default_rng(0)
-        model = DiscreteBayesianNetwork([("x1", "y"), ("x2", "y"), ("x3", "y")])
-        model.add_cpds(
-            LegacyTabularCPD("x1", 3, [[0.3], [0.3], [0.4]]),
-            LegacyTabularCPD("x2", 2, [[0.5], [0.5]]),
-            LegacyTabularCPD("x3", 2, [[0.6], [0.4]]),
-            LegacyTabularCPD("y", 3, rng.dirichlet([1, 1, 1], size=12).T, ["x1", "x2", "x3"], [3, 2, 2]),
-        )
-        data = model.simulate(500, seed=0, show_progress=False)
-        data = data[~((data["x1"] == 2) & (data["x2"] == 1))]
-        weights = np.where((data["x1"] == 0) & (data["x3"] == 1), 0.0, rng.uniform(0.5, 2, len(data)))
-
+    def test_matches_discrete_bayesian_estimator(self, legacy_network):
+        model, data, weights = legacy_network
         priors = [
             {},
             {"prior_type": "BDeu", "equivalent_sample_size": 7},
@@ -113,11 +100,13 @@ class TestTabularCPDEstimator:
         with pytest.raises(ValueError, match="does not support sample_weight"):
             cpd.fit(None, pd.Series(["a", "b"], name="y"), sample_weight=[1.0, 2.0])
         assert TabularCPD(estimator=TabularBayesian()).get_tag("supports_weighted_data") is True
+        # The tag follows the estimator when set_params changes it.
+        assert cpd.set_params(estimator=TabularMLE()).get_tag("supports_weighted_data") is True
 
     def test_estimator_parameter(self):
         # Maximum likelihood is the default, and the estimator must be a tabular one, not a network-level estimator.
         X = pd.DataFrame({"x": ["p", "p", "q"]})
         y = pd.Series(["a", "b", "a"], name="y")
         assert TabularCPD().fit(X, y) == TabularCPD(estimator=TabularMLE()).fit(X, y)
-        with pytest.raises(TypeError, match="tabular estimator"):
+        with pytest.raises(TypeError, match="BaseTabularEstimator"):
             TabularCPD(estimator=DiscreteBayesianEstimator())

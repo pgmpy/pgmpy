@@ -6,13 +6,15 @@ from numpy.typing import ArrayLike
 
 from pgmpy.parameterization._base import (
     BaseParameterization,
+    _check_integer,
     _checked_evidence,
     _checked_state_names,
     _parent_order,
+    _states,
 )
 from pgmpy.parameterization.cpds.tabular_estimators import BaseTabularEstimator, TabularMLE
 from pgmpy.parameterization.distributions import NominalDistribution
-from pgmpy.utils import collect_state_names, encode_columns, get_state_counts_array
+from pgmpy.utils import encode_columns, get_state_counts_array
 
 
 class TabularCPD(BaseParameterization):
@@ -92,14 +94,7 @@ class TabularCPD(BaseParameterization):
         self.estimator = estimator
         super().__init__()
 
-        # The estimator decides whether the counts can be weighted.
-        if estimator is not None:
-            if not isinstance(estimator, BaseTabularEstimator):
-                raise TypeError(
-                    "estimator must be a tabular estimator, such as TabularMLE() or TabularBayesian(), but is a "
-                    f"{type(estimator).__name__}."
-                )
-            self.set_tags(supports_weighted_data=estimator.get_tag("supports_weighted_data"))
+        self._check_estimator(estimator, BaseTabularEstimator)
 
     @classmethod
     def from_values(
@@ -142,19 +137,22 @@ class TabularCPD(BaseParameterization):
         evidence_card = [] if evidence_card is None else list(evidence_card)
         if len(evidence_card) != len(evidence):
             raise ValueError(f"evidence_card must have one entry per parent in {evidence}, but is {evidence_card}.")
+        _check_integer("variable_card", variable_card, 1)
+        for position, card in enumerate(evidence_card):
+            _check_integer(f"evidence_card[{position}]", card, 1)
         order = _parent_order(evidence)
         names = [variable, *(evidence[position] for position in order)]
         cardinalities = [variable_card, *(evidence_card[position] for position in order)]
         given = _checked_state_names(state_names)
-        states = {name: given.get(name, list(range(card))) for name, card in zip(names, cardinalities)}
+        states = {name: given[name] if name in given else list(range(card)) for name, card in zip(names, cardinalities)}
         for name, card in zip(names, cardinalities):
             if len(states[name]) != card:
                 raise ValueError(
                     f"{name!r} has {card} states, but state_names lists {len(states[name])}: {states[name]}."
                 )
 
-        # Step 2: Check that values is a table of probabilities of the right shape, and reorder its columns to the
-        # sorted parents.
+        # Step 2: Check that values is a table of probabilities of the right shape, normalize its columns, which need
+        # only sum to 1 within 0.01, and reorder them to the sorted parents.
         values = np.array(values, dtype=float)
         shape = (variable_card, int(np.prod(evidence_card)))
         if values.shape != shape:
@@ -163,6 +161,7 @@ class TabularCPD(BaseParameterization):
             )
         if (values < 0).any() or not np.allclose(values.sum(axis=0), 1, atol=0.01):
             raise ValueError("values must be non-negative, and each column must sum to 1.")
+        values = values / values.sum(axis=0)
         values = values.reshape(variable_card, *evidence_card).transpose(0, *(1 + position for position in order))
 
         # Step 3: Create the fitted instance.
@@ -177,29 +176,27 @@ class TabularCPD(BaseParameterization):
     def _fit(self, X: pd.DataFrame, y: pd.DataFrame, sample_weight: np.ndarray | None) -> None:
         # Step 1: Find the states of every variable: the given ones, else the sorted states in the data.
         names = [self.variable_, *self.evidence_]
-        given = _checked_state_names(self.state_names)
         data = pd.concat([y, X], axis=1, ignore_index=True)
-        states = {}
-        for position, name in enumerate(names):
-            observed = collect_state_names(data, position)
-            if name in given and not set(observed) <= set(given[name]):
-                raise ValueError(f"Data contains unexpected states for variable: {name!r}.")
-            states[name] = given[name] if name in given else observed
+        given = _checked_state_names(self.state_names)
+        states = _states([(name, data[position]) for position, name in enumerate(names)], given)
 
         # Step 2: Count, with any weights, the rows of each state of the target for each combination of parent states.
-        # The weights keep their scale, as it sets how much the data count against a prior. Positions label the
-        # columns here, as selecting columns by label fails for some names, e.g. booleans.
-        with np.errstate(over="ignore"):
-            total = len(data) if sample_weight is None else sample_weight.sum()
-        if not np.isfinite(total):
-            raise ValueError("sample_weight values sum to more than a float can hold; divide them by a constant.")
+        # The weights keep their scale, as it sets how much the data count against a prior, so their sum must be
+        # finite. Positions label the columns here, as selecting a list of columns by label fails for boolean names. A
+        # value that only equals a state under Python's ==, as True does 1, gets no code.
+        if sample_weight is not None:
+            with np.errstate(over="ignore"):
+                if not np.isfinite(sample_weight.sum()):
+                    raise ValueError(
+                        "sample_weight values sum to more than a float can hold; divide them by a constant."
+                    )
         codes, cardinalities = encode_columns(data, dict(enumerate(states.values())))
-        counts = get_state_counts_array(codes, cardinalities, 0, range(1, len(names)), sample_weight).astype(float)
-        if not np.isclose(counts.sum(), total):
+        if any((code < 0).any() for code in codes.values()):
             raise ValueError(
                 "Some values in the data don't match state_names, e.g. [0, 1] given for boolean data; list the states "
                 "with the data's own types."
             )
+        counts = get_state_counts_array(codes, cardinalities, 0, range(1, len(names)), sample_weight)
 
         # Step 3: Turn the counts into the table.
         self.cpt_ = (TabularMLE() if self.estimator is None else self.estimator).estimate(counts)
@@ -231,9 +228,7 @@ class TabularCPD(BaseParameterization):
             columns=[self.variable_],
         )
 
-    def __eq__(self, other: object) -> bool:
-        if type(other) is not type(self) or not (self.is_fitted and other.is_fitted):
-            return super().__eq__(other)
+    def _fitted_equal(self, other: "TabularCPD") -> bool:
         names = [self.variable_, *self.evidence_]
         if (self.variable_, self.evidence_) != (other.variable_, other.evidence_) or any(
             set(self.state_names_[name]) != set(other.state_names_[name]) for name in names
@@ -243,5 +238,3 @@ class TabularCPD(BaseParameterization):
         positions = [[other.state_names_[name].index(state) for state in self.state_names_[name]] for name in names]
         cardinalities = [self.variable_card_, *self.evidence_card_]
         return np.allclose(self.cpt_, other.cpt_.reshape(cardinalities)[np.ix_(*positions)].reshape(self.cpt_.shape))
-
-    __hash__ = BaseParameterization.__hash__

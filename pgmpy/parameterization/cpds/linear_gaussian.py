@@ -83,14 +83,7 @@ class LinearGaussianCPD(BaseParameterization):
         self.estimator = estimator
         super().__init__()
 
-        # The estimator decides whether the rows can be weighted.
-        if estimator is not None:
-            if not isinstance(estimator, BaseLinearGaussianEstimator):
-                raise TypeError(
-                    "estimator must be a linear Gaussian estimator, such as LinearGaussianOLS(), but is a "
-                    f"{type(estimator).__name__}."
-                )
-            self.set_tags(supports_weighted_data=estimator.get_tag("supports_weighted_data"))
+        self._check_estimator(estimator, BaseLinearGaussianEstimator)
 
     @classmethod
     def from_values(
@@ -139,15 +132,11 @@ class LinearGaussianCPD(BaseParameterization):
 
     def _fit(self, X: pd.DataFrame, y: pd.DataFrame, sample_weight: np.ndarray | None) -> None:
         # Step 1: Drop the rows with weight 0: they don't count, and dropping them keeps their values out of the sums of
-        # squares, where they could overflow. A constant target has no positive std.
+        # squares, where they could overflow.
         parents, target = X.to_numpy(dtype=float), y.iloc[:, 0].to_numpy(dtype=float)
         if sample_weight is not None:
             positive = sample_weight > 0
             parents, target, sample_weight = parents[positive], target[positive], sample_weight[positive]
-        if np.ptp(target) == 0:
-            raise ValueError(
-                f"{self.variable_!r} is constant, so its std is 0, but a LinearGaussianCPD needs a positive std."
-            )
 
         # Step 2: Estimate the coefficients and the std, which must be positive and finite.
         estimator = LinearGaussianOLS() if self.estimator is None else self.estimator
@@ -167,13 +156,9 @@ class LinearGaussianCPD(BaseParameterization):
         means = self.beta_[0] + X.to_numpy(dtype=float) @ self.beta_[1:]
         return Normal(mu=means.reshape(-1, 1), sigma=self.std_, index=X.index, columns=[self.variable_])
 
-    def __eq__(self, other: object) -> bool:
-        if type(other) is not type(self) or not (self.is_fitted and other.is_fitted):
-            return super().__eq__(other)
+    def _fitted_equal(self, other: "LinearGaussianCPD") -> bool:
         return (
             (self.variable_, self.evidence_) == (other.variable_, other.evidence_)
             and np.allclose(self.beta_, other.beta_)
             and np.allclose(self.std_, other.std_)
         )
-
-    __hash__ = BaseParameterization.__hash__

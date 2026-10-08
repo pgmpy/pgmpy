@@ -107,10 +107,9 @@ class TabularBayesian(BaseTabularEstimator):
             raise ValueError("prior_type='dirichlet' needs pseudo_counts.")
         if prior != "dirichlet" and pseudo_counts is not None:
             raise ValueError(f"pseudo_counts is only for prior_type='dirichlet', but prior_type is {prior_type!r}.")
-        if isinstance(equivalent_sample_size, bool) or not isinstance(equivalent_sample_size, Real):
-            raise ValueError(f"equivalent_sample_size must be a positive number, but is {equivalent_sample_size!r}.")
-        if not (np.isfinite(equivalent_sample_size) and equivalent_sample_size > 0):
-            raise ValueError(f"equivalent_sample_size must be a positive number, but is {equivalent_sample_size!r}.")
+        ess = equivalent_sample_size
+        if prior == "bdeu" and (isinstance(ess, bool) or not isinstance(ess, Real) or not 0 < ess < np.inf):
+            raise ValueError(f"equivalent_sample_size must be a positive number, but is {ess!r}.")
         if pseudo_counts is not None:
             values = np.asarray(pseudo_counts, dtype=float)
             if values.ndim not in (0, 2) or not np.isfinite(values).all() or (values < 0).any():

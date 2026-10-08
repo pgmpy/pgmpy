@@ -2,8 +2,7 @@ import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
 
-from pgmpy.parameterization._base import BaseParameterization, _check_n_samples
-from pgmpy.parameterization.distributions.nominal import _sample_index
+from pgmpy.parameterization._base import BaseParameterization, _check_integer
 
 
 class BaseMechanism(BaseParameterization):
@@ -16,7 +15,9 @@ class BaseMechanism(BaseParameterization):
     forward pass, so ``sample(X, random_state=s)`` equals ``predict(X, noise=sample_noise(len(X), random_state=s))``.
 
     Subclasses implement ``_fit`` and ``_predict_proba``, as every parameterization does, and ``_sample_noise``,
-    ``_forward`` and ``_abduct``.
+    ``_forward`` and ``_abduct``. ``_forward`` and ``_abduct`` get ``X`` in ``evidence_`` order, with ``X``'s own labels
+    from ``predict`` and ``abduct`` and on a RangeIndex from ``sample``, and the noise or ``y`` as a 1-D float array by
+    position. Both return one column named after the target, with ``X``'s index.
     """
 
     def predict(self, X: pd.DataFrame, noise: ArrayLike | pd.Series | pd.DataFrame | None = None) -> pd.DataFrame:
@@ -37,10 +38,8 @@ class BaseMechanism(BaseParameterization):
         """
         if noise is None:
             return super().predict(X)
-        X = self._check_X(X)
-        if X is None:
-            raise ValueError("predict needs X; for a root variable, pass a DataFrame without columns.")
-        return self._forward(X, _check_values(noise, X, "noise"))
+        X = self._check_X(X, "predict")
+        return self._forward(X, _checked_values(noise, X, "noise"))
 
     def sample_noise(self, n_samples: int, random_state: int | np.random.Generator | None = None) -> np.ndarray:
         """Draw noise values, which don't depend on the parents.
@@ -58,7 +57,7 @@ class BaseMechanism(BaseParameterization):
             The noise values, which ``predict(X, noise=...)`` takes by position.
         """
         self.check_is_fitted()
-        _check_n_samples(n_samples)
+        _check_integer("n_samples", n_samples, 0)
         return self._sample_noise(n_samples, random_state)
 
     def abduct(self, X: pd.DataFrame, y: ArrayLike | pd.Series | pd.DataFrame) -> pd.DataFrame:
@@ -76,28 +75,11 @@ class BaseMechanism(BaseParameterization):
         pandas.DataFrame
             One column named after the target, with ``X``'s index.
         """
-        X = self._check_X(X)
-        if X is None:
-            raise ValueError("abduct needs X; for a root variable, pass a DataFrame without columns.")
-        return self._abduct(X, _check_values(y, X, "y"))
+        X = self._check_X(X, "abduct")
+        return self._abduct(X, _checked_values(y, X, "y"))
 
-    def _sample(
-        self, X: pd.DataFrame | None, n_samples: int | None, random_state: int | np.random.Generator | None
-    ) -> pd.DataFrame:
-        # Step 1: Repeat X's rows once per draw, or for a root without X, take n_samples rows without columns, and draw
-        # one noise value for each.
-        if X is None:
-            rows = pd.DataFrame(index=pd.RangeIndex(n_samples))
-        else:
-            rows = X.iloc[np.tile(np.arange(len(X)), 1 if n_samples is None else n_samples)]
-        noise = self._sample_noise(len(rows), random_state)
-
-        # Step 2: Run the forward pass by position, and label the samples as every parameterization does: with X's
-        # index, and a level numbering the draws when n_samples is given.
-        samples = self._forward(rows.set_axis(pd.RangeIndex(len(rows))), noise)
-        if X is not None:
-            samples = samples.set_axis(X.index if n_samples is None else _sample_index(X.index, n_samples))
-        return samples
+    def _draw(self, rows: pd.DataFrame, random_state: int | np.random.Generator | None) -> pd.DataFrame:
+        return self._forward(rows, self._sample_noise(len(rows), random_state))
 
     def _sample_noise(self, n_samples: int, random_state: int | np.random.Generator | None) -> np.ndarray:
         raise NotImplementedError
@@ -109,7 +91,7 @@ class BaseMechanism(BaseParameterization):
         raise NotImplementedError
 
 
-def _check_values(values: ArrayLike | pd.Series | pd.DataFrame, X: pd.DataFrame, name: str) -> np.ndarray:
+def _checked_values(values: ArrayLike | pd.Series | pd.DataFrame, X: pd.DataFrame, name: str) -> np.ndarray:
     """Return one finite number per row of ``X``, as a 1-D float array, from an array by position or a pandas object
     with ``X``'s index."""
     if isinstance(values, pd.DataFrame):

@@ -136,12 +136,8 @@ class DistributionAdapter(BaseParameterization):
             return type(scalar)(**numbers, index=X.index, columns=[self.variable_])
         return IID(deepcopy(scalar), index=X.index, columns=[self.variable_])
 
-    def __eq__(self, other: object) -> bool:
-        if type(other) is not type(self) or not (self.is_fitted and other.is_fitted):
-            return super().__eq__(other)
+    def _fitted_equal(self, other: "DistributionAdapter") -> bool:
         # skbase's == ignores the distributions' types, which _equal checks.
         return (self.variable_, self.evidence_) == (other.variable_, other.evidence_) and _equal(
             self.distribution_, other.distribution_
         )
-
-    __hash__ = BaseParameterization.__hash__

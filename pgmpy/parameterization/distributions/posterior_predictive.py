@@ -1,5 +1,7 @@
 import math
-from typing import Any
+from collections.abc import Iterator
+from contextlib import contextmanager
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -11,13 +13,16 @@ from pgmpy.parameterization.distributions.nominal import _sample_index
 BaseDistribution = _safe_import("skpro.distributions.base.BaseDistribution")
 torch = _safe_import("torch")
 
+if TYPE_CHECKING:
+    from pgmpy.parameterization.adapters.pyro import PyroAdapter
+
 
 class PosteriorPredictive(BaseDistribution):
-    """Posterior predictive distribution of a Bayesian parameterization, such as ``PyroAdapter``: for each row, the
-    mixture of the target's distribution over the posterior draws, with equal weights.
+    """Posterior predictive distribution of a fitted ``PyroAdapter``: for each row, the mixture of the target's
+    distribution over the posterior draws, with equal weights.
 
-    It holds the fitted parameterization and the parents' values, and evaluates the target's distribution when a method
-    needs it, so it can be subset like any skpro distribution. The density, or the probability for a discrete support,
+    It holds the fitted adapter and the parents' values, and evaluates the target's distribution when a method needs it,
+    so it can be subset like any skpro distribution. The density, or the probability for a discrete support,
     is the average over the draws, and 0 outside the support. The mean is the average of the draws' means, and the
     variance the average of their variances plus the variance of their means. The cdf is the average of the draws'
     cdfs, for families that have one in torch, with values clamped to the support's bounds; ``ppf`` is skpro's
@@ -28,8 +33,8 @@ class PosteriorPredictive(BaseDistribution):
     Parameters
     ----------
     parameterization : PyroAdapter
-        A fitted parameterization with posterior draws, ``posterior_samples_``, which gives the target's torch
-        distribution given the parents' values under some of the draws.
+        A fitted ``PyroAdapter``, whose posterior draws, ``posterior_samples_``, give the target's torch distribution
+        given the parents' values.
     X : pandas.DataFrame
         The parents' values, one row per row of the distribution, used by position; one row for a scalar distribution.
     index : pandas.Index or list, optional
@@ -65,7 +70,7 @@ class PosteriorPredictive(BaseDistribution):
 
     def __init__(
         self,
-        parameterization: Any,
+        parameterization: "PyroAdapter",
         X: pd.DataFrame,
         index: pd.Index | list | None = None,
         columns: pd.Index | list | None = None,
@@ -89,17 +94,12 @@ class PosteriorPredictive(BaseDistribution):
                 raise ValueError("columns must contain exactly one column name.")
 
         super().__init__(index=index, columns=columns)
-        if parameterization._discrete:
+        if parameterization._discrete_support:
             self.set_tags(**{"distr:measuretype": "discrete"})
 
     def _torch_distribution(self) -> Any:
         """Return the target's torch distribution under every posterior draw, with batch shape (draws, rows)."""
-        distribution = self.parameterization._distribution(self.X, self.parameterization.posterior_samples_)
-        # Values outside the support are handled here, so torch mustn't reject them. Pyro's validation switch doesn't
-        # reach a distribution that a plate expanded, which keeps the flag it was created with; its parameters were
-        # checked then.
-        distribution._validate_args = False
-        return distribution
+        return _unvalidated(self.parameterization._distribution(self.X, self.parameterization.posterior_samples_))
 
     def _values(self, x: ArrayLike) -> Any:
         """Return the queried values, one per row, as a 1-D tensor in torch's default dtype."""
@@ -184,8 +184,7 @@ class PosteriorPredictive(BaseDistribution):
         # Step 2: Evaluate the target's distribution once for each draw picked, on the rows that picked it, and sample
         # it, in a copy of the torch random state seeded from the same generator.
         values = np.empty(len(rows))
-        with torch.random.fork_rng(devices=[]):
-            torch.manual_seed(int(rng.integers(2**63)))
+        with _seeded(rng):
             for draw in np.unique(picked):
                 positions = np.flatnonzero(picked == draw)
                 one_draw = {name: samples[draw : draw + 1] for name, samples in draws.items()}
@@ -207,6 +206,26 @@ class PosteriorPredictive(BaseDistribution):
         if rowidx is not None:
             X = X.iloc[[rowidx]] if isinstance(rowidx, (int, np.integer)) else X.iloc[rowidx]
         return {"parameterization": self.parameterization, "X": X}
+
+
+@contextmanager
+def _seeded(random_state: int | np.random.Generator | None) -> Iterator[None]:
+    """Seed torch's CPU generator from ``random_state`` for the block, and restore it after. ``torch.manual_seed`` would
+    also seed the other devices' generators, which ``fork_rng(devices=[])`` doesn't restore."""
+    with torch.random.fork_rng(devices=[]):
+        torch.default_generator.manual_seed(int(np.random.default_rng(random_state).integers(2**63)))
+        yield
+
+
+def _unvalidated(distribution: Any) -> Any:
+    """Return the torch distribution with its value checks off, also in the distributions it wraps, e.g. LogNormal's
+    base Normal, as the callers mask values outside the support themselves. Pyro's validation switch doesn't reach a
+    distribution that a plate expanded, which keeps the flag it was created with; its parameters were checked then."""
+    distribution._validate_args = False
+    for value in vars(distribution).values():
+        if isinstance(value, torch.distributions.Distribution):
+            _unvalidated(value)
+    return distribution
 
 
 def _to_numpy(values: Any, shape: tuple) -> np.ndarray:

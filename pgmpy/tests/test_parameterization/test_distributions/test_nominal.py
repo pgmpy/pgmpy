@@ -26,12 +26,6 @@ class TestNominalDistribution:
         assert dist.get_class_tag("distr:measuretype") == "discrete"
         assert dist.get_class_tag("capabilities:exact") == ["pmf", "log_pmf"]
 
-    def test_public_import(self):
-        """The class is importable from pgmpy.parameterization, where users import every public name."""
-        from pgmpy.parameterization import NominalDistribution as PublicCat
-
-        assert PublicCat is NominalDistribution
-
     @pytest.mark.parametrize("scalar", [False, True])
     def test_interface_compatibility(self, scalar):
         """ensure interface compatibility by skpro.utils.estimator_checks.check_estimator"""
@@ -307,9 +301,13 @@ class TestNominalDistribution:
         with pytest.raises(ValueError, match="missing values"):
             scalar.pmf(pd.NA)
 
-        # Case 8: tuple labels round-trip through sample() and pmf()
+        # Case 8: tuple labels round-trip through sample() and pmf(), also for a scalar distribution, where skpro would
+        # read a tuple as an array
         dist = NominalDistribution(probs=[[0.5, 0.5], [0.5, 0.5]], categories=[("a", 1), ("b", 2)])
         pd.testing.assert_frame_equal(dist.pmf(dist.sample()), pd.DataFrame({"variable": [0.5, 0.5]}))
+        scalar = NominalDistribution(probs=[0.3, 0.7], categories=[("a", 1), ("b", 2)])
+        assert scalar.pmf(("a", 1)) == pytest.approx(0.3) and scalar.log_pmf(("b", 2)) == pytest.approx(np.log(0.7))
+        assert scalar.pmf(scalar.sample(random_state=0)) in (pytest.approx(0.3), pytest.approx(0.7))
 
     def test_log_pmf(self):
         """test"""

@@ -82,7 +82,10 @@ class LinearGaussianOLS(BaseLinearGaussianEstimator):
     def estimate(
         self, parents: np.ndarray, target: np.ndarray, sample_weight: np.ndarray | None
     ) -> tuple[np.ndarray, float]:
-        # Step 1: Estimate the coefficients by weighted least squares; a root has only its mean.
+        # Step 1: Estimate the coefficients by weighted least squares; a root has only its mean. A constant target has
+        # no positive std, which the rounding of its fitted mean would hide.
+        if np.ptp(target) == 0:
+            raise ValueError("The target is constant, so its std is 0, but a LinearGaussianCPD needs a positive std.")
         weights = np.ones(len(target)) if sample_weight is None else sample_weight
         if parents.shape[1]:
             regression = LinearRegression().fit(parents, target, sample_weight=sample_weight)

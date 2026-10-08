@@ -1,3 +1,4 @@
+import copy
 from collections.abc import Callable
 from typing import Any, Literal
 
@@ -5,9 +6,10 @@ import numpy as np
 import pandas as pd
 from skbase.utils.dependencies import _safe_import
 
-from pgmpy.parameterization._base import BaseParameterization, _checked_state_names
+from pgmpy.parameterization._base import BaseParameterization, _checked_state_names, _states
 from pgmpy.parameterization.adapters.pyro_estimators import BasePyroEstimator, PyroSVI
 from pgmpy.parameterization.distributions import NominalDistribution, PosteriorPredictive
+from pgmpy.parameterization.distributions.posterior_predictive import _unvalidated
 
 torch = _safe_import("torch")
 pyro = _safe_import("pyro", pkg_name="pyro-ppl")
@@ -52,14 +54,14 @@ class PyroAdapter(BaseParameterization):
     fn : callable
         The target's distribution given its parents: takes the parents' values, a dict of 1-D tensors by name, and
         returns a Pyro distribution.
-    estimator : BasePyroEstimator, optional
-        The inference algorithm and its settings, e.g. ``PyroNUTS(num_samples=500)``. ``None`` for ``PyroSVI()``.
     variable_type : {"continuous", "discrete"}, default="continuous"
         Whether the target has numeric values or labels.
     state_names : dict, optional
         States of a discrete target and of discrete parents, as ``{variable: [states]}``, in the order of their codes.
         The listed states must include every state in the data; discrete variables that aren't listed get the sorted
         states seen in the data.
+    estimator : BasePyroEstimator, optional
+        The inference algorithm and its settings, e.g. ``PyroNUTS(num_samples=500)``. ``None`` for ``PyroSVI()``.
 
     Attributes
     ----------
@@ -116,7 +118,7 @@ class PyroAdapter(BaseParameterization):
 
     _tags = {
         "name": "pyro_adapter",
-        "variable_type": ["continuous"],
+        "variable_type": ["discrete", "continuous"],
         "parent_data_types": ["discrete", "continuous", "mixed"],
         "supports_weighted_data": True,
         "python_dependencies": ["pyro-ppl", "skpro"],
@@ -125,14 +127,14 @@ class PyroAdapter(BaseParameterization):
     def __init__(
         self,
         fn: Callable[[dict], Any],
-        estimator: BasePyroEstimator | None = None,
         variable_type: Literal["continuous", "discrete"] = "continuous",
         state_names: dict | None = None,
+        estimator: BasePyroEstimator | None = None,
     ) -> None:
         self.fn = fn
-        self.estimator = estimator
         self.variable_type = variable_type
         self.state_names = state_names
+        self.estimator = estimator
         super().__init__()
 
         if not callable(fn):
@@ -140,37 +142,29 @@ class PyroAdapter(BaseParameterization):
         if variable_type not in ("continuous", "discrete"):
             raise ValueError(f"variable_type must be 'continuous' or 'discrete', but is {variable_type!r}.")
         self.set_tags(variable_type=[variable_type])
-        # The estimator decides whether the rows can be weighted.
-        if estimator is not None:
-            if not isinstance(estimator, BasePyroEstimator):
-                raise TypeError(
-                    "estimator must be a Pyro estimator, such as PyroSVI() or PyroNUTS(), but is a "
-                    f"{type(estimator).__name__}."
-                )
-            self.set_tags(supports_weighted_data=estimator.get_tag("supports_weighted_data"))
+        self._check_estimator(estimator, BasePyroEstimator)
 
     def _fit(self, X: pd.DataFrame, y: pd.DataFrame, sample_weight: np.ndarray | None) -> None:
-        # Step 1: Drop the rows with weight 0, which count for nothing, as Pyro only scales by positive weights.
-        if sample_weight is not None:
-            keep = sample_weight > 0
-            X, y, sample_weight = X[keep], y[keep], sample_weight[keep]
-
-        # Step 2: Find the states of a discrete target and of the discrete parents, those listed in state_names or that
-        # aren't numeric: the given states, else the sorted states in the data.
+        # Step 1: Find the states of a discrete target and of the discrete parents, those listed in state_names or that
+        # aren't numeric: the given states, else the sorted states in the data, also of rows with weight 0.
         given = _checked_state_names(self.state_names)
         discrete = self.get_tag("variable_type") == ["discrete"]
+        if not discrete and self.variable_ in given:
+            raise ValueError(
+                f"state_names lists {self.variable_!r}, a continuous target, but only discrete variables have states."
+            )
         columns = [(self.variable_, y.iloc[:, 0])] if discrete else []
         columns += [
             (name, X.iloc[:, position])
             for position, name in enumerate(self.evidence_)
             if name in given or not pd.api.types.is_numeric_dtype(X.iloc[:, position])
         ]
-        self.state_names_ = {}
-        for name, values in columns:
-            observed = sorted(values.unique())
-            if name in given and not set(observed) <= set(given[name]):
-                raise ValueError(f"Data contains unexpected states for variable: {name!r}.")
-            self.state_names_[name] = given[name] if name in given else observed
+        self.state_names_ = _states(columns, given)
+
+        # Step 2: Drop the rows with weight 0, which count for nothing, as Pyro only scales by positive weights.
+        if sample_weight is not None:
+            keep = sample_weight > 0
+            X, y, sample_weight = X[keep], y[keep], sample_weight[keep]
 
         # Step 3: Convert the data to tensors, a discrete target to the codes of its states, and build the node's model
         # around fn.
@@ -245,18 +239,23 @@ class PyroAdapter(BaseParameterization):
             # Step 5: Fit with the estimator, and keep its posterior draws of the latent sites.
             estimator = PyroSVI() if self.estimator is None else self.estimator
             draws, self.diagnostics_ = estimator.estimate(model, (parents, target, weights), latent, params)
+            missing = [name for name in latent if name not in draws]
+            if missing:
+                raise ValueError(f"{type(estimator).__name__} returned no draws of {missing}, latent sites of fn.")
             self.posterior_samples_ = {name: draws[name].detach() for name in latent}
             self.params_ = {name: pyro.param(name).detach() for name in params}
         self._param_state = state
-        self._discrete = distribution.support.is_discrete
+        self._discrete_support = distribution.support.is_discrete
 
     def _predict_proba(self, X: pd.DataFrame | None) -> PosteriorPredictive | NominalDistribution:
-        # Step 1: A continuous target gets the posterior predictive. Only a root gets X=None: its own distribution is a
-        # scalar one, evaluated on one row without columns.
+        # Step 1: A continuous target gets the posterior predictive, of a copy of this adapter, so that it keeps this
+        # fit after a refit or a set_params. Only a root gets X=None: its own distribution is a scalar one, evaluated on
+        # one row without columns.
         if self.get_tag("variable_type") == ["continuous"]:
+            fitted = copy.copy(self)
             if X is None:
-                return PosteriorPredictive(self, pd.DataFrame(index=[0]))
-            return PosteriorPredictive(self, X, index=X.index, columns=[self.variable_])
+                return PosteriorPredictive(fitted, pd.DataFrame(index=[0]))
+            return PosteriorPredictive(fitted, X, index=X.index, columns=[self.variable_])
 
         # Step 2: A discrete target gets each row's probabilities of its states, averaged over the posterior draws. A
         # plate of size 0 raises in Pyro, so no rows give no probabilities.
@@ -319,5 +318,4 @@ def _code_probabilities(distribution: Any, n_states: int) -> Any:
         n_states, *[1] * len(distribution.batch_shape)
     )
     inside = distribution.support.check(codes)
-    distribution._validate_args = False
-    return torch.where(inside, distribution.log_prob(codes).exp(), 0.0).movedim(0, -1)
+    return torch.where(inside, _unvalidated(distribution).log_prob(codes).exp(), 0.0).movedim(0, -1)

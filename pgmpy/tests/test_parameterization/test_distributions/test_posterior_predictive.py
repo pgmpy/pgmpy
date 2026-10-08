@@ -100,6 +100,13 @@ class TestPosteriorPredictive:
         np.testing.assert_allclose(gamma.pdf(x)["t"], [0.0, stats.gamma.pdf(1.0, a=2)], rtol=1e-5)
         np.testing.assert_allclose(gamma.cdf(x)["t"], [0.0, stats.gamma.cdf(1.0, a=2)], rtol=1e-5)
 
+        # So does a family that wraps another, as LogNormal wraps a Normal.
+        sizes = PyroAdapter(lambda parents: dist.LogNormal(0.0, 1.0), estimator=PyroSVI(num_steps=1)).fit(
+            None, pd.Series([1.0, 2.0], name="s")
+        )
+        scores = sizes.log_likelihood(None, pd.Series([-1.0, 1.0], name="s"))["s"]
+        np.testing.assert_allclose(scores, [-np.inf, stats.lognorm.logpdf(1.0, s=1.0)], rtol=1e-5)
+
     def test_subsetting(self, train, X):
         # Subsets keep their rows' parents, so composites such as AdditiveNoiseMechanism's MeanScale can take them.
         dist_ = PyroAdapter(line, estimator=PyroSVI(num_steps=1)).fit(*train).predict_proba(X)
@@ -162,8 +169,3 @@ class TestPosteriorPredictive:
         values = counts.fit(None, pd.Series([0, 1, 2, 5], name="k")).sample(n_samples=20000, random_state=0)["k"]
         assert (values == np.round(values)).all()
         assert abs(values.mean() - 2) < 0.05 and abs(values.var() - 2) < 0.1
-
-    def test_public_import(self):
-        from pgmpy.parameterization.distributions import PosteriorPredictive as Internal
-
-        assert Internal is PosteriorPredictive

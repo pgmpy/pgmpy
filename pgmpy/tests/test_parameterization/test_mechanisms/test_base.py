@@ -81,6 +81,12 @@ class TestBaseMechanism:
                 mechanism.abduct(X, bad)
         with pytest.raises(ValueError, match="parents"):
             mechanism.predict(None, noise=np.zeros(len(X)))
+        # A root takes a DataFrame without columns for the forward pass and abduction, as for predict.
+        root = SumMechanism().fit(None, y)
+        with pytest.raises(ValueError, match="predict needs X"):
+            root.predict(None, noise=np.zeros(len(X)))
+        with pytest.raises(ValueError, match="abduct needs X"):
+            root.abduct(None, y)
         for n_samples in (-1, 2.5, True, None):
             with pytest.raises(ValueError, match="n_samples"):
                 mechanism.sample_noise(n_samples)
