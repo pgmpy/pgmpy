@@ -14,6 +14,7 @@ docstring is the tag's documentation. The ``_tags`` of a tag class describe the 
   - ``("str", choices)``: Any element of ``choices``. ``None`` is valid only if it is in ``choices``.
   - ``("list", choices)``: A list whose elements are all in ``choices``. The choices can be classes, e.g. graph
     classes from :mod:`pgmpy.base`.
+  - ``"str, list or None"``: A string, a list of strings, or ``None``, as skbase's ``python_dependencies`` takes.
 
 - ``short_descr`` (str): One-line description of the tag.
 
@@ -35,6 +36,8 @@ OBJECT_TYPES = [
     "bivariate_score",
     "supervised_metric",
     "unsupervised_metric",
+    "parameterization",
+    "local_estimator",
 ]
 
 METRIC_TYPES = ["supervised_metric", "unsupervised_metric"]
@@ -134,12 +137,13 @@ class requires_data(_BaseTag):
     """
     Whether the object needs data.
 
-    ``False`` for oracle CI tests such as ``IndependenceMatch`` and for metrics that only compare two graphs.
+    ``False`` for oracle CI tests such as ``IndependenceMatch``, for metrics that only compare two graphs, and for
+    parameterizations that are given rather than learned, such as ``DistributionAdapter``.
     """
 
     _tags = {
         "tag_name": "requires_data",
-        "parent_type": ["ci_test"] + METRIC_TYPES,
+        "parent_type": ["ci_test"] + METRIC_TYPES + ["parameterization"],
         "tag_type": "bool",
         "short_descr": "Whether the object needs data.",
     }
@@ -235,7 +239,8 @@ class capability__expert_knowledge(_BaseTag):
 # class-level value is the union over all available components (False if some component doesn't require it). `fit`
 # sets it to True if the algorithm or any component used for fitting requires it. Assumptions that can't be expressed
 # this way (for example, an assumption that holds if either of two conditions does) are described in the method's
-# docstring.
+# docstring. For parameterizations, the tag says whether the model of the target given its parents makes the
+# assumption; an adapter whose model depends on the estimator it wraps sets it in `__init__`.
 
 
 class assumption__causal_sufficiency(_BaseTag):
@@ -281,7 +286,7 @@ class assumption__linearity(_BaseTag):
 
     _tags = {
         "tag_name": "assumption:linearity",
-        "parent_type": ["causal_discovery", "ci_test", "structure_score", "bivariate_score"],
+        "parent_type": ["causal_discovery", "ci_test", "structure_score", "bivariate_score", "parameterization"],
         "tag_type": "bool",
         "short_descr": "Assumes each variable is a linear function of its parents.",
     }
@@ -292,7 +297,7 @@ class assumption__additive_noise(_BaseTag):
 
     _tags = {
         "tag_name": "assumption:additive_noise",
-        "parent_type": ["causal_discovery", "ci_test", "structure_score", "bivariate_score"],
+        "parent_type": ["causal_discovery", "ci_test", "structure_score", "bivariate_score", "parameterization"],
         "tag_type": "bool",
         "short_descr": "Assumes independent, additive noise.",
     }
@@ -303,7 +308,7 @@ class assumption__gaussian_noise(_BaseTag):
 
     _tags = {
         "tag_name": "assumption:gaussian_noise",
-        "parent_type": ["causal_discovery", "ci_test", "structure_score", "bivariate_score"],
+        "parent_type": ["causal_discovery", "ci_test", "structure_score", "bivariate_score", "parameterization"],
         "tag_type": "bool",
         "short_descr": "Assumes Gaussian noise.",
     }
@@ -419,6 +424,144 @@ class lower_is_better(_BaseTag):
     }
 
 
+# -----------------
+# Parameterizations
+# -----------------
+
+
+class variable_type(_BaseTag):
+    """
+    Types of target the parameterization can model.
+
+    The class-level value lists every type the class supports. An adapter whose type depends on what it wraps narrows
+    it to one in ``__init__``, e.g. ``SklearnAdapter`` to ``["discrete"]`` for a classifier. ``fit`` needs exactly one.
+    """
+
+    _tags = {
+        "tag_name": "variable_type",
+        "parent_type": ["parameterization"],
+        "tag_type": ("list", ["discrete", "continuous"]),
+        "short_descr": "Types of target the parameterization can model.",
+    }
+
+
+class parent_data_types(_BaseTag):
+    """
+    Data types of the parents the parameterization can condition on.
+
+    ``"mixed"`` means discrete and continuous parents together. Only a class that takes ``["continuous"]`` parents has
+    them checked in ``fit``, where they must be numeric: discrete parents can be integer-coded, so their dtype can't
+    tell them apart from continuous ones.
+    """
+
+    _tags = {
+        "tag_name": "parent_data_types",
+        "parent_type": ["parameterization"],
+        "tag_type": ("list", DATA_TYPES),
+        "short_descr": "Data types of the parents the parameterization can condition on.",
+    }
+
+
+class supports_weighted_data(_BaseTag):
+    """
+    Whether ``fit`` takes ``sample_weight``, or for a local estimator, whether it can estimate from weighted data.
+
+    A parameterization that delegates fitting sets it in ``__init__``: an adapter from the estimator it wraps, a
+    ``TabularCPD``, ``LinearGaussianCPD`` or ``PyroAdapter`` from its local estimator, and an ``AdditiveNoiseMechanism``
+    from both of its slots.
+    """
+
+    _tags = {
+        "tag_name": "supports_weighted_data",
+        "parent_type": ["parameterization", "local_estimator"],
+        "tag_type": "bool",
+        "short_descr": "Whether fit takes sample_weight, or a local estimator weighted data.",
+    }
+
+
+class capability__distribution(_BaseTag):
+    """
+    Whether the parameterization gives a distribution: whether ``predict_proba``, ``sample`` and ``log_likelihood``
+    work.
+
+    False for a point predictor, such as ``SklearnAdapter`` wrapping a regressor, whose only prediction is
+    ``predict``; those methods then raise ``NotImplementedError``. ``log_likelihood`` can still raise it for a
+    distribution that skpro can't score, e.g. an ``Empirical``.
+    """
+
+    _tags = {
+        "tag_name": "capability:distribution",
+        "parent_type": ["parameterization"],
+        "tag_type": "bool",
+        "short_descr": "Whether it gives a distribution, so that predict_proba, sample and log_likelihood work.",
+    }
+
+
+class capability__factor(_BaseTag):
+    """
+    Whether the parameterization can be turned into a discrete factor for exact inference.
+
+    A discrete factor is a table of probabilities over every combination of the states of the target and its parents,
+    as used by variable elimination and belief propagation, e.g. ``TabularCPD``.
+    """
+
+    _tags = {
+        "tag_name": "capability:factor",
+        "parent_type": ["parameterization"],
+        "tag_type": "bool",
+        "short_descr": "Whether it can be turned into a discrete factor for exact inference.",
+    }
+
+
+class capability__exact_inference(_BaseTag):
+    """
+    Whether the parameterization supports exact inference.
+
+    Either as a discrete factor (``capability:factor``), e.g. ``TabularCPD``, or as a linear Gaussian conditional that
+    combines with others into a joint Gaussian, e.g. ``LinearGaussianCPD``. A network supports exact inference only if
+    all its nodes support the same kind, which ``capability:factor`` and the ``assumption:*`` tags tell apart.
+    """
+
+    _tags = {
+        "tag_name": "capability:exact_inference",
+        "parent_type": ["parameterization"],
+        "tag_type": "bool",
+        "short_descr": "Whether it supports exact inference, as a discrete factor or a linear Gaussian.",
+    }
+
+
+class python_dependencies(_BaseTag):
+    """Python packages the object needs, checked when it is constructed, as in skbase: one package, a list, or None."""
+
+    _tags = {
+        "tag_name": "python_dependencies",
+        "parent_type": ["parameterization", "local_estimator"],
+        "tag_type": "str, list or None",
+        "short_descr": "Python packages the object needs, checked when it is constructed.",
+    }
+
+
+# ----------------
+# Local estimators
+# ----------------
+
+
+class parameterization(_BaseTag):
+    """
+    The parameterizations the local estimator can fit, by their ``name`` tag.
+
+    A local estimator is passed to a parameterization, e.g. ``TabularCPD(estimator=TabularBayesian())``, and estimates
+    its parameters from one node's data.
+    """
+
+    _tags = {
+        "tag_name": "parameterization",
+        "parent_type": ["local_estimator"],
+        "tag_type": ("list", ["tabular_cpd", "linear_gaussian_cpd", "pyro_adapter"]),
+        "short_descr": "The parameterizations the local estimator can fit, by their name tag.",
+    }
+
+
 def _build_tag_register() -> list[tuple]:
     register = []
     # vars() keeps the definition order, so tags are listed in the order they are defined in this module.
@@ -506,6 +649,13 @@ def check_tag_is_valid(tag_name: str, tag_value) -> None:
         valid, expected = isinstance(tag_value, bool), "a bool"
     elif tag_type == "str":
         valid, expected = isinstance(tag_value, str), "a str"
+    elif tag_type == "str, list or None":
+        valid = (
+            tag_value is None
+            or isinstance(tag_value, str)
+            or (isinstance(tag_value, list) and all(isinstance(value, str) for value in tag_value))
+        )
+        expected = "a str, a list of str or None"
     elif tag_type[0] == "str":
         valid, expected = tag_value in tag_type[1], f"one of {tag_type[1]}"
     else:

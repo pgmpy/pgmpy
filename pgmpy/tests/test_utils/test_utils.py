@@ -1,5 +1,6 @@
 import random
 import unittest
+from importlib.util import find_spec
 
 import numpy as np
 import pandas as pd
@@ -94,6 +95,12 @@ class TestPreprocessData(unittest.TestCase):
                 "B_int": "O",
             },
         )
+
+        # Booleans of every kind are numeric, including pyarrow's, which pandas doesn't count as numeric.
+        booleans = pd.DataFrame({"A": [True, False, True]})
+        dtypes = ["bool", "boolean"] + (["bool[pyarrow]"] if find_spec("pyarrow") else [])
+        for dtype in dtypes:
+            self.assertEqual(preprocess_data(booleans.astype(dtype))[1], {"A": "N"})
 
 
 class TestGetExampleModel(unittest.TestCase):

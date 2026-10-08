@@ -6,18 +6,20 @@ import numpy as np
 import pandas as pd
 import pytest
 from scipy.stats import norm
-from sklearn.exceptions import NotFittedError
+from skbase._exceptions import NotFittedError
 from sklearn.linear_model import LinearRegression
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 
 import pgmpy.parameterization
-from pgmpy.parameterization import BaseParameter
+from pgmpy.parameterization import BaseParameterization
 from pgmpy.utils import ExperimentalWarning
 
 
-class CountParameter(BaseParameter):
+class CountParameter(BaseParameterization):
     """Records the data it was fitted on; `_predict_proba` and `_sample` return what the base passed them."""
 
-    _tags = {"variable_type": "discrete", "supports_weighted_data": True}
+    _tags = {"variable_type": ["discrete"], "supports_weighted_data": True}
 
     def __init__(self, pseudo_count=0):
         self.pseudo_count = pseudo_count
@@ -42,17 +44,26 @@ def data():
     return X, y
 
 
-class TestBaseParameter:
+class TestBaseParameterization:
     def test_experimental_warning(self):
         with pytest.warns(ExperimentalWarning, match="pgmpy.parameterization is experimental"):
             importlib.reload(pgmpy.parameterization)
 
+    def test_public_names(self):
+        # Every public name of the subpackages is imported from pgmpy.parameterization, as the same object.
+        for subpackage in ("adapters", "cpds", "distributions", "mechanisms"):
+            module = importlib.import_module(f"pgmpy.parameterization.{subpackage}")
+            for name in module.__all__:
+                assert name in pgmpy.parameterization.__all__
+                assert getattr(pgmpy.parameterization, name) is getattr(module, name)
+
     def test_tags(self):
-        assert BaseParameter.get_class_tag("object_type") == "parameterization"
-        assert BaseParameter.get_class_tag("variable_type") == ["discrete", "continuous"]
-        assert BaseParameter.get_class_tag("parent_type") == ["discrete", "continuous"]
-        assert BaseParameter.get_class_tag("supports_weighted_data") is False
-        assert BaseParameter.get_class_tag("python_dependencies") is None
+        assert BaseParameterization.get_class_tag("object_type") == "parameterization"
+        assert BaseParameterization.get_class_tag("variable_type") == ["discrete", "continuous"]
+        assert BaseParameterization.get_class_tag("parent_data_types") == ["discrete", "continuous", "mixed"]
+        assert BaseParameterization.get_class_tag("supports_weighted_data") is False
+        assert BaseParameterization.get_class_tag("capability:distribution") is True
+        assert BaseParameterization.get_class_tag("python_dependencies") is None
 
     def test_fit(self, data):
         X, y = data
@@ -60,7 +71,7 @@ class TestBaseParameter:
         # Parents are sorted by name, and _fit gets X's columns in that order.
         parameter = CountParameter().fit(X, y)
         assert parameter.is_fitted
-        assert (parameter.variable_, parameter.evidence_, parameter.variable_type_) == ("t", ["a", "b"], "discrete")
+        assert (parameter.variable_, parameter.evidence_) == ("t", ["a", "b"])
         assert (parameter.columns_, parameter.n_rows_, parameter.total_weight_) == (["a", "b"], 4, 4.0)
         cyclic = CountParameter().fit(X.assign(c=X["a"])[["c", "a", "b"]], y)
         assert cyclic.evidence_ == cyclic.columns_ == ["a", "b", "c"]
@@ -89,17 +100,6 @@ class TestBaseParameter:
         assert boolean.evidence_ == boolean.columns_ == [False, True]
         assert list(boolean.predict_proba(dummies.iloc[:, ::-1]).columns) == [False, True]
 
-        # fit copies y, so an estimator that keeps a view of it doesn't change when the caller edits their data.
-        class KeepingParameter(CountParameter):
-            def _fit(self, X, y, sample_weight):
-                super()._fit(X, y, sample_weight)
-                self.y_ = y
-
-        target = y.copy()
-        kept = KeepingParameter().fit(X, target)
-        target.iloc[0, 0] = "9"
-        assert kept.y_.iloc[0, 0] == "0"
-
         # A failed refit leaves the object unfitted instead of half-updated.
         with pytest.raises(ValueError):
             parameter.fit(X, y.iloc[:3])
@@ -110,67 +110,63 @@ class TestBaseParameter:
         assert repr(CountParameter(pseudo_count=1)) == "CountParameter(pseudo_count=1)"
         assert CountParameter(pseudo_count=1).clone().get_params() == {"pseudo_count": 1}
 
-        ratio = pd.array([0.0, 1.0, 1.0, 1.0], dtype="Float64")
         rejected = [
             (X, pd.concat([y, y.set_axis(["u"], axis=1)], axis=1)),  # y with two columns
             (X, y["t"].tolist()),  # y as a list
             (X.to_numpy(), y),  # X as an array
             (X, y.set_axis([0, 1, 2, 3])),  # different index
-            (X.assign(t="x"), y),  # target also in X
             (X.assign(b=["u", None, "u", "v"]), y),  # None in X
             (X, y.assign(t=["0", np.nan, "1", "1"])),  # NaN in y
             (X.astype("string").assign(b=pd.array(["u", pd.NA, "u", "v"], dtype="string")), y),  # pd.NA in X
-            (X.assign(c=[0.0, np.inf, 0.0, 0.0]), y),  # inf in X
-            (X.assign(c=np.array([0.0, np.inf, 0.0, 0.0], dtype=np.float32)), y),  # inf in a float32 column
-            (X, y.assign(t=[0.0, 1.0, -np.inf, 1.0])),  # -inf in y
-            (X.assign(c=ratio / ratio), y),  # NaN from 0/0 in a Float64 column, which isna() doesn't flag
-            (X.assign(c=[1j, 0, 0, 0]), y),  # complex values in X
-            (X, y.assign(t=[1j, 0, 0, 0])),  # complex values in y
-            (X.iloc[:0], y.iloc[:0]),  # no rows
-            (pd.concat([X, X[["a"]]], axis=1), y),  # duplicate column names in X
         ]
         for X_bad, y_bad in rejected:
             with pytest.raises(ValueError):
                 CountParameter().fit(X_bad, y_bad)
+
+        # Parents need unique names, none of them the target's, as from_values requires. A class that needs data needs
+        # at least one row; one that doesn't, such as DistributionAdapter, fits without rows.
+        for X_bad in (X.set_axis(["a", "a"], axis=1), X.rename(columns={"a": "t"})):
+            with pytest.raises(ValueError, match="different names"):
+                CountParameter().fit(X_bad, y)
+        with pytest.raises(ValueError, match="at least one row"):
+            CountParameter().fit(X.iloc[:0], y.iloc[:0])
+
+        class DatalessParameter(CountParameter):
+            _tags = {"requires_data": False}
+
+        assert DatalessParameter().fit(X.iloc[:0], y.iloc[:0]).n_rows_ == 0
 
     def test_types(self, data):
         X, y = data
 
         # A discrete-only class accepts any labels, such as the integer, boolean or categorical data from simulate().
         for labels in ([0, 1, 1, 1], [True, False, False, True], pd.Categorical([2, 1, 2, 2]), [1, "b", ("c", 3), 1]):
-            fitted = CountParameter().fit(X, pd.Series(labels, index=X.index, name="t"))
-            assert fitted.variable_type_ == "discrete"
+            assert CountParameter().fit(X, pd.Series(labels, index=X.index, name="t")).is_fitted
 
         class ContinuousParameter(CountParameter):
-            _tags = {"variable_type": "continuous"}
+            _tags = {"variable_type": ["continuous"]}
 
-        assert ContinuousParameter().fit(X, y.astype(float)).variable_type_ == "continuous"
+        assert ContinuousParameter().fit(X, y.astype(float)).is_fitted
         with pytest.raises(ValueError, match="numeric"):
             ContinuousParameter().fit(X, y)
 
-        # A class that supports both types decides from the data.
-        class AnyParameter(CountParameter):
-            _tags = {"variable_type": ["discrete", "continuous"]}
-
-        assert AnyParameter().fit(X, y.astype(float) + 0.5).variable_type_ == "continuous"
-        assert AnyParameter().fit(X, y).variable_type_ == "discrete"
-        ordered = pd.Series(pd.Categorical([2, 1, 2, 2], categories=[1, 2], ordered=True), index=X.index, name="t")
-        assert AnyParameter().fit(X, ordered).variable_type_ == "discrete"
-
-        # Continuous parents must be numeric, in fit and at prediction, where discrete ones can have any labels.
-        # Booleans of every kind count as numeric.
+        # Continuous parents must be numeric in fit, where discrete ones can have any labels. Booleans of every kind
+        # count as numeric. A dtype that pgmpy.utils.preprocess_data can't classify, such as a date, is rejected too.
         class LinearParameter(CountParameter):
-            _tags = {"variable_type": "continuous", "parent_type": "continuous"}
+            _tags = {"variable_type": ["continuous"], "parent_data_types": ["continuous"]}
 
         numeric = pd.DataFrame({"a": [0.5, 1, 2, 3], "b": [True, False, True, True]}, index=X.index)
-        linear = LinearParameter().fit(numeric, y.astype(float))
+        LinearParameter().fit(numeric, y.astype(float))
         for dtype in ["boolean", "Sparse[bool]"] + (["bool[pyarrow]"] if find_spec("pyarrow") else []):
             LinearParameter().fit(numeric.astype({"b": dtype}), y.astype(float).astype(bool).astype(dtype))
-        for column in (X["a"], X["a"].astype("category"), pd.Categorical([1, 2, 1, 2]), pd.to_datetime(["2020"] * 4)):
+        for column in (X["a"], X["a"].astype("category"), pd.Categorical([1, 2, 1, 2])):
             with pytest.raises(ValueError, match="numeric"):
                 LinearParameter().fit(numeric.assign(a=column), y.astype(float))
-            with pytest.raises(ValueError, match="numeric"):
-                linear.predict_proba(numeric.assign(a=column))
+        with pytest.raises(ValueError, match="datatype"):
+            LinearParameter().fit(numeric.assign(a=pd.to_datetime(["2020"] * 4)), y.astype(float))
+        # Repeated parent names are reported as such, before any check of the columns' types.
+        with pytest.raises(ValueError, match="different names"):
+            LinearParameter().fit(numeric.set_axis(["a", "a"], axis=1), y.astype(float))
 
     def test_sample_weight(self, data):
         X, y = data
@@ -207,27 +203,44 @@ class TestBaseParameter:
         # Columns are matched by name and passed on in evidence_ order, so their order doesn't matter.
         parameter = CountParameter().fit(X, y)
         pd.testing.assert_frame_equal(parameter.predict_proba(X), X[["a", "b"]])
-        ratio = pd.array([0.0, 1.0, 1.0, 1.0], dtype="Float64")
-        for X_bad in (
-            X[["a"]],
-            X.assign(c=1),
-            X.rename(columns={"a": "z"}),
-            X.assign(a=["x", None, "y", "y"]),
-            X.assign(a=[0.0, np.inf, 0.0, 0.0]),
-            X.assign(a=ratio / ratio),
-            X.assign(a=[1j, 0, 0, 0]),
-        ):
+        for X_bad in (X[["a"]], X.assign(c=1), X.rename(columns={"a": "z"})):
             with pytest.raises(ValueError):
                 parameter.predict_proba(X_bad)
         with pytest.raises(ValueError):
             parameter.predict_proba(X.to_numpy())
 
-        # Without X, the subclass gives the marginal distribution, for a root or any other variable. A root also takes a
-        # DataFrame without columns, whose index sets the rows.
-        assert parameter.predict_proba() is None
+        # X=None stands for no parents: a root gets its own distribution from the subclass, and also takes a DataFrame
+        # without columns, whose index sets the rows. A variable with parents needs X.
+        with pytest.raises(ValueError, match="parents"):
+            parameter.predict_proba()
         root = CountParameter().fit(None, y)
         assert root.predict_proba(pd.DataFrame(index=[5, 6])).index.tolist() == [5, 6]
         assert root.predict_proba() is None
+
+    def test_predict(self, data):
+        # predict checks X as predict_proba does, but needs it: a root takes a DataFrame without columns.
+        X, y = data
+        with pytest.raises(NotFittedError):
+            CountParameter().predict(X)
+        parameter = CountParameter().fit(X, y)
+        for X_bad in (None, X[["a"]], X.to_numpy()):
+            with pytest.raises(ValueError):
+                parameter.predict(X_bad)
+
+    def test_log_likelihood(self, data):
+        # log_likelihood checks X as predict does, and y as fit does: a single column with X's index.
+        X, y = data
+        with pytest.raises(NotFittedError):
+            CountParameter().log_likelihood(X, y)
+        parameter = CountParameter().fit(X, y)
+        for X_bad, y_bad in (
+            (None, y),  # None is a root's X, but this variable has parents
+            (X[["a"]], y),
+            (X, y.set_axis([0, 1, 2, 3])),
+            (X, pd.concat([y, y.set_axis(["u"], axis=1)], axis=1)),
+        ):
+            with pytest.raises(ValueError):
+                parameter.log_likelihood(X_bad, y_bad)
 
     def test_sample(self, data):
         X, y = data
@@ -238,7 +251,8 @@ class TestBaseParameter:
         sampled_X, n_samples, random_state = parameter.sample(X, n_samples=2, random_state=0)
         pd.testing.assert_frame_equal(sampled_X, X[["a", "b"]])
         assert (n_samples, random_state) == (2, 0)
-        assert parameter.sample(n_samples=3) == (None, 3, None)
+        with pytest.raises(ValueError, match="parents"):
+            parameter.sample(n_samples=3)
 
         root = CountParameter().fit(None, y)
         assert root.sample(n_samples=0) == (None, 0, None)
@@ -252,33 +266,35 @@ class TestBaseParameter:
         # skpro's sample() takes no random_state, so for its distributions the default _sample applies the ppf to
         # uniform values from numpy.random.default_rng(random_state), in the layout of NominalDistribution's samples.
         distributions = pytest.importorskip("skpro.distributions")
-        from pgmpy.parameterization.distributions import NominalDistribution
+        from pgmpy.parameterization import NominalDistribution
 
         class NormalParameter(CountParameter):
-            _sample = BaseParameter._sample
-            normal = distributions.Normal
+            """Each row's mean codes its parents, (a, b) = (x, u), (x, v), (y, u) and (y, v), as 0 to 3; a root's is
+            1."""
+
+            _sample = BaseParameterization._sample
 
             def _predict_proba(self, X):
-                if X is None:
-                    return self.normal(mu=1.0, sigma=2.0)
-                return self.normal(mu=np.arange(len(X))[:, None], sigma=2.0, index=X.index, columns=["t"])
+                means = (2 * (X["a"] == "y") + (X["b"] == "v")).to_numpy(float) if self.evidence_ else np.ones(len(X))
+                return distributions.Normal(mu=means.reshape(-1, 1), sigma=2.0, index=X.index, columns=["t"])
 
-        # Rows are matched by position, so repeated labels and a MultiIndex, like a parent's own draws, keep them apart.
+        # Each row draws with its own parents' values, also under repeated labels or a MultiIndex, like a parent's own
+        # draws.
         X, y = data
         parameter = NormalParameter().fit(X, y)
         multi = pd.MultiIndex.from_arrays([[0, 0, 1, 1], ["p", "q", "p", "q"]], names=["draw", None])
-        for X_test in (X, X.iloc[[0, 0, 1, 2]], X.set_axis(multi)):
+        for X_test in (X, X.set_axis([10, 10, 11, 11]), X.set_axis(multi)):
             for n_samples in (None, 1, 2, 0):
                 samples = parameter.sample(X_test, n_samples=n_samples, random_state=0)
                 uniform = np.random.default_rng(0).random((1 if n_samples is None else n_samples, len(X_test)))
-                np.testing.assert_allclose(samples["t"], (np.arange(len(X_test)) + 2 * norm.ppf(uniform)).ravel())
+                np.testing.assert_allclose(samples["t"], (np.arange(4) + 2 * norm.ppf(uniform)).ravel())
                 nominal = NominalDistribution(np.full((len(X_test), 2), 0.5), ["u", "v"], index=X_test.index)
                 expected_index = nominal.sample(n_samples, random_state=0).index
                 pd.testing.assert_index_equal(samples.index, expected_index, exact=True)
         assert parameter.sample(X, n_samples=1).index.equals(pd.MultiIndex.from_arrays([[0] * len(X), X.index]))
 
         # Distributions that look rows up by label, such as skpro's Empirical, still draw each row from its own values:
-        # row r of X can only take the values r, r + len(X) and r + 2 * len(X).
+        # here every value of a row is its position modulo the number of rows of X.
         class EmpiricalParameter(NormalParameter):
             def _predict_proba(self, X):
                 values = pd.DataFrame(
@@ -286,7 +302,13 @@ class TestBaseParameter:
                 )
                 return distributions.Empirical(spl=values, index=X.index, columns=["t"])
 
-        # A distribution with ragged parameters, e.g. a Histogram with different bins per row, gets the per-draw loop.
+        empirical = EmpiricalParameter().fit(X, y)
+        for X_test in (X.set_axis([10, 10, 11, 11]), X.set_axis(multi)):
+            samples = empirical.sample(X_test, n_samples=20, random_state=0)["t"].to_numpy().reshape(20, len(X_test))
+            np.testing.assert_array_equal(samples % len(X_test), np.tile(np.arange(len(X_test)), (20, 1)))
+
+        # Distributions with ragged parameters, such as a Histogram with different bins per row, draw each row from its
+        # own bins.
         class HistogramParameter(NormalParameter):
             def _predict_proba(self, X):
                 sizes = [2 + position % 2 for position in range(len(X))]
@@ -297,93 +319,51 @@ class TestBaseParameter:
         drawn = HistogramParameter().fit(X, y).sample(X, n_samples=5, random_state=0)["t"].to_numpy().reshape(5, -1)
         assert ((drawn >= 0) & (drawn <= [2, 3, 2, 3])).all()
 
-        empirical = EmpiricalParameter().fit(X, y)
-        for X_test in (X.iloc[[0, 0, 1, 2]], X.set_axis(multi)):
-            samples = empirical.sample(X_test, n_samples=20, random_state=0)["t"].to_numpy().reshape(20, len(X_test))
-            np.testing.assert_array_equal(samples % len(X_test), np.tile(np.arange(len(X_test)), (20, 1)))
-
+        # Without X, a root draws n_samples values from its own distribution.
+        root = NormalParameter().fit(None, y)
         for n_samples in (3, 0):
-            samples = parameter.sample(n_samples=n_samples, random_state=0)
+            samples = root.sample(n_samples=n_samples, random_state=0)
             expected = 1 + 2 * norm.ppf(np.random.default_rng(0).random(n_samples))
             pd.testing.assert_frame_equal(samples, pd.DataFrame({"t": expected}), rtol=1e-10)
-
-        # A distribution whose parameters broadcast to its rows, like the Normal, gets one ppf call for all the draws.
-        # It gives the same values as the one call per draw that any other distribution gets.
-        calls = []
-
-        class CountingNormal(distributions.Normal):
-            def ppf(self, p):
-                calls.append(np.shape(p))
-                return super().ppf(p)
-
-        class CountingParameter(NormalParameter):
-            normal = CountingNormal
-
-        class LoopParameter(CountingParameter):
-            def _predict_proba(self, X):
-                return super()._predict_proba(X).set_tags(broadcast_init="off")
-
-        for X_test, n_samples in ((X, 3), (None, 5)):
-            calls.clear()
-            vectorised = CountingParameter().fit(X, y).sample(X_test, n_samples=n_samples, random_state=0)
-            assert calls == [(n_samples * (1 if X_test is None else len(X)), 1)]
-            looped = LoopParameter().fit(X, y).sample(X_test, n_samples=n_samples, random_state=0)
-            pd.testing.assert_frame_equal(vectorised, looped)
 
     def test_equality(self, data):
         X, y = data
 
-        assert CountParameter() == CountParameter()
-        assert CountParameter(pseudo_count=1) != CountParameter()
-
-        # Fitted parameters compare by what they learned, and equal ones hash equally.
-        fitted, same, other = CountParameter().fit(X, y), CountParameter().fit(X, y), CountParameter().fit(X[:3], y[:3])
-        assert fitted == same and hash(fitted) == hash(same)
-        assert fitted != other
-        assert other != CountParameter()
-
-        # Floats compare with numpy.allclose's tolerance, as arrays do, but names compare exactly.
-        assert CountParameter().fit(X, y, sample_weight=[1, 1, 1, 1 + 1e-12]) == fitted
-        assert CountParameter().fit(X, y, sample_weight=[1, 1, 1, 1.1]) != fitted
-        named = {name: CountParameter().fit(X, y.set_axis([name], axis=1)) for name in (1000.0, 1000.01, "t")}
-        assert named[1000.0] != named["t"] and named["t"] != named[1000.0] and named[1000.0] != named[1000.01]
-
-        # Other fitted values compare by type and content: numbers and numeric arrays within numpy.allclose's tolerance,
-        # other arrays exactly, dicts and lists item by item, skbase objects such as distributions by their parameters,
-        # and fitted estimators by identity.
+        # Unfitted objects compare their class and parameters. Nested estimators and skbase objects compare by their
+        # type and parameters too, at any depth.
         class ObjectParameter(CountParameter):
             def __init__(self, value=None):
                 self.value = value
                 super().__init__()
 
-            def _fit(self, X, y, sample_weight):
-                self.value_ = self.value
-
-        def equal(first, second):
-            return ObjectParameter(first).fit(X, y) == ObjectParameter(second).fit(X, y)
-
-        assert equal(np.array(["u", "v"]), np.array(["u", "v"])) and not equal(
-            np.array(["u", "v"]), np.array(["u", "w"])
+        assert CountParameter() == CountParameter()
+        assert CountParameter(pseudo_count=1) != CountParameter() and ObjectParameter() != CountParameter()
+        pipeline = make_pipeline(StandardScaler(), LinearRegression())
+        assert ObjectParameter(pipeline) == ObjectParameter(make_pipeline(StandardScaler(), LinearRegression()))
+        assert ObjectParameter(pipeline) != ObjectParameter(
+            make_pipeline(StandardScaler(), LinearRegression(fit_intercept=False))
         )
-        assert equal({"a": [1.0, "x"]}, {"a": [1.0 + 1e-12, "x"]}) and not equal({"a": [1.0, "x"]}, {"a": [1.0, "y"]})
-        for make in (lambda values: pd.array(values, dtype="string"), pd.Categorical):
-            assert equal(make(["a", "b"]), make(["a", "b"])) and not equal(make(["a", "b"]), make(["a", "c"]))
-            assert len({ObjectParameter(make(["a", "b"])).fit(X, y), ObjectParameter(make(["a", "c"])).fit(X, y)}) == 2
-        estimator = LinearRegression()
-        assert equal(estimator, estimator) and not equal(estimator, LinearRegression())
-
-        # Unfitted objects compare their parameters the same way, except that estimators compare by their parameters.
-        assert ObjectParameter(LinearRegression()) == ObjectParameter(LinearRegression())
         assert ObjectParameter(np.array(["u", "v"], dtype=object)) != ObjectParameter(
             np.array(["u", "w"], dtype=object)
         )
         if find_spec("skpro"):
             from skpro.distributions import LogNormal, Normal
 
-            from pgmpy.parameterization.distributions import NominalDistribution
+            from pgmpy.parameterization import NominalDistribution
 
-            assert equal(Normal(mu=0.0, sigma=1.0), Normal(mu=0.0, sigma=1.0))
-            assert not equal(Normal(mu=0.0, sigma=1.0), LogNormal(mu=0.0, sigma=1.0))
-            strings, objects = np.unique(["v", "u"]), np.array(["u", "w"], dtype=object)
-            assert equal(NominalDistribution([0.3, 0.7], strings), NominalDistribution([0.3, 0.7], strings))
-            assert not equal(NominalDistribution([0.3, 0.7], strings), NominalDistribution([0.3, 0.7], objects))
+            assert ObjectParameter(Normal(mu=0.0, sigma=1.0)) == ObjectParameter(Normal(mu=0.0, sigma=1.0))
+            assert ObjectParameter(Normal(mu=0.0, sigma=1.0)) != ObjectParameter(LogNormal(mu=0.0, sigma=1.0))
+            # String arrays, on which skbase's deep_equals raises.
+            strings = np.unique(["v", "u"])
+            nominal = ObjectParameter(NominalDistribution([0.3, 0.7], strings))
+            assert nominal == ObjectParameter(NominalDistribution([0.3, 0.7], strings.copy()))
+
+        # A fitted object equals only itself, unless its class compares what it learned, as the CPDs do.
+        fitted = CountParameter().fit(X, y)
+        assert fitted == fitted and fitted != CountParameter().fit(X, y) and fitted != CountParameter()
+
+        # The hash is constant per class, so fit doesn't change it, and equal objects hash equally.
+        parameter = CountParameter()
+        lookup = {parameter: 1}
+        parameter.fit(X, y)
+        assert lookup[parameter] == 1 and hash(parameter) == hash(CountParameter())

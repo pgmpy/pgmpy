@@ -1,10 +1,22 @@
 import pytest
 from skbase.lookup import all_objects
+from skbase.utils.dependencies import _check_soft_dependencies
+from sklearn.linear_model import LinearRegression, LogisticRegression
 
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
 from pgmpy.causal_discovery.bivariate_scores import BaseBivariateScore
 from pgmpy.ci_tests import BaseCITest
 from pgmpy.metrics._base import BaseSupervisedMetric, BaseUnsupervisedMetric
+from pgmpy.parameterization import (
+    AdditiveNoiseMechanism,
+    BaseLocalEstimator,
+    BaseParameterization,
+    LinearGaussianCPD,
+    PyroAdapter,
+    SklearnAdapter,
+    TabularBayesian,
+    TabularCPD,
+)
 from pgmpy.registry import OBJECT_TYPES, TAG_REGISTER, all_tags, check_tag_is_valid
 from pgmpy.structure_score import BaseStructureScore
 
@@ -17,6 +29,8 @@ OBJECTS = [
         (BaseBivariateScore, "pgmpy.causal_discovery"),
         (BaseSupervisedMetric, "pgmpy.metrics"),
         (BaseUnsupervisedMetric, "pgmpy.metrics"),
+        (BaseParameterization, "pgmpy.parameterization"),
+        (BaseLocalEstimator, "pgmpy.parameterization"),
     ]
     for cls in all_objects(object_types=base, package_name=package, return_names=False)
 ]
@@ -26,7 +40,9 @@ def test_tag_register_is_well_formed():
     for tag_name, object_type, tag_type, description in TAG_REGISTER:
         assert isinstance(tag_name, str) and isinstance(description, str) and description
         assert object_type in OBJECT_TYPES
-        assert tag_type in ("bool", "str") or (tag_type[0] in ("str", "list") and isinstance(tag_type[1], list))
+        assert tag_type in ("bool", "str", "str, list or None") or (
+            tag_type[0] in ("str", "list") and isinstance(tag_type[1], list)
+        )
 
     pairs = [(tag[0], tag[1]) for tag in TAG_REGISTER]
     assert len(pairs) == len(set(pairs))
@@ -41,6 +57,23 @@ def test_object_tags_are_registered_and_valid(cls):
         check_tag_is_valid(tag_name, tag_value)
 
 
+@pytest.mark.skipif(not _check_soft_dependencies("skpro", severity="none"), reason="needs skpro")
+def test_instance_tags_are_valid():
+    # Tags that __init__ sets from the parameters, e.g. an adapter's from what it wraps, are valid too.
+    instances = [
+        SklearnAdapter(LogisticRegression()),
+        SklearnAdapter(LinearRegression()),
+        AdditiveNoiseMechanism(SklearnAdapter(LinearRegression())),
+        TabularCPD(estimator=TabularBayesian()),
+        LinearGaussianCPD(),
+    ]
+    if _check_soft_dependencies("pyro-ppl", severity="none"):
+        instances.append(PyroAdapter(print, "discrete"))
+    for instance in instances:
+        for tag_name, tag_value in instance.get_tags().items():
+            check_tag_is_valid(tag_name, tag_value)
+
+
 @pytest.mark.parametrize("object_type", OBJECT_TYPES)
 def test_object_names_are_unique(object_type):
     names = [cls.get_class_tag("name") for cls in OBJECTS if cls.get_class_tag("object_type") == object_type]
@@ -50,6 +83,12 @@ def test_object_names_are_unique(object_type):
 def test_check_tag_is_valid():
     check_tag_is_valid("assumption:linearity", False)
     check_tag_is_valid("default_for", None)
+    # As in skbase, an object needs no package, one, or several.
+    check_tag_is_valid("python_dependencies", None)
+    check_tag_is_valid("python_dependencies", "skpro")
+    check_tag_is_valid("python_dependencies", ["pyro-ppl", "skpro"])
+    with pytest.raises(ValueError, match="a str, a list of str or None"):
+        check_tag_is_valid("python_dependencies", ["skpro", 2])
     with pytest.raises(KeyError):
         check_tag_is_valid("not_a_tag", True)
     with pytest.raises(ValueError, match="must be a bool"):
