@@ -84,7 +84,7 @@ class BayesianFunctionalRegression(BaseParameter):
 
     Example
     -------
-    >>> from pgmpy.parameter.bayesian.BayesianFunctionalRegression import BayesianFunctionalRegression
+    >>> from pgmpy.parameterization.bayesian.BayesianFunctionalRegression import BayesianFunctionalRegression
     >>> from skbase.utils.dependencies import _safe_import
     >>> import numpy as np
     >>> import pandas as pd
