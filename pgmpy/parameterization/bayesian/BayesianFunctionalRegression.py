@@ -237,7 +237,10 @@ class BayesianFunctionalRegression(BaseParameter):
             self.parallel_ = True
         return self
 
-    def _sample(self, X=None, n_samples=None):
+    def _predict_proba(self, X):
+        raise NotImplementedError("BayesianFunctionalRegression does not support predict_proba().")
+
+    def _sample(self, X=None, n_samples=None, random_state=None):
         X_tensor = to_tensor(X, self.device)
 
         if self.estimator == "mcmc":
@@ -257,10 +260,10 @@ class BayesianFunctionalRegression(BaseParameter):
                 parallel=self.parallel_,
             )
 
+        if random_state is not None:
+            pyro.set_rng_seed(int(random_state))
+
         with torch.no_grad():
             samples = predictive(X_tensor)
 
-        # TODO: Implement calculating log_proba logic
-        log_proba = None
-
-        return samples, log_proba
+        return samples

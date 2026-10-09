@@ -155,9 +155,8 @@ class TestBayesianFunctionalRegression:
         assert estimated_intercept == pytest.approx(0.3, abs=0.15)
         assert estimated_sigma == pytest.approx(0.7, abs=0.15)
 
-        samples, log_proba = parameter.sample(X.iloc[:20])
+        samples = parameter.sample(X.iloc[:20])
         assert torch.is_tensor(samples["obs"])
-        assert log_proba is None
 
     def test_fit_mcmc(self, data, model):
         X, y = data
@@ -203,6 +202,16 @@ class TestBayesianFunctionalRegression:
             abs=0.1,
         )
 
-        samples, log_proba = parameter.sample(X.iloc[:20])
+        samples = parameter.sample(X.iloc[:20])
         assert torch.is_tensor(samples["obs"])
-        assert log_proba is None
+
+    def test_predict_proba(self, data, model):
+        X, y = data
+
+        # Case 1
+        parameter = BayesianFunctionalRegression(model=model, estimator="svi")
+
+        parameter.fit(X, y)
+
+        with pytest.raises(NotImplementedError):
+            parameter.predict_proba(X)

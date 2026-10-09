@@ -5,6 +5,7 @@ This module is experimental: its API may change in any release without a depreca
 
 from pgmpy.parameterization._base import BaseParameter
 from pgmpy.parameterization.adapters import DistributionAdapter, SklearnAdapter, SkproAdapter
+from pgmpy.parameterization.bayesian import BayesianFunctionalRegression
 from pgmpy.parameterization.cpds import LinearGaussianCPD, TabularCPD
 from pgmpy.utils._warnings import ExperimentalWarning, _warn_external
 
@@ -20,4 +21,5 @@ __all__ = [
     "SklearnAdapter",
     "SkproAdapter",
     "TabularCPD",
+    "BayesianFunctionalRegression",
 ]
