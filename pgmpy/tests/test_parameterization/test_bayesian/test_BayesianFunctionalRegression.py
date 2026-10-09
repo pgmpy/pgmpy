@@ -7,7 +7,7 @@ pyro = pytest.importorskip("pyro")
 dist = pytest.importorskip("pyro.distributions")
 
 
-from pgmpy.parameter.bayesian.BayesianFunctionalRegression import BayesianFunctionalRegression
+from pgmpy.parameterization.bayesian.BayesianFunctionalRegression import BayesianFunctionalRegression
 
 
 @pytest.fixture

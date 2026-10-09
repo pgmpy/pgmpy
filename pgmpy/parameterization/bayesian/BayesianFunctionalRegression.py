@@ -2,7 +2,7 @@ from typing import Literal
 
 from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 
-from pgmpy.parameter._base import BaseParameter
+from pgmpy.parameterization._base import BaseParameter
 
 torch = _safe_import("torch")
 pyro = _safe_import("pyro", pkg_name="pyro-ppl")
