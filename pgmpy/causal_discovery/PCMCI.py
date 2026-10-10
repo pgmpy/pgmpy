@@ -1,12 +1,12 @@
-from pgmpy.causal_discovery._base import BaseCausalDiscovery
 from pgmpy.causal_discovery._pcmci import _BasePCMCI
 
 
-class PCMCI(BaseCausalDiscovery, _BasePCMCI):
+class PCMCI(_BasePCMCI):
     """
-    Public class which accepts a pandas dataframe
-    and exposes statistical discovery results to ]
-    TimeSeriesDAG for further conversion.
+    Public estimator for PCMCI causal discovery.
+
+    Accepts a sktime multi-index DataFrame and exposes discovery
+    results for further conversion by TimeSeriesDAG.
     """
 
     def __init__(
@@ -20,8 +20,8 @@ class PCMCI(BaseCausalDiscovery, _BasePCMCI):
         link_assumptions=None,
         **kwargs,
     ):
-        _BasePCMCI.__init__(
-            self,
+        """Initialize the PCMCI estimator."""
+        super().__init__(
             cond_ind_test=cond_ind_test,
             tau_min=tau_min,
             tau_max=tau_max,
@@ -32,30 +32,27 @@ class PCMCI(BaseCausalDiscovery, _BasePCMCI):
             **kwargs,
         )
 
-    def _fit(self, X):
+    def _fit(self, X):  # type: ignore
         """
-        Fit the PCMCI causal discovery algorithm.
-
-        Parameters
-        ----------
-        X : pandas.DataFrame
-            Time-series data.
-
-        Returns
-        -------
-        self
-            Fitted PCMCI estimator.
+        Prepare the input, run Tigramite's PCMCI procedure,
+        and store the discovery results.
         """
-        pass
+        # Prepare the time-series data.
+        data = self._prepare_data(X)
 
+        # Run PCMCI using Tigramite.
+        results = self._run_pcmci(
+            data,
+            link_assumptions=self.link_assumptions,
+        )
 
-"""
-Result coming out of _run_pcmci():
-result = {
-    "p_matrix": p_matrix,
-    "val_matrix": val_matrix,
-    "graph": graph,
-    "candidates": candidates,
-    "corrected_p_matrix": corrected_p_matrix,
-}.
-"""
+        # Normalize and store the discovery results.
+        results = self._process_results(results)
+
+        self.p_matrix_ = results["p_matrix"]  # type: ignore
+        self.val_matrix_ = results["val_matrix"]  # type: ignore
+        self.graph_ = results["graph"]  # type: ignore
+        self.candidates_ = results.get("candidates")  # type: ignore
+        self.corrected_p_matrix_ = results.get("corrected_p_matrix")  # type: ignore
+
+        return self
