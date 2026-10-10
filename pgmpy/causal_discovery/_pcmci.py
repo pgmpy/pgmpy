@@ -1,21 +1,10 @@
-from abc import ABC
+from abc import abstractmethod
+
+from pgmpy.causal_discovery._baseTimeSeries import BaseTimeSeriesCausalDiscovery
 
 
-class _BasePCMCI(ABC):
-    """Base class containing the common engine for PCMCI algorithm(s)
-
-    This class handles:
-    - PCMCI parameter handling
-    - CI test handling
-    - lag/link assumption
-    - candidate-parent initialization
-    - PC / condition-selection phase
-    - MCI Phase
-    - p-value correction
-    - assembling PCMCI discovery results
-
-    The resulting matrices are feeded to TimeSeriesDAG layer for conversion.
-    """
+class _BasePCMCI(BaseTimeSeriesCausalDiscovery):
+    """Base class wrapping Tigramite's PCMCI implementation."""
 
     def __init__(
         self,
@@ -28,110 +17,43 @@ class _BasePCMCI(ABC):
         link_assumptions=None,
         **kwargs,
     ):
-        self.cond_ind_test = cond_ind_test
-        self.tau_min = tau_min
-        self.tau_max = tau_max
+        """Initialize PCMCI-specific parameters."""
+        super().__init__(
+            tau_min=tau_min,
+            tau_max=tau_max,
+            cond_ind_test=cond_ind_test,
+            verbosity=verbosity,
+        )
         self.pc_alpha = pc_alpha
         self.fdr_method = fdr_method
-        self.verbosity = verbosity
         self.link_assumptions = link_assumptions
+        self.kwargs = kwargs
 
-    # Data prep
     def _prepare_data(self, X):
-        """prepate validated pgmpy dataframe for PCMCI internals"""
+        """Convert the sktime multi-index DataFrame into Tigramite's input format."""
         pass
 
-    def _run_ci_tests(self, data, source, target, condition_set):
-        """Run 1 CI test
-
-        Returns
-        -------
-        val : float
-            Test statistic / dependency measure
-
-        p_value : float
-            p-value returned by the CI test.
-        """
+    def _wrap_ci_test_for_tigramite(self):
+        """Adapt pgmpy's CI test to Tigramite's expected interface."""
         pass
 
     def _set_link_assumptions(self, link_assumptions=None):
-        """Validate and prepare temporal links
-
-        If no assumptions are provided, build the default
-        set tuple of source-target-lag.
-        """
+        """Validate and convert temporal link assumptions for Tigramite."""
         pass
 
-    def _initialize_candidates(self):
-        """Initialize candidate parents for every target variable.
-
-        Returns
-        -------
-        candidates : dict
-            Mapping from target variable to candidate.
-        """
-        pass
-
-    def _run_pc_stable(
-        self,
-        data,
-        candidates,
-    ):
-        """Run PC stable / condition-selection phase of PCMCI.
-
-        Returns
-        -------
-        candidates : dict
-            Remaining candidate parent relationships after
-            conditional independence based pruning.
-        """
-        pass
-
-    def _build_condition_set(
-        self,
-        source,
-        target,
-        candidates,
-        condition_set_size,
-    ):
-        """Construct a conditioning parent for a PC-phase CI test."""
-        pass
-
-    def _build_mci_condition_set(self, source, target, candidates):
-        """Condition set using MCI test."""
-        pass
-
-    def _run_mci_tests(
-        self,
-        data,
-        candidates,
-    ):
-        """Run MCI tests for all candidate relationships
-
-        Returns
-        -------
-        p_matrix : np.ndarray
-            Temporal p-value matrix
-
-        val_matrix : np.ndarray
-            Temporal test-statistic / dependency-value matrix.
-        """
+    def _initialize_pcmci(self, data):
+        """Initialize Tigramite's PCMCI object with the prepared data and CI test."""
         pass
 
     def _run_pcmci(self, data, link_assumptions=None):
-        """Execute the complete PCMCI workflow
+        """Run Tigramite's PCMCI procedure and return its results."""
+        pass
 
-        Steps:
-        - Configure link assumptions
-        - Initialize candidate parents
-        - Run PC / condition-selection phase
-        - Run MCI tests
-        - correct p-values
-        - Determine discovered links
+    def _process_results(self, results):
+        """Normalize Tigramite's results for pgmpy and TimeSeriesDAG."""
+        pass
 
-        Returns
-        -------
-        result : dict
-            PCMCI discovery results.
-        """
+    @abstractmethod
+    def _fit(self, X):
+        """Fit the estimator and store the discovery results."""
         pass
