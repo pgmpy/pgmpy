@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -131,7 +132,12 @@ class BaseDataset(BaseObject):
         )
 
     @classmethod
-    def load_dataframe(cls, n_samples=None, seed=None) -> pd.DataFrame:
+    def load_dataframe(
+        cls,
+        n_samples: int | None = None,
+        seed: int | None = None,
+        data_dir: str | Path | None = None,
+    ) -> pd.DataFrame:
         """
         Fetches/reads from cache the data associated with the dataset.
 
@@ -142,9 +148,17 @@ class BaseDataset(BaseObject):
             dataset size.
         seed : int, optional
             Random seed for reproducible subsampling.
+        data_dir : str or pathlib.Path, optional
+            Directory containing the dataset file. When omitted, use the
+            Hugging Face Hub cache.
+
         """
-        raw_data = cls._get_raw_data(cls.data_url)
-        df = pd.read_csv(io.BytesIO(raw_data), sep=getattr(cls, "sep", "\t"))
+        if data_dir is None:
+            raw_data = cls._get_raw_data(cls.data_url)
+            source = io.BytesIO(raw_data)
+        else:
+            source = Path(data_dir) / Path(cls.data_url).name
+        df = pd.read_csv(source, sep=getattr(cls, "sep", "\t"), compression=getattr(cls, "compression", None))
         if cls.get_class_tag("has_missing_data"):
             df.replace(cls.missing_values_marker, pd.NA, inplace=True)
         if cls.get_class_tag("has_index_col"):
@@ -306,10 +320,11 @@ def load_dataset(
     seed : int, optional
         Random seed for reproducible subsampling or simulation.
     **sim_kwargs : dict, optional
-        Additional keyword arguments forwarded to the simulator's
-        ``load_dataframe()`` and ``load_ground_truth()`` methods. Passing
-        simulator kwargs to a static dataset raises ``TypeError``. For Tubingen
-        datasets, these kwargs are ignored with a warning.
+        Dataset-specific keyword arguments forwarded to ``load_dataframe()``
+        and ``load_ground_truth()``. Static tabular datasets accept ``data_dir``
+        to read a prepared local file; unsupported arguments raise
+        ``TypeError``. For Tubingen datasets, these kwargs are ignored with
+        a warning.
 
     Examples
     --------

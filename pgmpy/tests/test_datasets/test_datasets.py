@@ -16,6 +16,7 @@ ALL_DATASETS = [
     "auto_mpg",
     "blue_driver",
     "boston_housing",
+    "causalbench_k562",
     "cities",
     "college_plans",
     "contraceptive_method",
@@ -209,3 +210,18 @@ def test_static_dataset_n_samples():
     ds1 = load_dataset("sachs_discrete", n_samples=50, seed=42)
     ds2 = load_dataset("sachs_discrete", n_samples=50, seed=42)
     pd.testing.assert_frame_equal(ds1.data, ds2.data)
+
+
+def test_load_causalbench_k562(tmp_path):
+    table = pd.DataFrame(
+        {
+            "ENSG00000116809": [1.0, 0.2, 1.1],
+            "ENSG00000142676": [2.0, 1.5, 0.3],
+            "intervention": pd.Categorical(["non-targeting", "ENSG00000116809", "excluded"]),
+        }
+    )
+    table.to_csv(tmp_path / "causalbench_k562.tsv.gz", sep="\t", index=False, compression="gzip")
+    dataset = load_dataset("causalbench_k562", data_dir=tmp_path)
+    pd.testing.assert_frame_equal(dataset.data, table)
+    assert dataset.ground_truth is None
+    assert dataset.expert_knowledge is None
