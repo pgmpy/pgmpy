@@ -1,4 +1,5 @@
 import itertools
+import tracemalloc
 
 import numpy as np
 import numpy.testing as np_test
@@ -381,6 +382,37 @@ class TestBeliefPropagation:
                 decimal=2,
             )
             evidence.update({c: 1})
+
+    def test_issue_1571(self, backend):
+        variables = [f"X{i}" for i in range(13)]
+        model = DiscreteBayesianNetwork(list(zip(variables[:-1], variables[1:])))
+        model.add_cpds(TabularCPD(variables[0], 3, [[0.2], [0.3], [0.5]]))
+        for parent, child in zip(variables[:-1], variables[1:]):
+            model.add_cpds(
+                TabularCPD(
+                    child, 3, [[0.1, 0.6, 0.3], [0.2, 0.3, 0.4], [0.7, 0.1, 0.3]], evidence=[parent], evidence_card=[3]
+                )
+            )
+        query_vars, evidence = variables[:-1], {variables[-1]: 0}
+        joint_size = 3 ** len(query_vars) * np.dtype(np.float64).itemsize
+        markov_model = model.to_markov_model()
+
+        for infer, kwargs in [
+            (BeliefPropagation(model), {}),
+            (VariableElimination(model), {}),
+            (VariableElimination(model), {"elimination_order": "MinFill"}),
+            (VariableElimination(markov_model), {}),
+            (VariableElimination(markov_model), {"elimination_order": "MinFill"}),
+        ]:
+            tracemalloc.start()
+            marginals = infer.query(query_vars, evidence=evidence, joint=False, show_progress=False, **kwargs)
+            peak = tracemalloc.get_traced_memory()[1]
+            tracemalloc.stop()
+            # tracemalloc does not see allocations made by torch.
+            if backend == "numpy":
+                assert peak < joint_size
+            for var in query_vars:
+                assert marginals[var] == infer.query([var], evidence=evidence, show_progress=False, **kwargs)
 
 
 class TestBeliefPropagationWithMessagePassing:
