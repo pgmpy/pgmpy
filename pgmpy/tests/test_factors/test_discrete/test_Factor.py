@@ -2776,7 +2776,7 @@ class TestTabularCPDInit:
         )
 
         cdf_str = grasp_cpd._make_table_str(tablefmt="grid")
-        terminal_width, terminal_height = get_terminal_size()
+        terminal_width, _ = get_terminal_size()
         list_rows_str = cdf_str.split("\n")
         table_width = len(list_rows_str[0])
 
@@ -2919,6 +2919,35 @@ class TestTabularCPDMethods:
         assert repr(grade_cpd) == f"<TabularCPD representing P(grade:3 | intel:3, diff:2) at {hex(id(grade_cpd))}>"
         assert repr(intel_cpd) == f"<TabularCPD representing P(intel:3) at {hex(id(intel_cpd))}>"
         assert repr(diff_cpd) == f"<TabularCPD representing P(grade:3 | diff:2) at {hex(id(diff_cpd))}>"
+
+    def test_str_with_tuple_variables(self):
+        c_cpd = TabularCPD(("C", 0), 3, [[0.0714286], [0.307143], [0.621429]])
+        a_cpd = TabularCPD(
+            ("A", 0),
+            2,
+            [
+                [0.5, 0.0, 1.0, 0.0, 0.456140350877, 0.5],
+                [0.5, 1.0, 0.0, 1.0, 0.543859649123, 0.5],
+            ],
+            evidence=[("C", 0), ("B", 0)],
+            evidence_card=[3, 2],
+        )
+        b_cpd = TabularCPD(
+            ("B", 0),
+            2,
+            [[0.0, 0.219512195122, 1.0], [1.0, 0.780487804878, 0.0]],
+            evidence=[("C", 0)],
+            evidence_card=[3],
+        )
+
+        c_str = str(c_cpd)
+        a_str = str(a_cpd)
+        b_str = str(b_cpd)
+
+        self.assertIn("('C', 0)(0)", c_str)
+        self.assertIn("('A', 0)(0)", a_str)
+        self.assertIn("('C', 0)(0)", a_str)
+        self.assertIn("('B', 0)(0)", b_str)
 
     def test_copy(self):
         copy_cpd = self.cpd.copy()
