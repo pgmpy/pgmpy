@@ -46,6 +46,8 @@ def build_bayesian_model():
 
 
 def build_markov_model():
+    # It is just a moralised version of the above Bayesian network so all the results are same. Only factors
+    # are under consideration for inference so this should be fine.
     model = DiscreteMarkovNetwork(
         [
             ("A", "J"),
@@ -171,6 +173,9 @@ ELIMINATION_ORDERS = ["greedy", "MinFill", "MinNeighbors", "MinWeight", "Weighte
 
 
 class TestVariableElimination:
+    # All the values that are used for comparison in the all the tests are
+    # found using SAMIAM (assuming that it is correct ;))
+
     def test_query_raises_for_empty_variables(self, backend):
         model = load_model("bnlearn/earthquake")
         infer = VariableElimination(model)
@@ -224,6 +229,7 @@ class TestVariableElimination:
 
     def test_query_multiple_times(self, bayesian_ve, backend):
         _, infer = bayesian_ve
+        # This just tests that the models are not getting modified while querying them
         for order in ELIMINATION_ORDERS:
             query_result = infer.query(["J"], elimination_order=order, show_progress=False)
             query_result = infer.query(["J"], elimination_order=order, show_progress=False)
@@ -314,6 +320,7 @@ class TestVariableElimination:
 
     def test_elimination_order(self, bayesian_ve, backend):
         _, infer = bayesian_ve
+        # Check all the heuristics give the same results.
         for elimination_order in ["WeightedMinFill", "MinNeighbors", "MinWeight", "MinFill"]:
             query_result = infer.query(["J"], elimination_order=elimination_order, show_progress=False)
             assert query_result == DiscreteFactor(variables=["J"], cardinality=[2], values=[0.416, 0.584])
@@ -321,9 +328,11 @@ class TestVariableElimination:
             query_result = infer.query(variables=["J"], evidence={"A": 0, "R": 1}, show_progress=False)
             assert query_result == DiscreteFactor(variables=["J"], cardinality=[2], values=[0.6, 0.4])
 
+        # Check when elimination order has extra variables. Because of pruning.
         query_result = infer.query(["J"], elimination_order=["A", "R", "L", "Q", "G"], show_progress=False)
         assert query_result == DiscreteFactor(variables=["J"], cardinality=[2], values=[0.416, 0.584])
 
+        # Check for when elimination order doesn't have all the variables
         with pytest.raises(ValueError):
             infer.query(variables=["J"], elimination_order=["A"])
 
@@ -443,6 +452,7 @@ class TestSnowNetwork:
                 query4 = infer.query(["Traffic"], virtual_evidence=[virt_evidence], show_progress=False)
                 np_test.assert_array_almost_equal(compat_fns.to_numpy(query4.values), [0.34375, 0.65625])
 
+                # TODO: State name should be returned here.
                 map4 = infer.map_query(["Traffic"], virtual_evidence=[virt_evidence], show_progress=False)
                 assert map4 in [{"Traffic": "slow"}, {"Traffic": 1}]
 
@@ -514,6 +524,9 @@ class TestVariableEliminationDuplicatedFactors:
 
 
 class TestVariableEliminationMarkov:
+    # All the values that are used for comparison in the all the tests are
+    # found using SAMIAM (assuming that it is correct ;))
+
     def test_query_single_variable(self, markov_ve, backend):
         _, infer = markov_ve
         query_result = infer.query(["J"], show_progress=False)
@@ -548,6 +561,7 @@ class TestVariableEliminationMarkov:
 
     def test_query_multiple_times(self, markov_ve, backend):
         _, infer = markov_ve
+        # This just tests that the models are not getting modified while querying them
         query_result = infer.query(["J"], show_progress=False)
         query_result = infer.query(["J"], show_progress=False)
         assert query_result == DiscreteFactor(variables=["J"], cardinality=[2], values=np.array([0.416, 0.584]))

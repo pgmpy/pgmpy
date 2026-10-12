@@ -211,6 +211,9 @@ class TestBeliefPropagation:
             compat_fns.to_numpy(b_C.values),
         )
 
+    # All the values that are used for comparison in the all the tests are
+    # found using SAMIAM (assuming that it is correct ;))
+
     def test_query_single_variable(self, bp_data, backend):
         _, bayesian_model = bp_data
         belief_propagation = BeliefPropagation(bayesian_model)
@@ -466,9 +469,11 @@ class TestBeliefPropagationWithMessagePassing:
         assert np.allclose(res["B"].values, np.array([0.11, 0.21, 0.68]), atol=1e-20)
         assert np.allclose(res["C"].values, np.array([0.217, 0.783]), atol=1e-20)
 
+        # Message common to both B and C
         assert np.allclose(messages["['A'] -> A"], np.array([0.4, 0.6]), atol=1e-20)
         assert np.allclose(messages["['B', 'A'] -> B"], np.array([0.11, 0.21, 0.68]), atol=1e-20)
 
+        # Message specific to B
         assert np.allclose(
             messages["['C', 'B'] -> B"],
             np.array([0.33333333, 0.33333333, 0.33333333]),
@@ -480,4 +485,5 @@ class TestBeliefPropagationWithMessagePassing:
             atol=1e-20,
         )
 
+        # Messages specific to C
         assert np.allclose(messages["['C', 'B'] -> C"], np.array([0.217, 0.783]), atol=1e-20)
