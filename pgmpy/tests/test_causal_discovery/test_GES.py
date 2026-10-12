@@ -9,7 +9,7 @@ from skbase.utils.dependencies import _check_soft_dependencies
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.base import PDAG
-from pgmpy.causal_discovery import GES
+from pgmpy.causal_discovery import GES, ExpertKnowledge
 from pgmpy.example_models import load_model
 from pgmpy.structure_score import K2
 
@@ -200,6 +200,29 @@ class TestGESCore:
         assert hasattr(est, "n_features_in_")
         assert hasattr(est, "feature_names_in_")
 
+    def test_search_space(self, titanic_data_categorical):
+        search_space = [("Pclass", "Sex"), ("Sex", "Survived"), ("Pclass", "Survived")]
+        expert_knowledge = ExpertKnowledge(search_space=search_space)
+        est = GES(scoring_method="k2", expert_knowledge=expert_knowledge, return_type="dag")
+        est.fit(titanic_data_categorical)
+        for edge in est.causal_graph_.edges():
+            assert edge in search_space
+
+    def test_required_and_forbidden_edges(self, rand_data):
+        expert_knowledge = ExpertKnowledge(required_edges=[("B", "C")], forbidden_edges=[("A", "B")])
+        est = GES(scoring_method="k2", expert_knowledge=expert_knowledge, return_type="dag")
+        est.fit(rand_data)
+        edges = set(est.causal_graph_.edges())
+        assert edges == {("B", "C")} or edges == {("C", "B")}
+        assert ("A", "B") not in edges
+
+    def test_max_indegree_constraint(self, titanic_data_categorical):
+        est = GES(scoring_method="k2", return_type="dag", max_indegree=2)
+        est.fit(titanic_data_categorical)
+        assert len(est.causal_graph_.edges()) > 0
+        for node in est.causal_graph_.nodes():
+            assert est.causal_graph_.in_degree(node) <= 2
+
 
 @pytest.mark.skipif(
     not _check_soft_dependencies("sempler", severity="none"),
@@ -278,11 +301,6 @@ class TestParityGES:
             ("X6", "X7"),
             ("X7", "X8"),
         ]
-
-
-def test_expert_knowledge_not_supported():
-    with pytest.raises(TypeError, match="expert_knowledge"):
-        GES(expert_knowledge=None)
 
 
 def test_cancer_model():
