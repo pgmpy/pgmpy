@@ -14,73 +14,73 @@ from pgmpy.readwrite import XDSLReader, XDSLWriter
 TEST_FILE = """<?xml version="1.0" encoding="UTF-8"?>
 <!-- This network was created in trial version of GeNIe, which can be used for evaluation purposes only -->
 <smile version="1.0" id="Asia" numsamples="10000" discsamples="10000">
-&#x20;   <nodes>
-&#x20;       <cpt id="asia" diagtype="observation" ranked="true">
-&#x20;           <state id="no" />
-&#x20;           <state id="yes" />
-&#x20;           <probabilities>0.99 0.01</probabilities>
-&#x20;       </cpt>
-&#x20;       <cpt id="tub" diagtype="target">
-&#x20;           <state id="no" label="F5" />
-&#x20;           <state id="yes" label="F6" fault="true" />
-&#x20;           <parents>asia</parents>
-&#x20;           <probabilities>0.99 0.01 0.95 0.05</probabilities>
-&#x20;       </cpt>
-&#x20;       <cpt id="smoke" diagtype="observation" ranked="true">
-&#x20;           <state id="no" />
-&#x20;           <state id="yes" />
-&#x20;           <probabilities>0.5 0.5</probabilities>
-&#x20;       </cpt>
-&#x20;       <cpt id="lung" diagtype="target">
-&#x20;           <state id="no" label="F9" />
-&#x20;           <state id="yes" label="F10" fault="true" />
-&#x20;           <parents>smoke</parents>
-&#x20;           <probabilities>0.99 0.01 0.9 0.1</probabilities>
-&#x20;       </cpt>
-&#x20;       <cpt id="either">
-&#x20;           <state id="Nothing" />
-&#x20;           <state id="CancerORTuberculosis" />
-&#x20;           <parents>tub lung</parents>
-&#x20;           <probabilities>1.00 0.0 1.00 0.0 1.00 0.0 0.0 1.0</probabilities>
-&#x20;       </cpt>
-&#x20;       <cpt id="xray" diagtype="observation" ranked="true">
-&#x20;           <state id="Normal" />
-&#x20;           <state id="Abnormal" />
-&#x20;           <parents>either</parents>
-&#x20;           <probabilities>0.95 0.05 0.02 0.98</probabilities>
-&#x20;       </cpt>
-&#x20;       <cpt id="bronc" diagtype="target">
-&#x20;           <state id="Absent" label="F15" />
-&#x20;           <state id="Present" label="F16" fault="true" />
-&#x20;           <parents>smoke</parents>
-&#x20;           <probabilities>0.7 0.3 0.4 0.6</probabilities>
-&#x20;       </cpt>
-&#x20;       <cpt id="dysp" diagtype="observation" ranked="true">
-&#x20;           <state id="Absent" />
-&#x20;           <state id="Present" />
-&#x20;           <parents>either bronc</parents>
-&#x20;           <probabilities>0.9 0.1 0.2 0.8 0.3 0.7 0.1 0.9</probabilities>
-&#x20;       </cpt>
-&#x20;   </nodes>
+   <nodes>
+       <cpt id="asia" diagtype="observation" ranked="true">
+           <state id="no" />
+           <state id="yes" />
+           <probabilities>0.99 0.01</probabilities>
+       </cpt>
+       <cpt id="tub" diagtype="target">
+           <state id="no" label="F5" />
+           <state id="yes" label="F6" fault="true" />
+           <parents>asia</parents>
+           <probabilities>0.99 0.01 0.95 0.05</probabilities>
+       </cpt>
+       <cpt id="smoke" diagtype="observation" ranked="true">
+           <state id="no" />
+           <state id="yes" />
+           <probabilities>0.5 0.5</probabilities>
+       </cpt>
+       <cpt id="lung" diagtype="target">
+           <state id="no" label="F9" />
+           <state id="yes" label="F10" fault="true" />
+           <parents>smoke</parents>
+           <probabilities>0.99 0.01 0.9 0.1</probabilities>
+       </cpt>
+       <cpt id="either">
+           <state id="Nothing" />
+           <state id="CancerORTuberculosis" />
+           <parents>tub lung</parents>
+           <probabilities>1.00 0.0 1.00 0.0 1.00 0.0 0.0 1.0</probabilities>
+       </cpt>
+       <cpt id="xray" diagtype="observation" ranked="true">
+           <state id="Normal" />
+           <state id="Abnormal" />
+           <parents>either</parents>
+           <probabilities>0.95 0.05 0.02 0.98</probabilities>
+       </cpt>
+       <cpt id="bronc" diagtype="target">
+           <state id="Absent" label="F15" />
+           <state id="Present" label="F16" fault="true" />
+           <parents>smoke</parents>
+           <probabilities>0.7 0.3 0.4 0.6</probabilities>
+       </cpt>
+       <cpt id="dysp" diagtype="observation" ranked="true">
+           <state id="Absent" />
+           <state id="Present" />
+           <parents>either bronc</parents>
+           <probabilities>0.9 0.1 0.2 0.8 0.3 0.7 0.1 0.9</probabilities>
+       </cpt>
+   </nodes>
 </smile>"""
 
 
 TEST_WHITESPACE_MODEL = """<?xml version="1.0" encoding="UTF-8"?>
 <!-- This network was created in trial version of GeNIe, which can be used for evaluation purposes only -->
 <smile version="1.0" id="Asia" numsamples="10000" discsamples="10000">
-&#x20;   <nodes>
-&#x20;       <cpt id="node 1" diagtype="observation" ranked="true">
-&#x20;           <state id="no" />
-&#x20;           <state id="yes" />
-&#x20;           <probabilities>0.5 0.5</probabilities>
-&#x20;       </cpt>
-&#x20;       <cpt id="node 2" diagtype="target">
-&#x20;           <state id="no" label="F5" />
-&#x20;           <state id="yes" label="F6" fault="true" />
-&#x20;           <parents>node 1</parents>
-&#x20;           <probabilities>0.5 0.5 0.5 0.5</probabilities>
-&#x20;       </cpt>
-&#x20;   </nodes>
+   <nodes>
+       <cpt id="node 1" diagtype="observation" ranked="true">
+           <state id="no" />
+           <state id="yes" />
+           <probabilities>0.5 0.5</probabilities>
+       </cpt>
+       <cpt id="node 2" diagtype="target">
+           <state id="no" label="F5" />
+           <state id="yes" label="F6" fault="true" />
+           <parents>node 1</parents>
+           <probabilities>0.5 0.5 0.5 0.5</probabilities>
+       </cpt>
+   </nodes>
 </smile>"""
 
 
