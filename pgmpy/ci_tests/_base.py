@@ -126,6 +126,27 @@ class _ResidualMixin:
 
         return residual, estimator
 
+    def _set_linearity_assumption_tag(self):
+        """
+        Set the ``assumption:linearity`` tag from the residualizing estimator.
+
+        Estimators from ``sklearn.linear_model`` assume linearity, random
+        forests do not, and for anything else the assumption is unknown
+        (``None``). A ``None`` estimator selects the random forest default, so
+        it is tagged ``False``.
+
+        Subclasses using this mixin must call this method in ``__init__`` after
+        ``super().__init__()`` and after setting ``self.estimator``.
+        """
+        estimator = self.estimator
+        if estimator is None or isinstance(estimator, (RandomForestClassifier, RandomForestRegressor)):
+            linearity = False
+        elif any(base.__module__.startswith("sklearn.linear_model") for base in type(estimator).__mro__):
+            linearity = True
+        else:
+            linearity = None
+        self.set_tags(**{"assumption:linearity": linearity})
+
 
 @dataclass(frozen=True)
 class _CITestResult:
@@ -307,7 +328,8 @@ def get_ci_test(test=None, data=None, use_cache=True):
         the default test for the data type of ``data`` is used.
     data : pandas.DataFrame or None
         The dataset to pass to the CI test constructor. Required when ``test`` is
-        ``None`` or when the resolved test has ``requires_data=True``.
+        ``None`` or when the resolved test has ``requires_data`` set to ``True``
+        (or ``None``, which means unknown and is treated as requiring data).
 
     Returns
     -------
@@ -389,7 +411,7 @@ def get_ci_test(test=None, data=None, use_cache=True):
 
     if tests:
         cls = tests[0]
-        if cls.get_class_tag("requires_data", tag_value_default=True):
+        if cls.get_class_tag("requires_data", tag_value_default=True) is not False:
             if data is None:
                 raise ValueError(f"CI test '{cls.__name__}' requires data, but data is None.")
             return cls(data=data, use_cache=use_cache)

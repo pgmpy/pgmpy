@@ -116,13 +116,15 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         result = self._fit(X, **fit_params)
 
         # Narrow the tags to the components used for fitting: keep the data types that every component supports and add
-        # the assumptions that any component makes.
+        # the assumptions that any component makes. An assumption stays unknown (None) if it is unknown for the
+        # algorithm or for any component that declares it; a component that does not declare the tag leaves the
+        # algorithm's value untouched.
         components = [getattr(self, name, None) for name in ("ci_test_", "scoring_method_", "pairwise_estimator_")]
         components = [component for component in components if component is not None]
         if components:
             class_tags = type(self).get_class_tags()
             data_types = class_tags["data_types"]
-            assumptions = {key: bool(value) for key, value in class_tags.items() if key.startswith("assumption:")}
+            assumptions = {key: value for key, value in class_tags.items() if key.startswith("assumption:")}
             for component in components:
                 component_tags = component.get_tags() if isinstance(component, BaseObject) else {}
                 component_types = component_tags.get("data_types")
@@ -130,7 +132,16 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
                     data_types = (
                         list(component_types) if data_types is None else [t for t in data_types if t in component_types]
                     )
-                assumptions = {key: value or bool(component_tags.get(key)) for key, value in assumptions.items()}
+                for key, value in assumptions.items():
+                    if key not in component_tags:
+                        continue
+                    component_value = component_tags[key]
+                    if value is True or component_value is True:
+                        assumptions[key] = True
+                    elif value is None or component_value is None:
+                        assumptions[key] = None
+                    else:
+                        assumptions[key] = False
             self.set_tags(data_types=data_types, **assumptions)
         return result
 

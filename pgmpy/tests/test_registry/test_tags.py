@@ -39,6 +39,10 @@ def test_object_tags_are_registered_and_valid(cls):
     assert tags["name"] == tags["name"].lower()
     for tag_name, tag_value in tags.items():
         check_tag_is_valid(tag_name, tag_value)
+    if not cls.__name__.startswith("Base"):
+        bool_tags = {tag[0] for tag in all_tags(tags["object_type"]) if tag[2] == "bool"}
+        unset = [tag_name for tag_name in bool_tags if tags[tag_name] is None]
+        assert not unset, f"{cls.__name__} leaves boolean tags unset (None): {unset}"
 
 
 @pytest.mark.parametrize("object_type", OBJECT_TYPES)
@@ -49,11 +53,12 @@ def test_object_names_are_unique(object_type):
 
 def test_check_tag_is_valid():
     check_tag_is_valid("assumption:linearity", False)
+    check_tag_is_valid("assumption:linearity", None)
     check_tag_is_valid("default_for", None)
     with pytest.raises(KeyError):
         check_tag_is_valid("not_a_tag", True)
     with pytest.raises(ValueError, match="must be a bool"):
-        check_tag_is_valid("assumption:linearity", None)
+        check_tag_is_valid("assumption:linearity", "yes")
     with pytest.raises(ValueError, match="must be one of"):
         check_tag_is_valid("identifiable_graph", "text")
 

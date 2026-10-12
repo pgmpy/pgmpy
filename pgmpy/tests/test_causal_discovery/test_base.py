@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import pytest
 from skbase.lookup import all_objects
+from sklearn.linear_model import Ridge
+from sklearn.neighbors import KNeighborsRegressor
 
 from pgmpy.causal_discovery import ANM, GES, IGCI, PC, ChowLiu, ExpertInLoop
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
@@ -97,7 +99,7 @@ def test_fit_narrowing_handles_untagged_and_wider_objects():
 
     pc = PC(ci_test=UntaggedCITest()).fit(data)
     assert pc.get_tag("data_types") == ["discrete", "continuous", "mixed"]
-    assert pc.get_tag("assumption:linearity") is False
+    assert pc.get_tag("assumption:linearity") is None
 
     class AnyDataScore(BaseBivariateScore):
         _tags = {"name": "any_data", "input_type": "cause_residual", "data_types": ["discrete", "continuous", "mixed"]}
@@ -107,7 +109,7 @@ def test_fit_narrowing_handles_untagged_and_wider_objects():
 
     anm = ANM(scoring_method=AnyDataScore()).fit(data)
     assert anm.get_tag("data_types") == ["continuous"]
-    assert anm.get_tag("assumption:linearity") is False
+    assert anm.get_tag("assumption:linearity") is None
 
     class UntaggedAlgorithm(BaseCausalDiscovery):
         def _fit(self, X):
@@ -115,6 +117,26 @@ def test_fit_narrowing_handles_untagged_and_wider_objects():
             return self
 
     assert UntaggedAlgorithm().fit(data).get_tag("data_types") == ["continuous"]
+
+
+def test_fit_propagates_unknown_assumption_from_ci_test():
+    rng = np.random.default_rng(42)
+    x = rng.normal(size=200)
+    data = pd.DataFrame({"x": x, "y": 2 * x + rng.normal(size=200), "z": rng.normal(size=200)})
+
+    class MinimalPC(PC):
+        def _fit(self, X, independencies=None):
+            self.ci_test_ = get_ci_test(test=self.ci_test, data=X)
+            return self
+
+    pc = MinimalPC(ci_test=GCM(data=data, estimator=KNeighborsRegressor())).fit(data)
+    assert pc.get_tag("assumption:linearity") is None
+
+    pc = MinimalPC(ci_test=GCM(data=data, estimator=Ridge())).fit(data)
+    assert pc.get_tag("assumption:linearity") is True
+
+    pc = MinimalPC(ci_test="pearsonr").fit(data)
+    assert pc.get_tag("assumption:linearity") is True
 
 
 def test_fit_narrows_tags_to_components_used():

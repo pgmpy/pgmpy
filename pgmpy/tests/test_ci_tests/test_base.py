@@ -2,8 +2,24 @@ import numpy as np
 import pandas as pd
 import pytest
 from skbase.lookup import all_objects
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import LinearRegression, Ridge
+from sklearn.neighbors import KNeighborsRegressor
 
-from pgmpy.ci_tests import BaseCITest, ChiSquare, FisherZ, IndependenceMatch, Pearsonr, get_ci_test
+from pgmpy.ci_tests import (
+    GCM,
+    BaseCITest,
+    ChiSquare,
+    FisherZ,
+    GeneralizedCov,
+    HotellingLawley,
+    IndependenceMatch,
+    Pearsonr,
+    PillaiTrace,
+    RoysLargestRoot,
+    WilksLambda,
+    get_ci_test,
+)
 
 
 def test_ci_registry():
@@ -110,3 +126,40 @@ def test_unknown_name(disc_data):
 def test_invalid_type():
     with pytest.raises(ValueError):
         get_ci_test(test=123)
+
+
+RESIDUAL_TESTS = [GCM, PillaiTrace, GeneralizedCov, WilksLambda, HotellingLawley, RoysLargestRoot]
+
+
+@pytest.mark.parametrize("cls", RESIDUAL_TESTS, ids=lambda cls: cls.__name__)
+@pytest.mark.parametrize(
+    ("estimator", "expected"),
+    [
+        (LinearRegression(), True),
+        (Ridge(), True),
+        (RandomForestRegressor(random_state=0), False),
+        (KNeighborsRegressor(), None),
+    ],
+    ids=["linear_model", "ridge", "random_forest", "other_estimator"],
+)
+def test_linearity_assumption_tag_follows_estimator(cont_data, cls, estimator, expected):
+    assert cls.get_class_tag("assumption:linearity") is False
+    assert cls(data=cont_data, estimator=estimator).get_tag("assumption:linearity") is expected
+
+
+@pytest.mark.parametrize(
+    "cls", [PillaiTrace, GeneralizedCov, WilksLambda, HotellingLawley, RoysLargestRoot], ids=lambda cls: cls.__name__
+)
+def test_linearity_assumption_tag_default_estimator(cont_data, cls):
+    assert cls(data=cont_data).get_tag("assumption:linearity") is False
+
+
+def test_linearity_assumption_tag_gcm_default_estimator(cont_data):
+    assert GCM(data=cont_data).get_tag("assumption:linearity") is True
+
+
+def test_requires_data_none_treated_as_required(monkeypatch, cont_data):
+    monkeypatch.setitem(ChiSquare._tags, "requires_data", None)
+    with pytest.raises(ValueError, match="requires data"):
+        get_ci_test(test="chi_square", data=None)
+    assert isinstance(get_ci_test(test="chi_square", data=cont_data), ChiSquare)
