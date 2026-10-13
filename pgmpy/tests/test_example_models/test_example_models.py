@@ -3,7 +3,7 @@ import re
 import pytest
 from skbase.lookup import all_objects
 
-from pgmpy.base import DAG
+from pgmpy.base import ADMG, DAG
 from pgmpy.example_models import list_models, load_model
 from pgmpy.example_models._base import BaseExampleModel
 from pgmpy.models import (
@@ -339,6 +339,7 @@ def test_load_model():
             model,
             (
                 DAG,
+                ADMG,
                 DiscreteBayesianNetwork,
                 LinearGaussianBayesianNetwork,
                 FunctionalBayesianNetwork,
@@ -360,7 +361,7 @@ def test_load_model():
             assert model_tags["is_continuous"] == isinstance(model, LinearGaussianBayesianNetwork)
             assert model_tags["is_hybrid"] == isinstance(model, FunctionalBayesianNetwork)
         else:
-            assert isinstance(model, DAG)
+            assert isinstance(model, (DAG, ADMG, ADMG))
 
 
 def test_load_model_invalid_name():

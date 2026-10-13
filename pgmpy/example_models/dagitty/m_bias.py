@@ -1,7 +1,7 @@
-from .._base import BaseExampleModel, DAGMixin
+from .._base import ADMGMixin, BaseExampleModel
 
 
-class MBias(DAGMixin, BaseExampleModel):
+class MBias(ADMGMixin, BaseExampleModel):
     """
     References
     ----------
@@ -10,8 +10,8 @@ class MBias(DAGMixin, BaseExampleModel):
 
     _tags = {
         "name": "dagitty/m_bias",
-        "n_nodes": 5,
-        "n_edges": 5,
+        "n_nodes": 3,
+        "n_edges": 3,
         "is_parameterized": False,
     }
     data_url = "dags/M-bias.txt"

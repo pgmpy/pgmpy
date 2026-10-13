@@ -77,6 +77,18 @@ class ContinuousMixin:
         return LinearGaussianBayesianNetwork.load(file_obj)
 
 
+class ADMGMixin:
+    """
+    Mixin class for loading ADMGs from dagitty string format.
+    """
+
+    @classmethod
+    def load_model_object(cls):
+        from pgmpy.base import ADMG
+
+        return ADMG.from_dagitty(string=cls._get_raw_data().decode("utf-8"))
+
+
 class DAGMixin:
     """
     Mixin class for loading DAGs from dagitty string format.

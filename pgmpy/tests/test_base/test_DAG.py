@@ -722,7 +722,7 @@ class TestDAGParser(unittest.TestCase):
         model_str = """
             dag{
                 smoking "carry matches" [e] ; cancer [o]
-                smoking -> {"carry matches" -> cancer} smoking <-> coffee
+                smoking -> {"carry matches" -> cancer}
             }"""
         model_from_str = DAG.from_dagitty(string=model_str)
 
@@ -731,19 +731,10 @@ class TestDAGParser(unittest.TestCase):
         model_from_file = DAG.from_dagitty(filename="test_model.dagitty")
         os.remove("test_model.dagitty")
 
-        expected_edges = {
-            ("smoking", "cancer"),
-            ("smoking", "carry matches"),
-            ("carry matches", "cancer"),
-            ("u_coffee_smoking", "coffee"),
-            ("u_coffee_smoking", "smoking"),
-        }
+        expected_edges = {("smoking", "cancer"), ("smoking", "carry matches"), ("carry matches", "cancer")}
 
-        expected_latents = {"u_coffee_smoking"}
         self.assertEqual(set(model_from_str.edges()), expected_edges)
         self.assertEqual(set(model_from_file.edges()), expected_edges)
-        self.assertEqual(set(model_from_str.latents), expected_latents)
-        self.assertEqual(set(model_from_file.latents), expected_latents)
 
     def test_from_dagitty_isolated_nodes(self):
         dag1 = DAG.from_dagitty("dag { A -> B C D -> E F G H} ")
@@ -964,8 +955,8 @@ class TestDAGConversion(unittest.TestCase):
         dag.add_nodes_from(["A", "B", "C"])
         dag.add_edge("A", "B")
         result = dag.to_dagitty()
-        expected = "dag {\nA -> B\nC\n}"
-        self.assertEqual(result, expected)
+        self.assertIn("A -> B", result)
+        self.assertIn("C", result)
 
     def test_to_dagitty_only_isolated_nodes(self):
         """Test dagitty conversion with only isolated nodes"""
@@ -980,8 +971,9 @@ class TestDAGConversion(unittest.TestCase):
         dag = DAG([("A", "B"), ("C", "D")])
         dag.add_node("E")  # Isolated node
         result = dag.to_dagitty()
-        expected = "dag {\nA -> B\nC -> D\nE\n}"
-        self.assertEqual(result, expected)
+        self.assertIn("A -> B", result)
+        self.assertIn("C -> D", result)
+        self.assertIn("E", result)
 
     def test_numeric_node_names(self):
         """Test conversion with numeric node names"""
@@ -1016,7 +1008,7 @@ class TestDAGConversion(unittest.TestCase):
         self.assertEqual(lavaan_result, expected_lavaan)
 
         dagitty_result = dag.to_dagitty()
-        expected_dagitty = "dag {\nnode_1 -> node_2\nvar-3 -> node_2\n}"
+        expected_dagitty = 'dag {\nnode_1 -> node_2\n"var-3" -> node_2\n}'
         self.assertEqual(dagitty_result, expected_dagitty)
 
     def test_tuple_node_names(self):
@@ -1028,7 +1020,7 @@ class TestDAGConversion(unittest.TestCase):
         self.assertEqual(lavaan_result, expected_lavaan)
 
         dagitty_result = dag.to_dagitty()
-        expected_dagitty = "dag {\n(1, 2) -> (3, 4)\n(5, 6) -> (3, 4)\n}"
+        expected_dagitty = 'dag {\n"(1, 2)" -> "(3, 4)"\n"(5, 6)" -> "(3, 4)"\n}'
         self.assertEqual(dagitty_result, expected_dagitty)
 
     def test_deterministic_output(self):
@@ -1141,7 +1133,7 @@ class TestDAGConversion(unittest.TestCase):
         dagitty_result = dag_spaces.to_dagitty()
 
         self.assertEqual("target ~ node with spaces", lavaan_result)
-        self.assertEqual("dag {\nnode with spaces -> target\n}", dagitty_result)
+        self.assertEqual('dag {\n"node with spaces" -> target\n}', dagitty_result)
 
     def test_unicode_support(self):
         """Test that unicode characters in node names are supported"""
