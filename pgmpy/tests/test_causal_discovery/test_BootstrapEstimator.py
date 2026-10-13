@@ -4,7 +4,9 @@ import pandas as pd
 import pytest
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
+from pgmpy.base import ADMG
 from pgmpy.causal_discovery import PC, BootstrapEstimator, HillClimbSearch
+from pgmpy.causal_discovery._base import BaseCausalDiscovery
 
 
 def expected_failed_checks(estimator):
@@ -52,7 +54,7 @@ def edge_type_counts(edges):
 def test_bootstrap_rand_data(rand_data):
 
     # --- 1. HillClimbSearch (DAG) ---
-    hc = BootstrapEstimator(estimator=HillClimbSearch(return_type="dag"), show_progress=False, seed=0)
+    hc = BootstrapEstimator(estimator=HillClimbSearch(return_type="dag"), n_bootstraps=10, show_progress=False, seed=0)
     hc.fit(rand_data)
 
     assert hc.bootstrap_edges_.shape == (10, 10)
@@ -86,7 +88,7 @@ def test_bootstrap_rand_data(rand_data):
     np_test.assert_array_equal(hc.adjacency_matrix_.values, expected_adj_hc)
 
     # --- 2. PC (PDAG) ---
-    pc = BootstrapEstimator(estimator=PC(return_type="pdag"), show_progress=False, seed=42)
+    pc = BootstrapEstimator(estimator=PC(return_type="pdag"), n_bootstraps=10, show_progress=False, seed=42)
     pc.fit(rand_data)
 
     assert edge_type_counts(pc.bootstrap_edges_) == {
@@ -198,7 +200,8 @@ def test_bootstrap_get_consensus_graph(rand_data):
 
     # Pairs that are never adjacent are left out even with threshold 0. B - D is only seen as D -> B, which would close
     # the cycle B -> C -> D -> B, so it is skipped.
-    g_zero = est.get_consensus_graph(threshold=0.0)
+    with pytest.warns(UserWarning, match=r"\('B', 'D'\)"):
+        g_zero = est.get_consensus_graph(threshold=0.0)
     assert set(g_zero.edges()) == expected_base_edges | {("C", "E")}
 
 
@@ -237,7 +240,7 @@ def test_bootstrap_get_adjacency_matrix(rand_data):
 
 
 def test_bootstrap_threshold_invalid(rand_data):
-    est = BootstrapEstimator(estimator=HillClimbSearch(return_type="dag"), show_progress=False)
+    est = BootstrapEstimator(estimator=HillClimbSearch(return_type="dag"), n_bootstraps=10, show_progress=False)
     est.fit(rand_data)
     for invalid_threshold in [-0.5, 1.5]:
         with pytest.raises(ValueError):
@@ -254,3 +257,30 @@ def test_bootstrap_fit_invalid_params(rand_data, params):
     est = BootstrapEstimator(estimator=HillClimbSearch(return_type="dag"), show_progress=False, **params)
     with pytest.raises(ValueError, match=list(params)[0]):
         est.fit(rand_data)
+
+
+def test_bootstrap_other_graph_types():
+    class FixedADMG(BaseCausalDiscovery):
+        def _fit(self, X):
+            self.causal_graph_ = ADMG(edge_list=[("A", "B", "->"), ("A", "B", "<>"), ("C", "B", "->")])
+            self.adjacency_matrix_ = self.causal_graph_.to_adjacency(nodelist=X.columns)
+            return self
+
+    data = pd.DataFrame(np.random.default_rng(0).normal(size=(50, 3)), columns=["A", "B", "C"])
+    est = BootstrapEstimator(FixedADMG(), n_bootstraps=3, n_jobs=1, show_progress=False).fit(data)
+
+    # A directed and a bidirected edge between the same pair are recorded together.
+    assert list(est.bootstrap_edges_.iloc[:, 0].cat.categories) == ["->,<>", "<-"]
+    assert est.bootstrap_edges_[0].to_dict() == {("A", "B"): "->,<>", ("A", "C"): np.nan, ("B", "C"): "<-"}
+    assert isinstance(est.causal_graph_, ADMG)
+    assert sorted(est.causal_graph_.get_edges(data=True)) == [("A", "B", "->"), ("A", "B", "<>"), ("C", "B", "->")]
+    assert est.adjacency_matrix_.loc["A", "B"] == ("->", "<>")
+
+    # The weakest edge of a cycle is skipped with a warning.
+    est.bootstrap_edges_ = pd.DataFrame(
+        [["->", "->", "->", "->"], ["<-", "<-", None, None], ["->", "->", "->", None]],
+        index=pd.MultiIndex.from_tuples([("A", "B"), ("A", "C"), ("B", "C")], names=["u", "v"]),
+    ).astype(pd.CategoricalDtype(["->", "<-"]))
+    with pytest.warns(UserWarning, match=r"\('A', 'C'\)"):
+        graph = est.get_consensus_graph(threshold=0.5)
+    assert sorted(graph.get_edges(data=True)) == [("A", "B", "->"), ("B", "C", "->")]

@@ -10,8 +10,9 @@ from sklearn.base import clone
 from tqdm.auto import trange
 
 from pgmpy import config
-from pgmpy.base import DAG, PDAG
+from pgmpy.base import ADMG, DAG, MAG, PDAG
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
+from pgmpy.utils._warnings import _warn_external
 
 
 class BootstrapEstimator(BaseCausalDiscovery):
@@ -26,15 +27,17 @@ class BootstrapEstimator(BaseCausalDiscovery):
     1. Resamples the input dataset with replacement `n_bootstraps` times.
     2. Fits an independent clone of the base estimator on each resampled data.
     3. Records the type of edge between every pair of variables in each bootstrap graph (`bootstrap_edges_`).
-    4. Constructs a consensus DAG or PDAG from the pairs of variables that have an edge in at least a `threshold`
-    fraction of the bootstrap graphs.
+    4. Constructs a consensus graph, of the same class as the bootstrap graphs, from the pairs of variables that have
+    an edge in at least a `threshold` fraction of the bootstrap graphs.
 
     Parameters
     ----------
     estimator : BaseCausalDiscovery instance
-        The base causal discovery estimator to be wrapped (e.g., PC, GES, HillClimbSearch).
+        The base causal discovery estimator to be wrapped (e.g., PC, GES, HillClimbSearch). The bootstrap graphs are of
+        the class it returns. To count edges on equivalence classes, configure it to return a CPDAG, e.g. with
+        ``return_type="pdag"``.
 
-    n_bootstraps : int, default=10
+    n_bootstraps : int, default=100
         The number of bootstrap samples to generate and fit. Must be at least 1.
 
     sample_size : float, default=1.0
@@ -45,8 +48,10 @@ class BootstrapEstimator(BaseCausalDiscovery):
         Only used to compute the consensus graph (`causal_graph_` and `adjacency_matrix_`); `bootstrap_edges_` doesn't
         depend on it. A pair of variables is connected in the consensus graph if it has an edge in at least this
         fraction of the bootstrap graphs, and in at least one of them. The edge gets its most frequent type in the
-        bootstrap graphs; ties are left undirected in a PDAG and oriented from u to v in a DAG. Pairs are added from the
-        most to the least frequent, and an edge that would create a cycle is skipped. Must be between 0.0 and 1.0.
+        bootstrap graphs; ties are left undirected in a PDAG and otherwise go to the first tied edge type in the order
+        of the categories of `bootstrap_edges_`, e.g. u -> v in a DAG. Pairs are added from the most to the least
+        frequent, and an edge that would create a directed cycle is skipped with a warning. Must be between 0.0 and
+        1.0.
 
     warm_start : bool, default=False
         When set to True, reuses existing fitted bootstrap graphs and adds new bootstrap samples upon subsequent calls
@@ -63,17 +68,21 @@ class BootstrapEstimator(BaseCausalDiscovery):
 
     Attributes
     ----------
-    causal_graph_ : DAG or PDAG
-        The learned consensus causal graph matching the return type of the base estimator.
+    causal_graph_ : DAG, PDAG, MAG, or ADMG
+        The learned consensus causal graph, of the same class as the bootstrap graphs.
 
     adjacency_matrix_ : pd.DataFrame
-        Adjacency matrix representation of the consensus causal graph.
+        Adjacency matrix representation of the consensus causal graph: binary for a DAG or PDAG, and the edge types
+        of ``to_adjacency(encoding="edge_type")`` otherwise.
 
     bootstrap_edges_ : pd.DataFrame
         The edge between every pair of variables in every bootstrap graph. Each row is a pair (u, v), with u before v
         in the order of the input features, and each column is a bootstrap graph, in the order of `bootstrap_samples_`.
-        The values are "->" for u -> v, "<-" for v -> u, "--" for an undirected edge, and NaN if u and v aren't
-        adjacent. Edge frequencies and other summaries can be computed with pandas, as shown in the examples.
+        The values are the edge types oriented from u to v, e.g. "->" for u -> v, "<-" for v -> u, "--" for an
+        undirected edge, and "<>" for a bidirected edge, and NaN if u and v aren't adjacent. Coincident edges, e.g. a
+        directed and a bidirected edge in an ADMG, are joined with a comma ("->,<>"). The categories are the edge
+        types found in any bootstrap graph. Edge frequencies and other summaries can be computed with pandas, as shown
+        in the examples.
 
     bootstrap_samples_ : np.ndarray
         2D array of shape `(n_bootstraps, bootstrap_sample_size)` containing the row indices used in each bootstrap
@@ -98,7 +107,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
     >>> data = load_model("bnlearn/cancer").simulate(n_samples=2000, seed=42)
     >>> data = data[sorted(data.columns)]
     >>> hc = HillClimbSearch(return_type="dag")
-    >>> est = BootstrapEstimator(hc, seed=42, show_progress=False)
+    >>> est = BootstrapEstimator(hc, n_bootstraps=10, seed=42, show_progress=False)
     >>> est = est.fit(data)
 
     # Show the edge between each pair of variables (rows) in each bootstrap graph (columns):
@@ -136,18 +145,18 @@ class BootstrapEstimator(BaseCausalDiscovery):
     # Frequency of each edge type among the bootstrap graphs in which the pair is adjacent:
     >>> orientations = est.bootstrap_edges_.apply(lambda row: row.value_counts(normalize=True), axis=1)
     >>> orientations.round(2)  # doctest: +NORMALIZE_WHITESPACE
-                           ->    <-   --
+                           ->    <-
     u         v
-    Cancer    Dyspnoea   1.00  0.00  0.0
-              Pollution  1.00  0.00  0.0
-              Smoker     0.89  0.11  0.0
-              Xray       0.10  0.90  0.0
-    Dyspnoea  Pollution  0.00  1.00  0.0
-              Smoker      NaN   NaN  NaN
-              Xray        NaN   NaN  NaN
-    Pollution Smoker     1.00  0.00  0.0
-              Xray        NaN   NaN  NaN
-    Smoker    Xray        NaN   NaN  NaN
+    Cancer    Dyspnoea   1.00  0.00
+              Pollution  1.00  0.00
+              Smoker     0.89  0.11
+              Xray       0.10  0.90
+    Dyspnoea  Pollution  0.00  1.00
+              Smoker      NaN   NaN
+              Xray        NaN   NaN
+    Pollution Smoker     1.00  0.00
+              Xray        NaN   NaN
+    Smoker    Xray        NaN   NaN
 
     # Show the adjacency matrix of the consensus graph:
     >>> est.adjacency_matrix_
@@ -185,7 +194,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
     def __init__(
         self,
         estimator: BaseCausalDiscovery,
-        n_bootstraps: int = 10,
+        n_bootstraps: int = 100,
         sample_size: float = 1,
         threshold: float = 0.5,
         warm_start: bool = False,
@@ -259,11 +268,6 @@ class BootstrapEstimator(BaseCausalDiscovery):
         if not (0.0 <= self.threshold <= 1.0):
             raise ValueError(f"threshold must be between 0.0 and 1.0. Got {self.threshold} instead.")
 
-        if hasattr(self.estimator, "return_type"):
-            self.return_type_ = self.estimator.return_type.lower()
-        else:
-            self.return_type_ = "dag"
-
         variables = self.feature_names_in_
 
         # Step 1: Resample dataset and fit base estimators
@@ -310,47 +314,49 @@ class BootstrapEstimator(BaseCausalDiscovery):
                 ),
             )
 
-            # Record the edge type of every pair of variables (u, v), with u before v, in each new bootstrap graph:
-            # "->" for u -> v, "<-" for v -> u, "--" for an undirected edge, and NaN if they aren't adjacent. An
-            # undirected edge sets both entries of an adjacency matrix.
-            graphs = np.array(
-                [
-                    est.adjacency_matrix_.reindex(index=variables, columns=variables, fill_value=0).values
-                    for est in results
-                ]
-            )
+            # Record the edge type of every pair of variables (u, v), with u before v, in each new bootstrap graph,
+            # oriented from u to v (e.g. "->" for u -> v and "<-" for v -> u), and NaN if they aren't adjacent.
+            # Coincident edges, e.g. a directed and a bidirected edge in an ADMG, are joined with a comma.
             rows, cols = np.triu_indices(len(variables), k=1)
-            u_to_v, v_to_u = graphs[:, rows, cols] == 1, graphs[:, cols, rows] == 1
-            edge_types = np.select([u_to_v & v_to_u, u_to_v, v_to_u], ["--", "->", "<-"], default=None)
+            edge_types = []
+            for est in results:
+                cells = est.causal_graph_.to_adjacency(encoding="edge_type", nodelist=variables).to_numpy()[rows, cols]
+                edge_types.append([",".join(c) if isinstance(c, tuple) else (None if c == 0 else c) for c in cells])
             new_edges = pd.DataFrame(
-                edge_types.T,
+                np.array(edge_types, dtype=object).T,
                 index=pd.MultiIndex.from_arrays([variables[rows], variables[cols]], names=["u", "v"]),
                 columns=range(n_existing, n_existing + len(results)),
-            ).astype(pd.CategoricalDtype(["->", "<-", "--"]))
+            )
 
             if n_existing > 0:
                 self.bootstrap_samples_ = np.concatenate([self.bootstrap_samples_, samples_to_fit], axis=0)
-                self.bootstrap_edges_ = pd.concat([self.bootstrap_edges_, new_edges], axis=1)
+                edges = pd.concat([self.bootstrap_edges_.astype(object), new_edges], axis=1)
             else:
                 self.bootstrap_samples_ = samples_to_fit
-                self.bootstrap_edges_ = new_edges
                 self.estimator_ = results[0]
+                edges = new_edges
+
+            # The categories are the edge types found in any bootstrap graph.
+            self.bootstrap_edges_ = edges.astype(pd.CategoricalDtype(sorted(set(edges.stack().dropna()))))
 
         # Step 2: Form a consensus graph.
         self.causal_graph_ = self._estimate_consensus_graph(self.threshold)
 
-        self.adjacency_matrix_ = self.causal_graph_.to_adjacency(encoding="binary", nodelist=variables)
+        # A binary adjacency matrix can only represent DAGs and PDAGs.
+        encoding = "binary" if isinstance(self.causal_graph_, (DAG, PDAG)) else "edge_type"
+        self.adjacency_matrix_ = self.causal_graph_.to_adjacency(encoding=encoding, nodelist=variables)
 
         return self
 
-    def _estimate_consensus_graph(self, threshold: float) -> DAG | PDAG:
+    def _estimate_consensus_graph(self, threshold: float) -> DAG | PDAG | MAG | ADMG:
         """
         Helper method to estimate the consensus graph for a given probability threshold.
 
         A pair of variables gets an edge if it has one in at least a `threshold` fraction of the bootstrap graphs, and
         in at least one of them. The edge gets its most frequent type in the bootstrap graphs; ties are left undirected
-        in a PDAG and oriented from u to v in a DAG. Pairs are added from the most to the least frequent, and an edge
-        that would create a cycle is skipped.
+        in a PDAG and otherwise go to the first tied edge type in the order of the categories of `bootstrap_edges_`,
+        e.g. u -> v in a DAG. Pairs are added from the most to the least frequent, and an edge that would create a
+        directed cycle is skipped with a warning.
 
         Parameters
         ----------
@@ -359,36 +365,48 @@ class BootstrapEstimator(BaseCausalDiscovery):
 
         Returns
         -------
-        consensus_graph : DAG or PDAG
-            The constructed consensus causal graph.
+        consensus_graph : DAG, PDAG, MAG, or ADMG
+            The constructed consensus causal graph, of the same class as the bootstrap graphs.
         """
         edges = self.bootstrap_edges_
-        counts = pd.DataFrame({edge_type: (edges == edge_type).sum(axis=1) for edge_type in ("->", "<-", "--")})
-        frequency = counts.sum(axis=1) / edges.shape[1]
+        counts = pd.DataFrame(
+            {edge_type: (edges == edge_type).sum(axis=1) for edge_type in edges.iloc[:, 0].cat.categories}
+        )
+        frequency = edges.notna().mean(axis=1)
         candidates = frequency[(frequency >= threshold) & (frequency > 0)].sort_values(ascending=False, kind="stable")
 
-        is_pdag = self.return_type_ in ("pdag", "cpdag")
-        graph = PDAG() if is_pdag else DAG()
+        graph = type(self.estimator_.causal_graph_)()
         graph.add_nodes_from(self.feature_names_in_)
 
+        skipped = []
         for u, v in candidates.index:
-            n_u_to_v, n_v_to_u, n_undirected = counts.loc[(u, v)]
+            pair_counts = counts.loc[(u, v)]
+            most_frequent = pair_counts.index[pair_counts == pair_counts.max()]
+            edge_types = ["--"] if isinstance(graph, PDAG) and len(most_frequent) > 1 else most_frequent[0].split(",")
 
-            if is_pdag and (n_undirected >= max(n_u_to_v, n_v_to_u) or n_u_to_v == n_v_to_u):
-                graph.add_edge(u, v, "--")
-                continue
+            # A directed edge x -> y creates a directed cycle if there already is a directed path from y to x.
+            directed = [
+                (u, v) if edge_type == "->" else (v, u) for edge_type in edge_types if edge_type in ("->", "<-")
+            ]
+            if isinstance(graph, DAG):
+                if any(nx.has_path(graph, y, x) for x, y in directed):
+                    skipped.append((u, v))
+                else:
+                    graph.add_edges_from(directed)
+            elif any(graph.has_path(y, x, edge_types="->") for x, y in directed):
+                skipped.append((u, v))
+            else:
+                graph.add_edges_from([(u, v, edge_type) for edge_type in edge_types])
 
-            x, y = (u, v) if n_u_to_v >= n_v_to_u else (v, u)
-            if is_pdag:
-                graph.add_edge(x, y, "->")
-                if not graph.has_acyclic_extension():
-                    graph.remove_edge(x, y, "->")
-            elif not nx.has_path(graph, y, x):
-                graph.add_edge(x, y)
+        if skipped:
+            _warn_external(
+                f"{len(skipped)} pair(s) of variables passed the threshold but were left out of the consensus graph "
+                f"because their edge would create a directed cycle: {skipped}"
+            )
 
         return graph
 
-    def get_consensus_graph(self, threshold: float) -> DAG | PDAG:
+    def get_consensus_graph(self, threshold: float) -> DAG | PDAG | MAG | ADMG:
         """
         Returns the consensus causal graph estimated using a specified edge
         probability threshold.
@@ -402,9 +420,8 @@ class BootstrapEstimator(BaseCausalDiscovery):
 
         Returns
         -------
-        consensus_graph : DAG or PDAG
-            The consensus causal graph (either a DAG or a PDAG depending on
-            the return type of the base estimator).
+        consensus_graph : DAG, PDAG, MAG, or ADMG
+            The consensus causal graph, of the same class as the bootstrap graphs.
 
         Raises
         ------
@@ -419,7 +436,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
         >>> data = load_model("bnlearn/cancer").simulate(n_samples=2000, seed=42)
         >>> data = data[sorted(data.columns)]
         >>> hc = HillClimbSearch(return_type="dag")
-        >>> est = BootstrapEstimator(hc, seed=42, show_progress=False)
+        >>> est = BootstrapEstimator(hc, n_bootstraps=10, seed=42, show_progress=False)
         >>> est = est.fit(data)
 
         # Extract consensus graph with threshold 0.4:
@@ -447,7 +464,8 @@ class BootstrapEstimator(BaseCausalDiscovery):
         Returns
         -------
         adjacency_matrix : pandas.DataFrame
-            The adjacency matrix representation of the consensus causal graph.
+            The adjacency matrix representation of the consensus causal graph: binary for a DAG or PDAG, and the edge
+            types of ``to_adjacency(encoding="edge_type")`` otherwise.
 
         Raises
         ------
@@ -462,7 +480,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
         >>> data = load_model("bnlearn/cancer").simulate(n_samples=2000, seed=42)
         >>> data = data[sorted(data.columns)]
         >>> hc = HillClimbSearch(return_type="dag")
-        >>> est = BootstrapEstimator(hc, seed=42, show_progress=False)
+        >>> est = BootstrapEstimator(hc, n_bootstraps=10, seed=42, show_progress=False)
         >>> est = est.fit(data)
 
         # Extract adjacency matrix with threshold 0.4:
@@ -479,4 +497,5 @@ class BootstrapEstimator(BaseCausalDiscovery):
             raise ValueError(f"Threshold must be between 0.0 and 1.0. Got {threshold} instead.")
 
         graph = self._estimate_consensus_graph(threshold)
-        return graph.to_adjacency(encoding="binary", nodelist=self.feature_names_in_)
+        encoding = "binary" if isinstance(graph, (DAG, PDAG)) else "edge_type"
+        return graph.to_adjacency(encoding=encoding, nodelist=self.feature_names_in_)

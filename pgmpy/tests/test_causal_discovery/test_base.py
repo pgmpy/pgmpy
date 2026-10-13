@@ -3,6 +3,7 @@ import pandas as pd
 import pytest
 from skbase.lookup import all_objects
 
+from pgmpy.base import DAG
 from pgmpy.causal_discovery import ANM, GES, IGCI, PC, BootstrapEstimator, ChowLiu, ExpertInLoop
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
 from pgmpy.causal_discovery.bivariate_scores import BaseBivariateScore
@@ -112,7 +113,8 @@ def test_fit_narrowing_handles_untagged_and_wider_objects():
     class UntaggedAlgorithm(BaseCausalDiscovery):
         def _fit(self, X):
             self.ci_test_ = get_ci_test(test="pearsonr", data=X)
-            self.adjacency_matrix_ = pd.DataFrame(0, index=X.columns, columns=X.columns)
+            self.causal_graph_ = DAG()
+            self.causal_graph_.add_nodes_from(X.columns)
             return self
 
     assert UntaggedAlgorithm().fit(data).get_tag("data_types") == ["continuous"]
