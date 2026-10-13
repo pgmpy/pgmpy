@@ -55,6 +55,9 @@ class TOPIC(BaseCausalDiscovery):
         The discovered topological order of the variables. The first element is the inferred root; for each edge
         ``u -> v`` in the learned graph, ``u`` appears before ``v`` in this list.
 
+    scoring_method_ : BaseStructureScore
+        The structure score used for learning, resolved from ``scoring_method``.
+
     n_features_in_ : int
         The number of features in the data used to learn the causal graph.
 
@@ -84,6 +87,23 @@ class TOPIC(BaseCausalDiscovery):
 
     """
 
+    _tags = {
+        "name": "topic",
+        "data_types": ["discrete", "continuous", "mixed"],
+        "identifiable_graph": "cpdag",
+        "requires_target": False,
+        "capability:multivariate": True,
+        "capability:expert_knowledge": [],
+        "assumption:causal_sufficiency": True,
+        "assumption:acyclicity": True,
+        "assumption:faithfulness": True,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
+    }
+
     def __init__(
         self,
         scoring_method: str | BaseStructureScore | None = None,
@@ -105,7 +125,7 @@ class TOPIC(BaseCausalDiscovery):
             The input dataset.
         """
         # Step 0: Initialize scoring method and data structures
-        score = get_scoring_method(scoring_method=self.scoring_method, data=X)
+        self.scoring_method_ = get_scoring_method(scoring_method=self.scoring_method, data=X)
 
         dag_current = DAG()
         dag_current.add_nodes_from(list(X.columns))
@@ -129,11 +149,13 @@ class TOPIC(BaseCausalDiscovery):
             score_improvement = np.zeros((n, n))
             for j, effect in enumerate(candidates):
                 base_parents = tuple(dag_current.get_parents(effect))
-                old_score = score.local_score(effect, base_parents)
+                old_score = self.scoring_method_.local_score(effect, base_parents)
                 for i, cause in enumerate(candidates):
                     if i == j:
                         continue
-                    score_improvement[i, j] = score.local_score(effect, base_parents + (cause,)) - old_score
+                    score_improvement[i, j] = (
+                        self.scoring_method_.local_score(effect, base_parents + (cause,)) - old_score
+                    )
 
             # Step 1.1.2: Source is the candidate with the smallest maximum incoming improvement (i.e. the least
             # preferred sink).
@@ -149,7 +171,9 @@ class TOPIC(BaseCausalDiscovery):
             # Step 1.2: Add edges from the source to remaining candidates if they improve the score sufficiently.
             for node in candidates:
                 current_parents = tuple(dag_current.get_parents(node))
-                gain = score.local_score(node, current_parents + (source,)) - score.local_score(node, current_parents)
+                gain = self.scoring_method_.local_score(
+                    node, current_parents + (source,)
+                ) - self.scoring_method_.local_score(node, current_parents)
                 if gain > self.min_improvement:
                     dag_current.add_edge(source, node)
 
@@ -157,12 +181,12 @@ class TOPIC(BaseCausalDiscovery):
             # score, using min_improvement as the tolerance (symmetric with the edge-addition threshold above).
             current_parents = list(dag_current.get_parents(source))
             while current_parents:
-                old_score = score.local_score(source, tuple(current_parents))
+                old_score = self.scoring_method_.local_score(source, tuple(current_parents))
                 best_parent = None
                 best_harm = float("-inf")
                 for parent in current_parents:
                     new_parents = tuple(p for p in current_parents if p != parent)
-                    harm = score.local_score(source, new_parents) - old_score
+                    harm = self.scoring_method_.local_score(source, new_parents) - old_score
                     if harm >= -self.min_improvement and harm > best_harm:
                         best_harm = harm
                         best_parent = parent

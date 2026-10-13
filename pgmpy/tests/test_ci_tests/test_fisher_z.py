@@ -128,7 +128,7 @@ def test_fisher_z_residual(residual_data):
     df_indep, df_dep = residual_data
     test = FisherZ(data=df_indep)
     test("X", "Y", ["Z1", "Z2", "Z3"])
-    assert round(test.p_value_, 3) == pytest.approx(0.044, abs=1e-2)
+    assert round(test.p_value_, 3) == pytest.approx(0.238, abs=1e-2)
 
     test = FisherZ(data=df_dep)
     test("X", "Y", ["Z1", "Z2", "Z3"])

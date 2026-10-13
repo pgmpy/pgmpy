@@ -1515,6 +1515,21 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
         )[:]
         self.assertRaises(ValueError, self.model_connected.predict_probability, predict_data)
 
+    def test_predict_probability_non_string_nodes(self):
+        model = DiscreteBayesianNetwork([(0, 1)])
+        cpd0 = TabularCPD(0, 2, [[0.6], [0.4]])
+        cpd1 = TabularCPD(1, 2, [[0.8, 0.2], [0.2, 0.8]], evidence=[0], evidence_card=[2])
+        model.add_cpds(cpd0, cpd1)
+
+        predict_data = pd.DataFrame({0: [0, 1]})
+        result = model.predict_probability(predict_data)
+
+        self.assertIsInstance(result, pd.DataFrame)
+        self.assertEqual(list(result.columns), ["1_0", "1_1"])
+        self.assertEqual(len(result), 2)
+        np_test.assert_allclose(result["1_0"].values, [0.8, 0.2])
+        np_test.assert_allclose(result["1_1"].values, [0.2, 0.8])
+
     def tearDown(self):
         del self.model_connected
         del self.model_disconnected

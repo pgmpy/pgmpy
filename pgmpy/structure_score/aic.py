@@ -54,9 +54,8 @@ class AIC(LogLikelihood):
 
     _tags = {
         "name": "aic-d",
-        "supported_datatype": "discrete",
+        "data_types": ["discrete"],
         "default_for": None,
-        "is_parameteric": False,
     }
 
     def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:

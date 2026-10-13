@@ -51,13 +51,17 @@ class YourCITest(BaseCITest):
     .. [1] Add reference for the CI test
     """
 
-    # TODO: Required: Metadata used for registering the CI test.
+    # TODO: Set every tag. `pgmpy.registry.all_tags("ci_test")` lists them, and the tag classes in
+    #       `pgmpy/registry/_tags.py` document each tag and its allowed values.
     _tags = {
-        "name": "your_ci_test",  # Unique name allowing users to find this test by name.
-        "data_types": ("continuous",),  # Can be combination of ("discrete", "continuous", "mixed").
-        "default_for": None,  # If specified, this test becomes the default for the specified data type.
-        "requires_data": True,  # False for tests that don’t use data.
-        "is_symmetric": True,  # Set to False only if swapping X and Y can change the result.
+        "name": "your_ci_test",
+        "data_types": ["continuous"],
+        "default_for": None,
+        "requires_data": True,
+        "is_symmetric": True,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
     }
 
     def __init__(self, data: pd.DataFrame = None, param1=None, param2=None, use_cache: bool = True):
@@ -67,6 +71,11 @@ class YourCITest(BaseCITest):
         self.param2 = param2
 
         super().__init__(use_cache=use_cache)
+
+        # TODO: If an assumption depends on a hyperparameter (e.g. a user-supplied estimator), set the most permissive
+        #       value in `_tags` and update it here with `set_tags`, after `super().__init__`. For example:
+        # if isinstance(self.param1, LinearRegression):
+        #     self.set_tags(**{"assumption:linearity": True})
 
     def _compute_result(
         self,

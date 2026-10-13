@@ -48,7 +48,7 @@ class DiscreteMixin:
 
     @classmethod
     def load_model_object(cls):
-        return BIFReader(string=gzip.decompress(cls._get_raw_data()).decode("utf-8")).get_model()
+        return BIFReader(string=gzip.decompress(cls._get_raw_data()).decode("utf-8")).read()
 
 
 class BIFMixin:
@@ -58,7 +58,7 @@ class BIFMixin:
 
     @classmethod
     def load_model_object(cls):
-        return BIFReader(string=cls._get_raw_data().decode("utf-8")).get_model()
+        return BIFReader(string=cls._get_raw_data().decode("utf-8")).read()
 
 
 class ContinuousMixin:

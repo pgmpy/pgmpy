@@ -119,7 +119,7 @@ class DoubleMLRegressor(BaseCausalPrediction):
     >>> lgbn = DAG.from_dagitty(
     ...     "dag { X -> T [beta=0.2] X -> Y [beta=0.3] T -> Y [beta=0.4] }"
     ... )
-    >>> data = lgbn.simulate(n_samples=1000, seed=42)
+    >>> data = lgbn.simulate(n_samples=10000, seed=42)
     >>> X = data.loc[:, ["X", "T"]]
     >>> y = data["Y"]
 
@@ -146,7 +146,7 @@ class DoubleMLRegressor(BaseCausalPrediction):
     >>> dml.n_folds_
     3
     >>> dml.n_samples_
-    1000
+    10000
 
     Notes
     -----

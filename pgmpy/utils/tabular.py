@@ -83,8 +83,7 @@ def encode_columns(data: pd.DataFrame, state_names: dict) -> tuple[dict, dict]:
     cardinalities = {}
     for col in data.columns:
         cats = state_names[col]
-        cat = pd.Categorical(data[col], categories=cats)
-        codes[col] = np.asarray(cat.codes, dtype=np.int64)
+        codes[col] = pd.Index(cats, tupleize_cols=False).get_indexer(data[col]).astype(np.int64, copy=False)
         cardinalities[col] = len(cats)
     return codes, cardinalities
 

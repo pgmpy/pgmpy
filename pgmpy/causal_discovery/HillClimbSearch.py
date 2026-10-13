@@ -94,6 +94,9 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
     adjacency_matrix_ : pd.DataFrame
         Adjacency matrix representation of the learned causal graph.
 
+    scoring_method_ : BaseStructureScore
+        The structure score used for learning, resolved from ``scoring_method``.
+
     n_features_in_ : int
         The number of features in the data used to learn the causal graph.
 
@@ -129,6 +132,23 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
     ----------
     - :footcite:t:`koller_friedman_2009`
     """
+
+    _tags = {
+        "name": "hill_climb_search",
+        "data_types": ["discrete", "continuous", "mixed"],
+        "identifiable_graph": "cpdag",
+        "requires_target": False,
+        "capability:multivariate": True,
+        "capability:expert_knowledge": ["forbidden_edges", "required_edges", "search_space", "temporal_order"],
+        "assumption:causal_sufficiency": True,
+        "assumption:acyclicity": True,
+        "assumption:faithfulness": True,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
+    }
 
     def __init__(
         self,
@@ -171,7 +191,7 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
 
         # Step 1: Initial checks and setup for arguments
         # Step 1.1: Check score
-        score = get_scoring_method(self.scoring_method, X)
+        self.scoring_method_ = get_scoring_method(self.scoring_method, X)
 
         # Step 1.2: Check the start_dag
         if self.start_dag is None:
@@ -220,7 +240,7 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
             best_operation, best_score_delta = max(
                 self._legal_operations_dag(
                     model=current_model,
-                    scoring_method=score,
+                    scoring_method=self.scoring_method_,
                     tabu_list=tabu_list,
                     max_indegree=max_indegree,
                     forbidden_edges=expert_knowledge.forbidden_edges_,
