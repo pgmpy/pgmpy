@@ -5,7 +5,7 @@ import pytest
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.base import ADMG
-from pgmpy.causal_discovery import PC, BootstrapEstimator, HillClimbSearch
+from pgmpy.causal_discovery import ANM, PC, BootstrapEstimator, HillClimbSearch
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
 
 
@@ -284,6 +284,18 @@ def test_bootstrap_without_replacement(rand_data):
 
     assert est.bootstrap_samples_.shape == (3, 250)
     assert all(len(np.unique(sample)) == 250 for sample in est.bootstrap_samples_)
+
+
+def test_bootstrap_follows_wrapped_estimator(rand_data):
+    # sklearn input tags come from the wrapped estimator, e.g. ANM doesn't accept categorical data.
+    assert BootstrapEstimator(ANM()).__sklearn_tags__().input_tags.categorical is False
+    assert BootstrapEstimator(PC()).__sklearn_tags__().input_tags.categorical is True
+
+    # The wrapped estimator's own progress bars are turned off; the bootstrap shows a single one.
+    est = BootstrapEstimator(HillClimbSearch(return_type="dag"), n_bootstraps=2, n_jobs=1, show_progress=False)
+    est.fit(rand_data)
+    assert est.estimator.show_progress is True
+    assert est.estimator_.show_progress is False
 
 
 def test_bootstrap_other_graph_types():
