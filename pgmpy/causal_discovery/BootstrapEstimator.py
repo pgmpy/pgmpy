@@ -225,8 +225,10 @@ class BootstrapEstimator(BaseCausalDiscovery):
 
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
-        # The wrapped estimator gets the input data unchanged, so it decides which input is accepted.
-        tags.input_tags = get_tags(self.estimator).input_tags
+        # The wrapped estimator gets the input data unchanged, so it decides which input is accepted. An invalid
+        # estimator is reported by `_fit`.
+        if isinstance(self.estimator, BaseCausalDiscovery):
+            tags.input_tags = get_tags(self.estimator).input_tags
         return tags
 
     @staticmethod
