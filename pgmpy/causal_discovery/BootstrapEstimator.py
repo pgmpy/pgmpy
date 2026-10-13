@@ -21,22 +21,21 @@ class BootstrapEstimator(BaseCausalDiscovery):
     Bootstrap meta-estimator for causal discovery.
 
     This class wraps any causal discovery estimator to assess the stability of the learned causal structure. It
-    repeatedly samples the input dataset, runs the causal discovery estimator on each sampled dataset,
-    records the edge between every pair of variables in each resulting graph, and constructs a consensus graph.
+    repeatedly samples the input dataset, runs the causal discovery estimator on each sampled dataset, records the edge
+    between every pair of variables in each resulting graph, and constructs a consensus graph.
 
-    The non-parametric bootstrap procedure operates as follows:
-    1. Resamples the input dataset with replacement `n_bootstraps` times.
-    2. Fits an independent clone of the base estimator on each resampled data.
+    The procedure operates as follows:
+    1. Draws `n_bootstraps` samples of the input dataset, each with a `sample_size` fraction of its rows, either with
+    replacement (the non-parametric bootstrap) or, with ``replace=False``, without replacement (subsampling).
+    2. Fits an independent clone of the base estimator on each sample, and one more on the full data (`estimator_`).
     3. Records the type of edge between every pair of variables in each bootstrap graph (`bootstrap_edges_`).
-    4. Constructs a consensus graph, of the same class as the bootstrap graphs, from the pairs of variables that have
-    an edge in at least a `threshold` fraction of the bootstrap graphs.
+    4. Constructs a consensus graph, of the same class as the bootstrap graphs, from the pairs of variables that have an
+    edge in at least a `threshold` fraction of the bootstrap graphs.
 
     Parameters
     ----------
     estimator : BaseCausalDiscovery instance
-        The base causal discovery estimator to be wrapped (e.g., PC, GES, HillClimbSearch). The bootstrap graphs are of
-        the class it returns. To count edges on equivalence classes, configure it to return a CPDAG, e.g. with
-        ``return_type="pdag"``.
+        The base causal discovery estimator to be wrapped (e.g., PC, GES, HillClimbSearch).
 
     n_bootstraps : int, default=100
         The number of bootstrap samples to generate and fit. Must be at least 1.
@@ -47,17 +46,14 @@ class BootstrapEstimator(BaseCausalDiscovery):
 
     replace : bool, default=True
         If True, each bootstrap sample is drawn with replacement, so rows can repeat. If False, each sample is a subset
-        of distinct rows, which requires a `sample_size` below 1.0. Duplicate rows can make score-based methods learn
-        extra edges and miscalibrate CI tests, which subsampling without replacement (e.g. ``sample_size=0.5``) avoids.
+        of distinct rows, which requires a `sample_size` below 1.0.
 
     threshold : float, default=0.5
-        Only used to compute the consensus graph (`causal_graph_` and `adjacency_matrix_`); `bootstrap_edges_` doesn't
-        depend on it. A pair of variables is connected in the consensus graph if it has an edge in at least this
-        fraction of the bootstrap graphs, and in at least one of them. The edge gets its most frequent type in the
-        bootstrap graphs; ties are left undirected in a PDAG and otherwise go to the first tied edge type in the order
-        of the categories of `bootstrap_edges_`, e.g. u -> v in a DAG. Pairs are added from the most to the least
-        frequent, and an edge that would create a directed cycle is skipped with a warning. Must be between 0.0 and
-        1.0.
+        Edge frequency threshold for the consensus graph (`causal_graph_`, `adjacency_matrix_`); it doesn't affect
+        `bootstrap_edges_`. Pairs with an edge in at least this fraction of the bootstrap graphs are connected with
+        their most frequent edge type; ties become undirected in a PDAG and otherwise take the first tied category, e.g.
+        u -> v in a DAG. Pairs are added from most to least frequent, skipping with a warning any edge that would create
+        a directed cycle. Must be between 0.0 and 1.0.
 
     warm_start : bool, default=False
         When set to True, reuses existing fitted bootstrap graphs and adds new bootstrap samples upon subsequent calls
@@ -75,7 +71,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
 
     Attributes
     ----------
-    causal_graph_ : DAG, PDAG, MAG, or ADMG
+    causal_graph_ : DAG, PDAG, MAG, or PAG
         The learned consensus causal graph, of the same class as the bootstrap graphs.
 
     adjacency_matrix_ : pd.DataFrame
@@ -83,13 +79,10 @@ class BootstrapEstimator(BaseCausalDiscovery):
         of ``to_adjacency(encoding="edge_type")`` otherwise.
 
     bootstrap_edges_ : pd.DataFrame
-        The edge between every pair of variables in every bootstrap graph. Each row is a pair (u, v), with u before v
-        in the order of the input features, and each column is a bootstrap graph, in the order of `bootstrap_samples_`.
-        The values are the edge types oriented from u to v, e.g. "->" for u -> v, "<-" for v -> u, "--" for an
-        undirected edge, and "<>" for a bidirected edge, and NaN if u and v aren't adjacent. Coincident edges, e.g. a
-        directed and a bidirected edge in an ADMG, are joined with a comma ("->,<>"). The categories are the edge
-        types found in any bootstrap graph. Edge frequencies and other summaries can be computed with pandas, as shown
-        in the examples.
+        The edge between every pair of variables in every bootstrap graph. Each row is a pair (u, v), and each column is
+        a bootstrap graph. The values are the edge types oriented from u to v, e.g. "->" for u -> v, "<-" for v -> u,
+        "--" for an undirected edge, and NaN if u and v aren't adjacent. Edge frequencies and other summaries can be
+        computed with pandas, as shown in the examples.
 
     bootstrap_samples_ : np.ndarray
         2D array of shape `(n_bootstraps, bootstrap_sample_size)` containing the row indices used in each bootstrap
@@ -98,9 +91,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
         - Axis 1 (second axis): Represents the sampled row indices for that bootstrap sample.
 
     estimator_ : BaseCausalDiscovery
-        A clone of ``estimator`` fitted on the full input data, e.g. to compare its graph with the bootstrap edges. It
-        isn't one of the bootstrap graphs and doesn't count towards `bootstrap_edges_`. With ``warm_start=True``, it is
-        fitted on the first call to fit only.
+        A clone of ``estimator`` fitted on the full input data, e.g. to compare its graph with the bootstrap edges.
 
     n_features_in_ : int
         The number of features in the input data.
@@ -113,8 +104,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
     # Simulate a dataset and fit BootstrapEstimator with PC, which returns a CPDAG for each bootstrap sample:
     >>> from pgmpy.causal_discovery import PC, BootstrapEstimator
     >>> from pgmpy.example_models import load_model
-    >>> data = load_model("bnlearn/cancer").simulate(n_samples=2000, seed=42)
-    >>> data = data[sorted(data.columns)]
+    >>> data = load_model("bnlearn/cancer").simulate(n_samples=1000, seed=42)
     >>> pc = PC(return_type="pdag")
     >>> est = BootstrapEstimator(pc, n_bootstraps=10, seed=42, show_progress=False)
     >>> est = est.fit(data)
