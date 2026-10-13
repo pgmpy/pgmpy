@@ -1,0 +1,69 @@
+name: Handle Issue Assignments
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  issues: write
+
+jobs:
+  assign-issue:
+    if: >-
+      ${{ !github.event.issue.pull_request &&
+          github.event.comment.user.type != 'Bot' }}
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event.issue.number }}
+      cancel-in-progress: false
+    steps:
+      - name: Process assignment command
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const command = context.payload.comment.body.trim();
+            if (command !== '.take' && command !== '.release') {
+              return;
+            }
+
+            const user = context.payload.comment.user.login;
+            const params = {
+              ...context.repo,
+              issue_number: context.payload.issue.number,
+            };
+            if (command === '.release') {
+              await github.rest.issues.removeAssignees({
+                ...params,
+                assignees: [user],
+              });
+              return;
+            }
+
+            const { data: issue } = await github.rest.issues.get(params);
+            let message;
+
+            if (issue.state !== 'open') {
+              message = 'This issue is closed and cannot be claimed.';
+            } else if (
+              !issue.labels.some(label =>
+                ['good first issue', 'help wanted'].includes(label.name.toLowerCase())
+              )
+            ) {
+              message = 'The `.take` command is restricted to issues labeled `good first issue` or `help wanted`. For other issues, please discuss assignment with a maintainer.';
+            } else if (issue.assignees.length > 0) {
+              message = 'This issue is already assigned to a contributor.';
+            } else {
+              const { data: assignedIssue } = await github.rest.issues.addAssignees({
+                ...params,
+                assignees: [user],
+              });
+              if (!assignedIssue.assignees.some(assignee => assignee.login === user)) {
+                throw new Error(`GitHub did not assign @${user} to issue #${issue.number}.`);
+              }
+              message = 'Thanks! You have been assigned.';
+            }
+
+            await github.rest.issues.createComment({
+              ...params,
+              body: `@${user} ${message}`,
+            });

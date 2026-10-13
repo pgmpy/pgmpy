@@ -13,11 +13,13 @@ We are committed to providing a welcoming and inclusive experience for everyone.
 If this is your first contribution to pgmpy (or to open source in general), here's how to get started:
 
 1. Look for issues labelled [**Good First Issue**](https://github.com/pgmpy/pgmpy/labels/good%20first%20issue). These are scoped, well-defined tasks that don't require deep familiarity with the codebase.
-2. **Comment on the issue** before you start working, so a maintainer can assign it to you and avoid duplicate effort.
+2. **Comment on the issue** before you start working to avoid duplicate effort. For open, unassigned issues labelled **good first issue** or **help wanted**, comment `.take` to assign yourself. For other issues, a maintainer can assign you.
 3. **Discuss your approach** on the issue thread before opening a PR. A short description of your planned design or solution is enough.
 4. Follow the setup steps below, then open your PR against the `dev` branch.
 
 Please follow the instructions as closely as possible, but don't worry about getting everything perfect on the first try. We would be happy to help with anything that doesn't match our project standards.
+
+If you can no longer work on an issue, comment `.release` to remove your assignment.
 
 ## Getting Started
 
