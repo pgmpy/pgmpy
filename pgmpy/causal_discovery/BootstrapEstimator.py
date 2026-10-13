@@ -25,7 +25,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
     between every pair of variables in each resulting graph, and constructs a consensus graph.
 
     The procedure operates as follows:
-    1. Draws `n_bootstraps` samples of the input dataset, each with a `sample_size` fraction of its rows, either with
+    1. Draws `n_bootstraps` samples of the input dataset, each with a `sample_fraction` of its rows, either with
     replacement (the non-parametric bootstrap) or, with ``replace=False``, without replacement (subsampling).
     2. Fits an independent clone of the base estimator on each sample, and one more on the full data (`estimator_`).
     3. Records the type of edge between every pair of variables in each bootstrap graph (`bootstrap_edges_`).
@@ -40,13 +40,13 @@ class BootstrapEstimator(BaseCausalDiscovery):
     n_bootstraps : int, default=100
         The number of bootstrap samples to generate and fit. Must be at least 1.
 
-    sample_size : float, default=1.0
-        The fraction of samples to draw from the input data for each bootstrap sample. Must be greater than 0.0 and at
+    sample_fraction : float, default=1.0
+        The fraction of the rows of the input data to draw for each bootstrap sample. Must be greater than 0.0 and at
         most 1.0.
 
     replace : bool, default=True
         If True, each bootstrap sample is drawn with replacement, so rows can repeat. If False, each sample is a subset
-        of distinct rows, which requires a `sample_size` below 1.0.
+        of distinct rows, which requires a `sample_fraction` below 1.0.
 
     threshold : float, default=0.5
         Edge frequency threshold for the consensus graph (`causal_graph_`, `adjacency_matrix_`); it doesn't affect
@@ -85,8 +85,8 @@ class BootstrapEstimator(BaseCausalDiscovery):
         computed with pandas, as shown in the examples.
 
     bootstrap_samples_ : np.ndarray
-        2D array of shape `(n_bootstraps, bootstrap_sample_size)` containing the row indices used in each bootstrap
-        sample.
+        2D array of shape `(n_bootstraps, int(sample_fraction * n_rows))` containing the row indices used in each
+        bootstrap sample.
         - Axis 0 (first axis): Represents each individual bootstrap sample.
         - Axis 1 (second axis): Represents the sampled row indices for that bootstrap sample.
 
@@ -105,6 +105,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
     >>> from pgmpy.causal_discovery import PC, BootstrapEstimator
     >>> from pgmpy.example_models import load_model
     >>> data = load_model("bnlearn/cancer").simulate(n_samples=1000, seed=42)
+    >>> data = data[sorted(data.columns)]
     >>> pc = PC(return_type="pdag")
     >>> est = BootstrapEstimator(pc, n_bootstraps=10, seed=42, show_progress=False)
     >>> est = est.fit(data)
@@ -115,28 +116,28 @@ class BootstrapEstimator(BaseCausalDiscovery):
     ...     print(est.bootstrap_edges_)
                            0    1    2    3    4    5    6    7    8    9
     u         v
-    Cancer    Dyspnoea    <-  NaN   <-  NaN  NaN  NaN   <-   <-  NaN  NaN
-              Pollution  NaN   ->  NaN   <-   <-   ->  NaN  NaN   <-   <-
-              Smoker      <-   <-   <-  NaN   <-  NaN   <-  NaN   <-   <-
-              Xray        <-   <-   <-   <-   <-   --   <-   <-   <-   <-
-    Dyspnoea  Pollution  NaN   ->  NaN  NaN  NaN   ->  NaN  NaN  NaN  NaN
+    Cancer    Dyspnoea    <-  NaN  NaN   <-  NaN  NaN  NaN  NaN  NaN  NaN
+              Pollution  NaN  NaN   <-  NaN  NaN  NaN  NaN   <-  NaN  NaN
+              Smoker      <-  NaN  NaN   <-   <-   --   <-   <-   <-   <-
+              Xray        <-   --   <-   <-   <-   --   <-   <-   <-   <-
+    Dyspnoea  Pollution  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN
               Smoker     NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN
               Xray       NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN
-    Pollution Smoker     NaN  NaN  NaN  NaN  NaN  NaN  NaN   --  NaN  NaN
+    Pollution Smoker     NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN
               Xray       NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN
     Smoker    Xray       NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN
 
     # Fraction of the bootstrap graphs in which each pair of variables is adjacent:
     >>> est.bootstrap_edges_.notna().mean(axis=1)  # doctest: +NORMALIZE_WHITESPACE
     u          v
-    Cancer     Dyspnoea     0.4
-               Pollution    0.6
-               Smoker       0.7
+    Cancer     Dyspnoea     0.2
+               Pollution    0.2
+               Smoker       0.8
                Xray         1.0
-    Dyspnoea   Pollution    0.2
+    Dyspnoea   Pollution    0.0
                Smoker       0.0
                Xray         0.0
-    Pollution  Smoker       0.1
+    Pollution  Smoker       0.0
                Xray         0.0
     Smoker     Xray         0.0
     dtype: float64
@@ -144,31 +145,31 @@ class BootstrapEstimator(BaseCausalDiscovery):
     # Frequency of each edge type among the bootstrap graphs in which the pair is adjacent:
     >>> orientations = est.bootstrap_edges_.apply(lambda row: row.value_counts(normalize=True), axis=1)
     >>> orientations.round(2)  # doctest: +NORMALIZE_WHITESPACE
-                          --    ->    <-
+                           --    <-
     u         v
-    Cancer    Dyspnoea   0.0  0.00  1.00
-              Pollution  0.0  0.33  0.67
-              Smoker     0.0  0.00  1.00
-              Xray       0.1  0.00  0.90
-    Dyspnoea  Pollution  0.0  1.00  0.00
-              Smoker     NaN   NaN   NaN
-              Xray       NaN   NaN   NaN
-    Pollution Smoker     1.0  0.00  0.00
-              Xray       NaN   NaN   NaN
-    Smoker    Xray       NaN   NaN   NaN
+    Cancer    Dyspnoea   0.00  1.00
+              Pollution  0.00  1.00
+              Smoker     0.12  0.88
+              Xray       0.20  0.80
+    Dyspnoea  Pollution   NaN   NaN
+              Smoker      NaN   NaN
+              Xray        NaN   NaN
+    Pollution Smoker      NaN   NaN
+              Xray        NaN   NaN
+    Smoker    Xray        NaN   NaN
 
     # Show the adjacency matrix of the consensus graph:
     >>> est.adjacency_matrix_
                Cancer  Dyspnoea  Pollution  Smoker  Xray
     Cancer          0         0          0       0     0
     Dyspnoea        0         0          0       0     0
-    Pollution       1         0          0       0     0
+    Pollution       0         0          0       0     0
     Smoker          1         0          0       0     0
     Xray            1         0          0       0     0
 
     # Show the shapes of the bootstrap samples and bootstrap edges:
     >>> est.bootstrap_samples_.shape
-    (10, 2000)
+    (10, 1000)
     >>> est.bootstrap_edges_.shape
     (10, 10)
     """
@@ -194,7 +195,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
         self,
         estimator: BaseCausalDiscovery,
         n_bootstraps: int = 100,
-        sample_size: float = 1,
+        sample_fraction: float = 1,
         replace: bool = True,
         threshold: float = 0.5,
         warm_start: bool = False,
@@ -205,7 +206,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
 
         self.estimator = estimator
         self.n_bootstraps = n_bootstraps
-        self.sample_size = sample_size
+        self.sample_fraction = sample_fraction
         self.replace = replace
         self.threshold = threshold
         self.warm_start = warm_start
@@ -215,8 +216,6 @@ class BootstrapEstimator(BaseCausalDiscovery):
 
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
-        # The wrapped estimator gets the input data unchanged, so it decides which input is accepted. An invalid
-        # estimator is reported by `_fit`.
         if isinstance(self.estimator, BaseCausalDiscovery):
             tags.input_tags = get_tags(self.estimator).input_tags
         return tags
@@ -226,11 +225,9 @@ class BootstrapEstimator(BaseCausalDiscovery):
         X: pd.DataFrame,
         base_estimator: BaseCausalDiscovery,
         bootstrap_sample: np.ndarray,
-    ) -> BaseCausalDiscovery:
+    ) -> DAG | PDAG | MAG | ADMG:
         """
-        Fits a clone of the base estimator on the given rows of the dataset.
-
-        The rows are a bootstrap sample, or all rows of the dataset for `estimator_`.
+        Fits a clone of the base estimator on a bootstrap sample of the dataset.
 
         Parameters
         ----------
@@ -243,20 +240,13 @@ class BootstrapEstimator(BaseCausalDiscovery):
 
         Returns
         -------
-        fitted_estimator : BaseCausalDiscovery
-            The fitted clone of the base estimator.
+        causal_graph : DAG, PDAG, MAG, or ADMG
+            The causal graph learned by the fitted clone.
         """
-
-        # Create new sample by resampling
         sample = X.iloc[bootstrap_sample]
-
-        # Fit the resample data on base estimator. The bootstrap shows one progress bar for all fits, so the
-        # estimator's own progress bars are turned off.
         base_estimator = cast(BaseCausalDiscovery, clone(base_estimator))
-        if "show_progress" in base_estimator.get_params():
-            base_estimator.set_params(show_progress=False)
         est = base_estimator.fit(sample)
-        return est
+        return est.causal_graph_
 
     def _fit(self, X: pd.DataFrame) -> BootstrapEstimator:
         """
@@ -268,36 +258,34 @@ class BootstrapEstimator(BaseCausalDiscovery):
             The input data to learn the causal structure from.
         """
 
-        # Step 0: Initialize variables
+        # Step 1: Initial checks for arguments
+        # Step 1.1: Check the parameters
         if not isinstance(self.estimator, BaseCausalDiscovery):
             raise ValueError("estimator must be an instance of BaseCausalDiscovery Class.")
         if self.n_bootstraps < 1:
             raise ValueError(f"n_bootstraps must be at least 1. Got {self.n_bootstraps} instead.")
-        if not (0.0 < self.sample_size <= 1.0):
-            raise ValueError(f"sample_size must be greater than 0.0 and at most 1.0. Got {self.sample_size} instead.")
+        if not (0.0 < self.sample_fraction <= 1.0):
+            raise ValueError(
+                f"sample_fraction must be greater than 0.0 and at most 1.0. Got {self.sample_fraction} instead."
+            )
         if not (0.0 <= self.threshold <= 1.0):
             raise ValueError(f"threshold must be between 0.0 and 1.0. Got {self.threshold} instead.")
-        if not self.replace and self.sample_size == 1.0:
+        if not self.replace and self.sample_fraction == 1.0:
             raise ValueError(
-                "replace=False with sample_size=1.0 uses the full data in every bootstrap sample. Use a sample_size "
-                "below 1.0."
+                "replace=False with sample_fraction=1.0 uses the full data in every bootstrap sample. Use a "
+                "sample_fraction below 1.0."
             )
 
-        variables = self.feature_names_in_
-
-        # Step 1: Resample dataset and fit base estimators
-        rng = np.random.default_rng(self.seed)
-        bootstrap_sample_size = int(len(X) * self.sample_size)
-        all_samples = np.array(
-            [rng.choice(len(X), size=bootstrap_sample_size, replace=self.replace) for _ in range(self.n_bootstraps)]
-        )
-
-        # A warm start keeps the earlier bootstrap samples, bootstrap edges, and `estimator_`, and only fits the new
-        # bootstrap samples. Otherwise, start from empty results.
-        rows, cols = np.triu_indices(len(variables), k=1)
-        if self.warm_start and hasattr(self, "bootstrap_samples_"):
+        # Step 1.2: Check that a warm start can continue the earlier fit
+        bootstrap_sample_size = int(len(X) * self.sample_fraction)
+        warm_start = self.warm_start and hasattr(self, "bootstrap_samples_")
+        if warm_start:
             if bootstrap_sample_size != self.bootstrap_samples_.shape[1]:
-                raise ValueError("Cannot warm_start with a different dataset size.")
+                raise ValueError(
+                    "Cannot warm_start with a different dataset size or sample_fraction: the existing bootstrap "
+                    f"samples have {self.bootstrap_samples_.shape[1]} rows, the new ones would have "
+                    f"{bootstrap_sample_size}."
+                )
             if list(X.columns) != list(self.adjacency_matrix_.columns):
                 raise ValueError("Cannot warm_start with a different dataset features.")
             if self.n_bootstraps < len(self.bootstrap_samples_):
@@ -305,83 +293,105 @@ class BootstrapEstimator(BaseCausalDiscovery):
                     f"n_bootstraps={self.n_bootstraps} must be larger or equal to "
                     f"len(bootstrap_samples_)={len(self.bootstrap_samples_)} when warm_start==True."
                 )
-        else:
+
+        # Step 2: Fit the estimator on the bootstrap samples
+        # Step 2.1: Draw the bootstrap samples
+        rng = np.random.default_rng(self.seed)
+        all_samples = np.array(
+            [rng.choice(len(X), size=bootstrap_sample_size, replace=self.replace) for _ in range(self.n_bootstraps)]
+        )
+
+        # Step 2.2: Without a warm start, initialize the results and fit `estimator_` on the full data
+        rows, cols = np.triu_indices(len(self.feature_names_in_), k=1)
+        if not warm_start:
             self.bootstrap_samples_ = np.empty((0, bootstrap_sample_size), dtype=all_samples.dtype)
             self.bootstrap_edges_ = pd.DataFrame(
-                index=pd.MultiIndex.from_arrays([variables[rows], variables[cols]], names=["u", "v"])
+                index=pd.MultiIndex.from_arrays(
+                    [self.feature_names_in_[rows], self.feature_names_in_[cols]], names=["u", "v"]
+                )
             )
+            self.estimator_ = clone(self.estimator).fit(X)
 
         n_existing = len(self.bootstrap_samples_)
         samples_to_fit = all_samples[n_existing:]
 
-        # Only fit new bootstrap samples if needed. We skip this if warm_start is True and n_bootstraps has not
-        # changed, but still form the consensus graph below in case class parameters (like threshold) were modified.
+        # Step 2.3: Fit the estimator on the new bootstrap samples
         if len(samples_to_fit) > 0:
-            # On the first fit, the estimator is also fitted on the full data, in the same batch as the bootstrap
-            # samples. A warm start keeps that fit, since it requires the same data.
-            row_indices = [np.arange(len(X)), *samples_to_fit] if n_existing == 0 else list(samples_to_fit)
-            results = cast(
-                list[BaseCausalDiscovery],
-                Parallel(n_jobs=self.n_jobs)(
-                    delayed(self._bootstrap_iteration)(X, self.estimator, indices)
-                    for indices in tqdm(
-                        row_indices,
-                        desc="Bootstrapping",
-                        disable=not (self.show_progress and config.SHOW_PROGRESS),
-                    )
-                ),
+            graphs = Parallel(n_jobs=self.n_jobs)(
+                delayed(self._bootstrap_iteration)(X, self.estimator, indices)
+                for indices in tqdm(
+                    samples_to_fit,
+                    desc="Bootstrapping",
+                    disable=not (self.show_progress and config.SHOW_PROGRESS),
+                )
             )
-            if n_existing == 0:
-                self.estimator_, results = results[0], results[1:]
 
-            # Record the edge type of every pair of variables (u, v), with u before v, in each new bootstrap graph,
-            # oriented from u to v (e.g. "->" for u -> v and "<-" for v -> u), and NaN if they aren't adjacent.
-            # Coincident edges, e.g. a directed and a bidirected edge in an ADMG, are joined with a comma.
+            # Step 2.4: Record the edge types of the new bootstrap graphs
             edge_types = []
-            for est in results:
-                cells = est.causal_graph_.to_adjacency(encoding="edge_type", nodelist=variables).to_numpy()[rows, cols]
+            for graph in graphs:
+                cells = graph.to_adjacency(encoding="edge_type", nodelist=self.feature_names_in_).to_numpy()[rows, cols]
                 edge_types.append([",".join(c) if isinstance(c, tuple) else (None if c == 0 else c) for c in cells])
             new_edges = pd.DataFrame(
                 np.array(edge_types, dtype=object).T,
                 index=self.bootstrap_edges_.index,
-                columns=range(n_existing, n_existing + len(results)),
+                columns=range(n_existing, n_existing + len(graphs)),
             )
 
             self.bootstrap_samples_ = np.concatenate([self.bootstrap_samples_, samples_to_fit], axis=0)
             edges = pd.concat([self.bootstrap_edges_.astype(object), new_edges], axis=1)
-
-            # The categories are the edge types found in any bootstrap graph.
             self.bootstrap_edges_ = edges.astype(pd.CategoricalDtype(sorted(set(edges.stack().dropna()))))
 
-        # Step 2: Form a consensus graph.
-        self.causal_graph_ = self._estimate_consensus_graph(self.threshold)
+        # Step 3: Store results
+        # Step 3.1: Form the consensus graph
+        self.causal_graph_ = self.get_consensus_graph(self.threshold)
 
-        # A binary adjacency matrix can only represent DAGs and PDAGs.
+        # Step 3.2: Compute its adjacency matrix, binary for DAGs and PDAGs
         encoding = "binary" if isinstance(self.causal_graph_, (DAG, PDAG)) else "edge_type"
-        self.adjacency_matrix_ = self.causal_graph_.to_adjacency(encoding=encoding, nodelist=variables)
+        self.adjacency_matrix_ = self.causal_graph_.to_adjacency(encoding=encoding, nodelist=self.feature_names_in_)
 
         return self
 
-    def _estimate_consensus_graph(self, threshold: float) -> DAG | PDAG | MAG | ADMG:
+    def get_consensus_graph(self, threshold: float) -> DAG | PDAG | MAG | ADMG:
         """
-        Helper method to estimate the consensus graph for a given threshold.
-
-        A pair of variables gets an edge if it has one in at least a `threshold` fraction of the bootstrap graphs, and
-        in at least one of them. The edge gets its most frequent type in the bootstrap graphs; ties are left undirected
-        in a PDAG and otherwise go to the first tied edge type in the order of the categories of `bootstrap_edges_`,
-        e.g. u -> v in a DAG. Pairs are added from the most to the least frequent, and an edge that would create a
-        directed cycle is skipped with a warning.
+        Returns the consensus causal graph estimated using a specified edge
+        frequency threshold.
 
         Parameters
         ----------
         threshold : float
-            Threshold on the fraction of bootstrap graphs with an edge (between 0.0 and 1.0).
+            The threshold for the edge frequency. Only pairs of variables that have an edge in at least this
+            fraction of the bootstrap graphs, and in at least one of them, are connected. See the `threshold` parameter
+            of the class for how the edges are oriented. Must be between 0.0 and 1.0.
 
         Returns
         -------
         consensus_graph : DAG, PDAG, MAG, or ADMG
-            The constructed consensus causal graph, of the same class as the bootstrap graphs.
+            The consensus causal graph, of the same class as the bootstrap graphs.
+
+        Raises
+        ------
+        ValueError
+            If `threshold` is not between 0.0 and 1.0.
+
+        Examples
+        --------
+        # Fit BootstrapEstimator on dataset:
+        >>> from pgmpy.causal_discovery import PC, BootstrapEstimator
+        >>> from pgmpy.example_models import load_model
+        >>> data = load_model("bnlearn/cancer").simulate(n_samples=1000, seed=42)
+        >>> data = data[sorted(data.columns)]
+        >>> pc = PC(return_type="pdag")
+        >>> est = BootstrapEstimator(pc, n_bootstraps=10, seed=42, show_progress=False)
+        >>> est = est.fit(data)
+
+        # Extract consensus graph with threshold 0.2:
+        >>> consensus_graph = est.get_consensus_graph(threshold=0.2)
+        >>> sorted(consensus_graph.directed_edges)
+        [('Dyspnoea', 'Cancer'), ('Pollution', 'Cancer'), ('Smoker', 'Cancer'), ('Xray', 'Cancer')]
         """
+        if not (0.0 <= threshold <= 1.0):
+            raise ValueError(f"Threshold must be between 0.0 and 1.0. Got {threshold} instead.")
+
         edges = self.bootstrap_edges_
         counts = pd.DataFrame(
             {edge_type: (edges == edge_type).sum(axis=1) for edge_type in edges.iloc[:, 0].cat.categories}
@@ -420,49 +430,6 @@ class BootstrapEstimator(BaseCausalDiscovery):
 
         return graph
 
-    def get_consensus_graph(self, threshold: float) -> DAG | PDAG | MAG | ADMG:
-        """
-        Returns the consensus causal graph estimated using a specified edge
-        frequency threshold.
-
-        Parameters
-        ----------
-        threshold : float
-            The threshold for the edge frequency. Only pairs of variables that have an edge in at least this
-            fraction of the bootstrap graphs, and in at least one of them, are connected. See the `threshold` parameter
-            of the class for how the edges are oriented. Must be between 0.0 and 1.0.
-
-        Returns
-        -------
-        consensus_graph : DAG, PDAG, MAG, or ADMG
-            The consensus causal graph, of the same class as the bootstrap graphs.
-
-        Raises
-        ------
-        ValueError
-            If `threshold` is not between 0.0 and 1.0.
-
-        Examples
-        --------
-        # Fit BootstrapEstimator on dataset:
-        >>> from pgmpy.causal_discovery import PC, BootstrapEstimator
-        >>> from pgmpy.example_models import load_model
-        >>> data = load_model("bnlearn/cancer").simulate(n_samples=2000, seed=42)
-        >>> data = data[sorted(data.columns)]
-        >>> pc = PC(return_type="pdag")
-        >>> est = BootstrapEstimator(pc, n_bootstraps=10, seed=42, show_progress=False)
-        >>> est = est.fit(data)
-
-        # Extract consensus graph with threshold 0.4:
-        >>> consensus_graph = est.get_consensus_graph(threshold=0.4)
-        >>> sorted(consensus_graph.directed_edges)
-        [('Dyspnoea', 'Cancer'), ('Pollution', 'Cancer'), ('Smoker', 'Cancer'), ('Xray', 'Cancer')]
-        """
-        if not (0.0 <= threshold <= 1.0):
-            raise ValueError(f"Threshold must be between 0.0 and 1.0. Got {threshold} instead.")
-
-        return self._estimate_consensus_graph(threshold)
-
     def get_adjacency_matrix(self, threshold: float) -> pd.DataFrame:
         """
         Returns the adjacency matrix of the consensus causal graph estimated
@@ -491,14 +458,14 @@ class BootstrapEstimator(BaseCausalDiscovery):
         # Fit BootstrapEstimator on dataset:
         >>> from pgmpy.causal_discovery import PC, BootstrapEstimator
         >>> from pgmpy.example_models import load_model
-        >>> data = load_model("bnlearn/cancer").simulate(n_samples=2000, seed=42)
+        >>> data = load_model("bnlearn/cancer").simulate(n_samples=1000, seed=42)
         >>> data = data[sorted(data.columns)]
         >>> pc = PC(return_type="pdag")
         >>> est = BootstrapEstimator(pc, n_bootstraps=10, seed=42, show_progress=False)
         >>> est = est.fit(data)
 
-        # Extract adjacency matrix with threshold 0.4:
-        >>> adj_matrix = est.get_adjacency_matrix(threshold=0.4)
+        # Extract adjacency matrix with threshold 0.2:
+        >>> adj_matrix = est.get_adjacency_matrix(threshold=0.2)
         >>> adj_matrix
                    Cancer  Dyspnoea  Pollution  Smoker  Xray
         Cancer          0         0          0       0     0
@@ -507,9 +474,6 @@ class BootstrapEstimator(BaseCausalDiscovery):
         Smoker          1         0          0       0     0
         Xray            1         0          0       0     0
         """
-        if not (0.0 <= threshold <= 1.0):
-            raise ValueError(f"Threshold must be between 0.0 and 1.0. Got {threshold} instead.")
-
-        graph = self._estimate_consensus_graph(threshold)
+        graph = self.get_consensus_graph(threshold)
         encoding = "binary" if isinstance(graph, (DAG, PDAG)) else "edge_type"
         return graph.to_adjacency(encoding=encoding, nodelist=self.feature_names_in_)

@@ -99,13 +99,15 @@ def test_bootstrap_dag_estimator(rand_data):
     assert est.bootstrap_edges_.shape == (10, 20)
     assert set(est.causal_graph_.edges()) == expected_high_edges
 
-    # A warm start needs the same data and can't drop bootstrap samples.
-    with pytest.raises(ValueError, match="different dataset size"):
+    # A warm start needs the same data and sample_fraction, and can't drop bootstrap samples.
+    with pytest.raises(ValueError, match="different dataset size or sample_fraction"):
         est.fit(rand_data.iloc[:200])
     with pytest.raises(ValueError, match="different dataset features"):
         est.fit(rand_data.rename(columns={"A": "Z"}))
     with pytest.raises(ValueError, match="must be larger or equal to"):
         est.set_params(n_bootstraps=3).fit(rand_data)
+    with pytest.raises(ValueError, match="different dataset size or sample_fraction"):
+        est.set_params(sample_fraction=0.5).fit(rand_data)
 
 
 def test_bootstrap_pdag_estimator(rand_data):
@@ -127,8 +129,8 @@ def test_bootstrap_pdag_estimator(rand_data):
         {"estimator": "pc"},
         {"threshold": -0.5},
         {"threshold": 1.5},
-        {"sample_size": 0},
-        {"sample_size": 1.5},
+        {"sample_fraction": 0},
+        {"sample_fraction": 1.5},
         {"n_bootstraps": 0},
         {"replace": False},
     ],
@@ -147,7 +149,7 @@ def test_bootstrap_sampling_and_wrapped_estimator(rand_data):
     est = BootstrapEstimator(
         HillClimbSearch(return_type="dag"),
         n_bootstraps=2,
-        sample_size=0.5,
+        sample_fraction=0.5,
         replace=False,
         n_jobs=1,
         show_progress=False,
