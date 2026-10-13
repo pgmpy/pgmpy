@@ -99,6 +99,10 @@ class BaseFormulaIdentification:
     no interventions or no conditioning variables. Subclasses may require
     additional roles through ``required_roles``.
 
+    A query that roles cannot express, such as the conjunction of counterfactual
+    events of ``IDStar``, is passed to ``identify`` as keyword arguments, which
+    are forwarded to ``_identify``.
+
     Attributes
     ----------
     hedge_ : tuple of graph objects or None
@@ -158,7 +162,7 @@ class BaseFormulaIdentification:
             if not causal_graph.get_role(role):
                 raise ValueError(f"causal_graph must have '{role}' role assigned for {type(self).__name__}.")
 
-    def identify(self, causal_graph: ADMG | DAG) -> ProbabilityExpressionTree | Literal[False]:
+    def identify(self, causal_graph: ADMG | DAG, **query) -> ProbabilityExpressionTree | Literal[False]:
         """
         Run the identification algorithm on a causal graph.
 
@@ -172,6 +176,10 @@ class BaseFormulaIdentification:
             By default, only ``"outcomes"`` is required; ``"exposures"`` and
             ``"conditioning"`` may be empty.
 
+        **query
+            The part of the query that is not carried by the graph roles, forwarded to ``_identify``. ``ID`` and
+            ``IDC`` take none; ``IDStar`` takes the counterfactual ``event``.
+
         Returns
         -------
         ProbabilityExpressionTree
@@ -184,7 +192,7 @@ class BaseFormulaIdentification:
         """
         self._validate_causal_graph(causal_graph)
         self.hedge_ = None
-        return self._identify(causal_graph)
+        return self._identify(causal_graph, **query)
 
     def _identify(self, causal_graph: ADMG | DAG) -> ProbabilityExpressionTree | Literal[False]:
         """Override in subclasses to implement the identification algorithm.
@@ -202,6 +210,6 @@ class BaseFormulaIdentification:
         """
         raise NotImplementedError
 
-    def __call__(self, causal_graph: ADMG | DAG) -> ProbabilityExpressionTree | Literal[False]:
+    def __call__(self, causal_graph: ADMG | DAG, **query) -> ProbabilityExpressionTree | Literal[False]:
         """Alias for the ``identify`` method."""
-        return self.identify(causal_graph)
+        return self.identify(causal_graph, **query)
