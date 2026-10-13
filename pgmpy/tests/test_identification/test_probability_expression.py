@@ -1,6 +1,7 @@
 import pytest
 
 from pgmpy.identification.probability_expression import (
+    ConstantNode,
     DivisionNode,
     MarginalNode,
     ProbabilityExpressionTree,
@@ -100,6 +101,7 @@ class TestTreeNodeAbstract:
         assert isinstance(MarginalNode(prob_y, sumset=frozenset({"Y"})), _TreeNode)
         assert isinstance(ProductNode([prob_y, prob_x]), _TreeNode)
         assert isinstance(DivisionNode(prob_y, prob_x), _TreeNode)
+        assert isinstance(ConstantNode(1), _TreeNode)
 
 
 class TestMarginalize:
@@ -121,6 +123,11 @@ class TestMarginalize:
     def test_marginalize_does_not_shrink_an_interventional_term(self):
         node = ProbabilityNode(frozenset({"Y", "Z"}), do=frozenset({"X"}))
         assert node.marginalize({"Z"}) == MarginalNode(node, sumset=frozenset({"Z"}))
+
+    def test_marginalize_does_not_shrink_a_term_with_values(self):
+        """sum_y P(Y = y, Z = z) is not P(Z = z): the summed symbol is a value of Y, not a variable."""
+        node = ProbabilityNode(frozenset({"Y", "Z"}), values={"Y": "y", "Z": "z"})
+        assert node.marginalize({"y"}) == MarginalNode(node, sumset=frozenset({"y"}))
 
     def test_marginalize_flattens_nested_sums(self):
         inner = MarginalNode(ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"})), sumset=frozenset({"X"}))
@@ -177,6 +184,28 @@ class TestProbabilityNode:
 
         latex_multi = MarginalNode(ProbabilityNode(frozenset({"X", "Y", "Z"})), sumset=frozenset({"X", "Z"})).to_latex()
         assert latex_multi.startswith(r"\sum_{X, Z}")
+
+    def test_values(self):
+        node = ProbabilityNode({"Y", "X"}, do={"W"}, cond={"Z"}, values={"Y": "y", "X": "x'", "W": 0})
+        assert node.to_latex() == r"P(X = x', Y = y \mid do(W = 0), Z)"
+        assert repr(node).endswith("values={'Y': 'y', 'X': \"x'\", 'W': 0})")
+        assert node == ProbabilityNode({"X", "Y"}, do={"W"}, cond={"Z"}, values={"W": 0, "X": "x'", "Y": "y"})
+        assert hash(node) == hash(
+            ProbabilityNode({"X", "Y"}, do={"W"}, cond={"Z"}, values={"W": 0, "X": "x'", "Y": "y"})
+        )
+        assert node != ProbabilityNode({"X", "Y"}, do={"W"}, cond={"Z"}, values={"W": 1, "X": "x'", "Y": "y"})
+        assert ProbabilityNode({"Y"}).values == {}
+
+
+class TestConstantNode:
+    def test_constant(self):
+        assert ConstantNode(0).children == []
+        assert ConstantNode(1).to_latex() == "1"
+        assert repr(ConstantNode(0)) == "ConstantNode(value=0)"
+        assert ConstantNode(1) == ConstantNode(1)
+        assert hash(ConstantNode(1)) == hash(ConstantNode(1))
+        assert ConstantNode(1) != ConstantNode(0)
+        assert ProbabilityExpressionTree(root=ConstantNode(0)).to_latex() == "0"
 
 
 class TestMarginalNode:

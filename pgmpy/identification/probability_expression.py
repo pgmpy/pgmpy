@@ -9,7 +9,7 @@ class _TreeNode:
     possible: every node exposes ``children`` (list of _TreeNode), ``to_latex()`` (str), and
     ``__repr__()`` (str).
 
-    Concrete subclasses: ProbabilityNode, MarginalNode, ProductNode, DivisionNode.
+    Concrete subclasses: ProbabilityNode, MarginalNode, ProductNode, DivisionNode, ConstantNode.
 
     Do not instantiate directly.
     """
@@ -99,6 +99,12 @@ class ProbabilityNode(_TreeNode):
         Example: ``frozenset({"Z"})`` renders after the conditioning bar.
         Default: ``frozenset()``.
 
+    values : dict, optional
+        The value each variable in ``variables``, ``do`` or ``cond`` is fixed to. Counterfactual identification
+        returns terms for a single assignment of values, such as :math:`P_{x}(y)`, rather than whole distributions.
+        Example: ``{"Y": "y", "X": "x"}`` renders ``Y`` as ``Y = y`` and ``X`` as ``X = x``.
+        Default: ``None``, which leaves every variable free.
+
     Raises
     ------
     ValueError
@@ -118,25 +124,35 @@ class ProbabilityNode(_TreeNode):
     'P(Y \\mid X)'
     >>> ProbabilityNode(frozenset({"Y"}), do=frozenset({"X"})).to_latex()
     'P(Y \\mid do(X))'
+    >>> ProbabilityNode(frozenset({"Y"}), do=frozenset({"X"}), values={"Y": "y", "X": "x"}).to_latex()
+    'P(Y = y \\mid do(X = x))'
     """
 
-    def __init__(self, variables, do=frozenset(), cond=frozenset()):
+    def __init__(self, variables, do=frozenset(), cond=frozenset(), values=None):
         self.variables = frozenset(variables)
         if not self.variables:
             raise ValueError("A probability term must have at least one variable.")
         self.do = frozenset(do)
         self.cond = frozenset(cond)
+        self.values = dict(values or {})
         self.children = []
 
     def _marginalize(self, sumset):
         r"""Shrink a plain joint :math:`P(A)` to :math:`P(A \setminus sumset)`.
 
         Only a plain joint simplifies this way; summing out of a conditional or interventional term cannot be written
-        as a single atomic term.
+        as a single atomic term. Neither can summing out of a term whose variables are fixed to values.
         """
-        if self.do or self.cond:
+        if self.do or self.cond or self.values:
             return super()._marginalize(sumset)
         return ProbabilityNode(self.variables - sumset)
+
+    def _assignments_to_latex(self, var_set):
+        """Sort and join variable names, writing ``V = v`` for each variable fixed to a value."""
+        return ", ".join(
+            f"{variable} = {self.values[variable]}" if variable in self.values else str(variable)
+            for variable in sorted(var_set, key=str)
+        )
 
     def to_latex(self):
         r"""
@@ -160,13 +176,13 @@ class ProbabilityNode(_TreeNode):
         >>> ProbabilityNode(frozenset({"Y"}), do=frozenset({"X"}), cond=frozenset({"Z"})).to_latex()
         'P(Y \\mid do(X), Z)'
         """
-        variables_str = self._vars_to_latex(self.variables)
+        variables_str = self._assignments_to_latex(self.variables)
 
         conditioning_parts = []
         if self.do:
-            conditioning_parts.append(r"do(" + self._vars_to_latex(self.do) + r")")
+            conditioning_parts.append(r"do(" + self._assignments_to_latex(self.do) + r")")
         if self.cond:
-            conditioning_parts.append(self._vars_to_latex(self.cond))
+            conditioning_parts.append(self._assignments_to_latex(self.cond))
 
         if conditioning_parts:
             inner = variables_str + r" \mid " + r", ".join(conditioning_parts)
@@ -181,15 +197,22 @@ class ProbabilityNode(_TreeNode):
             parts.append(f"do={set(self.do)!r}")
         if self.cond:
             parts.append(f"cond={set(self.cond)!r}")
+        if self.values:
+            parts.append(f"values={self.values!r}")
         return "ProbabilityNode(" + ", ".join(parts) + ")"
 
     def __eq__(self, other):
         if not isinstance(other, ProbabilityNode):
             return NotImplemented
-        return (self.variables, self.do, self.cond) == (other.variables, other.do, other.cond)
+        return (self.variables, self.do, self.cond, self.values) == (
+            other.variables,
+            other.do,
+            other.cond,
+            other.values,
+        )
 
     def __hash__(self):
-        return hash((self.variables, self.do, self.cond))
+        return hash((self.variables, self.do, self.cond, frozenset(self.values.items())))
 
 
 class MarginalNode(_TreeNode):
@@ -409,6 +432,56 @@ class DivisionNode(_TreeNode):
         return hash(tuple(self.children))
 
 
+class ConstantNode(_TreeNode):
+    r"""
+    Leaf node representing a constant probability.
+
+    Counterfactual identification answers some queries without reference to any distribution: an empty conjunction
+    of events has probability 1, and an inconsistent one has probability 0.
+
+    Parameters
+    ----------
+    value : int or float
+        The constant.
+
+    Attributes
+    ----------
+    children : list
+        Always ``[]``. ``ConstantNode`` is always a leaf node.
+
+    Examples
+    --------
+    >>> from pgmpy.identification.probability_expression import ConstantNode
+    >>> ConstantNode(0).to_latex()
+    '0'
+    """
+
+    def __init__(self, value):
+        self.value = value
+        self.children = []
+
+    def to_latex(self):
+        """
+        Return LaTeX for the constant.
+
+        Returns
+        -------
+        str
+        """
+        return str(self.value)
+
+    def __repr__(self):
+        return f"ConstantNode(value={self.value!r})"
+
+    def __eq__(self, other):
+        if not isinstance(other, ConstantNode):
+            return NotImplemented
+        return self.value == other.value
+
+    def __hash__(self):
+        return hash((ConstantNode, self.value))
+
+
 class ProbabilityExpressionTree:
     r"""
     Container for expression trees produced by identification algorithms.
@@ -418,7 +491,7 @@ class ProbabilityExpressionTree:
     routines and is not itself a tree node.
 
     The expression tree is composed of ``ProbabilityNode``, ``MarginalNode``, ``ProductNode``,
-    and ``DivisionNode`` nodes (all subclasses of ``_TreeNode``). Inspect or traverse the tree
+    ``DivisionNode`` and ``ConstantNode`` nodes (all subclasses of ``_TreeNode``). Inspect or traverse the tree
     via the ``root`` attribute and the ``children`` lists on nodes.
 
     Parameters
@@ -465,7 +538,7 @@ class ProbabilityExpressionTree:
         if not isinstance(root, _TreeNode):
             raise TypeError(
                 f"root must be a _TreeNode instance (one of ProbabilityNode, "
-                f"MarginalNode, ProductNode, DivisionNode); got {type(root).__name__}."
+                f"MarginalNode, ProductNode, DivisionNode, ConstantNode); got {type(root).__name__}."
             )
         self.root = root
 
