@@ -57,6 +57,9 @@ def test_bootstrap_rand_data(rand_data):
     hc = BootstrapEstimator(estimator=HillClimbSearch(return_type="dag"), n_bootstraps=10, show_progress=False, seed=0)
     hc.fit(rand_data)
 
+    # `estimator_` is fitted on the full data and isn't one of the bootstrap graphs.
+    full_fit = HillClimbSearch(return_type="dag").fit(rand_data)
+    assert set(hc.estimator_.causal_graph_.edges()) == set(full_fit.causal_graph_.edges())
     assert hc.bootstrap_edges_.shape == (10, 10)
     assert list(hc.bootstrap_edges_.columns) == list(range(10))
     assert edge_type_counts(hc.bootstrap_edges_) == {
@@ -131,6 +134,7 @@ def test_bootstrap_bootstrap_warm_start(rand_data):
 
     initial_samples = est.bootstrap_samples_.copy()
     initial_edges = est.bootstrap_edges_.copy()
+    initial_estimator = est.estimator_
 
     # Increase n_bootstraps to 20 and re-fit with warm_start
     est.n_bootstraps = 20
@@ -153,6 +157,7 @@ def test_bootstrap_bootstrap_warm_start(rand_data):
     # Verify first 10 bootstrap samples and graphs are preserved and identical in 20 bootstrap fit
     np_test.assert_array_equal(est.bootstrap_samples_[:10], initial_samples)
     pd.testing.assert_frame_equal(est.bootstrap_edges_[list(range(10))], initial_edges)
+    assert est.estimator_ is initial_estimator
 
 
 def test_bootstrap_warm_start_validation(rand_data):
@@ -251,12 +256,34 @@ def test_bootstrap_threshold_invalid(rand_data):
 
 @pytest.mark.parametrize(
     "params",
-    [{"threshold": -0.5}, {"threshold": 1.5}, {"sample_size": 0}, {"sample_size": 1.5}, {"n_bootstraps": 0}],
+    [
+        {"threshold": -0.5},
+        {"threshold": 1.5},
+        {"sample_size": 0},
+        {"sample_size": 1.5},
+        {"n_bootstraps": 0},
+        {"replace": False},
+    ],
 )
 def test_bootstrap_fit_invalid_params(rand_data, params):
     est = BootstrapEstimator(estimator=HillClimbSearch(return_type="dag"), show_progress=False, **params)
     with pytest.raises(ValueError, match=list(params)[0]):
         est.fit(rand_data)
+
+
+def test_bootstrap_without_replacement(rand_data):
+    est = BootstrapEstimator(
+        estimator=HillClimbSearch(return_type="dag"),
+        n_bootstraps=3,
+        sample_size=0.5,
+        replace=False,
+        show_progress=False,
+        seed=0,
+    )
+    est.fit(rand_data)
+
+    assert est.bootstrap_samples_.shape == (3, 250)
+    assert all(len(np.unique(sample)) == 250 for sample in est.bootstrap_samples_)
 
 
 def test_bootstrap_other_graph_types():

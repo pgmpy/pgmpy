@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from sklearn.base import clone
-from tqdm.auto import trange
+from tqdm.auto import tqdm
 
 from pgmpy import config
 from pgmpy.base import ADMG, DAG, MAG, PDAG
@@ -43,6 +43,11 @@ class BootstrapEstimator(BaseCausalDiscovery):
     sample_size : float, default=1.0
         The fraction of samples to draw from the input data for each bootstrap sample. Must be greater than 0.0 and at
         most 1.0.
+
+    replace : bool, default=True
+        If True, each bootstrap sample is drawn with replacement, so rows can repeat. If False, each sample is a subset
+        of distinct rows, which requires a `sample_size` below 1.0. Duplicate rows can make score-based methods learn
+        extra edges and miscalibrate CI tests, which subsampling without replacement (e.g. ``sample_size=0.5``) avoids.
 
     threshold : float, default=0.5
         Only used to compute the consensus graph (`causal_graph_` and `adjacency_matrix_`); `bootstrap_edges_` doesn't
@@ -91,7 +96,9 @@ class BootstrapEstimator(BaseCausalDiscovery):
         - Axis 1 (second axis): Represents the sampled row indices for that bootstrap sample.
 
     estimator_ : BaseCausalDiscovery
-        The clone of ``estimator`` fitted on the first bootstrap sample.
+        A clone of ``estimator`` fitted on the full input data, e.g. to compare its graph with the bootstrap edges. It
+        isn't one of the bootstrap graphs and doesn't count towards `bootstrap_edges_`. With ``warm_start=True``, it is
+        fitted on the first call to fit only.
 
     n_features_in_ : int
         The number of features in the input data.
@@ -196,6 +203,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
         estimator: BaseCausalDiscovery,
         n_bootstraps: int = 100,
         sample_size: float = 1,
+        replace: bool = True,
         threshold: float = 0.5,
         warm_start: bool = False,
         n_jobs: int = -1,
@@ -206,6 +214,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
         self.estimator = estimator
         self.n_bootstraps = n_bootstraps
         self.sample_size = sample_size
+        self.replace = replace
         self.threshold = threshold
         self.warm_start = warm_start
         self.n_jobs = n_jobs
@@ -219,11 +228,9 @@ class BootstrapEstimator(BaseCausalDiscovery):
         bootstrap_sample: np.ndarray,
     ) -> BaseCausalDiscovery:
         """
-        Runs a single bootstrap iteration on resampled data.
+        Fits a clone of the base estimator on the given rows of the dataset.
 
-        Selects rows from the dataset based on provided sample indices,
-        creates a clone of the base estimator, and fits it on the resampled
-        data.
+        The rows are a bootstrap sample, or all rows of the dataset for `estimator_`.
 
         Parameters
         ----------
@@ -232,7 +239,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
         base_estimator : BaseCausalDiscovery
             The base causal discovery estimator to clone and fit.
         bootstrap_sample : np.ndarray
-            Array of row indices defining the bootstrap resample.
+            Array of row indices to fit on.
 
         Returns
         -------
@@ -267,6 +274,11 @@ class BootstrapEstimator(BaseCausalDiscovery):
             raise ValueError(f"sample_size must be greater than 0.0 and at most 1.0. Got {self.sample_size} instead.")
         if not (0.0 <= self.threshold <= 1.0):
             raise ValueError(f"threshold must be between 0.0 and 1.0. Got {self.threshold} instead.")
+        if not self.replace and self.sample_size == 1.0:
+            raise ValueError(
+                "replace=False with sample_size=1.0 uses the full data in every bootstrap sample. Use a sample_size "
+                "below 1.0."
+            )
 
         variables = self.feature_names_in_
 
@@ -277,7 +289,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
         # Generate all required bootstrap sample index arrays
         sample_indices = []
         for _ in range(self.n_bootstraps):
-            sample_idx = rng.choice(len(X), size=bootstrap_sample_size, replace=True)
+            sample_idx = rng.choice(len(X), size=bootstrap_sample_size, replace=self.replace)
             sample_indices.append(sample_idx)
         all_samples = np.array(sample_indices)
 
@@ -302,17 +314,22 @@ class BootstrapEstimator(BaseCausalDiscovery):
         # Only fit new bootstrap samples if needed. We skip this if warm_start is True and n_bootstraps has not
         # changed, but still form the consensus graph below in case class parameters (like threshold) were modified.
         if len(samples_to_fit) > 0:
+            # On the first fit, the estimator is also fitted on the full data, in the same batch as the bootstrap
+            # samples. A warm start keeps that fit, since it requires the same data.
+            row_indices = [np.arange(len(X)), *samples_to_fit] if n_existing == 0 else list(samples_to_fit)
             results = cast(
                 list[BaseCausalDiscovery],
                 Parallel(n_jobs=self.n_jobs)(
-                    delayed(self._bootstrap_iteration)(X, self.estimator, samples_to_fit[i])
-                    for i in trange(
-                        len(samples_to_fit),
+                    delayed(self._bootstrap_iteration)(X, self.estimator, indices)
+                    for indices in tqdm(
+                        row_indices,
                         desc="Bootstrapping",
                         disable=not (self.show_progress and config.SHOW_PROGRESS),
                     )
                 ),
             )
+            if n_existing == 0:
+                self.estimator_, results = results[0], results[1:]
 
             # Record the edge type of every pair of variables (u, v), with u before v, in each new bootstrap graph,
             # oriented from u to v (e.g. "->" for u -> v and "<-" for v -> u), and NaN if they aren't adjacent.
@@ -333,7 +350,6 @@ class BootstrapEstimator(BaseCausalDiscovery):
                 edges = pd.concat([self.bootstrap_edges_.astype(object), new_edges], axis=1)
             else:
                 self.bootstrap_samples_ = samples_to_fit
-                self.estimator_ = results[0]
                 edges = new_edges
 
             # The categories are the edge types found in any bootstrap graph.
