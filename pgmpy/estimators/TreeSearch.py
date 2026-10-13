@@ -36,7 +36,8 @@ class TreeSearch(StructureEstimator):
             FutureWarning,
         )
         if root_node is not None and root_node not in data.columns:
-            raise ValueError(f"Root node: {root_node} not found in data columns.")
+            raise ValueError(
+                f"Root node: {root_node} not found in data columns.")
 
         self.root_node = root_node
         self.n_jobs = n_jobs
@@ -53,6 +54,7 @@ class TreeSearch(StructureEstimator):
         class_node=None,
         edge_weights_fn="mutual_info",
         show_progress=True,
+        return_type="dag",
     ):
         """
         Estimate the `DAG` structure that fits best to the given data set
@@ -66,6 +68,11 @@ class TreeSearch(StructureEstimator):
         Estimated model: pgmpy.base.DAG
             The estimated model structure.
         """
+        valid_return_types = {"dag", "pdag", "cpdag"}
+        if return_type.lower() not in valid_return_types:
+            raise ValueError(
+                f"Invalid return_type: '{return_type}'. Expected one of {valid_return_types}."
+            )
         if estimator_type == "chow-liu":
             est = _ChowLiu(
                 root_node=self.root_node,
@@ -82,6 +89,12 @@ class TreeSearch(StructureEstimator):
                 show_progress=show_progress,
             )
         else:
-            raise ValueError(f"`estimator_type` must be one of: chow-liu, tan. Got: {estimator_type}")
+            raise ValueError(
+                f"`estimator_type` must be one of: chow-liu, tan. Got: {estimator_type}")
 
-        return est.fit(self.data).causal_graph_
+        model = est.fit(self.data).causal_graph_
+
+        if return_type.lower() == "dag":
+            return model
+        elif return_type.lower() in {"pdag",  "cpdag"}:
+            return model.to_pdag()

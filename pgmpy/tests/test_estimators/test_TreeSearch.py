@@ -9,6 +9,7 @@ from pgmpy.example_models import load_model
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.sampling import BayesianModelSampling
+from pgmpy.base import DAG, PDAG
 
 
 @pytest.fixture
@@ -27,7 +28,8 @@ def data12():
 def data13():
     np.random.seed(0)
     # test data for chow-liu
-    model = DiscreteBayesianNetwork([("A", "B"), ("A", "C"), ("B", "D"), ("B", "E"), ("C", "F")])
+    model = DiscreteBayesianNetwork(
+        [("A", "B"), ("A", "C"), ("B", "D"), ("B", "E"), ("C", "F")])
     cpd_a = TabularCPD("A", 2, [[0.4], [0.6]])
     cpd_b = TabularCPD(
         "B",
@@ -36,7 +38,8 @@ def data13():
         evidence=["A"],
         evidence_card=[2],
     )
-    cpd_c = TabularCPD("C", 2, [[0.3, 0.4], [0.7, 0.6]], evidence=["A"], evidence_card=[2])
+    cpd_c = TabularCPD("C", 2, [[0.3, 0.4], [0.7, 0.6]], evidence=[
+                       "A"], evidence_card=[2])
     cpd_d = TabularCPD(
         "D",
         3,
@@ -241,7 +244,8 @@ def test_estimate_tan_auto_class_node(data22):
     root_node = data22.columns[maxw_idx[0]]
     class_node = data22.columns[maxw_idx[1]]
 
-    dag = est.estimate(estimator_type="tan", class_node=class_node, show_progress=False)
+    dag = est.estimate(estimator_type="tan",
+                       class_node=class_node, show_progress=False)
     nodes = list(dag.nodes())
     assert nodes[0] == root_node
     assert nodes[-1] == class_node
@@ -312,7 +316,8 @@ def test_tan_real_dataset(alarm_df):
     ]
     target = "CVP"
     est = TreeSearch(alarm_df[features + [target]], root_node=features[0])
-    edges = est.estimate(estimator_type="tan", class_node=target, show_progress=False).edges()
+    edges = est.estimate(estimator_type="tan",
+                         class_node=target, show_progress=False).edges()
     assert set(expected_edges) == set(edges)
 
 
@@ -320,3 +325,49 @@ def test_tan_real_dataset(alarm_df):
 def shutdown_executor():
     yield
     get_reusable_executor().shutdown(wait=True)
+
+
+def test_estimate_chow_liu_return_type(data12):
+    est = TreeSearch(data12, root_node="A")
+
+    # Test return_type="dag"
+    dag = est.estimate(estimator_type="chow-liu",
+                       return_type="dag", show_progress=False)
+    assert isinstance(dag, DAG)
+
+    # Test return_type="pdag" and "cpdag"
+    pdag = est.estimate(estimator_type="chow-liu",
+                        return_type="pdag", show_progress=False)
+    assert isinstance(pdag, PDAG)
+
+    cpdag = est.estimate(estimator_type="chow-liu",
+                         return_type="cpdag", show_progress=False)
+    assert isinstance(cpdag, PDAG)
+
+    # Test invalid return_type raises ValueError
+    with pytest.raises(ValueError):
+        est.estimate(estimator_type="chow-liu",
+                     return_type="invalid_type", show_progress=False)
+
+
+def test_estimate_tan_return_type(data22):
+    est = TreeSearch(data22, root_node="R")
+
+    # Test return_type="dag"
+    dag = est.estimate(estimator_type="tan", class_node="A",
+                       return_type="dag", show_progress=False)
+    assert isinstance(dag, DAG)
+
+    # Test return_type="pdag" and "cpdag"
+    pdag = est.estimate(estimator_type="tan", class_node="A",
+                        return_type="pdag", show_progress=False)
+    assert isinstance(pdag, PDAG)
+
+    cpdag = est.estimate(estimator_type="tan", class_node="A",
+                         return_type="cpdag", show_progress=False)
+    assert isinstance(cpdag, PDAG)
+
+    # Test invalid return_type raises ValueError
+    with pytest.raises(ValueError):
+        est.estimate(estimator_type="tan", class_node="A",
+                     return_type="invalid_type", show_progress=False)
