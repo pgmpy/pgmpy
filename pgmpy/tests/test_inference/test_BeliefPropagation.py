@@ -383,7 +383,7 @@ class TestBeliefPropagation:
             )
             evidence.update({c: 1})
 
-    def test_issue_1571(self, backend):
+    def test_issue_1571(self, backend, monkeypatch):
         variables = [f"X{i}" for i in range(13)]
         model = DiscreteBayesianNetwork(list(zip(variables[:-1], variables[1:])))
         model.add_cpds(TabularCPD(variables[0], 3, [[0.2], [0.3], [0.5]]))
@@ -397,6 +397,15 @@ class TestBeliefPropagation:
         joint_size = 3 ** len(query_vars) * np.dtype(np.float64).itemsize
         markov_model = model.to_markov_model()
 
+        marginalize = DiscreteFactor.marginalize
+        factor_sizes = []
+
+        def track_marginalization(factor, variables, inplace=True):
+            factor_sizes.append(compat_fns.size(factor.values))
+            return marginalize(factor, variables, inplace=inplace)
+
+        monkeypatch.setattr(DiscreteFactor, "marginalize", track_marginalization)
+
         for infer, kwargs in [
             (BeliefPropagation(model), {}),
             (VariableElimination(model), {}),
@@ -404,10 +413,12 @@ class TestBeliefPropagation:
             (VariableElimination(markov_model), {}),
             (VariableElimination(markov_model), {"elimination_order": "MinFill"}),
         ]:
+            factor_sizes.clear()
             tracemalloc.start()
             marginals = infer.query(query_vars, evidence=evidence, joint=False, show_progress=False, **kwargs)
             peak = tracemalloc.get_traced_memory()[1]
             tracemalloc.stop()
+            assert max(factor_sizes, default=0) < 3 ** len(query_vars)
             # tracemalloc does not see allocations made by torch.
             if backend == "numpy":
                 assert peak < joint_size
