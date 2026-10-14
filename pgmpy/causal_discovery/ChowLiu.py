@@ -123,18 +123,14 @@ class ChowLiu(_TreeSearchMixin, BaseCausalDiscovery):
         # Step 1: Validate return_type
         valid_return_types = {"dag", "pdag", "cpdag"}
         if return_type.lower() not in valid_return_types:
-            raise ValueError(
-                f"Invalid return_type: '{return_type}'. Expected one of {valid_return_types}."
-            )
+            raise ValueError(f"Invalid return_type: '{return_type}'. Expected one of {valid_return_types}.")
 
         # Step 2: Validate root_node if explicitly provided.
         if self.root_node is not None and self.root_node not in X.columns:
-            raise ValueError(
-                f"Root node: {self.root_node} not found in data columns.")
+            raise ValueError(f"Root node: {self.root_node} not found in data columns.")
 
         # Step 3: Compute all pairwise edge weights.
-        weights = self._get_weights(
-            X, self.edge_weights_fn, self.n_jobs, self.show_progress)
+        weights = self._get_weights(X, self.edge_weights_fn, self.n_jobs, self.show_progress)
 
         # Step 4: If root_node isn't specified, auto-pick the node with the highest sum of edge weights.
         root_node = self.root_node
@@ -151,7 +147,6 @@ class ChowLiu(_TreeSearchMixin, BaseCausalDiscovery):
         else:
             self.causal_graph_ = dag
 
-        self.adjacency_matrix_ = nx.to_pandas_adjacency(
-            self.causal_graph_, weight=1, dtype="int")
+        self.adjacency_matrix_ = nx.to_pandas_adjacency(self.causal_graph_, weight=1, dtype="int")
 
         return self
