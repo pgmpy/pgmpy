@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 from joblib.externals.loky import get_reusable_executor
 
+from pgmpy.base import DAG, PDAG
 from pgmpy.causal_discovery import ChowLiu
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
@@ -178,3 +179,22 @@ def test_chow_liu_auto_root_node(data12):
 def shutdown_executor():
     yield
     get_reusable_executor().shutdown(wait=True)
+
+
+def test_chow_liu_return_type(data12):
+    est = ChowLiu(root_node="A", show_progress=False)
+
+    # Test returning DAG (default)
+    est.fit(data12, return_type="dag")
+    assert isinstance(est.causal_graph_, DAG)
+
+    # Test returning PDAG / CPDAG
+    est.fit(data12, return_type="pdag")
+    assert isinstance(est.causal_graph_, PDAG)
+
+    est.fit(data12, return_type="cpdag")
+    assert isinstance(est.causal_graph_, PDAG)
+
+    # Test invalid return_type raises ValueError
+    with pytest.raises(ValueError):
+        est.fit(data12, return_type="invalid_type")

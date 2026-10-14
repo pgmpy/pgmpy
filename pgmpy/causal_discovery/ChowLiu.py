@@ -119,39 +119,39 @@ class ChowLiu(_TreeSearchMixin, BaseCausalDiscovery):
         self.n_jobs = n_jobs
         self.show_progress = show_progress
 
-    def _fit(self, X: pd.DataFrame):
-        """
-        Estimate the ``DAG`` structure that fits best to the given data set
-        without parametrization.
+    def _fit(self, X: pd.DataFrame, return_type: str = "dag"):
+        # Step 1: Validate return_type
+        valid_return_types = {"dag", "pdag", "cpdag"}
+        if return_type.lower() not in valid_return_types:
+            raise ValueError(
+                f"Invalid return_type: '{return_type}'. Expected one of {valid_return_types}."
+            )
 
-        Parameters
-        ----------
-        X : pd.DataFrame
-            The data to learn the causal structure from. Each column
-            represents one variable.
-
-        Returns
-        -------
-        self : ChowLiu
-            Returns the instance with the fitted attributes set.
-        """
-        # Step 1: Validate root_node if explicitly provided.
+        # Step 2: Validate root_node if explicitly provided.
         if self.root_node is not None and self.root_node not in X.columns:
-            raise ValueError(f"Root node: {self.root_node} not found in data columns.")
+            raise ValueError(
+                f"Root node: {self.root_node} not found in data columns.")
 
-        # Step 2: Compute all pairwise edge weights.
-        weights = self._get_weights(X, self.edge_weights_fn, self.n_jobs, self.show_progress)
+        # Step 3: Compute all pairwise edge weights.
+        weights = self._get_weights(
+            X, self.edge_weights_fn, self.n_jobs, self.show_progress)
 
-        # Step 3: If root_node isn't specified, auto-pick the node with the
-        # highest sum of edge weights.
+        # Step 4: If root_node isn't specified, auto-pick the node with the highest sum of edge weights.
         root_node = self.root_node
         if root_node is None:
             sum_weights = weights.sum(axis=0)
             maxw_idx = np.argsort(sum_weights)[::-1]
             root_node = X.columns[maxw_idx[0]]
 
-        # Step 4: Build the causal graph and store fitted attributes.
-        self.causal_graph_ = self._create_tree_and_dag(weights, X.columns, root_node)
-        self.adjacency_matrix_ = nx.to_pandas_adjacency(self.causal_graph_, weight=1, dtype="int")
+        # Step 5: Build the causal graph.
+        dag = self._create_tree_and_dag(weights, X.columns, root_node)
+
+        if return_type.lower() in {"pdag", "cpdag"}:
+            self.causal_graph_ = dag.to_pdag()
+        else:
+            self.causal_graph_ = dag
+
+        self.adjacency_matrix_ = nx.to_pandas_adjacency(
+            self.causal_graph_, weight=1, dtype="int")
 
         return self
