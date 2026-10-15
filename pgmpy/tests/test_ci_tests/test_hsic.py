@@ -52,10 +52,17 @@ class TestHSIC:
 
     def test_custom_kernel(self, hsic_data):
         _, df_dep, _ = hsic_data
-        # Single kernel shared by X and Y.
-        assert not HSIC(data=df_dep, kernel=RBF(0.5))("X", "Y", [], significance_level=0.05)
-        # Tuple: separate kernels for X and Y.
-        assert not HSIC(data=df_dep, kernel=(RBF(0.5), RBF(0.5)))("X", "Y", [], significance_level=0.05)
+        # Single kernel shared by all columns.
+        shared = HSIC(data=df_dep, kernel=RBF(2.0))
+        assert not shared("X", "Y", [], significance_level=0.05)
+        # A dict with the same kernel for every column is equivalent.
+        per_column = HSIC(data=df_dep, kernel={"X": RBF(2.0), "Y": RBF(2.0)})
+        assert per_column.run_test("X", "Y", []) == shared.run_test("X", "Y", [])
+        # Columns missing from the dict use the default RBF kernel (length scale 0.5 for n=300).
+        partial = HSIC(data=df_dep, kernel={"X": RBF(2.0)})
+        full = HSIC(data=df_dep, kernel={"X": RBF(2.0), "Y": RBF(0.5)})
+        assert partial.run_test("X", "Y", []) == full.run_test("X", "Y", [])
+        assert partial.clone().run_test("X", "Y", []) == partial.run_test("X", "Y", [])
 
     def test_permutation(self, hsic_data):
         df_ind, df_dep, _ = hsic_data
@@ -96,7 +103,11 @@ class TestHSIC:
         with pytest.raises(ValueError, match="n_permutations"):
             HSIC(data=df_ind, n_permutations=0)
         with pytest.raises(ValueError, match="kernel"):
-            HSIC(data=df_ind, kernel=(RBF(0.5), "not-a-kernel"))
+            HSIC(data=df_ind, kernel=(RBF(0.5), RBF(0.5)))
+        with pytest.raises(ValueError, match="kernel"):
+            HSIC(data=df_ind, kernel={"X": "not-a-kernel"})
+        with pytest.raises(ValueError, match="kernel"):
+            HSIC(data=df_ind, kernel={"W": RBF(0.5)})
 
 
 class TestHSICCompareCausalLearn:
