@@ -93,10 +93,11 @@ class KCI(HSIC):
 
     _tags = {
         "name": "kci",
-        "data_types": ("continuous",),
+        "data_types": ["continuous"],
         "default_for": None,
         "requires_data": True,
         "is_symmetric": True,
+        "capability:conditioning": True,
     }
 
     def __init__(

@@ -112,7 +112,7 @@ class HSIC(BaseCITest):
         "default_for": None,
         "requires_data": True,
         "is_symmetric": True,
-        "capability:conditional_ci": False,
+        "capability:conditioning": False,
         "assumption:linearity": False,
         "assumption:additive_noise": False,
         "assumption:gaussian_noise": False,

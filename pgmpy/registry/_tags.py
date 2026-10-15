@@ -226,6 +226,21 @@ class capability__expert_knowledge(_BaseTag):
     }
 
 
+class capability__conditioning(_BaseTag):
+    """
+    Whether the CI test supports a non-empty conditioning set ``Z``.
+
+    ``False`` for marginal independence tests, such as ``HSIC``, that only test ``X`` against ``Y``.
+    """
+
+    _tags = {
+        "tag_name": "capability:conditioning",
+        "parent_type": ["ci_test"],
+        "tag_type": "bool",
+        "short_descr": "Whether the test supports a non-empty conditioning set Z.",
+    }
+
+
 # -----------
 # Assumptions
 # -----------
