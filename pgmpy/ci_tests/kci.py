@@ -107,7 +107,7 @@ class KCI(HSIC):
         "data_types": ["continuous"],
         "default_for": None,
         "requires_data": True,
-        "is_symmetric": True,
+        "is_symmetric": False,
         "capability:conditioning": True,
     }
 
@@ -169,8 +169,7 @@ class KCI(HSIC):
         keep_x, keep_y = wx > wx.max() * 1e-5, wy > wy.max() * 1e-5
         vx = vx[:, keep_x] * np.sqrt(wx[keep_x])
         vy = vy[:, keep_y] * np.sqrt(wy[keep_y])
-        uu = (vx[:, :, None] * vy[:, None, :]).reshape(self._n_samples, -1)
-        uu_prod = uu @ uu.T if uu.shape[1] > self._n_samples else uu.T @ uu
+        uu_prod = (vx @ vx.T) * (vy @ vy.T)
         p_value = _gamma_pvalue_from_moments(test_stat, np.trace(uu_prod), 2.0 * np.vdot(uu_prod, uu_prod))
 
         return _CITestResult(statistic=float(test_stat), p_value=float(p_value), effect_size=float(effect_size))

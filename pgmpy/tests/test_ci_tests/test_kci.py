@@ -36,6 +36,10 @@ class TestKCI:
             assert test.p_value_ == pytest.approx(p_value, abs=0.01)
             assert test.effect_size_ == pytest.approx(effect_size, abs=1e-4)
 
+        # Only X is augmented with Z, so swapping X and Y changes the result and the cache keeps both orders.
+        test = KCI(data=df_cind)
+        assert test.run_test("X", "Y", ["Z"]) != test.run_test("Y", "X", ["Z"])
+
         # Without conditioning variables, KCI is HSIC.
         assert KCI(data=df_ind).run_test("X", "Y", []) == HSIC(data=df_ind).run_test("X", "Y", [])
         assert isinstance(get_ci_test(test="kci", data=df_ind), KCI)
