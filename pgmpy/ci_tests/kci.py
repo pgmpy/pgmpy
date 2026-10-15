@@ -1,20 +1,9 @@
 import numpy as np
 import pandas as pd
-from scipy import stats
 from sklearn.gaussian_process.kernels import RBF, Kernel
 
 from ._base import _CITestResult
-from .hsic import HSIC
-
-
-def _gamma_pvalue_from_moments(test_stat: float, mean: float, var: float) -> float:
-    """Gamma-approximation p-value from precomputed null moments."""
-    if var <= 0 or mean <= 0:
-        return 1.0
-
-    k = mean**2 / var
-    theta = var / mean
-    return float(stats.gamma.sf(test_stat, a=k, scale=theta))
+from .hsic import HSIC, _gamma_pvalue_from_moments
 
 
 class KCI(HSIC):

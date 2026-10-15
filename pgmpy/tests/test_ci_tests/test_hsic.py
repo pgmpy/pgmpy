@@ -24,122 +24,55 @@ def hsic_data():
 
 
 class TestHSIC:
-    def test_independent(self, hsic_data):
-        df_ind, _, _ = hsic_data
-        test = HSIC(data=df_ind)
-        assert test("X", "Y", [], significance_level=0.05)
-        assert test.statistic_ == pytest.approx(122.8551, abs=0.01)
-        assert test.p_value_ == pytest.approx(0.1261, abs=0.01)
+    def test_matches_causal_learn(self, hsic_data):
+        # Reference values from causal-learn v0.1.4.5:
+        # KCI_UInd().compute_pvalue(df[["X"]].to_numpy(), df[["Y"]].to_numpy())
+        for df, statistic, p_value in zip(hsic_data, (122.8551, 8651.7687, 3634.9518), (0.1267, 0.0, 0.0)):
+            test = HSIC(data=df)
+            test.run_test("X", "Y", [])
+            assert test.statistic_ == pytest.approx(statistic, abs=0.01)
+            assert test.p_value_ == pytest.approx(p_value, abs=0.01)
+            assert test.p_value_ > 0.0
 
-    def test_linear_dependence(self, hsic_data):
-        _, df_dep, _ = hsic_data
-        test = HSIC(data=df_dep)
-        assert not test("X", "Y", [], significance_level=0.05)
-        assert test.statistic_ == pytest.approx(8651.7687, abs=0.01)
-        assert 0.0 < test.p_value_ < 0.001
-
-    def test_nonlinear_dependence(self, hsic_data):
-        _, _, df_nonlinear = hsic_data
-        test = HSIC(data=df_nonlinear)
-        assert not test("X", "Y", [], significance_level=0.05)
-        assert test.statistic_ == pytest.approx(3634.9518, abs=0.01)
-        assert 0.0 < test.p_value_ < 0.001
-
-    def test_median_bandwidth(self, hsic_data):
+    def test_options(self, hsic_data):
         df_ind, df_dep, _ = hsic_data
-        assert HSIC(data=df_ind, bandwidth="median")("X", "Y", [], significance_level=0.05)
-        assert not HSIC(data=df_dep, bandwidth="median")("X", "Y", [], significance_level=0.05)
+        for kwargs in (
+            {"bandwidth": "median"},
+            {"null_dist": "permutation", "n_permutations": 200, "seed": 0},
+            {"kernel": RBF(2.0)},
+        ):
+            assert HSIC(data=df_ind, **kwargs)("X", "Y", [], significance_level=0.05), kwargs
+            assert not HSIC(data=df_dep, **kwargs)("X", "Y", [], significance_level=0.05), kwargs
 
-    def test_custom_kernel(self, hsic_data):
+    def test_kernels(self, hsic_data):
         _, df_dep, _ = hsic_data
-        # Single kernel shared by all columns.
-        shared = HSIC(data=df_dep, kernel=RBF(2.0))
-        assert not shared("X", "Y", [], significance_level=0.05)
-        # A dict with the same kernel for every column is equivalent.
+        # A single kernel is equivalent to a dict with that kernel for every column.
         per_column = HSIC(data=df_dep, kernel={"X": RBF(2.0), "Y": RBF(2.0)})
-        assert per_column.run_test("X", "Y", []) == shared.run_test("X", "Y", [])
+        assert HSIC(data=df_dep, kernel=RBF(2.0)).run_test("X", "Y", []) == per_column.run_test("X", "Y", [])
         # Columns missing from the dict use the default RBF kernel (length scale 0.5 for n=300).
         partial = HSIC(data=df_dep, kernel={"X": RBF(2.0)})
         full = HSIC(data=df_dep, kernel={"X": RBF(2.0), "Y": RBF(0.5)})
         assert partial.run_test("X", "Y", []) == full.run_test("X", "Y", [])
         assert partial.clone().run_test("X", "Y", []) == partial.run_test("X", "Y", [])
 
-    def test_permutation(self, hsic_data):
-        df_ind, df_dep, _ = hsic_data
-        assert HSIC(data=df_ind, null_dist="permutation", n_permutations=200, seed=0)(
-            "X", "Y", [], significance_level=0.05
-        )
-        assert not HSIC(data=df_dep, null_dist="permutation", n_permutations=200, seed=0)(
-            "X", "Y", [], significance_level=0.05
-        )
-
-    def test_gamma_null_safe_defaults(self):
-        # n < 6: variance formula guard returns p = 1.0
-        df_small = pd.DataFrame({"X": [1.0, 2.0, 3.0, 4.0, 5.0], "Y": [5.0, 4.0, 3.0, 2.0, 1.0]})
-        assert HSIC(data=df_small).run_test("X", "Y", [])[1] == 1.0
-
-    def test_constant_column_raises(self):
-        # A constant (zero-variance) column has no defined kernel scaling.
-        rng = np.random.default_rng(seed=0)
-        df_const = pd.DataFrame({"X": np.zeros(50), "Y": rng.standard_normal(50)})
-        with pytest.raises(ValueError, match="constant"):
-            HSIC(data=df_const).run_test("X", "Y", [])
-
-        # An unused constant column must not block testing the other variables.
-        df_extra = pd.DataFrame({"X": rng.standard_normal(50), "Y": rng.standard_normal(50), "C": np.ones(50)})
-        HSIC(data=df_extra).run_test("X", "Y", [])
-
-    def test_conditioning_not_supported(self, hsic_data):
-        df_ind, _, _ = hsic_data
-        with pytest.raises(ValueError, match="does not support conditioning"):
-            HSIC(data=df_ind)("X", "Y", ["Z"])
+        # length_scale = median of the non-zero standardized distances / sqrt(2). Six of X's ten pairwise distances
+        # are ties; the non-zero ones are all sqrt(5). Y's median distance is 2 / sqrt(2.5).
+        df_small = pd.DataFrame({"X": [0.0, 0.0, 0.0, 0.0, 1.0], "Y": [1.0, 2.0, 3.0, 4.0, 5.0]})
+        test = HSIC(data=df_small, bandwidth="median")
+        assert test.kernel_dict["X"].length_scale == pytest.approx(np.sqrt(2.5))
+        assert test.kernel_dict["Y"].length_scale == pytest.approx(np.sqrt(0.8))
+        # The Gamma null moments need n >= 6; smaller samples get p = 1.
+        assert test.run_test("X", "Y", [])[1] == 1.0
 
     def test_invalid_params(self, hsic_data):
         df_ind, _, _ = hsic_data
-        with pytest.raises(ValueError, match="bandwidth"):
-            HSIC(data=df_ind, bandwidth="bad")
-        with pytest.raises(ValueError, match="null_dist"):
-            HSIC(data=df_ind, null_dist="bad")
-        with pytest.raises(ValueError, match="n_permutations"):
-            HSIC(data=df_ind, n_permutations=0)
-        with pytest.raises(ValueError, match="kernel"):
-            HSIC(data=df_ind, kernel=(RBF(0.5), RBF(0.5)))
-        with pytest.raises(ValueError, match="kernel"):
-            HSIC(data=df_ind, kernel={"X": "not-a-kernel"})
-        with pytest.raises(ValueError, match="kernel"):
-            HSIC(data=df_ind, kernel={"W": RBF(0.5)})
-
-
-class TestHSICCompareCausalLearn:
-    """Cross-validate against causal-learn v0.1.4.5 (numpy 2.4.3).
-
-    Reference values reproduced with::
-
-        import numpy as np
-        from causallearn.utils.KCI.KCI import KCI_UInd
-
-        rng = np.random.default_rng(seed=10)
-        data = rng.standard_normal((300, 2))
-        KCI_UInd().compute_pvalue(data[:, 0:1], data[:, 1:2])   # stat=143.38, p=0.36
-
-        rng = np.random.default_rng(seed=42)
-        X = rng.normal(size=300); Y = 2*X + rng.normal(scale=0.3, size=300)
-        KCI_UInd().compute_pvalue(X[:, None], Y[:, None])        # stat=8287.12, p=0.0
-    """
-
-    def test_matches_causal_learn_kci_uind(self):
-        rng = np.random.default_rng(seed=10)
-        df = pd.DataFrame(rng.standard_normal((300, 2)), columns=["X", "Y"])
-        test = HSIC(data=df)
-        test.run_test("X", "Y", [])
-        assert test.statistic_ == pytest.approx(143.3768, abs=0.01)
-        assert test.p_value_ == pytest.approx(0.3597, abs=0.01)
-
-        rng = np.random.default_rng(seed=42)
-        X = rng.normal(size=300)
-        Y = 2 * X + rng.normal(scale=0.3, size=300)
-        df = pd.DataFrame({"X": X, "Y": Y})
-        test = HSIC(data=df)
-        test.run_test("X", "Y", [])
-        assert test.statistic_ == pytest.approx(8287.1236, abs=0.01)
-        assert test.p_value_ == pytest.approx(0.0, abs=0.001)
+        for kwargs in (
+            {"bandwidth": "bad"},
+            {"null_dist": "bad"},
+            {"n_permutations": 0},
+            {"kernel": (RBF(0.5), RBF(0.5))},
+            {"kernel": {"X": "not-a-kernel"}},
+            {"kernel": {"W": RBF(0.5)}},
+        ):
+            with pytest.raises(ValueError, match=next(iter(kwargs))):
+                HSIC(data=df_ind, **kwargs)

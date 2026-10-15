@@ -7,6 +7,16 @@ from sklearn.gaussian_process.kernels import RBF, Kernel
 from ._base import BaseCITest, _CITestResult
 
 
+def _gamma_pvalue_from_moments(test_stat: float, mean: float, var: float) -> float:
+    """Gamma-approximation p-value from precomputed null moments."""
+    if var <= 0 or mean <= 0:
+        return 1.0
+
+    k = mean**2 / var
+    theta = var / mean
+    return float(stats.gamma.sf(test_stat, a=k, scale=theta))
+
+
 class HSIC(BaseCITest):
     r"""
     Test whether two continuous variables are independent.
@@ -71,13 +81,14 @@ class HSIC(BaseCITest):
     Raises
     ------
     ValueError
-        If a requested variable is constant, conditioning variables are supplied, or an initialization argument is
-        invalid.
+        If an initialization argument is invalid.
 
     Notes
     -----
     The variables are standardized before testing. With the default RBF kernels, ``bandwidth="heuristic"`` chooses a
-    width from the sample size, while ``bandwidth="median"`` uses the median distance between observations.
+    width from the sample size, while ``bandwidth="median"`` follows :footcite:t:`gretton_2007` and sets the length
+    scale to :math:`m / \sqrt{2}`, where :math:`m` is the median of the non-zero pairwise distances between
+    observations, giving the kernel :math:`k(x, x') = \exp(-\lVert x - x' \rVert^2 / m^2)`.
 
     The statistic is computed from centered kernel matrices:
 
@@ -135,34 +146,33 @@ class HSIC(BaseCITest):
 
         # Step 2: Standardize the data.
         self._std_data = self.data.apply(lambda col: (col - col.mean()) / col.std(ddof=1))
+        self._n_samples = self.data.shape[0]
 
         # Step 3: Set up a kernel for each column.
-        if isinstance(kernel, Kernel):
-            # Step 3.1: If a single kernel is provided, use it for every column.
+        # Step 3.1: Collect the user-provided kernels.
+        if kernel is None:
+            self.kernel_dict = {}
+        elif isinstance(kernel, Kernel):
             self.kernel_dict = dict.fromkeys(self.data.columns, kernel)
-        elif kernel is None or isinstance(kernel, dict):
-            # Step 3.2: Use the provided per-column kernels; the remaining columns get an RBF kernel.
-            kernel = {} if kernel is None else kernel
+        elif isinstance(kernel, dict):
             invalid = [col for col, k in kernel.items() if col not in self.data.columns or not isinstance(k, Kernel)]
             if invalid:
                 raise ValueError(f"kernel must map columns in data to sklearn Kernels. Invalid entries: {invalid}")
-
-            n = self.data.shape[0]
-            self.kernel_dict = {}
-            for col, x in self._std_data.items():
-                if col in kernel:
-                    self.kernel_dict[col] = kernel[col]
-                    continue
-                if self.bandwidth == "median":
-                    med = np.median(pdist(x.to_numpy().reshape(-1, 1), metric="euclidean"))
-                    length_scale = np.sqrt(2.0) * med if med > 0 else 1.0
-                else:
-                    length_scale = 0.8 if n < 200 else (0.5 if n < 1200 else 0.3)
-                self.kernel_dict[col] = RBF(length_scale=length_scale)
+            self.kernel_dict = dict(kernel)
         else:
             raise ValueError(
                 f"kernel must be a sklearn Kernel, a dict of Kernels keyed by column, or None. Got {kernel!r}"
             )
+
+        # Step 3.2: Columns without a provided kernel get a default RBF kernel.
+        for col in self.data.columns.drop(list(self.kernel_dict)):
+            if self.bandwidth == "median":
+                dists = pdist(self._std_data[[col]].to_numpy())
+                dists = dists[dists > 0]
+                length_scale = np.median(dists) / np.sqrt(2.0) if dists.size else 1.0
+            else:
+                length_scale = 0.8 if self._n_samples < 200 else (0.5 if self._n_samples < 1200 else 0.3)
+            self.kernel_dict[col] = RBF(length_scale=length_scale)
 
         super().__init__(use_cache=use_cache)
 
@@ -170,30 +180,7 @@ class HSIC(BaseCITest):
     def _center_kernel(K: np.ndarray) -> np.ndarray:
         """Double-center a kernel matrix."""
         col_mean = K.mean(axis=0)
-        return K - col_mean[None, :] - col_mean[:, None] + col_mean.mean()
-
-    def _hsic_gamma_pvalue(self, test_stat, K, L, Kc, Lc):
-        """Compute a Gamma p-value using the closed-form null moments."""
-        n = K.shape[0]
-        if n < 6:
-            return 1.0
-
-        M_sq = (Kc * Lc / 6.0) ** 2
-        off_diag_sq_sum = M_sq.sum() - np.trace(M_sq)
-        var_hsic = off_diag_sq_sum / (n * (n - 1))
-        moment_factor = 72.0 * (n - 4) * (n - 5) / (n * (n - 1) * (n - 2) * (n - 3))
-        var_hsic *= moment_factor
-
-        mu_x = (K.sum() - np.trace(K)) / (n * (n - 1))
-        mu_y = (L.sum() - np.trace(L)) / (n * (n - 1))
-        mean_hsic = (1.0 + mu_x * mu_y - mu_x - mu_y) / n
-
-        if var_hsic <= 0 or mean_hsic <= 0:
-            return 1.0
-
-        alpha = mean_hsic**2 / var_hsic
-        beta = var_hsic * n / mean_hsic
-        return stats.gamma.sf(test_stat / n, a=alpha, scale=beta)
+        return K - col_mean - col_mean[:, None] + col_mean.mean()
 
     def _compute_result(self, X: str, Y: str, Z: list):
         r"""
@@ -201,23 +188,36 @@ class HSIC(BaseCITest):
 
         Z must be empty; use :class:`KCI` for conditional tests.
         """
-        x, y = self._std_data[[X]].to_numpy(), self._std_data[[Y]].to_numpy()
-        kernel_x, kernel_y = self.kernel_dict[X], self.kernel_dict[Y]
-
-        Kx, Ky = kernel_x(x), kernel_y(y)
+        Kx = self.kernel_dict[X](self._std_data[[X]].to_numpy())
+        Ky = self.kernel_dict[Y](self._std_data[[Y]].to_numpy())
         Kxc, Kyc = self._center_kernel(Kx), self._center_kernel(Ky)
-        test_stat = np.sum(Kxc * Kyc)
+        KxcKyc = Kxc * Kyc
+        test_stat = KxcKyc.sum()
 
         if self.null_dist == "permutation":
-            # Permutation commutes with centering, so reindex Kyc instead of re-centering.
             rng = np.random.default_rng(self.seed)
-            n = y.shape[0]
-            null_stats = np.empty(self.n_permutations)
-            for i in range(self.n_permutations):
-                perm = rng.permutation(n)
-                null_stats[i] = np.sum(Kxc * Kyc[perm][:, perm])
-            p_value = (1 + np.sum(null_stats >= test_stat)) / (1 + self.n_permutations)
+            n_exceed = 0
+            for _ in range(self.n_permutations):
+                perm = rng.permutation(self._n_samples)
+                n_exceed += np.vdot(Kxc, Kyc[np.ix_(perm, perm)]) >= test_stat
+            p_value = (1 + n_exceed) / (1 + self.n_permutations)
+        elif self._n_samples < 6:
+            p_value = 1.0
         else:
-            p_value = self._hsic_gamma_pvalue(test_stat, Kx, Ky, Kxc, Kyc)
+            n_pairs = self._n_samples * (self._n_samples - 1)
+            off_diag_sq_sum = (np.vdot(KxcKyc, KxcKyc) - np.sum(np.diag(KxcKyc) ** 2)) / 36.0
+            moment_factor = (
+                72.0
+                * (self._n_samples - 4)
+                * (self._n_samples - 5)
+                / (n_pairs * (self._n_samples - 2) * (self._n_samples - 3))
+            )
+            var_hsic = moment_factor * off_diag_sq_sum / n_pairs
+            mu_x = (Kx.sum() - np.trace(Kx)) / n_pairs
+            mu_y = (Ky.sum() - np.trace(Ky)) / n_pairs
+            mean_hsic = (1.0 - mu_x) * (1.0 - mu_y) / self._n_samples
+            p_value = _gamma_pvalue_from_moments(
+                test_stat / self._n_samples, self._n_samples * mean_hsic, self._n_samples**2 * var_hsic
+            )
 
         return _CITestResult(statistic=float(test_stat), p_value=float(p_value), effect_size=None)
