@@ -40,8 +40,8 @@ class HSIC(BaseCITest):
         Determines the width of the default RBF kernels.
 
     null_dist : {"gamma", "permutation"}, default="gamma"
-        How to compute the p-value. ``"gamma"`` is fast and works well with RBF-like kernels. ``"permutation"`` is
-        slower but works with arbitrary kernels.
+        How to compute the p-value. ``"gamma"`` is fast and approximates the null distribution with a Gamma
+        distribution. ``"permutation"`` is slower but makes no distributional approximation.
 
     use_cache : bool, default=True
         Whether to cache test results for repeated queries.
@@ -233,7 +233,9 @@ class HSIC(BaseCITest):
             var_hsic = moment_factor * off_diag_sq_sum / n_pairs
             mu_x = (Kx.sum() - np.trace(Kx)) / n_pairs
             mu_y = (Ky.sum() - np.trace(Ky)) / n_pairs
-            mean_hsic = (1.0 - mu_x) * (1.0 - mu_y) / self._n_samples
+            mean_hsic = (
+                (np.trace(Kx) / self._n_samples - mu_x) * (np.trace(Ky) / self._n_samples - mu_y) / self._n_samples
+            )
             p_value = _gamma_pvalue_from_moments(
                 test_stat / self._n_samples, self._n_samples * mean_hsic, self._n_samples**2 * var_hsic
             )

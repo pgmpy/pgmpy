@@ -51,7 +51,7 @@ class TestHSIC:
             assert 0.0 <= ind.effect_size_ < dep.effect_size_ <= 1.0, kwargs
 
     def test_kernels(self, hsic_data):
-        _, df_dep, _ = hsic_data
+        df_ind, df_dep, _ = hsic_data
         # A single kernel is equivalent to a dict with that kernel for every column.
         per_column = HSIC(data=df_dep, kernel={"X": RBF(2.0), "Y": RBF(2.0)})
         assert HSIC(data=df_dep, kernel=RBF(2.0)).run_test("X", "Y", []) == per_column.run_test("X", "Y", [])
@@ -60,6 +60,9 @@ class TestHSIC:
         full = HSIC(data=df_dep, kernel={"X": RBF(2.0), "Y": RBF(0.5)})
         assert partial.run_test("X", "Y", []) == full.run_test("X", "Y", [])
         assert partial.clone().run_test("X", "Y", []) == partial.run_test("X", "Y", [])
+        # The Gamma p-value also holds for kernels whose diagonal is not 1.
+        assert HSIC(data=df_ind, kernel=DotProduct())("X", "Y", [], significance_level=0.05)
+        assert HSIC(data=df_ind, kernel={"X": RBF(0.5), "Y": DotProduct()})("X", "Y", [], significance_level=0.05)
         # With linear kernels, the effect size (normalized HSIC) equals the squared Pearson correlation.
         linear = HSIC(data=df_dep, kernel=DotProduct())
         linear.run_test("X", "Y", [])
