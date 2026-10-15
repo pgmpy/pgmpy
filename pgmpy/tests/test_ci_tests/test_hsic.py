@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import pytest
-from sklearn.gaussian_process.kernels import RBF
+from sklearn.gaussian_process.kernels import RBF, DotProduct
 
 from pgmpy.ci_tests import HSIC
 
@@ -25,14 +25,18 @@ def hsic_data():
 
 class TestHSIC:
     def test_matches_causal_learn(self, hsic_data):
-        # Reference values from causal-learn v0.1.4.5:
+        # Reference statistics and p-values from causal-learn v0.1.4.5:
         # KCI_UInd().compute_pvalue(df[["X"]].to_numpy(), df[["Y"]].to_numpy())
-        for df, statistic, p_value in zip(hsic_data, (122.8551, 8651.7687, 3634.9518), (0.1267, 0.0, 0.0)):
+        # causal-learn reports no effect size; the expected effect sizes are normalized HSIC.
+        for df, statistic, p_value, effect_size in zip(
+            hsic_data, (122.8551, 8651.7687, 3634.9518), (0.1267, 0.0, 0.0), (0.0293, 0.9240, 0.4600)
+        ):
             test = HSIC(data=df)
             test.run_test("X", "Y", [])
             assert test.statistic_ == pytest.approx(statistic, abs=0.01)
             assert test.p_value_ == pytest.approx(p_value, abs=0.01)
             assert test.p_value_ > 0.0
+            assert test.effect_size_ == pytest.approx(effect_size, abs=1e-4)
 
     def test_options(self, hsic_data):
         df_ind, df_dep, _ = hsic_data
@@ -41,8 +45,10 @@ class TestHSIC:
             {"null_dist": "permutation", "n_permutations": 200, "seed": 0},
             {"kernel": RBF(2.0)},
         ):
-            assert HSIC(data=df_ind, **kwargs)("X", "Y", [], significance_level=0.05), kwargs
-            assert not HSIC(data=df_dep, **kwargs)("X", "Y", [], significance_level=0.05), kwargs
+            ind, dep = HSIC(data=df_ind, **kwargs), HSIC(data=df_dep, **kwargs)
+            assert ind("X", "Y", [], significance_level=0.05), kwargs
+            assert not dep("X", "Y", [], significance_level=0.05), kwargs
+            assert 0.0 <= ind.effect_size_ < dep.effect_size_ <= 1.0, kwargs
 
     def test_kernels(self, hsic_data):
         _, df_dep, _ = hsic_data
@@ -54,6 +60,10 @@ class TestHSIC:
         full = HSIC(data=df_dep, kernel={"X": RBF(2.0), "Y": RBF(0.5)})
         assert partial.run_test("X", "Y", []) == full.run_test("X", "Y", [])
         assert partial.clone().run_test("X", "Y", []) == partial.run_test("X", "Y", [])
+        # With linear kernels, the effect size (normalized HSIC) equals the squared Pearson correlation.
+        linear = HSIC(data=df_dep, kernel=DotProduct())
+        linear.run_test("X", "Y", [])
+        assert linear.effect_size_ == pytest.approx(np.corrcoef(df_dep["X"], df_dep["Y"])[0, 1] ** 2)
 
         # length_scale = median of the non-zero standardized distances / sqrt(2). Six of X's ten pairwise distances
         # are ties; the non-zero ones are all sqrt(5). Y's median distance is 2 / sqrt(2.5).

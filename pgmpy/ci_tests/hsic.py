@@ -65,6 +65,8 @@ class HSIC(BaseCITest):
     5468.71
     >>> f"{test.p_value_:.2e}"
     '2.97e-67'
+    >>> round(test.effect_size_, 2)
+    0.44
 
     Attributes
     ----------
@@ -75,8 +77,8 @@ class HSIC(BaseCITest):
     p_value_ : float
         The p-value for the test. Set after calling the test.
 
-    effect_size_ : None
-        Not defined for HSIC.
+    effect_size_ : float
+        Normalized HSIC (centered kernel alignment), between 0 and 1. Set after calling the test.
 
     Raises
     ------
@@ -95,6 +97,15 @@ class HSIC(BaseCITest):
     .. math::
         T = \operatorname{Tr}(\tilde{K}_X \tilde{K}_Y).
 
+    The effect size is the normalized statistic, known as centered kernel alignment (:footcite:t:`cortes_2012`):
+
+    .. math::
+        \frac{\operatorname{Tr}(\tilde{K}_X \tilde{K}_Y)}
+        {\sqrt{\operatorname{Tr}(\tilde{K}_X \tilde{K}_X) \operatorname{Tr}(\tilde{K}_Y \tilde{K}_Y)}}.
+
+    It lies between 0 and 1 and equals the squared Pearson correlation when both kernels are linear. Like ``T``, it is
+    biased upwards in small samples, so it is slightly above 0 even when the variables are independent.
+
     When `null_dist='gamma'`, p-value is approximated using a Gamma distribution. When `null_dist='permutation'`,
     p-value is approximated empirically by a permutation test.
 
@@ -104,6 +115,7 @@ class HSIC(BaseCITest):
     ----------
     - :footcite:t:`gretton_2005`
     - :footcite:t:`gretton_2007`
+    - :footcite:t:`cortes_2012`
     """
 
     _tags = {
@@ -184,7 +196,7 @@ class HSIC(BaseCITest):
 
     def _compute_result(self, X: str, Y: str, Z: list):
         r"""
-        Compute HSIC statistic and p-value for :math:`X \perp Y`.
+        Compute HSIC statistic, p-value, and effect size for :math:`X \perp Y`.
 
         Z must be empty; use :class:`KCI` for conditional tests.
         """
@@ -193,6 +205,7 @@ class HSIC(BaseCITest):
         Kxc, Kyc = self._center_kernel(Kx), self._center_kernel(Ky)
         KxcKyc = Kxc * Kyc
         test_stat = KxcKyc.sum()
+        effect_size = test_stat / np.sqrt(np.vdot(Kxc, Kxc) * np.vdot(Kyc, Kyc))
 
         if self.null_dist == "permutation":
             rng = np.random.default_rng(self.seed)
@@ -220,4 +233,4 @@ class HSIC(BaseCITest):
                 test_stat / self._n_samples, self._n_samples * mean_hsic, self._n_samples**2 * var_hsic
             )
 
-        return _CITestResult(statistic=float(test_stat), p_value=float(p_value), effect_size=None)
+        return _CITestResult(statistic=float(test_stat), p_value=float(p_value), effect_size=float(effect_size))
