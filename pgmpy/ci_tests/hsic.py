@@ -179,14 +179,19 @@ class HSIC(BaseCITest):
         # Step 3.2: Columns without a provided kernel get a default RBF kernel.
         for col in self.data.columns.drop(list(self.kernel_dict)):
             if self.bandwidth == "median":
-                dists = pdist(self._std_data[[col]].to_numpy())
-                dists = dists[dists > 0]
-                length_scale = np.median(dists) / np.sqrt(2.0) if dists.size else 1.0
+                length_scale = self._median_length_scale(self._std_data[[col]].to_numpy())
             else:
                 length_scale = 0.8 if self._n_samples < 200 else (0.5 if self._n_samples < 1200 else 0.3)
             self.kernel_dict[col] = RBF(length_scale=length_scale)
 
         super().__init__(use_cache=use_cache)
+
+    @staticmethod
+    def _median_length_scale(X: np.ndarray) -> float:
+        """RBF length scale from the median heuristic: median non-zero pairwise distance divided by sqrt(2)."""
+        dists = pdist(X)
+        dists = dists[dists > 0]
+        return np.median(dists) / np.sqrt(2.0) if dists.size else 1.0
 
     @staticmethod
     def _center_kernel(K: np.ndarray) -> np.ndarray:
