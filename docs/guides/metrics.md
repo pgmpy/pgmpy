@@ -47,14 +47,24 @@ method.
 
 ## Metric Discovery
 
-`get_metrics(...)` lets you discover available metrics by their requirements instead of
-hard-coding class names:
+`get_metric(...)` returns a metric by name, or the default metric for the kind of comparison
+you need:
 
 ```python
-from pgmpy.metrics import get_metrics
+from pgmpy.metrics import get_metric
 
-supervised = get_metrics(requires_true_graph=True)
-unsupervised = get_metrics(requires_data=True)
+shd = get_metric("shd")
+default_unsupervised = get_metric(requires_true_graph=False)
+```
+
+To list metrics by their tags, use `skbase.lookup.all_objects`:
+
+```python
+from skbase.lookup import all_objects
+from pgmpy.metrics import BaseSupervisedMetric, BaseUnsupervisedMetric
+
+supervised = all_objects(object_types=BaseSupervisedMetric, package_name="pgmpy.metrics", return_names=False)
+unsupervised = all_objects(object_types=BaseUnsupervisedMetric, package_name="pgmpy.metrics", return_names=False)
 ```
 
 ## See Also

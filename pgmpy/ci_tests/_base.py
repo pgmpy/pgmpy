@@ -33,6 +33,12 @@ class _ResidualMixin:
         for numerical variables.
     """
 
+    _tags = {
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+    }
+
     def _fit_predict(self, target_col: str, Z_data: pd.DataFrame):
         """
         Fit an estimator on ``Z_data`` to predict ``target_col``.
@@ -137,11 +143,15 @@ class BaseCITest(BaseObject):
     """
 
     _tags = {
+        "object_type": "ci_test",
         "name": None,
-        "data_types": (),
+        "data_types": [],
         "default_for": None,
         "requires_data": True,
         "is_symmetric": True,
+        "assumption:linearity": None,
+        "assumption:additive_noise": None,
+        "assumption:gaussian_noise": None,
     }
 
     def __init__(self, use_cache: bool = True):

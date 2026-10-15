@@ -72,6 +72,23 @@ class R2Sort(BaseOrderDiscovery):
     - :footcite:t:`Reisach2021`
     """
 
+    _tags = {
+        "name": "r2_sort",
+        "data_types": ["continuous"],
+        "identifiable_graph": "dag",
+        "requires_target": False,
+        "capability:multivariate": True,
+        "capability:expert_knowledge": [],
+        "assumption:causal_sufficiency": True,
+        "assumption:acyclicity": True,
+        "assumption:faithfulness": False,
+        "assumption:linearity": True,
+        "assumption:additive_noise": True,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
+    }
+
     def _fit(self, X: pd.DataFrame) -> "R2Sort":
         return_type = self.return_type.lower()
         if return_type not in ("dag", "pdag"):

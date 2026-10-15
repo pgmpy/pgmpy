@@ -54,9 +54,8 @@ class AICCondGauss(LogLikelihoodCondGauss):
 
     _tags = {
         "name": "aic-cg",
-        "supported_datatype": "mixed",
+        "data_types": ["discrete", "continuous", "mixed"],
         "default_for": None,
-        "is_parameteric": False,
     }
 
     def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:

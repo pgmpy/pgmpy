@@ -53,7 +53,7 @@ class FisherZ(Pearsonr):
 
     _tags = {
         "name": "fisher_z",
-        "data_types": ("continuous",),
+        "data_types": ["continuous"],
         "default_for": None,
         "requires_data": True,
     }

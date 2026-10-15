@@ -1,3 +1,4 @@
+from ._warnings import ExperimentalWarning
 from .check_functions import _check_1d_array_object, _check_length_equal
 from .mathext import cartesian, sample_discrete
 from .optimizer import optimize, pinverse
@@ -19,6 +20,7 @@ from .utils import (
 )
 
 __all__ = [
+    "ExperimentalWarning",
     "cartesian",
     "sample_discrete",
     "StateNameMixin",

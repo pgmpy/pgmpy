@@ -78,7 +78,7 @@ class PearsonrEquivalence(Pearsonr):
 
     _tags = {
         "name": "pearsonr_equivalence",
-        "data_types": ("continuous",),
+        "data_types": ["continuous"],
         "default_for": None,
         "requires_data": True,
     }

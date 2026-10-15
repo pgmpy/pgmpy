@@ -18,9 +18,12 @@ class IndependenceMatch(BaseCITest):
 
     _tags = {
         "name": "independence_match",
-        "data_types": ("discrete", "continuous", "mixed"),
+        "data_types": ["discrete", "continuous", "mixed"],
         "default_for": None,
         "requires_data": False,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
     }
 
     def __init__(self, independencies=None, use_cache: bool = True):

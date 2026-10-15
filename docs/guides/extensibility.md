@@ -38,7 +38,7 @@ Templates are available for the most common extension types:
   `score` API.
 - **Datasets**: New datasets become discoverable via `list_datasets()`.
 - **Example models**: New models become discoverable via `list_models()`.
-- **Metrics**: New metrics become discoverable via `get_metrics()`.
+- **Metrics**: New metrics can be selected by name via `get_metric()`.
 
 ## Automatic Registration
 
