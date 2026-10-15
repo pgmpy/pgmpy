@@ -13,6 +13,7 @@ def collect_state_names(data: pd.DataFrame, variable: str) -> list:
     observed = sorted(non_null.unique())
     if series.isna().any():
         import warnings
+
         warnings.warn(
             f"Variable '{variable}' contains NaN values which are ignored for state detection. "
             f"Provide explicit `state_names` to include all possible states.",
