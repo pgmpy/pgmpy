@@ -65,6 +65,9 @@ class YourDatasetClass(BaseDataset):
     # TODO: If the delimiter of the dataset is not tab ("\t"), set the correct delimiter.
     # sep = "\t"
 
+    # TODO: If the data file is compressed, set its compression format.
+    # compression = "gzip"
+
     # TODO: If the dataset has categorical variables, list them here.
     categorical_variables = []
 
