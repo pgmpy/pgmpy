@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import cast
-
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -63,8 +61,8 @@ class BootstrapEstimator(BaseCausalDiscovery):
         The number of jobs to run in parallel. -1 uses all available processors.
 
     show_progress : bool, default=True
-        If True, displays a progress bar during fitting. The wrapped estimator's own progress bars are always turned
-        off.
+        If True, displays a progress bar during fitting. Set `show_progress` on the wrapped estimator to control its
+        own progress bars.
 
     seed : int or None, default=None
         Seed for the random number generator to ensure reproducibility.
@@ -244,8 +242,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
             The causal graph learned by the fitted clone.
         """
         sample = X.iloc[bootstrap_sample]
-        base_estimator = cast(BaseCausalDiscovery, clone(base_estimator))
-        est = base_estimator.fit(sample)
+        est = clone(base_estimator).fit(sample)
         return est.causal_graph_
 
     def _fit(self, X: pd.DataFrame) -> BootstrapEstimator:

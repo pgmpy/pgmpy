@@ -159,10 +159,6 @@ def test_bootstrap_sampling_and_wrapped_estimator(rand_data):
     assert est.bootstrap_samples_.shape == (2, 250)
     assert all(len(np.unique(sample)) == 250 for sample in est.bootstrap_samples_)
 
-    # The wrapped estimator's own progress bars are turned off; the bootstrap shows a single one.
-    assert est.estimator.show_progress is True
-    assert est.estimator_.show_progress is False
-
 
 def test_bootstrap_other_graph_types():
     class FixedADMG(BaseCausalDiscovery):
