@@ -310,13 +310,13 @@ def preprocess_data(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     for col in df.columns:
         dtype = df[col].dtype
 
-        if isinstance(dtype, pd.CategoricalDtype):
-            dtypes[col] = "O" if dtype.ordered else "C"
-        elif pd.api.types.is_numeric_dtype(dtype):
+        if pd.api.types.is_numeric_dtype(dtype):
             dtypes[col] = "N"
-        elif pd.api.types.is_object_dtype(dtype) or pd.api.types.is_string_dtype(dtype):
+        elif pd.api.types.is_object_dtype(dtype) or pd.api.types.is_string_dtype(df[col]):
             df[col] = df[col].astype("category")
             dtypes[col] = "C"
+        elif isinstance(dtype, pd.CategoricalDtype):
+            dtypes[col] = "O" if dtype.ordered else "C"
         else:
             raise ValueError(
                 f"Couldn't infer datatype of column: {col} from data. "
