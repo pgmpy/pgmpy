@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-from scipy import linalg
 from sklearn.gaussian_process.kernels import RBF, Kernel
 
 from ._base import _CITestResult
@@ -156,7 +155,7 @@ class KCI(HSIC):
         Ky = self._center_kernel(kernel_y(y))
         Kz = self._center_kernel(kernel_z(z))
         identity = np.eye(self._n_samples)
-        Rz = self.epsilon * linalg.solve(Kz + self.epsilon * identity, identity, assume_a="pos")
+        Rz = self.epsilon * np.linalg.solve(Kz + self.epsilon * identity, identity)
         KxR = Rz @ Kx @ Rz
         KyR = Rz @ Ky @ Rz
 
