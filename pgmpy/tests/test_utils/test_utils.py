@@ -103,6 +103,19 @@ class TestPreprocessData(unittest.TestCase):
         self.assertEqual(processed_data["integer"].dtype, data["integer"].dtype)
         self.assertEqual(dtypes, {"integer": "N"})
 
+    def test_preprocess_data_ordered_categories(self):
+        data = pd.DataFrame(
+            {
+                "strings": pd.Categorical(["low", "high"], categories=["low", "high"], ordered=True),
+                "numbers": pd.Categorical([1, 2], categories=[1, 2], ordered=True),
+            }
+        )
+
+        processed_data, dtypes = preprocess_data(data)
+
+        self.assertEqual(dtypes, {"strings": "C", "numbers": "O"})
+        pd.testing.assert_frame_equal(processed_data, data)
+
 
 class TestGetExampleModel(unittest.TestCase):
     def test_get_categorical_models(self):
