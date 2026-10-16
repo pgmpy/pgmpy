@@ -3,6 +3,7 @@ import pandas as pd
 import pytest
 from joblib.externals.loky import get_reusable_executor
 
+from pgmpy.base import DAG, PDAG
 from pgmpy.causal_discovery import TAN
 from pgmpy.example_models import load_model
 from pgmpy.factors.discrete import TabularCPD
@@ -259,3 +260,22 @@ def test_tan_real_dataset(alarm_df):
 def shutdown_executor():
     yield
     get_reusable_executor().shutdown(wait=True)
+
+
+def test_tan_return_type(data22):
+    est = TAN(root_node="R", class_node="A", show_progress=False)
+
+    # Test returning DAG (default)
+    est.fit(data22, return_type="dag")
+    assert isinstance(est.causal_graph_, DAG)
+
+    # Test returning PDAG / CPDAG
+    est.fit(data22, return_type="pdag")
+    assert isinstance(est.causal_graph_, PDAG)
+
+    est.fit(data22, return_type="cpdag")
+    assert isinstance(est.causal_graph_, PDAG)
+
+    # Test invalid return_type raises ValueError
+    with pytest.raises(ValueError):
+        est.fit(data22, return_type="invalid_type")
