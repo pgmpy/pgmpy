@@ -43,12 +43,19 @@ jobs:
         with:
           python-version: "3.11"
 
-      # Step 5. Cache Model
-      - name: 5. Cache GLiClass Model
+      - name: 5-1. Cache GLiClass Model
         uses: actions/cache@v4
         with:
           path: ~/.cache/huggingface/hub
           key: ${{ runner.os }}-gliclass-small-v1.0-v1
+
+      - name: 5-2. Cache pip Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-py311-${{ hashFiles('.github/workflows/auto-label.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-py311-
 
       # Step 6. Install Dependencies
       - name: 6. Install Dependencies
