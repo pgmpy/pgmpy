@@ -6,7 +6,7 @@ from transformers import AutoTokenizer
 MODEL_ID = "knowledgator/gliclass-small-v1.0"
 
 LABELS = [
-    "Base Models",
+    "Probabilistic Graphical Model",
     "Bug",
     "Causal Discovery",
     "Causal Identification",
