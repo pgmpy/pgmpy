@@ -26,6 +26,8 @@ jobs:
 
       - name: 2. Checkout Repository
         uses: actions/checkout@v4
+        with:
+          ref: auto-label
 
       - name: 3. Setup Python
         uses: actions/setup-python@v5
