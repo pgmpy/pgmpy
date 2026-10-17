@@ -89,11 +89,11 @@ class _GraphRolesMixin:
         Raises
         ------
         ValueError
-            If variables are assigned the "latents" role in a graph class with ``SUPPORTS_LATENTS = False``.
+            If a variable is not in the graph, or variables are assigned the "latents" role in a graph class with
+            ``SUPPORTS_LATENTS = False``.
         """
-        variables = [variables] if isinstance(variables, str) else list(variables)
-        if role == "latents" and variables and not self.SUPPORTS_LATENTS:
-            raise ValueError(f"Latent variables are not supported for {type(self).__name__}.")
+        if isinstance(variables, str):
+            variables = {variables}
 
         if not inplace:
             new_graph = self.copy()
@@ -107,18 +107,14 @@ class _GraphRolesMixin:
                     raise ValueError(f"Variable '{var}' not found in the graph.")
                 else:
                     existing_role = new_graph.nodes[var].get("roles", set())
-
-                    existing_role.add(role)
-                    new_graph.add_node(var, roles=existing_role)
+                    new_graph.add_node(var, roles=existing_role | {role})
         else:
             for var in variables:
                 if var not in new_graph.graph:
                     raise ValueError(f"Variable '{var}' not found in the graph.")
                 else:
                     existing_role = new_graph.nodes[var].get("roles", set())
-
-                    existing_role.add(role)
-                    new_graph.add_node(var, roles=existing_role)
+                    new_graph.add_node(var, roles=existing_role | {role})
         if not inplace:
             return new_graph
 

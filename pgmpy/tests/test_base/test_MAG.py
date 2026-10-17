@@ -65,12 +65,14 @@ class TestMAG:
         with pytest.raises(ValueError, match="Latent variables are not supported for MAG"):
             MAG(edge_list=edges, roles={"latents": "L"})
 
-        mag = MAG(edge_list=edges)
+        mag = MAG(edge_list=edges, exposures={"X"})
         with pytest.raises(ValueError, match="Latent variables are not supported for MAG"):
             mag.latents = {"L"}
         with pytest.raises(ValueError, match="Latent variables are not supported for MAG"):
             mag.with_role(role="latents", variables="L")
-        assert mag.latents == set()
+        with pytest.raises(ValueError, match="Latent variables are not supported for MAG"):
+            mag.with_role(role="latents", variables="X", inplace=True)
+        assert mag.get_role_dict() == {"exposures": ["X"]}
 
     def test_roles_and_equality(self):
         e = [

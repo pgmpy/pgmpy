@@ -57,12 +57,14 @@ class TestADMGInitialization:
         with pytest.raises(ValueError, match="Latent variables are not supported for ADMG"):
             ADMG(edge_list=edges, roles={"latents": "L"})
 
-        admg = ADMG(edge_list=edges, latents=set())
+        admg = ADMG(edge_list=edges, exposures={"X"}, latents=set())
         with pytest.raises(ValueError, match="Latent variables are not supported for ADMG"):
             admg.latents = {"L"}
         with pytest.raises(ValueError, match="Latent variables are not supported for ADMG"):
             admg.with_role(role="latents", variables="L")
-        assert admg.latents == set()
+        with pytest.raises(ValueError, match="Latent variables are not supported for ADMG"):
+            admg.with_role(role="latents", variables="X", inplace=True)
+        assert admg.get_role_dict() == {"exposures": ["X"]}
 
 
 class TestADMGConversion:
