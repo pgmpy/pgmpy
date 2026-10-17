@@ -8,6 +8,7 @@ from .HillClimbSearch import HillClimbSearch
 from .IGCI import IGCI
 from .LLMPairwise import LLMPairwise
 from .PC import PC
+from .PCMCI import PCMCI
 from .R2Sort import R2Sort
 from .SP import SP
 from .TAN import TAN
@@ -30,4 +31,5 @@ __all__ = [
     "TAN",
     "TOPIC",
     "VarSort",
+    "PCMCI",
 ]
