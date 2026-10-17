@@ -1,4 +1,5 @@
 from .ANM import ANM
+from .BootstrapEstimator import BootstrapEstimator
 from .ChowLiu import ChowLiu
 from .ExpertInLoop import ExpertInLoop
 from .ExpertKnowledge import ExpertKnowledge
@@ -16,6 +17,7 @@ from .VarSort import VarSort
 
 __all__ = [
     "ANM",
+    "BootstrapEstimator",
     "ChowLiu",
     "ExpertInLoop",
     "ExpertKnowledge",
