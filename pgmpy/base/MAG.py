@@ -7,21 +7,15 @@ class MAG(_CoreGraph):
     """
     Class for representing Maximal Ancestral Graphs (MAGs).
 
-    A MAG is a graph used in causal inference to represent conditional independence relations when some variables are
-    latent (unobserved) or selection is present. MAGs allow directed (``"->"``), bidirected (``"<>"``), and undirected
-    (``"--"``) edges -- bidirected edges encode latent confounding and undirected edges encode selection bias. A MAG is
-    *maximal*: no edge can be added without changing the implied conditional-independence relations. Every vertex of a
-    MAG is observed: latent variables and selection are represented only through bidirected and undirected edges, so the
-    ``latents`` role cannot be assigned.
-
-    Built on :class:`~pgmpy.base._base._CoreGraph`, restricted to the directed/bidirected/undirected edge types via
-    ``SUPPORTED_EDGE_TYPES`` and ``SUPPORTS_LATENTS=False``.
+    A MAG has directed (``"->"``), bidirected (``"<>"``) and undirected (``"--"``) edges: bidirected edges encode
+    latent confounding and undirected edges encode selection bias. It is *maximal*: no edge can be added without
+    changing the implied conditional independencies. Every vertex is observed, so the ``latents`` role cannot be
+    assigned.
 
     Parameters
     ----------
     edge_list : iterable of tuples, optional
-        Edges of the form ``(u, v, edge_type)`` with ``edge_type`` one of ``"->"``, ``"<-"``,
-        ``"<>"``, ``"--"``.
+        Edges of the form ``(u, v, edge_type)`` with ``edge_type`` one of ``"->"``, ``"<-"``, ``"<>"``, ``"--"``.
 
     exposures, outcomes : set, default=set()
         Treatment / response variables (causal-analysis roles).
