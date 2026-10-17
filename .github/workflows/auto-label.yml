@@ -34,19 +34,25 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: 4. Install Dependencies
+      - name: 4. Cache GLiClass Model
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface/hub
+          key: ${{ runner.os }}-gliclass-small-v1.0-v1
+
+      - name: 5. Install Dependencies
         run: |
           python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
           python -m pip install transformers gliclass
 
-      - name: 5. Classify Issue
+      - name: 6. Classify Issue
         id: classify
         env:
           ISSUE_TITLE: ${{ steps.get-title.outputs.result }}
         run: |
           python .github/scripts/auto-label.py
 
-      - name: 6. Apply Label
+      - name: 7. Apply Label
         uses: actions/github-script@v7
         env:
           PREDICTED_LABEL: ${{ steps.classify.outputs.label }}
