@@ -24,15 +24,20 @@ jobs:
 
             return title;
 
-      - name: 2. Classify Issue
+      - name: 2. Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 3. Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 4. Classify Issue
         id: classify
         env:
           ISSUE_TITLE: ${{ steps.get-title.outputs.result }}
         run: |
-          echo "Classifying: $ISSUE_TITLE"
-
-          # TODO: Replace with classification model
-          echo "label=Bug" >> "$GITHUB_OUTPUT"
+          python script/auto-label.py
 
       - name: 3. Apply Label
         uses: actions/github-script@v7
