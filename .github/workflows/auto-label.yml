@@ -1,0 +1,16 @@
+name: Read Issue Title
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  read-issue:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Print issue title
+        run: |
+          echo "Issue title: $ISSUE_TITLE"
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
