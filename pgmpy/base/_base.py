@@ -226,7 +226,7 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
         Parameters
         ----------
         nodes_for_adding : iterable
-            Nodes or ``(node, attribute_dict)`` pairs. Hashable tuples are treated as node identifiers.
+            Node names, or ``(node, attribute_dict)`` tuples.
 
         attr : keyword arguments, optional
             Shared attributes to set or update. Per-node attributes take precedence over these shared values.
@@ -253,18 +253,12 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
         {'Y'}
         """
         nodes_for_adding = list(nodes_for_adding)
-        for node in nodes_for_adding:
-            # NetworkX interprets unhashable entries as (node, attribute_dict) pairs.
-            try:
-                hash(node)
-            except TypeError:
-                node, node_attr = node
-                attributes = attr.copy()
-                attributes.update(node_attr)
-            else:
-                attributes = attr
-            if not self.SUPPORTS_LATENTS and "latents" in attributes.get("roles", ()):
-                raise ValueError(f"Latent variables are not supported for {type(self).__name__}.")
+        if not self.SUPPORTS_LATENTS:
+            for node in nodes_for_adding:
+                is_pair = isinstance(node, tuple) and isinstance(node[1], dict)
+                node_attr = attr | node[1] if is_pair else attr
+                if "latents" in node_attr.get("roles", ()):
+                    raise ValueError(f"Latent variables are not supported for {type(self).__name__}.")
         super().add_nodes_from(nodes_for_adding, **attr)
 
     def add_edge(
