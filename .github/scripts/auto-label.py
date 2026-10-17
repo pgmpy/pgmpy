@@ -1,6 +1,6 @@
 import os
 
-from gliclass import GLiClassModel, ZeroShotClassificationPipeline
+from gliclass import GLiClassModel, ZeroShotClassificationWithChunkingPipeline
 from transformers import AutoTokenizer
 
 MODEL_ID = "knowledgator/gliclass-small-v1.0"
@@ -25,22 +25,30 @@ LABELS = [
 ]
 
 
-def classifier(title: str) -> str:
+def classifier(title: str, body: str) -> str:
     model = GLiClassModel.from_pretrained(MODEL_ID)
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
 
-    pipeline = ZeroShotClassificationPipeline(
+    chunking_pipeline = ZeroShotClassificationWithChunkingPipeline(
         model,
         tokenizer,
         classification_type="single-label",
         device="cpu",
+        text_chunk_size=8192,
+        text_chunk_overlap=256,
+        labels_chunk_size=8,
     )
 
-    return pipeline(title, LABELS)[0][0]["label"]
+    text = f"Title: {title}\n\nBody:\n{body}"
+
+    return chunking_pipeline(text, LABELS)[0][0]["label"]
 
 
 if __name__ == "__main__":
-    predicted_label = classifier(os.environ["ISSUE_TITLE"])
+    issue_title = os.environ["ISSUE_TITLE"]
+    issue_body = os.environ["ISSUE_BODY"]
+
+    predicted_label = classifier(issue_title, issue_body)
 
     print(f"Predicted Label: {predicted_label}")
 
