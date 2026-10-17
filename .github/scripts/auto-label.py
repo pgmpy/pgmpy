@@ -11,7 +11,6 @@ LABELS = [
     "Causal Discovery",
     "Causal Identification",
     "Datasets",
-    "Documentation",
     "Example Models",
     "IO",
     "Maintenance",
