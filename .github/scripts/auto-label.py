@@ -24,6 +24,13 @@ LABELS = [
     "Time Series",
 ]
 
+PROMPT = (
+    "Classify this pgmpy GitHub issue based on its title and body. "
+    "Identify the primary technical topic or software module involved. "
+    "Focus on the actual functionality being discussed rather than "
+    "For example, ChowLiu and TAN belong to Causal Discovery. "
+    "IO refers to file reading, writing, importing, exporting, and serialization, "
+)
 
 def classifier(title: str, body: str) -> str:
     model = GLiClassModel.from_pretrained(MODEL_ID)
@@ -41,7 +48,7 @@ def classifier(title: str, body: str) -> str:
 
     text = f"Title: {title}\n\nBody:\n{body}"
 
-    return chunking_pipeline(text, LABELS)[0][0]["label"]
+    return chunking_pipeline(text, LABELS, prompt=PROMPT)[0][0]["label"]
 
 
 if __name__ == "__main__":
