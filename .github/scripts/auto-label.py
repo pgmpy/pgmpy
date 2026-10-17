@@ -28,8 +28,6 @@ PROMPT = (
     "Classify this pgmpy GitHub issue based on its title and body. "
     "Identify the primary technical topic or software module involved. "
     "Focus on the actual functionality being discussed rather than "
-    "For example, ChowLiu and TAN belong to Causal Discovery. "
-    "IO refers to file reading, writing, importing, exporting, and serialization, "
 )
 
 def classifier(title: str, body: str) -> str:
