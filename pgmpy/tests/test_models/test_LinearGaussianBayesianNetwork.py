@@ -110,6 +110,21 @@ class TestLGBNMethods(unittest.TestCase):
         assert len(model.get_cpds()) == 2
         assert len(copy_model.get_cpds()) == 3
 
+        # Test roles and latents preservation and independence
+        model.with_role(role="exposure", variables="A", inplace=True)
+        copy_model = model.copy()
+        assert model.exposures == copy_model.exposures
+
+        copy_model.with_role(role="outcome", variables="C", inplace=True)
+        assert "C" not in model.get_role_dict().get("outcome", [])
+
+        model.latents = {"A"}
+        copy_model = model.copy()
+        assert copy_model.latents == {"A"}
+        assert copy_model == model
+        copy_model.latents.add("B")
+        assert "B" not in model.latents
+
     def test_to_joint_gaussian(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
         mean, cov = self.model.to_joint_gaussian()
@@ -150,7 +165,6 @@ class TestLGBNMethods(unittest.TestCase):
         np_test.assert_array_almost_equal(df_cont.cov(), df_equ.cov(), decimal=1)
 
     def test_simulate_with_evidence(self):
-
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
         evidence = {"x1": 0}
         df = self.model.simulate(n_samples=10000, seed=42, evidence=evidence)
