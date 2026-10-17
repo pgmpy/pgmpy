@@ -1,22 +1,50 @@
 import os
 
+from gliclass import GLiClassModel, ZeroShotClassificationPipeline
+from transformers import AutoTokenizer
+
+MODEL_ID = "knowledgator/gliclass-small-v1.0"
+
+LABELS = [
+    "Base Models",
+    "Bug",
+    "Causal Discovery",
+    "Causal Identification",
+    "Datasets",
+    "Documentation",
+    "Enhancement",
+    "Example Models",
+    "IO",
+    "Maintenance",
+    "Metrics",
+    "New Feature",
+    "Parameter Estimation",
+    "Performance",
+    "Probabilistic Inference",
+    "Simulations",
+    "Tests",
+    "Time Series",
+]
+
 
 def classifier(title: str) -> str:
-    # TODO: Replace with GLiClass classification model
-    return "Bug"
+    model = GLiClassModel.from_pretrained(MODEL_ID)
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
+
+    pipeline = ZeroShotClassificationPipeline(
+        model,
+        tokenizer,
+        classification_type="single-label",
+        device="cpu",
+    )
+
+    return pipeline(title, LABELS)[0][0]["label"]
 
 
 if __name__ == "__main__":
-    # Step 1. Get issue title
-    issue_title = os.environ["ISSUE_TITLE"]
-
-    print(f"Issue Title: {issue_title}")
-
-    # Step 2. Classify issue
-    predicted_label = classifier(issue_title)
+    predicted_label = classifier(os.environ["ISSUE_TITLE"])
 
     print(f"Predicted Label: {predicted_label}")
 
-    # Step 3. Return label to GitHub Actions
     with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
         f.write(f"label={predicted_label}\n")
