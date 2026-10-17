@@ -246,7 +246,7 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
         --------
         >>> from pgmpy.base import ADMG
         >>> graph = ADMG()
-        >>> graph.add_nodes_from(["X", ("Y", {"roles": {"outcomes"}})], roles={"exposures"})
+        >>> graph.add_nodes_from([("X", {"roles": {"exposures"}}), ("Y", {"roles": {"outcomes"}})])
         >>> graph.exposures
         {'X'}
         >>> graph.outcomes
