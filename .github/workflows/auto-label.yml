@@ -34,6 +34,8 @@ jobs:
       # Step 3. Checkout Repository
       - name: 3. Checkout Repository
         uses: actions/checkout@v4
+        with:
+          ref: auto-label
 
       # Step 4. Setup Python
       - name: 4. Setup Python
