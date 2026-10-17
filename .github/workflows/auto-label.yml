@@ -39,7 +39,7 @@ jobs:
         env:
           ISSUE_TITLE: ${{ steps.get-title.outputs.result }}
         run: |
-          python scripts/auto-label.py
+          python .github/scripts/auto-label.py
 
       - name: 3. Apply Label
         uses: actions/github-script@v7
