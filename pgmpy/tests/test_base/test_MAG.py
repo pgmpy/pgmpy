@@ -60,15 +60,15 @@ class TestMAG:
     def test_latents_rejected(self):
         """Every vertex of a MAG is observed; latent confounding is expressed only through `<>` edges."""
         edges = [("X", "Y", "->"), ("L", "X", "->")]
-        with pytest.raises(ValueError, match="Every vertex of a MAG is observed"):
+        with pytest.raises(ValueError, match="Latent variables are not supported for MAG"):
             MAG(edge_list=edges, latents={"L"})
-        with pytest.raises(ValueError, match="Every vertex of a MAG is observed"):
+        with pytest.raises(ValueError, match="Latent variables are not supported for MAG"):
             MAG(edge_list=edges, roles={"latents": "L"})
 
         mag = MAG(edge_list=edges)
-        with pytest.raises(ValueError, match="Every vertex of a MAG is observed"):
+        with pytest.raises(ValueError, match="Latent variables are not supported for MAG"):
             mag.latents = {"L"}
-        with pytest.raises(ValueError, match="Every vertex of a MAG is observed"):
+        with pytest.raises(ValueError, match="Latent variables are not supported for MAG"):
             mag.with_role(role="latents", variables="L")
         assert mag.latents == set()
 

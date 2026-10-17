@@ -212,11 +212,7 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
         {'X'}
         """
         if not self.SUPPORTS_LATENTS and "latents" in attr.get("roles", ()):
-            raise ValueError(
-                f"Every vertex of a {type(self).__name__} is observed; latent variables are represented by its "
-                "edges, so the 'latents' role cannot be assigned. Use DAG.to_admg() to project the latent "
-                "variables of a DAG into bidirected edges."
-            )
+            raise ValueError(f"Latent variables are not supported for {type(self).__name__}.")
         super().add_node(node_for_adding, **attr)
 
     def add_nodes_from(
@@ -268,11 +264,7 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
             else:
                 attributes = attr
             if not self.SUPPORTS_LATENTS and "latents" in attributes.get("roles", ()):
-                raise ValueError(
-                    f"Every vertex of a {type(self).__name__} is observed; latent variables are represented by its "
-                    "edges, so the 'latents' role cannot be assigned. Use DAG.to_admg() to project the latent "
-                    "variables of a DAG into bidirected edges."
-                )
+                raise ValueError(f"Latent variables are not supported for {type(self).__name__}.")
         super().add_nodes_from(nodes_for_adding, **attr)
 
     def add_edge(

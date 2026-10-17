@@ -7,10 +7,7 @@ __all__ = ["_GraphRolesMixin"]
 
 
 class _GraphRolesMixin:
-    """Mixin class for handling roles in a causal graph.
-
-    Graph classes use ``SUPPORTS_LATENTS`` to control whether nodes can be assigned the ``latents`` role.
-    """
+    """Mixin class for handling roles in a causal graph."""
 
     def get_role(self, role: str):
         """Return list of nodes in graph G with a specific role.
@@ -94,17 +91,9 @@ class _GraphRolesMixin:
         ValueError
             If variables are assigned the "latents" role in a graph class with ``SUPPORTS_LATENTS = False``.
         """
-        if isinstance(variables, str):
-            variables = {variables}
-
-        if role == "latents" and not self.SUPPORTS_LATENTS:
-            variables = list(variables)
-            if variables:
-                raise ValueError(
-                    f"Every vertex of a {type(self).__name__} is observed; latent variables are represented by its "
-                    "edges, so the 'latents' role cannot be assigned. Use DAG.to_admg() to project the latent "
-                    "variables of a DAG into bidirected edges."
-                )
+        variables = [variables] if isinstance(variables, str) else list(variables)
+        if role == "latents" and variables and not self.SUPPORTS_LATENTS:
+            raise ValueError(f"Latent variables are not supported for {type(self).__name__}.")
 
         if not inplace:
             new_graph = self.copy()

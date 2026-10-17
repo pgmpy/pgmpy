@@ -52,15 +52,15 @@ class TestADMGInitialization:
     def test_latents_rejected(self):
         """Every vertex of an ADMG is observed; latent confounding is expressed only through `<>` edges."""
         edges = [("X", "Y", "->"), ("L", "X", "->")]
-        with pytest.raises(ValueError, match="DAG.to_admg"):
+        with pytest.raises(ValueError, match="Latent variables are not supported for ADMG"):
             ADMG(edge_list=edges, latents={"L"})
-        with pytest.raises(ValueError, match="DAG.to_admg"):
+        with pytest.raises(ValueError, match="Latent variables are not supported for ADMG"):
             ADMG(edge_list=edges, roles={"latents": "L"})
 
         admg = ADMG(edge_list=edges, latents=set())
-        with pytest.raises(ValueError, match="DAG.to_admg"):
+        with pytest.raises(ValueError, match="Latent variables are not supported for ADMG"):
             admg.latents = {"L"}
-        with pytest.raises(ValueError, match="DAG.to_admg"):
+        with pytest.raises(ValueError, match="Latent variables are not supported for ADMG"):
             admg.with_role(role="latents", variables="L")
         assert admg.latents == set()
 

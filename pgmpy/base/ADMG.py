@@ -90,22 +90,16 @@ class ADMG(_CoreGraph):
         """
         from pgmpy.base import DAG
 
-        dag = DAG()
+        dag = DAG(self.get_directed_graph().edges())
         dag.add_nodes_from(self.nodes())
-        dag.add_edges_from(self.get_directed_graph().edges())
-        latents = set()
         for u, v in self.get_edges(data=False, edge_types={"<>"}):
             u, v = sorted((u, v), key=str)
             latent = f"{latent_prefix}_{u}_{v}"
             if latent in dag:
-                raise ValueError(
-                    f"Cannot add '{latent}' as the latent parent of {u} <> {v}: it is already a node of the graph. "
-                    "Use a different `latent_prefix`."
-                )
+                raise ValueError(f"Node '{latent}' already exists. Use a different `latent_prefix`.")
             dag.add_edges_from([(latent, u), (latent, v)])
-            latents.add(latent)
+            dag.with_role(role="latents", variables=latent, inplace=True)
 
-        dag.latents = latents
         for role, variables in self.get_role_dict().items():
             dag.with_role(role=role, variables=variables, inplace=True)
         return dag

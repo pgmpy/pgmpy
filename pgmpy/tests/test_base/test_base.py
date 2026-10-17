@@ -243,7 +243,7 @@ class TestCoreGraph:
     @pytest.mark.parametrize("graph_cls", [ADMG, MAG])
     def test_node_insertion_without_latents(self, graph_cls):
         graph = graph_cls()
-        with pytest.raises(ValueError, match="the 'latents' role cannot be assigned"):
+        with pytest.raises(ValueError, match="Latent variables are not supported"):
             graph.add_node("L", roles={"latents"})
         assert not graph.nodes
 
@@ -251,7 +251,7 @@ class TestCoreGraph:
         graph.add_node("X", color="blue")
         expected = {"roles": {"exposures"}, "label": "original", "color": "blue"}
         assert graph.nodes["X"] == expected
-        with pytest.raises(ValueError, match="the 'latents' role cannot be assigned"):
+        with pytest.raises(ValueError, match="Latent variables are not supported"):
             graph.add_node("X", roles={"latents"}, color="red")
         assert graph.nodes["X"] == expected
         for nodes, attributes in [
@@ -259,7 +259,7 @@ class TestCoreGraph:
             ([("X", {"color": "red"}), ("L", {"roles": {"latents"}})], {}),
             ([("X", {"roles": {"latents"}})], {"roles": {"exposures"}}),
         ]:
-            with pytest.raises(ValueError, match="the 'latents' role cannot be assigned"):
+            with pytest.raises(ValueError, match="Latent variables are not supported"):
                 graph.add_nodes_from(iter(nodes), **attributes)
             assert dict(graph.nodes(data=True)) == {"X": expected}
         assert graph.latents == set()
