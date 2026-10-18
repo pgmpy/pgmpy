@@ -1,4 +1,4 @@
-from pgmpy.causal_discovery._pcmci import _BasePCMCI
+from pgmpy.causal_discovery._base_pcmpi import _BasePCMCI
 
 
 class PCMCI(_BasePCMCI):
