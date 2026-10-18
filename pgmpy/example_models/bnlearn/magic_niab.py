@@ -5,7 +5,7 @@ class MagicNIAB(ContinuousMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`opgenrhein_strimmer_2007`
+    - :footcite:t:`opgenrhein_strimmer_2007`
     """
 
     _tags = {

@@ -21,6 +21,16 @@ Bayesian Network Formats
    ~pgmpy.readwrite.XBNReader
    ~pgmpy.readwrite.XBNWriter
 
+Linear Gaussian Bayesian Network Formats
+----------------------------------------
+
+.. autosummary::
+   :toctree: generated/readwrite
+   :template: autosummary/class.rst
+
+   ~pgmpy.readwrite.LGBNJSONReader
+   ~pgmpy.readwrite.LGBNJSONWriter
+
 Other Supported Formats
 -----------------------
 

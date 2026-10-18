@@ -5,7 +5,7 @@ class Superconductivity(BaseDataset):
     """
     References
     ----------
-    - :cite:p:`uci_superconductivity`
+    - :footcite:t:`uci_superconductivity`
     """
 
     _tags = {

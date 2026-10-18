@@ -1,3 +1,5 @@
+We are currently experimenting with doing **only** live PR reviews. To get feedback/review on this PR please join one of our PR review events on Discord. 
+
 **The following checklist is mandatory**
 
 Your PR will be closed if you remove the checklist. Use of LLMs is **strictly forbidden** for any part of this checklist (including for improving language), and will result in a **ban** if we find any use of LLMs.

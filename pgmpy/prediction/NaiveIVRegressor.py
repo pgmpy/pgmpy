@@ -161,8 +161,7 @@ class NaiveIVRegressor(BaseCausalPrediction):
 
     References
     ----------
-    .. [1] “Instrumental Variables Estimation.”
-           Wikipedia: https://en.wikipedia.org/wiki/Instrumental_variables_estimation
+    - :footcite:t:`instrumental_variables_estimation`
     """
 
     def __init__(

@@ -5,7 +5,7 @@ class ContraceptiveMethod(BaseDataset):
     """
     References
     ----------
-    - :cite:p:`uci_contraceptive_method`
+    - :footcite:t:`uci_contraceptive_method`
     """
 
     _tags = {

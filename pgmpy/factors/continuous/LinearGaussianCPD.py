@@ -30,7 +30,7 @@ class LinearGaussianCPD(BaseFactor):
 
     References
     ----------
-    - :cite:p:`srihari_gaussian_bn`
+    - :footcite:t:`srihari_gaussian_bn`
 
     Parameters
     ----------

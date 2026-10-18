@@ -71,16 +71,17 @@ class PillaiTrace(_ResidualMixin, BaseCITest):
 
     References
     ----------
-    - :cite:p:`ankan_textor_2023`
-    - :cite:p:`li_shepherd_2010`
-    - :cite:p:`muller_peterson_1984`
+    - :footcite:t:`ankan_textor_2023`
+    - :footcite:t:`li_shepherd_2010`
+    - :footcite:t:`muller_peterson_1984`
     """
 
     _tags = {
         "name": "pillai",
-        "data_types": ("discrete", "continuous", "mixed"),
+        "data_types": ["discrete", "continuous", "mixed"],
         "default_for": "mixed",
         "requires_data": True,
+        "capability:conditioning": True,
     }
 
     def __init__(self, data: pd.DataFrame, estimator=None, use_cache: bool = True):

@@ -67,19 +67,16 @@ class GeneralizedCov(_ResidualMixin, BaseCITest):
 
     References
     ----------
-    .. [1] Ankan, Ankur, and Johannes Textor. "A simple unified approach to testing
-           high-dimensional conditional independences for categorical and ordinal data."
-           Proceedings of the AAAI Conference on Artificial Intelligence.
-    .. [2] Phipson, B. and Smyth, G. K. (2010). Permutation p-values should never be zero:
-           calculating exact p-values when permutations are randomly drawn. Statistical
-           Applications in Genetics and Molecular Biology, 9(1).
+    - :footcite:t:`ankan_textor_2023`
+    - :footcite:t:`phipson_smyth_2010`
     """
 
     _tags = {
         "name": "generalized_cov",
-        "data_types": ("discrete", "continuous", "mixed"),
+        "data_types": ["discrete", "continuous", "mixed"],
         "default_for": None,
         "requires_data": True,
+        "capability:conditioning": True,
     }
 
     def __init__(

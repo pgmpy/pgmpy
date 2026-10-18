@@ -34,6 +34,7 @@ ALL_DATASETS = [
     "myocardial_infarction",
     "pima_diabetes",
     "pittsburgh_bridges",
+    "population_threshold_rdd_italy",
     "residential_building",
     "sachs_continuous",
     "sachs_continuous_jittered",
@@ -157,6 +158,25 @@ def test_tubingen_invalid_format():
         load_dataset("tubingen/abc")
     with pytest.raises(ValueError):
         load_dataset("tubingen/999")
+
+
+def test_population_threshold_rdd_italy_tags():
+    from pgmpy.datasets.population_threshold_rdd import PopulationThresholdRDDItaly
+
+    assert "population_threshold_rdd_italy" in list_datasets()
+    assert "population_threshold_rdd_italy" in list_datasets(is_mixed=True)
+    assert "population_threshold_rdd_italy" not in list_datasets(is_continuous=True)
+
+    tags = PopulationThresholdRDDItaly.get_class_tags()
+    assert tags["name"] == "population_threshold_rdd_italy"
+    assert tags["n_samples"] == 10409
+    assert tags["n_variables"] == 19
+    assert tags["has_missing_data"] is True
+    assert tags["is_mixed"] is True
+    assert tags["has_ground_truth"] is False
+    assert tags["is_simulated"] is False
+    assert PopulationThresholdRDDItaly.categorical_variables == ["macro_area"]
+    assert PopulationThresholdRDDItaly.missing_values_marker == "NA"
 
 
 def test_invalid_input():

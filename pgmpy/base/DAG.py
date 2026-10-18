@@ -3,6 +3,7 @@ from __future__ import annotations
 import itertools
 from collections.abc import Hashable, Iterable, Sequence
 from os import PathLike
+from typing import TYPE_CHECKING
 
 import networkx as nx
 import numpy as np
@@ -10,9 +11,13 @@ import pandas as pd
 
 from pgmpy import logger
 from pgmpy.base._mixin_roles import _GraphRolesMixin
-from pgmpy.ci_tests import get_ci_test
+from pgmpy.ci_tests import BaseCITest, get_ci_test
 from pgmpy.independencies import Independencies
+from pgmpy.utils._warnings import _warn_external
 from pgmpy.utils.parser import parse_dagitty, parse_lavaan
+
+if TYPE_CHECKING:
+    from pgmpy.base import ADMG
 
 
 class DAG(_GraphRolesMixin, nx.DiGraph):
@@ -164,6 +169,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
     ['U', 'Z']
     """
 
+    SUPPORTS_LATENTS = True
+
     def __init__(
         self,
         ebunch: Iterable[tuple[Hashable, Hashable]] | None = None,
@@ -226,6 +233,11 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         filename: str (default: None)
             The filename of the file containing the model in lavaan syntax.
 
+        Warns
+        -----
+        UserWarning
+            If residual correlations are ignored when constructing the DAG.
+
         Examples
         --------
         """
@@ -238,7 +250,10 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             raise ValueError("Either `filename` or `string` need to be specified")
         ebunch, latents, err_corr, _ = parse_lavaan(lavaan_str)
         if err_corr:
-            logger.warning(f"Residual correlations {err_corr} are ignored in DAG. Use the SEM class to keep them.")
+            _warn_external(
+                f"Residual correlations {err_corr} are ignored in DAG. Use the SEM class to keep them.",
+                UserWarning,
+            )
         return cls(ebunch=ebunch, latents=latents)
 
     @classmethod
@@ -382,7 +397,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         will be automatically added. Node names can be any hashable python
         object.
 
-        **The behavior of adding weights is different than networkx.
+        **The behavior of adding weights is different than networkx.**
 
         Parameters
         ----------
@@ -682,7 +697,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         model : A DAG object, for which you want to check I-equivalence
 
         Returns
-        --------
+        -------
         I-equivalence: boolean
             True if both are I-equivalent, False otherwise
 
@@ -717,7 +732,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             A set of all the immoralities in the model
 
         Examples
-        ---------
+        --------
         >>> from pgmpy.base import DAG
         >>> student = DAG()
         >>> student.add_edges_from(
@@ -810,7 +825,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         References
         ----------
-        - :cite:p:`tian_paz_pearl_1998` (Algorithm 4, page 10).
+        - :footcite:t:`tian_paz_pearl_1998` (Algorithm 4, page 10).
         """
         if (end in self.neighbors(start)) or (start in self.neighbors(end)):
             raise ValueError("No possible separators because start and end are adjacent")
@@ -918,7 +933,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         References
         ----------
-        - :cite:p:`koller_friedman_2009` (page 75, Algorithm 3.1).
+        - :footcite:t:`koller_friedman_2009` (page 75, Algorithm 3.1).
         """
         observed_list: list[Hashable] | tuple[Hashable, Hashable]
         if observed:
@@ -1018,7 +1033,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         References
         ----------
-        - :cite:p:`chickering_2002a` (Figures 4 and 5).
+        - :footcite:t:`chickering_2002a` (Figures 4 and 5).
         """
         # Perform a topological sort on the nodes
         topo_order = list(nx.topological_sort(self))
@@ -1104,6 +1119,73 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         pdag.add_nodes_from(self.nodes())
         return pdag
 
+    def to_admg(self) -> ADMG:
+        """
+        Returns the latent projection of the DAG onto its observed variables, as an ADMG.
+
+        Every vertex of an ADMG is observed, so the latent variables of the DAG are marginalized out and their
+        effects are carried by the edges between the observed variables. For observed variables ``X`` and ``Y``,
+        the projection has:
+
+        - a directed edge ``X -> Y`` if the DAG has a directed path from ``X`` to ``Y`` whose intermediate nodes
+          are all latent, and
+        - a bidirected edge ``X <> Y`` if some latent variable has directed paths to both ``X`` and ``Y`` whose
+          intermediate nodes are all latent, i.e. ``X`` and ``Y`` share a latent common cause.
+
+        The projection preserves the d-separation relations among the observed variables, which the ADMG represents as
+        m-separation. The roles of the observed variables are kept.
+
+        Returns
+        -------
+        pgmpy.base.ADMG
+            The latent projection over the observed variables.
+
+        See Also
+        --------
+        pgmpy.base.ADMG.to_dag : The reverse conversion, replacing each bidirected edge with a latent parent.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> dag = DAG([("U", "X"), ("U", "Y"), ("X", "M"), ("M", "Y")], latents={"U"})
+        >>> admg = dag.to_admg()
+        >>> sorted(admg.get_edges(data=True))
+        [('M', 'Y', '->'), ('X', 'M', '->'), ('X', 'Y', '<>')]
+
+        References
+        ----------
+        - :footcite:t:`richardson_2003`
+        """
+        from pgmpy.base import ADMG
+
+        latents = self.latents
+        admg = ADMG()
+        admg.add_nodes_from(node for node in self.nodes() if node not in latents)
+        for source in self.nodes():
+            # Observed nodes reachable from `source` by a directed path whose intermediate nodes are all latent.
+            reached, visited, stack = [], set(), list(self.successors(source))
+            while stack:
+                node = stack.pop()
+                if node in visited:
+                    continue
+                visited.add(node)
+                if node in latents:
+                    stack.extend(self.successors(node))
+                else:
+                    reached.append(node)
+
+            if source in latents:
+                for u, v in itertools.combinations(reached, 2):
+                    if not admg.has_edge(u, v, "<>"):
+                        admg.add_edge(u, v, "<>")
+            else:
+                admg.add_edges_from([(source, v, "->") for v in reached])
+
+        # Roles on latent nodes, including the latents role itself, are dropped.
+        for role, variables in self.get_role_dict().items():
+            admg.with_role(role=role, variables=[node for node in variables if node not in latents], inplace=True)
+        return admg
+
     def to_adjacency(self, encoding: str = "edge_type", nodelist: list | None = None) -> pd.DataFrame:
         """
         Return the adjacency matrix of the DAG as a ``pandas.DataFrame``.
@@ -1140,11 +1222,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             f"got {encoding!r}. Other encodings become available once DAG inherits _CoreGraph."
         )
 
-    def do(
-        self,
-        nodes: Hashable | Iterable[Hashable] | tuple[Hashable, Hashable],
-        inplace=False,
-    ):
+    def do(self, nodes: Hashable | Iterable[Hashable], inplace: bool = False):
         """
         Applies the do operator to the graph and returns a new DAG with the
         transformed graph.
@@ -1154,8 +1232,9 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         Parameters
         ----------
-        nodes : list, array-like
-            The names of the nodes to apply the do-operator for.
+        nodes : Hashable or iterable of Hashable
+            The variable(s) to intervene on; all must be present in the graph. A ``str``, ``int``
+            or ``tuple`` is one node; a list, set or frozenset is a collection.
 
         inplace: boolean (default: False)
             If inplace=True, makes the changes to the current object,
@@ -1164,7 +1243,12 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         Returns
         -------
         Modified DAG: pgmpy.base.DAG
-            A new instance of DAG modified by the do-operator
+            The post-intervention graph: `self` if `inplace=True`, otherwise a modified copy.
+
+        Raises
+        ------
+        ValueError
+            If any node is not present in the graph.
 
         Examples
         --------
@@ -1180,21 +1264,15 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         References
         ----------
-        - :cite:p:`pearl_2009` (page 70).
+        - :footcite:t:`pearl_2009` (page 70).
         """
+        nodes = list(nodes) if isinstance(nodes, (list, set, frozenset)) else [nodes]
+        if missing := (set(nodes) - set(self.nodes())):
+            raise ValueError(f"Nodes not found in the model: {missing}")
+
         dag = self if inplace else self.copy()
-
-        if isinstance(nodes, (str, int)):
-            nodes = [nodes]
-        else:
-            nodes = list(nodes)
-
-        if not set(nodes).issubset(set(self.nodes())):
-            raise ValueError(f"Nodes not found in the model: {set(nodes) - set(self.nodes())}")
-
         for node in nodes:
-            parents = list(dag.predecessors(node))
-            for parent in parents:
+            for parent in list(dag.predecessors(node)):
                 dag.remove_edge(parent, node)
         return dag
 
@@ -1459,7 +1537,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         if n_edges is None and edge_prob is None:
             edge_prob = 0.5
-            logger.info("Using default edge_prob=0.5 since neither n_edges nor edge_prob were specified.")
+            logger.debug("Using default edge_prob=0.5 since neither n_edges nor edge_prob were specified.")
 
         shuffled_names = list(node_names)
         gen.shuffle(shuffled_names)
@@ -1706,7 +1784,12 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             and self.get_role_dict() == other.get_role_dict()
         )
 
-    def edge_strength(self, data, edges=None, ci_test=None):
+    def edge_strength(
+        self,
+        data: pd.DataFrame,
+        edges: tuple[Hashable, Hashable] | list[tuple[Hashable, Hashable]] | None = None,
+        ci_test: str | BaseCITest | None = None,
+    ) -> dict[tuple[Hashable, Hashable], float | None]:
         """
         Computes the strength of each edge in `edges`. The strength is bounded
         between 0 and 1, with 1 signifying strong effect.
@@ -1743,6 +1826,13 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         dict
             Dictionary mapping edges to their strength values.
 
+        Warns
+        -----
+        UserWarning
+            If requested edges are skipped because an endpoint or a parent of
+            the target is latent. Only strengths for the remaining requested
+            edges are returned.
+
         Examples
         --------
         >>> from pgmpy.models import LinearGaussianBayesianNetwork as LGBN
@@ -1773,7 +1863,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
         References
         ----------
-        - :cite:p:`ankan_textor_2023`
+        - :footcite:t:`ankan_textor_2023`
         """
 
         # If edges is None, compute for all edges in the DAG
@@ -1819,9 +1909,11 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             self.edges[edge]["strength"] = ci_test.effect_size_
 
         if skipped_edges:
-            logger.warning(
-                f"Skipped computing strengths for edges involving latent variables: {skipped_edges}. "
-                "Use CausalInference class for advanced causal effect estimation."
+            _warn_external(
+                "Skipped computing strengths for edges with a latent endpoint "
+                f"or a latent parent of the target: {skipped_edges}. "
+                "Returning strengths only for the remaining requested edges.",
+                UserWarning,
             )
 
         return strengths

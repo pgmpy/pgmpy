@@ -1,6 +1,7 @@
 import warnings
 from collections import OrderedDict
 from shutil import get_terminal_size
+from unittest.mock import patch
 
 import numpy as np
 import numpy.testing as np_test
@@ -3165,6 +3166,27 @@ class TestTabularCPDMethods:
 
         with pytest.raises(ValueError):
             TabularCPD.get_uniform(variable="A", evidence=["B", "C"], cardinality={"A": 2, "B": 3})
+
+    def test_vertical_truncation(self):
+        # Large CPD: truncation triggered
+        cpd_large = TabularCPD("X", 30, np.ones((30, 1)) / 30)
+        with patch("pgmpy.factors.discrete.CPD.get_terminal_size", return_value=(200, 20)):
+            table_str = str(cpd_large)
+        lines = table_str.split("\n")
+        assert len(lines) < 61
+        sep_idx = next(i for i, line in enumerate(lines) if all(c == "." for c in line))
+        assert lines[sep_idx - 1].startswith("+")
+        assert lines[sep_idx + 1].startswith("+")
+        assert any("X(0)" in line for line in lines)
+        assert any("X(29)" in line for line in lines)
+
+        # Small CPD: no truncation
+        cpd_small = TabularCPD("X", 3, np.ones((3, 1)) / 3)
+        with patch("pgmpy.factors.discrete.CPD.get_terminal_size", return_value=(200, 50)):
+            table_str = str(cpd_small)
+        lines = table_str.split("\n")
+        assert len(lines) == 7
+        assert not any(all(c == "." for c in line) for line in lines)
 
     def teardown_method(self):
         del self.cpd

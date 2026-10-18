@@ -2,8 +2,9 @@ from itertools import chain, combinations, permutations
 
 from sklearn.base import BaseEstimator
 
-from pgmpy import logger
+from pgmpy.base import PDAG
 from pgmpy.ci_tests import get_ci_test
+from pgmpy.utils._warnings import _warn_external
 
 
 class ExpertKnowledge(BaseEstimator):
@@ -38,6 +39,9 @@ class ExpertKnowledge(BaseEstimator):
             the form: [(variables at the root / 1st temporal order), (variables at 2nd temporal order), ... (leaf nodes
             / last temporal order)].
 
+    root_nodes: iterator (default: None)
+        The set of root nodes in the causal graph. Root nodes can not have an incoming edge to them.
+
     ci_test: str | BaseCITest | callable (default: None)
             Conditional independence test used when ``search_space`` is a screening strategy. If ``None``, the default
             test for the data type is auto-detected (e.g. chi-square for discrete, Pearson for continuous). Ignored when
@@ -45,6 +49,22 @@ class ExpertKnowledge(BaseEstimator):
 
     significance_level: float (default: 0.05)
             Significance threshold for the screening test. Used only when ``search_space`` is a screening strategy.
+
+
+    Attributes
+    ----------
+    forbidden_edges_ : set
+        Directed edges that must be absent: the union of the user-specified forbidden edges, the temporal-order
+        complement (any edge from a later tier to an earlier tier), and the complement of the search space.
+
+    required_edges_ : set
+        Directed edges that must be present.
+
+    search_space_ : set
+        The resolved search space: the explicit whitelist, or the screened marginally-dependent pairs.
+
+    temporal_ordering_ : dict
+        Mapping from each variable to its temporal tier.
 
     Notes
     -----
@@ -96,6 +116,7 @@ class ExpertKnowledge(BaseEstimator):
         forbidden_edges=None,
         required_edges=None,
         temporal_order=None,
+        root_nodes=None,
         search_space=None,
         ci_test=None,
         significance_level=0.05,
@@ -103,15 +124,15 @@ class ExpertKnowledge(BaseEstimator):
     ):
         self.forbidden_edges = forbidden_edges if forbidden_edges is not None else set()
         self.required_edges = required_edges if required_edges is not None else set()
-
+        self.root_nodes = root_nodes if root_nodes is not None else set()
         self.search_space = search_space if search_space is not None else set()
         self.ci_test = ci_test
         self.significance_level = significance_level
+
         if not (0 < significance_level < 1):
             raise ValueError("significance_level must be between 0 and 1.")
 
         self.temporal_order = temporal_order
-        self.temporal_ordering = self._get_temporal_ordering(self.temporal_order)
 
     def __repr__(self):
         # Calculate total number of nodes in temporal order
@@ -226,25 +247,20 @@ class ExpertKnowledge(BaseEstimator):
         -------
         self : ExpertKnowledge
             The instance with the fitted attributes set.
-
-        Attributes
-        ----------
-        forbidden_edges_ : set
-            Directed edges that must be absent: the union of the user-specified forbidden edges, the temporal-order
-            complement (any edge from a later tier to an earlier tier), and the complement of the search space.
-
-        required_edges_ : set
-            Directed edges that must be present.
-
-        search_space_ : set
-            The resolved search space: the explicit whitelist, or the screened marginally-dependent pairs.
-
-        temporal_ordering_ : dict
-            Mapping from each variable to its temporal tier.
         """
         # Step 1: `data` is required only for the resolutions that depend on it (screening, search-space complement).
-        if data is None and self.search_space:
-            raise ValueError("`data` is required to fit when `search_space` is specified.")
+        if data is None:
+            if self.search_space:
+                raise ValueError("`data` is required to fit when `search_space` is specified.")
+            elif self.root_nodes:
+                raise ValueError("`data` is required to fit when `root_nodes` is specified.")
+        else:
+            data_columns = set(data.columns)
+            if not isinstance(self.search_space, str):
+                if not set(chain(*self.search_space)).issubset(data_columns):
+                    raise ValueError("Some of the variables specified in `search_space` are not present in the `data`")
+            if not set(self.root_nodes).issubset(data_columns):
+                raise ValueError("Some of the variables specified in `root_nodes` are not present in the `data`")
 
         # Step 2: Validate the temporal order (if given) covers exactly the data's variables.
         if self.temporal_order is not None:
@@ -255,7 +271,7 @@ class ExpertKnowledge(BaseEstimator):
                 raise ValueError(f"Missing nodes in temporal order - {missing}")
 
         # Step 3: Resolve the attributes taken directly from the declared knowledge.
-        self.temporal_ordering_ = dict(self.temporal_ordering)
+        self.temporal_ordering_ = self._get_temporal_ordering(self.temporal_order)
         self.required_edges_ = set(self.required_edges)
 
         # Step 4: Resolve the search space (explicit whitelist or screening strategy) without mutating the inputs.
@@ -273,19 +289,30 @@ class ExpertKnowledge(BaseEstimator):
         #         + temporal complement (any edge from a later tier to an earlier tier)
         #         + search-space complement (all pairs outside search_space_, when a search space is given).
         forbidden = set(self.forbidden_edges)
+
         if self.temporal_order is not None:
             for tier in range(1, len(self.temporal_order)):
                 for node in self.temporal_order[tier]:
                     for lower_tier in range(tier):
                         for lower_node in self.temporal_order[lower_tier]:
                             forbidden.add((node, lower_node))
+
         if data is not None and self.search_space:
             forbidden |= set(permutations(data.columns, 2)) - self.search_space_
+
+        # Step 6: Add forbidden incoming edges for declared root nodes
+        #         so that root nodes cannot have parents in the learned graph.
+        if data is not None and self.root_nodes:
+            for root in self.root_nodes:
+                for node in data.columns:
+                    if node != root:
+                        forbidden.add((node, root))
+
         self.forbidden_edges_ = forbidden
 
         return self
 
-    def apply_to(self, graph):
+    def apply_to(self, graph: PDAG) -> PDAG:
         """
         Orient the edges of ``graph`` according to the fitted expert knowledge.
 
@@ -293,7 +320,7 @@ class ExpertKnowledge(BaseEstimator):
         :meth:`fit`) to orient still-undirected edges of ``graph`` in place.
         Required edges ``(u, v)`` are oriented ``u -> v``; forbidden edges ``(u, v)`` are
         oriented away from the forbidden direction (``v -> u``). Edges that already
-        conflict with the learned structure are left unchanged and a warning is logged.
+        conflict with the learned structure are left unchanged and a warning is reported.
 
         This method does not mutate the expert knowledge object; temporal constraints are
         already resolved into ``forbidden_edges_`` by :meth:`fit`.
@@ -308,26 +335,36 @@ class ExpertKnowledge(BaseEstimator):
         graph : pgmpy.base.PDAG
             The same graph instance, after edge orientation.
 
+        Warns
+        -----
+        UserWarning
+            If a forbidden directed edge is already present, or a required edge
+            is absent or oppositely oriented. The conflicting constraint is not
+            enforced; the graph is not modified for that constraint.
+
         References
         ----------
-        - :cite:p:`ankan_textor_2023`
+        - :footcite:t:`ankan_textor_2023`
         """
         for u, v in self.forbidden_edges_:
             if graph.has_edge(u, v, "--"):
                 graph.orient_undirected_edge(v, u, inplace=True)
             elif graph.has_edge(u, v, "->"):
-                logger.warning(
-                    f"Specified expert knowledge conflicts with learned structure. "
-                    f"Ignoring edge {u}->{v} from forbidden edges."
+                _warn_external(
+                    f"Forbidden edge {u}->{v} is present in the learned structure. "
+                    "The forbidden-edge constraint is not enforced; the edge is left unchanged.",
+                    UserWarning,
                 )
 
         for u, v in self.required_edges_:
             if graph.has_edge(u, v, "--"):
                 graph.orient_undirected_edge(u, v, inplace=True)
             elif graph.has_edge(u, v, "->") is False:
-                logger.warning(
-                    f"Specified expert knowledge conflicts with learned structure. "
-                    f"Ignoring edge {u}->{v} from required edges"
+                _warn_external(
+                    f"Required edge {u}->{v} is absent or oppositely oriented in the learned structure. "
+                    "The required-edge constraint is not enforced; "
+                    "no edge is added or reoriented for this constraint.",
+                    UserWarning,
                 )
 
         return graph

@@ -1,7 +1,8 @@
 # Plotting Models
 
-```{meta}
-:description: Visualize pgmpy graphs with Graphviz, daft, or networkx drawing tools.
+```{eval-rst}
+.. meta::
+   :description: Visualize pgmpy graphs with Graphviz, daft, or networkx drawing tools.
 ```
 
 pgmpy provides built-in plotting helpers for visualizing graph structures. These work

@@ -65,8 +65,7 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
 
     References
     ----------
-    .. [1] Friedman N, Geiger D and Goldszmidt M (1997). Bayesian network
-       classifiers. Machine Learning 29: 131–163
+    - :footcite:t:`friedman_geiger_goldszmidt_1997`
 
     Examples
     --------
@@ -104,6 +103,23 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
     ... )
     >>> plt.show()
     """
+
+    _tags = {
+        "name": "tan",
+        "data_types": ["discrete"],
+        "identifiable_graph": "cpdag",
+        "requires_target": True,
+        "capability:multivariate": True,
+        "capability:expert_knowledge": [],
+        "assumption:causal_sufficiency": True,
+        "assumption:acyclicity": True,
+        "assumption:faithfulness": False,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
+    }
 
     def __init__(
         self,

@@ -1,3 +1,5 @@
+from collections.abc import Hashable
+
 import numpy as np
 
 from pgmpy.structure_score.log_likelihood_cond_gauss import LogLikelihoodCondGauss
@@ -49,17 +51,16 @@ class BICCondGauss(LogLikelihoodCondGauss):
 
     References
     ----------
-    - :cite:p:`andrews_ramsey_cooper_2018`
+    - :footcite:t:`andrews_ramsey_cooper_2018`
     """
 
     _tags = {
         "name": "bic-cg",
-        "supported_datatype": "mixed",
+        "data_types": ["discrete", "continuous", "mixed"],
         "default_for": "mixed",
-        "is_parameteric": False,
     }
 
-    def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
+    def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         ll = self._log_likelihood(variable=variable, parents=parents)
         k = self._get_num_parameters(variable=variable, parents=parents)
 

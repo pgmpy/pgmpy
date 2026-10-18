@@ -16,7 +16,7 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
     """
     Score-based causal discovery using Greedy Equivalence Search (GES).
 
-    This class implements the GES algorithm [1]_ for causal discovery. Given a
+    This class implements the GES algorithm [1] for causal discovery. Given a
     tabular dataset, the algorithm estimates the causal structure among the
     variables in the data as a Directed Acyclic Graph (DAG) or Partially
     Directed Acyclic Graph (PDAG).
@@ -55,6 +55,9 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
     adjacency_matrix_ : pd.DataFrame
         Adjacency matrix representation of the learned causal graph.
 
+    scoring_method_ : BaseStructureScore
+        The structure score used for learning, resolved from ``scoring_method``.
+
     n_features_in_ : int
         The number of features in the data used to learn the causal graph.
 
@@ -84,9 +87,26 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
 
     References
     ----------
-    - :cite:p:`chickering_2002b`
+    - :footcite:t:`chickering_2002b`
     - https://github.com/juangamella/ges
     """
+
+    _tags = {
+        "name": "ges",
+        "data_types": ["discrete", "continuous", "mixed"],
+        "identifiable_graph": "cpdag",
+        "requires_target": False,
+        "capability:multivariate": True,
+        "capability:expert_knowledge": [],
+        "assumption:causal_sufficiency": True,
+        "assumption:acyclicity": True,
+        "assumption:faithfulness": True,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
+    }
 
     def __init__(
         self,
@@ -258,8 +278,8 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
 
         # Step 1: Initial checks and setup for arguments
         # Step 1.1: Check score
-        score = get_scoring_method(self.scoring_method, X)
-        score_fn = score.local_score
+        self.scoring_method_ = get_scoring_method(self.scoring_method, X)
+        score_fn = self.scoring_method_.local_score
 
         # Step 1.2: Initialize the starting PDAG
         current_model = PDAG()

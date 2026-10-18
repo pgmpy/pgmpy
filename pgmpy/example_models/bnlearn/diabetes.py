@@ -5,7 +5,7 @@ class Diabetes(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`andreassen_1991`
+    - :footcite:t:`andreassen_1991`
     """
 
     _tags = {

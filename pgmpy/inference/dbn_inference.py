@@ -64,7 +64,7 @@ class DBNInference(Inference):
 
     References
     ----------
-    - :cite:p:`murphy_2002`
+    - :footcite:t:`murphy_2002`
     """
 
     def __init__(self, model):

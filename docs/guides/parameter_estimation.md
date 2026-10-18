@@ -1,7 +1,8 @@
 # Parameter Estimation
 
-```{meta}
-:description: Estimate model parameters from data using pgmpy's unified parameter-estimation APIs.
+```{eval-rst}
+.. meta::
+   :description: Estimate model parameters from data using pgmpy's unified parameter-estimation APIs.
 ```
 
 Once the structure of a graphical model is known, the next step is estimating its

@@ -100,7 +100,6 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
                 "set to numpy."
                 "Call pgmpy.config.set_backend('torch') to switch the backend globally."
             )
-            logger.info(msg)
             raise ValueError(msg)
 
         _check_soft_dependencies("pyro-ppl", obj=self)
@@ -152,7 +151,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
 
             for prev_cpd_index in range(len(self.cpds)):
                 if self.cpds[prev_cpd_index].variable == cpd.variable:
-                    logger.warning(f"Replacing existing CPD for {cpd.variable}")
+                    logger.debug(f"Replacing existing CPD for {cpd.variable}")
                     self.cpds[prev_cpd_index] = cpd
                     break
             else:
@@ -163,9 +162,9 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         Returns the cpd of the node. If node is not specified returns all the CPDs
         that have been added till now to the graph
 
-        Parameter
-        ---------
-        node: any hashable python object (optional)
+        Parameters
+        ----------
+        node : any hashable python object, optional
             The node whose CPD we want. If node not specified returns all the
             CPDs added to the model.
 
@@ -546,7 +545,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
             for step in range(num_steps):
                 loss = svi.step(tensor_data)
                 if step % 50 == 0:
-                    logger.info(f"Step {step} | Loss: {loss:.4f}")
+                    logger.debug(f"Step {step} | Loss: {loss:.4f}")
 
         # Step 3: Fit the model using specified estimator
         elif estimator.lower() == "mcmc":

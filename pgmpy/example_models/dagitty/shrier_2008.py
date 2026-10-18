@@ -5,7 +5,7 @@ class Shrier2008(DAGMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`shrier_2008`
+    - :footcite:t:`shrier_2008`
     """
 
     _tags = {

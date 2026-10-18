@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from functools import cached_property
 
 import numpy as np
 import pandas as pd
@@ -31,6 +32,12 @@ class _ResidualMixin:
         ordinal variables and :class:`~sklearn.ensemble.RandomForestRegressor`
         for numerical variables.
     """
+
+    _tags = {
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+    }
 
     def _fit_predict(self, target_col: str, Z_data: pd.DataFrame):
         """
@@ -136,17 +143,26 @@ class BaseCITest(BaseObject):
     """
 
     _tags = {
+        "object_type": "ci_test",
         "name": None,
-        "data_types": (),
+        "data_types": [],
         "default_for": None,
         "requires_data": True,
         "is_symmetric": True,
+        "capability:conditioning": None,
+        "assumption:linearity": None,
+        "assumption:additive_noise": None,
+        "assumption:gaussian_noise": None,
     }
 
     def __init__(self, use_cache: bool = True):
         self.use_cache = use_cache
         self._result_cache = {}
         super().__init__()
+
+    @cached_property
+    def _is_symmetric(self) -> bool:
+        return self.get_tag("is_symmetric", tag_value_default=True)
 
     def __call__(
         self,
@@ -199,7 +215,7 @@ class BaseCITest(BaseObject):
         """
         self.run_test(X=X, Y=Y, Z=list(Z))
 
-        return self.p_value_ >= significance_level
+        return bool(self.p_value_ >= significance_level)
 
     def run_test(self, X, Y, Z):
         """
@@ -228,7 +244,7 @@ class BaseCITest(BaseObject):
         Z = list(Z)
 
         if self.use_cache:
-            if self.get_tag("is_symmetric", tag_value_default=True):
+            if self._is_symmetric:
                 x_key, y_key = sorted((X, Y), key=repr)
             else:
                 x_key, y_key = X, Y

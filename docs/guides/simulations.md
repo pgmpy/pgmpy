@@ -1,7 +1,8 @@
 # Simulations
 
-```{meta}
-:description: Generate synthetic data from fitted pgmpy models using the simulation APIs.
+```{eval-rst}
+.. meta::
+   :description: Generate synthetic data from fitted pgmpy models using the simulation APIs.
 ```
 
 Simulation generates synthetic samples from a graphical model by sampling from the

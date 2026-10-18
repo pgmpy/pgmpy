@@ -147,11 +147,12 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
 
     References
     ----------
-    - :cite:p:`ali_2009`
-    - :cite:p:`zhang_2008`
+    - :footcite:t:`ali_2009`
+    - :footcite:t:`zhang_2008`
     """
 
     SUPPORTED_EDGE_TYPES = frozenset(["--", "-o", "o-", "->", "<-", "o>", "<o", "<>", "oo"])
+    SUPPORTS_LATENTS = True
 
     def __init__(
         self,
@@ -179,6 +180,86 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
 
         for role, vars in roles.items():
             self.with_role(role=role, variables=vars, inplace=True)
+
+    def add_node(self, node_for_adding: Hashable, **attr: Any) -> None:
+        """
+        Add a node or update the attributes of an existing node.
+
+        Parameters
+        ----------
+        node_for_adding : Hashable
+            The node to add. Nodes must be hashable and cannot be None.
+
+        attr : keyword arguments, optional
+            Attributes to set or update. The ``roles`` attribute is a set of role names; ``"latents"`` is only
+            allowed when the graph supports explicit latent variables.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If the node is None or its roles include ``"latents"`` in a graph that does not support latent variables.
+
+        Examples
+        --------
+        >>> from pgmpy.base import ADMG
+        >>> graph = ADMG()
+        >>> graph.add_node("X", roles={"exposures"}, label="Treatment")
+        >>> graph.exposures
+        {'X'}
+        """
+        if not self.SUPPORTS_LATENTS and "latents" in attr.get("roles", ()):
+            raise ValueError(f"Latent variables are not supported for {type(self).__name__}.")
+        super().add_node(node_for_adding, **attr)
+
+    def add_nodes_from(
+        self,
+        nodes_for_adding: Iterable[Hashable | tuple[Hashable, dict[str, Any]]],
+        **attr: Any,
+    ) -> None:
+        """
+        Add multiple nodes or update their attributes.
+
+        Parameters
+        ----------
+        nodes_for_adding : iterable
+            Node names, or ``(node, attribute_dict)`` tuples.
+
+        attr : keyword arguments, optional
+            Shared attributes to set or update. Per-node attributes take precedence over these shared values.
+            The ``roles`` attribute is a set of role names.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If roles include ``"latents"`` in a graph that does not support latent variables. Role assignments
+            are validated for the entire batch before any nodes or attributes are modified.
+
+        Examples
+        --------
+        >>> from pgmpy.base import ADMG
+        >>> graph = ADMG()
+        >>> graph.add_nodes_from([("X", {"roles": {"exposures"}}), ("Y", {"roles": {"outcomes"}})])
+        >>> graph.exposures
+        {'X'}
+        >>> graph.outcomes
+        {'Y'}
+        """
+        nodes_for_adding = list(nodes_for_adding)
+        if not self.SUPPORTS_LATENTS:
+            for node in nodes_for_adding:
+                is_pair = isinstance(node, tuple) and isinstance(node[1], dict)
+                node_attr = attr | node[1] if is_pair else attr
+                if "latents" in node_attr.get("roles", ()):
+                    raise ValueError(f"Latent variables are not supported for {type(self).__name__}.")
+        super().add_nodes_from(nodes_for_adding, **attr)
 
     def add_edge(
         self,
@@ -863,7 +944,7 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
 
         References
         ----------
-        - :cite:p:`pearl_2009` (page 70).
+        - :footcite:t:`pearl_2009` (page 70).
 
         Examples
         --------
@@ -1288,7 +1369,9 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
                 queue.extend(self.get_neighbors(current, edge_types))
         return reachable
 
-    def get_district(self, nodes: Hashable | Iterable[Hashable]) -> set[Hashable]:
+    def get_district(
+        self, nodes: Hashable | Iterable[Hashable] | None = None
+    ) -> set[Hashable] | set[frozenset[Hashable]]:
         """
         Returns the district of `nodes`: the maximal set of nodes connected to them through
         bidirected (``"<>"``) edges, including the input node(s) themselves.
@@ -1299,14 +1382,19 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
 
         Parameters
         ----------
-        nodes : Hashable or iterable of Hashable
-            A single node, or a list/set of nodes; districts are unioned over the collection. A
-            ``str``, ``int`` or ``tuple`` is one node; a list, set or frozenset is a collection.
+        nodes : Hashable, iterable of Hashable, or None (default=None)
+            - If ``None``: return all c-components in the graph as a set of frozensets.
+            - If a single node (``str``, ``int``, ``tuple``): return the c-component containing
+              that node as a set.
+            - If a collection (``list``, ``set``, ``frozenset``): return the c-components
+              containing those nodes as a set of frozensets.
 
         Returns
         -------
-        nodes : set
-            All nodes in the same bidirected-connected component(s) as `nodes`, including `nodes`.
+         nodes : set or set of frozensets
+            - When ``nodes`` is a single hashable: a set of all nodes in the same c-component.
+            - When ``nodes`` is ``None`` or a collection: a set of frozensets, each being a
+              distinct c-component.
 
         See Also
         --------
@@ -1321,10 +1409,26 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
         ['X', 'Z']
         >>> admg.get_district("Y")
         {'Y'}
+        >>> admg = ADMG(edge_list=[("A", "B", "<>"), ("C", "D", "<>")])
+        >>> sorted([sorted(list(c)) for c in admg.get_district()])
+        [['A', 'B'], ['C', 'D']]
+        >>> sorted([sorted(list(c)) for c in admg.get_district(nodes=["A", "C"])])
+        [['A', 'B'], ['C', 'D']]
 
         """
-        nodes = list(nodes) if isinstance(nodes, (list, set, frozenset)) else [nodes]
-        return set().union(*(self.get_reachable_nodes(node=n, edge_types="<>") for n in nodes))
+        if nodes is None or isinstance(nodes, (list, set, frozenset)):
+            visited = set()
+            components = set()
+            node_list = list(nodes) if nodes is not None else list(self.nodes())
+
+            for node in node_list:
+                if node not in visited:
+                    component = self.get_reachable_nodes(node=node, edge_types="<>")
+                    components.add(frozenset(component))
+                    visited.update(component)
+            return components
+        else:
+            return self.get_reachable_nodes(node=nodes, edge_types="<>")
 
     def to_adjacency(self, encoding: str = "edge_type", nodelist=None) -> pd.DataFrame:
         """

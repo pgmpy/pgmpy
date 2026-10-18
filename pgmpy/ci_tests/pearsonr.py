@@ -38,7 +38,7 @@ class Pearsonr(BaseCITest):
     >>> data = pd.DataFrame(data=rng.standard_normal(size=(1000, 3)), columns=["X", "Y", "Z"])
     >>> test = Pearsonr(data=data)
     >>> test(X="X", Y="Y", Z=["Z"], significance_level=0.05)
-    np.True_
+    True
     >>> round(test.statistic_, 2)
     np.float64(0.01)
     >>> round(test.p_value_, 2)
@@ -58,15 +58,19 @@ class Pearsonr(BaseCITest):
 
     References
     ----------
-    - :cite:p:`peerj_blue_driver`
-    - :cite:p:`wikipedia_partial_correlation`
+    - :footcite:t:`peerj_blue_driver`
+    - :footcite:t:`wikipedia_partial_correlation`
     """
 
     _tags = {
         "name": "pearsonr",
-        "data_types": ("continuous",),
+        "data_types": ["continuous"],
         "default_for": "continuous",
         "requires_data": True,
+        "capability:conditioning": True,
+        "assumption:linearity": True,
+        "assumption:additive_noise": True,
+        "assumption:gaussian_noise": True,
     }
 
     def __init__(self, data: pd.DataFrame, use_cache: bool = True):

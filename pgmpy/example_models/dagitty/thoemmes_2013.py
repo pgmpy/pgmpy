@@ -5,7 +5,7 @@ class Thoemmes2013(DAGMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`thoemmes_2013`
+    - :footcite:t:`thoemmes_2013`
     """
 
     _tags = {
