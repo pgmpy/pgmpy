@@ -46,6 +46,7 @@ class PDAG(_CoreGraph):
     """
 
     SUPPORTED_EDGE_TYPES = frozenset(["->", "<-", "--"])
+    SUPPORTS_LATENTS = True
 
     @property
     def directed_edges(self) -> set[tuple]:
