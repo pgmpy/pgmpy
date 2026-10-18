@@ -183,21 +183,19 @@ class BaseTimeSeriesCausalDiscovery(ABC):
         if self.cond_ind_test is None:
             raise ValueError("cond_ind_test must be provided to perform causal discovery.")
 
-        self.tigramite_ci_test_ = PgmpyTigramiteCITest(
-            cond_ind_test=self.tigramite_ci_test_, variable_names=self.variable_names_
-        )
+        self.tigramite_ci_test_ = PgmpyTigramiteCITest(cond_ind_test=self.ci_test, variable_names=self.variable_names_)
         return self.tigramite_ci_test_
 
     @abstractmethod
-    def _initialize_algorithm(self):
+    def _initialize_algorithm(self) -> None:
         """Initialize the concrete time-series discovery methods."""
 
     @abstractmethod
-    def _run_discovery(self):
+    def _run_discovery(self) -> dict[str, object]:
         """Run the concrete discovery algorithm and return raw results."""
 
     @abstractmethod
-    def _process_discovery_results(self, results):
+    def _process_discovery_results(self, results: dict[str, object]) -> None:
         """Normalize the results into the public pgmpy result attributes."""
 
     def fit(self, X):
