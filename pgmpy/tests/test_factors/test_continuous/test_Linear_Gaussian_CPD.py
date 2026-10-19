@@ -28,3 +28,35 @@ def test_get_random():
 def test_variable_hashable():
     with pytest.raises(ValueError, match="argument must be hashable"):
         LinearGaussianCPD(variable=["X"], beta=[0], std=1)
+
+
+@pytest.mark.parametrize(
+    "evidence",
+    [
+        ["X"],
+        ("X",),
+        np.array(["X"]),
+    ],
+)
+def test_evidence_array_like(evidence):
+    cpd = LinearGaussianCPD(
+        variable="Y",
+        beta=[0, 1],
+        std=1,
+        evidence=evidence,
+    )
+
+    assert cpd.evidence == ["X"]
+    assert list(cpd.variables) == ["Y", "X"]
+
+
+def test_evidence_generator():
+    cpd = LinearGaussianCPD(
+        variable="Y",
+        beta=[0, 1],
+        std=1,
+        evidence=iter(["X"]),
+    )
+
+    assert cpd.evidence == ["X"]
+    assert list(cpd.variables) == ["Y", "X"]

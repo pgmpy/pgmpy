@@ -75,7 +75,7 @@ class LinearGaussianCPD(BaseFactor):
         self.beta = np.array(beta)
         self.std = std
         self.evidence = list(evidence)
-        self.variables = [variable] + evidence
+        self.variables = [variable] + self.evidence
 
     def copy(self):
         """
