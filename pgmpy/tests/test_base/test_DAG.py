@@ -759,6 +759,11 @@ class TestDAGParser(unittest.TestCase):
             set(),
         )
 
+    def test_from_dagitty_no_header(self):
+        dag = DAG.from_dagitty("X -> Y")
+        self.assertEqual(set(dag.nodes()), {"X", "Y"})
+        self.assertEqual(set(dag.edges()), {("X", "Y")})
+
     def test_from_daggitty_single_line_with_group_of_vars(self):
         dag = DAG.from_dagitty('dag{ bb="0,0,1,1" X [l, pos="-1.228,-1.145"] X-> {Y Z}  Z ->A ->B <- C}')
         self.assertEqual(
