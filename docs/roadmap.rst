@@ -1,85 +1,75 @@
 .. meta::
-   :description: High-level roadmap themes for pgmpy development and contribution areas.
+   :description: Broad goals and release-oriented roadmap for pgmpy development and contribution areas.
 
 Roadmap
 =======
 
-This page outlines the main areas of ongoing and future improvement for pgmpy.
-It is intended as a contributor-facing roadmap rather than a strict release
-schedule.
+This page outlines the broad direction for pgmpy and the focus areas for
+upcoming release lines. It is intended to help contributors plan work and give
+users a clearer view of what is likely to improve next.
 
-The roadmap is best read as a set of active themes:
+The release sections below are planning guidance rather than a hard delivery
+guarantee. Scope can change based on maintainer time, community feedback, and
+the complexity of ongoing work. Patch releases within a release line are
+expected to focus primarily on bug fixes, documentation improvements, and
+compatibility updates.
 
-- where the library is being improved,
-- where contributions are most useful,
-- and which parts of the user experience we want to keep strengthening.
+Broad Goals
+-----------
 
-Documentation And Learning Resources
-------------------------------------
+Across releases, pgmpy is aiming to keep improving a few long-running goals:
 
-Continue improving the documentation so it is easier to move between:
+- make core workflows easier to discover and easier to compose across causal
+  discovery, parameter estimation, inference, causal identification and
+  estimation, simulation, and evaluation;
+- improve documentation so users can move smoothly between quickstarts,
+  task-oriented guides, worked examples, and API reference pages;
+- expand built-in examples, datasets, and example models so workflows can be
+  evaluated quickly without extensive setup;
+- continue broadening modeling and algorithm coverage while keeping the public
+  APIs consistent and maintainable;
+- improve the contributor experience with clearer extension points, stronger
+  validation for docs and examples, and a more predictable public module
+  layout.
 
-- task-oriented guides,
-- runnable quickstart examples,
-- and detailed API reference pages.
+Release Line v1.2
+-----------------
 
-This includes clearer workflows, better cross-linking, and stronger example
-coverage for the core pgmpy feature areas.
+The next release line is intended to focus on usability and workflow coherence.
+The main areas of work are expected to be:
 
-Unified APIs Across Workflows
------------------------------
+- stronger documentation and learning resources, especially clearer guide
+  structure, better cross-linking, and more task-oriented examples for common
+  workflows;
+- better API consistency across workflows so structure learning, parameter
+  estimation, inference, and causal effect workflows feel more aligned;
+- improved discovery and coverage of bundled datasets, example models, and
+  benchmark-friendly examples;
+- quality-of-life improvements around common user journeys, error messages, and
+  smaller interface inconsistencies that affect day-to-day usage.
 
-Keep making the library feel more consistent across:
+Release Line v1.3
+-----------------
 
-- causal discovery,
-- parameter estimation,
-- inference,
-- causal identification and estimation,
-- simulation,
-- and evaluation.
+The following release line is expected to build on the v1.2 cleanup work and
+push further into library depth and extensibility. Likely focus areas include:
 
-This includes clearer high-level entry points, consistent naming, and better
-alignment between narrative guides and the public APIs.
+- broader modeling and algorithm coverage across probabilistic and causal
+  workflows;
+- stronger extension mechanisms and reusable templates for adding new methods
+  or components;
+- better benchmarking and evaluation support where it helps compare workflows
+  or validate model quality;
+- continued improvements to developer experience, including documentation,
+  examples, and automated validation around contributor-facing tooling.
 
-Examples, Benchmarks, And Datasets
-----------------------------------
+How To Read Release Sections
+----------------------------
 
-Expand the ecosystem of built-in examples, benchmark datasets, and example
-models so users can evaluate workflows quickly without building everything from
-scratch.
-
-This includes:
-
-- better example coverage for major tasks,
-- easier discovery of built-in assets,
-- and stronger benchmark-oriented documentation.
-
-Modeling And Algorithm Coverage
--------------------------------
-
-Continue expanding and refining pgmpy's support for probabilistic and causal
-modeling workflows.
-
-This includes ongoing work around:
-
-- structure learning and causal discovery,
-- parameter estimation,
-- exact and approximate inference,
-- causal reasoning,
-- and support for different model families.
-
-Developer Experience
---------------------
-
-Improve the contributor experience by keeping the codebase easier to extend and
-maintain.
-
-Important themes here include:
-
-- better extension templates,
-- clearer contribution pathways,
-- stronger automated validation for docs and examples,
-- and consistent public module organization.
+If an item appears under a release line, it should be interpreted as an area of
+focus rather than a promise that every related issue will ship in that release.
+Exact contents will depend on review bandwidth, contributor activity, and the
+size of ongoing changes.
 
 How To Contribute Against The Roadmap
 -------------------------------------
