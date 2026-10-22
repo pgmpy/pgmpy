@@ -295,6 +295,20 @@ class TestDAGCreation(unittest.TestCase):
         dag_lat5 = DAG([("A", "B"), ("B", "C"), ("A", "D"), ("D", "E"), ("E", "C")], latents={"E"})
         self.assertEqual(dag_lat5.minimal_dseparator(start="A", end="C"), {"B", "D"})
 
+    def test_minimal_dseparator_issue_2354(self):
+        # The old greedy implementation returned {"A", "B"} here because it
+        # dropped "C" from the candidate set first; the true minimal
+        # d-separator is {"C"}.
+        dag = DAG([("A", "X"), ("A", "B"), ("B", "X"), ("C", "B"), ("C", "Y")])
+        separator = dag.minimal_dseparator(start="X", end="Y")
+        self.assertEqual(separator, {"C"})
+        self.assertFalse(dag.is_dconnected("X", "Y", observed=separator))
+        self.assertTrue(dag.is_dconnected("X", "Y", observed=set()))
+
+        # A pure v-structure needs no conditioning to d-separate.
+        collider_dag = DAG([("A", "C"), ("B", "C")])
+        self.assertEqual(collider_dag.minimal_dseparator(start="A", end="B"), set())
+
     def test_copy(self):
         model = load_model("dagitty/m_bias")
         model_copy = model.copy()
