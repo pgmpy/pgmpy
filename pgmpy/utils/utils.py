@@ -311,7 +311,8 @@ def preprocess_data(df):
         if pd.api.types.is_integer_dtype(df[col]):
             df[col] = df[col].astype("int")
             dtypes[col] = "N"
-        elif pd.api.types.is_numeric_dtype(df[col]):
+        # pandas doesn't count every boolean dtype as numeric, e.g. pyarrow's, so booleans are checked by kind.
+        elif pd.api.types.is_numeric_dtype(df[col]) or df[col].dtype.kind == "b":
             dtypes[col] = "N"
         elif pd.api.types.is_object_dtype(df[col]) or pd.api.types.is_string_dtype(df[col]):
             dtypes[col] = "C"
