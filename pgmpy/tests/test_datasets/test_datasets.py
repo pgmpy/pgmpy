@@ -31,6 +31,8 @@ ALL_DATASETS = [
     "htru2",
     "iq_brain_size",
     "lead",
+    "light_tunnel_palette",
+    "light_tunnel_pure_colors_bright",
     "myocardial_infarction",
     "pima_diabetes",
     "pittsburgh_bridges",
