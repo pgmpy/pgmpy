@@ -186,3 +186,13 @@ def test_generate_sample_less_arg(random_state, gibbs):
     samples = [sample for sample in gen]
     random_state.assert_called_once_with(gibbs)
     assert len(samples) == 2
+
+
+def test_generate_sample_excludes_latents(bayesian_model):
+    bayesian_model.latents = {"intel"}
+    gibbs = GibbsSampling(bayesian_model)
+    start_state = [State("diff", 0), State("intel", 0), State("grade", 0)]
+    samples = [sample for sample in gibbs.generate_sample(start_state, 3)]
+    assert len(samples) == 3
+    for sample in samples:
+        assert {s.var for s in sample} == {"diff", "grade"}

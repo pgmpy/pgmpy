@@ -598,4 +598,4 @@ class GibbsSampling(MarkovChain):
             if include_latents:
                 yield self.state[:]
             else:
-                yield [s for s in self.state if i not in self.latents]
+                yield [s for s in self.state if s.var not in self.latents]
