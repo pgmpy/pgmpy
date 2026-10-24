@@ -56,7 +56,7 @@ class CausalInfluenceDiagram(DAG):
         chance_nodes: Iterable[Hashable] | None = None,
         decision_nodes: Iterable[Hashable] | None = None,
         utility_nodes: Iterable[Hashable] | None = None,
-    ) -> None:
+    ):
         self._probabilities: dict[Hashable, BaseParameter] = {}
         self._policies: dict[Hashable, BaseParameter] = {}
         self._utilities: dict[Hashable, Callable[[pd.DataFrame], object]] = {}
@@ -75,12 +75,15 @@ class CausalInfluenceDiagram(DAG):
 
         super().__init__(ebunch=ebunch)
 
+        for node in self.nodes:
+            self.nodes[node].setdefault("role", "chance")
+
         for role, nodes in declared_roles.items():
             for node in nodes:
                 self.add_node(node, role=role)
 
     @staticmethod
-    def _as_node_list(nodes: Iterable[Hashable] | None) -> list[Hashable]:
+    def _as_node_list(nodes: Iterable[Hashable] | None):
         if nodes is None:
             return []
         if isinstance(nodes, (str, bytes)) or not isinstance(nodes, Iterable):
@@ -104,37 +107,40 @@ class CausalInfluenceDiagram(DAG):
             else:
                 self.add_node(item, **attr)
 
-    def add_edge(self, u: Hashable, v: Hashable, weight: int | float | None = None) -> None:
-        """Add an edge while preserving the DAG constraint."""
-        if u == v or (self.has_node(u) and self.has_node(v) and nx.has_path(self, v, u)):
-            raise ValueError("Cycles are not allowed in a DAG.")
-        if not self.has_node(u):
-            self.add_node(u)
-        if not self.has_node(v):
-            self.add_node(v)
-        super().add_edge(u, v, weight=weight)
+    def add_edge(self, u: Hashable, v: Hashable, **attr):
+        """Add an edge"""
+        super().add_edge(u, v, **attr)
 
-    def remove_node(self, n: Hashable) -> None:
+    # def add_edge(self, u: Hashable, v: Hashable, weight: int | float | None = None):
+    #     if u == v or (self.has_node(u) and self.has_node(v) and nx.has_path(self, v, u)):
+    #         raise ValueError("Cycles are not allowed in a DAG.")
+    #     if not self.has_node(u):
+    #         self.add_node(u)
+    #     if not self.has_node(v):
+    #         self.add_node(v)
+    #     super().add_edge(u, v, weight=weight)
+
+    def remove_node(self, n: Hashable):
         """Remove a node and any parameterization assigned to it."""
         super().remove_node(n)
         self._probabilities.pop(n, None)
         self._policies.pop(n, None)
         self._utilities.pop(n, None)
 
-    def remove_nodes_from(self, nodes: Iterable[Hashable]) -> None:
+    def remove_nodes_from(self, nodes: Iterable[Hashable]):
         """Remove nodes and any parameterizations assigned to them."""
         for node in nodes:
             if self.has_node(node):
                 self.remove_node(node)
 
-    def clear(self) -> None:
+    def clear(self):
         """Remove all nodes, edges, and assigned parameterizations."""
         super().clear()
         self._probabilities.clear()
         self._policies.clear()
         self._utilities.clear()
 
-    def copy(self) -> CausalInfluenceDiagram:
+    def copy(self):
         """Return a graph copy, retaining shallow copies of assigned parameterizations."""
         copied = type(self)()
         copied.graph.update(self.graph)
@@ -148,27 +154,27 @@ class CausalInfluenceDiagram(DAG):
         return copied
 
     @property
-    def chance_nodes(self) -> list[Hashable]:
+    def chance_nodes(self):
         """Nodes with the chance role, in graph order."""
         return [node for node, data in self.nodes(data=True) if data.get("role") == "chance"]
 
     @property
-    def decision_nodes(self) -> list[Hashable]:
+    def decision_nodes(self):
         """Nodes with the decision role, in graph order."""
         return [node for node, data in self.nodes(data=True) if data.get("role") == "decision"]
 
     @property
-    def utility_nodes(self) -> list[Hashable]:
+    def utility_nodes(self):
         """Nodes with the utility role, in graph order."""
         return [node for node, data in self.nodes(data=True) if data.get("role") == "utility"]
 
-    def _check_node_role(self, node: Hashable, role: str) -> None:
+    def _check_node_role(self, node: Hashable, role: str):
         if not self.has_node(node):
             raise ValueError(f"Node {node!r} is not in the diagram.")
         if self.nodes[node].get("role") != role:
             raise ValueError(f"{node!r} is a {self.nodes[node].get('role')!r} node; expected a {role} node.")
 
-    def check_model(self) -> bool:
+    def check_model(self):
         """Validate graph roles, utility assignments, and conditional parameterizations."""
         self._check_cycles()
 
@@ -211,7 +217,7 @@ class CausalInfluenceDiagram(DAG):
 
         return True
 
-    def _check_parameterization(self, node: Hashable, parameterization: BaseParameter) -> None:
+    def _check_parameterization(self, node: Hashable, parameterization: BaseParameter):
         """Validate a conditional parameterization against its node and graph parents.
 
         Unfitted parameterizations are accepted here and rejected by :meth:`check_model`.
@@ -239,7 +245,7 @@ class CausalInfluenceDiagram(DAG):
                 f"the parents of node {node!r}: {list(self.predecessors(node))}."
             )
 
-    def set_probabilities(self, node: Hashable, parameterization: BaseParameter) -> None:
+    def set_probabilities(self, node: Hashable, parameterization: BaseParameter):
         """Assign a conditional probability parameterization to a chance node.
 
         Fitted parameterizations are checked immediately. An unfitted parameterization may be assigned and is checked
@@ -257,7 +263,7 @@ class CausalInfluenceDiagram(DAG):
         self._check_parameterization(node, parameterization)
         self._probabilities[node] = parameterization
 
-    def set_policy(self, node: Hashable, policy: BaseParameter) -> None:
+    def set_policy(self, node: Hashable, policy: BaseParameter):
         """Assign a conditional policy to a decision node.
 
         A deterministic discrete policy can be represented by a one-hot :class:`TabularCPD`.
@@ -275,7 +281,7 @@ class CausalInfluenceDiagram(DAG):
         self._check_parameterization(node, policy)
         self._policies[node] = policy
 
-    def set_utility(self, node: Hashable, utility: Callable[[pd.DataFrame], object]) -> None:
+    def set_utility(self, node: Hashable, utility: Callable[[pd.DataFrame], object]):
         """Assign a utility function to a utility node.
 
         The function receives a DataFrame containing the node's parent values and must return one finite numeric value
@@ -289,13 +295,16 @@ class CausalInfluenceDiagram(DAG):
             Function from parent assignments to utility values.
 
         """
+        if not callable(utility):
+            raise TypeError(f"Utility assigned to node {node!r} must be callable, got {type(utility).__name__}")
+
         self._utilities[node] = utility
 
     def simulate(
         self,
         n_samples: int = 1000,
         seed: int | np.random.Generator | None = None,
-    ) -> pd.DataFrame:
+    ):
         """Generate samples from assigned chance distributions and decision policies.
 
         Nodes are sampled in topological order. Utility callables are then evaluated and their values are returned in
