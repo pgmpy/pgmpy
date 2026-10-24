@@ -171,9 +171,9 @@ def test_set_utility_validation_is_deferred_to_check_model():
         cid.check_model()
 
     cid = CausalInfluenceDiagram(utility_nodes=["Utility"])
-    cid.set_utility("Utility", "not callable")
+
     with pytest.raises(TypeError, match="must be callable"):
-        cid.check_model()
+        cid.set_utility("Utility", "not callable")
 
     cid = CausalInfluenceDiagram()
     cid.set_utility("Missing", lambda values: np.zeros(len(values)))
@@ -212,16 +212,8 @@ def test_set_utility_defers_role_and_callable_validation_to_check_model():
         cid.check_model()
 
     cid = CausalInfluenceDiagram(utility_nodes=["Utility"])
-    cid.set_utility("Utility", "not callable")
-
     with pytest.raises(TypeError, match="must be callable"):
-        cid.check_model()
-
-    cid = CausalInfluenceDiagram()
-    cid.set_utility("Missing", lambda values: np.zeros(len(values)))
-
-    with pytest.raises(ValueError, match="not an existing utility node"):
-        cid.check_model()
+        cid.set_utility("Utility", "not callable")
 
 
 def test_simulate_samples_policies_and_additive_utility_with_seed():
