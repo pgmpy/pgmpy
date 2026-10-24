@@ -75,6 +75,8 @@ class CausalInfluenceDiagram(DAG):
 
         super().__init__(ebunch=ebunch)
 
+        self._check_cycles()
+
         for node in self.nodes:
             self.nodes[node].setdefault("role", "chance")
 
@@ -110,15 +112,6 @@ class CausalInfluenceDiagram(DAG):
     def add_edge(self, u: Hashable, v: Hashable, **attr):
         """Add an edge"""
         super().add_edge(u, v, **attr)
-
-    # def add_edge(self, u: Hashable, v: Hashable, weight: int | float | None = None):
-    #     if u == v or (self.has_node(u) and self.has_node(v) and nx.has_path(self, v, u)):
-    #         raise ValueError("Cycles are not allowed in a DAG.")
-    #     if not self.has_node(u):
-    #         self.add_node(u)
-    #     if not self.has_node(v):
-    #         self.add_node(v)
-    #     super().add_edge(u, v, weight=weight)
 
     def remove_node(self, n: Hashable):
         """Remove a node and any parameterization assigned to it."""
