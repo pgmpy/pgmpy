@@ -109,10 +109,6 @@ class CausalInfluenceDiagram(DAG):
             else:
                 self.add_node(item, **attr)
 
-    def add_edge(self, u: Hashable, v: Hashable, **attr):
-        """Add an edge"""
-        super().add_edge(u, v, **attr)
-
     def remove_node(self, n: Hashable):
         """Remove a node and any parameterization assigned to it."""
         super().remove_node(n)
