@@ -1,8 +1,7 @@
-import pytest
-
 import numpy as np
 import numpy.testing as np_test
 import pandas as pd
+import pytest
 
 from pgmpy.base import DAG
 from pgmpy.factors.discrete import TabularCPD
@@ -14,17 +13,13 @@ np.random.seed(42)
 
 @pytest.fixture
 def causal_graph_methods_setup():
-    game = DiscreteBayesianNetwork(
-        [("A", "X"), ("A", "B"), ("C", "B"), ("C", "Y"), ("X", "Y"), ("B", "X")]
-    )
+    game = DiscreteBayesianNetwork([("A", "X"), ("A", "B"), ("C", "B"), ("C", "Y"), ("X", "Y"), ("B", "X")])
     inference = CausalInference(game)
 
     dag_bd1 = DiscreteBayesianNetwork([("X", "Y"), ("Z1", "X"), ("Z1", "Y")])
     inference_bd = CausalInference(dag_bd1)
 
-    dag_bd2 = DiscreteBayesianNetwork(
-        [("X", "Y"), ("Z1", "X"), ("Z1", "Z2"), ("Z2", "Y")]
-    )
+    dag_bd2 = DiscreteBayesianNetwork([("X", "Y"), ("Z1", "X"), ("Z1", "Z2"), ("Z2", "Y")])
     inference_bd2 = CausalInference(dag_bd2)
 
     return inference, inference_bd, inference_bd2
@@ -93,9 +88,7 @@ class TestAdjustmentSet:
         bd_graph = infer_dag.get_proper_backdoor_graph(X=["x1", "x2"], Y=["y1", "y2"])
         assert ("x1", "y1") not in bd_graph.edges()
         assert len(bd_graph.edges()) == 4
-        assert set(bd_graph.edges()) == {
-            ("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")
-        }
+        assert set(bd_graph.edges()) == {("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")}
 
         # SEMGraph
         bd_graph = infer_sem.get_proper_backdoor_graph(X=["x1", "x2"], Y=["y1", "y2"])
@@ -121,9 +114,7 @@ class TestAdjustmentSet:
         bd_graph = infer_dag.get_proper_backdoor_graph(X="x1", Y="y1")
         assert ("x1", "y1") not in bd_graph.edges()
         assert len(bd_graph.edges()) == 4
-        assert set(bd_graph.edges()) == {
-            ("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")
-        }
+        assert set(bd_graph.edges()) == {("x1", "z1"), ("z1", "z2"), ("z2", "x2"), ("y2", "z2")}
 
         # SEMGraph
         bd_graph = infer_sem.get_proper_backdoor_graph(X="x1", Y="y1")
@@ -146,28 +137,16 @@ class TestAdjustmentSet:
         infer_dag, infer_sem = adjustment_set_setup
 
         # DAG
-        assert infer_dag.is_valid_adjustment_set(
-            X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z1", "z2"]
-        )
+        assert infer_dag.is_valid_adjustment_set(X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z1", "z2"])
         assert infer_dag.is_valid_adjustment_set(X="x1", Y="y1", adjustment_set=["z1", "z2"])
-        assert not infer_dag.is_valid_adjustment_set(
-            X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z1"]
-        )
-        assert infer_dag.is_valid_adjustment_set(
-            X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z2"]
-        )
+        assert not infer_dag.is_valid_adjustment_set(X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z1"])
+        assert infer_dag.is_valid_adjustment_set(X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z2"])
 
         # SEMGraph
-        assert infer_sem.is_valid_adjustment_set(
-            X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z1", "z2"]
-        )
+        assert infer_sem.is_valid_adjustment_set(X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z1", "z2"])
         assert infer_sem.is_valid_adjustment_set(X="x1", Y="y1", adjustment_set=["z1", "z2"])
-        assert not infer_sem.is_valid_adjustment_set(
-            X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z1"]
-        )
-        assert infer_sem.is_valid_adjustment_set(
-            X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z2"]
-        )
+        assert not infer_sem.is_valid_adjustment_set(X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z1"])
+        assert infer_sem.is_valid_adjustment_set(X=["x1", "x2"], Y=["y1", "y2"], adjustment_set=["z2"])
 
     def test_get_minimal_adjustment_set(self):
         # Without latent variables
@@ -263,6 +242,8 @@ class TestAdjustmentSet:
         assert adj_set == {"Z"}
         with pytest.raises(ValueError):
             infer.get_minimal_adjustment_set(X="X_3", Y="Y")
+
+
 class TestBackdoorPaths:
     """
     These tests are drawn from games presented in The Book of Why by Judea Pearl. See the Jupyter Notebook called
@@ -412,6 +393,7 @@ class TestBackdoorPaths:
                 frozenset({"B", "D"}),
             }
         )
+
 
 @pytest.fixture
 def sem_identification_setup():
@@ -615,10 +597,26 @@ class TestSEMIdentification:
         assert demo.get_ivs("eta2", "y8", scaling_indicators=scale) == {"x1", "x2", "x3", "y2", "y3", "y7"}
 
         assert demo.get_ivs("xi1", "x2", scaling_indicators=scale) == {
-            "x3", "y1", "y2", "y3", "y4", "y5", "y6", "y7", "y8"
+            "x3",
+            "y1",
+            "y2",
+            "y3",
+            "y4",
+            "y5",
+            "y6",
+            "y7",
+            "y8",
         }
         assert demo.get_ivs("xi1", "x3", scaling_indicators=scale) == {
-            "x2", "y1", "y2", "y3", "y4", "y5", "y6", "y7", "y8"
+            "x2",
+            "y1",
+            "y2",
+            "y3",
+            "y4",
+            "y5",
+            "y6",
+            "y7",
+            "y8",
         }
 
         assert demo.get_ivs("xi1", "eta1", scaling_indicators=scale) == {"x2", "x3"}
@@ -810,14 +808,14 @@ class TestBayesianIV:
 
 
 def _get_simpson_model():
-       simpson_model = DiscreteBayesianNetwork([("S", "T"), ("T", "C"), ("S", "C")])
-       cpd_s = TabularCPD(
+    simpson_model = DiscreteBayesianNetwork([("S", "T"), ("T", "C"), ("S", "C")])
+    cpd_s = TabularCPD(
         variable="S",
         variable_card=2,
         values=[[0.5], [0.5]],
         state_names={"S": ["m", "f"]},
     )
-       cpd_t = TabularCPD(
+    cpd_t = TabularCPD(
         variable="T",
         variable_card=2,
         values=[[0.25, 0.75], [0.75, 0.25]],
@@ -825,7 +823,7 @@ def _get_simpson_model():
         evidence_card=[2],
         state_names={"S": ["m", "f"], "T": [0, 1]},
     )
-       cpd_c = TabularCPD(
+    cpd_c = TabularCPD(
         variable="C",
         variable_card=2,
         values=[[0.3, 0.4, 0.7, 0.8], [0.7, 0.6, 0.3, 0.2]],
@@ -833,9 +831,10 @@ def _get_simpson_model():
         evidence_card=[2, 2],
         state_names={"S": ["m", "f"], "T": [0, 1], "C": [0, 1]},
     )
-       simpson_model.add_cpds(cpd_s, cpd_t, cpd_c)
+    simpson_model.add_cpds(cpd_s, cpd_t, cpd_c)
 
-       return simpson_model
+    return simpson_model
+
 
 def _get_example_model():
     # Model structure: Z -> X -> Y; Z -> W -> Y
@@ -1075,8 +1074,7 @@ class TestDoQuery:
             causal_inference.query(variables=["R"], evidence=evidence, do=counterfactual_intervention)
         assert (
             "Invalid causal query: There is a direct edge from the query"
-            " variable 'R' to the intervention variable 'S'."
-            in str(exc_info.value)
+            " variable 'R' to the intervention variable 'S'." in str(exc_info.value)
         )
 
 
