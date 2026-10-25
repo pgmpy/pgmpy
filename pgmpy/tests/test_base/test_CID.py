@@ -107,7 +107,7 @@ def test_incremental_edges_preserve_acyclicity():
         CausalInfluenceDiagram([("A", "B"), ("B", "B")])
 
 
-def test_copy_retains_assignments_and_parent_changes_are_revalidatedeli():
+def test_copy_retains_assignments_and_parent_changes_are_revalidated():
     cid = CausalInfluenceDiagram([("X", "Y")])
     cid.set_probabilities("X", parameter("X", [0, 1], {(): [0.5, 0.5]}))
     cid.set_probabilities("Y", parameter("Y", [0, 1], {(0,): [0.5, 0.5], (1,): [0.5, 0.5]}, ["X"]))

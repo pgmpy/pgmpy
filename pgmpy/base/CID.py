@@ -164,7 +164,15 @@ class CausalInfluenceDiagram(DAG):
             raise ValueError(f"{node!r} is a {self.nodes[node].get('role')!r} node; expected a {role} node.")
 
     def check_model(self):
-        """Validate graph roles, utility assignments, and conditional parameterizations."""
+        """
+        Validate graph roles, utility assignments, and conditional  parameterizations.
+
+        * Checks for acyclicity and every node has a valid role
+        * Every decision node has a fitted policy.
+        * Every decision node has a fitted policy.
+        * checks that each parameterization targets the correct node and has evidence
+          matching the node's graph parents.
+        """
         self._check_cycles()
 
         for node, attributes in self.nodes(data=True):
@@ -341,8 +349,6 @@ class CausalInfluenceDiagram(DAG):
 
         for node in self.utility_nodes:
             utility = self._utilities.get(node)
-            if utility is None:
-                raise ValueError(f"No utility function assigned to utility node {node!r}.")
             parent_samples = samples.reindex(columns=list(self.predecessors(node)))
             values = utility(parent_samples)
             values = values.to_numpy() if isinstance(values, pd.Series) else np.asarray(values)
