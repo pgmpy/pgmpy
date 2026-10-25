@@ -366,3 +366,56 @@ def test_doubleml_recovers_theta_high_dim():
 
     preds = est.predict(df)
     assert preds.shape[0] == df.shape[0]
+
+
+@pytest.fixture
+def data():
+    rng = np.random.default_rng(0)
+    n = 60
+    z1 = rng.normal(size=n)
+    z2 = rng.normal(size=n)
+    d = z1 + z2 + rng.normal(size=n)
+    y = 2 * d + z1 + z2 + rng.normal(size=n)
+    X = pd.DataFrame({"D": d, "Z1": z1, "Z2": z2})
+    weights = rng.uniform(0.5, 2.0, size=n)
+    return X, y, weights
+
+
+def _fit(dag, X, y, sample_weight, n_folds):
+    model = DoubleMLRegressor(
+        causal_graph=dag,
+        nuisance_estimators=(LinearRegression(), LinearRegression()),
+        effect_estimator=LinearRegression(),
+        n_folds=n_folds,
+        seed=0,
+    )
+    model.fit(X, y, sample_weight=sample_weight)
+    return model
+
+
+@pytest.mark.parametrize("n_folds", [1, 3])
+@pytest.mark.parametrize(
+    "make_weights",
+    [
+        lambda w: w.tolist(),
+        lambda w: pd.Series(w, index=range(100, 100 + len(w))),
+        lambda w: pd.Series(w, index=np.random.default_rng(1).permutation(len(w))),
+    ],
+    ids=["list", "shifted-index-series", "shuffled-index-series"],
+)
+def test_sample_weight_array_like(dag, data, make_weights, n_folds):
+    """Array-like weights must give the same result as the equivalent ndarray,
+    with weights matched by position and not by pandas index label."""
+    X, y, weights = data
+    expected = _fit(dag, X, y, weights, n_folds)
+    result = _fit(dag, X, y, make_weights(weights), n_folds)
+    np.testing.assert_allclose(result.effect_est_.coef_, expected.effect_est_.coef_)
+
+
+@pytest.mark.parametrize("n_folds", [1, 3])
+def test_sample_weight_invalid_shape(dag, data, n_folds):
+    X, y, weights = data
+    with pytest.raises(ValueError, match="sample_weight"):
+        _fit(dag, X, y, weights[:-1], n_folds)
+    with pytest.raises(ValueError, match="sample_weight"):
+        _fit(dag, X, y, weights.reshape(-1, 1), n_folds)
