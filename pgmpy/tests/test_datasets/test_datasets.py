@@ -17,6 +17,7 @@ ALL_DATASETS = [
     "blue_driver",
     "boston_housing",
     "causalbench_k562",
+    "causalbench_rpe1",
     "cities",
     "college_plans",
     "contraceptive_method",
@@ -212,7 +213,8 @@ def test_static_dataset_n_samples():
     pd.testing.assert_frame_equal(ds1.data, ds2.data)
 
 
-def test_load_causalbench_k562(tmp_path):
+@pytest.mark.parametrize(("name", "n_variables"), [("causalbench_k562", 622), ("causalbench_rpe1", 383)])
+def test_load_causalbench(tmp_path, name, n_variables):
     table = pd.DataFrame(
         {
             "ENSG00000116809": [1.0, 0.2, 1.1],
@@ -220,12 +222,12 @@ def test_load_causalbench_k562(tmp_path):
             "intervention": pd.Categorical(["non-targeting", "ENSG00000116809", "excluded"]),
         }
     )
-    table.to_csv(tmp_path / "causalbench_k562.tsv.gz", sep="\t", index=False, compression="gzip")
-    dataset = load_dataset("causalbench_k562", data_dir=tmp_path, n_samples=3, seed=7)
+    table.to_csv(tmp_path / f"{name}.tsv.gz", sep="\t", index=False, compression="gzip")
+    dataset = load_dataset(name, data_dir=tmp_path, n_samples=3, seed=7)
     expected = table.sample(n=3, random_state=7).reset_index(drop=True)
     pd.testing.assert_frame_equal(dataset.data, expected.drop(columns="intervention"))
     pd.testing.assert_series_equal(dataset.interventions, expected["intervention"])
-    assert dataset.tags["n_variables"] == 622
+    assert dataset.tags["n_variables"] == n_variables
     assert dataset.tags["is_continuous"] is True
     assert dataset.tags["is_mixed"] is False
     assert dataset.tags["is_interventional"] is True
