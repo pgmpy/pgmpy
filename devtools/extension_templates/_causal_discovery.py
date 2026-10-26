@@ -86,10 +86,9 @@ class MyCausalDiscoveryAlgo(BaseCausalDiscovery):
 
     def _fit(self, X: pd.DataFrame):
 
-        # TODO: If the algorithm uses a CI test, a structure score, or a pairwise estimator, store the resolved one as
-        #       self.ci_test_ (from pgmpy.ci_tests.get_ci_test), self.scoring_method_ (from
-        #       pgmpy.structure_score.get_scoring_method), or self.pairwise_estimator_. `fit` uses them to narrow the
-        #       algorithm's tags. Remove this block otherwise.
+        # TODO: Set self.ci_test_, self.scoring_method_, self.pairwise_estimator_, and self.estimator_ attributes if the
+        # algorithm uses a CI test, a structure score, a pairwise estimator, or an estimator. These attributes are used
+        # by the `fit` method to narrow the algorithm's tags. Remove this block otherwise.
         # self.ci_test_ = get_ci_test(test=self.ci_test, data=X)
 
         # TODO: Add logic to learn the causal graph from the data X. Methods from mixin classes can be used here if
