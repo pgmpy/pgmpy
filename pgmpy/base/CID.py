@@ -109,6 +109,12 @@ class CausalInfluenceDiagram(DAG):
             else:
                 self.add_node(item, **attr)
 
+    def add_edge(self, u_of_edge: Hashable, v_of_edge: Hashable, **attr):
+        super().add_edge(u_of_edge, v_of_edge, **attr)
+
+        self.nodes[u_of_edge].setdefault("role", "chance")
+        self.nodes[v_of_edge].setdefault("role", "chance")
+
     def remove_node(self, n: Hashable):
         """Remove a node and any parameterization assigned to it."""
         super().remove_node(n)
@@ -292,6 +298,7 @@ class CausalInfluenceDiagram(DAG):
             Function from parent assignments to utility values.
 
         """
+        self._check_node_role(node, "utility")
         if not callable(utility):
             raise TypeError(f"Utility assigned to node {node!r} must be callable, got {type(utility).__name__}")
 

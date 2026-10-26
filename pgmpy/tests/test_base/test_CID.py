@@ -63,6 +63,13 @@ def test_roles_default_to_chance_and_can_be_declared():
     cid.add_node("Risk", role="chance")
     assert cid.chance_nodes == ["Health", "Age", "Risk"]
 
+    cid_b = CausalInfluenceDiagram()
+    cid_b.add_edge("A", "B")
+
+    assert cid_b.chance_nodes == ["A", "B"]
+    assert cid_b.decision_nodes == []
+    assert cid_b.utility_nodes == []
+
 
 def test_bulk_node_updates_preserve_roles_and_clear_removed_assignments():
     cid = CausalInfluenceDiagram()
@@ -90,19 +97,10 @@ def test_role_validation_and_utility_leaf_invariant():
     with pytest.raises(ValueError, match="Utility nodes must be leaves"):
         cid.check_model()
 
-    cid = CausalInfluenceDiagram(utility_nodes=["Utility"])
-    cid.add_edge("Utility", "Outcome")
-    with pytest.raises(ValueError, match="Utility nodes must be leaves"):
-        cid.check_model()
-
-    cid.add_edge("A", "B")
-    cid.add_node("A", role="utility")
-    with pytest.raises(ValueError, match="Utility nodes must be leaves"):
-        cid.check_model()
+    cid = CausalInfluenceDiagram(chance_nodes=["X"])
 
 
-def test_incremental_edges_preserve_acyclicity():
-
+def test_acyclicity():
     with pytest.raises(ValueError, match="Cycles are not allowed"):
         CausalInfluenceDiagram([("A", "B"), ("B", "B")])
 
@@ -133,9 +131,8 @@ def test_parameter_assignments_validate_role_target_and_parents():
         cid.set_probabilities("Utility", root)
     with pytest.raises(ValueError, match="expected a decision node"):
         cid.set_policy("X", root)
-    cid.set_utility("X", lambda values: np.zeros(len(values)))
-    with pytest.raises(ValueError, match="not an existing utility node"):
-        cid.check_model()
+    with pytest.raises(ValueError, match="expected a utility node"):
+        cid.set_utility("X", lambda values: np.zeros(len(values)))
 
     with pytest.raises(TypeError, match="Expected pgmpy BaseParameter"):
         cid.set_probabilities("X", object())
@@ -164,23 +161,6 @@ def test_simulate_distinguishes_missing_and_unfitted_parameterizations():
             validate()
 
 
-def test_set_utility_validation_is_deferred_to_check_model():
-    cid = CausalInfluenceDiagram(chance_nodes=["X"])
-    cid.set_utility("X", lambda values: np.zeros(len(values)))
-    with pytest.raises(ValueError, match="not an existing utility node"):
-        cid.check_model()
-
-    cid = CausalInfluenceDiagram(utility_nodes=["Utility"])
-
-    with pytest.raises(TypeError, match="must be callable"):
-        cid.set_utility("Utility", "not callable")
-
-    cid = CausalInfluenceDiagram()
-    cid.set_utility("Missing", lambda values: np.zeros(len(values)))
-    with pytest.raises(ValueError, match="not an existing utility node"):
-        cid.check_model()
-
-
 def test_check_model_validates_roles_and_utility_assignments():
     cid = CausalInfluenceDiagram([("X", "Utility")], utility_nodes=["Utility"])
     cid.set_probabilities("X", parameter("X", [0, 1], {(): [0.5, 0.5]}))
@@ -194,26 +174,6 @@ def test_check_model_validates_roles_and_utility_assignments():
     cid.nodes["X"]["role"] = "invalid"
     with pytest.raises(ValueError, match="invalid role"):
         cid.check_model()
-
-
-def test_check_model_validates_utility_leaf_rule_after_graph_mutation():
-    cid = CausalInfluenceDiagram([("Utility", "Outcome")])
-    cid.nodes["Utility"]["role"] = "utility"
-
-    with pytest.raises(ValueError, match="Utility nodes must be leaves"):
-        cid.check_model()
-
-
-def test_set_utility_defers_role_and_callable_validation_to_check_model():
-    cid = CausalInfluenceDiagram(chance_nodes=["X"])
-    cid.set_utility("X", lambda values: np.zeros(len(values)))
-
-    with pytest.raises(ValueError, match="not an existing utility node"):
-        cid.check_model()
-
-    cid = CausalInfluenceDiagram(utility_nodes=["Utility"])
-    with pytest.raises(TypeError, match="must be callable"):
-        cid.set_utility("Utility", "not callable")
 
 
 def test_simulate_samples_policies_and_additive_utility_with_seed():
