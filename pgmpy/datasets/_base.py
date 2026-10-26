@@ -23,14 +23,15 @@ class Dataset:
     data: pd.DataFrame
     expert_knowledge: ExpertKnowledge | None = None
     ground_truth: DAG | PDAG | ADMG | MAG | None = None
+    interventions: pd.DataFrame | None = None
 
     tags: dict[str, Any] = None
-    interventions: pd.Series | None = None
 
     def __str__(self) -> str:
         return (
             f"Dataset(name={self.name}, \n data=DataFrame of size: {self.data.shape}, \n "
-            f"expert_knowledge={self.expert_knowledge}, \n ground_truth={self.ground_truth}, \n tags={self.tags})"
+            f"expert_knowledge={self.expert_knowledge}, \n ground_truth={self.ground_truth},"
+            f"interventions={self.interventions}, \n tags={self.tags})"
         )
 
     def __repr__(self) -> str:
@@ -40,10 +41,10 @@ class Dataset:
 class BaseDataset(BaseObject):
     """
     Base class for all datasets in pgmpy.
+
     Inherits from skbase.base.BaseObject to utilize its tag and lookup functionality.
     """
 
-    # define tags
     _tags = {
         "name": None,
         "n_variables": None,
@@ -146,13 +147,11 @@ class BaseDataset(BaseObject):
         Parameters
         ----------
         n_samples : int, optional
-            If provided, return a random subsample of this size. Capped at the
-            dataset size.
+            If provided, return a random subsample of this size. Capped at the dataset size.
         seed : int, optional
             Random seed for reproducible subsampling.
         data_dir : str or pathlib.Path, optional
-            Directory containing the dataset file. When omitted, use the
-            Hugging Face Hub cache.
+            Directory containing the dataset file. When omitted, use the Hugging Face Hub cache.
 
         """
         if data_dir is None:
@@ -161,17 +160,22 @@ class BaseDataset(BaseObject):
         else:
             source = Path(data_dir) / Path(cls.data_url).name
         df = pd.read_csv(source, sep=getattr(cls, "sep", "\t"), compression=getattr(cls, "compression", None))
+
         if cls.get_class_tag("has_missing_data"):
             df.replace(cls.missing_values_marker, pd.NA, inplace=True)
+
         if cls.get_class_tag("has_index_col"):
             df.drop(df.columns[0], axis=1, inplace=True)
+
         if len(cls.categorical_variables) > 0:
             for col in cls.categorical_variables:
                 df[col] = df[col].astype("category")
+
         if len(cls.ordinal_variables) > 0:
             for col, order in cls.ordinal_variables.items():
                 cat_type = pd.CategoricalDtype(categories=order, ordered=True)
                 df[col] = df[col].astype(cat_type)
+
         if n_samples is not None:
             if n_samples > len(df):
                 _warn_external(
@@ -406,9 +410,11 @@ def load_dataset(
         )
 
     df = target_cls.load_dataframe(n_samples=n_samples, seed=seed, **sim_kwargs)
-    interventions = None
-    if target_cls.intervention_column is not None:
-        interventions = df.pop(target_cls.intervention_column)
+
+    if target_cls.intervention_columns is not None:
+        interventions = df.drop(target_cls.intervention_columns, axis=1)
+    else:
+        interventions = None
 
     return Dataset(
         name=name,
