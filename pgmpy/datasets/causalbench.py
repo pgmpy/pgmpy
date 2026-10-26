@@ -10,7 +10,7 @@ class CausalBenchK562(BaseDataset):
 
     _tags = {
         "name": "causalbench_k562",
-        "n_variables": 623,
+        "n_variables": 622,
         "n_samples": 162751,
         "has_ground_truth": False,
         "has_expert_knowledge": False,
@@ -19,8 +19,8 @@ class CausalBenchK562(BaseDataset):
         "is_simulated": False,
         "is_interventional": True,
         "is_discrete": False,
-        "is_continuous": False,
-        "is_mixed": True,
+        "is_continuous": True,
+        "is_mixed": False,
         "is_ordinal": False,
     }
 
@@ -31,5 +31,6 @@ class CausalBenchK562(BaseDataset):
     expert_knowledge_url = None
 
     compression = "gzip"
+    intervention_column = "intervention"
     categorical_variables = ["intervention"]
     ordinal_variables = dict()

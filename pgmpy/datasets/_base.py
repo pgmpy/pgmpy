@@ -25,6 +25,7 @@ class Dataset:
     ground_truth: DAG | PDAG | ADMG | MAG | None = None
 
     tags: dict[str, Any] = None
+    interventions: pd.Series | None = None
 
     def __str__(self) -> str:
         return (
@@ -63,6 +64,7 @@ class BaseDataset(BaseObject):
     repo_id = "pgmpy/example_datasets"
     repo_type = "dataset"
     revision = "main"
+    intervention_column: str | None = None
 
     @staticmethod
     def _parse_expert_knowledge(raw_expert_knowledge: bytes) -> ExpertKnowledge:
@@ -403,12 +405,18 @@ def load_dataset(
             tags=tags,
         )
 
+    df = target_cls.load_dataframe(n_samples=n_samples, seed=seed, **sim_kwargs)
+    interventions = None
+    if target_cls.intervention_column is not None:
+        interventions = df.pop(target_cls.intervention_column)
+
     return Dataset(
         name=name,
-        data=target_cls.load_dataframe(n_samples=n_samples, seed=seed, **sim_kwargs),
+        data=df,
         expert_knowledge=target_cls.load_expert_knowledge(),
         ground_truth=target_cls.load_ground_truth(seed=seed, **sim_kwargs),
         tags=target_cls.get_class_tags(),
+        interventions=interventions,
     )
 
 

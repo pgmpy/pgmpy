@@ -221,7 +221,13 @@ def test_load_causalbench_k562(tmp_path):
         }
     )
     table.to_csv(tmp_path / "causalbench_k562.tsv.gz", sep="\t", index=False, compression="gzip")
-    dataset = load_dataset("causalbench_k562", data_dir=tmp_path)
-    pd.testing.assert_frame_equal(dataset.data, table)
+    dataset = load_dataset("causalbench_k562", data_dir=tmp_path, n_samples=3, seed=7)
+    expected = table.sample(n=3, random_state=7).reset_index(drop=True)
+    pd.testing.assert_frame_equal(dataset.data, expected.drop(columns="intervention"))
+    pd.testing.assert_series_equal(dataset.interventions, expected["intervention"])
+    assert dataset.tags["n_variables"] == 622
+    assert dataset.tags["is_continuous"] is True
+    assert dataset.tags["is_mixed"] is False
+    assert dataset.tags["is_interventional"] is True
     assert dataset.ground_truth is None
     assert dataset.expert_knowledge is None
