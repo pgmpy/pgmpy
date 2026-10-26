@@ -1,4 +1,4 @@
-"""Adapters for using pgmpy's CI tests with Tigramite."""
+# Adapter from Tigramite to pgmpy for CI test
 
 import numpy as np
 import pandas as pd
