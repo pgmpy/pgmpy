@@ -28,14 +28,14 @@ from pgmpy.ci_tests import get_ci_test, IndependenceMatch
 
 class LatentPC(_ConstraintMixin):
     """
-    The Ψ-PC algorithm for causal discovery / structure learning.
+    The Latent-PC algorithm for causal discovery / structure learning.
 
-    This class implements the Ψ-PC algorithm [1] for causal discovery. Ψ-PC is an
-    extension of the PC algorithm that accommodates (unknown) latent variables. Given
+    This class implements the Ψ-PC algorithm :cite:p:`jaber_2020` for causal discovery. Ψ-PC is an
+    extension of the PC algorithm that accommodates latent (unknown) variables. Given
     a set of tabular datasets, the Ψ-PC algorithm estimates the causal structure among the
     variables in the data as a Ψ-Partially Directed Acyclic Graph (Ψ-PDAG).
 
-    The algorithm uses data from a combination of observational and experimental data (soft
+    The algorithm uses data from a combination of observational and experimental data (assuming soft
     interventions), with the interventional targets being unknown.
     The algorithm works by combining conditional independency tests and mechanism shift tests
     and estimates a DAG pattern that satisfies the identified dependencies.
@@ -50,13 +50,6 @@ class LatentPC(_ConstraintMixin):
         signature of the built-in CI tests.
 
         If None, the appropriate CI test will be chosen based on the data type.
-
-    return_type : str, default="pdag"
-        The type of structure to return. Can be one of: `pdag`, `cpdag`, `dag`.
-
-        - If `return_type=pdag` or `return_type=cpdag`: a partially directed structure is returned.
-        - If `return_type=dag`, a fully directed structure is returned. This DAG is one of the possible orientations of
-          the PDAG learned by the PC algorithm.
 
     significance_level : float, default=0.01
         The p-value threshold to use for the statistical independence tests. If the p-value of a test is greater than
@@ -110,13 +103,44 @@ class LatentPC(_ConstraintMixin):
     n_features_in_ : int
         The number of features in the data used to learn the causal graph.
 
+    References
+    ----------
+
+    - :footcite:t:`jaber_2020`
+    - :footcite:t:`spirtes_glymour_scheines_2001`
+    - :footcite:t:`neapolitan_2009`
+    - :footcite:t:`schmidt_2018`
+    - :footcite:t:`le_2019`
+    - :footcite:t:`meek_1995`
+    - :footcite:t:`ramsey_2016`
+
+    Examples
+    --------
+    Simulate data with a different mechanism for a node:
+
+    >>> import pandas as pd
+    >>> import numpy as np
+    >>> values = pd.DataFrame(np.random.normal(size=(1000, 2)),columns=["A", "B"])
+    >>> values["C"] = values["A"] + values["B"]
+
+    >>> shifted_values = values.copy(deep=True)
+    >>> shifted_values["A"] = np.random.randint(low=2, high=4, size=(1000,))
+    >>> shifted_values["C"] = shifted_values["A"] + shifted_values["B"]
+
+    Use the Latent-PC algorithm to learn the causal structure from data:
+
+    >>> from pgmpy.causal_discovery.LatentPC import LatentPC
+
+    >>> latent_pc = LatentPC(significance_level=0.05)
+    >>> latent_pc._fit([values, shifted_values])
+    >>> latent_pc.causal_graph_.get_edges()
+    [('A', 'C', '->'), ('f_1', 'A', '->'), ('B', 'C', '->')]
     """
 
     def __init__(
         self,
         variant: str = "parallel",
         ci_test: str | Callable | None = None,
-        return_type: str = "pdag",
         significance_level: float = 0.01,
         max_cond_vars: int = 5,
         orient_rule: str | None = None,
@@ -126,7 +150,6 @@ class LatentPC(_ConstraintMixin):
     ):
         self.variant = variant
         self.ci_test = ci_test
-        self.return_type = return_type
         self.significance_level = significance_level
         self.max_cond_vars = max_cond_vars
         self.orient_rule = orient_rule
@@ -197,6 +220,7 @@ class LatentPC(_ConstraintMixin):
 
         all_variables = variables + f_nodes
         self.latent_nodes = set(f_nodes)
+
         graph = nx.complete_graph(n=all_variables, create_using=nx.Graph)
         if expert_knowledge is None:
             temporal_ordering, required_edges, forbidden_edges = {}, set(), set()
@@ -268,18 +292,18 @@ class LatentPC(_ConstraintMixin):
 
         # Step 3: Use separating sets to orient colliders
         self.skeleton_, self.separating_sets_ = graph, separating_sets
-        pdag = self._orient_colliders(
-            temporal_ordering=expert_knowledge.temporal_ordering_,
-        )
+        pdag = self._orient_colliders(temporal_ordering=temporal_ordering)
 
         # Step 4: Apply orientation rules and expert knowledge as hard directional constraints.
         curr_edges = list(pdag.edges)
         for u, v, _ in curr_edges:
             if u in f_nodes:
                 pdag.orient_undirected_edge(u, v, inplace=True)
+                # pdag.replace_edge(u, v, '->', '-o')
 
             elif v in f_nodes:
                 pdag.orient_undirected_edge(v, u, inplace=True)
+                # pdag.replace_edge(v, u, '<-', 'o-')
 
         pdag = pdag.apply_meeks_rules(apply_r4=False)
         pdag.add_nodes_from(set(X.columns) - set(pdag.nodes()))
@@ -293,8 +317,8 @@ class LatentPC(_ConstraintMixin):
     def latent_separating_set(
         self,
         datasets: List[pd.DataFrame],
-        x: Any,
-        y: Any,
+        u: Any,
+        v: Any,
         graph_nodes: Iterable,
         latent_nodes: Iterable,
         distribution_map: dict,
@@ -304,17 +328,17 @@ class LatentPC(_ConstraintMixin):
         graph_nodes = set(graph_nodes)
         latent_nodes = set(latent_nodes)
 
-        if x not in latent_nodes and y in latent_nodes:
-            x, y = y, x  # make x the F-node (latent node)
+        if u not in latent_nodes and v in latent_nodes:
+            u, v = v, u  # make u the latent node (also called F-node)
 
-        if x not in latent_nodes and y not in latent_nodes:
+        if u not in latent_nodes and v not in latent_nodes:
             # choose any arbitrary distribution
             ci_test = getattr(self, "ci_test_", None)
             if ci_test is None:
                 ci_test = get_ci_test(test=self.ci_test, data=datasets[0])
                 self.ci_test_ = ci_test
 
-            conditioning_set = list(graph_nodes - {x, y})
+            conditioning_set = list(graph_nodes - {u, v})
             conditioning_set = list(
                 chain.from_iterable(
                     combinations(conditioning_set, r)
@@ -323,13 +347,13 @@ class LatentPC(_ConstraintMixin):
             )
             for nodes in conditioning_set:
                 if ci_test.is_independent(
-                    x, y, nodes, significance_level=self.significance_level
+                    u, v, nodes, significance_level=self.significance_level
                 ):
                     return True, set(nodes) | latent_nodes
 
         else:
-            i, j = distribution_map[x]
-            conditioning_set = list(graph_nodes - {y})
+            i, j = distribution_map[u]
+            conditioning_set = list(graph_nodes - {v})
             conditioning_set = list(
                 chain.from_iterable(
                     combinations(conditioning_set, r)
@@ -337,7 +361,7 @@ class LatentPC(_ConstraintMixin):
                 )
             )
 
-            if x not in self._ci_test_mechanisms:
+            if u not in self._ci_test_mechanisms:
 
                 d_i = datasets[i - 1].copy()
                 d_j = datasets[j - 1].copy()
@@ -355,21 +379,21 @@ class LatentPC(_ConstraintMixin):
                     self.ci_test,
                     data=data,
                 )
-                self._ci_test_mechanisms[x] = ci_test
+                self._ci_test_mechanisms[u] = ci_test
             else:
-                ci_test = self._ci_test_mechanisms[x]
+                ci_test = self._ci_test_mechanisms[u]
 
             for nodes in conditioning_set:
                 if (
                     ci_test.is_independent(
-                        y,
+                        v,
                         "_mechanism",
                         nodes,
                         significance_level=self.significance_level,
                     )
                     is True
                 ):
-                    return True, set(nodes) | (latent_nodes - {x})
+                    return True, set(nodes) | (latent_nodes - {u})
 
         return False, set()
 
@@ -391,6 +415,9 @@ class LatentPC(_ConstraintMixin):
         Uses ``self.skeleton_``, ``self.separating_sets_``, ``self.orient_rule``,
         ``self.ci_test_``, ``self.significance_level``, and ``self.max_cond_vars``.
 
+        Latent nodes (also called F-nodes) are excluded from collider orientation.
+        They have separate handling for orientation.
+
         Parameters
         ----------
         temporal_ordering : dict, optional
@@ -405,18 +432,6 @@ class LatentPC(_ConstraintMixin):
         ----------
         - :footcite:t:`neapolitan_2009` (Section 10.1.2, Algorithm 10.2, page 550).
         - :footcite:t:`ramsey_2016`
-
-        Examples
-        --------
-        >>> import pandas as pd
-        >>> import numpy as np
-        >>> from pgmpy.causal_discovery import PC
-        >>> from pgmpy.example_models import load_model
-        >>> df = load_model("bnlearn/cancer").simulate(int(1e3), seed=42)
-        >>> est = PC(ci_test='chi_square').fit(df)
-        >>> pdag = est._orient_colliders()
-        >>> sorted(pdag.get_edges(data=False))
-        [('Pollution', 'Cancer'), ('Xray', 'Cancer')]
         """
 
         skeleton = self.skeleton_
