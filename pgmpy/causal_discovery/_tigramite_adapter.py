@@ -203,8 +203,8 @@ class PgmpyTigramiteCITest:
             lagged_data.columns, "N"
         )
 
-        # The same names can refer to different aligned samples when cutoff
-        # settings change, so avoid reusing results from an earlier query.
+        # The same names can have different results
+        # due to cutoff settings.
         if hasattr(self.cond_ind_test, "_result_cache"):
             self.cond_ind_test._result_cache.clear()
 
