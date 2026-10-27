@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -22,13 +23,15 @@ class Dataset:
     data: pd.DataFrame
     expert_knowledge: ExpertKnowledge | None = None
     ground_truth: DAG | PDAG | ADMG | MAG | None = None
+    interventions: pd.DataFrame | None = None
 
     tags: dict[str, Any] = None
 
     def __str__(self) -> str:
         return (
             f"Dataset(name={self.name}, \n data=DataFrame of size: {self.data.shape}, \n "
-            f"expert_knowledge={self.expert_knowledge}, \n ground_truth={self.ground_truth}, \n tags={self.tags})"
+            f"expert_knowledge={self.expert_knowledge}, \n ground_truth={self.ground_truth},"
+            f"interventions={self.interventions}, \n tags={self.tags})"
         )
 
     def __repr__(self) -> str:
@@ -38,10 +41,10 @@ class Dataset:
 class BaseDataset(BaseObject):
     """
     Base class for all datasets in pgmpy.
+
     Inherits from skbase.base.BaseObject to utilize its tag and lookup functionality.
     """
 
-    # define tags
     _tags = {
         "name": None,
         "n_variables": None,
@@ -62,6 +65,7 @@ class BaseDataset(BaseObject):
     repo_id = "pgmpy/example_datasets"
     repo_type = "dataset"
     revision = "main"
+    intervention_column: str | None = None
 
     @staticmethod
     def _parse_expert_knowledge(raw_expert_knowledge: bytes) -> ExpertKnowledge:
@@ -131,31 +135,47 @@ class BaseDataset(BaseObject):
         )
 
     @classmethod
-    def load_dataframe(cls, n_samples=None, seed=None) -> pd.DataFrame:
+    def load_dataframe(
+        cls,
+        n_samples: int | None = None,
+        seed: int | None = None,
+        data_dir: str | Path | None = None,
+    ) -> pd.DataFrame:
         """
         Fetches/reads from cache the data associated with the dataset.
 
         Parameters
         ----------
         n_samples : int, optional
-            If provided, return a random subsample of this size. Capped at the
-            dataset size.
+            If provided, return a random subsample of this size. Capped at the dataset size.
         seed : int, optional
             Random seed for reproducible subsampling.
+        data_dir : str or pathlib.Path, optional
+            Directory containing the dataset file. When omitted, use the Hugging Face Hub cache.
+
         """
-        raw_data = cls._get_raw_data(cls.data_url)
-        df = pd.read_csv(io.BytesIO(raw_data), sep=getattr(cls, "sep", "\t"))
+        if data_dir is None:
+            raw_data = cls._get_raw_data(cls.data_url)
+            source = io.BytesIO(raw_data)
+        else:
+            source = Path(data_dir) / Path(cls.data_url).name
+        df = pd.read_csv(source, sep=getattr(cls, "sep", "\t"), compression=getattr(cls, "compression", None))
+
         if cls.get_class_tag("has_missing_data"):
             df.replace(cls.missing_values_marker, pd.NA, inplace=True)
+
         if cls.get_class_tag("has_index_col"):
             df.drop(df.columns[0], axis=1, inplace=True)
+
         if len(cls.categorical_variables) > 0:
             for col in cls.categorical_variables:
                 df[col] = df[col].astype("category")
+
         if len(cls.ordinal_variables) > 0:
             for col, order in cls.ordinal_variables.items():
                 cat_type = pd.CategoricalDtype(categories=order, ordered=True)
                 df[col] = df[col].astype(cat_type)
+
         if n_samples is not None:
             if n_samples > len(df):
                 _warn_external(
@@ -306,10 +326,11 @@ def load_dataset(
     seed : int, optional
         Random seed for reproducible subsampling or simulation.
     **sim_kwargs : dict, optional
-        Additional keyword arguments forwarded to the simulator's
-        ``load_dataframe()`` and ``load_ground_truth()`` methods. Passing
-        simulator kwargs to a static dataset raises ``TypeError``. For Tubingen
-        datasets, these kwargs are ignored with a warning.
+        Dataset-specific keyword arguments forwarded to ``load_dataframe()``
+        and ``load_ground_truth()``. Static tabular datasets accept ``data_dir``
+        to read a prepared local file; unsupported arguments raise
+        ``TypeError``. For Tubingen datasets, these kwargs are ignored with
+        a warning.
 
     Examples
     --------
@@ -388,12 +409,20 @@ def load_dataset(
             tags=tags,
         )
 
+    df = target_cls.load_dataframe(n_samples=n_samples, seed=seed, **sim_kwargs)
+
+    if target_cls.intervention_columns is not None:
+        interventions = df.drop(target_cls.intervention_columns, axis=1)
+    else:
+        interventions = None
+
     return Dataset(
         name=name,
-        data=target_cls.load_dataframe(n_samples=n_samples, seed=seed, **sim_kwargs),
+        data=df,
         expert_knowledge=target_cls.load_expert_knowledge(),
         ground_truth=target_cls.load_ground_truth(seed=seed, **sim_kwargs),
         tags=target_cls.get_class_tags(),
+        interventions=interventions,
     )
 
 
