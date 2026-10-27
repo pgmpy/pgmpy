@@ -21,9 +21,7 @@ class BaseGraphicalIdentification:
     ...     "A simple identification method when all variable are observed"
     ...
     ...     def _identify(self, causal_graph):
-    ...         outcome_parents = causal_graph.predecessors(
-    ...             causal_graph.get_role("exposures")
-    ...         )
+    ...         outcome_parents = causal_graph.predecessors(causal_graph.get_role("exposures"))
     ...         identified_cg = causal_graph.with_role("adjustment", outcome_parents)
     ...         return identified_cg, True
     ...
@@ -41,26 +39,22 @@ class BaseGraphicalIdentification:
         """
         Run the identification algorithm on a causal graph.
 
-        This method applies the identification procedure to the input causal
-        graph, annotating it with variable roles (e.g., adjustment, IVs) while
-        keeping the original graphical structure.
+        This method applies the identification procedure to the input causal graph, annotating it with variable roles
+        (e.g., adjustment, IVs) while keeping the original graphical structure.
 
         Parameters
         ----------
         causal_graph : DAG, PDAG, ADMG, MAG, or PAG object
-            The input causal graph on which to perform identification. The
-            causal graph must have variables with exposures and outcomes roles
-            defined.
+            The input causal graph on which to perform identification. The causal graph must have variables with
+            exposures and outcomes roles defined.
 
         Returns
         -------
         identified_graph : DAG, PDAG, ADMG, MAG, or PAG object
-            A new causal graph instance with variable roles assigned according
-            to the identification method.
+            A new causal graph instance with variable roles assigned according to the identification method.
 
         success : bool
-            True if the exposures and outcomes are successfully identified; False
-            otherwise.
+            True if the exposures and outcomes are successfully identified; False otherwise.
         """
         self._validate_causal_graph(causal_graph)
         return self._identify(causal_graph)
@@ -69,10 +63,9 @@ class BaseGraphicalIdentification:
         """
         Validate the input causal graph for identification.
 
-        This method checks if the variable roles assigned in the `causal_graph`
-        are appropriate for identification. For example, given a causal graph
-        with exposures, outcomes, and adjustment roles, it verifies that the
-        adjustment set is valid for the given exposures and outcomes.
+        This method checks if the variable roles assigned in the `causal_graph` are appropriate for identification. For
+        example, given a causal graph with exposures, outcomes, and adjustment roles, it verifies that the adjustment
+        set is valid for the given exposures and outcomes.
 
         Parameters
         ----------
