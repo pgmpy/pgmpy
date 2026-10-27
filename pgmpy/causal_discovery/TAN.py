@@ -256,3 +256,49 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
         weights.T[indices] = vals
 
         return weights
+
+    def _fit(self, X: pd.DataFrame, return_type: str = "dag"):
+        # Step 1: Validate return_type
+        valid_return_types = {"dag", "pdag", "cpdag"}
+        if return_type.lower() not in valid_return_types:
+            raise ValueError(f"Invalid return_type: '{return_type}'. Expected one of {valid_return_types}.")
+
+        # Step 2: Validate class_node and root_node.
+        if self.class_node is None:
+            raise ValueError("class_node argument must be specified")
+        if self.class_node not in X.columns:
+            raise ValueError(f"Class node: {self.class_node} not found in data columns")
+        if self.root_node is not None and self.root_node not in X.columns:
+            raise ValueError(f"Root node: {self.root_node} not found in data columns.")
+
+        root_node = self.root_node
+        if root_node is None:
+            features = X.drop(columns=[self.class_node])
+            weights = self._get_weights(features, self.edge_weights_fn, self.n_jobs, self.show_progress)
+            sum_weights = weights.sum(axis=0)
+            maxw_idx = np.argsort(sum_weights)[::-1]
+            root_node = features.columns[maxw_idx[0]]
+
+        weights = self._get_conditional_weights(
+            X, self.class_node, self.edge_weights_fn, self.n_jobs, self.show_progress
+        )
+
+        if root_node == self.class_node:
+            raise ValueError(f"Root node: {root_node} and class node: {self.class_node} are identical")
+
+        class_node_idx = np.where(X.columns == self.class_node)[0][0]
+        weights = np.delete(weights, class_node_idx, axis=0)
+        weights = np.delete(weights, class_node_idx, axis=1)
+        reduced_columns = np.delete(X.columns, class_node_idx)
+        D = self._create_tree_and_dag(weights, reduced_columns, root_node)
+
+        D.add_edges_from([(self.class_node, node) for node in reduced_columns])
+
+        if return_type.lower() in {"pdag", "cpdag"}:
+            self.causal_graph_ = D.to_pdag()
+        else:
+            self.causal_graph_ = D
+
+        self.adjacency_matrix_ = nx.to_pandas_adjacency(self.causal_graph_, weight=1, dtype="int")
+
+        return self

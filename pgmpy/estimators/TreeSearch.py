@@ -53,6 +53,7 @@ class TreeSearch(StructureEstimator):
         class_node=None,
         edge_weights_fn="mutual_info",
         show_progress=True,
+        return_type="dag",
     ):
         """
         Estimate the `DAG` structure that fits best to the given data set
@@ -66,6 +67,9 @@ class TreeSearch(StructureEstimator):
         Estimated model: pgmpy.base.DAG
             The estimated model structure.
         """
+        valid_return_types = {"dag", "pdag", "cpdag"}
+        if return_type.lower() not in valid_return_types:
+            raise ValueError(f"Invalid return_type: '{return_type}'. Expected one of {valid_return_types}.")
         if estimator_type == "chow-liu":
             est = _ChowLiu(
                 root_node=self.root_node,
@@ -84,4 +88,9 @@ class TreeSearch(StructureEstimator):
         else:
             raise ValueError(f"`estimator_type` must be one of: chow-liu, tan. Got: {estimator_type}")
 
-        return est.fit(self.data).causal_graph_
+        model = est.fit(self.data).causal_graph_
+
+        if return_type.lower() == "dag":
+            return model
+        else:
+            return model.to_pdag()

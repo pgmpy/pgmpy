@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 from joblib.externals.loky import get_reusable_executor
 
+from pgmpy.base import DAG, PDAG
 from pgmpy.estimators import TreeSearch
 from pgmpy.example_models import load_model
 from pgmpy.factors.discrete import TabularCPD
@@ -320,3 +321,41 @@ def test_tan_real_dataset(alarm_df):
 def shutdown_executor():
     yield
     get_reusable_executor().shutdown(wait=True)
+
+
+def test_estimate_chow_liu_return_type(data12):
+    est = TreeSearch(data12, root_node="A")
+
+    # Test return_type="dag"
+    dag = est.estimate(estimator_type="chow-liu", return_type="dag", show_progress=False)
+    assert isinstance(dag, DAG)
+
+    # Test return_type="pdag" and "cpdag"
+    pdag = est.estimate(estimator_type="chow-liu", return_type="pdag", show_progress=False)
+    assert isinstance(pdag, PDAG)
+
+    cpdag = est.estimate(estimator_type="chow-liu", return_type="cpdag", show_progress=False)
+    assert isinstance(cpdag, PDAG)
+
+    # Test invalid return_type raises ValueError
+    with pytest.raises(ValueError):
+        est.estimate(estimator_type="chow-liu", return_type="invalid_type", show_progress=False)
+
+
+def test_estimate_tan_return_type(data22):
+    est = TreeSearch(data22, root_node="R")
+
+    # Test return_type="dag"
+    dag = est.estimate(estimator_type="tan", class_node="A", return_type="dag", show_progress=False)
+    assert isinstance(dag, DAG)
+
+    # Test return_type="pdag" and "cpdag"
+    pdag = est.estimate(estimator_type="tan", class_node="A", return_type="pdag", show_progress=False)
+    assert isinstance(pdag, PDAG)
+
+    cpdag = est.estimate(estimator_type="tan", class_node="A", return_type="cpdag", show_progress=False)
+    assert isinstance(cpdag, PDAG)
+
+    # Test invalid return_type raises ValueError
+    with pytest.raises(ValueError):
+        est.estimate(estimator_type="tan", class_node="A", return_type="invalid_type", show_progress=False)
