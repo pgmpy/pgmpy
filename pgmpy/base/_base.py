@@ -153,6 +153,7 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
 
     SUPPORTED_EDGE_TYPES = frozenset(["--", "-o", "o-", "->", "<-", "o>", "<o", "<>", "oo"])
     SUPPORTS_LATENTS = True
+    MARKERS_TO_EDGE_TYPE = {(">", "-"): "<-", ("o", "-"): "o-", (">", "o"): "<o", (">", ">"): "<>"}
 
     def __init__(
         self,
@@ -1846,11 +1847,4 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
         """
         u_marker = markers[u]
         v_marker = markers[v]
-
-        marker_map = {
-            (">", "-"): "<-",
-            ("o", "-"): "o-",
-            (">", "o"): "<o",
-            (">", ">"): "<>",
-        }
-        return marker_map.get((u_marker, v_marker), f"{u_marker}{v_marker}")
+        return self.MARKERS_TO_EDGE_TYPE.get((u_marker, v_marker), f"{u_marker}{v_marker}")
