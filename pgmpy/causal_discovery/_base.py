@@ -3,6 +3,7 @@ from collections import deque
 from collections.abc import Callable, Generator, Hashable
 from itertools import combinations, permutations
 
+import narwhals.stable.v2 as nw
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -64,50 +65,60 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         tags.target_tags.required = False
         return tags
 
-    def _check_fit_data(self, X):
+    def _check_fit_data(self, X) -> nw.DataFrame:
         """Check the input data for fitting the causal discovery algorithm.
 
         Parameters
         ----------
-        X: pd.DataFrame
+        X: pd.DataFrame, pl.DataFrame, pa.Table, cudf.DataFrame, or np.ndarray
             The data to fit the causal discovery algorithm on.
         """
-        n_samples, n_features = X.shape
 
+        if isinstance(X, (np.ndarray, pd.DataFrame)):
+            # Handle cases like complex data, sparse arrays etc. first
+            validate_data(
+                self,
+                X=X,
+                dtype=None,
+                accept_sparse=False,
+                ensure_all_finite=True,
+                reset=True,
+            )
+            if isinstance(X, np.ndarray):
+                cols = [f"x{i}" for i in range(X.shape[1])]
+                X = pd.DataFrame(X, columns=cols)
+
+        nw_df = X if isinstance(X, nw.DataFrame) else nw.from_native(X, eager_only=True)
+
+        n_samples, n_features = nw_df.shape
         if n_features == 0:
-            raise ValueError(f"0 feature(s) (shape={X.shape}) while a minimum of 1 is required.")
+            raise ValueError(f"0 feature(s) (shape={nw_df.shape}) while a minimum of 1 is required.")
         if n_samples < 2:
             raise ValueError(f"n_samples = {n_samples}, at least 2 are required.")
 
-        # Handle cases like complex data, sparse arrays etc. first
-        validate_data(
-            self,
-            X=X,
-            dtype=None,
-            accept_sparse=False,
-            ensure_all_finite=True,
-            reset=True,
-        )
+        for col in nw_df.columns:
+            s = nw_df.get_column(col)
+            null_count = s.is_null().sum()
+            try:
+                nan_count = s.is_nan().sum() if s.dtype.is_float() else 0
+            except (TypeError, AttributeError):
+                nan_count = 0
+            if (null_count + nan_count) > 0:
+                raise ValueError(f"Input contains NaN/null values in column '{col}'.")
 
-        if not isinstance(X, pd.DataFrame):
-            X = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
-            self.feature_names_in_ = X.columns
-
-        if not all([isinstance(x, Hashable) for x in X.values.flat]):
-            raise TypeError("argument must be a string, number, or hashable object.")
-
-        for col in X.columns:
-            if X[col].nunique() == 1:
+        for col in nw_df.columns:
+            if nw_df.get_column(col).n_unique() == 1:
                 warnings.warn(
                     f"Variable '{col}' is constant (zero variance), which can lead to unreliable results for"
                     f"{type(self).__name__}. Consider removing it before fitting.",
                     UserWarning,
                 )
 
-        self.n_features_in_ = len(X.columns)
-        return X
+        self.feature_names_in_ = np.asarray(nw_df.columns, dtype=object)
+        self.n_features_in_ = n_features
+        return nw_df
 
-    def fit(self, X: pd.DataFrame, y=None, **fit_params):
+    def fit(self, X, y=None, **fit_params):
         """Fit data (`X`) to a causal graph. The method calls the `_fit` method, which must be implemented separately in
         any causal discovery algorithm inheriting from `BaseCausalDiscovery`. Additional keyword arguments are passed to
         `_fit`.
