@@ -1,32 +1,20 @@
-from collections import deque
-from joblib import Parallel, delayed
-from collections.abc import Callable, Generator, Hashable
-from itertools import combinations, permutations
+import networkx as nx
+import pandas as pd
+
 from collections.abc import Callable, Hashable
 from itertools import combinations, chain
+from sklearn.base import clone
+from sklearn.utils.validation import check_is_fitted, validate_data
 from tqdm.auto import tqdm
 from typing import List, Any, Iterable
 
-import networkx as nx
-import numpy as np
-import pandas as pd
-from sklearn.base import BaseEstimator, clone
-from sklearn.metrics import (
-    adjusted_mutual_info_score,
-    mutual_info_score,
-    normalized_mutual_info_score,
-)
-from sklearn.utils.validation import check_is_fitted, validate_data
-
-
 from pgmpy import config, logger
-from pgmpy.base import PDAG, MAG
+from pgmpy.base import PDAG
 from pgmpy.causal_discovery import ExpertKnowledge
-from pgmpy.causal_discovery._base import BaseCausalDiscovery, _ConstraintMixin
 from pgmpy.ci_tests import get_ci_test, IndependenceMatch
 
 
-class LatentPC(_ConstraintMixin):
+class LatentPC():
     """
     The Latent-PC algorithm for causal discovery / structure learning.
 
@@ -36,9 +24,12 @@ class LatentPC(_ConstraintMixin):
     variables in the data as a Ψ-Partially Directed Acyclic Graph (Ψ-PDAG).
 
     The algorithm uses data from a combination of observational and experimental data (assuming soft
-    interventions), with the interventional targets being unknown.
-    The algorithm works by combining conditional independency tests and mechanism shift tests
-    and estimates a DAG pattern that satisfies the identified dependencies.
+    interventions), with the interventional targets being unknown. The latent variables represent the 
+    difference in mechanism between any two datasets; in other words, the latent variables form edges 
+    with the variables in the two datasets where the interventions took place.
+    The algorithm does this by combining conditional independency tests and mechanism shift tests
+    and estimates a PDAG pattern that satisfies the identified dependencies.
+
     Ψ-PC can be used for structural learning in non-Markovian systems (i.e., when latent variables affect
     more than one observable).
 
