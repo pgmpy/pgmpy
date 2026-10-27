@@ -176,7 +176,7 @@ class ID(BaseFormulaIdentification):
                 outcomes,
                 exposures & ancestors,
                 ancestors,
-                causal_graph.get_ancestral_graph(ancestors),
+                causal_graph.get_subgraph(ancestors),
                 estimand.marginalize(variables - ancestors),
                 ordering,
             )
