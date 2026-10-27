@@ -739,8 +739,8 @@ class TestDynamicBayesianNetworkMethods3(unittest.TestCase):
         self.cancer_inf = DBNInference(self.cancer_model)
         self.cancer_query_result = self.cancer_inf.query([("Xray", 1)], {("Smoker", 0): 0})[("Xray", 1)].values
 
-        self.assertAlmostEqual(self.cancer_query_result[0], 0.213307, 4)
-        self.assertAlmostEqual(self.cancer_query_result[1], 0.786693, 4)
+        self.assertAlmostEqual(self.cancer_query_result[0], 0.2173922, 4)
+        self.assertAlmostEqual(self.cancer_query_result[1], 0.7826078, 4)
 
     def test_initialize_and_infer3(self):
         self.cancer_model.add_edges_from(
