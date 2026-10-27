@@ -831,7 +831,8 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
         subgraph.add_nodes_from(node for node in self.nodes() if node in nodes)
         for u, v, edge_type in self.get_edges(data=True, edge_types=edge_types):
             if u in nodes and v in nodes:
-                subgraph.add_edge(u, v, edge_type=edge_type)
+                key = nx.MultiGraph.add_edge(subgraph, u, v)
+                subgraph.edges[u, v, key].update(self._to_markers(edge=(u, v, edge_type)))
 
         for role, variables in self.get_role_dict().items():
             retained = [node for node in variables if node in nodes]
