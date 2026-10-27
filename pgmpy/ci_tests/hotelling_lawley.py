@@ -69,6 +69,7 @@ class HotellingLawley(_ResidualMixin, BaseCITest):
         "data_types": ["discrete", "continuous", "mixed"],
         "default_for": None,
         "requires_data": True,
+        "capability:conditioning": True,
     }
 
     def __init__(self, data: pd.DataFrame, estimator=None, use_cache: bool = True):

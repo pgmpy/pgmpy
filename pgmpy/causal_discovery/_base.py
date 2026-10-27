@@ -111,18 +111,34 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         """Fit data (`X`) to a causal graph. The method calls the `_fit` method, which must be implemented separately in
         any causal discovery algorithm inheriting from `BaseCausalDiscovery`. Additional keyword arguments are passed to
         `_fit`.
+
+        After fitting, the tags are updated to the objects used for fitting. A wrapped causal discovery estimator,
+        stored by `_fit` as `estimator_`, determines every tag except `name`. A CI test (`ci_test_`), a structure or
+        bivariate score (`scoring_method_`), or a pairwise estimator (`pairwise_estimator_`) narrows `data_types` and
+        the `assumption:*` tags.
         """
+        # Step 1: Run checks on the dataset.
         X = self._check_fit_data(X)
+
+        # Step 2: Run the fitting algorithm.
         result = self._fit(X, **fit_params)
 
-        # Narrow the tags to the components used for fitting: keep the data types that every component supports and add
-        # the assumptions that any component makes.
+        # Step 3: Take over the tags of a wrapped causal discovery estimator.
+        estimator = getattr(self, "estimator_", None)
+        if estimator is not None:
+            tags = type(self).get_class_tags()
+            tags.update(
+                {key: value for key, value in estimator.get_tags().items() if key != "name" and value is not None}
+            )
+            self.set_tags(**tags)
+
+        # Step 4: Narrow the data types and the assumptions to the components used for fitting.
         components = [getattr(self, name, None) for name in ("ci_test_", "scoring_method_", "pairwise_estimator_")]
         components = [component for component in components if component is not None]
         if components:
-            class_tags = type(self).get_class_tags()
-            data_types = class_tags["data_types"]
-            assumptions = {key: bool(value) for key, value in class_tags.items() if key.startswith("assumption:")}
+            base_tags = self.get_tags() if estimator is not None else type(self).get_class_tags()
+            data_types = base_tags["data_types"]
+            assumptions = {key: bool(value) for key, value in base_tags.items() if key.startswith("assumption:")}
             for component in components:
                 component_tags = component.get_tags() if isinstance(component, BaseObject) else {}
                 component_types = component_tags.get("data_types")
