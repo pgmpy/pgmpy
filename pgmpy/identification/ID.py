@@ -12,20 +12,17 @@ class ID(BaseFormulaIdentification):
     r"""
     Given a causal graph, identifies the causal effect using the ID algorithm.
 
-    The class implements the recursive identification procedure of :footcite:t:`shpitser_2006` (Fig. 3) for ADMGs and
-    DAGs with exposure and outcome roles.
+    Follows Fig. 3 of :footcite:t:`shpitser_2006`. ``identify`` takes an ADMG or DAG with disjoint ``exposures`` and
+    ``outcomes`` and returns P(Y|do(X)) as a
+    :class:`~pgmpy.identification.probability_expression.ProbabilityExpressionTree`, or False if it is not
+    identifiable. A DAG is first projected to an ADMG (:meth:`pgmpy.base.DAG.to_admg`), so its latents cannot be
+    exposures or outcomes.
 
-    Parameters
+    Attributes
     ----------
-    causal_graph: ADMG | DAG
-        An ADMG or DAG with exposures and outcomes roles assigned. The two roles must be disjoint.
-
-    Returns
-    -------
-    expression: ProbabilityExpressionTree | False
-        The symbolic formula for P(Y|do(X)), or False if the effect is not identifiable. When False, the witness
-        hedge is stored in ``self.hedge_`` as the pair of graphs ``(G, G_S)`` thrown by Step 5; the C-forests forming
-        the hedge are edge subgraphs of that pair (Theorem 6).
+    hedge_ : tuple of (ADMG, ADMG) or None
+        If the effect is not identifiable, the pair ``(G, G_S)`` from Step 5 containing the hedge's C-forests
+        (Theorem 6); otherwise None.
 
     Examples
     --------
