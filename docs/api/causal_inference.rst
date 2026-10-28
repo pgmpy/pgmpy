@@ -14,6 +14,8 @@ Graphical Identification and Inference
    ~pgmpy.inference.CausalInference.CausalInference
    ~pgmpy.identification.adjustment.Adjustment
    ~pgmpy.identification.frontdoor.Frontdoor
+   ~pgmpy.identification.ID.ID
+   ~pgmpy.identification.probability_expression.ProbabilityExpressionTree
 
 Estimators
 ----------
