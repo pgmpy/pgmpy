@@ -11,6 +11,8 @@ from pgmpy.ci_tests import get_ci_test
 from pgmpy.global_vars import config
 from pgmpy.metrics import BaseUnsupervisedMetric
 
+from .rmsea import RMSEA
+
 
 class FisherC(BaseUnsupervisedMetric):
     """
@@ -99,8 +101,8 @@ class FisherC(BaseUnsupervisedMetric):
 
         if self.compute_rmsea:
             if len(X) != 1 and len(cis) != 0:
-                rmsea = np.sqrt(max((C - 2 * len(cis)) / (2 * len(cis) * (len(X) - 1)), 0))
+                rmsea = RMSEA.compute_rmsea(test_statistic=C, deg_of_freedom=(2 * len(cis)), data=X)
+                self.rmsea_ = rmsea
             return (p_value, rmsea)
-
         else:
             return p_value
