@@ -260,6 +260,13 @@ class DoubleMLRegressor(BaseCausalPrediction):
 
         if sample_weight is None:
             sample_weight = np.ones(self.n_samples_)
+        else:
+            sample_weight = np.asarray(sample_weight, dtype=float)
+            if sample_weight.ndim != 1 or sample_weight.shape[0] != self.n_samples_:
+                raise ValueError(
+                    f"sample_weight must be 1-dimensional with length {self.n_samples_}, "
+                    f"got shape {sample_weight.shape}."
+                )
 
         # Step 2: Prepare covariate dataframe. If no adjustment or pretreatment
         #         variables, use intercept only.
