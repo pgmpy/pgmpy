@@ -5,7 +5,7 @@ from copy import deepcopy
 import numpy as np
 import pandas as pd
 
-from pgmpy.causal_discovery._tigramite_adapter import PgmpyTigramiteCITest
+from pgmpy.ci_tests._tigramite_adapter import TigramiteAdapter
 
 
 class BaseTimeSeriesCausalDiscovery(ABC):
@@ -44,7 +44,7 @@ class BaseTimeSeriesCausalDiscovery(ABC):
             conditional independence testing interface.
 
         verbosity : int
-            Controls the amount of diagnostic information emitted during
+            Controls the amount of information emitted during
             the discovery process.
         """
         # validate temporal lag configuration
@@ -183,7 +183,9 @@ class BaseTimeSeriesCausalDiscovery(ABC):
         if self.cond_ind_test is None:
             raise ValueError("cond_ind_test must be provided to perform causal discovery.")
 
-        self.tigramite_ci_test_ = PgmpyTigramiteCITest(cond_ind_test=self.ci_test, variable_names=self.variable_names_)
+        self.tigramite_ci_test_ = TigramiteAdapter(
+            tigramite_ci=self.tigramite_ci_test_, tau_max=self.tau_max, cut_off="2xtau_max", alpha_or_thres=None
+        )
         return self.tigramite_ci_test_
 
     @abstractmethod

@@ -5,6 +5,7 @@ import numpy as np
 from pgmpy.causal_discovery._baseTimeSeries import (
     BaseTimeSeriesCausalDiscovery,
 )
+from pgmpy.ci_tests._tigramite_adapter import TigramiteAdapter
 
 
 class _BasePCMCI(BaseTimeSeriesCausalDiscovery):
@@ -35,39 +36,45 @@ class _BasePCMCI(BaseTimeSeriesCausalDiscovery):
         self.fdr_method = fdr_method
         self.link_assumptions = link_assumptions
         self.kwargs = kwargs
+        self.tigramite_ci_test_ = None
+        self.ci_test_ = None
+        self.pcmci_ = None
 
     def _prepare_data(self, X):
-        """Convert an sktime MultiIndex DataFrame to a Tigramite DataFrame."""
-        from tigramite import data_processing as pp
+        """Convert an sktime MultiIndex DataFrame to a Tigramite DataFrame.
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            The input DataFrame to be transformed.
+
+        Returns
+        -------
+        tigramite_data_ : tigtamite DataFrame
+            A multi-indexed tigramite friendly dataframe.
+        """
+
+        from tigramite import data_processing as dp
 
         self._validate_time_series_data(X)
         self.X_ = X.copy()
-
         self.series_data_ = self._prepare_time_series_data(X)
 
         too_short = [series_id for series_id, series in self.series_data_.items() if len(series) <= self.tau_max]
+
         if too_short:
             raise ValueError(
-                "Each time series must contain more observations than tau_max. "
-                f"Series that are too short: {too_short!r}"
+                f"Each time series must contain more observation than tau_max. Series that are too short: {too_short!r}"
             )
 
-        # Tigramite supports multiple independent datasets through a dictionary.
-        # Use integer dataset IDs instead of relying on the user's series IDs.
-        data_dict = {i: series.to_numpy(dtype=float) for i, series in enumerate(self.series_data_.values())}
+        data = {i: series.to_numpy(dtype=float) for i, series in enumerate(self.series_data_.values())}
 
-        self.tigramite_data_ = pp.DataFrame(
-            data=data_dict,
-            var_names=self.variable_names_,
-        )
+        self.tigramite_data_ = dp.DataFrame(data=data, var_names=self.variable_names_)
 
         return self.tigramite_data_
 
     def _wrap_ci_test_for_tigramite(self):
         """Create the adapter for pgmpy's conditional independence test."""
-        from pgmpy.causal_discovery._tigramite_adapter import (
-            PgmpyTigramiteCITest,
-        )
 
         if self.cond_ind_test is None:
             raise ValueError("cond_ind_test must be provided for causal discovery.")
@@ -76,9 +83,8 @@ class _BasePCMCI(BaseTimeSeriesCausalDiscovery):
 
         self.ci_test_ = deepcopy(self.cond_ind_test)
 
-        self.tigramite_ci_test_ = PgmpyTigramiteCITest(
-            cond_ind_test=self.ci_test_,
-            variable_names=self.variable_names_,
+        self.tigramite_ci_test_ = TigramiteAdapter(
+            tigramite_ci=self.ci_test_, tau_max=self.tau_max, cut_off="2xtau_max", alpha_or_thres=None
         )
 
         return self.tigramite_ci_test_
@@ -95,7 +101,7 @@ class _BasePCMCI(BaseTimeSeriesCausalDiscovery):
             raise TypeError("link_assumptions must be a dictionary.")
 
         n_variables = self.n_variables_
-        allowed_marks = {"-->", "<--", "o-o", "x-x", "?"}
+        allowed_marks = {"->", "<-", "oo", "?>", "<?"}
         normalized = {}
 
         for target, assumptions in link_assumptions.items():
@@ -132,8 +138,11 @@ class _BasePCMCI(BaseTimeSeriesCausalDiscovery):
                     )
 
                 # Tigramite represents past lags as negative integers.
-                if not -self.tau_max <= lag <= 0:
-                    raise ValueError(f"Invalid lag {lag}; expected a lag between {-self.tau_max} and 0.")
+                min_lag = -self.tau_max
+                max_lag = -self.tau_min
+
+                if not min_lag <= lag <= max_lag:
+                    raise ValueError(f"Invalid lag {lag}; expected a lag between {min_lag} and {max_lag}")
 
                 if lag == 0 and source == int(target):
                     raise ValueError("Self-links at lag 0 are not valid link assumptions.")
@@ -162,35 +171,28 @@ class _BasePCMCI(BaseTimeSeriesCausalDiscovery):
 
     def _run_pcmci(self, data, link_assumptions=None):
         """Run Tigramite's PCMCI algorithm."""
-        if not hasattr(self, "pcmci_"):
-            self._initialize_pcmci(data)
+        self._initialize_pcmci(data=data)
 
-        assumptions = self._set_link_assumptions(link_assumptions)
+        assumptions = self._set_link_assumptions(link_assumptions=link_assumptions)
 
         run_kwargs = {
+            **self.kwargs,
             "tau_min": self.tau_min,
             "tau_max": self.tau_max,
             "pc_alpha": self.pc_alpha,
             "fdr_method": self.fdr_method,
+            "link_assumptions": assumptions,
         }
-        run_kwargs.update(self.kwargs)
 
-        if assumptions is not None:
-            run_kwargs["link_assumptions"] = assumptions
-
-        return self.pcmci_.run_pcmci(**run_kwargs)
+        return self.pcmci_.run_pcmci(**run_kwargs)  # type: ignore
 
     def _process_results(self, results):
         """Validate and normalize Tigramite's result matrices."""
         required = {"graph", "p_matrix", "val_matrix"}
-        missing = required.difference(results)
+        missing = required - results.keys()
 
         if missing:
             raise ValueError(f"Tigramite results are missing required keys: {sorted(missing)}")
-
-        graph = np.asarray(results["graph"])
-        p_matrix = np.asarray(results["p_matrix"], dtype=float)
-        val_matrix = np.asarray(results["val_matrix"], dtype=float)
 
         expected_shape = (
             self.n_variables_,
@@ -198,24 +200,20 @@ class _BasePCMCI(BaseTimeSeriesCausalDiscovery):
             self.tau_max + 1,
         )
 
-        for name, matrix in (
-            ("graph", graph),
-            ("p_matrix", p_matrix),
-            ("val_matrix", val_matrix),
-        ):
-            if matrix.shape != expected_shape:
-                raise ValueError(f"Tigramite returned {name} with shape {matrix.shape}; expected {expected_shape}.")
-
-        # Preserve the native Tigramite graph array. It can be converted to
-        # TimeSeriesDAG separately using TimeSeriesDAG.from_adjacency().
         normalized = dict(results)
-        normalized["graph"] = graph
-        normalized["p_matrix"] = p_matrix
-        normalized["val_matrix"] = val_matrix
+
+        for name in required:
+            dtype = str if name == "graph" else float
+            matrix = np.asarray(results[name], dtype=dtype)
+
+            if matrix.shape != expected_shape:
+                raise ValueError(f"Tigramite returned {name} with shape {matrix.shape}; expected {expected_shape}")
+
+            normalized[name] = matrix
 
         return normalized
 
     @abstractmethod
     def _fit(self, X):
         """Fit the estimator and store the discovery results."""
-        pass
+        ...
