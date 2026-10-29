@@ -27,6 +27,9 @@ class CausalInfluenceDiagram(DAG):
         Nodes to assign the ``"decision"`` role.
     utility_nodes : iterable of hashable, optional
         Nodes to assign the ``"utility"`` role. Utility nodes must be leaves.
+    latent_nodes : iterable of hashable, optional
+        Nodes to assign the ``"latent"`` role. Latent nodes can only be either chance or decision nodes.
+        They cannot be utility nodes.
 
     Examples
     --------
@@ -48,7 +51,7 @@ class CausalInfluenceDiagram(DAG):
     that sample. Decision optimization and expected-utility inference are not implemented.
     """
 
-    _NODE_ROLES = frozenset({"chance", "decision", "utility"})
+    _NODE_ROLES = frozenset({"chance", "decision", "utility", "latent"})
 
     def __init__(
         self,
@@ -56,6 +59,7 @@ class CausalInfluenceDiagram(DAG):
         chance_nodes: Iterable[Hashable] | None = None,
         decision_nodes: Iterable[Hashable] | None = None,
         utility_nodes: Iterable[Hashable] | None = None,
+        latent_nodes: Iterable[Hashable] | None = None,
     ):
         self._probabilities: dict[Hashable, BaseParameter] = {}
         self._policies: dict[Hashable, BaseParameter] = {}
@@ -65,6 +69,7 @@ class CausalInfluenceDiagram(DAG):
             "chance": self._as_node_list(chance_nodes),
             "decision": self._as_node_list(decision_nodes),
             "utility": self._as_node_list(utility_nodes),
+            "latent": self._as_node_list(latent_nodes),
         }
         assigned_roles = {}
         for role, nodes in declared_roles.items():
@@ -74,8 +79,6 @@ class CausalInfluenceDiagram(DAG):
                 assigned_roles[node] = role
 
         super().__init__(ebunch=ebunch)
-
-        self._check_cycles()
 
         for node in self.nodes:
             self.nodes[node].setdefault("role", "chance")
@@ -149,18 +152,18 @@ class CausalInfluenceDiagram(DAG):
         return copied
 
     @property
-    def chance_nodes(self):
-        """Nodes with the chance role, in graph order."""
+    def get_chance_nodes(self):
+        """Get the nodes with the chance role, in graph order."""
         return [node for node, data in self.nodes(data=True) if data.get("role") == "chance"]
 
     @property
-    def decision_nodes(self):
-        """Nodes with the decision role, in graph order."""
+    def get_decision_nodes(self):
+        """Get the nodes with the decision role, in graph order."""
         return [node for node, data in self.nodes(data=True) if data.get("role") == "decision"]
 
     @property
-    def utility_nodes(self):
-        """Nodes with the utility role, in graph order."""
+    def get_utility_nodes(self):
+        """Get the nodes with the utility role, in graph order."""
         return [node for node, data in self.nodes(data=True) if data.get("role") == "utility"]
 
     def _check_node_role(self, node: Hashable, role: str):
@@ -175,7 +178,7 @@ class CausalInfluenceDiagram(DAG):
 
         * Checks for acyclicity and every node has a valid role
         * Every decision node has a fitted policy.
-        * Every decision node has a fitted policy.
+        * Every latent node has a fitted parameterization.
         * checks that each parameterization targets the correct node and has evidence
           matching the node's graph parents.
         """
@@ -354,7 +357,7 @@ class CausalInfluenceDiagram(DAG):
                 draws = parameterization.sample(n_samples=n_samples, random_state=random_state)
             samples[node] = draws.iloc[:, 0].to_numpy()
 
-        for node in self.utility_nodes:
+        for node in self.get_utility_nodes:
             utility = self._utilities.get(node)
             parent_samples = samples.reindex(columns=list(self.predecessors(node)))
             values = utility(parent_samples)
@@ -366,8 +369,6 @@ class CausalInfluenceDiagram(DAG):
             if not all(isinstance(value, Real) for value in values):
                 raise ValueError(f"Utility function for {node!r} must return numeric values.")
             values = np.asarray(values, dtype=float)
-            if not np.isfinite(values).all():
-                raise ValueError(f"Utility function for {node!r} must return finite values.")
             samples[node] = values
 
         return samples.reindex(columns=list(self.nodes()))

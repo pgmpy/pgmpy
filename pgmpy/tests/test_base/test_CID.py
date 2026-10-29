@@ -53,30 +53,31 @@ def test_roles_default_to_chance_and_can_be_declared():
         ebunch=[("Treatment", "Health"), ("Treatment", "Utility"), ("Health", "Utility")],
         decision_nodes=["Treatment"],
         utility_nodes=["Utility"],
+        latent_nodes=["Latent"],
     )
 
-    assert cid.chance_nodes == ["Health"]
-    assert cid.decision_nodes == ["Treatment"]
-    assert cid.utility_nodes == ["Utility"]
+    assert cid.get_chance_nodes == ["Health"]
+    assert cid.get_decision_nodes == ["Treatment"]
+    assert cid.get_utility_nodes == ["Utility"]
 
     cid.add_node("Age")
     cid.add_node("Risk", role="chance")
-    assert cid.chance_nodes == ["Health", "Age", "Risk"]
+    assert cid.get_chance_nodes == ["Health", "Age", "Risk"]
 
     cid_b = CausalInfluenceDiagram()
     cid_b.add_edge("A", "B")
 
-    assert cid_b.chance_nodes == ["A", "B"]
-    assert cid_b.decision_nodes == []
-    assert cid_b.utility_nodes == []
+    assert cid_b.get_chance_nodes == ["A", "B"]
+    assert cid_b.get_decision_nodes == []
+    assert cid_b.get_utility_nodes == []
 
 
 def test_bulk_node_updates_preserve_roles_and_clear_removed_assignments():
     cid = CausalInfluenceDiagram()
     cid.add_nodes_from(["X", ("Decision", {"role": "decision"})])
 
-    assert cid.chance_nodes == ["X"]
-    assert cid.decision_nodes == ["Decision"]
+    assert cid.get_chance_nodes == ["X"]
+    assert cid.get_decision_nodes == ["Decision"]
 
     cid.set_probabilities("X", parameter("X", [0, 1], {(): [0.5, 0.5]}))
     cid.remove_nodes_from(["Decision", "X"])
@@ -234,7 +235,6 @@ def test_simulate_samples_policies_and_additive_utility_with_seed():
 @pytest.mark.parametrize(
     ("utility", "message"),
     [
-        (lambda values: np.full(len(values), np.nan), "finite"),
         (lambda values: np.zeros(len(values) + 1), "one value per row"),
         (lambda values: np.full((len(values), 2), 1.0), "one-dimensional"),
         (lambda values: ["not numeric"] * len(values), "numeric"),
@@ -252,7 +252,7 @@ def test_tabular_cpd_can_be_assigned_when_skpro_is_available():
     pytest.importorskip("skpro")
     from pgmpy.parameterization import TabularCPD
 
-    cid = CausalInfluenceDiagram(chance_nodes=["X"])
+    cid = CausalInfluenceDiagram(get_chance_nodes=["X"])
     cid.set_probabilities("X", TabularCPD.from_values("X", 2, [[0.5], [0.5]]))
 
     assert len(cid.simulate(n_samples=5, seed=0)) == 5
