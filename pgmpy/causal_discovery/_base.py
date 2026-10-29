@@ -821,13 +821,7 @@ class _TreeSearchMixin:
         model : pgmpy.base.DAG
             The estimated DAG rooted at ``root_node``.
         """
-        n_vars = len(columns)
-        G = nx.Graph()
-        G.add_nodes_from(columns)
-        for i in range(n_vars):
-            for j in range(i + 1, n_vars):
-                G.add_edge(columns[i], columns[j], weight=weights[i, j])
-
+        G = nx.from_numpy_array(weights, nodelist=columns)
         T = nx.maximum_spanning_tree(G)
         D = nx.bfs_tree(T, root_node)
         return DAG(D)
