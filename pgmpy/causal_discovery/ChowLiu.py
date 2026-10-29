@@ -2,7 +2,6 @@
 
 import networkx as nx
 import numpy as np
-import pandas as pd
 
 from pgmpy.causal_discovery._base import BaseCausalDiscovery, _TreeSearchMixin
 

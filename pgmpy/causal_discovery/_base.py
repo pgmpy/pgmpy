@@ -781,7 +781,7 @@ class _TreeSearchMixin:
             data = pd.DataFrame(data, columns=[f"x{i}" for i in range(data.shape[1])])
 
         data = data if isinstance(data, nw.DataFrame) else nw.from_native(data, eager_only=True)
-        
+
         edge_weights_fn = _TreeSearchMixin._resolve_edge_weights_fn(edge_weights_fn)
 
         n_vars = len(data.columns)
