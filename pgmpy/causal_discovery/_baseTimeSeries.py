@@ -97,7 +97,7 @@ class BaseTimeSeriesCausalDiscovery(ABC):
         if X.columns.has_duplicates:
             raise ValueError("Input DataFrame must have unique variable names.")
 
-        if X.index.hasnans:
+        if any(X.index.get_level_values(i).hasnans for i in range(X.index.nlevels)):
             raise ValueError("Input MultiIndex must not contain missing identifiers.")
 
         if not all(isinstance(name, str) for name in X.columns):
@@ -184,7 +184,10 @@ class BaseTimeSeriesCausalDiscovery(ABC):
             raise ValueError("cond_ind_test must be provided to perform causal discovery.")
 
         self.tigramite_ci_test_ = TigramiteAdapter(
-            tigramite_ci=self.tigramite_ci_test_, tau_max=self.tau_max, cut_off="2xtau_max", alpha_or_thres=None
+            tigramite_ci=self.tigramite_ci_test_, 
+            tau_max=self.tau_max, 
+            cut_off="2xtau_max", 
+            alpha_or_thres=None
         )
         return self.tigramite_ci_test_
 
@@ -206,10 +209,14 @@ class BaseTimeSeriesCausalDiscovery(ABC):
 
         Algorithm-specific methods receive the prepared series and own
         their Tigramite configuration and result processing.
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            Input data to fit the model on.
         """
         self._prepare_time_series_data(X)
 
-        self.ci_test = deepcopy(self.cond_ind_test)
         self.tigramite_ci_test_ = self._wrap_ci_test_for_tigramite()
 
         self._initialize_algorithm()
@@ -222,6 +229,11 @@ class BaseTimeSeriesCausalDiscovery(ABC):
     def get_causal_links(self):
         """
         Return the discovered causal relationships.
+
+        Returns
+        -------
+        object
+            A graph object
         """
         if self.graph_ is None:
             raise RuntimeError("The estimator has not been fitted yet")
@@ -230,6 +242,11 @@ class BaseTimeSeriesCausalDiscovery(ABC):
     def get_parameters(self):
         """
         Return the configuration used for time-series causal discovery.
+
+        Returns
+        -------
+        dict
+            Summary of all the variables.
         """
         return {
             "tau_min": self.tau_min,
