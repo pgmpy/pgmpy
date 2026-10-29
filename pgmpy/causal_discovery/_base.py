@@ -70,8 +70,13 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
 
         Parameters
         ----------
-        X: pd.DataFrame, pl.DataFrame, pa.Table, cudf.DataFrame, or np.ndarray
+        X: pd.DataFrame, pl.DataFrame, pa.Table, cudf.DataFrame, np.ndarray, or nw.DataFrame
             The data to fit the causal discovery algorithm on.
+
+        Returns
+        -------
+        nw_df : nw.DataFrame
+            The validated data wrapped as an eager Narwhals DataFrame.
         """
 
         if isinstance(X, (np.ndarray, pd.DataFrame)):
@@ -749,8 +754,8 @@ class _TreeSearchMixin:
 
         Parameters
         ----------
-        data : pd.DataFrame
-            Dataframe where each column represents one variable.
+        data : pd.DataFrame, pl.DataFrame, pa.Table, cudf.DataFrame, np.ndarray, or nw.DataFrame
+            Dataframe or 2D array where each column represents one variable.
 
         edge_weights_fn : str or callable, default="mutual_info"
             Method to use for computing edge weights. Options are:
@@ -772,14 +777,22 @@ class _TreeSearchMixin:
             Symmetric matrix where ``weights[i, j]`` is the edge weight between
             variable *i* and variable *j*.
         """
+        if isinstance(data, np.ndarray):
+            data = pd.DataFrame(data, columns=[f"x{i}" for i in range(data.shape[1])])
+
+        data = data if isinstance(data, nw.DataFrame) else nw.from_native(data, eager_only=True)
+        
         edge_weights_fn = _TreeSearchMixin._resolve_edge_weights_fn(edge_weights_fn)
 
         n_vars = len(data.columns)
+
+        col_arrays = {col: data.get_column(col).to_numpy() for col in data.columns}
+
         pbar = combinations(data.columns, 2)
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(pbar, total=(n_vars * (n_vars - 1) / 2), desc="Building tree")
 
-        vals = Parallel(n_jobs=n_jobs)(delayed(edge_weights_fn)(data.loc[:, u], data.loc[:, v]) for u, v in pbar)
+        vals = Parallel(n_jobs=n_jobs)(delayed(edge_weights_fn)(col_arrays[u], col_arrays[v]) for u, v in pbar)
         weights = np.zeros((n_vars, n_vars))
         indices = np.triu_indices(n_vars, k=1)
         weights[indices] = vals
@@ -808,11 +821,13 @@ class _TreeSearchMixin:
         model : pgmpy.base.DAG
             The estimated DAG rooted at ``root_node``.
         """
-        T = nx.maximum_spanning_tree(
-            nx.from_pandas_adjacency(
-                pd.DataFrame(weights, index=columns, columns=columns),
-                create_using=nx.Graph,
-            )
-        )
+        n_vars = len(columns)
+        G = nx.Graph()
+        G.add_nodes_from(columns)
+        for i in range(n_vars):
+            for j in range(i + 1, n_vars):
+                G.add_edge(columns[i], columns[j], weight=weights[i, j])
+
+        T = nx.maximum_spanning_tree(G)
         D = nx.bfs_tree(T, root_node)
         return DAG(D)
