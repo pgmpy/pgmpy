@@ -166,12 +166,6 @@ class CausalInfluenceDiagram(DAG):
         """Get the nodes with the utility role, in graph order."""
         return [node for node, data in self.nodes(data=True) if data.get("role") == "utility"]
 
-    def _check_node_role(self, node: Hashable, role: str):
-        if not self.has_node(node):
-            raise ValueError(f"Node {node!r} is not in the diagram.")
-        if self.nodes[node].get("role") != role:
-            raise ValueError(f"{node!r} is a {self.nodes[node].get('role')!r} node; expected a {role} node.")
-
     def check_model(self):
         """
         Validate graph roles, utility assignments, and conditional  parameterizations.
@@ -264,8 +258,13 @@ class CausalInfluenceDiagram(DAG):
         parameterization : pgmpy.parameterization.BaseParameter
             Conditional distribution targeting ``node`` with evidence matching its graph parents.
         """
-
-        self._check_node_role(node, "chance")
+        if not self.has_node(node):
+            raise ValueError(f"Chance node {node!r} is not in the diagram.")
+        if self.nodes[node].get("role") != "chance":
+            raise ValueError(
+                f"Cannot assign probabilities to {node!r}: "
+                f"node role is {self.nodes[node].get('role')!r}, expected 'chance'."
+            )
         self._check_parameterization(node, parameterization)
         self._probabilities[node] = parameterization
 
@@ -283,7 +282,13 @@ class CausalInfluenceDiagram(DAG):
         policy : pgmpy.parameterization.BaseParameter
             Conditional distribution or deterministic policy targeting ``node`` with evidence matching its parents.
         """
-        self._check_node_role(node, "decision")
+        if not self.has_node(node):
+            raise ValueError(f"Decision node {node!r} is not in the diagram.")
+        if self.nodes[node].get("role") != "decision":
+            raise ValueError(
+                f"Cannot assign a policy to {node!r}: "
+                f"node role is {self.nodes[node].get('role')!r}, expected 'decision'."
+            )
         self._check_parameterization(node, policy)
         self._policies[node] = policy
 
@@ -301,7 +306,15 @@ class CausalInfluenceDiagram(DAG):
             Function from parent assignments to utility values.
 
         """
-        self._check_node_role(node, "utility")
+
+        if not self.has_node(node):
+            raise ValueError(f"Utility node {node!r} is not in the diagram.")
+        if self.nodes[node].get("role") != "utility":
+            raise ValueError(
+                f"Cannot assign a utility function to {node!r}: "
+                f"node role is {self.nodes[node].get('role')!r}, expected 'utility'."
+            )
+
         if not callable(utility):
             raise TypeError(f"Utility assigned to node {node!r} must be callable, got {type(utility).__name__}")
 

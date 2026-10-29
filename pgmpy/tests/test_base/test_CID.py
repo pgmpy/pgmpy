@@ -128,11 +128,11 @@ def test_parameter_assignments_validate_role_target_and_parents():
     child = parameter("Y", ["no", "yes"], {("no",): [0.5, 0.5], ("yes",): [0.5, 0.5]}, ["X"])
     wrong_parents = parameter("Y", ["no", "yes"], {(): [0.5, 0.5]})
 
-    with pytest.raises(ValueError, match="expected a chance node"):
+    with pytest.raises(ValueError, match=r"expected 'chance'\."):
         cid.set_probabilities("Utility", root)
-    with pytest.raises(ValueError, match="expected a decision node"):
+    with pytest.raises(ValueError, match=r"expected 'decision'\."):
         cid.set_policy("X", root)
-    with pytest.raises(ValueError, match="expected a utility node"):
+    with pytest.raises(ValueError, match=r"expected 'utility'\."):
         cid.set_utility("X", lambda values: np.zeros(len(values)))
 
     with pytest.raises(TypeError, match="Expected pgmpy BaseParameter"):
