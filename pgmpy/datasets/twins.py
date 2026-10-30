@@ -20,7 +20,7 @@ class TwinsDataset(BaseDataset):
     missing_values_marker = ""
     base_url = "twins"
 
-    data_url = "twins.txt"
+    data_url = "data/twins.txt"
 
     ground_truth_url = None
     expert_knowledge_url = None
