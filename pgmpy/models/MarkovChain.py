@@ -495,6 +495,8 @@ class MarkovChain:
         >>> model.random_state() # doctest: +SKIP
         [State(var='diff', state=2), State(var='intel', state=1)]
         """
+        if seed is None:
+            return [State(var, np.random.randint(self.cardinalities[var])) for var in self.variables]
         rng = np.random.default_rng(seed)
         return [State(var, rng.integers(self.cardinalities[var])) for var in self.variables]
 
