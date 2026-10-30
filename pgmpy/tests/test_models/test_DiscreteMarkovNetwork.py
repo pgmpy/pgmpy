@@ -215,20 +215,25 @@ class TestMarkovNetworkMethods(unittest.TestCase):
 
         factor_graph = self.graph.to_factor_graph()
         self.assertIsInstance(factor_graph, FactorGraph)
-        self.assertListEqual(
-            sorted(factor_graph.nodes()),
-            ["Alice", "Bob", "Charles", "phi_Alice_Bob", "phi_Bob_Charles"],
+        # Factor nodes must be the DiscreteFactor objects themselves, not strings
+        # (issue #1000): check_model() raises ValueError if factor nodes are strings.
+        self.assertSetEqual(
+            {node for node in factor_graph.nodes() if isinstance(node, str)},
+            {"Alice", "Bob", "Charles"},
         )
-        self.assertListEqual(
-            hf.recursive_sorted(factor_graph.edges()),
+        self.assertIn(phi1, factor_graph.nodes())
+        self.assertIn(phi2, factor_graph.nodes())
+        self.assertCountEqual(
+            factor_graph.edges(),
             [
-                ["Alice", "phi_Alice_Bob"],
-                ["Bob", "phi_Alice_Bob"],
-                ["Bob", "phi_Bob_Charles"],
-                ["Charles", "phi_Bob_Charles"],
+                ("Alice", phi1),
+                ("Bob", phi1),
+                ("Bob", phi2),
+                ("Charles", phi2),
             ],
         )
         self.assertListEqual(factor_graph.get_factors(), [phi1, phi2])
+        self.assertTrue(factor_graph.check_model())
 
     def test_factor_graph_raises_error(self):
         self.graph.add_edges_from([("Alice", "Bob"), ("Bob", "Charles")])
