@@ -1,0 +1,46 @@
+name: Warmup GLiClass Cache
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  warmup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-py311-v1
+
+      - name: Cache GLiClass Model
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface/hub
+          key: ${{ runner.os }}-gliclass-small-v1.0-v1
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install transformers gliclass
+
+      - name: Download GLiClass Model
+        run: |
+          python - <<'PY'
+          from gliclass import GLiClassModel
+          from transformers import AutoTokenizer
+
+          model_id = "knowledgator/gliclass-small-v1.0"
+
+          GLiClassModel.from_pretrained(model_id)
+          AutoTokenizer.from_pretrained(model_id)
+          PY
