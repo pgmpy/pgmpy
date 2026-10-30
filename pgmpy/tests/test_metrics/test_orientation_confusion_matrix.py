@@ -48,7 +48,7 @@ def empty_dag():
 def pdag():
     p = PDAG()
     p.add_nodes_from(["x1", "x2", "x3"])
-    p.add_edges_from([("x1", "x2"), ("x2", "x3")])
+    p.add_edges_from([("x1", "x2", "--"), ("x2", "x3", "--")])
     return p
 
 

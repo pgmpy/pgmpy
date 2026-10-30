@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Humanitarian(BIFMixin, _BaseExampleModel):
+class Humanitarian(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/humanitarian",
         "n_nodes": 21,

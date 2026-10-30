@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Kosterhavet(BIFMixin, _BaseExampleModel):
+class Kosterhavet(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/kosterhavet",
         "n_nodes": 38,

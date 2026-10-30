@@ -34,4 +34,4 @@ Utilities
    :toctree: generated/metrics
    :template: autosummary/function.rst
 
-   ~pgmpy.metrics.get_metrics
+   ~pgmpy.metrics.get_metric

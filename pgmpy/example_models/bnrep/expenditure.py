@@ -1,7 +1,7 @@
-from .._base import ContinuousMixin, _BaseExampleModel
+from .._base import BaseExampleModel, ContinuousMixin
 
 
-class Expenditure(ContinuousMixin, _BaseExampleModel):
+class Expenditure(ContinuousMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/expenditure",
         "n_nodes": 12,

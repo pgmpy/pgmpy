@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Tastingtea(BIFMixin, _BaseExampleModel):
+class Tastingtea(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/tastingtea",
         "n_nodes": 17,

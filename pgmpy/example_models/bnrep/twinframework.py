@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Twinframework(BIFMixin, _BaseExampleModel):
+class Twinframework(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/twinframework",
         "n_nodes": 7,

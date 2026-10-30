@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Fluids3(BIFMixin, _BaseExampleModel):
+class Fluids3(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/fluids3",
         "n_nodes": 9,

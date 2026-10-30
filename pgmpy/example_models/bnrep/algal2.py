@@ -1,7 +1,7 @@
-from .._base import ContinuousMixin, _BaseExampleModel
+from .._base import BaseExampleModel, ContinuousMixin
 
 
-class Algal2(ContinuousMixin, _BaseExampleModel):
+class Algal2(ContinuousMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/algal2",
         "n_nodes": 9,

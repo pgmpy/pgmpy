@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from functools import lru_cache
+from collections import OrderedDict
+from collections.abc import Hashable
 
 import pandas as pd
 from skbase.base import BaseObject
 from skbase.lookup import all_objects
 
-from pgmpy.utils import build_state_names, get_dataset_type, get_state_counts, preprocess_data
+from pgmpy.utils import build_state_names, get_dataset_type, preprocess_data
 
 
 class BaseStructureScore(BaseObject):
@@ -26,29 +27,47 @@ class BaseStructureScore(BaseObject):
     state_names : dict, optional
         Dictionary mapping each variable name to its allowed states. If not specified, the
         observed values in the data are used.
+    max_cache_size : int or None, default=10000
+        Maximum number of local scores to cache. When the cache is full, the least recently used entry is evicted. If
+        None, the cache is unlimited. Increase this for large datasets to avoid cache thrashing.
     """
 
     _tags = {
+        "object_type": "structure_score",
         "name": None,
-        "supported_datatype": None,
+        "data_types": [],
         "default_for": None,
-        "is_parameteric": False,
+        "assumption:linearity": None,
+        "assumption:additive_noise": None,
+        "assumption:gaussian_noise": None,
     }
 
-    def __init__(self, data, state_names=None):
+    def __init__(self, data, state_names=None, max_cache_size=10000):
         self.data, self.dtypes = preprocess_data(data)
+        self.max_cache_size = max_cache_size
+        if max_cache_size is not None and max_cache_size <= 0:
+            raise ValueError(f"max_cache_size must be a positive integer or None. Got: {max_cache_size}")
 
         if self.data is not None:
             self.variables = list(self.data.columns.values)
             self.state_names = build_state_names(self.data, state_names=state_names)
 
-        self._cached_local_score = lru_cache(maxsize=10000)(self._local_score)
+        self._cache = OrderedDict()
 
-    def local_score(self, variable: str, parents: tuple[str, ...]) -> float:
+    def local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         """Compute the cached local score for `variable` given `parents`."""
-        return self._cached_local_score(variable, parents)
+        key = (variable, tuple(parents))
+        score = self._cache.get(key)
+        if score is None:
+            score = self._local_score(*key)
+            self._cache[key] = score
+            if self.max_cache_size is not None and len(self._cache) > self.max_cache_size:
+                self._cache.popitem(last=False)
+        else:
+            self._cache.move_to_end(key)
+        return score
 
-    def _local_score(self, variable: str, parents: tuple[str, ...]) -> float:
+    def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         """Compute the uncached local score for `variable` given `parents`."""
         raise NotImplementedError
 
@@ -68,28 +87,59 @@ class BaseStructureScore(BaseObject):
         """Return the log prior ratio for a structure operation."""
         return 0
 
-    def state_counts(
-        self,
-        variable: str,
-        parents: tuple[str, ...] = (),
-        weighted: bool = False,
-        reindex: bool = True,
-    ) -> pd.DataFrame:
-        """Return state counts for `variable`, optionally conditioned on `parents`."""
-        return get_state_counts(
-            data=self.data,
-            state_names=self.state_names,
-            variable=variable,
-            parents=parents,
-            weighted=weighted,
-            reindex=reindex,
-        )
-
 
 def get_scoring_method(
     scoring_method: str | BaseStructureScore | None,
     data: pd.DataFrame,
 ) -> BaseStructureScore:
+    """
+    Returns a structure score instance.
+
+    Parameters
+    ----------
+    scoring_method : str or BaseStructureScore or None
+        The scoring method whose instance is to be returned.
+
+        A string selects the corresponding scoring method with default
+        parameters. A ``BaseStructureScore`` instance is returned unchanged.
+        If ``None``, the default scoring method for the data type is selected
+        automatically.
+
+    data : pandas.DataFrame
+        Dataset used to determine the default scoring method and to
+        initialize score instances.
+
+    Returns
+    -------
+    BaseStructureScore
+        An initialized structure score instance.
+
+    Examples
+    --------
+    >>> from pgmpy.example_models import load_model
+    >>> from pgmpy.structure_score import BDeu, get_scoring_method
+    >>> model = load_model("bnlearn/asia")
+    >>> data = model.simulate(n_samples=1000, seed=42)
+
+    Use a scoring method by name:
+
+    >>> score = get_scoring_method("k2", data)
+
+    Use the default scoring method for the dataset type:
+
+    >>> score = get_scoring_method(None, data)
+
+    Use a custom scoring method with non-default parameters:
+
+    >>> score = BDeu(data, equivalent_sample_size=20, max_cache_size=20000)
+    >>> score = get_scoring_method(score, data)
+
+    Raises
+    ------
+    ValueError
+        If ``scoring_method`` is invalid, unknown, or if ``data`` is
+        required but not provided.
+    """
     if isinstance(scoring_method, BaseStructureScore):
         return scoring_method
 

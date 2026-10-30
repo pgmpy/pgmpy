@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Projectmanagement(BIFMixin, _BaseExampleModel):
+class Projectmanagement(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/projectmanagement",
         "n_nodes": 26,

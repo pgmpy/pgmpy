@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Nuclearwaste(BIFMixin, _BaseExampleModel):
+class Nuclearwaste(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/nuclearwaste",
         "n_nodes": 10,

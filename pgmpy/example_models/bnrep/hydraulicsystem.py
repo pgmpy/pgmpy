@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Hydraulicsystem(BIFMixin, _BaseExampleModel):
+class Hydraulicsystem(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/hydraulicsystem",
         "n_nodes": 4,

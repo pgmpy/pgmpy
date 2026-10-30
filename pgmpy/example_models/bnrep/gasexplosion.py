@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Gasexplosion(BIFMixin, _BaseExampleModel):
+class Gasexplosion(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/gasexplosion",
         "n_nodes": 18,

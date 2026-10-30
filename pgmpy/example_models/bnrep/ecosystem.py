@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Ecosystem(BIFMixin, _BaseExampleModel):
+class Ecosystem(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/ecosystem",
         "n_nodes": 13,

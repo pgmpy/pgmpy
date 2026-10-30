@@ -1,7 +1,7 @@
-from .._base import ContinuousMixin, _BaseExampleModel
+from .._base import BaseExampleModel, ContinuousMixin
 
 
-class Algorithms2(ContinuousMixin, _BaseExampleModel):
+class Algorithms2(ContinuousMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/algorithms2",
         "n_nodes": 4,

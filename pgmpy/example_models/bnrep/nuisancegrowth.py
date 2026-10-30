@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Nuisancegrowth(BIFMixin, _BaseExampleModel):
+class Nuisancegrowth(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/nuisancegrowth",
         "n_nodes": 19,

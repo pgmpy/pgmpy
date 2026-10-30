@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Aircrash(BIFMixin, _BaseExampleModel):
+class Aircrash(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/aircrash",
         "n_nodes": 9,

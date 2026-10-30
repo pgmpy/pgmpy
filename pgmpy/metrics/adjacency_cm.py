@@ -3,10 +3,10 @@ import numpy as np
 import pandas as pd
 
 from pgmpy.base import DAG, PDAG
-from pgmpy.metrics import _BaseSupervisedMetric
+from pgmpy.metrics import BaseSupervisedMetric
 
 
-class AdjacencyConfusionMatrix(_BaseSupervisedMetric):
+class AdjacencyConfusionMatrix(BaseSupervisedMetric):
     """
     Computes confusion matrix based metrics for comparing causal graph skeletons.
 
@@ -66,19 +66,16 @@ class AdjacencyConfusionMatrix(_BaseSupervisedMetric):
 
     References
     ----------
-    .. [1] Petersen, A. H. (2025). Are you doing better than random guessing? a call for using negative controls
-           when evaluating causal discovery algorithms. Proceedings of the Forty-First Conference on Uncertainty
-           in Artificial Intelligence. Rio de Janeiro, Brazil: JMLR.org. https://arxiv.org/abs/2412.10039
+    - :footcite:t:`petersen_2025`
 
     """
 
     _tags = {
         "name": "adjacency_confusion_matrix",
-        "requires_true_graph": True,
-        "requires_data": False,
-        "lower_is_better": False,
         "is_symmetric": False,
-        "supported_graph_types": (DAG, PDAG),
+        "supported_graph_types": [DAG, PDAG],
+        "output_type": "dict",
+        "lower_is_better": False,
     }
 
     def __init__(self, metrics: list[str] | None = None):

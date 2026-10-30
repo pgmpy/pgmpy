@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Titanic(BIFMixin, _BaseExampleModel):
+class Titanic(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/titanic",
         "n_nodes": 4,

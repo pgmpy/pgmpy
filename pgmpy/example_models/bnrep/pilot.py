@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Pilot(BIFMixin, _BaseExampleModel):
+class Pilot(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/pilot",
         "n_nodes": 42,

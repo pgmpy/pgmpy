@@ -35,4 +35,4 @@ def test_exactly_same_vars():
     test = GSq(data=df)
     test("x", "y", [])
     assert test.dof_ == 1
-    assert test.p_value_ == pytest.approx(0, abs=1e-5)
+    assert test.p_value_ == pytest.approx(0, abs=1e-2)

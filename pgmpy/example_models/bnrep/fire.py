@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Fire(BIFMixin, _BaseExampleModel):
+class Fire(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/fire",
         "n_nodes": 11,

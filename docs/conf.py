@@ -54,7 +54,11 @@ extensions = [
     "sphinxext.opengraph",
     "sphinx_sitemap",
     "pgmpy_docs",
+    "sphinxcontrib.bibtex",
 ]
+
+bibtex_bibfiles = ['references.bib']
+bibtex_default_style = 'unsrt'
 
 templates_path = ["_templates"]
 source_suffix = {
@@ -65,7 +69,7 @@ root_doc = "index"
 master_doc = root_doc
 
 project = "pgmpy"
-copyright = "2025, pgmpy developers"
+copyright = "2026, pgmpy developers"
 author = "Ankur Ankan, Abinash Panda"
 
 version = site_config.version_name

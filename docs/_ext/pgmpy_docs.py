@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import json
 import os
 import re
@@ -21,6 +22,7 @@ DOCS_VERSION_VAR = "PGMPY_DOCS_VERSION"
 DOCS_RELEASE_VAR = "PGMPY_DOCS_RELEASE"
 DOCS_VERSIONS_FILE_ENV_VAR = "PGMPY_DOCS_VERSIONS_FILE"
 RELEASE_VERSION_PATTERN = re.compile(r"^v(?P<major>\d+)\.(?P<minor>\d+)$")
+FOOTCITE_RE = re.compile(r":footcite:[tp]?:`([^`]+)`")
 TITLE_UNDERLINE_CHARS = frozenset('=-~^"`:#*+')
 SECTION_ORDER = {
     "Home": 0,
@@ -755,10 +757,168 @@ def on_build_finished(app: Any, exception: Exception | None) -> None:
     )
 
 
+def _bibliography_block(keys: list[str]) -> list[str]:
+    """Build a ``.. bibliography::`` block that renders ``keys`` as full citation text.
+
+    ``:filter: False`` means no entry is selected by citation, so only the keys listed as
+    directive content are rendered (see sphinxcontrib-bibtex ``get_filtered_entries``): full
+    reference text with no citation label, and no ``:cite:``/``:footcite:`` role required.
+    One directive per key (with ``:start: continue``) keeps the docstring's own ordering,
+    which a single multi-key directive would replace with ``references.bib`` order.
+    """
+    block: list[str] = []
+    for i, key in enumerate(keys):
+        block += ["", ".. bibliography::", "   :list: enumerated", "   :filter: False"]
+        if i:
+            block.append("   :start: continue")
+        block += ["", "   " + key]
+    block.append("")
+    return block
+
+
+def _is_section_header(lines: list[str], i: int) -> bool:
+    # numpydoc section header: a non-empty line underlined by matching '-' chars
+    return (
+        i + 1 < len(lines)
+        and lines[i].strip() != ""
+        and lines[i + 1].strip() != ""
+        and set(lines[i + 1].strip()) == {"-"}
+        and len(lines[i + 1].strip()) >= len(lines[i].strip())
+    )
+
+
+def _references_span(lines: list[str]) -> tuple[int, int] | None:
+    """Return the ``(body_start, end)`` line span of the numpydoc "References" section, or None."""
+    start = next(
+        (i for i, ln in enumerate(lines) if ln.strip() == "References" and _is_section_header(lines, i)),
+        None,
+    )
+    if start is None:
+        return None
+    end = next((j for j in range(start + 2, len(lines)) if _is_section_header(lines, j)), len(lines))
+    return start + 2, end
+
+
+def expand_references(app: Any, what: str, name: str, obj: Any, options: Any, lines: list[str]) -> None:
+    """Render docstring citations as full reference text instead of short labels.
+
+    Docstrings cite works with ``:footcite:t:`` roles, which render only a short ``Author
+    [1]`` mark. This turns those into the complete citation text (from ``references.bib``):
+
+    * In a numpydoc "References" section (a bullet list of ``:footcite:`` roles), the bullets
+      are replaced by ``.. bibliography::`` directives so the section shows full reference
+      text only -- not a label *and* the text.
+    * A citation used inline in the prose keeps its inline mark, and its full text is rendered
+      in a "References" section (via ``.. footbibliography::``) so inline-cited works also
+      appear as full references, not just an author-year mark.
+
+    Runs before numpydoc (lower ``priority``) and edits the raw numpydoc docstring lines.
+    """
+    if not any(":footcite:" in line for line in lines):
+        return
+
+    # Replace the ``:footcite:`` bullets of a "References" section with full-text bibliographies,
+    # keeping any non-footcite content (e.g. a plain link bullet) and dropping locator text.
+    span = _references_span(lines)
+    if span is not None:
+        body_start, end = span
+        new_body: list[str] = []
+        keys: list[str] = []
+        insert_at: int | None = None
+        for j in range(body_start, end):
+            line_keys = FOOTCITE_RE.findall(lines[j])
+            if line_keys:
+                if insert_at is None:
+                    insert_at = len(new_body)
+                keys += line_keys
+            else:
+                new_body.append(lines[j])
+        keys = list(dict.fromkeys(keys))  # dedupe, preserving the docstring's citation order
+        if keys:
+            new_body[insert_at:insert_at] = _bibliography_block(keys)
+            lines[body_start:end] = new_body
+
+    # Any ``:footcite:`` left over is an inline (prose) citation: render its full text via a
+    # footbibliography so inline-cited works also show up as complete references.
+    if any(":footcite:" in line for line in lines):
+        span = _references_span(lines)
+        if span is None:
+            # numpydoc drops a bare trailing directive's blank line, so give it a real section
+            lines += ["", "References", "----------", "", ".. footbibliography::", ""]
+        else:
+            end = span[1]
+            lines[end:end] = ["", ".. footbibliography::", ""]
+
+
+def skip_sklearn_metadata_request_method(
+    app: Any,
+    what: str,
+    name: str,
+    obj: Any,
+    skip: bool,
+    options: Any,
+) -> bool | None:
+    """Skip scikit-learn-generated metadata request methods in API docs."""
+    if getattr(obj, "__module__", None) == "sklearn.utils._metadata_requests" and re.fullmatch(r"set_.+_request", name):
+        return True
+    return None
+
+
+def _format_tag_type(tag_type: str | tuple) -> str:
+    if isinstance(tag_type, str):
+        return f"``{tag_type}``"
+    # Class-valued choices are graph classes, which are documented under pgmpy.base.
+    choices = ", ".join(
+        f":class:`~pgmpy.base.{choice.__name__}`" if isinstance(choice, type) else f"``{choice!r}``"
+        for choice in tag_type[1]
+    )
+    return f"one of {choices}" if tag_type[0] == "str" else f"list with elements from {choices}"
+
+
+def render_tag_reference(object_type: str) -> list[str]:
+    """Render the tags of ``object_type`` from :mod:`pgmpy.registry` as an RST definition list.
+
+    Each entry shows the tag name, its value type, and the docstring of its tag class.
+    """
+    from pgmpy.registry import _tags as tag_module
+
+    lines: list[str] = []
+    for tag_name, _, tag_type, _ in tag_module.all_tags(object_type):
+        doc = inspect.cleandoc(getattr(tag_module, tag_name.replace(":", "__")).__doc__)
+        lines += [f"``{tag_name}``", f"   **Type:** {_format_tag_type(tag_type)}", ""]
+        lines += [f"   {line}" if line else "" for line in doc.splitlines()]
+        lines.append("")
+    return lines
+
+
+def _tag_reference_directive() -> type:
+    from docutils import nodes
+    from docutils.statemachine import StringList
+    from sphinx.util.docutils import SphinxDirective
+    from sphinx.util.nodes import nested_parse_with_titles
+
+    class TagReferenceDirective(SphinxDirective):
+        """``.. pgmpy-tags:: <object_type>`` renders the registered tags of an object type."""
+
+        required_arguments = 1
+
+        def run(self) -> list[Any]:
+            container = nodes.container()
+            content = StringList(render_tag_reference(self.arguments[0]), source="pgmpy.registry")
+            nested_parse_with_titles(self.state, content, container)
+            return container.children
+
+    return TagReferenceDirective
+
+
 def setup(app: Any) -> dict[str, Any]:
+    app.add_directive("pgmpy-tags", _tag_reference_directive())
     app.connect("builder-inited", on_builder_inited)
     app.connect("html-page-context", on_html_page_context)
     app.connect("build-finished", on_build_finished)
+    # priority < numpydoc's default (500) so we edit the raw numpydoc docstring
+    app.connect("autodoc-process-docstring", expand_references, priority=400)
+    app.connect("autodoc-skip-member", skip_sklearn_metadata_request_method)
     return {
         "parallel_read_safe": True,
         "parallel_write_safe": True,

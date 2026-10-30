@@ -4,7 +4,7 @@ from pgmpy.example_models import load_model
 from pgmpy.metrics import StructureScore
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def alarm_and_data():
     alarm = load_model("bnlearn/alarm")
     data = alarm.simulate(int(1e4), show_progress=False)

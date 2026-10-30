@@ -1,0 +1,30 @@
+/knowledge
+addtemporal
+
+1
+2
+3
+
+forbiddirect
+
+requiredirect
+raf mek
+pka jnk
+erk akt
+pka akt
+mek erk
+plc pkc
+pip3 pip2
+pip3 akt
+pkc pka
+plc pip2
+pkc jnk
+pka mek
+pka p38
+pka raf
+pip2 pkc
+pkc mek
+pip3 plc
+pka erk
+pkc p38
+pkc raf

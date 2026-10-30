@@ -1,7 +1,7 @@
-from .._base import ContinuousMixin, _BaseExampleModel
+from .._base import BaseExampleModel, ContinuousMixin
 
 
-class Cachexia1(ContinuousMixin, _BaseExampleModel):
+class Cachexia1(ContinuousMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/cachexia1",
         "n_nodes": 6,

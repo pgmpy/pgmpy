@@ -10,10 +10,10 @@ from sklearn.utils.validation import (
     validate_data,
 )
 
-from pgmpy.prediction._base import _BaseCausalPrediction
+from pgmpy.prediction._base import BaseCausalPrediction
 
 
-class NaiveAdjustmentRegressor(_BaseCausalPrediction):
+class NaiveAdjustmentRegressor(BaseCausalPrediction):
     """
     Naive adjustment regressor using causal graph roles for feature selection.
 
@@ -143,9 +143,9 @@ class NaiveAdjustmentRegressor(_BaseCausalPrediction):
         ----------
         X : array-like or DataFrame of shape (n_samples, n_features)
             Training data. Column names must exactly match variable names in the causal graph.
-            - If DataFrame: Column names must match DAG variable names exactly
-            - If numpy array: Will be converted to DataFrame with columns [0, 1, 2, ...],
-              so DAG should use integer variable names
+            DataFrame column names must match DAG variable names exactly. A
+            NumPy array is converted to a DataFrame with integer columns, so
+            the DAG should use integer variable names in that case.
         y : array-like of shape (n_samples,)
             Target values (outcome variable).
         sample_weight : array-like of shape (n_samples,), optional
@@ -209,9 +209,9 @@ class NaiveAdjustmentRegressor(_BaseCausalPrediction):
         ----------
         X : array-like or DataFrame of shape (n_samples, n_features)
             Input data. Column names must exactly match variable names in the causal graph.
-            - If DataFrame: Column names must match DAG variable names exactly
-            - If numpy array: Will be converted to DataFrame with columns [0, 1, 2, ...],
-              so DAG should use integer variable names
+            DataFrame column names must match DAG variable names exactly. A
+            NumPy array is converted to a DataFrame with integer columns, so
+            the DAG should use integer variable names in that case.
 
         Returns
         -------

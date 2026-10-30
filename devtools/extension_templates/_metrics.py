@@ -17,9 +17,9 @@
 from pgmpy.base import DAG  # noqa: F401
 
 # TODO: Choose the appropriate base class based on whether your metric requires ground truth:
-# For metrics that compare against a ground truth graph, import _BaseSupervisedMetric
-# For metrics that evaluate a graph against data without ground truth, import _BaseUnsupervisedMetric
-from pgmpy.metrics import _BaseSupervisedMetric, _BaseUnsupervisedMetric
+# For metrics that compare against a ground truth graph, import BaseSupervisedMetric
+# For metrics that evaluate a graph against data without ground truth, import BaseUnsupervisedMetric
+from pgmpy.metrics import BaseSupervisedMetric, BaseUnsupervisedMetric
 
 # TODO: Add any additional imports needed for your specific metric implementation.
 # Common imports might include:
@@ -30,7 +30,7 @@ from pgmpy.metrics import _BaseSupervisedMetric, _BaseUnsupervisedMetric
 
 # TODO: Choose ONE of the following class definitions and remove the other.
 # Option 1: For supervised metrics (requires ground truth)
-class MyMetric(_BaseSupervisedMetric):
+class MyMetric(BaseSupervisedMetric):
     """
     [One line description of the metric.]
 
@@ -67,14 +67,14 @@ class MyMetric(_BaseSupervisedMetric):
     .. [1] TODO: Add citation for the metric
     """
 
-    # TODO: Fill in the tags for your metric. This is mandatory.
+    # TODO: Set every tag. `pgmpy.registry.all_tags("supervised_metric")` lists them, and the tag classes in
+    #       `pgmpy/registry/_tags.py` document each tag and its allowed values.
     _tags = {
-        "name": "my_metric",  # Change to your metric name (lowercase, underscores allowed)
-        "requires_true_graph": True,  # Set to True for supervised metrics
-        "requires_data": False,  # Set to True if metric needs data in addition to graphs
-        "lower_is_better": True,  # Set to False if higher values are better
-        "is_symmetric": False,  # Set to True if metric(A, B) == metric(B, A)
-        "supported_graph_types": (DAG,),  # Add supported graph types (DAG, PDAG, etc.)
+        "name": "my_metric",
+        "is_symmetric": False,
+        "supported_graph_types": [DAG],
+        "output_type": "scalar",
+        "lower_is_better": True,
     }
 
     # TODO: Add all parameters required for the metric in the init method.
@@ -123,7 +123,7 @@ class MyMetric(_BaseSupervisedMetric):
 
 # TODO: Choose ONE of the following class definitions and remove the other.
 # Option 2: For unsupervised metrics (no ground truth required)
-class MyUnsupervisedMetric(_BaseUnsupervisedMetric):
+class MyUnsupervisedMetric(BaseUnsupervisedMetric):
     """
     [One line description of the metric.]
 
@@ -160,13 +160,13 @@ class MyUnsupervisedMetric(_BaseUnsupervisedMetric):
     .. [1] TODO: Add citation for the metric
     """
 
-    # TODO: Fill in the tags for your metric. This is mandatory.
+    # TODO: Set every tag. `pgmpy.registry.all_tags("unsupervised_metric")` lists them, and the tag classes in
+    #       `pgmpy/registry/_tags.py` document each tag and its allowed values.
     _tags = {
-        "name": "my_unsupervised_metric",  # Change to your metric name
-        "requires_true_graph": False,  # Always False for unsupervised metrics
-        "requires_data": True,  # Always True for unsupervised metrics
-        "lower_is_better": False,  # Set based on your metric's interpretation
-        "supported_graph_types": (DAG,),  # Add supported graph types
+        "name": "my_unsupervised_metric",
+        "supported_graph_types": [DAG],
+        "output_type": "scalar",
+        "lower_is_better": False,
     }
 
     # TODO: Add all parameters required for the metric in the init method.

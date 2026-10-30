@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Ets(BIFMixin, _BaseExampleModel):
+class Ets(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/ets",
         "n_nodes": 20,

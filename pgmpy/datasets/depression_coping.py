@@ -1,7 +1,7 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class DepressionCoping(_BaseDataset):
+class DepressionCoping(BaseDataset):
     _tags = {
         "name": "depression_coping",
         "n_variables": 78,

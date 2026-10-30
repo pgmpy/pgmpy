@@ -79,6 +79,13 @@ listings in favor of the current class names.
 
       Discrete, Gaussian, and conditional-Gaussian structure scoring classes.
 
+   .. grid-item-card:: Tags
+      :link: api/tags
+      :link-type: doc
+      :class-card: sd-card-hover
+
+      Tags that describe the data types, capabilities, and assumptions of pgmpy objects.
+
    .. grid-item-card:: Metrics
       :link: api/metrics
       :link-type: doc
@@ -120,6 +127,7 @@ listings in favor of the current class names.
    api/structure_learning
    api/ci_test
    api/structure_score
+   api/tags
    api/metrics
    api/readwrite
    api/data

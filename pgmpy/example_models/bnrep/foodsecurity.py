@@ -1,7 +1,7 @@
-from .._base import ContinuousMixin, _BaseExampleModel
+from .._base import BaseExampleModel, ContinuousMixin
 
 
-class Foodsecurity(ContinuousMixin, _BaseExampleModel):
+class Foodsecurity(ContinuousMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/foodsecurity",
         "n_nodes": 4,

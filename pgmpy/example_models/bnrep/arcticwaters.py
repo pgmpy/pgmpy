@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Arcticwaters(BIFMixin, _BaseExampleModel):
+class Arcticwaters(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/arcticwaters",
         "n_nodes": 46,

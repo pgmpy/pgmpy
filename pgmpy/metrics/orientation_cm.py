@@ -2,10 +2,10 @@ import networkx as nx
 import pandas as pd
 
 from pgmpy.base import DAG
-from pgmpy.metrics import _BaseSupervisedMetric
+from pgmpy.metrics import BaseSupervisedMetric
 
 
-class OrientationConfusionMatrix(_BaseSupervisedMetric):
+class OrientationConfusionMatrix(BaseSupervisedMetric):
     """
     Computes confusion matrix based metrics for comparing edge orientations in DAGs.
 
@@ -63,17 +63,15 @@ class OrientationConfusionMatrix(_BaseSupervisedMetric):
 
     References
     ----------
-    .. [1] Bryan Andrews, Joseph Ramsey, Gregory F. Cooper Proceedings of Machine Learning Research,
-           PMLR 104:4-21, 2019. https://proceedings.mlr.press/v104/andrews19a.html
+    - :footcite:t:`andrews_ramsey_cooper_2019`
     """
 
     _tags = {
         "name": "orientation_confusion_matrix",
-        "requires_true_graph": True,
-        "requires_data": False,
-        "lower_is_better": False,
         "is_symmetric": False,
-        "supported_graph_types": (DAG,),
+        "supported_graph_types": [DAG],
+        "output_type": "dict",
+        "lower_is_better": False,
     }
 
     def __init__(self, metrics: list[str] | None = None):

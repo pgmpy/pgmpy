@@ -30,9 +30,9 @@ class StateNameMixin:
         if state_names:
             for key, value in state_names.items():
                 if not isinstance(value, (list, tuple)):
-                    raise ValueError("The state names must be for the form: {variable: list_of_states}")
+                    raise ValueError("The state names must be of the form: {variable: list_of_states}")
                 elif not len(set(value)) == len(value):
-                    raise ValueError(f"Repeated statenames for variable: {key}")
+                    raise ValueError(f"Repeated state names for variable: {key}")
 
             # Make a copy, so that the original object doesn't get modified after operations.
             self.state_names = state_names.copy()

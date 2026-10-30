@@ -23,12 +23,12 @@ def _random_dag_with_same_nodes(model, rng, edge_prob: float = EDGE_PROB) -> DAG
     return DAG(g.edges())
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def rng():
     return np.random.default_rng(SEED)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def models_and_data(rng):
     out = {}
     for name in ("cancer", "alarm"):

@@ -137,3 +137,4 @@ Key Features
    API Reference <reference>
    Citation <citation>
    Getting Involved <development>
+   References <references>

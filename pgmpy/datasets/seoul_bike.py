@@ -1,7 +1,7 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class SeoulBike(_BaseDataset):
+class SeoulBike(BaseDataset):
     _tags = {
         "name": "seoul_bike",
         "n_variables": 13,

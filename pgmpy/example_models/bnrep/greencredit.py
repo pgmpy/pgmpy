@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Greencredit(BIFMixin, _BaseExampleModel):
+class Greencredit(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/greencredit",
         "n_nodes": 10,

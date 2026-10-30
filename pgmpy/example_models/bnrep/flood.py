@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Flood(BIFMixin, _BaseExampleModel):
+class Flood(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/flood",
         "n_nodes": 22,

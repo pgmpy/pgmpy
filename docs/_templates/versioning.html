@@ -6,6 +6,8 @@
     data-current-version="{{ pgmpy_version_name }}"
     data-current-label="{{ pgmpy_current_version_label }}"
     data-target-uri="{{ pgmpy_current_target_uri or '' }}"
+    data-site-root="{{ pgmpy_site_root_url }}"
+    data-manifest-url="{{ pgmpy_site_root_url }}/versions.json"
   >
     {% set has_release_entries = versions.stable or versions.releases %}
     {% if has_release_entries %}
@@ -44,6 +46,8 @@
       const currentVersion = select.dataset.currentVersion;
       const currentLabel = select.dataset.currentLabel || currentVersion;
       const currentTargetUri = (select.dataset.targetUri || "").replace(/^\/+/, "");
+      const siteRoot = (select.dataset.siteRoot || "").replace(/\/+$/, "");
+      const manifestUrl = select.dataset.manifestUrl;
 
       if (!Array.from(select.options).some(function(option) { return option.value === currentVersion; })) {
         const option = document.createElement("option");
@@ -54,10 +58,11 @@
       }
 
       const buildTargetUrl = function(baseUrl) {
+        const normalized = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
         if (!currentTargetUri || currentTargetUri === "index.html") {
-          return baseUrl;
+          return normalized;
         }
-        return new URL(currentTargetUri, baseUrl).toString();
+        return new URL(currentTargetUri, normalized).toString();
       };
 
       const navigateToVersion = async function(option) {
@@ -66,16 +71,17 @@
           return;
         }
 
-        const targetUrl = buildTargetUrl(baseUrl);
+        const normalized = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
+        const targetUrl = buildTargetUrl(normalized);
 
-        if (targetUrl === baseUrl) {
-          window.location.href = baseUrl;
+        if (targetUrl === normalized) {
+          window.location.href = normalized;
           return;
         }
 
         try {
           const response = await fetch(targetUrl, { method: "HEAD" });
-          window.location.href = response.ok ? targetUrl : baseUrl;
+          window.location.href = response.ok ? targetUrl : normalized;
         } catch (error) {
           window.location.href = targetUrl;
         }
@@ -88,6 +94,75 @@
         }
         navigateToVersion(option);
       });
+
+      const populateFromManifest = function(manifest) {
+        if (!siteRoot) {
+          return;
+        }
+
+        const stableName = manifest && manifest.stable;
+        const releases = manifest && Array.isArray(manifest.releases) ? manifest.releases : [];
+        const development = manifest && Array.isArray(manifest.development) ? manifest.development : [];
+
+        const fragment = document.createDocumentFragment();
+
+        const appendOption = function(group, value, textContent, url) {
+          const option = document.createElement("option");
+          option.value = value;
+          option.textContent = textContent;
+          option.dataset.url = url;
+          if (value === currentVersion) {
+            option.selected = true;
+          }
+          group.appendChild(option);
+        };
+
+        if (stableName || releases.length) {
+          const releasesGroup = document.createElement("optgroup");
+          releasesGroup.label = "Releases";
+          if (stableName) {
+            appendOption(releasesGroup, "stable", stableName + " (stable)", siteRoot + "/");
+          }
+          releases.forEach(function(name) {
+            appendOption(releasesGroup, name, name, siteRoot + "/" + name + "/");
+          });
+          fragment.appendChild(releasesGroup);
+        }
+
+        if (development.length) {
+          const developmentGroup = document.createElement("optgroup");
+          developmentGroup.label = "In Development";
+          development.forEach(function(name) {
+            appendOption(developmentGroup, name, name, siteRoot + "/" + name + "/");
+          });
+          fragment.appendChild(developmentGroup);
+        }
+
+        const hasCurrent = Array.from(fragment.querySelectorAll("option")).some(function(option) {
+          return option.value === currentVersion;
+        });
+        if (!hasCurrent) {
+          const option = document.createElement("option");
+          option.value = currentVersion;
+          option.textContent = currentLabel;
+          option.selected = true;
+          fragment.insertBefore(option, fragment.firstChild);
+        }
+
+        select.replaceChildren(fragment);
+      };
+
+      if (manifestUrl) {
+        fetch(manifestUrl, { cache: "no-cache" })
+          .then(function(response) {
+            if (!response.ok) {
+              throw new Error("manifest fetch failed: " + response.status);
+            }
+            return response.json();
+          })
+          .then(populateFromManifest)
+          .catch(function() { /* keep server-rendered fallback */ });
+      }
     });
   })();
 </script>

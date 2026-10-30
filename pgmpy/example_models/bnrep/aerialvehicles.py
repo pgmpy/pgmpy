@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Aerialvehicles(BIFMixin, _BaseExampleModel):
+class Aerialvehicles(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/aerialvehicles",
         "n_nodes": 39,
