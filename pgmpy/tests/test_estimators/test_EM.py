@@ -131,7 +131,7 @@ class TestEM(unittest.TestCase):
             # The latent variable doesn't converge to the true value when
             # the initial CPD is specified.
             if orig_cpd.variables[0] == "Smoker":
-                self.assertTrue(np.allclose(est_cpd.values, np.array([0.124, 0.876]), atol=0.01))
+                self.assertTrue(np.allclose(est_cpd.values, np.array([0.123, 0.877]), atol=0.01))
             else:
                 self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
 
@@ -161,12 +161,12 @@ class TestEM(unittest.TestCase):
             # The latent variable doesn't converge to the true value when
             # the initial CPD is specified.
             if orig_cpd.variables[0] == "Smoker":
-                self.assertTrue(np.allclose(est_cpd.values, np.array([0.124, 0.876]), atol=0.01))
+                self.assertTrue(np.allclose(est_cpd.values, np.array([0.123, 0.877]), atol=0.01))
             elif orig_cpd.variables[0] == "Xray":
                 self.assertTrue(
                     np.allclose(
                         est_cpd.values,
-                        np.array([[0.799, 0.148], [0.201, 0.852]]),
+                        np.array([[0.799, 0.093], [0.201, 0.907]]),
                         atol=0.01,
                     )
                 )
@@ -340,7 +340,7 @@ class TestEMTorch(TestEM):
                 self.assertTrue(
                     np.allclose(
                         compat_fns.to_numpy(est_cpd.values),
-                        np.array([0.124, 0.876]),
+                        np.array([0.123, 0.877]),
                         atol=0.01,
                     )
                 )
@@ -376,7 +376,7 @@ class TestEMTorch(TestEM):
                 self.assertTrue(
                     np.allclose(
                         compat_fns.to_numpy(est_cpd.values),
-                        np.array([0.124, 0.876]),
+                        np.array([0.123, 0.877]),
                         atol=0.01,
                     )
                 )
@@ -384,7 +384,7 @@ class TestEMTorch(TestEM):
                 self.assertTrue(
                     np.allclose(
                         compat_fns.to_numpy(est_cpd.values),
-                        np.array([[0.799, 0.148], [0.201, 0.852]]),
+                        np.array([[0.799, 0.093], [0.201, 0.907]]),
                         atol=0.01,
                     )
                 )

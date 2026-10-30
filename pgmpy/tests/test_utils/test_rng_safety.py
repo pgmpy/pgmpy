@@ -10,7 +10,7 @@ class TestRNGSafety(unittest.TestCase):
     def test_sample_discrete_safety(self):
         # Set global seed
         np.random.seed(42)  # noqa: NPY002
-        v1 = np.random.random()  # noqa: S311
+        _ = np.random.random()  # noqa: S311
 
         # Call sample_discrete with its own seed
         sample_discrete(["a", "b"], [0.5, 0.5], size=10, seed=123)
@@ -33,7 +33,7 @@ class TestRNGSafety(unittest.TestCase):
         model.add_transition_model("B", tm)
 
         np.random.seed(42)  # noqa: NPY002
-        v1 = np.random.random()  # noqa: S311
+        _ = np.random.random()  # noqa: S311
 
         # Call sample with its own seed
         model.sample(size=5, seed=123)

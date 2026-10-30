@@ -334,6 +334,7 @@ class TestMarkovChain(unittest.TestCase):
         state2 = model.random_state(seed=42)
         state3 = model.random_state(seed=99)
         self.assertEqual(state1, state2)
+        self.assertNotEqual(state1, state3)
 
     def test_sample_seed_no_start_state(self):
         model = MC(["a", "b"], [2, 2])
