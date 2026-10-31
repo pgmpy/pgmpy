@@ -3,6 +3,7 @@ from collections import deque
 from collections.abc import Callable, Generator, Hashable
 from itertools import combinations, permutations
 
+import narwhals.stable.v2 as nw
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -64,50 +65,70 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         tags.target_tags.required = False
         return tags
 
-    def _check_fit_data(self, X):
+    def _check_fit_data(self, X) -> nw.DataFrame:
         """Check the input data for fitting the causal discovery algorithm.
 
         Parameters
         ----------
-        X: pd.DataFrame
+        X: pd.DataFrame, pl.DataFrame, pa.Table, cudf.DataFrame, np.ndarray, or nw.DataFrame
             The data to fit the causal discovery algorithm on.
-        """
-        n_samples, n_features = X.shape
 
+        Returns
+        -------
+        nw_df : nw.DataFrame
+            The validated data wrapped as an eager Narwhals DataFrame.
+        """
+
+        if isinstance(X, (np.ndarray, pd.DataFrame)):
+            # Handle cases like complex data, sparse arrays etc. first
+            validate_data(
+                self,
+                X=X,
+                dtype=None,
+                accept_sparse=False,
+                ensure_all_finite=True,
+                reset=True,
+            )
+            if isinstance(X, np.ndarray):
+                cols = [f"x{i}" for i in range(X.shape[1])]
+                X = pd.DataFrame(X, columns=cols)
+
+        nw_df = X if isinstance(X, nw.DataFrame) else nw.from_native(X, eager_only=True)
+
+        n_samples, n_features = nw_df.shape
         if n_features == 0:
-            raise ValueError(f"0 feature(s) (shape={X.shape}) while a minimum of 1 is required.")
+            raise ValueError(f"0 feature(s) (shape={nw_df.shape}) while a minimum of 1 is required.")
         if n_samples < 2:
             raise ValueError(f"n_samples = {n_samples}, at least 2 are required.")
 
-        # Handle cases like complex data, sparse arrays etc. first
-        validate_data(
-            self,
-            X=X,
-            dtype=None,
-            accept_sparse=False,
-            ensure_all_finite=True,
-            reset=True,
-        )
+        for col in nw_df.columns:
+            s = nw_df.get_column(col)
+            null_count = s.is_null().sum()
+            nan_count = s.is_nan().sum() if s.dtype.is_float() else 0
+            if (null_count + nan_count) > 0:
+                raise ValueError(f"Input contains NaN/null values in column '{col}'.")
 
-        if not isinstance(X, pd.DataFrame):
-            X = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
-            self.feature_names_in_ = X.columns
+        try:
+            for col in nw_df.columns:
+                if nw_df.get_column(col).n_unique() == 1:
+                    warnings.warn(
+                        f"Variable '{col}' is constant (zero variance), which can lead to unreliable results for"
+                        f"{type(self).__name__}. Consider removing it before fitting.",
+                        UserWarning,
+                    )
+        except TypeError as e:
+            raise TypeError("argument must be a string, number, or hashable object.") from e
 
-        if not all([isinstance(x, Hashable) for x in X.values.flat]):
-            raise TypeError("argument must be a string, number, or hashable object.")
+        self.feature_names_in_ = np.asarray(nw_df.columns, dtype=object)
+        self.n_features_in_ = n_features
 
-        for col in X.columns:
-            if X[col].nunique() == 1:
-                warnings.warn(
-                    f"Variable '{col}' is constant (zero variance), which can lead to unreliable results for"
-                    f"{type(self).__name__}. Consider removing it before fitting.",
-                    UserWarning,
-                )
+        if not getattr(self, "_supports_narwhals", False):
+            if not isinstance(X, pd.DataFrame):
+                X = nw_df.to_pandas()
+            return X
+        return nw_df
 
-        self.n_features_in_ = len(X.columns)
-        return X
-
-    def fit(self, X: pd.DataFrame, y=None, **fit_params):
+    def fit(self, X, y=None, **fit_params):
         """Fit data (`X`) to a causal graph. The method calls the `_fit` method, which must be implemented separately in
         any causal discovery algorithm inheriting from `BaseCausalDiscovery`. Additional keyword arguments are passed to
         `_fit`.
@@ -738,8 +759,8 @@ class _TreeSearchMixin:
 
         Parameters
         ----------
-        data : pd.DataFrame
-            Dataframe where each column represents one variable.
+        data : pd.DataFrame, pl.DataFrame, pa.Table, cudf.DataFrame, np.ndarray, or nw.DataFrame
+            Dataframe or 2D array where each column represents one variable.
 
         edge_weights_fn : str or callable, default="mutual_info"
             Method to use for computing edge weights. Options are:
@@ -761,14 +782,22 @@ class _TreeSearchMixin:
             Symmetric matrix where ``weights[i, j]`` is the edge weight between
             variable *i* and variable *j*.
         """
+        if isinstance(data, np.ndarray):
+            data = pd.DataFrame(data, columns=[f"x{i}" for i in range(data.shape[1])])
+
+        data = data if isinstance(data, nw.DataFrame) else nw.from_native(data, eager_only=True)
+
         edge_weights_fn = _TreeSearchMixin._resolve_edge_weights_fn(edge_weights_fn)
 
         n_vars = len(data.columns)
+
+        col_arrays = {col: data.get_column(col).to_numpy() for col in data.columns}
+
         pbar = combinations(data.columns, 2)
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(pbar, total=(n_vars * (n_vars - 1) / 2), desc="Building tree")
 
-        vals = Parallel(n_jobs=n_jobs)(delayed(edge_weights_fn)(data.loc[:, u], data.loc[:, v]) for u, v in pbar)
+        vals = Parallel(n_jobs=n_jobs)(delayed(edge_weights_fn)(col_arrays[u], col_arrays[v]) for u, v in pbar)
         weights = np.zeros((n_vars, n_vars))
         indices = np.triu_indices(n_vars, k=1)
         weights[indices] = vals
@@ -797,11 +826,7 @@ class _TreeSearchMixin:
         model : pgmpy.base.DAG
             The estimated DAG rooted at ``root_node``.
         """
-        T = nx.maximum_spanning_tree(
-            nx.from_pandas_adjacency(
-                pd.DataFrame(weights, index=columns, columns=columns),
-                create_using=nx.Graph,
-            )
-        )
+        G = nx.from_numpy_array(weights, nodelist=columns)
+        T = nx.maximum_spanning_tree(G)
         D = nx.bfs_tree(T, root_node)
         return DAG(D)
