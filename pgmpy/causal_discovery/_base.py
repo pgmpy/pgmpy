@@ -111,16 +111,24 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
             if (null_count + nan_count) > 0:
                 raise ValueError(f"Input contains NaN/null values in column '{col}'.")
 
-        for col in nw_df.columns:
-            if nw_df.get_column(col).n_unique() == 1:
-                warnings.warn(
-                    f"Variable '{col}' is constant (zero variance), which can lead to unreliable results for"
-                    f"{type(self).__name__}. Consider removing it before fitting.",
-                    UserWarning,
-                )
+        try:
+            for col in nw_df.columns:
+                if nw_df.get_column(col).n_unique() == 1:
+                    warnings.warn(
+                        f"Variable '{col}' is constant (zero variance), which can lead to unreliable results for"
+                        f"{type(self).__name__}. Consider removing it before fitting.",
+                        UserWarning,
+                    )
+        except TypeError as e:
+            raise TypeError("argument must be a string, number, or hashable object.") from e
 
         self.feature_names_in_ = np.asarray(nw_df.columns, dtype=object)
         self.n_features_in_ = n_features
+
+        if not getattr(self, "_supports_narwhals", False):
+            if not isinstance(X, pd.DataFrame):
+                X = nw_df.to_pandas()
+            return X
         return nw_df
 
     def fit(self, X, y=None, **fit_params):

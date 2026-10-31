@@ -89,6 +89,8 @@ class ChowLiu(_TreeSearchMixin, BaseCausalDiscovery):
     >>> plt.show()
     """
 
+    _supports_narwhals = True
+
     _tags = {
         "name": "chow_liu",
         "data_types": ["discrete"],
