@@ -12,12 +12,10 @@ class BaseTimeSeriesCausalDiscovery(ABC):
     """
     Base class for time-series causal discovery algorithms.
 
-    Input data follows sktime's multi-index dataframe convention.
-    Level 0 identifies an independent series, level 1 identifies the grid
-    of rows and columns which are variables.
+    Input data follows sktime's MultiIndex DataFrame convention:
 
-    Subclasses implement the algoritm-specific initialization of time series
-    causal discovery and result processing methods.
+    Subclasses implement algorithm initialization, discovery,
+    and result processing.
     """
 
     def __init__(
@@ -27,27 +25,8 @@ class BaseTimeSeriesCausalDiscovery(ABC):
         cond_ind_test=None,
         verbosity=0,
     ):
-        """
-        Initialize the base time-series causal discovery estimator.
+        """Initialize the time-series causal discovery estimator."""
 
-        Parameters
-        ----------
-        tau_min : int
-            Minimum temporal lag considered during causal discovery.
-
-        tau_max : int
-            Maximum temporal lag considered during causal discovery.
-
-        cond_ind_test : object
-            Conditional independence test used to evaluate candidate
-            causal relationships. The test is expected to follow pgmpy's
-            conditional independence testing interface.
-
-        verbosity : int
-            Controls the amount of information emitted during
-            the discovery process.
-        """
-        # validate temporal lag configuration
         if not isinstance(tau_min, int) or isinstance(tau_min, bool) or tau_min < 0:
             raise ValueError("tau_min must be a non negative integer")
 
@@ -59,11 +38,10 @@ class BaseTimeSeriesCausalDiscovery(ABC):
 
         self.tau_min = tau_min
         self.tau_max = tau_max
-        # conditional independence test
         self.cond_ind_test = cond_ind_test
         self.verbosity = verbosity
 
-        # initialize dataset metadata, populated when estimator receives data
+        # Dataset metadata.
         self.series_ids_ = None
         self.variable_names_ = None
         self.n_variables_ = None
@@ -71,15 +49,25 @@ class BaseTimeSeriesCausalDiscovery(ABC):
         self.n_series_ = None
         self.series_data_ = None
         self.series_lengths_ = None
-        self.X_ = None  # for creating a dataset copy
+        self.X_ = None
 
-        # values populated after fitting
+        # Discovery results.
         self.graph_ = None
         self.p_matrix_ = None
         self.val_matrix_ = None
 
     def _validate_time_series_data(self, X):
-        """Validate the sktime multi-index DataFrame."""
+        """
+        Validate the input time-series DataFrame.
+
+        Checks the DataFrame structure, index integrity, variable names,
+        numeric values, missing values, and time-point ordering.
+
+        Returns
+        -------
+        pandas.DataFrame
+            The validated input DataFrame.
+        """
         if not isinstance(X, pd.DataFrame):
             raise TypeError("Input data must be a pandas DataFrame.")
 
@@ -97,14 +85,11 @@ class BaseTimeSeriesCausalDiscovery(ABC):
         if X.columns.has_duplicates:
             raise ValueError("Input DataFrame must have unique variable names.")
 
-        if any(X.index.get_level_values(i).hasnans for i in range(X.index.nlevels)):
-            raise ValueError("Input MultiIndex must not contain missing identifiers.")
-
         if not all(isinstance(name, str) for name in X.columns):
             raise TypeError("All variable names must be strings.")
 
-        if X.columns.has_duplicates:
-            raise ValueError("Variable names must be unique.")
+        if any(X.index.get_level_values(level).hasnans for level in range(X.index.nlevels)):
+            raise ValueError("Input MultiIndex must not contain missing identifiers.")
 
         if X.isna().to_numpy().any():
             raise ValueError("Input data contains missing values. Handle them before fitting.")
@@ -115,8 +100,10 @@ class BaseTimeSeriesCausalDiscovery(ABC):
         if not np.isfinite(X.to_numpy(dtype=float)).all():
             raise ValueError("Input data must contain only finite numeric values.")
 
+        # Check each series independently.
         for series_id, group in X.groupby(level=0, sort=False):
             time_index = group.index.get_level_values(1)
+
             if time_index.has_duplicates:
                 raise ValueError(f"Series {series_id!r} contains duplicate time points.")
 
@@ -129,98 +116,112 @@ class BaseTimeSeriesCausalDiscovery(ABC):
 
         return X
 
+    def _validate_series_lengths(self):
+        """
+        Ensure every independent time series has enough observations.
+
+        Each series must contain more observations than tau_max.
+        This prevents attempting lagged discovery on a series that is
+        too short for the configured maximum lag.
+        """
+        if self.series_lengths_ is None:
+            raise RuntimeError("Series lengths are unavailable. Prepare the data first.")
+
+        too_short = [series_id for series_id, length in self.series_lengths_.items() if length <= self.tau_max]
+
+        if too_short:
+            raise ValueError(
+                "Each time series must contain more observations than "
+                f"tau_max. Series that are too short: {too_short!r}"
+            )
+
     def _prepare_time_series_data(self, X):
         """
-        Prepare time series multi-index DataFrame for discovery.
+        Extract time-series metadata and prepare individual series.
 
-        The input dataframe is expected to use a multi-index with:
-        - level 0: instance or series identifier
-        - level 1: time-point identifier
-
-        Columns represent variables whose causal relationships are to be discovered.
+        Assumes that X has already passed _validate_time_series_data().
+        Each series is sorted by its time index before being stored.
         """
-
-        # ensure input is pandas dataframe
-        if not isinstance(X, pd.DataFrame):
-            raise ValueError("Input data must be a pandas DataFrame.")
-
-        # ensure df uses a multi-index
-        if not isinstance(X.index, pd.MultiIndex):
-            raise ValueError("Input DataFrame must have a MultiIndex.")
-
-        # ensure data not empty
-        if X.empty or X.shape[1] == 0:
-            raise ValueError("Input DataFrame must contain at least one variable.")
-
-        # extract identifiers and names
         self.series_ids_ = X.index.get_level_values(0).unique()
         self.variable_names_ = list(X.columns)
 
-        # Number of variables and total observations
         self.n_variables_ = X.shape[1]
         self.n_observations_ = len(X)
-
-        # number of independent series
         self.n_series_ = len(self.series_ids_)
 
         self.series_data_ = {series_id: X.xs(series_id, level=0).sort_index() for series_id in self.series_ids_}
 
         self.series_lengths_ = {series_id: len(series_data) for series_id, series_data in self.series_data_.items()}
 
-        # return prepared representation
         return self.series_data_
 
     def _wrap_ci_test_for_tigramite(self):
         """
-        Adapt pgmpy's CI-test callable to Tigramite's run_test interface.
-
-        The adapter is created by a subclass once its data representation
-        and algorithm-specific requirements are known.
-
-        Tigramite's standard CI-test protocol expects a callable with
-        set_dataframe(dataframe) and run_test(X, Y, Z, tau_max, ...).
+        Adapt the configured conditional independence test for Tigramite.
         """
         if self.cond_ind_test is None:
             raise ValueError("cond_ind_test must be provided to perform causal discovery.")
 
+        # Keep the configured test separate from the adapter.
+        ci_test = deepcopy(self.cond_ind_test)
+
         self.tigramite_ci_test_ = TigramiteAdapter(
-            tigramite_ci=self.tigramite_ci_test_, 
-            tau_max=self.tau_max, 
-            cut_off="2xtau_max", 
-            alpha_or_thres=None
+            tigramite_ci=ci_test,
+            tau_max=self.tau_max,
+            cut_off="2xtau_max",
+            alpha_or_thres=None,
         )
+
         return self.tigramite_ci_test_
 
     @abstractmethod
     def _initialize_algorithm(self) -> None:
-        """Initialize the concrete time-series discovery methods."""
+        """Initialize the concrete time-series discovery algorithm."""
 
     @abstractmethod
     def _run_discovery(self) -> dict[str, object]:
-        """Run the concrete discovery algorithm and return raw results."""
+        """Run causal discovery and return raw results."""
 
     @abstractmethod
     def _process_discovery_results(self, results: dict[str, object]) -> None:
-        """Normalize the results into the public pgmpy result attributes."""
+        """Normalize the results into the public estimator attributes."""
 
     def fit(self, X):
         """
         Fit the estimator to one or more time series.
 
-        Algorithm-specific methods receive the prepared series and own
-        their Tigramite configuration and result processing.
-
         Parameters
         ----------
-        X : pd.DataFrame
-            Input data to fit the model on.
+        X : pandas.DataFrame
+            MultiIndex DataFrame containing time-series observations.
+
+        Returns
+        -------
+        self
+            The fitted estimator.
         """
+        # 1. Validate the complete input.
+        self._validate_time_series_data(X)
+
+        # 2. Preserve the original input.
+        self.X_ = X.copy()
+
+        # 3. Extract individual series and metadata.
         self._prepare_time_series_data(X)
 
-        self.tigramite_ci_test_ = self._wrap_ci_test_for_tigramite()
+        # 4. Validate the lengths of individual series.
+        self._validate_series_lengths()
 
+        # 5. Adapt the conditional independence test.
+        self._wrap_ci_test_for_tigramite()
+
+        # 6. Initialize the algorithm.
         self._initialize_algorithm()
+
+        # 7. Run causal discovery.
         results = self._run_discovery()
+
+        # 8. Normalize and store the results.
         self._process_discovery_results(results=results)
         self.results_ = results
 
@@ -230,24 +231,18 @@ class BaseTimeSeriesCausalDiscovery(ABC):
         """
         Return the discovered causal relationships.
 
-        Returns
-        -------
-        object
-            A graph object
+        Raises
+        ------
+        RuntimeError
+            If the estimator has not been fitted.
         """
         if self.graph_ is None:
-            raise RuntimeError("The estimator has not been fitted yet")
+            raise RuntimeError("The estimator has not been fitted yet.")
+
         return self.graph_
 
     def get_parameters(self):
-        """
-        Return the configuration used for time-series causal discovery.
-
-        Returns
-        -------
-        dict
-            Summary of all the variables.
-        """
+        """Return the estimator's configuration."""
         return {
             "tau_min": self.tau_min,
             "tau_max": self.tau_max,

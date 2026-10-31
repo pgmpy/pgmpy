@@ -11,7 +11,7 @@ class DummyPCMCI(_BasePCMCI):
     """Concrete implementation for testing."""
 
     def _fit(self, X):
-        return self
+        pass
 
     def _initialize_algorithm(self):
         pass
@@ -76,9 +76,7 @@ class TestBasePCMCI:
             model._prepare_data(data)
 
     def test_wrap_ci_test(self, model):
-        with patch(
-            "pgmpy.causal_discovery._base_pcmpi.TigramiteAdapter"
-        ) as mock_adapter:
+        with patch("pgmpy.causal_discovery._base_pcmpi.TigramiteAdapter") as mock_adapter:
             model._wrap_ci_test_for_tigramite()
 
         assert model.ci_test_ is not model.cond_ind_test

@@ -5,8 +5,52 @@ class PCMCI(_BasePCMCI):
     """
     Public estimator for PCMCI causal discovery.
 
-    Accepts a sktime multi-index DataFrame and exposes discovery
-    results for further conversion by TimeSeriesDAG.
+    Accepts a sktime-compatible MultiIndex DataFrame and exposes
+    discovery results for further processing by TimeSeriesDAG.
+
+    Parameters
+    ----------
+    cond_ind_test : object
+        Conditional independence test used by the discovery algorithm.
+
+    tau_min : int, default=0
+        Minimum time lag considered during causal discovery.
+
+    tau_max : int, default=1
+        Maximum time lag considered during causal discovery.
+
+    pc_alpha : float, default=0.05
+        Significance level used during the PC-stable phase.
+
+    fdr_method : str or None, default="fdr_bh"
+        Multiple-testing correction method.
+
+    verbosity : int, default=0
+        Verbosity level for the discovery algorithm.
+
+    link_assumptions : dict or None, default=None
+        Optional prior assumptions restricting candidate causal links.
+
+    **kwargs
+        Additional keyword arguments forwarded to Tigramite's
+        run_pcmci() method.
+
+    Attributes
+    ----------
+    graph_ : numpy.ndarray
+        Discovered causal graph.
+
+    p_matrix_ : numpy.ndarray
+        Matrix of p-values for candidate links.
+
+    val_matrix_ : numpy.ndarray
+        Matrix of test statistics for candidate links.
+
+    candidates_ : object
+        Candidate links returned by the discovery algorithm, if available.
+
+    corrected_p_matrix_ : numpy.ndarray or None
+        Multiple-testing-corrected p-values, if returned by Tigramite.
     """
 
     def __init__(
@@ -20,7 +64,6 @@ class PCMCI(_BasePCMCI):
         link_assumptions=None,
         **kwargs,
     ):
-        """Initialize the PCMCI estimator."""
         super().__init__(
             cond_ind_test=cond_ind_test,
             tau_min=tau_min,
@@ -31,28 +74,3 @@ class PCMCI(_BasePCMCI):
             link_assumptions=link_assumptions,
             **kwargs,
         )
-
-    def _fit(self, X):  # type: ignore
-        """
-        Prepare the input, run Tigramite's PCMCI procedure,
-        and store the discovery results.
-        """
-        # Prepare the time-series data.
-        data = self._prepare_data(X)
-
-        # Run PCMCI using Tigramite.
-        results = self._run_pcmci(
-            data,
-            link_assumptions=self.link_assumptions,
-        )
-
-        # Normalize and store the discovery results.
-        results = self._process_results(results)
-
-        self.p_matrix_ = results["p_matrix"]  # type: ignore
-        self.val_matrix_ = results["val_matrix"]  # type: ignore
-        self.graph_ = results["graph"]  # type: ignore
-        self.candidates_ = results.get("candidates")  # type: ignore
-        self.corrected_p_matrix_ = results.get("corrected_p_matrix")  # type: ignore
-
-        return self
