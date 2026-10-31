@@ -104,10 +104,7 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         for col in nw_df.columns:
             s = nw_df.get_column(col)
             null_count = s.is_null().sum()
-            try:
-                nan_count = s.is_nan().sum() if s.dtype.is_float() else 0
-            except (TypeError, AttributeError):
-                nan_count = 0
+            nan_count = s.is_nan().sum() if s.dtype.is_float() else 0
             if (null_count + nan_count) > 0:
                 raise ValueError(f"Input contains NaN/null values in column '{col}'.")
 
