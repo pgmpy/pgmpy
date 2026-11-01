@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Earthquake(BIFMixin, _BaseExampleModel):
+class Earthquake(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/earthquake",
         "n_nodes": 40,

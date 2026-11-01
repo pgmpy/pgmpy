@@ -113,7 +113,6 @@ jobs:
 
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-
   publish-testpypi:
     name: Publish to TestPyPI
     if: github.event_name == 'workflow_dispatch'

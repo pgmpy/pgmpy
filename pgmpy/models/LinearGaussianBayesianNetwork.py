@@ -1,9 +1,5 @@
 from __future__ import annotations
 
-import io
-import json
-import math
-import os
 from collections.abc import Hashable, Iterable
 from typing import Any
 
@@ -11,14 +7,14 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from scipy.stats import multivariate_normal
-from sklearn.linear_model import LinearRegression
 
 from pgmpy import logger
 from pgmpy.base import DAG
 from pgmpy.factors.continuous import LinearGaussianCPD
+from pgmpy.models._file_io import _FileIOMixin
 
 
-class LinearGaussianBayesianNetwork(DAG):
+class LinearGaussianBayesianNetwork(_FileIOMixin, DAG):
     """
     Class to represent Linear Gaussian Bayesian Networks (LGBN).
 
@@ -74,36 +70,32 @@ class LinearGaussianBayesianNetwork(DAG):
     ...     print(cpd)
     ...
     P(x1) = N(1; 4)
-    P(x2 | x1) = N(-5 + 0.5*x1; 4)
-    P(x3 | x2) = N(4 + -1*x2; 3)
+    P(x2 | x1) = N(0.5*x1 + -5.0; 4)
+    P(x3 | x2) = N(-1*x2 + 4; 3)
 
     # Simulating data from the model.
 
     >>> df = model.simulate(n_samples=100, seed=42)
-    >>> print(df.columns)
-    Index(['x1', 'x2', 'x3'], dtype='object')
+    >>> print(df.columns) # doctest: +ELLIPSIS
+    Index(['x1', 'x2', 'x3'], dtype='...')
 
     # Fitting the model to the simulated data.
 
-    >>> model.fit(df)
+    >>> model.fit(df) # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+    <pgmpy.models.LinearGaussianBayesianNetwork.LinearGaussianBayesianNetwork object at 0x...>
 
     # Predicting missing variables.
 
     >>> df_missing = df.drop(columns=["x3"])
-    >>> missing_vars, mu_cond, cov_cond = model.predict(df_missing)
-    >>> print(missing_vars)
+    >>> pred = model.predict(df_missing)
+    >>> list(pred.columns)
     ['x3']
-    >>> print(mu_cond)
-    [[ 0.13440001]
-     [-0.39458728]
-     [ 0.60606023]
-     [ 0.0732233 ]
-     [-0.07241039]
-     [ 0.43420811]
-     [ 0.23197845]
-     [ 0.35382335]
-     [ 0.11859155]
-     [ 0.18397848]]
+    >>> print(pred.values[:5])
+    [[11.44002506]
+     [13.55810512]
+     [ 9.17133321]
+     [ 6.65304283]
+     [ 4.12695995]]
     """
 
     def __init__(
@@ -122,101 +114,6 @@ class LinearGaussianBayesianNetwork(DAG):
             roles=roles,
         )
         self.cpds = []
-
-    @classmethod
-    def load(
-        cls,
-        filename: str | os.PathLike | io.IOBase,
-    ) -> LinearGaussianBayesianNetwork:
-        """
-        Read the model from a JSON file or a file-like object of a JSON file.
-
-        Parameters
-        ----------
-        filename: str or file-like object
-            The path along with the filename where to read the file, or a
-            file-like object containing the model data.
-
-        Examples
-        --------
-        >>> from pgmpy.models import LinearGaussianBayesianNetwork
-        >>> model = LinearGaussianBayesianNetwork.load("ecoli70.json")
-        >>> print(model)
-        LinearGaussianBayesianNetwork with 46 nodes and 70 edges
-        """
-
-        if isinstance(filename, (str, os.PathLike)):
-            with open(filename) as f:
-                data = json.load(f)
-        else:
-            content = filename.read()
-            if isinstance(content, bytes):
-                content = content.decode("utf-8")
-            data = json.loads(content)
-
-        nodes = data.get("nodes")
-        edges = data.get("arcs")
-        cpds_data = data.get("cpds")
-
-        model = cls(edges)
-        model.add_nodes_from(nodes)
-
-        cpds = []
-        for node, cpd_info in cpds_data.items():
-            coefficients = cpd_info["coefficients"]
-            var = cpd_info["variance"][0]
-            parents = cpd_info["parents"]
-
-            intercept = coefficients["(Intercept)"][0]
-            parent_coeffs = [coefficients[parent][0] for parent in parents]
-
-            cpd = LinearGaussianCPD(
-                variable=node,
-                beta=[intercept] + parent_coeffs,
-                std=math.sqrt(var),
-                evidence=parents,
-            )
-            cpds.append(cpd)
-
-        model.add_cpds(*cpds)
-        return model
-
-    def save(self, filename: str) -> None:
-        """
-        Writes the model to a JSON file.
-
-        Parameters
-        ----------
-        filename: str
-            The path along with the filename where to write the file.
-
-        Examples
-        --------
-        >>> from pgmpy.datasets import load_model
-        >>> model = load_model("bnlearn/ecoli70")
-        >>> model.save("ecoli70.json")
-        """
-
-        model_data = {
-            "nodes": list(self.nodes()),
-            "arcs": list(self.edges()),
-            "cpds": {},
-        }
-
-        for cpd in self.get_cpds():
-            coeffs_dict = {"(Intercept)": [float(cpd.beta[0])]}
-            for idx, parent in enumerate(cpd.evidence):
-                coeffs_dict[parent] = [float(cpd.beta[idx + 1])]
-
-            cpd_data = {
-                "coefficients": coeffs_dict,
-                "variance": [float(cpd.std**2)],
-                "parents": list(cpd.evidence),
-            }
-            model_data["cpds"][cpd.variable] = cpd_data
-
-        with open(filename, "w") as f:
-            json.dump(model_data, f, indent=4)
 
     def add_cpds(self, *cpds: LinearGaussianCPD) -> None:
         """
@@ -241,8 +138,8 @@ class LinearGaussianBayesianNetwork(DAG):
         ...     print(cpd)
         ...
         P(x1) = N(1; 4)
-        P(x2 | x1) = N(-5 + 0.5*x1; 4)
-        P(x3 | x2) = N(4 + -1*x2; 3)
+        P(x2 | x1) = N(0.5*x1 + -5.0; 4)
+        P(x3 | x2) = N(-1*x2 + 4; 3)
         """
         for cpd in cpds:
             if not isinstance(cpd, LinearGaussianCPD):
@@ -253,7 +150,7 @@ class LinearGaussianBayesianNetwork(DAG):
 
             for prev_cpd_index in range(len(self.cpds)):
                 if self.cpds[prev_cpd_index].variable == cpd.variable:
-                    logger.warning(f"Replacing existing CPD for {cpd.variable}")
+                    logger.debug(f"Replacing existing CPD for {cpd.variable}")
                     self.cpds[prev_cpd_index] = cpd
                     break
             else:
@@ -284,8 +181,10 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> cpd2 = LinearGaussianCPD("x2", [-5, 0.5], 4, ["x1"])
         >>> cpd3 = LinearGaussianCPD("x3", [4, -1], 3, ["x2"])
         >>> model.add_cpds(cpd1, cpd2, cpd3)
-        >>> model.get_cpds()
-        [P(x1) = N(1; 4), P(x2 | x1) = N(-5 + 0.5*x1; 4), P(x3 | x2) = N(4 + -1*x2; 3)]
+        >>> model.get_cpds() # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        [<LinearGaussianCPD: P(x1) = N(1; 4) at 0x...,
+        <LinearGaussianCPD: P(x2 | x1) = N(0.5*x1 + -5.0; 4) at 0x...,
+        <LinearGaussianCPD: P(x3 | x2) = N(-1*x2 + 4; 3) at 0x...]
         """
         if node is not None:
             if node not in self.nodes():
@@ -319,8 +218,8 @@ class LinearGaussianBayesianNetwork(DAG):
         ...     print(cpd)
         ...
         P(x1) = N(1; 4)
-        P(x2 | x1) = N(-5 + 0.5*x1; 4)
-        P(x3 | x2) = N(4 + -1*x2; 3)
+        P(x2 | x1) = N(0.5*x1 + -5.0; 4)
+        P(x3 | x2) = N(-1*x2 + 4; 3)
 
         >>> model.remove_cpds(cpd2, cpd3)
         >>> for cpd in model.get_cpds():
@@ -363,7 +262,10 @@ class LinearGaussianBayesianNetwork(DAG):
         --------
         >>> from pgmpy.models import LinearGaussianBayesianNetwork
         >>> model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
-        >>> model.get_random_cpds(loc=0, scale=1, seed=42)
+        >>> model.get_random_cpds(loc=0, scale=1, seed=42) # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        [<LinearGaussianCPD: P(x1) = N(...; ...) at 0x...,
+        <LinearGaussianCPD: P(x2 | x1) = N(...; ...) at 0x...,
+        <LinearGaussianCPD: P(x3 | x2) = N(...; ...) at 0x...]
         """
         rng = np.random.default_rng(seed)
 
@@ -390,14 +292,15 @@ class LinearGaussianBayesianNetwork(DAG):
         Linear Gaussian Bayesian Networks can be represented using a joint
         Gaussian distribution over all the variables. This method gives
         the mean and covariance of this equivalent joint gaussian distribution.
+
         Returns
         -------
-        mean, cov: np.ndarray, np.ndarray
+        mean, cov : np.ndarray, np.ndarray
             Mean vector and covariance matrix of the joint Gaussian.
             The mean and the covariance matrix of the joint gaussian distribution.
+
         Examples
         --------
-        >>> mean, cov = model.to_joint_gaussian()
         >>> from pgmpy.models import LinearGaussianBayesianNetwork
         >>> from pgmpy.factors.continuous import LinearGaussianCPD
         >>> model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
@@ -405,6 +308,7 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> cpd2 = LinearGaussianCPD("x2", [-5, 0.5], 4, ["x1"])
         >>> cpd3 = LinearGaussianCPD("x3", [4, -1], 3, ["x2"])
         >>> model.add_cpds(cpd1, cpd2, cpd3)
+        >>> mean, cov = model.to_joint_gaussian()
         >>> mean
         array([ 1. , -4.5,  8.5])
         >>> cov
@@ -466,11 +370,12 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> cpd2 = LinearGaussianCPD("x2", [-5, 0.5], 4, ["x1"])
         >>> cpd3 = LinearGaussianCPD("x3", [4, -1], 3, ["x2"])
         >>> model.add_cpds(cpd1, cpd2, cpd3)
+        >>> rng = np.random.default_rng(42)
         >>> df = pd.DataFrame(
-        ...     np.random.normal(0, 1, size=(100, 3)), columns=["x1", "x2", "x3"]
+        ...     rng.normal(0, 1, size=(100, 3)), columns=["x1", "x2", "x3"]
         ... )
-        >>> model.log_likelihood(df)
-        -1128.66
+        >>> float(round(model.log_likelihood(df), 3))
+        -855.065
         """
         ordering = list(nx.topological_sort(self))
         missing = set(ordering) - set(data.columns)
@@ -576,17 +481,36 @@ class LinearGaussianBayesianNetwork(DAG):
         >>> model.add_cpds(cpd1, cpd2, cpd3)
 
         Simple forward sampling
-        >>> model.simulate(n_samples=3, seed=42)
+
+        >>> model.simulate(n_samples=3, seed=42) # doctest: +NORMALIZE_WHITESPACE
+                 x1         x2         x3
+        0  2.218868  -8.050502  14.301856
+        1  4.762259 -10.423011  10.516473
+        2  1.511362  -5.509290   9.458886
 
         Sampling with intervention (do)
-        >>> model.simulate(n_samples=3, seed=42, do={"x2": 0.0})
+
+        >>> model.simulate(n_samples=3, seed=42, do={"x2": 0.0}) # doctest: +NORMALIZE_WHITESPACE
+                 x1        x3   x2
+        0  2.218868  0.880048  0.0
+        1  4.001805  6.821694  0.0
+        2 -6.804141  0.093461  0.0
 
         Sampling with evidence
-        >>> model.simulate(n_samples=3, seed=42, evidence={"x1": 2.0})
+
+        >>> model.simulate(n_samples=3, seed=42, evidence={"x1": 2.0}) # doctest: +NORMALIZE_WHITESPACE
+            x1         x2         x3
+        0  2.0  -2.781132   3.661179
+        1  2.0  -0.998195   7.819889
+        2  2.0 -11.804141  11.897602
 
         Sampling with both intervention and evidence
-        >>> model.simulate(n_samples=3, seed=42, do={"x2": 1.0}, evidence={"x1": 0.0})
 
+        >>> model.simulate(n_samples=3, seed=42, do={"x2": 1.0}, evidence={"x1": 0.0}) # doctest: +NORMALIZE_WHITESPACE
+            x1        x3   x2
+        0  0.0  3.914151  1.0
+        1  0.0 -0.119952  1.0
+        2  0.0  5.251354  1.0
         """
         # Step 1: Check if all arguments are specified and valid
         evidence = {} if evidence is None else evidence
@@ -681,7 +605,7 @@ class LinearGaussianBayesianNetwork(DAG):
         # Step 4: Sample according to evidence
         if len(evidence) == 0:
             df = pd.DataFrame(
-                rng.multivariate_normal(mean=mean, cov=cov, size=n_samples),
+                rng.multivariate_normal(mean=mean, cov=cov, size=n_samples, method="cholesky"),
                 columns=variables,
             )
 
@@ -694,7 +618,9 @@ class LinearGaussianBayesianNetwork(DAG):
             mean_cond = mean_cond[:, sorted_indices]
             cov_cond = cov_cond[sorted_indices][:, sorted_indices]
 
-            samples_missing = rng.multivariate_normal(mean=mean_cond[0], cov=cov_cond, size=n_samples)
+            samples_missing = rng.multivariate_normal(
+                mean=mean_cond[0], cov=cov_cond, size=n_samples, method="cholesky"
+            )
             df_missing = pd.DataFrame(samples_missing, columns=missing_vars)
 
             df = pd.DataFrame(index=range(n_samples), columns=variables)
@@ -766,8 +692,7 @@ class LinearGaussianBayesianNetwork(DAG):
     def fit(
         self,
         data: pd.DataFrame,
-        estimator: str = "mle",
-        std_estimator: str = "unbiased",
+        estimator=None,
     ) -> LinearGaussianBayesianNetwork:
         """
         Estimates (fits) the Linear Gaussian CPDs from data.
@@ -775,88 +700,50 @@ class LinearGaussianBayesianNetwork(DAG):
         Parameters
         ----------
         data : pd.DataFrame
-                Continuous-valued data containing all model variables.
-                A pandas DataFrame with the data to which to fit the model
-                structure. All variables must be continuously valued.
+            Continuous-valued data containing all model variables.
 
-        estimator : str, optional (default 'mle')
-                The estimator to use for mean estimation.
-                 - 'mle': Maximum Likelihood Estimation via OLS.
-                Currently, MLE via OLS is the only supported method for mean estimation.
-
-        std_estimator : str, optional (default 'unbiased')
-                The estimator to use for standard deviation estimation.
-                Must be one of:
-                    - 'mle': Maximum Likelihood Estimation. Uses ddof=0.
-                    - 'unbiased': Unbiased estimation. For root nodes, uses
-                    ddof=1. For non-root nodes, uses ddof = 1 + number of parents.
+        estimator : LinearGaussianMLE, optional
+            An initialized Gaussian parameter estimator from
+            `pgmpy.parameter_estimator`. If not specified, defaults to
+            ``LinearGaussianMLE()``.
 
         Returns
         -------
-        self
-        None: The estimated LinearGaussianCPDs are added to the model. They can
-            be accessed using `model.cpds`.
+        self: LinearGaussianBayesianNetwork
+            Returns the model with fitted CPDs added. CPDs can be accessed via
+            ``model.cpds``.
+
         Examples
         --------
         >>> import numpy as np
         >>> import pandas as pd
         >>> from pgmpy.models import LinearGaussianBayesianNetwork
+        >>> from pgmpy.parameter_estimator import LinearGaussianMLE
+        >>> rng = np.random.default_rng(42)
         >>> df = pd.DataFrame(
-        ...     np.random.normal(0, 1, (100, 3)), columns=["x1", "x2", "x3"]
+        ...     rng.normal(0, 1, (100, 3)), columns=["x1", "x2", "x3"]
         ... )
         >>> model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
-        >>> model.fit(df, estimator="mle", std_estimator="unbiased")
-        >>> model.cpds
-        [<LinearGaussianCPD: P(x1) = N(0.092; 0.825) at 0x78474cbdb350,
-        <LinearGaussianCPD: P(x2 | x1) = N(-0.058*x1 + -0.178; 0.983) at 0x78474be12ba0,
-        <LinearGaussianCPD: P(x3 | x2) = N(-0.141*x2 + 0.049; 1.11) at 0x78474be12750]
+        >>> model.fit(df) # doctest: +ELLIPSIS
+        <pgmpy.models.LinearGaussianBayesianNetwork.LinearGaussianBayesianNetwork object at 0x...>
+        >>> model.cpds # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        [<LinearGaussianCPD: P(x1) = N(-0.029; 0.902) at 0x...,
+        <LinearGaussianCPD: P(x2 | x1) = N(0.046*x1 + -0.012; 0.981) at 0x...,
+        <LinearGaussianCPD: P(x3 | x2) = N(0.172*x2 + -0.078; 0.908) at 0x...]
         """
-        # Step 1: Check the input
-        if len(missing_vars := (set(self.nodes()) - set(data.columns))) > 0:
-            raise ValueError(f"Following variables are missing in the data: {missing_vars}")
+        from pgmpy.parameter_estimator import LinearGaussianMLE
+        from pgmpy.parameter_estimator.base import GaussianParameterEstimator
 
-        if estimator not in {
-            "mle",
-        }:
-            raise ValueError("estimator must be {'mle'}")
-        if std_estimator not in {"mle", "unbiased"}:
-            raise ValueError("std_estimator must be one of {'mle', 'unbiased'}")
+        if estimator is None:
+            estimator = LinearGaussianMLE()
+        elif not isinstance(estimator, GaussianParameterEstimator):
+            raise TypeError(
+                "estimator must be an instance of a Gaussian parameter estimator. "
+                "Pass an initialized estimator, for example `LinearGaussianMLE()`."
+            )
 
-        # Step 2: Estimate the LinearGaussianCPDs
-        cpds = []
-        for node in self.nodes():
-            parents = self.get_parents(node)
-            # Step 2.1: If node doesn't have any parents (i.e. root node),
-            #  simply take the mean and variance.
-
-            if len(parents) == 0:
-                ddof = 0 if std_estimator == "mle" else 1
-                cpds.append(
-                    LinearGaussianCPD(
-                        variable=node,
-                        beta=[data.loc[:, node].mean()],
-                        std=data.loc[:, node].std(ddof=ddof),
-                    )
-                )
-            # Step 2.2: Else, fit a linear regression model and take the coefficients and intercept.
-            # Compute error variance using predicted values.
-
-            else:
-                lm = LinearRegression().fit(data.loc[:, parents], data.loc[:, node])
-                residuals = data.loc[:, node] - lm.predict(data.loc[:, parents])
-                p = 1 + len(parents)  # intercept + coefficients
-                ddof = 0 if std_estimator == "mle" else p
-                cpds.append(
-                    LinearGaussianCPD(
-                        variable=node,
-                        beta=np.append([lm.intercept_], lm.coef_),
-                        std=residuals.std(ddof=ddof),
-                        evidence=parents,
-                    )
-                )
-
-        # Step 3: Add the estimated CPDs to the model
-        self.add_cpds(*cpds)
+        estimator.fit(self, data)
+        self.add_cpds(*estimator.parameters_)
         return self
 
     def predict_probability(self, data: pd.DataFrame) -> tuple[list[str], np.ndarray, np.ndarray]:
@@ -886,10 +773,15 @@ class LinearGaussianBayesianNetwork(DAG):
         --------
         >>> from pgmpy.example_models import load_model
         >>> model = load_model("bnlearn/ecoli70")
-        >>> df = model.simulate(n_samples=5)
-        >>> df = df.drop(columns=["folK"], axis=1)
-        >>> model.predict(df)
-        (['folK'], array([[0.13440001]]), array([[0.13440001]]))
+        >>> df = model.simulate(n_samples=5, seed=42)
+        >>> df = df.drop(columns=["folK"])
+        >>> model.predict(df) # doctest: +NORMALIZE_WHITESPACE
+               folK
+        0  1.198400
+        1  1.778992
+        2  1.605741
+        3  1.312239
+        4  1.885455
         """
         # Step 0: Check the inputs
         missing_vars = list(set(self.nodes()) - set(data.columns))
@@ -941,13 +833,15 @@ class LinearGaussianBayesianNetwork(DAG):
         --------
         >>> from pgmpy.example_models import load_model
         >>> model = load_model("bnlearn/ecoli70")
-        >>> df = model.simulate(n_samples=5)
-        >>> df = df.drop(columns=["folK"], axis=1)
-        >>> model.predict(df)
-           folK
-        0  0.134
-        1  0.217
-        ...
+        >>> df = model.simulate(n_samples=5, seed=42)
+        >>> df = df.drop(columns=["folK"])
+        >>> model.predict(df) # doctest: +NORMALIZE_WHITESPACE
+               folK
+        0  1.198400
+        1  1.778992
+        2  1.605741
+        3  1.312239
+        4  1.885455
         """
         missing_vars, mu_cond, _ = self.predict_probability(data)
         return pd.DataFrame(mu_cond, columns=missing_vars, index=data.index)
@@ -967,7 +861,8 @@ class LinearGaussianBayesianNetwork(DAG):
     @staticmethod
     def get_random(
         n_nodes: int = 5,
-        edge_prob: float = 0.5,
+        n_edges: int | None = None,
+        edge_prob: float | None = None,
         node_names: list | None = None,
         latents: bool = False,
         loc: float = 0,
@@ -975,36 +870,44 @@ class LinearGaussianBayesianNetwork(DAG):
         seed: int | None = None,
     ) -> LinearGaussianBayesianNetwork:
         """
-        Returns a randomly generated Linear Gaussian Bayesian Network on `n_nodes`
-        Returns a randomly generated Linear Gaussian Bayesian Network on `n_nodes` variables
-        with edge probabiliy of `edge_prob` between variables.
+        Returns a randomly generated Linear Gaussian Bayesian Network on
+        ``n_nodes`` variables with edge probability ``edge_prob`` between
+        variables.
+
         Parameters
         ----------
-        n_nodes: int
+        n_nodes : int
             Number of nodes.
             The number of nodes in the randomly generated DAG.
 
+        n_edges : int or None, default=None
+            The number of edges in the randomly generated DAG.
+
+        edge_prob : float or None
             Probability of an edge (consistent with a topological order).
             The probability of edge between any two nodes in the topologically
             sorted DAG.
 
-        node_names: list (default: None)
+        node_names : list, default=None
             A list of variables names to use in the random graph.
-            If None, the node names are integer values starting from 0.
+            If None, the node names are "X_0", "X_1", ..., "X_{n-1}".
 
-        latents: bool (default: False)
-        loc: float
+        latents : bool, default=False
+            Whether to include latent variables in the generated graph.
 
+        loc : float
             Mean of normal for coefficients.
             The mean of the normal distribution from which the coefficients are
             sampled.
 
+        scale : float
             Std dev of normal for coefficients.
             The standard deviation of the normal distribution from which the
             coefficients are sampled.
 
-        seed: int
+        seed : int
             The seed for the random number generator.
+
         Returns
         -------
         LinearGaussianBayesianNetwork
@@ -1013,19 +916,26 @@ class LinearGaussianBayesianNetwork(DAG):
         Examples
         --------
         >>> from pgmpy.models import LinearGaussianBayesianNetwork
-        >>> model = LinearGaussianBayesianNetwork.get_random(n_nodes=5)
-        >>> model.nodes()
-        NodeView((0, 3, 1, 2, 4))
-        >>> model.edges()
-        OutEdgeView([(0, 3), (3, 4), (1, 3), (2, 4)])
-        >>> model.cpds
-        [<LinearGaussianCPD: P(0) = N(1.764; 1.613) at 0x2732f41aae0,
-        <LinearGaussianCPD: P(3 | 0, 1) = N(-0.721*0 + -0.079*1 + 0.943; 0.12) at 0x2732f16db20,
-        <LinearGaussianCPD: P(1) = N(-0.534; 0.208) at 0x2732f320b30,
-        <LinearGaussianCPD: P(2) = N(-0.023; 0.166) at 0x2732d8d5f40,
-        <LinearGaussianCPD: P(4 | 2, 3) = N(-0.24*2 + -0.907*3 + 0.625; 0.48) at 0x2737fecdaf0]
+        >>> model = LinearGaussianBayesianNetwork.get_random(n_nodes=5, seed=42)
+        >>> sorted(model.nodes())
+        ['X_0', 'X_1', 'X_2', 'X_3', 'X_4']
+        >>> sorted(model.edges())
+        [('X_2', 'X_0'), ('X_3', 'X_0'), ('X_4', 'X_0'), ('X_4', 'X_1'), ('X_4', 'X_2')]
+        >>> sorted(model.cpds, key=lambda cpd: cpd.variable) # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
+        [<LinearGaussianCPD: P(X_0 | X_4, X_2, X_3) = N(...) at 0x...,
+        <LinearGaussianCPD: P(X_1 | X_4) = N(...) at 0x...,
+        <LinearGaussianCPD: P(X_2 | X_4) = N(...) at 0x...,
+        <LinearGaussianCPD: P(X_3) = N(...; ...) at 0x...,
+        <LinearGaussianCPD: P(X_4) = N(...; ...) at 0x...]
         """
-        dag = DAG.get_random(n_nodes=n_nodes, edge_prob=edge_prob, node_names=node_names, latents=latents)
+        dag = DAG.get_random(
+            n_nodes=n_nodes,
+            n_edges=n_edges,
+            edge_prob=edge_prob,
+            node_names=node_names,
+            latents=latents,
+            seed=seed,
+        )
         # Initialize with full DAG to preserve isolated nodes
         lgbn_model = LinearGaussianBayesianNetwork(dag)
         lgbn_model.latents = dag.latents
@@ -1054,7 +964,8 @@ class LinearGaussianBayesianNetwork(DAG):
             return False
 
         # Test for structure equality using the DAG's __eq__ method.
-        super().__eq__(other)
+        if not super().__eq__(other):
+            return False
 
         # Test for LinearGaussianCPD equality.
         self_cpds = {cpd.variable: cpd for cpd in self.cpds}

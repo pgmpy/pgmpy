@@ -1,7 +1,7 @@
-from .._base import ContinuousMixin, _BaseExampleModel
+from .._base import BaseExampleModel, ContinuousMixin
 
 
-class Turbine2(ContinuousMixin, _BaseExampleModel):
+class Turbine2(ContinuousMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/turbine2",
         "n_nodes": 16,

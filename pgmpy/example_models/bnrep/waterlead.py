@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Waterlead(BIFMixin, _BaseExampleModel):
+class Waterlead(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/waterlead",
         "n_nodes": 17,

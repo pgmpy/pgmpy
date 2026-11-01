@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Corical(BIFMixin, _BaseExampleModel):
+class Corical(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/corical",
         "n_nodes": 20,

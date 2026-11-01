@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Agropastoral2(BIFMixin, _BaseExampleModel):
+class Agropastoral2(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/agropastoral2",
         "n_nodes": 11,

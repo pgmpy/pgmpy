@@ -39,9 +39,4 @@ jobs:
 
       - name: Run notebooks
         run: |
-          notebooks=$(grep -v '^\s*#' notebook_test_list.txt | grep -v '^\s*$' | tr '\n' ' ')
-          if [ -n "$notebooks" ]; then
-            pytest --nbmake $notebooks -v
-          else
-            echo "No notebooks listed in notebook_test_list.txt, skipping."
-          fi
+          pytest --nbmake examples/*.ipynb -v

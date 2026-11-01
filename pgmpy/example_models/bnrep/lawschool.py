@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Lawschool(BIFMixin, _BaseExampleModel):
+class Lawschool(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/lawschool",
         "n_nodes": 10,

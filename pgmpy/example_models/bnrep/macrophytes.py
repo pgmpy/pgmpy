@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Macrophytes(BIFMixin, _BaseExampleModel):
+class Macrophytes(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/macrophytes",
         "n_nodes": 15,

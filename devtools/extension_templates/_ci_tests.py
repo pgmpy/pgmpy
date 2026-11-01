@@ -1,0 +1,111 @@
+# This extension template provides instructions to add new Conditional Independence (CI) tests to pgmpy.
+
+# Please follow the following steps:
+# 1. Copy this file to `pgmpy/ci_tests` and rename it as `your_ci_test.py`.
+# 2. Go through this file and address all the TODOs.
+# 3. Add an import in `pgmpy/ci_tests/__init__.py`.
+# 4. Add tests in `pgmpy/tests/test_ci_tests/test_your_ci_test.py`.
+
+# TODO: Add necessary imports here (e.g., numpy, scipy, sklearn, etc.)
+import pandas as pd
+
+from pgmpy.ci_tests._base import BaseCITest, _CITestResult
+
+
+class YourCITest(BaseCITest):
+    """
+    [One-line description of the CI test]
+
+    [Detailed description of the test. Please include test statistic and p-value equations if possible]
+
+    Parameters
+    ----------
+    data : pandas.DataFrame, optional
+        Dataset used for CI testing. Required if `requires_data=True`.
+
+    param1 : type, optional
+        Description of hyperparameter.
+
+    param2 : type, optional
+        Description of hyperparameter.
+
+    Attributes
+    ----------
+    statistic_ : float
+        Test statistic computed during the test.
+
+    p_value_ : float
+        p-value corresponding to the test statistic.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> from pgmpy.ci_tests import YourCITest
+    >>> data = pd.DataFrame(...)
+    >>> test = YourCITest(data=data)
+    >>> test("X", "Y", ["Z"], significance_level=0.05)
+    # Show the output
+
+    References
+    ----------
+    .. [1] Add reference for the CI test
+    """
+
+    # TODO: Set every tag. `pgmpy.registry.all_tags("ci_test")` lists them, and the tag classes in
+    #       `pgmpy/registry/_tags.py` document each tag and its allowed values.
+    _tags = {
+        "name": "your_ci_test",
+        "data_types": ["continuous"],
+        "default_for": None,
+        "requires_data": True,
+        "is_symmetric": True,
+        "capability:conditioning": True,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+    }
+
+    def __init__(self, data: pd.DataFrame = None, param1=None, param2=None, use_cache: bool = True):
+        # TODO: Store all inputs as attributes. Add any validation if required by parameters.
+        self.data = data
+        self.param1 = param1
+        self.param2 = param2
+
+        super().__init__(use_cache=use_cache)
+
+        # TODO: If an assumption depends on a hyperparameter (e.g. a user-supplied estimator), set the most permissive
+        #       value in `_tags` and update it here with `set_tags`, after `super().__init__`. For example:
+        # if isinstance(self.param1, LinearRegression):
+        #     self.set_tags(**{"assumption:linearity": True})
+
+    def _compute_result(
+        self,
+        X: str,
+        Y: str,
+        Z: list,
+    ):
+        """
+        Compute the test statistic and p-value payload for a single query.
+
+        Parameters
+        ----------
+        X : str
+            First variable
+        Y : str
+            Second variable
+        Z : list
+            Conditioning variables
+
+        Returns
+        -------
+        _CITestResult
+            Result payload consumed by `BaseCITest.run_test`.
+        """
+        # TODO: Add logic for computing the test statistic and p-value. Can use self.data, and other params.
+        statistic = None
+        p_value = None
+
+        # TODO: If you need to expose extra result attributes (for example `dof_`),
+        # return them in the `attributes` dict. The base class will project them onto
+        # the instance after cache lookup / execution.
+        return _CITestResult(statistic=statistic, p_value=p_value, attributes={})

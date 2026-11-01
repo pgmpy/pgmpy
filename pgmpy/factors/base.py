@@ -49,8 +49,6 @@ def factor_product(*args):
     ... ]
     >>> np.array(cardinalities)
     array([2, 3, 2, 2])
-    >>> phi.values.shape
-    (2, 3, 2, 2)
     """
     if not all(isinstance(phi, BaseFactor) for phi in args):
         raise TypeError("Arguments must be factors")

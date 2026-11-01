@@ -1,0 +1,33 @@
+dag{
+raf
+mek
+plc
+pip2
+pip3
+erk
+akt
+pka
+pkc
+p38
+jnk
+erk -> akt
+mek -> erk
+pip2 -> pkc
+pip3 -> akt
+pip3 -> pip2
+pip3 -> plc
+pka -> akt
+pka -> erk
+pka -> jnk
+pka -> mek
+pka -> p38
+pka -> raf
+pkc -> jnk
+pkc -> mek
+pkc -> p38
+pkc -> pka
+pkc -> raf
+plc -> pip2
+plc -> pkc
+raf -> mek
+}

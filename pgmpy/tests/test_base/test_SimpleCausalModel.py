@@ -127,3 +127,32 @@ def test_latents():
 def test_is_dag():
     model = SimpleCausalModel(exposures="X", outcomes="Y", confounders="Z", mediators="M", instruments="I")
     assert nx.is_directed_acyclic_graph(model)
+
+
+def test_zero_variables():
+    model = SimpleCausalModel(exposures=0, outcomes=0, confounders=0, mediators=0, instruments=0)
+    assert len(model.nodes()) == 0
+    assert len(model.edges()) == 0
+    assert set(model.get_role("exposures")) == set()
+    assert set(model.get_role("outcomes")) == set()
+
+
+def test_iterable_empty():
+    model = SimpleCausalModel(exposures=[], outcomes=[], confounders=[], mediators=[], instruments=[])
+    assert len(model.nodes()) == 0
+    assert len(model.edges()) == 0
+    assert set(model.get_role("exposures")) == set()
+    assert set(model.get_role("outcomes")) == set()
+
+
+def test_iterable_types():
+    model = SimpleCausalModel(
+        exposures={"X"},
+        outcomes=("Y",),
+        confounders=["Z"],
+        mediators=iter(["M"]),
+        instruments=iter({"I"}),
+    )
+    assert set(model.nodes()) == {"X", "Y", "Z", "M", "I"}
+    expected_edges = {("Z", "X"), ("Z", "Y"), ("I", "X"), ("X", "M"), ("M", "Y")}
+    assert set(model.edges()) == expected_edges

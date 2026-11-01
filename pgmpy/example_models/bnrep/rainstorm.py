@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Rainstorm(BIFMixin, _BaseExampleModel):
+class Rainstorm(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/rainstorm",
         "n_nodes": 34,

@@ -1,7 +1,7 @@
-from .._base import ContinuousMixin, _BaseExampleModel
+from .._base import BaseExampleModel, ContinuousMixin
 
 
-class Building(ContinuousMixin, _BaseExampleModel):
+class Building(ContinuousMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/building",
         "n_nodes": 24,

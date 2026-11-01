@@ -5,10 +5,10 @@ from sklearn.base import clone
 from sklearn.linear_model import LinearRegression
 from sklearn.utils.validation import check_is_fitted, validate_data
 
-from pgmpy.prediction._base import _BaseCausalPrediction
+from pgmpy.prediction._base import BaseCausalPrediction
 
 
-class NaiveIVRegressor(_BaseCausalPrediction):
+class NaiveIVRegressor(BaseCausalPrediction):
     """
     Implements Naive Instrumental Variable (IV) regressor (single exposure, multiple instruments).
 
@@ -161,8 +161,7 @@ class NaiveIVRegressor(_BaseCausalPrediction):
 
     References
     ----------
-    .. [1] “Instrumental Variables Estimation.”
-           Wikipedia: https://en.wikipedia.org/wiki/Instrumental_variables_estimation
+    - :footcite:t:`instrumental_variables_estimation`
     """
 
     def __init__(

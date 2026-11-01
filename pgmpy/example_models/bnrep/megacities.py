@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Megacities(BIFMixin, _BaseExampleModel):
+class Megacities(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/megacities",
         "n_nodes": 18,

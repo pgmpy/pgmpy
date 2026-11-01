@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Knowledge(BIFMixin, _BaseExampleModel):
+class Knowledge(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/knowledge",
         "n_nodes": 6,

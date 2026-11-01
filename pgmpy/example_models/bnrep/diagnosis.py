@@ -1,7 +1,7 @@
-from .._base import ContinuousMixin, _BaseExampleModel
+from .._base import BaseExampleModel, ContinuousMixin
 
 
-class Diagnosis(ContinuousMixin, _BaseExampleModel):
+class Diagnosis(ContinuousMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/diagnosis",
         "n_nodes": 16,

@@ -1,68 +1,79 @@
-from functools import partial
+# The continuous solver in this module is adapted from notears/linear.py in
+# https://github.com/xunzheng/notears (Apache License 2.0). Original work:
+# Zheng, Aragam, Ravikumar and Xing, NeurIPS 2018. This file was modified for
+# pgmpy's BaseCausalDiscovery API, DAG output, and input validation.
+# http://www.apache.org/licenses/LICENSE-2.0
 
 import networkx as nx
 import numpy as np
+import pandas as pd
+import scipy.linalg as slin
 import scipy.optimize as sopt
-from scipy.special import expit
-from skbase.utils.dependencies import _safe_import
+from scipy.special import expit as sigmoid
 from tqdm.auto import trange
 
 from pgmpy import config
 from pgmpy.base import DAG
-from pgmpy.causal_discovery._base import _BaseCausalDiscovery
-from pgmpy.causal_discovery.ExpertKnowledge import ExpertKnowledge
-from pgmpy.global_vars import logger
-from pgmpy.utils import compat_fns
-
-torch = _safe_import("torch")
+from pgmpy.causal_discovery._base import BaseCausalDiscovery
 
 
-class NOTEARS(_BaseCausalDiscovery):
+class NOTEARS(BaseCausalDiscovery):
     """
-    NOTEARS structure learning estimator.
+    Continuous optimization for DAG structure learning (NOTEARS) :cite:p:`zheng_2018`.
 
-    Learns a DAG from continuous, binary, or count data by solving a continuous
-    optimization problem with an acyclicity constraint based on the matrix exponential.
+    NOTEARS casts DAG learning as a constrained continuous program: a least-squares,
+    logistic, or Poisson loss plus L1 regularization, subject to the acyclicity
+    constraint ``h(W) = tr(exp(W ◦ W)) - d = 0``. The equality is handled with an
+    augmented Lagrangian; each inner step is L-BFGS-B on a nonnegative split
+    ``W = W+ - W-``. After optimization, entries with absolute weight below
+    ``w_threshold`` are dropped. Remaining edges are inserted in decreasing
+    absolute weight so ``causal_graph_`` is a :class:`~pgmpy.base.DAG`.
+
+    For ``loss_type='l2'`` the columns of ``X`` are mean-centered, matching
+    ``xunzheng/notears`` (Apache-2.0). Columns are not standardized. The
+    estimator tags describe this continuous linear case; ``logistic`` and
+    ``poisson`` are extra numeric likelihoods on 0/1 and count data.
 
     Parameters
     ----------
     lambda1 : float, default=0.1
-        L1 regularization coefficient on edge strengths.
+        L1 penalty on edge weights.
 
-    loss_type : str, default='l2'
-        Loss function to use. One of 'l2', 'logistic', or 'poisson'.
+    loss_type : {'l2', 'logistic', 'poisson'}, default='l2'
+        Data likelihood. ``l2`` is linear SEM / continuous data, ``logistic`` is
+        binary 0/1 data, ``poisson`` is non-negative counts.
 
-    max_iter : int, default=20
-        Maximum number of outer augmented Lagrangian iterations.
+    max_iter : int, default=100
+        Maximum number of augmented-Lagrangian dual steps.
 
     h_tol : float, default=1e-8
-        Stops when acyclicity violation <= h_tol.
+        Stop when the acyclicity residual is at most this value.
 
     rho_max : float, default=1e16
-        Maximum penalty parameter for augmented Lagrangian.
+        Stop when the penalty parameter reaches this value.
 
     w_threshold : float, default=0.3
-        Edges with absolute weight below this are dropped.
-
-    expert_knowledge : ExpertKnowledge or None, default=None
-        Prior knowledge on required/forbidden edges and temporal ordering.
+        Drop edges whose absolute weight is below this value. A value of 0
+        keeps the raw solver output, which can contain 2-cycles; weaker
+        cyclic edges are then dropped.
 
     show_progress : bool, default=True
-        If True and global progress is enabled, shows a progress bar.
+        If True and global progress is enabled, show a progress bar.
 
     Attributes
     ----------
     causal_graph_ : DAG
-        The learned directed acyclic graph.
+        The learned directed acyclic graph. Edge attribute ``weight`` stores the
+        estimated coefficient.
 
     adjacency_matrix_ : pd.DataFrame
-        Adjacency matrix of the learned causal graph.
+        Binary adjacency matrix of ``causal_graph_``.
 
     n_features_in_ : int
-        Number of features seen during fit.
+        The number of features in the data used to learn the causal graph.
 
     feature_names_in_ : np.ndarray
-        Feature names seen during fit.
+        The feature names in the data used to learn the causal graph.
 
     Examples
     --------
@@ -70,40 +81,52 @@ class NOTEARS(_BaseCausalDiscovery):
     >>> import pandas as pd
     >>> from pgmpy.causal_discovery import NOTEARS
     >>> rng = np.random.default_rng(42)
-    >>> x = rng.normal(size=500)
-    >>> y = 1.5 * x + rng.normal(scale=0.3, size=500)
+    >>> x = rng.normal(size=200)
+    >>> y = 1.5 * x + rng.normal(scale=0.3, size=200)
     >>> data = pd.DataFrame({"X": x, "Y": y})
-    >>> est = NOTEARS(lambda1=0.1, loss_type="l2")
-    >>> est.fit(data)
-    >>> est.causal_graph_.edges()
+    >>> est = NOTEARS(show_progress=False).fit(data)
+    >>> set(est.causal_graph_.edges())
+    {('X', 'Y')}
 
     References
     ----------
-    .. [1] Zheng, X., Aragam, B., Ravikumar, P., and Xing, E. P. (2018).
-           DAGs with NO TEARS: Continuous Optimization for Structure Learning.
-           Advances in Neural Information Processing Systems 31.
+    - :cite:p:`zheng_2018`
+    - https://github.com/xunzheng/notears
     """
 
-    _required_penalty_weight = 10.0
+    _tags = {
+        "name": "notears",
+        "data_types": ["continuous"],
+        "identifiable_graph": "dag",
+        "requires_target": False,
+        "capability:multivariate": True,
+        "capability:expert_knowledge": [],
+        "assumption:causal_sufficiency": True,
+        "assumption:acyclicity": True,
+        "assumption:faithfulness": False,
+        "assumption:linearity": True,
+        "assumption:additive_noise": True,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
+    }
 
     def __init__(
         self,
-        lambda1=0.1,
-        loss_type="l2",
-        max_iter=20,
-        h_tol=1e-8,
-        rho_max=1e16,
-        w_threshold=0.3,
-        expert_knowledge=None,
-        show_progress=True,
-    ):
+        lambda1: float = 0.1,
+        loss_type: str = "l2",
+        max_iter: int = 100,
+        h_tol: float = 1e-8,
+        rho_max: float = 1e16,
+        w_threshold: float = 0.3,
+        show_progress: bool = True,
+    ) -> None:
         self.lambda1 = lambda1
         self.loss_type = loss_type
         self.max_iter = max_iter
         self.h_tol = h_tol
         self.rho_max = rho_max
         self.w_threshold = w_threshold
-        self.expert_knowledge = expert_knowledge
         self.show_progress = show_progress
 
     def __sklearn_tags__(self):
@@ -111,226 +134,9 @@ class NOTEARS(_BaseCausalDiscovery):
         tags.input_tags.categorical = False
         return tags
 
-    @staticmethod
-    def _doubled_to_adjacency(adjacency_doubled, n_nodes):
-        n_entries = n_nodes * n_nodes
-        return (adjacency_doubled[:n_entries] - adjacency_doubled[n_entries:]).reshape((n_nodes, n_nodes))
-
-    def _validate_data_for_loss(self, X):
-        data_np = X.to_numpy(dtype=float)
-
-        if np.isnan(data_np).any():
-            raise ValueError("NOTEARS does not support missing values.")
-
-        if self.loss_type == "logistic":
-            is_binary = np.logical_or(np.isclose(data_np, 0.0), np.isclose(data_np, 1.0))
-            if not np.all(is_binary):
-                raise ValueError("For loss_type='logistic', all values must be binary (0/1).")
-        elif self.loss_type == "poisson":
-            if np.any(data_np < 0):
-                raise ValueError("For loss_type='poisson', all values must be non-negative.")
-
-        return data_np
-
-    def _constraint_grad(self, adjacency_matrix, compute_jac=True):
-        matrix_exp = compat_fns.matrix_exp(adjacency_matrix * adjacency_matrix)
-        if isinstance(adjacency_matrix, np.ndarray):
-            penalty = np.trace(matrix_exp) - adjacency_matrix.shape[0]
-        else:
-            penalty = torch.trace(matrix_exp) - adjacency_matrix.shape[0]
-        jac = (matrix_exp.T * adjacency_matrix * 2) if compute_jac else None
-        return penalty, jac
-
-    def _required_penalty_gradient(self, adjacency_strength, required_mask, weight_threshold, compute_jac=True):
-        deficit = weight_threshold - adjacency_strength
-        active = deficit > 0
-
-        if isinstance(adjacency_strength, np.ndarray):
-            penalty_mat = np.where(active, deficit * deficit, 0.0) * required_mask
-            jac = np.where(active, -2.0 * deficit, 0.0) * required_mask if compute_jac else None
-            return np.sum(penalty_mat), jac
-        else:
-            penalty_mat = torch.where(active, deficit * deficit, torch.zeros_like(deficit)) * required_mask
-            jac = (
-                (torch.where(active, -2.0 * deficit, torch.zeros_like(deficit)) * required_mask)
-                if compute_jac
-                else None
-            )
-            return torch.sum(penalty_mat), jac
-
-    def _required_edge_min_strength(self):
-        return max(self.w_threshold, self.lambda1 / (2 * self._required_penalty_weight) + 1e-6)
-
-    @staticmethod
-    def _validate_expert_knowledge_nodes(expert_knowledge, node_to_index):
-        for edge_set in (expert_knowledge.required_edges, expert_knowledge.forbidden_edges):
-            for u, v in edge_set:
-                if (u not in node_to_index) or (v not in node_to_index):
-                    raise ValueError(
-                        f"Expert knowledge edge ({u}, {v}) refers to node(s) not present in the data columns."
-                    )
-
-    def _loss_grad(self, data, adjacency_matrix, backend):
-        scores = data @ adjacency_matrix
-        n_samples = data.shape[0]
-
-        if self.loss_type == "l2":
-            residual = data - scores
-            loss = 0.5 / n_samples * backend.sum(residual**2)
-            loss_jac = -(data.T @ residual) / n_samples
-            return loss, loss_jac
-
-        if self.loss_type == "logistic":
-            if isinstance(data, np.ndarray):
-                loss = 1.0 / n_samples * (np.logaddexp(0.0, scores) - data * scores).sum()
-                probs = expit(scores)
-            else:
-                loss = 1.0 / n_samples * (torch.logaddexp(torch.zeros_like(scores), scores) - data * scores).sum()
-                probs = torch.sigmoid(scores)
-            loss_jac = 1.0 / n_samples * data.T @ (probs - data)
-            return loss, loss_jac
-
-        # poisson
-        exp_scores = backend.exp(scores)
-        loss = 1.0 / n_samples * backend.sum(exp_scores - data * scores)
-        loss_jac = 1.0 / n_samples * data.T @ (exp_scores - data)
-        return loss, loss_jac
-
-    def _objective_numpy(
-        self,
-        adjacency_doubled,
-        alpha,
-        rho,
-        data,
-        required_mask,
-        backend,
-    ):
-        n_nodes = data.shape[1]
-        n_entries = n_nodes * n_nodes
-        w_plus = adjacency_doubled[:n_entries].reshape((n_nodes, n_nodes))
-        w_minus = adjacency_doubled[n_entries:].reshape((n_nodes, n_nodes))
-
-        adjacency_matrix = w_plus - w_minus
-        adjacency_strength = w_plus + w_minus
-
-        loss, loss_jac = self._loss_grad(data, adjacency_matrix, backend)
-        acyclic_penalty, acyclic_jac = self._constraint_grad(adjacency_matrix)
-        required_threshold = self._required_edge_min_strength()
-        required_penalty, required_jac = self._required_penalty_gradient(
-            adjacency_strength, required_mask, required_threshold
-        )
-
-        objective = (
-            loss
-            + 0.5 * rho * acyclic_penalty * acyclic_penalty
-            + alpha * acyclic_penalty
-            + self.lambda1 * adjacency_strength.sum()
-            + self._required_penalty_weight * required_penalty
-        )
-
-        adjacency_jac = loss_jac + (rho * acyclic_penalty + alpha) * acyclic_jac
-        jac_plus = adjacency_jac + self.lambda1 + self._required_penalty_weight * required_jac
-        jac_minus = -adjacency_jac + self.lambda1 + self._required_penalty_weight * required_jac
-        jac = compat_fns.concatenate(jac_plus.ravel(), jac_minus.ravel())
-        return objective, jac
-
-    def _objective_torch(
-        self,
-        adjacency_doubled,
-        alpha,
-        rho,
-        data,
-        required_mask,
-        hard_mask,
-        backend,
-    ):
-        n_nodes = data.shape[1]
-        n_entries = n_nodes * n_nodes
-        w_plus = adjacency_doubled[:n_entries].reshape((n_nodes, n_nodes))
-        w_minus = adjacency_doubled[n_entries:].reshape((n_nodes, n_nodes))
-
-        w_plus = torch.clamp(w_plus, min=0.0)
-        w_minus = torch.clamp(w_minus, min=0.0)
-        zero_matrix = torch.zeros_like(w_plus)
-        w_plus = torch.where(hard_mask, zero_matrix, w_plus)
-        w_minus = torch.where(hard_mask, zero_matrix, w_minus)
-
-        adjacency_matrix = w_plus - w_minus
-        adjacency_strength = w_plus + w_minus
-        loss, _ = self._loss_grad(data, adjacency_matrix, backend)
-        acyclic_penalty, _ = self._constraint_grad(adjacency_matrix, compute_jac=False)
-        required_threshold = self._required_edge_min_strength()
-        required_penalty, _ = self._required_penalty_gradient(
-            adjacency_strength, required_mask, required_threshold, compute_jac=False
-        )
-
-        return (
-            loss
-            + 0.5 * rho * acyclic_penalty * acyclic_penalty
-            + alpha * acyclic_penalty
-            + self.lambda1 * torch.sum(adjacency_strength)
-            + self._required_penalty_weight * required_penalty
-        )
-
-    @staticmethod
-    def _project_torch_doubled(adjacency_doubled, n_nodes, hard_mask):
-        with torch.no_grad():
-            n_entries = n_nodes * n_nodes
-            w_plus = adjacency_doubled[:n_entries].reshape((n_nodes, n_nodes))
-            w_minus = adjacency_doubled[n_entries:].reshape((n_nodes, n_nodes))
-
-            w_plus.clamp_(min=0.0)
-            w_minus.clamp_(min=0.0)
-            w_plus[hard_mask] = 0.0
-            w_minus[hard_mask] = 0.0
-
-    def _run_inner_torch(
-        self,
-        adjacency_doubled,
-        alpha,
-        rho,
-        data,
-        required_mask,
-        hard_mask,
-        backend,
-    ):
-        adjacency_param = torch.nn.Parameter(adjacency_doubled.detach().clone())
-        optimizer = torch.optim.LBFGS([adjacency_param], max_iter=100, line_search_fn="strong_wolfe")
-
-        def closure():
-            optimizer.zero_grad()
-            objective = self._objective_torch(
-                adjacency_param,
-                alpha=alpha,
-                rho=rho,
-                data=data,
-                required_mask=required_mask,
-                hard_mask=hard_mask,
-                backend=backend,
-            )
-            objective.backward()
-            return objective
-
-        optimizer.step(closure)
-        self._project_torch_doubled(adjacency_param, data.shape[1], hard_mask)
-        return adjacency_param.detach()
-
-    @staticmethod
-    def _standardize_l2(data):
-        if isinstance(data, np.ndarray):
-            means = data.mean(axis=0, keepdims=True)
-            stds = data.std(axis=0, keepdims=True)
-            stds[stds == 0] = 1.0
-            return (data - means) / stds
-
-        means = data.mean(dim=0, keepdim=True)
-        stds = data.std(dim=0, keepdim=True, unbiased=False)
-        stds = torch.where(stds == 0, torch.ones_like(stds), stds)
-        return (data - means) / stds
-
-    def _fit(self, X):
+    def _fit(self, X: pd.DataFrame) -> "NOTEARS":
         """
-        Run the NOTEARS optimization on data X.
+        The fitting procedure for the NOTEARS algorithm.
 
         Parameters
         ----------
@@ -339,8 +145,8 @@ class NOTEARS(_BaseCausalDiscovery):
 
         Returns
         -------
-        self : NOTEARS
-            Returns the instance with fitted attributes.
+        self : pgmpy.causal_discovery.NOTEARS
+            Returns the instance with the fitted attributes.
         """
         if self.loss_type not in {"l2", "logistic", "poisson"}:
             raise ValueError(f"loss_type must be one of: l2, logistic, poisson. Got: {self.loss_type}")
@@ -351,186 +157,105 @@ class NOTEARS(_BaseCausalDiscovery):
         if self.w_threshold < 0:
             raise ValueError(f"w_threshold must be non-negative. Got: {self.w_threshold}")
 
-        data_np = self._validate_data_for_loss(X)
-        backend = compat_fns.get_compute_backend()
-
-        nodes = list(X.columns)
-        n_nodes = len(nodes)
-        node_to_index = {node: idx for idx, node in enumerate(nodes)}
-
-        expert_knowledge = ExpertKnowledge() if self.expert_knowledge is None else self.expert_knowledge
-        if expert_knowledge.search_space:
-            expert_knowledge.limit_search_space(nodes)
-        expert_knowledge._orient_temporal_forbidden_edges(DAG(), only_edges=False)
-        self._validate_expert_knowledge_nodes(expert_knowledge, node_to_index)
-
-        forbidden_mask_np = np.zeros((n_nodes, n_nodes), dtype=bool)
-        required_mask_np = np.zeros((n_nodes, n_nodes), dtype=float)
-
-        for u, v in expert_knowledge.required_edges:
-            if (u, v) in expert_knowledge.forbidden_edges:
-                raise ValueError(f"Expert knowledge conflict: Edge ({u}, {v}) is both required and forbidden.")
-            if u == v:
-                raise ValueError(f"Expert knowledge conflict: Self-loop ({u}, {u}) cannot be required.")
-
-        for u, v in expert_knowledge.forbidden_edges:
-            if (u in node_to_index) and (v in node_to_index):
-                forbidden_mask_np[node_to_index[u], node_to_index[v]] = True
-        np.fill_diagonal(forbidden_mask_np, True)
-
-        for u, v in expert_knowledge.required_edges:
-            if (u in node_to_index) and (v in node_to_index):
-                required_mask_np[node_to_index[u], node_to_index[v]] = 1.0
-
-        if backend == np:
-            data = np.asarray(data_np, dtype=config.get_dtype())
-            required_mask = np.asarray(required_mask_np, dtype=config.get_dtype())
-            adjacency_doubled = np.zeros(2 * n_nodes * n_nodes, dtype=config.get_dtype())
-        else:
-            data = torch.tensor(data_np, dtype=config.get_dtype(), device=config.get_device())
-            required_mask = torch.tensor(required_mask_np, dtype=config.get_dtype(), device=config.get_device())
-            adjacency_doubled = torch.zeros(
-                2 * n_nodes * n_nodes,
-                dtype=config.get_dtype(),
-                device=config.get_device(),
-            )
-            hard_mask = torch.tensor(forbidden_mask_np, dtype=torch.bool, device=data.device)
+        data = np.asarray(X.to_numpy(dtype=float), dtype=float)
+        n_samples, n_nodes = data.shape
+        nodes = list(self.feature_names_in_)
 
         if self.loss_type == "l2":
-            data = self._standardize_l2(data)
+            data = data - np.mean(data, axis=0, keepdims=True)
+        elif self.loss_type == "logistic":
+            is_binary = np.logical_or(np.isclose(data, 0.0), np.isclose(data, 1.0))
+            if not np.all(is_binary):
+                raise ValueError("For loss_type='logistic', all values must be binary (0/1).")
+        elif np.any(data < 0):
+            raise ValueError("For loss_type='poisson', all values must be non-negative.")
 
-        if self.show_progress and config.SHOW_PROGRESS:
-            iteration = trange(int(self.max_iter))
-        else:
-            iteration = range(int(self.max_iter))
+        def _loss(adjacency):
+            scores = data @ adjacency
+            if self.loss_type == "l2":
+                residual = data - scores
+                loss = 0.5 / n_samples * (residual**2).sum()
+                loss_jac = -1.0 / n_samples * data.T @ residual
+            elif self.loss_type == "logistic":
+                loss = 1.0 / n_samples * (np.logaddexp(0.0, scores) - data * scores).sum()
+                loss_jac = 1.0 / n_samples * data.T @ (sigmoid(scores) - data)
+            else:
+                exp_scores = np.exp(scores)
+                loss = 1.0 / n_samples * (exp_scores - data * scores).sum()
+                loss_jac = 1.0 / n_samples * data.T @ (exp_scores - data)
+            return loss, loss_jac
 
+        def _acyclicity(adjacency):
+            matrix_exp = slin.expm(adjacency * adjacency)
+            penalty = np.trace(matrix_exp) - n_nodes
+            jac = matrix_exp.T * adjacency * 2
+            return penalty, jac
+
+        def _to_adjacency(doubled):
+            n_entries = n_nodes * n_nodes
+            return (doubled[:n_entries] - doubled[n_entries:]).reshape((n_nodes, n_nodes))
+
+        def _objective(doubled):
+            adjacency = _to_adjacency(doubled)
+            loss, loss_jac = _loss(adjacency)
+            penalty, penalty_jac = _acyclicity(adjacency)
+            objective = loss + 0.5 * rho * penalty * penalty + alpha * penalty + self.lambda1 * doubled.sum()
+            smooth_jac = loss_jac + (rho * penalty + alpha) * penalty_jac
+            return objective, np.concatenate((smooth_jac + self.lambda1, -smooth_jac + self.lambda1), axis=None)
+
+        doubled = np.zeros(2 * n_nodes * n_nodes)
         rho = 1.0
         alpha = 0.0
-        h = np.inf
-
-        if backend == np:
-            bounds = []
-            for _ in range(2):
-                for i in range(n_nodes):
-                    for j in range(n_nodes):
-                        if forbidden_mask_np[i, j]:
-                            bounds.append((0.0, 0.0))
-                        else:
-                            bounds.append((0.0, None))
-
-            for iter_idx in iteration:
-                adjacency_new = adjacency_doubled
-                h_new = h
-                while rho < self.rho_max:
-                    objective = partial(
-                        self._objective_numpy,
-                        alpha=alpha,
-                        rho=rho,
-                        data=data,
-                        required_mask=required_mask,
-                        backend=backend,
-                    )
-                    result = sopt.minimize(
-                        objective,
-                        adjacency_doubled,
-                        method="L-BFGS-B",
-                        jac=True,
-                        bounds=bounds,
-                    )
-                    candidate = result.x
-                    h_candidate, _ = self._constraint_grad(
-                        self._doubled_to_adjacency(candidate, n_nodes), compute_jac=False
-                    )
-                    h_new = float(h_candidate)
-
-                    if np.isfinite(h) and h_new > 0.25 * h:
-                        rho *= 10
-                    else:
-                        adjacency_new = candidate
-                        break
-
-                adjacency_doubled = adjacency_new
-                h = h_new
-                alpha += rho * h
-                logger.debug(
-                    "NOTEARS iter=%s h=%.4e rho=%.4e alpha=%.4e",
-                    iter_idx,
-                    h,
-                    rho,
-                    alpha,
-                )
-                if h <= self.h_tol or rho >= self.rho_max:
-                    break
-        else:
-            for iter_idx in iteration:
-                adjacency_new = adjacency_doubled
-                h_new = h
-                while rho < self.rho_max:
-                    candidate = self._run_inner_torch(
-                        adjacency_doubled=adjacency_doubled,
-                        alpha=alpha,
-                        rho=rho,
-                        data=data,
-                        required_mask=required_mask,
-                        hard_mask=hard_mask,
-                        backend=backend,
-                    )
-                    h_candidate, _ = self._constraint_grad(
-                        self._doubled_to_adjacency(candidate, n_nodes), compute_jac=False
-                    )
-                    h_new = float(h_candidate.detach().cpu().item())
-
-                    if np.isfinite(h) and h_new > 0.25 * h:
-                        rho *= 10
-                    else:
-                        adjacency_new = candidate
-                        break
-
-                adjacency_doubled = adjacency_new
-                h = h_new
-                alpha += rho * h
-                logger.debug(
-                    "NOTEARS iter=%s h=%.4e rho=%.4e alpha=%.4e",
-                    iter_idx,
-                    h,
-                    rho,
-                    alpha,
-                )
-                if h <= self.h_tol or rho >= self.rho_max:
-                    break
-
-        adjacency_est = self._doubled_to_adjacency(adjacency_doubled, n_nodes)
-        adjacency_np = compat_fns.to_numpy(adjacency_est)
-        adjacency_np[np.abs(adjacency_np) < self.w_threshold] = 0.0
-
-        if expert_knowledge.required_edges:
-            required_threshold = self._required_edge_min_strength()
-            for u, v in expert_knowledge.required_edges:
-                u_idx = node_to_index[u]
-                v_idx = node_to_index[v]
-                if adjacency_np[u_idx, v_idx] == 0.0:
-                    adjacency_np[u_idx, v_idx] = required_threshold
-
-        dag = DAG()
-        dag.add_nodes_from(nodes)
-        required_edges = set(expert_knowledge.required_edges)
-        for u, v in required_edges:
-            if nx.has_path(dag, v, u):
-                raise ValueError("required_edges create a cycle in the output DAG. Please modify required_edges.")
-            dag.add_edge(u, v)
-
-        weighted_edges = [
-            (nodes[i], nodes[j], abs(adjacency_np[i, j]))
-            for i in range(n_nodes)
-            for j in range(n_nodes)
-            if (i != j) and (adjacency_np[i, j] != 0.0) and ((nodes[i], nodes[j]) not in required_edges)
+        penalty = np.inf
+        bounds = [
+            (0.0, 0.0) if i == j else (0.0, None) for _ in range(2) for i in range(n_nodes) for j in range(n_nodes)
         ]
-        weighted_edges.sort(key=lambda edge: edge[2], reverse=True)
-        for u, v, _ in weighted_edges:
-            if not nx.has_path(dag, v, u):
-                dag.add_edge(u, v)
+        iterations = (
+            trange(int(self.max_iter)) if self.show_progress and config.SHOW_PROGRESS else range(int(self.max_iter))
+        )
 
-        self.causal_graph_ = dag
-        self.adjacency_matrix_ = nx.to_pandas_adjacency(self.causal_graph_, weight=1, dtype="int")
+        # Augmented Lagrangian outer loop from Zheng et al. 2018 / xunzheng/notears.
+        for _ in iterations:
+            doubled_new, penalty_new = None, None
+            while rho < self.rho_max:
+                result = sopt.minimize(_objective, doubled, method="L-BFGS-B", jac=True, bounds=bounds)
+                doubled_new = result.x
+                penalty_new, _ = _acyclicity(_to_adjacency(doubled_new))
+                if penalty_new > 0.25 * penalty:
+                    rho *= 10
+                else:
+                    break
+            doubled, penalty = doubled_new, penalty_new
+            alpha += rho * penalty
+            if penalty <= self.h_tol or rho >= self.rho_max:
+                break
 
+        adjacency = _to_adjacency(doubled)
+        adjacency[np.abs(adjacency) < self.w_threshold] = 0.0
+        ranked = []
+        for i, source in enumerate(nodes):
+            for j, target in enumerate(nodes):
+                weight = float(adjacency[i, j])
+                if weight != 0.0:
+                    ranked.append((abs(weight), i, j, source, target, weight))
+        ranked.sort(key=lambda item: (-item[0], item[1], item[2]))
+
+        # Official notears_linear returns W, which need not be a DAG at w_threshold=0.
+        scratch = nx.DiGraph()
+        scratch.add_nodes_from(nodes)
+        edges = []
+        weights = []
+        for _, _, _, source, target, weight in ranked:
+            scratch.add_edge(source, target)
+            if nx.is_directed_acyclic_graph(scratch):
+                edges.append((source, target))
+                weights.append(weight)
+            else:
+                scratch.remove_edge(source, target)
+
+        self.causal_graph_ = DAG()
+        self.causal_graph_.add_nodes_from(nodes)
+        if edges:
+            self.causal_graph_.add_edges_from(edges, weights=weights)
+        self.adjacency_matrix_ = self.causal_graph_.to_adjacency(encoding="binary", nodelist=nodes)
         return self

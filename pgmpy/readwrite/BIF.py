@@ -1,5 +1,5 @@
 import re
-import warnings
+from collections.abc import Hashable
 from itertools import product
 from string import Template
 
@@ -23,13 +23,14 @@ except ImportError as e:
         f"{e}. pyparsing is required for using read/write methods. Please install using: pip install pyparsing."
     ) from None
 
-from pgmpy import logger
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
+from pgmpy.readwrite._base import BaseReader, BaseWriter
 from pgmpy.utils import compat_fns
+from pgmpy.utils._warnings import _warn_external
 
 
-class BIFReader:
+class BIFReader(BaseReader):
     """
     Initializes a BIFReader object.
 
@@ -44,33 +45,38 @@ class BIFReader:
     include_properties: boolean
         If True, gets the properties tag from the file and stores in graph properties.
 
+    state_name_type: int, str or bool (default: str)
+        The data type to which to convert the state names of the variables.
+
     Examples
     --------
-    >>> # dog-problem.bif file is present at
-    >>> # http://www.cs.cmu.edu/~javabayes/Examples/DogProblem/dog-problem.bif
-    >>> from pgmpy.readwrite import BIFReader
-    >>> reader = BIFReader("bif_test.bif")
-    <pgmpy.readwrite.BIF.BIFReader object at 0x7f2375621cf8>
-    >>> model = reader.get_model()
+    >>> from pgmpy.readwrite import BIFReader, BIFWriter
+    >>> from pgmpy.example_models import load_model
+    >>> asia = load_model("bnlearn/asia")
+    >>> writer = BIFWriter(asia)
+    >>> bif_str = str(writer)
+    >>> reader = BIFReader(string=bif_str)
+    >>> print(reader) # doctest: +ELLIPSIS
+    <pgmpy.readwrite.BIF.BIFReader object at 0x...>
 
-    Reference
-    ---------
-    [1] Geoff Hulten and Pedro Domingos. The interchange format for bayesian networks.
-        http://www.cs.washington.edu/dm/vfml/appendixes/bif.htm, 2003.
+    References
+    ----------
+    - :footcite:t:`hulten_domingos_bif`
     """
 
-    def __init__(self, path=None, string=None, include_properties=False):
-        if path:
+    format_name = "bif"
+    file_extensions = ["bif"]
+
+    def __init__(self, path=None, string=None, include_properties=False, state_name_type=str):
+        super().__init__(path=path, string=string)
+        if path is not None:
             with open(path) as network:
                 self.network = network.read()
-
-        elif string:
+        else:
             self.network = string
 
-        else:
-            raise ValueError("Must specify either path or string")
-
         self.include_properties = include_properties
+        self.state_name_type = state_name_type
 
         if "/*" in self.network or "//" in self.network:
             # removing comments from the file
@@ -249,22 +255,22 @@ class BIFReader:
 
         return probability_expr, cpd_expr
 
-    def get_model(self, state_name_type=str):
+    def read(self):
         """
         Returns the Bayesian Model read from the file/str.
 
-        Parameters
-        ----------
-        state_name_type: int, str or bool (default: str)
-            The data type to which to convert the state names of the variables.
-
-        Example
-        ----------
-        >>> from pgmpy.readwrite import BIFReader
-        >>> reader = BIFReader("bif_test.bif")
-        >>> reader.get_model()
-        <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork object at 0x7f20af154320>
+        Examples
+        --------
+        >>> from pgmpy.readwrite import BIFReader, BIFWriter
+        >>> from pgmpy.example_models import load_model
+        >>> asia = load_model("bnlearn/asia")
+        >>> writer = BIFWriter(asia)
+        >>> bif_str = str(writer)
+        >>> reader = BIFReader(string=bif_str)
+        >>> reader.read() # doctest: +ELLIPSIS
+        <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork object at 0x...>
         """
+        state_name_type = self.state_name_type
         model = DiscreteBayesianNetwork()
         model.add_nodes_from(self.variable_names)
         model.add_edges_from(self.variable_edges)
@@ -298,7 +304,7 @@ class BIFReader:
         return model
 
 
-class BIFWriter:
+class BIFWriter(BaseWriter):
     """
     Initialise a BIFWriter Object
 
@@ -310,20 +316,22 @@ class BIFWriter:
         Round the probability values to `round_values` decimals. If None, keeps all decimal points.
 
     Examples
-    ---------
+    --------
     >>> from pgmpy.readwrite import BIFWriter
     >>> from pgmpy.example_models import load_model
     >>> asia = load_model("bnlearn/asia")
     >>> writer = BIFWriter(asia)
-    >>> writer
-    <writer_BIF.BIFWriter at 0x7f05e5ea27b8>
+    >>> writer # doctest: +ELLIPSIS
+    <pgmpy.readwrite.BIF.BIFWriter object at 0x...>
     >>> writer.write("asia.bif")
     """
 
+    format_name = "bif"
+    file_extensions = ["bif"]
+    supported_models = (DiscreteBayesianNetwork,)
+
     def __init__(self, model, round_values=None):
-        if not isinstance(model, DiscreteBayesianNetwork):
-            raise TypeError("model must be an instance of DiscreteBayesianNetwork")
-        self.model = model
+        super().__init__(model)
         self.round_values = round_values
         if not self.model.name:
             self.network_name = "unknown"
@@ -451,36 +459,43 @@ $values
         -------
         list: a list containing names of variable
 
-        Example
-        -------
+        Examples
+        --------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
-        >>> model = BIFReader("dog-problem.bif").get_model()
-        >>> writer = BIFWriter(model)
-        >>> writer.get_variables()
-        ['bowel-problem', 'family-out', 'hear-bark', 'light-on', 'dog-out']
+        >>> from pgmpy.example_models import load_model
+        >>> asia = load_model("bnlearn/asia")
+        >>> writer = BIFWriter(asia)
+        >>> sorted(writer.get_variables())
+        ['asia', 'bronc', 'dysp', 'either', 'lung', 'smoke', 'tub', 'xray']
         """
         variables = self.model.nodes()
         return variables
 
-    def get_states(self):
+    def get_states(self) -> dict[Hashable, list[str]]:
         """
-        Add states to variable of BIF, handling commas in state names by replacing them with underscores.
+        Return state names as strings for BIF serialization.
 
         Returns
         -------
         dict: dict of type {variable: a list of states}
 
-        Example
-        -------
+        Warns
+        -----
+        UserWarning
+            If a state name contains a comma and cannot be read back correctly
+            by pgmpy's BIFReader.
+
+        Examples
+        --------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
-        >>> model = BIFReader("dog-problem.bif").get_model()
-        >>> writer = BIFWriter(model)
-        >>> writer.get_states()
-        {'bowel-problem': ['bowel-problem_0', 'bowel-problem_1'],
-         'dog-out': ['dog-out_0', 'dog-out_1'],
-         'family-out': ['family-out_0', 'family-out_1'],
-         'hear-bark': ['hear-bark_0', 'hear-bark_1'],
-         'light-on': ['light-on_0', 'light-on_1']}
+        >>> from pgmpy.example_models import load_model
+        >>> asia = load_model("bnlearn/asia")
+        >>> writer = BIFWriter(asia)
+        >>> writer.get_states() # doctest: +NORMALIZE_WHITESPACE
+        {'asia': ['yes', 'no'], 'bronc': ['yes', 'no'],
+        'dysp': ['yes', 'no'], 'either': ['yes', 'no'],
+        'lung': ['yes', 'no'], 'smoke': ['yes', 'no'],
+        'tub': ['yes', 'no'], 'xray': ['yes', 'no']}
         """
         variable_states = {}
         cpds = self.model.get_cpds()
@@ -492,9 +507,11 @@ $values
 
                 # Warn users if any commas in state names
                 if "," in state_str:
-                    logger.warning(
-                        f"State name '{state_str}' for variable '{variable}' contains commas. "
-                        "This may cause issues when loading the file. Consider removing any special characters."
+                    _warn_external(
+                        f"State name {state_str!r} for variable {variable!r} contains a comma "
+                        "and cannot be read back correctly by pgmpy's BIFReader. "
+                        "Rename the state if pgmpy round-trip compatibility is required.",
+                        UserWarning,
                     )
                 variable_states[variable].append(state_str)
         return variable_states
@@ -507,17 +524,14 @@ $values
         -------
         dict: dict of type {variable: list of properties }
 
-        Example
-        -------
+        Examples
+        --------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
-        >>> model = BIFReader("dog-problem.bif").get_model()
-        >>> writer = BIFWriter(model)
-        >>> writer.get_properties()
-        {'bowel-problem': ['position = (335, 99)'],
-         'dog-out': ['position = (300, 195)'],
-         'family-out': ['position = (257, 99)'],
-         'hear-bark': ['position = (296, 268)'],
-         'light-on': ['position = (218, 195)']}
+        >>> from pgmpy.example_models import load_model
+        >>> asia = load_model("bnlearn/asia")
+        >>> writer = BIFWriter(asia)
+        >>> writer.get_properties() # doctest: +NORMALIZE_WHITESPACE
+        {'asia': [], 'bronc': [], 'dysp': [], 'either': [], 'lung': [], 'smoke': [], 'tub': [], 'xray': []}
         """
         variables = self.model.nodes()
         property_tag = {}
@@ -534,17 +548,21 @@ $values
         -------
         dict: dict of type {variable: a list of parents}
 
-        Example
-        -------
+        Examples
+        --------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
-        >>> model = BIFReader("dog-problem.bif").get_model()
-        >>> writer = BIFWriter(model)
-        >>> writer.get_parents()
-        {'bowel-problem': [],
-         'dog-out': ['bowel-problem', 'family-out'],
-         'family-out': [],
-         'hear-bark': ['dog-out'],
-         'light-on': ['family-out']}
+        >>> from pgmpy.example_models import load_model
+        >>> asia = load_model("bnlearn/asia")
+        >>> writer = BIFWriter(asia)
+        >>> writer.get_parents() # doctest: +NORMALIZE_WHITESPACE
+        {'asia': [],
+        'bronc': ['smoke'],
+        'dysp': ['bronc', 'either'],
+        'either': ['lung', 'tub'],
+        'lung': ['smoke'],
+        'smoke': [],
+        'tub': ['asia'],
+        'xray': ['either']}
         """
         cpds = self.model.get_cpds()
         variable_parents = {}
@@ -560,17 +578,19 @@ $values
         -------
         dict: dict of type {variable: array}
 
-        Example
-        -------
+        Examples
+        --------
         >>> from pgmpy.readwrite import BIFReader, BIFWriter
-        >>> model = BIFReader("dog-problem.bif").get_model()
-        >>> writer = BIFWriter(model)
-        >>> writer.get_cpds()
-        {'bowel-problem': array([ 0.01,  0.99]),
-         'dog-out': array([ 0.99,  0.97,  0.9 ,  0.3 ,  0.01,  0.03,  0.1 ,  0.7 ]),
-         'family-out': array([ 0.15,  0.85]),
-         'hear-bark': array([ 0.7 ,  0.01,  0.3 ,  0.99]),
-         'light-on': array([ 0.6 ,  0.05,  0.4 ,  0.95])}
+        >>> from pgmpy.example_models import load_model
+        >>> asia = load_model("bnlearn/asia")
+        >>> writer = BIFWriter(asia)
+        >>> writer.get_cpds() # doctest: +NORMALIZE_WHITESPACE
+        {'asia': array([0.01, 0.99]), 'bronc': array([0.6, 0.3, 0.4, 0.7]),
+        'dysp': array([0.9, 0.8, 0.7, 0.1, 0.1, 0.2, 0.3, 0.9]),
+        'either': array([1., 1., 1., 0., 0., 0., 0., 1.]),
+        'lung': array([0.1 , 0.01, 0.9 , 0.99]), 'smoke': array([0.5, 0.5]),
+        'tub': array([0.05, 0.01, 0.95, 0.99]),
+        'xray': array([0.98, 0.05, 0.02, 0.95])}
         """
         cpds = self.model.get_cpds()
         tables = {}
@@ -578,28 +598,10 @@ $values
             tables[cpd.variable] = compat_fns.to_numpy(cpd.values.ravel(), decimals=self.round_values)
         return tables
 
-    def write(self, filename):
-        """
-        Writes the BIF data into a file
-
-        Parameters
-        ----------
-        filename : Name of the file
-
-        Example
-        -------
-        >>> from pgmpy.example_models import load_model
-        >>> from pgmpy.readwrite import BIFReader, BIFWriter
-        >>> asia = load_model("bnlearn/asia")
-        >>> writer = BIFWriter(asia)
-        >>> writer.write(filename="asia.bif")
-        """
-        writer = self.__str__()
-        with open(filename, "w") as fout:
-            fout.write(writer)
-
     def write_bif(self, filename):
-        warnings.warn(
-            "`BIFWriter.write_bif` is deprecated. Please use `BIFWriter.write` instead.", FutureWarning, stacklevel=2
+        _warn_external(
+            "`BIFWriter.write_bif` is deprecated since v1.1.0 and will be removed in v2.0. "
+            "Use `BIFWriter.write` instead.",
+            FutureWarning,
         )
         self.write(filename)

@@ -1,7 +1,7 @@
-from .._base import ContinuousMixin, _BaseExampleModel
+from .._base import BaseExampleModel, ContinuousMixin
 
 
-class Lexical(ContinuousMixin, _BaseExampleModel):
+class Lexical(ContinuousMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/lexical",
         "n_nodes": 8,
