@@ -1,0 +1,9 @@
+/knowledge
+addtemporal
+
+1  buying doors lug_boot maint persons safety
+2  eval
+
+forbiddirect
+
+requiredirect
