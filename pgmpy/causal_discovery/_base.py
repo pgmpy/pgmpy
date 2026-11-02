@@ -218,6 +218,12 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
 
         # Case 1: When data is provided.
         if X is not None:
+            if isinstance(X, np.ndarray):
+                X = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
+            elif not isinstance(X, pd.DataFrame):
+                nw_df = X if isinstance(X, nw.DataFrame) else nw.from_native(X, eager_only=True)
+                X = nw_df.to_pandas()
+
             validate_data(
                 self,
                 X=X,
@@ -226,8 +232,6 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
                 ensure_all_finite=True,
                 reset=False,
             )
-            if isinstance(X, np.ndarray):
-                X = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
 
             return get_metric(metric, requires_true_graph=False).evaluate(X, self.causal_graph_)
 
