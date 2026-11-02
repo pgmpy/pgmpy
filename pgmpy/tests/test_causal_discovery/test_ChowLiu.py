@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 from joblib.externals.loky import get_reusable_executor
 
+from pgmpy.base import DAG, PDAG
 from pgmpy.causal_discovery import ChowLiu
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
@@ -172,6 +173,38 @@ def test_chow_liu_auto_root_node(data12):
 
     assert nodes[0] == root_node
     assert nodes == ["D", "A", "C", "B", "E"]
+
+
+@pytest.mark.parametrize("return_type", ["dag", "DAG", "pdag", "PDAG", "cpdag"])
+def test_chow_liu_return_type(data13, return_type):
+    est = ChowLiu(root_node="A", return_type=return_type, show_progress=False).fit(data13)
+    expected_edges = {
+        ("A", "B"),
+        ("A", "C"),
+        ("B", "D"),
+        ("B", "E"),
+        ("C", "F"),
+    }
+    if return_type.lower() == "dag":
+        assert isinstance(est.causal_graph_, DAG)
+        assert set(est.causal_graph_.edges()) == expected_edges
+        for u, v in expected_edges:
+            assert est.adjacency_matrix_.loc[u, v] == 1
+            assert est.adjacency_matrix_.loc[v, u] == 0
+    else:
+        assert isinstance(est.causal_graph_, PDAG)
+        assert not est.causal_graph_.directed_edges
+        assert {tuple(sorted(e)) for e in est.causal_graph_.undirected_edges} == {
+            tuple(sorted(e)) for e in expected_edges
+        }
+        for u, v in expected_edges:
+            assert est.adjacency_matrix_.loc[u, v] == 1
+            assert est.adjacency_matrix_.loc[v, u] == 1
+
+
+def test_chow_liu_invalid_return_type(data13):
+    with pytest.raises(ValueError, match="return_type must be one of: dag, pdag, or cpdag"):
+        ChowLiu(return_type="invalid", show_progress=False).fit(data13)
 
 
 @pytest.fixture(autouse=True)

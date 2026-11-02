@@ -3,6 +3,7 @@ import pandas as pd
 import pytest
 from joblib.externals.loky import get_reusable_executor
 
+from pgmpy.base import DAG, PDAG
 from pgmpy.causal_discovery import TAN
 from pgmpy.example_models import load_model
 from pgmpy.factors.discrete import TabularCPD
@@ -253,6 +254,47 @@ def test_tan_real_dataset(alarm_df):
     edges = est.causal_graph_.edges()
 
     assert set(expected_edges) == set(edges)
+
+
+@pytest.mark.parametrize("return_type", ["dag", "DAG", "pdag", "PDAG", "cpdag"])
+def test_tan_return_type(data22, return_type):
+    est = TAN(
+        root_node="R",
+        class_node="A",
+        return_type=return_type,
+        show_progress=False,
+    ).fit(data22)
+    expected_edges = {
+        ("A", "B"),
+        ("A", "C"),
+        ("A", "D"),
+        ("A", "E"),
+        ("A", "R"),
+        ("R", "B"),
+        ("R", "C"),
+        ("R", "D"),
+        ("R", "E"),
+    }
+    if return_type.lower() == "dag":
+        assert isinstance(est.causal_graph_, DAG)
+        assert set(est.causal_graph_.edges()) == expected_edges
+        for u, v in expected_edges:
+            assert est.adjacency_matrix_.loc[u, v] == 1
+            assert est.adjacency_matrix_.loc[v, u] == 0
+    else:
+        assert isinstance(est.causal_graph_, PDAG)
+        assert not est.causal_graph_.directed_edges
+        assert {tuple(sorted(e)) for e in est.causal_graph_.undirected_edges} == {
+            tuple(sorted(e)) for e in expected_edges
+        }
+        for u, v in expected_edges:
+            assert est.adjacency_matrix_.loc[u, v] == 1
+            assert est.adjacency_matrix_.loc[v, u] == 1
+
+
+def test_tan_invalid_return_type(data22):
+    with pytest.raises(ValueError, match="return_type must be one of: dag, pdag, or cpdag"):
+        TAN(class_node="A", return_type="invalid", show_progress=False).fit(data22)
 
 
 @pytest.fixture(autouse=True)
