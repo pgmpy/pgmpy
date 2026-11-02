@@ -60,13 +60,15 @@ class _Timeseriescoregraph(_Coregraph):
             raise TypeError("Variabe names must be hashable and not None. Got None")
         return (node, 0)
 
-    def _normalize_edge(self, u, v, edge_type: str) -> tuple:
+    def _normalize_edge(self, u, v, edge_type: str | None) -> tuple:
 
         u, v = self._normalize_node(u), self._normalize_node(v)
         lag = v[1] - u[1]
         if lag < 0:
-            markers = self._to_markers((u, v, edge_type))
-            u, v, edge_type = v, u, self._to_edge_type(v, u, markers)
+            if edge_type is not None:
+                markers = self._to_markers((u, v, edge_type))
+                edge_type = self._to_edge_type(v, u, markers)
+            u, v = v, u
             lag = -lag
         return ((u[0], -lag), (v[0], 0), edge_type)
 
