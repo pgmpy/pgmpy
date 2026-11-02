@@ -27,9 +27,9 @@ def _get_dataset_labels(datasets: list[str | BaseSimulatedDataset | Dataset | pd
     Raises
     ------
     TypeError
-        If an entry is not a dataset name, ``BaseSimulatedDataset``, ``Dataset`` or ``pd.DataFrame``.
+        If an entry is not a str, BaseSimulatedDataset, Dataset, or pd.DataFrame.
     """
-    labels = []
+    labels: list[str] = []
     seen: set[str] = set()
 
     for position, dataset in enumerate(datasets):
@@ -42,10 +42,7 @@ def _get_dataset_labels(datasets: list[str | BaseSimulatedDataset | Dataset | pd
         elif isinstance(dataset, BaseSimulatedDataset):
             label = " ".join(repr(dataset).split())
         else:
-            if isinstance(dataset, type):
-                received = f"the class {dataset.__name__}"
-            else:
-                received = type(dataset).__name__
+            received = f"the class {dataset.__name__}" if isinstance(dataset, type) else type(dataset).__name__
             raise TypeError(
                 f"Each entry in datasets must be a str, BaseSimulatedDataset, Dataset, or pd.DataFrame, got {received}."
             )
@@ -71,8 +68,7 @@ def _resolve_dataset(
     Parameters
     ----------
     dataset : str, BaseSimulatedDataset, Dataset, or pd.DataFrame
-        A registered dataset name, an initialized simulator, or caller-prepared data. ``Dataset`` and
-        ``pd.DataFrame`` inputs are used as they are; ``n_samples`` doesn't resample them.
+        A registered dataset name, an initialized simulator, or existing data.
 
     label : str
         The label of ``dataset`` from ``_get_dataset_labels``.
@@ -89,25 +85,29 @@ def _resolve_dataset(
     Returns
     -------
     Dataset
-        The resolved dataset. The caller's ``Dataset`` or ``pd.DataFrame`` is never modified.
+        The resolved dataset.
 
     Raises
     ------
+    TypeError
+        If ``dataset`` is not a str, BaseSimulatedDataset, Dataset, or pd.DataFrame.
     ValueError
         If ``dataset`` is a name that isn't registered.
     """
     if isinstance(dataset, str):
         resolved = load_dataset(dataset, n_samples=n_samples, seed=seed)
     elif isinstance(dataset, BaseSimulatedDataset):
-        df = dataset.load_dataframe(n_samples=n_samples)
-        gt = dataset.load_ground_truth()
         tags = dataset.get_tags()
+        df = dataset.load_dataframe(n_samples=n_samples)
         tags["n_samples"], tags["n_variables"] = df.shape
-        resolved = Dataset(name=label, data=df, ground_truth=gt, tags=tags)
+        resolved = Dataset(name=label, data=df, ground_truth=dataset.load_ground_truth(), tags=tags)
     elif isinstance(dataset, Dataset):
         resolved = dataset
-    else:
+    elif isinstance(dataset, pd.DataFrame):
         resolved = Dataset(name=label, data=dataset)
+    else:
+        received = f"the class {dataset.__name__}" if isinstance(dataset, type) else type(dataset).__name__
+        raise TypeError(f"dataset must be a str, BaseSimulatedDataset, Dataset, or pd.DataFrame, got {received}.")
 
     if resolved.ground_truth is None and ground_truth is not None and label in ground_truth:
         resolved = replace(resolved, ground_truth=ground_truth[label])

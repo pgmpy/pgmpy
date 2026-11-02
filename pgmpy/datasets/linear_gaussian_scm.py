@@ -53,7 +53,6 @@ class LinearGaussianSCM(BaseSimulatedDataset):
             scale=scale,
             seed=seed,
         )
-        self.seed = seed
 
     def load_dataframe(self, n_samples: int | None = None) -> pd.DataFrame:
         """Sample data from the generated Linear Gaussian SCM.

@@ -8,152 +8,171 @@ from pgmpy.datasets._base import Dataset
 from pgmpy.datasets.anm import AdditiveNoiseModel
 from pgmpy.datasets.linear_gaussian_scm import LinearGaussianSCM
 
-# ---------------------------------------------------------------------------
-# _get_dataset_labels
-# ---------------------------------------------------------------------------
 
+class TestBenchmarkDatasetResolution:
+    def test_get_dataset_labels(self):
+        sim = AdditiveNoiseModel(n_nodes=8, seed=1)
+        ds = Dataset(name="prepared", data=pd.DataFrame({"a": [1]}))
+        df = pd.DataFrame(np.zeros((3, 2)))
 
-def test_get_dataset_labels():
-    sim = AdditiveNoiseModel(n_nodes=8, seed=1)
-    ds = Dataset(name="prepared", data=pd.DataFrame({"a": [1]}))
-    df = pd.DataFrame(np.zeros((3, 2)))
+        labels = _get_dataset_labels(["sachs_discrete", sim, ds, df])
+        assert labels == [
+            "sachs_discrete",
+            "AdditiveNoiseModel(n_nodes=8, seed=1)",
+            "prepared",
+            "DataFrame_3(3x2)",
+        ]
 
-    labels = _get_dataset_labels(["sachs_discrete", sim, ds, df])
-    assert labels[0] == "sachs_discrete"
-    assert labels[1] == " ".join(repr(sim).split())
-    assert labels[2] == "prepared"
-    assert labels[3] == "DataFrame_3(3x2)"
+        sim_multi = AdditiveNoiseModel(
+            function_type=(np.sin, np.cos, np.tan, np.sinh, np.cosh, np.tanh, np.exp, np.log)
+        )
+        assert "\n" in repr(sim_multi)
+        assert _get_dataset_labels([sim_multi]) == [
+            "AdditiveNoiseModel(function_type=(<ufunc 'sin'>, <ufunc 'cos'>, <ufunc 'tan'>, "
+            "<ufunc 'sinh'>, <ufunc 'cosh'>, <ufunc 'tanh'>, <ufunc 'exp'>, <ufunc 'log'>))"
+        ]
 
+        sim_a = LinearGaussianSCM(seed=1)
+        sim_b = LinearGaussianSCM(seed=1)
+        assert _get_dataset_labels([sim_a, sim_b]) == [
+            "LinearGaussianSCM(seed=1)",
+            "LinearGaussianSCM(seed=1)_1",
+        ]
 
-def test_get_dataset_labels_duplicates():
-    sim_a = LinearGaussianSCM(seed=1)
-    sim_b = LinearGaussianSCM(seed=1)
-    labels = _get_dataset_labels([sim_a, sim_b])
-    assert labels[0] != labels[1]
-    assert labels[1].endswith("_1")
+        assert _get_dataset_labels(["a", "a", "a_0"]) == ["a", "a_1", "a_0"]
+        assert _get_dataset_labels(["a", "a", "a_1"]) == ["a", "a_1", "a_1_2"]
 
-    labels = _get_dataset_labels(["a", "a", "a_0"])
-    assert len(set(labels)) == 3
+        df1 = pd.DataFrame(np.zeros((3, 2)))
+        df2 = pd.DataFrame(np.zeros((3, 2)))
+        ds1 = Dataset(name="same", data=pd.DataFrame({"x": [1]}))
+        ds2 = Dataset(name="same", data=pd.DataFrame({"y": [2]}))
+        assert _get_dataset_labels([df1, df2, ds1, ds2]) == [
+            "DataFrame_0(3x2)",
+            "DataFrame_1(3x2)",
+            "same",
+            "same_3",
+        ]
 
-    labels = _get_dataset_labels(["a", "a", "a_1"])
-    assert len(set(labels)) == 3
+        for bad_input, expected_fragment in [
+            (42, "int"),
+            ([1, 2], "list"),
+            (AdditiveNoiseModel, "the class AdditiveNoiseModel"),
+        ]:
+            with pytest.raises(TypeError, match=expected_fragment):
+                _get_dataset_labels([bad_input])
 
-    df1 = pd.DataFrame(np.zeros((3, 2)))
-    df2 = pd.DataFrame(np.zeros((3, 2)))
-    ds1 = Dataset(name="same", data=pd.DataFrame({"x": [1]}))
-    ds2 = Dataset(name="same", data=pd.DataFrame({"y": [2]}))
-    labels = _get_dataset_labels([df1, df2, ds1, ds2])
-    assert len(set(labels)) == 4
+    def test_resolve_dataset(self):
+        registered = [
+            ("sachs_discrete", 100, (100, 11), 11, 20),
+            ("linear_gaussian", 200, (200, 5), 5, 5),
+            ("lead", 1000, (1000, 7), None, None),
+            ("tubingen/1", None, (349, 2), 2, 1),
+        ]
+        for name, n_samples, expected_shape, n_nodes, n_edges in registered:
+            ds = _resolve_dataset(name, label=name, n_samples=n_samples, seed=42)
+            assert ds.name == name
+            assert ds.data.shape == expected_shape
+            if n_nodes is not None:
+                assert len(ds.ground_truth.nodes()) == n_nodes
+                assert len(ds.ground_truth.edges()) == n_edges
+            else:
+                assert ds.ground_truth is None
+            ds2 = _resolve_dataset(name, label=name, n_samples=n_samples, seed=42)
+            assert np.array_equal(ds.data.values, ds2.data.values)
 
+        tubingen_ds = _resolve_dataset("tubingen/1", label="tubingen/1", n_samples=None, seed=42)
+        assert tubingen_ds.name == "tubingen/1"
+        assert tubingen_ds.data.shape == (349, 2)
+        assert list(tubingen_ds.data.columns) == ["x", "y"]
+        assert tubingen_ds.data.iloc[0, 0] == 205.0 and tubingen_ds.data.iloc[0, 1] == 9.7
+        assert tubingen_ds.data.iloc[-1, 0] == 615.0 and tubingen_ds.data.iloc[-1, 1] == 6.2
+        assert set(tubingen_ds.ground_truth.nodes()) == {"x", "y"}
+        assert set(tubingen_ds.ground_truth.edges()) == {("x", "y")}
 
-@pytest.mark.parametrize(
-    ("bad_input", "expected_fragment"),
-    [
-        (42, "int"),
-        ([1, 2], "list"),
-        (AdditiveNoiseModel, "the class AdditiveNoiseModel"),
-    ],
-    ids=["int", "list", "uninstantiated_class"],
-)
-def test_get_dataset_labels_unsupported_type(bad_input, expected_fragment):
-    with pytest.raises(TypeError, match=expected_fragment):
-        _get_dataset_labels([bad_input])
+        sim = AdditiveNoiseModel(n_nodes=8, seed=1)
+        ds_sim = _resolve_dataset(sim, label="anm_8", n_samples=50, seed=999)
+        assert ds_sim.name == "anm_8"
+        assert ds_sim.data.shape == (50, 8)
+        assert set(ds_sim.ground_truth.nodes()) == {f"X_{i}" for i in range(8)}
+        assert set(ds_sim.ground_truth.edges()) == {
+            ("X_0", "X_7"),
+            ("X_1", "X_2"),
+            ("X_1", "X_4"),
+            ("X_1", "X_6"),
+            ("X_2", "X_6"),
+            ("X_2", "X_7"),
+            ("X_4", "X_2"),
+            ("X_4", "X_3"),
+            ("X_4", "X_6"),
+            ("X_5", "X_0"),
+            ("X_5", "X_3"),
+            ("X_5", "X_4"),
+            ("X_5", "X_6"),
+            ("X_6", "X_3"),
+        }
+        assert len(ds_sim.ground_truth.edges()) == 14
+        assert ds_sim.tags["n_samples"] == 50
+        assert ds_sim.tags["n_variables"] == 8
+        assert np.array_equal(ds_sim.data.values, sim.load_dataframe(n_samples=50).values)
 
+        df = pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]})
+        ds_obj = Dataset(name="mine", data=df)
+        resolved_ds = _resolve_dataset(ds_obj, label="mine", n_samples=2, seed=42)
+        assert resolved_ds is ds_obj
+        assert resolved_ds.name == "mine"
+        assert resolved_ds.data.shape == (3, 2)
+        assert _resolve_dataset(ds_obj, label="mine", n_samples=None, seed=42) is ds_obj
 
-# ---------------------------------------------------------------------------
-# _resolve_dataset — registered names
-# ---------------------------------------------------------------------------
+        resolved_df = _resolve_dataset(df, label="DataFrame_0(3x2)", n_samples=2, seed=42)
+        assert resolved_df.data is df
+        assert resolved_df.name == "DataFrame_0(3x2)"
+        assert resolved_df.data.shape == (3, 2)
+        assert resolved_df.ground_truth is None
+        assert _resolve_dataset(df, label="DataFrame_0(3x2)", n_samples=None, seed=42).data is df
 
+        gt = DAG([("a", "b")])
+        ds_nogt = Dataset(name="no_gt", data=pd.DataFrame({"a": [1], "b": [2]}))
+        assert (
+            _resolve_dataset(ds_nogt, label="no_gt", n_samples=None, seed=None, ground_truth={"no_gt": gt}).ground_truth
+            is gt
+        )
+        assert ds_nogt.ground_truth is None
 
-@pytest.mark.parametrize(
-    ("name", "n_samples", "expected_rows"),
-    [
-        ("sachs_discrete", 100, 100),
-        ("linear_gaussian", 200, 200),
-        ("lead", 1000, 1000),
-        ("tubingen/1", None, None),
-    ],
-    ids=["static", "simulated", "covariance", "tubingen"],
-)
-def test_resolve_registered_dataset(name, n_samples, expected_rows):
-    ds = _resolve_dataset(name, label=name, n_samples=n_samples, seed=42)
-    assert isinstance(ds, Dataset)
-    if expected_rows is not None:
-        assert ds.data.shape[0] == expected_rows
+        df_gt = pd.DataFrame({"a": [1], "b": [2]})
+        assert (
+            _resolve_dataset(df_gt, label="my_df", n_samples=None, seed=None, ground_truth={"my_df": gt}).ground_truth
+            is gt
+        )
 
-    ds2 = _resolve_dataset(name, label=name, n_samples=n_samples, seed=42)
-    assert np.array_equal(ds.data.values, ds2.data.values)
+        assert (
+            _resolve_dataset("lead", label="lead", n_samples=100, seed=42, ground_truth={"lead": gt}).ground_truth is gt
+        )
 
+        sim_5 = AdditiveNoiseModel(n_nodes=5, seed=1)
+        assert (
+            _resolve_dataset(sim_5, label="anm", n_samples=50, seed=None, ground_truth={"anm": gt}).ground_truth
+            is not gt
+        )
 
-def test_resolve_registered_dataset_errors():
-    with pytest.warns(UserWarning, match="Requested"):
-        ds = _resolve_dataset("sachs_discrete", label="sachs_discrete", n_samples=999999, seed=42)
-    assert ds.data.shape[0] < 999999
+        assert (
+            _resolve_dataset(
+                ds_nogt, label="no_gt", n_samples=None, seed=None, ground_truth={"other_key": gt}
+            ).ground_truth
+            is None
+        )
 
-    with pytest.raises(ValueError, match="not found"):
-        _resolve_dataset("no_such_dataset", label="no_such_dataset", n_samples=100, seed=42)
+        with pytest.warns(UserWarning, match="Requested"):
+            ds_excess = _resolve_dataset("sachs_discrete", label="sachs_discrete", n_samples=999999, seed=42)
+        assert ds_excess.name == "sachs_discrete"
+        assert ds_excess.data.shape[0] == 5400
 
+        with pytest.raises(ValueError, match="not found"):
+            _resolve_dataset("no_such_dataset", label="no_such_dataset", n_samples=100, seed=42)
 
-# ---------------------------------------------------------------------------
-# _resolve_dataset — simulator instances
-# ---------------------------------------------------------------------------
-
-
-def test_resolve_simulator_instance():
-    sim = AdditiveNoiseModel(n_nodes=8, seed=1)
-    ds = _resolve_dataset(sim, label="anm_8", n_samples=50, seed=999)
-
-    assert ds.data.shape == (50, 8)
-    assert set(ds.ground_truth.nodes()) == set(ds.data.columns)
-    assert ds.tags["n_samples"] == 50
-    assert ds.tags["n_variables"] == 8
-
-    df_direct = sim.load_dataframe(n_samples=50)
-    assert np.array_equal(ds.data.values, df_direct.values)
-
-
-# ---------------------------------------------------------------------------
-# _resolve_dataset — supplied data (Dataset and DataFrame)
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.parametrize("n_samples", [None, 2], ids=["n_samples_none", "n_samples_set"])
-def test_resolve_supplied_data_is_not_resampled(n_samples):
-    df = pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]})
-
-    ds_obj = Dataset(name="mine", data=df)
-    resolved = _resolve_dataset(ds_obj, label="mine", n_samples=n_samples, seed=42)
-    assert resolved is ds_obj
-
-    resolved_df = _resolve_dataset(df, label="DataFrame_0(3x2)", n_samples=n_samples, seed=42)
-    assert resolved_df.data is df
-    assert resolved_df.name == "DataFrame_0(3x2)"
-    assert resolved_df.ground_truth is None
-
-
-# ---------------------------------------------------------------------------
-# _resolve_dataset — ground_truth override
-# ---------------------------------------------------------------------------
-
-
-def test_ground_truth_override():
-    gt = DAG([("a", "b")])
-
-    ds = Dataset(name="no_gt", data=pd.DataFrame({"a": [1], "b": [2]}))
-    resolved = _resolve_dataset(ds, label="no_gt", n_samples=None, seed=None, ground_truth={"no_gt": gt})
-    assert resolved.ground_truth is gt
-    assert ds.ground_truth is None
-
-    df = pd.DataFrame({"a": [1], "b": [2]})
-    resolved_df = _resolve_dataset(df, label="my_df", n_samples=None, seed=None, ground_truth={"my_df": gt})
-    assert resolved_df.ground_truth is gt
-
-    resolved_lead = _resolve_dataset("lead", label="lead", n_samples=100, seed=42, ground_truth={"lead": gt})
-    assert resolved_lead.ground_truth is gt
-
-    sim = AdditiveNoiseModel(n_nodes=5, seed=1)
-    resolved_sim = _resolve_dataset(sim, label="anm", n_samples=50, seed=None, ground_truth={"anm": gt})
-    assert resolved_sim.ground_truth is not gt
-
-    resolved_miss = _resolve_dataset(ds, label="no_gt", n_samples=None, seed=None, ground_truth={"other_key": gt})
-    assert resolved_miss.ground_truth is None
+        for bad_input, expected_fragment in [
+            (42, "int"),
+            ([1, 2], "list"),
+            (AdditiveNoiseModel, "the class AdditiveNoiseModel"),
+        ]:
+            with pytest.raises(TypeError, match=expected_fragment):
+                _resolve_dataset(bad_input, label="bad", n_samples=100, seed=42)

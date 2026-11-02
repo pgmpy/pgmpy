@@ -3,9 +3,11 @@
 import numpy as np
 import pytest
 from skbase.utils.dependencies import _check_soft_dependencies
+from sklearn.base import clone
 
 from pgmpy.base import DAG
 from pgmpy.datasets import list_datasets, load_dataset
+from pgmpy.datasets.anm import AdditiveNoiseModel
 
 
 def test_load_anm_dataset():
@@ -106,3 +108,22 @@ def test_anm_skpro_noise():
     iso_dag.add_node("B")
     ds_iso = load_dataset("anm", seed=42, dag=iso_dag, noise=Laplace(mu=0, scale=1))
     assert not np.allclose(ds_iso.data["A"].values, ds_iso.data["B"].values)
+
+
+def test_anm_skbase_interface():
+    # repr does not raise AttributeError and produces exact literal representation
+    sim = AdditiveNoiseModel()
+    assert repr(sim) == "AdditiveNoiseModel()"
+    assert repr(AdditiveNoiseModel(n_nodes=8, seed=1)) == "AdditiveNoiseModel(n_nodes=8, seed=1)"
+
+    # dag parameter is preserved on the instance
+    g = DAG([("A", "B")])
+    assert AdditiveNoiseModel(dag=g).dag is g
+
+    # clone and get_params round trip
+    orig = AdditiveNoiseModel(n_nodes=8, seed=1)
+    cloned = clone(orig)
+    assert cloned is not orig
+    assert cloned.get_params() == orig.get_params()
+    assert cloned.n_nodes == 8
+    assert cloned.seed == 1
