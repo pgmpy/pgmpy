@@ -42,6 +42,11 @@ class LinearGaussianSCM(BaseSimulatedDataset):
         edge_prob: float = 0.5,
         scale: float = 1.0,
     ):
+        self.seed = seed
+        self.n_nodes = n_nodes
+        self.edge_prob = edge_prob
+        self.scale = scale
+
         self.model = LinearGaussianBayesianNetwork.get_random(
             n_nodes=n_nodes,
             edge_prob=edge_prob,

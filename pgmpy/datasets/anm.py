@@ -66,6 +66,14 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
         weight: float | tuple[float, float] = (-1, 1),
         seed: int | None = None,
     ):
+        self.dag = dag
+        self.n_nodes = n_nodes
+        self.edge_prob = edge_prob
+        self.noise = noise
+        self.function_type = function_type
+        self.weight = weight
+        self.seed = seed
+
         if dag is not None:
             if not isinstance(dag, DAG):
                 raise TypeError(f"dag must be a pgmpy.base.DAG instance, got {type(dag).__name__}.")
@@ -75,20 +83,15 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
                     UserWarning,
                     stacklevel=2,
                 )
-            self.dag = dag
+            self._dag = dag
         else:
-            self.dag = DAG.get_random(n_nodes=n_nodes, edge_prob=edge_prob, seed=seed)
+            self._dag = DAG.get_random(n_nodes=n_nodes, edge_prob=edge_prob, seed=seed)
 
         if isinstance(weight, (tuple, list)):
             if len(weight) != 2:
                 raise ValueError(f"weight range must be a (low, high) tuple of length 2, got length {len(weight)}.")
         elif not isinstance(weight, numbers.Real) or isinstance(weight, bool):
             raise TypeError(f"weight must be a float or a (low, high) tuple, got {type(weight).__name__}.")
-
-        self.noise = noise
-        self.function_type = function_type
-        self.weight = weight
-        self.seed = seed
 
     def load_dataframe(self, n_samples: int | None = None) -> pd.DataFrame:
         """Sample data from the generated Additive Noise Model.
@@ -107,14 +110,14 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
         pd.DataFrame
         """
         rng = np.random.default_rng(self.seed)
-        topo_order = list(nx.topological_sort(self.dag))
+        topo_order = list(nx.topological_sort(self._dag))
         n = n_samples if n_samples is not None else 1000
         funcs = list(self.function_type)
 
-        data = pd.DataFrame(0.0, index=range(n), columns=list(self.dag.nodes()))
+        data = pd.DataFrame(0.0, index=range(n), columns=list(self._dag.nodes()))
 
         for node in topo_order:
-            parents = list(self.dag.predecessors(node))
+            parents = list(self._dag.predecessors(node))
 
             if self.noise is None:
                 noise_vals = rng.normal(0, 1, size=n)
@@ -152,4 +155,4 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
         -------
         DAG
         """
-        return self.dag
+        return self._dag
