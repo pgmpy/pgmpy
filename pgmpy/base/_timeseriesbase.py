@@ -7,11 +7,29 @@ import numpy as np
 from pgmpy.base._base import _Coregraph
 
 
-class _Timeseriescoregraph(_Coregraph):
+class _TimeSeriesCoregraph(_Coregraph):
+    """
+    Base class for all time-series graph types in pgmpy.
+
+    This class generalizes over a *node* vocabulary: every endpoint is a ``(variable, time)`` pair, and the
+    invariants are stated in terms of lags rather than endpoint markers. Subclasses (e.g. ``TimeSeriesDAG``,
+    ``TimeSeriesPDAG``) are expected to declare their own ``SUPPORTED_EDGE_TYPES`` exactly as the static
+    classes do.
+
+    Parameters
+    ----------
+    tau_max : int, optional (default: inferred)
+        The maximum lag the graph accepts. If None, it starts at 0 and grows to fit whatever is added.
+
+    Docs in is progress.
+    """
+
     def __init__(
         self,
         tau_max: int | None = None,
     ):
+        # Must precede the super().__init__(): the inherited consturctor adds the edges by calling self.add_edge(),
+        # which is overridden below and reads this state.
         self._set_tau_max(tau_max)
         super().__init__()
 
@@ -94,3 +112,9 @@ class _Timeseriescoregraph(_Coregraph):
     def has_edge(self, u: Hashable, v: Hashable, edge_type: str | None = None) -> bool:
         u, v, edge_type = self._normalize_edge(u, v, edge_type or "--")
         return super().has_edge(u, v, edge_type if edge_type != "--" else None)
+
+    def get_parents(self, node: Hashable) -> set:
+        return super().get_parents(self._normalize_node(node))
+
+    def get_children(self, node: Hashable) -> set:
+        return super().get_children(self._normalize_node(node))
