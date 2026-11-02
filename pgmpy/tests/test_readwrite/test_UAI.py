@@ -151,6 +151,30 @@ class TestUAIReader:
         }
         assert dict(model.nodes) == node_expected
 
+    def test_get_functions(self, reader_string, reader_string_with_comment):
+        functions_expected = [["var_0", "var_1"], ["var_0", "var_1", "var_2"]]
+        assert reader_string.functions == functions_expected
+        assert reader_string.get_functions() == functions_expected
+        assert reader_string_with_comment.functions == functions_expected
+
+    def test_read_bayes_parent_order_roundtrip(self):
+        parents = ["var_0", "var_1", "var_2"]
+        model = DiscreteBayesianNetwork([(p, "var_3") for p in parents])
+        model.add_cpds(*[TabularCPD(p, 2, [[0.5], [0.5]]) for p in parents])
+        v = np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8])
+        model.add_cpds(TabularCPD("var_3", 2, [v, 1 - v], evidence=parents, evidence_card=[2, 2, 2]))
+
+        uai_string = str(UAIWriter(model))
+        read_model = UAIReader(string=uai_string).read()
+
+        orig_cpd = model.get_cpds("var_3")
+        read_cpd = read_model.get_cpds("var_3")
+
+        assert read_cpd.variables[1:] == parents
+        assert orig_cpd == read_cpd
+        q = {"var_0": 0, "var_1": 0, "var_2": 1}
+        assert orig_cpd.get_value(var_3=0, **q) == read_cpd.get_value(var_3=0, **q)
+
 
 @pytest.fixture
 def bayes_model(backend):

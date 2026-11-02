@@ -64,6 +64,7 @@ class UAIReader(BaseReader):
         self.domain = self.get_domain()
         self.edges = self.get_edges()
         self.tables = self.get_tables()
+        self.functions = self.get_functions()
 
     def get_grammar(self):
         """
@@ -208,6 +209,35 @@ class UAIReader(BaseReader):
                 edges.extend(list(combinations(function_variables, 2)))
         return set(edges)
 
+    def get_functions(self):
+        """
+        Returns a list of function scopes.
+        Each function scope is a list of variables in the scope.
+
+        Returns
+        -------
+        list: list of lists containing variables in each function scope
+
+        Examples
+        --------
+        >>> from pgmpy.readwrite import UAIReader, UAIWriter
+        >>> from pgmpy.example_models import load_model
+        >>> model = load_model("bnlearn/asia")
+        >>> writer = UAIWriter(model)
+        >>> writer.write("asia.uai")
+        >>> reader = UAIReader("asia.uai")
+        >>> reader.get_functions() # doctest: +NORMALIZE_WHITESPACE
+        [['var_0'], ['var_5', 'var_1'], ['var_3', 'var_1', 'var_2'], ['var_6', 'var_4', 'var_3'],
+        ['var_5', 'var_4'], ['var_5'], ['var_0', 'var_6'], ['var_3', 'var_7']]
+        """
+        functions = []
+        for function in range(0, self.no_functions):
+            function_variables = self.grammar.parse_string(self.network)["fun_" + str(function)]
+            if isinstance(function_variables, int):
+                function_variables = [function_variables]
+            functions.append(["var_" + str(var) for var in function_variables])
+        return functions
+
     def get_tables(self):
         """
         Returns list of tuple of child variable and CPD in case of Bayesian
@@ -276,11 +306,11 @@ class UAIReader(BaseReader):
             model.add_edges_from(self.edges)
 
             tabular_cpds = []
-            for child_var, values in self.tables:
+            for (child_var, values), function_vars in zip(self.tables, self.functions):
                 states = int(self.domain[child_var])
                 values = np.fromiter(values, dtype=float)
                 values = values.reshape(states, values.size // states)
-                parents = list(model.predecessors(child_var))
+                parents = list(reversed(function_vars[:-1]))
                 if len(parents) == 0:
                     tabular_cpds.append(TabularCPD(child_var, states, values))
                 else:
