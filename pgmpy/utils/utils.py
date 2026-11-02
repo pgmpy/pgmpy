@@ -308,19 +308,16 @@ def preprocess_data(df):
     df = df.copy()
     dtypes = {}
     for col in df.columns:
-        if pd.api.types.is_integer_dtype(df[col]):
-            df[col] = df[col].astype("int")
+        col_data = df[col]
+        if pd.api.types.is_numeric_dtype(col_data):
             dtypes[col] = "N"
-        elif pd.api.types.is_numeric_dtype(df[col]):
-            dtypes[col] = "N"
-        elif pd.api.types.is_object_dtype(df[col]) or pd.api.types.is_string_dtype(df[col]):
+            if pd.api.types.is_integer_dtype(col_data):
+                df[col] = df[col].astype("int")
+        elif pd.api.types.is_object_dtype(col_data) or pd.api.types.is_string_dtype(col_data):
             dtypes[col] = "C"
-            df[col] = df[col].astype("category")
-        elif isinstance(df[col].dtype, pd.CategoricalDtype):
-            if df[col].dtype.ordered:
-                dtypes[col] = "O"
-            else:
-                dtypes[col] = "C"
+            df[col] = col_data.astype("category")
+        elif isinstance(col_data.dtype, pd.CategoricalDtype):
+            dtypes[col] = "O" if col_data.dtype.ordered else "C"
         else:
             raise ValueError(
                 f"Couldn't infer datatype of column: {col} from data. "
