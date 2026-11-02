@@ -131,18 +131,9 @@ def alarm_df():
 
 @pytest.mark.parametrize("weight_fn", ["mutual_info", "adjusted_mutual_info", "normalized_mutual_info"])
 @pytest.mark.parametrize("n_jobs", [2, 1])
-def test_tan(data22, weight_fn, n_jobs):
-    est = TAN(
-        root_node="R",
-        class_node="A",
-        edge_weights_fn=weight_fn,
-        n_jobs=n_jobs,
-        show_progress=False,
-    ).fit(data22)
-    dag = est.causal_graph_
-
-    assert set(dag.nodes()) == {"A", "B", "C", "D", "E", "R"}
-    assert set(dag.edges()) == {
+@pytest.mark.parametrize("return_type", ["dag", "pdag"])  # checks return type
+def test_tan(data22, weight_fn, n_jobs, return_type):
+    expected_edges = {
         ("A", "B"),
         ("A", "C"),
         ("A", "D"),
@@ -153,14 +144,35 @@ def test_tan(data22, weight_fn, n_jobs):
         ("R", "D"),
         ("R", "E"),
     }
-    assert dag.has_edge("A", "B")
-    assert dag.has_edge("A", "C")
-    assert dag.has_edge("A", "D")
-    assert dag.has_edge("A", "E")
-    assert dag.has_edge("R", "B")
-    assert dag.has_edge("R", "C")
-    assert dag.has_edge("R", "D")
-    assert dag.has_edge("R", "E")
+    est = TAN(
+        root_node="R",
+        class_node="A",
+        edge_weights_fn=weight_fn,
+        return_type=return_type,
+        n_jobs=n_jobs,
+        show_progress=False,
+    ).fit(data22)
+    graph = est.causal_graph_
+
+    assert set(graph.nodes()) == {"A", "B", "C", "D", "E", "R"}
+    # adjacency matrix, check
+    if return_type == "dag":
+        assert isinstance(graph, DAG)
+        assert set(graph.edges()) == expected_edges
+        for u, v in expected_edges:
+            assert graph.has_edge(u, v)
+            assert est.adjacency_matrix_.loc[u, v] == 1
+            assert est.adjacency_matrix_.loc[v, u] == 0
+    else:
+        assert isinstance(graph, PDAG)
+        assert not graph.directed_edges
+        assert {tuple(sorted(e)) for e in graph.undirected_edges} == {tuple(sorted(e)) for e in expected_edges}
+        for u, v in expected_edges:
+            assert est.adjacency_matrix_.loc[u, v] == 1
+            assert est.adjacency_matrix_.loc[v, u] == 1
+
+    with pytest.raises(ValueError, match="return_type must be one of: dag, pdag, or cpdag"):
+        TAN(class_node="A", return_type="invalid", show_progress=False).fit(data22)
 
 
 def test_tan_auto_class_node(data22):
@@ -254,47 +266,6 @@ def test_tan_real_dataset(alarm_df):
     edges = est.causal_graph_.edges()
 
     assert set(expected_edges) == set(edges)
-
-
-@pytest.mark.parametrize("return_type", ["dag", "DAG", "pdag", "PDAG", "cpdag"])
-def test_tan_return_type(data22, return_type):
-    est = TAN(
-        root_node="R",
-        class_node="A",
-        return_type=return_type,
-        show_progress=False,
-    ).fit(data22)
-    expected_edges = {
-        ("A", "B"),
-        ("A", "C"),
-        ("A", "D"),
-        ("A", "E"),
-        ("A", "R"),
-        ("R", "B"),
-        ("R", "C"),
-        ("R", "D"),
-        ("R", "E"),
-    }
-    if return_type.lower() == "dag":
-        assert isinstance(est.causal_graph_, DAG)
-        assert set(est.causal_graph_.edges()) == expected_edges
-        for u, v in expected_edges:
-            assert est.adjacency_matrix_.loc[u, v] == 1
-            assert est.adjacency_matrix_.loc[v, u] == 0
-    else:
-        assert isinstance(est.causal_graph_, PDAG)
-        assert not est.causal_graph_.directed_edges
-        assert {tuple(sorted(e)) for e in est.causal_graph_.undirected_edges} == {
-            tuple(sorted(e)) for e in expected_edges
-        }
-        for u, v in expected_edges:
-            assert est.adjacency_matrix_.loc[u, v] == 1
-            assert est.adjacency_matrix_.loc[v, u] == 1
-
-
-def test_tan_invalid_return_type(data22):
-    with pytest.raises(ValueError, match="return_type must be one of: dag, pdag, or cpdag"):
-        TAN(class_node="A", return_type="invalid", show_progress=False).fit(data22)
 
 
 @pytest.fixture(autouse=True)

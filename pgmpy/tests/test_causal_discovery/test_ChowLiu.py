@@ -126,39 +126,55 @@ def data22():
 
 @pytest.mark.parametrize("weight_fn", ["mutual_info", "adjusted_mutual_info", "normalized_mutual_info"])
 @pytest.mark.parametrize("n_jobs", [2, 1])
-def test_chow_liu(data12, data13, weight_fn, n_jobs):
+@pytest.mark.parametrize("return_type", ["dag", "pdag"])  # checks for return_type
+def test_chow_liu(data12, data13, weight_fn, n_jobs, return_type):
     est = ChowLiu(
         root_node="A",
         edge_weights_fn=weight_fn,
+        return_type=return_type,
         n_jobs=n_jobs,
         show_progress=False,
     ).fit(data12)
-    dag = est.causal_graph_
+    graph = est.causal_graph_
 
-    assert set(dag.nodes()) == {"A", "B", "C", "D", "E"}
-    assert nx.is_tree(dag)
+    assert set(graph.nodes()) == {"A", "B", "C", "D", "E"}
+    assert nx.is_tree(graph)
 
     est = ChowLiu(
         root_node="A",
         edge_weights_fn=weight_fn,
+        return_type=return_type,
         n_jobs=n_jobs,
         show_progress=False,
     ).fit(data13)
-    dag = est.causal_graph_
+    graph = est.causal_graph_
 
-    assert set(dag.nodes()) == {"A", "B", "C", "D", "E", "F"}
-    assert set(dag.edges()) == {
+    expected_edges = {
         ("A", "B"),
         ("A", "C"),
         ("B", "D"),
         ("B", "E"),
         ("C", "F"),
     }
-    assert dag.has_edge("A", "B")
-    assert dag.has_edge("A", "C")
-    assert dag.has_edge("B", "D")
-    assert dag.has_edge("B", "E")
-    assert dag.has_edge("C", "F")
+    assert set(graph.nodes()) == {"A", "B", "C", "D", "E", "F"}
+    # adjacency matrix, check if the edges are as expected
+    if return_type == "dag":
+        assert isinstance(graph, DAG)
+        assert set(graph.edges()) == expected_edges
+        for u, v in expected_edges:
+            assert graph.has_edge(u, v)
+            assert est.adjacency_matrix_.loc[u, v] == 1
+            assert est.adjacency_matrix_.loc[v, u] == 0
+    else:
+        assert isinstance(graph, PDAG)
+        assert not graph.directed_edges
+        assert {tuple(sorted(e)) for e in graph.undirected_edges} == {tuple(sorted(e)) for e in expected_edges}
+        for u, v in expected_edges:
+            assert est.adjacency_matrix_.loc[u, v] == 1
+            assert est.adjacency_matrix_.loc[v, u] == 1
+
+    with pytest.raises(ValueError, match="return_type must be one of: dag, pdag, or cpdag"):
+        ChowLiu(return_type="invalid", show_progress=False).fit(data12)
 
 
 def test_chow_liu_auto_root_node(data12):
@@ -173,38 +189,6 @@ def test_chow_liu_auto_root_node(data12):
 
     assert nodes[0] == root_node
     assert nodes == ["D", "A", "C", "B", "E"]
-
-
-@pytest.mark.parametrize("return_type", ["dag", "DAG", "pdag", "PDAG", "cpdag"])
-def test_chow_liu_return_type(data13, return_type):
-    est = ChowLiu(root_node="A", return_type=return_type, show_progress=False).fit(data13)
-    expected_edges = {
-        ("A", "B"),
-        ("A", "C"),
-        ("B", "D"),
-        ("B", "E"),
-        ("C", "F"),
-    }
-    if return_type.lower() == "dag":
-        assert isinstance(est.causal_graph_, DAG)
-        assert set(est.causal_graph_.edges()) == expected_edges
-        for u, v in expected_edges:
-            assert est.adjacency_matrix_.loc[u, v] == 1
-            assert est.adjacency_matrix_.loc[v, u] == 0
-    else:
-        assert isinstance(est.causal_graph_, PDAG)
-        assert not est.causal_graph_.directed_edges
-        assert {tuple(sorted(e)) for e in est.causal_graph_.undirected_edges} == {
-            tuple(sorted(e)) for e in expected_edges
-        }
-        for u, v in expected_edges:
-            assert est.adjacency_matrix_.loc[u, v] == 1
-            assert est.adjacency_matrix_.loc[v, u] == 1
-
-
-def test_chow_liu_invalid_return_type(data13):
-    with pytest.raises(ValueError, match="return_type must be one of: dag, pdag, or cpdag"):
-        ChowLiu(return_type="invalid", show_progress=False).fit(data13)
 
 
 @pytest.fixture(autouse=True)
