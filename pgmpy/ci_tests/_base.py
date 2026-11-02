@@ -126,6 +126,28 @@ class _ResidualMixin:
 
         return residual, estimator
 
+    def _set_linearity_assumption_tag(self):
+        """Set the 'assumption:linearity' tag based on the estimator type."""
+        est = self.estimator
+
+        if est is None:
+            self.set_tags(**{"assumption:linearity": False})
+            return
+
+        is_linear = any(cls.__module__.startswith("sklearn.linear_model") for cls in type(est).__mro__)
+        if is_linear:
+            self.set_tags(**{"assumption:linearity": True})
+            return
+
+        is_forest = any(
+            (cls.__module__.startswith("sklearn.ensemble") and "Forest" in cls.__name__) for cls in type(est).__mro__
+        ) or isinstance(est, (RandomForestClassifier, RandomForestRegressor))
+        if is_forest:
+            self.set_tags(**{"assumption:linearity": False})
+            return
+
+        self.set_tags(**{"assumption:linearity": None})
+
 
 @dataclass(frozen=True)
 class _CITestResult:
@@ -158,6 +180,8 @@ class BaseCITest(BaseObject):
     def __init__(self, use_cache: bool = True):
         self.use_cache = use_cache
         self._result_cache = {}
+        if not hasattr(self, "data"):
+            self.data = None
         super().__init__()
 
     @cached_property
@@ -364,6 +388,9 @@ def get_ci_test(test=None, data=None, use_cache=True):
     from pgmpy.utils import get_dataset_type
 
     if isinstance(test, BaseCITest):
+        requires_data = test.get_tag("requires_data", tag_value_default=True)
+        if (requires_data is True or requires_data is None) and test.data is None and data is None:
+            raise ValueError(f"CI test '{type(test).__name__}' requires data, but data is None")
         return test
 
     if callable(test):
@@ -390,7 +417,8 @@ def get_ci_test(test=None, data=None, use_cache=True):
 
     if tests:
         cls = tests[0]
-        if cls.get_class_tag("requires_data", tag_value_default=True):
+        requires_data = cls.get_class_tag("requires_data", tag_value_default=True)
+        if requires_data is True or requires_data is None:
             if data is None:
                 raise ValueError(f"CI test '{cls.__name__}' requires data, but data is None.")
             return cls(data=data, use_cache=use_cache)

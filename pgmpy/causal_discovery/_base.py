@@ -138,7 +138,8 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         if components:
             base_tags = self.get_tags() if estimator is not None else type(self).get_class_tags()
             data_types = base_tags["data_types"]
-            assumptions = {key: bool(value) for key, value in base_tags.items() if key.startswith("assumption:")}
+            # Preserve None (unknown) instead of collapsing via bool(value)
+            assumptions = {key: base_tags.get(key) for key in base_tags if key.startswith("assumption:")}
             for component in components:
                 component_tags = component.get_tags() if isinstance(component, BaseObject) else {}
                 component_types = component_tags.get("data_types")
@@ -146,7 +147,16 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
                     data_types = (
                         list(component_types) if data_types is None else [t for t in data_types if t in component_types]
                     )
-                assumptions = {key: value or bool(component_tags.get(key)) for key, value in assumptions.items()}
+                for key in assumptions:
+                    if key in component_tags:
+                        comp_val = component_tags[key]
+                        curr_val = assumptions[key]
+                        if curr_val is True or comp_val is True:
+                            assumptions[key] = True
+                        elif curr_val is None or comp_val is None:
+                            assumptions[key] = None
+                        else:
+                            assumptions[key] = False
             self.set_tags(data_types=data_types, **assumptions)
         return result
 

@@ -2,8 +2,24 @@ import numpy as np
 import pandas as pd
 import pytest
 from skbase.lookup import all_objects
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import Ridge
 
-from pgmpy.ci_tests import BaseCITest, ChiSquare, FisherZ, IndependenceMatch, Pearsonr, get_ci_test
+from pgmpy.ci_tests import (
+    GCM,
+    BaseCITest,
+    ChiSquare,
+    FisherZ,
+    GeneralizedCov,
+    HotellingLawley,
+    IndependenceMatch,
+    Pearsonr,
+    PillaiTrace,
+    RoysLargestRoot,
+    WilksLambda,
+    get_ci_test,
+)
+from pgmpy.ci_tests._base import _CITestResult
 
 
 def test_ci_registry():
@@ -110,3 +126,36 @@ def test_unknown_name(disc_data):
 def test_invalid_type():
     with pytest.raises(ValueError):
         get_ci_test(test=123)
+
+
+@pytest.mark.parametrize(
+    "cls",
+    [GCM, PillaiTrace, GeneralizedCov, WilksLambda, HotellingLawley, RoysLargestRoot],
+)
+def test_residual_ci_tests_estimator_tags(cls, cont_data):
+    class CustomEstimator:
+        def fit(self, X, y):
+            return self
+
+        def predict(self, X):
+            return np.zeros(len(X))
+
+    test_linear = cls(data=cont_data, estimator=Ridge())
+    assert test_linear.get_tag("assumption:linearity") is True
+
+    test_forest = cls(data=cont_data, estimator=RandomForestRegressor())
+    assert test_forest.get_tag("assumption:linearity") is False
+
+    test_custom = cls(data=cont_data, estimator=CustomEstimator())
+    assert test_custom.get_tag("assumption:linearity") is None
+
+
+def test_get_ci_test_requires_data_none():
+    class UnknownDataCITest(BaseCITest):
+        _tags = {"name": "unknown_data_test", "requires_data": None}
+
+        def _compute_result(self, X, Y, Z):
+            return _CITestResult(statistic=0.0, p_value=1.0)
+
+    with pytest.raises(ValueError, match="requires data, but data is None"):
+        get_ci_test(test=UnknownDataCITest(), data=None)
