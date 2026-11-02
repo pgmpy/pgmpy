@@ -113,6 +113,18 @@ class _TimeSeriesCoregraph(_Coregraph):
         u, v, edge_type = self._normalize_edge(u, v, edge_type or "--")
         return super().has_edge(u, v, edge_type if edge_type != "--" else None)
 
+    def variables(self) -> list:
+        """
+        Returns the list of distinct variable names, with times dropped and duplicates removed.
+
+        Returns
+        -------
+        list
+            List of variables in the time series graph. Sorting by ``str`` rather than natural order keeps
+            mixed types comparable.
+        """
+        return sorted({var for var, _ in super().nodes()}, key=str)
+
     def get_parents(self, node: Hashable) -> set:
         return super().get_parents(self._normalize_node(node))
 
