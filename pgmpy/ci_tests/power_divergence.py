@@ -122,9 +122,13 @@ class PowerDivergence(BaseCITest):
 
     _tags = {
         "name": "power_divergence",
-        "data_types": ("discrete",),
+        "data_types": ["discrete"],
         "default_for": None,
         "requires_data": True,
+        "capability:conditioning": True,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
     }
 
     def __init__(self, data: pd.DataFrame, lambda_: str | float = "cressie-read", use_cache: bool = True):

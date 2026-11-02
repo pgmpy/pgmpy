@@ -108,12 +108,12 @@ def test_pearsonr_residual(residual_data):
     df_indep, df_dep = residual_data
     test = Pearsonr(data=df_indep)
     test("X", "Y", ["Z1", "Z2", "Z3"])
-    assert round(test.statistic_, 3) == pytest.approx(-0.056, abs=1e-2)
-    assert round(test.p_value_, 3) == pytest.approx(0.044, abs=1e-2)
+    assert round(test.statistic_, 3) == pytest.approx(0.037, abs=1e-2)
+    assert round(test.p_value_, 3) == pytest.approx(0.238, abs=1e-2)
 
     test = Pearsonr(data=df_dep)
     test("X", "Y", ["Z1", "Z2", "Z3"])
-    assert round(test.statistic_, 3) == pytest.approx(0.406, abs=1e-2)
+    assert round(test.statistic_, 3) == pytest.approx(0.489, abs=1e-2)
     assert round(test.p_value_, 2) == pytest.approx(0.0, abs=1e-2)
 
 

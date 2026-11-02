@@ -9,7 +9,7 @@ import pandas as pd
 from skbase.utils.dependencies import _check_soft_dependencies
 
 import pgmpy.tests.help_functions as hf
-from pgmpy.base import DAG
+from pgmpy.base import ADMG, DAG
 from pgmpy.ci_tests import Pearsonr
 from pgmpy.example_models import load_model
 from pgmpy.models import LinearGaussianBayesianNetwork as LGBN
@@ -426,7 +426,7 @@ class TestDAGCreation(unittest.TestCase):
             DAG.get_random(n_nodes=n_nodes, n_edges=3, node_names=["a", "b", "c"])
 
     def test_random_dag_edge_prob_default(self):
-        with self.assertLogs("pgmpy", level="INFO") as cm:
+        with self.assertLogs("pgmpy", level="DEBUG") as cm:
             dag = DAG.get_random(n_nodes=5, n_edges=None, edge_prob=None, seed=13)
 
         self.assertEqual(len(dag.nodes()), 5)
@@ -865,6 +865,25 @@ class TestDoOperator(unittest.TestCase):
         dag_do_x = self.g2.do(["A", "Y"])
         self.assertEqual(set(dag_do_x.nodes()), set(self.g2.nodes()))
         self.assertEqual(sorted(list(dag_do_x.edges())), [("A", "B")])
+        # a set is a collection too; the original graph is left untouched
+        self.assertEqual(sorted(self.g2.do({"A", "Y"}).edges()), [("A", "B")])
+        self.assertEqual(sorted(self.g2.edges()), [("A", "B"), ("A", "Y"), ("X", "A"), ("Z", "Y")])
+
+        # inplace=True mutates and returns the same object
+        g = self.g1.copy()
+        self.assertIs(g.do("A", inplace=True), g)
+        self.assertEqual(sorted(g.edges()), [("A", "B"), ("A", "Y")])
+
+        # a tuple is a single (hashable) node, not a collection -- same convention as `get_parents`
+        tdag = DAG([("X", ("A", 0)), (("A", 0), "Y")])
+        self.assertEqual(sorted(tdag.do(("A", 0)).edges()), [(("A", 0), "Y")])
+        # any other hashable scalar is a single node as well
+        ndag = DAG([(np.int64(0), np.int64(1))])
+        self.assertEqual(list(ndag.do(np.int64(1)).edges()), [])
+
+        # a node not in the graph raises
+        with self.assertRaises(ValueError):
+            self.g1.do("Q")
 
 
 class TestDAGConversion(unittest.TestCase):
@@ -963,6 +982,57 @@ class TestDAGConversion(unittest.TestCase):
         result = dag.to_dagitty()
         expected = "dag {\nA -> B\nC -> D\nE\n}"
         self.assertEqual(result, expected)
+
+    def test_to_admg(self):
+        # Front-door graph.
+        dag = DAG([("U", "X"), ("U", "Y"), ("X", "M"), ("M", "Y")], latents={"U"}, exposures={"X"}, outcomes={"Y"})
+        expected = ADMG(
+            edge_list=[("X", "M", "->"), ("M", "Y", "->"), ("X", "Y", "<>")], exposures={"X"}, outcomes={"Y"}
+        )
+        self.assertEqual(dag.to_admg(), expected)
+
+        # Without latents every edge and isolated node is kept.
+        dag = DAG([("A", "B"), ("B", "C")])
+        dag.add_node("D")
+        expected = ADMG(edge_list=[("A", "B", "->"), ("B", "C", "->")])
+        expected.add_node("D")
+        self.assertEqual(dag.to_admg(), expected)
+
+        edges = [
+            # latent mediator: X -> L -> Y becomes X -> Y
+            ("X", "L"),
+            ("L", "Y"),
+            # latent collider: P -> C <- Q adds no edge between P and Q, but C -> Z gives P -> Z and Q -> Z
+            ("P", "C"),
+            ("Q", "C"),
+            ("C", "Z"),
+            # the latent chain U1 -> U2 -> A with U1 -> B confounds A and B, and so does V: a single A <> B,
+            # alongside the direct A -> B
+            ("U1", "U2"),
+            ("U2", "A"),
+            ("U1", "B"),
+            ("V", "A"),
+            ("V", "B"),
+            ("A", "B"),
+            # a latent with three observed children confounds every pair of them
+            ("W", "B"),
+            ("W", "D"),
+            ("W", "E"),
+        ]
+        dag = DAG(edges, latents={"L", "C", "U1", "U2", "V", "W"})
+        expected = ADMG(
+            edge_list=[
+                ("X", "Y", "->"),
+                ("P", "Z", "->"),
+                ("Q", "Z", "->"),
+                ("A", "B", "->"),
+                ("A", "B", "<>"),
+                ("B", "D", "<>"),
+                ("B", "E", "<>"),
+                ("D", "E", "<>"),
+            ]
+        )
+        self.assertEqual(dag.to_admg(), expected)
 
     def test_numeric_node_names(self):
         """Test conversion with numeric node names"""

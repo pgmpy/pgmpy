@@ -4,10 +4,10 @@ from itertools import combinations
 
 import networkx as nx
 
-from pgmpy import logger
 from pgmpy.base import DAG
 from pgmpy.estimators import StructureEstimator
 from pgmpy.structure_score import get_scoring_method
+from pgmpy.utils._warnings import _warn_external
 from pgmpy.utils.mathext import powerset
 
 
@@ -47,14 +47,19 @@ class ExhaustiveSearch(StructureEstimator):
     def all_dags(self, nodes=None):
         """
         Computes all possible directed acyclic graphs with a given set of nodes,
-        sparse ones first. `2**(n*(n-1))` graphs need to be searched, given `n` nodes,
-        so this is likely not feasible for n>6. This is a generator.
+        sparse ones first. `2**(n*(n-1))` candidate directed graphs need to be searched,
+        given `n` nodes, so this is likely not feasible for n>6. This is a generator.
 
         Parameters
         ----------
         nodes: list of nodes for the DAGs (optional)
             A list of the node names that the generated DAGs should have.
             If not provided, nodes are taken from data.
+
+        Warns
+        -----
+        UserWarning
+            If more than six nodes would make exhaustive enumeration impractical.
 
         Returns
         -------
@@ -107,8 +112,12 @@ class ExhaustiveSearch(StructureEstimator):
         if nodes is None:
             nodes = sorted(self.state_names.keys())
         if len(nodes) > 6:
-            logger.info("Generating all DAGs of n nodes likely not feasible for n>6!")
-            logger.info(f"Attempting to search through {2 ** (len(nodes) * (len(nodes) - 1))} graphs")
+            candidate_count = 2 ** (len(nodes) * (len(nodes) - 1))
+            _warn_external(
+                f"Exhaustive search over {len(nodes)} nodes examines {candidate_count:,} candidate directed graphs. "
+                "Reduce the node set or use a non-exhaustive estimator.",
+                UserWarning,
+            )
 
         edges = list(combinations(nodes, 2))  # n*(n-1) possible directed edges
         edges.extend([(y, x) for x, y in edges])

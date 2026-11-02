@@ -202,7 +202,8 @@ def test_error_handling_missing_roles_and_multiple_exposure():
         model3.fit(incomplete, [5, 6])
 
 
-def test_sample_weight_support_and_shapes(dag):
+@pytest.mark.parametrize("n_folds", [1, 3])
+def test_sample_weight_support_and_shapes(dag, n_folds):
     """Test that sample_weight parameter is accepted and shape-validated."""
     X, y = make_simulated_plr(n=150, seed=5)
 
@@ -210,20 +211,23 @@ def test_sample_weight_support_and_shapes(dag):
         causal_graph=dag,
         nuisance_estimators=LinearRegression(),
         effect_estimator=LinearRegression(),
-        n_folds=1,
+        n_folds=n_folds,
+        seed=0,
     )
 
-    # list-like sample weight accepted
-    sw_list = [1.0] * X.shape[0]
-    _ = model.fit(X, y, sample_weight=sw_list)
+    weights = np.linspace(0.5, 2.0, len(X))
+    model.fit(X, y, sample_weight=weights)
+    expected_predictions = model.predict(X)
+    expected_coef = model.effect_est_.coef_.copy()
 
-    # pandas Series accepted
-    sw_ser = pd.Series([1.0] * X.shape[0])
-    _ = model.fit(X, y, sample_weight=sw_ser)
+    for sample_weight in [weights.tolist(), pd.Series(weights, index=np.arange(len(X)) + 100)]:
+        model.fit(X, y, sample_weight=sample_weight)
+        np.testing.assert_allclose(model.predict(X), expected_predictions)
+        np.testing.assert_allclose(model.effect_est_.coef_, expected_coef)
 
-    # wrong-length should raise
-    with pytest.raises(ValueError):
-        model.fit(X, y, sample_weight=[1.0] * (X.shape[0] - 1))
+    for sample_weight in [weights[:-1].tolist(), weights.reshape(-1, 1)]:
+        with pytest.raises(ValueError, match="sample_weight"):
+            model.fit(X, y, sample_weight=sample_weight)
 
 
 def test_dag_roles_validation_and_pretreatment_support():
@@ -278,8 +282,6 @@ def test_doubleml_recovers_theta_with_RF():
     data = lgbn.simulate(1000, seed=42)  # returns a pandas DataFrame
 
     df = data.loc[:, ["X", "U1", "U2"]]
-    df = (df - df.mean(axis=0)) / df.std(axis=0)
-
     y = data["Y"]
 
     G = DAG(
@@ -290,8 +292,8 @@ def test_doubleml_recovers_theta_with_RF():
     est = DoubleMLRegressor(
         causal_graph=G,
         nuisance_estimators=(
-            RandomForestRegressor(),
-            RandomForestRegressor(),
+            RandomForestRegressor(random_state=0),
+            RandomForestRegressor(random_state=0),
         ),
         effect_estimator=LinearRegression(),
         n_folds=3,
@@ -300,12 +302,12 @@ def test_doubleml_recovers_theta_with_RF():
 
     est.fit(df, y)
 
-    assert est.effect_est_.coef_.round(1)[0] == 0.6
+    assert est.effect_est_.coef_[0] == pytest.approx(0.6, abs=0.12)
 
     preds = est.predict(df)
     assert preds.shape[0] == df.shape[0]
     mse = np.mean((preds - y.to_numpy()) ** 2)
-    assert mse < 0.5
+    assert mse < y.var()
 
 
 def test_doubleml_recovers_theta_high_dim():

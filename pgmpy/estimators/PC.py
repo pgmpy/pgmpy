@@ -1,6 +1,5 @@
 """Deprecated compatibility shim for :class:`pgmpy.causal_discovery.PC`."""
 
-import warnings
 from collections.abc import Callable, Hashable
 
 import networkx as nx
@@ -11,6 +10,7 @@ from pgmpy.causal_discovery import PC as _PC
 from pgmpy.estimators.BaseConstraintEstimator import BaseConstraintEstimator
 from pgmpy.estimators.ExpertKnowledge import ExpertKnowledge
 from pgmpy.independencies import Independencies
+from pgmpy.utils._warnings import _warn_external
 
 
 class PC(BaseConstraintEstimator):
@@ -37,10 +37,10 @@ class PC(BaseConstraintEstimator):
         independencies: Independencies | None = None,
         **kwargs,
     ) -> None:
-        warnings.warn(
-            "PC is deprecated and will be removed in v2.0. Please use pgmpy.causal_discovery.PC instead.",
+        _warn_external(
+            "`pgmpy.estimators.PC` is deprecated since v1.1.0 and will be removed in v2.0. "
+            "Use `pgmpy.causal_discovery.PC` instead.",
             FutureWarning,
-            stacklevel=2,
         )
         super().__init__(data=data, independencies=independencies, **kwargs)
 

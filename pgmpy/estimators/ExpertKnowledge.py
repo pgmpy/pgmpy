@@ -1,8 +1,7 @@
 """Deprecated compatibility shim for :class:`pgmpy.causal_discovery.ExpertKnowledge`."""
 
-import warnings
-
 from pgmpy.causal_discovery import ExpertKnowledge as _ExpertKnowledge
+from pgmpy.utils._warnings import _warn_external
 
 
 class ExpertKnowledge(_ExpertKnowledge):
@@ -29,11 +28,10 @@ class ExpertKnowledge(_ExpertKnowledge):
         significance_level=0.05,
         **kwargs,
     ):
-        warnings.warn(
-            "ExpertKnowledge is deprecated and will be removed in v2.0. "
-            "Please use pgmpy.causal_discovery.ExpertKnowledge instead.",
+        _warn_external(
+            "`pgmpy.estimators.ExpertKnowledge` is deprecated and will be removed in v2.0. "
+            "Use `pgmpy.causal_discovery.ExpertKnowledge` instead.",
             FutureWarning,
-            stacklevel=2,
         )
         # Stored for sklearn get_params/clone round-trips of this shim.
         self.screening_method = screening_method

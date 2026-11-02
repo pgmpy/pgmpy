@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 
-import warnings
 import xml.etree.ElementTree as etree
 from io import BytesIO
 from itertools import chain
 
 import numpy as np
 
-from pgmpy import logger
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
+from pgmpy.readwrite._base import BaseReader, BaseWriter
 from pgmpy.utils import compat_fns
+from pgmpy.utils._warnings import _warn_external
 
 try:
     import pyparsing as pp
@@ -20,7 +20,7 @@ except ImportError as e:
     ) from None
 
 
-class XMLBIFReader:
+class XMLBIFReader(BaseReader):
     """
     Initialisation of XMLBIFReader object.
 
@@ -33,6 +33,9 @@ class XMLBIFReader:
     string : str
         String of XMLBIF data
 
+    state_name_type: int, str or bool (default: str)
+        The data type to which to convert the state names of the variables.
+
     Examples
     --------
     >>> # xmlbif_test.xml is the file present in
@@ -43,20 +46,23 @@ class XMLBIFReader:
     >>> writer = XMLBIFWriter(model)
     >>> writer.write("xmlbif_test.xml")
     >>> reader = XMLBIFReader("xmlbif_test.xml")
-    >>> model = reader.get_model()
+    >>> model = reader.read()
 
     References
     ----------
     - :footcite:t:`cozman_xmlbif`
     """
 
-    def __init__(self, path=None, string=None):
-        if path:
+    format_name = "xmlbif"
+    file_extensions = ["xmlbif"]
+
+    def __init__(self, path=None, string=None, state_name_type=str):
+        super().__init__(path=path, string=string)
+        if path is not None:
             self.network = etree.ElementTree(file=path).getroot().find("NETWORK")
-        elif string:
-            self.network = etree.fromstring(string.encode("utf-8")).find("NETWORK")
         else:
-            raise ValueError("Must specify either path or string")
+            self.network = etree.fromstring(string.encode("utf-8")).find("NETWORK")
+        self.state_name_type = state_name_type
         self.network_name = self.network.find("NAME").text
         self.variables = self.get_variables()
         self.variable_parents = self.get_parents()
@@ -224,14 +230,9 @@ class XMLBIFReader:
         }
         return variable_property
 
-    def get_model(self, state_name_type=str):
+    def read(self):
         """
         Returns a Bayesian Network instance from the file/string.
-
-        Parameters
-        ----------
-        state_name_type: int, str, or bool (default: str)
-            The data type to which to convert the state names of the variables.
 
         Returns
         -------
@@ -245,8 +246,9 @@ class XMLBIFReader:
         >>> writer = XMLBIFWriter(model)
         >>> writer.write("xmlbif_test.xml")
         >>> reader = XMLBIFReader("xmlbif_test.xml")
-        >>> model = reader.get_model()
+        >>> model = reader.read()
         """
+        state_name_type = self.state_name_type
         model = DiscreteBayesianNetwork()
         model.add_nodes_from(self.variables)
         model.add_edges_from(self.edge_list)
@@ -279,7 +281,7 @@ class XMLBIFReader:
         return model
 
 
-class XMLBIFWriter:
+class XMLBIFWriter(BaseWriter):
     """
     Initialise a XMLBIFWriter object.
 
@@ -307,10 +309,12 @@ class XMLBIFWriter:
     - :footcite:t:`cozman_xmlbif`
     """
 
+    format_name = "xmlbif"
+    file_extensions = ["xmlbif"]
+    supported_models = (DiscreteBayesianNetwork,)
+
     def __init__(self, model, encoding="utf-8", prettyprint=True):
-        if not isinstance(model, DiscreteBayesianNetwork):
-            raise TypeError("model must an instance of DiscreteBayesianNetwork")
-        self.model = model
+        super().__init__(model)
 
         self.encoding = encoding
         self.prettyprint = prettyprint
@@ -361,8 +365,8 @@ class XMLBIFWriter:
         """
         Add variables to XMLBIF
 
-        Return
-        ------
+        Returns
+        -------
         dict: dict of type {variable: variable tags}
 
         Examples
@@ -392,8 +396,8 @@ class XMLBIFWriter:
         """
         Add outcome to variables of XMLBIF
 
-        Return
-        ------
+        Returns
+        -------
         dict: dict of type {variable: outcome tags}
 
         Examples
@@ -430,29 +434,24 @@ class XMLBIFWriter:
         return outcome_tag
 
     def _make_valid_state_name(self, state_name):
-        """Transform the input state_name into a valid state in XMLBIF.
-        XMLBIF states must start with a letter and only contain letters,
-        numbers and underscores.
+        """Convert state_name to a string and replace special-character runs.
+
+        Runs of characters other than ASCII letters, digits, and underscores
+        are replaced with a single underscore.
         """
         s = str(state_name)
-
-        # Warn about commas in state names as they can cause issues when loading
-        if "," in s:
-            var_name = self.variable_name if hasattr(self, "variable_name") else "unknown"
-            logger.warning(
-                f"State name '{s}' for variable '{var_name}' contains commas. "
-                "This may cause issues when loading the file. Consider removing any special characters."
-            )
-
-        # Keep existing transformation logic
         s_fixed = pp.CharsNotIn(pp.alphanums + "_").set_parse_action(pp.replace_with("_")).transform_string(s)
         if not s_fixed[0].isalpha():
             s_fixed = s_fixed
 
         if s != s_fixed:
-            logger.warning(
-                f"State name '{s}' has been modified to '{s_fixed}' to comply with XMLBIF format requirements. "
-                "XMLBIF states must start with a letter and only contain letters, numbers, and underscores."  # noqa: E501
+            var_name = getattr(self, "variable_name", "unknown")
+            _warn_external(
+                f"State name {s!r} for variable {var_name!r} was changed "
+                f"to {s_fixed!r} for XMLBIF serialization. "
+                "pgmpy replaces characters other than ASCII letters, digits, "
+                "and underscores with underscores.",
+                UserWarning,
             )
         return s_fixed
 
@@ -460,8 +459,8 @@ class XMLBIFWriter:
         """
         Add property to variables in XMLBIF
 
-        Return
-        ------
+        Returns
+        -------
         dict: dict of type {variable: property tag}
 
         Examples
@@ -493,8 +492,8 @@ class XMLBIFWriter:
         """
         Add Definition to XMLBIF
 
-        Return
-        ------
+        Returns
+        -------
         dict: dict of type {variable: definition tag}
 
         Examples
@@ -528,12 +527,12 @@ class XMLBIFWriter:
         """
         Add Table to XMLBIF.
 
-        Return
-        ---------------
+        Returns
+        -------
         dict: dict of type {variable: table tag}
 
         Examples
-        -------
+        --------
         >>> from pgmpy.readwrite import XMLBIFWriter
         >>> from pgmpy.example_models import load_model
         >>> model = load_model("bnlearn/asia")
@@ -575,14 +574,13 @@ class XMLBIFWriter:
         >>> writer = XMLBIFWriter(model)
         >>> writer.write("asia.xml")
         """
-        with open(filename, "w") as fout:
+        with open(filename, "w", encoding=self.encoding) as fout:
             fout.write(self.__str__())
 
     def write_xmlbif(self, filename):
-        warnings.warn(
-            """`XMLBIFWriter.write_xmlbif` is deprecated and will be removed in v2.0. Please use `XMLBIFWriter.write`
-            instead.""",
+        _warn_external(
+            "`XMLBIFWriter.write_xmlbif` is deprecated since v1.1.0 and will be removed in v2.0. "
+            "Use `XMLBIFWriter.write` instead.",
             FutureWarning,
-            stacklevel=2,
         )
         self.write(filename)

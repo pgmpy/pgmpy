@@ -1,7 +1,8 @@
 # Example Models
 
-```{meta}
-:description: Discover and load built-in example models using pgmpy's example-model helpers.
+```{eval-rst}
+.. meta::
+   :description: Discover and load built-in example models using pgmpy's example-model helpers.
 ```
 
 pgmpy ships a registry of ready-made Bayesian network models from standard repositories.

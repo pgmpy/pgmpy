@@ -69,7 +69,7 @@ root_doc = "index"
 master_doc = root_doc
 
 project = "pgmpy"
-copyright = "2025, pgmpy developers"
+copyright = "2026, pgmpy developers"
 author = "Ankur Ankan, Abinash Panda"
 
 version = site_config.version_name

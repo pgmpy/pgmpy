@@ -25,6 +25,7 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
     the score until a local maximum is reached.
 
     The algorithm is a greedy local search method that:
+
     1. Starts from an initial graph (empty by default or based on provided expert knowledge).
     2. Evaluates all possible single-edge modifications (add, delete, reverse).
     3. Applies the modification with the highest score improvement.
@@ -55,7 +56,7 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
 
     max_indegree : int or None, default=None
         If provided, the procedure only searches among models where all nodes
-        have at most `max_indegree` parents. This can significantly reduce
+        have at most ``max_indegree`` parents. This can significantly reduce
         the search space and computation time for large graphs.
 
     expert_knowledge : ExpertKnowledge instance, default=None
@@ -68,18 +69,19 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
 
     return_type : str, default='pdag'
         The type of graph to return. Options are:
+
         - 'dag': Returns a directed acyclic graph (DAG).
         - 'pdag': Returns a partially directed acyclic graph (PDAG) where edges that
           could not be oriented are left undirected.
 
     epsilon : float, default=1e-4
         Defines the exit condition. If the improvement in score is less
-        than `epsilon`, the algorithm terminates and returns the learned model.
+        than ``epsilon``, the algorithm terminates and returns the learned model.
 
     max_iter : int, default=1e6
         The maximum number of iterations allowed. The algorithm terminates
         and returns the learned model when the number of iterations exceeds
-        `max_iter`.
+        ``max_iter``.
 
     show_progress : bool, default=True
         If True, shows a progress bar while learning the causal structure.
@@ -91,6 +93,9 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
 
     adjacency_matrix_ : pd.DataFrame
         Adjacency matrix representation of the learned causal graph.
+
+    scoring_method_ : BaseStructureScore
+        The structure score used for learning, resolved from ``scoring_method``.
 
     n_features_in_ : int
         The number of features in the data used to learn the causal graph.
@@ -127,6 +132,23 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
     ----------
     - :footcite:t:`koller_friedman_2009`
     """
+
+    _tags = {
+        "name": "hill_climb_search",
+        "data_types": ["discrete", "continuous", "mixed"],
+        "identifiable_graph": "cpdag",
+        "requires_target": False,
+        "capability:multivariate": True,
+        "capability:expert_knowledge": ["forbidden_edges", "required_edges", "search_space", "temporal_order"],
+        "assumption:causal_sufficiency": True,
+        "assumption:acyclicity": True,
+        "assumption:faithfulness": True,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
+    }
 
     def __init__(
         self,
@@ -169,7 +191,7 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
 
         # Step 1: Initial checks and setup for arguments
         # Step 1.1: Check score
-        score = get_scoring_method(self.scoring_method, X)
+        self.scoring_method_ = get_scoring_method(self.scoring_method, X)
 
         # Step 1.2: Check the start_dag
         if self.start_dag is None:
@@ -218,7 +240,7 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
             best_operation, best_score_delta = max(
                 self._legal_operations_dag(
                     model=current_model,
-                    scoring_method=score,
+                    scoring_method=self.scoring_method_,
                     tabu_list=tabu_list,
                     max_indegree=max_indegree,
                     forbidden_edges=expert_knowledge.forbidden_edges_,

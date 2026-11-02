@@ -1,5 +1,4 @@
 import gzip
-import warnings
 
 import pandas as pd
 
@@ -10,6 +9,7 @@ except ImportError:
     from importlib_resources import files
 
 from pgmpy import logger
+from pgmpy.utils._warnings import _warn_external
 
 
 def get_example_model(model: str):
@@ -48,11 +48,10 @@ def get_example_model(model: str):
       one of the model classes in pgmpy.models
                            depending on the type of dataset.
     """
-    warnings.warn(
-        """`get_example_model` is deprecated and will be removed in v2.0. Please use `pgmpy.example_models.load_model`
-        instead.""",
+    _warn_external(
+        "`get_example_model` is deprecated since v1.1.0 and will be removed in v2.0. "
+        "Use `pgmpy.example_models.load_model` instead.",
         FutureWarning,
-        stacklevel=2,
     )
     cat_models = {
         "asia",
@@ -170,7 +169,7 @@ def get_example_model(model: str):
             with gzip.open(ref) as f:
                 content = f.read()
             reader = BIFReader(string=content.decode("utf-8"))
-            return reader.get_model()
+            return reader.read()
 
     elif model in cont_models:
         from pgmpy.models import LinearGaussianBayesianNetwork
@@ -309,34 +308,29 @@ def preprocess_data(df):
     df = df.copy()
     dtypes = {}
     for col in df.columns:
-        if pd.api.types.is_integer_dtype(df[col]):
-            df[col] = df[col].astype("int")
+        col_data = df[col]
+        if pd.api.types.is_numeric_dtype(col_data):
             dtypes[col] = "N"
-        elif pd.api.types.is_numeric_dtype(df[col]):
-            dtypes[col] = "N"
-        elif pd.api.types.is_object_dtype(df[col]) or pd.api.types.is_string_dtype(df[col]):
+            if pd.api.types.is_integer_dtype(col_data):
+                df[col] = df[col].astype("int")
+        elif pd.api.types.is_object_dtype(col_data) or pd.api.types.is_string_dtype(col_data):
             dtypes[col] = "C"
-            df[col] = df[col].astype("category")
-        elif isinstance(df[col].dtype, pd.CategoricalDtype):
-            if df[col].dtype.ordered:
-                dtypes[col] = "O"
-            else:
-                dtypes[col] = "C"
+            df[col] = col_data.astype("category")
+        elif isinstance(col_data.dtype, pd.CategoricalDtype):
+            dtypes[col] = "O" if col_data.dtype.ordered else "C"
         else:
             raise ValueError(
                 f"Couldn't infer datatype of column: {col} from data. "
                 "Try specifying the appropriate datatype to the column."
             )
 
-    logger.info(
-        f" Datatype (N=numerical, C=Categorical Unordered,O=Categorical Ordered)inferred from data: \n {dtypes}"
-    )
+    logger.debug(f"Inferred variable types (N=numerical, C=unordered categorical, O=ordered categorical): {dtypes}")
     return (df, dtypes)
 
 
 def _heuristic_categorical_detection(df, dtypes):
     """
-    Creates a warning if numerical values are detected for a categorical variable.
+    Warns when numeric columns have a low ratio of distinct to non-missing values.
     """
     # credit: https://stackoverflow.com/a/35827646
     potential_categorical = []
@@ -345,9 +339,10 @@ def _heuristic_categorical_detection(df, dtypes):
             if 1.0 * df[var].nunique() / df[var].count() < 0.1:
                 potential_categorical.append(var)
     if len(potential_categorical) > 0:
-        logger.warning(
-            f"Variables: {potential_categorical} are likely categorical, but using numerical values. Please set the"
-            " dtype as `categorical` in pandas dataframe if that's the case, otherwise ignore this warning."
+        _warn_external(
+            f"Numeric variables {potential_categorical} have fewer distinct values than 10% of non-missing rows. "
+            "If these variables are categorical, cast them to pandas 'category' dtype.",
+            UserWarning,
         )
 
 
@@ -365,6 +360,12 @@ def get_dataset_type(data: pd.DataFrame) -> str:
     -------
     str
         `continuous`, `discrete` or `mixed`.
+
+    Warns
+    -----
+    UserWarning
+        If a numeric column has fewer distinct values than 10% of its non-missing rows. This heuristic does not
+        change the column's inferred type or the returned dataset type.
     """
 
     df, dtypes = preprocess_data(data)

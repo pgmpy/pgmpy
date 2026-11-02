@@ -1,12 +1,12 @@
 """Deprecated compatibility shim over :class:`pgmpy.causal_discovery`'s constraint-based machinery."""
 
-import warnings
 from collections.abc import Callable
 
 from sklearn.base import clone
 
 from pgmpy.base import UndirectedGraph
 from pgmpy.estimators import StructureEstimator
+from pgmpy.utils._warnings import _warn_external
 
 
 class BaseConstraintEstimator(StructureEstimator):
@@ -37,11 +37,10 @@ class BaseConstraintEstimator(StructureEstimator):
     def __init__(self, data=None, independencies=None, **kwargs):
         # Subclass shims (e.g. the deprecated PC) emit their own warning.
         if type(self) is BaseConstraintEstimator:
-            warnings.warn(
-                "BaseConstraintEstimator is deprecated and will be removed in v2.0. "
-                "Please use the constraint-based estimators in pgmpy.causal_discovery instead.",
+            _warn_external(
+                "`pgmpy.estimators.BaseConstraintEstimator` is deprecated and will be removed in v2.0. "
+                "Use `pgmpy.causal_discovery.PC` instead.",
                 FutureWarning,
-                stacklevel=2,
             )
         super().__init__(data, independencies, **kwargs)
 

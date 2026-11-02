@@ -1,5 +1,3 @@
-import logging
-
 import numpy as np
 import pandas as pd
 import pytest
@@ -103,7 +101,7 @@ class TestExpertKnowledge:
         assert ek.search_space_ == {("X", "Y"), ("Y", "X")}
         assert ek.forbidden_edges_ == {("X", "Z"), ("Y", "Z"), ("Z", "X"), ("Z", "Y")}
 
-    def test_apply_to_orients_required_forbidden_and_warns(self, caplog):
+    def test_apply_to_orients_required_forbidden_and_warns(self):
         data = pd.DataFrame({c: [0, 1] for c in ["A", "B", "C", "D", "E", "F"]})
         ek = ExpertKnowledge(
             required_edges=[("A", "B"), ("E", "F")],
@@ -115,20 +113,14 @@ class TestExpertKnowledge:
             edge_list=[("F", "E", "->"), ("A", "B", "--"), ("C", "D", "--")],
         )
 
-        pgmpy_logger = logging.getLogger("pgmpy")
-        pgmpy_logger.addHandler(caplog.handler)
-        try:
-            with caplog.at_level("WARNING", logger="pgmpy"):
-                ek.apply_to(pdag)
-        finally:
-            pgmpy_logger.removeHandler(caplog.handler)
+        with pytest.warns(UserWarning, match="Required edge E->F is absent or oppositely oriented"):
+            ek.apply_to(pdag)
 
         # required A-B oriented A->B; forbidden C->D oriented away (D->C)
         assert ("A", "B") in pdag.directed_edges
         assert ("D", "C") in pdag.directed_edges
         # required E->F conflicts with existing F->E: warned and left as-is
         assert ("F", "E") in pdag.directed_edges
-        assert any("Ignoring edge E->F from required edges" in m for m in caplog.messages)
 
     def test_fit_without_data_resolves_declarative_knowledge(self):
         # forbidden/required/temporal knowledge needs no data, so fit() works without it.

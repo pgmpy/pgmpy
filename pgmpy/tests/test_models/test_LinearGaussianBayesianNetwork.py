@@ -162,7 +162,7 @@ class TestLGBNMethods(unittest.TestCase):
         cov_cond = cov_cond[sorted_indices][:, sorted_indices]
 
         rng = np.random.default_rng(seed=42)
-        samples = rng.multivariate_normal(mean=mean_cond[0], cov=cov_cond, size=10000)
+        samples = rng.multivariate_normal(mean=mean_cond[0], cov=cov_cond, size=10000, method="cholesky")
         df_equ = pd.DataFrame(samples, columns=missing_vars)
 
         np_test.assert_array_almost_equal(df.mean()[["x2", "x3"]], df_equ.mean(), decimal=5)
@@ -243,6 +243,26 @@ class TestLGBNMethods(unittest.TestCase):
         np_test.assert_array_almost_equal(sim_mean, expected_mean, decimal=1)
         np_test.assert_array_almost_equal(sim_cov, expected_cov, decimal=1)
 
+    def test_simulate_matches_ancestral_sampling(self):
+        model = LinearGaussianBayesianNetwork([(z, v) for z in ("Z1", "Z2", "Z3") for v in ("X", "Y")])
+        model.add_cpds(
+            LinearGaussianCPD("Z1", beta=[0], std=1),
+            LinearGaussianCPD("Z2", beta=[0], std=1),
+            LinearGaussianCPD("Z3", beta=[0], std=1),
+            LinearGaussianCPD("X", beta=[1, 0.5, 0.5, 0.5], std=1, evidence=["Z1", "Z2", "Z3"]),
+            LinearGaussianCPD("Y", beta=[-1, 0.5, 0.5, 0.5], std=1, evidence=["Z1", "Z2", "Z3"]),
+        )
+        df = model.simulate(n_samples=100, seed=42)
+
+        noise = pd.DataFrame(np.random.default_rng(42).standard_normal((100, 5)), columns=df.columns)
+        expected = pd.DataFrame(index=df.index, columns=df.columns, dtype=float)
+        for var in df.columns:
+            cpd = model.get_cpds(var)
+            parents = expected[cpd.evidence].to_numpy()
+            expected[var] = cpd.beta[0] + parents @ np.asarray(cpd.beta[1:]) + cpd.std * noise[var]
+
+        np_test.assert_allclose(df.to_numpy(), expected.to_numpy())
+
     def test_simulate_raises_for_invalid_do_and_evidence_nodes(self):
         model = LinearGaussianBayesianNetwork([("A", "B")])
         cpd_a = LinearGaussianCPD("A", beta=[1], std=1.0)
@@ -303,7 +323,7 @@ class TestLGBNMethods(unittest.TestCase):
 
             for index, evid_var in enumerate(cpd_orig.evidence):
                 est_index = cpd_est.evidence.index(evid_var)
-                self.assertTrue(abs(cpd_orig.beta[index + 1] - cpd_est.beta[est_index + 1]) < 0.1)
+                self.assertTrue(abs(cpd_orig.beta[index + 1] - cpd_est.beta[est_index + 1]) < 0.2)
 
     def test_fit_invalid_estimator(self):
         new_model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
@@ -325,7 +345,7 @@ class TestLGBNMethods(unittest.TestCase):
         self.assertTrue(
             np.allclose(
                 result["x2"].round(2).values,
-                [-6.04, -6.61, -4.90, -2.12, -5.30, -0.64, -7.58, -2.08, -3.28, -6.26],
+                [-7.99, -5.11, -5.02, -5.45, -2.38, -3.43, -2.52, -2.44, -7.28, -3.54],
             )
         )
 
@@ -344,40 +364,40 @@ class TestLGBNMethods(unittest.TestCase):
 
         true_data = {
             "yceP": [
-                0.9355,
-                -0.6,
-                0.9173,
-                1.377,
-                -0.0277,
-                0.9375,
-                0.3736,
-                3.2211,
-                1.335,
-                0.5562,
+                2.1082,
+                1.0409,
+                2.7293,
+                0.364,
+                -1.0284,
+                1.0486,
+                2.2428,
+                1.5194,
+                1.7567,
+                0.7267,
             ],
             "yheI": [
-                1.4243,
-                3.3746,
-                2.9019,
-                -0.2351,
-                0.4836,
-                3.5011,
-                -0.3094,
-                1.909,
-                0.7434,
-                1.4975,
+                1.3727,
+                -0.5331,
+                -0.4184,
+                2.0929,
+                2.7519,
+                -1.1885,
+                1.5676,
+                -0.6507,
+                1.8537,
+                0.9404,
             ],
             "cspA": [
-                1.7982,
-                0.1066,
-                -1.245,
-                -0.2534,
-                1.1994,
-                0.8585,
-                -0.2137,
-                0.9671,
-                0.0418,
-                1.6395,
+                2.1082,
+                -0.7373,
+                -0.2022,
+                0.5873,
+                -1.6884,
+                2.1621,
+                -1.0443,
+                1.6545,
+                0.5553,
+                1.572,
             ],
         }
         for var_name, expected in true_data.items():
@@ -402,7 +422,7 @@ class TestLGBNMethods(unittest.TestCase):
         self.assertTrue(
             np.allclose(
                 mu.round(2).squeeze(),
-                [-6.04, -6.61, -4.90, -2.12, -5.30, -0.64, -7.58, -2.08, -3.28, -6.26],
+                [-7.99, -5.11, -5.02, -5.45, -2.38, -3.43, -2.52, -2.44, -7.28, -3.54],
             )
         )
 

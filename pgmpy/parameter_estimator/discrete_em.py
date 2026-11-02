@@ -7,10 +7,12 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
+from sklearn.exceptions import ConvergenceWarning
 from tqdm.auto import tqdm
 
-from pgmpy import config, logger
+from pgmpy import config
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.utils._warnings import _warn_external
 
 from .base import DiscreteParameterEstimator
 from .discrete_mle import DiscreteMLE
@@ -190,6 +192,14 @@ class DiscreteEM(DiscreteParameterEstimator):
             DataFrame object with column names identical to the observed variable names of the network. Fully missing
             columns are treated as latent variables if they are not already marked as latent.
 
+        Warns
+        -----
+        UserWarning
+            If fully missing columns are promoted to latent variables or rows with partial missingness are dropped.
+
+        sklearn.exceptions.ConvergenceWarning
+            If the estimator does not converge within `max_iter` iterations.
+
         Returns
         -------
         self: DiscreteEM
@@ -225,9 +235,10 @@ class DiscreteEM(DiscreteParameterEstimator):
         dropped_cols = original_cols - set(data.columns)
         new_latents = [col for col in dropped_cols if col in model.nodes() and col not in model.latents]
         if new_latents:
-            logger.warning(
+            _warn_external(
                 f"Columns {new_latents} have all missing values and are not marked as latent. "
-                "Treating them as latent variables."
+                "Treating them as latent variables.",
+                UserWarning,
             )
             model.latents = set(model.latents) | set(new_latents)
 
@@ -235,9 +246,10 @@ class DiscreteEM(DiscreteParameterEstimator):
         data = data.dropna()
         dropped_rows_count = original_rows_count - data.shape[0]
         if dropped_rows_count:
-            logger.warning(
+            _warn_external(
                 f"{dropped_rows_count} rows with missing values in partially "
-                "missing columns were dropped from the dataset."
+                "missing columns were dropped from the dataset.",
+                UserWarning,
             )
 
         self._initialize_fit(model, data, sample_weight=sample_weight)
@@ -370,5 +382,9 @@ class DiscreteEM(DiscreteParameterEstimator):
 
             self._model_copy.cpds = new_cpds
 
+        _warn_external(
+            f"EM did not converge after reaching max_iter={self.max_iter}. Increase max_iter or relax atol.",
+            ConvergenceWarning,
+        )
         self.parameters_ = new_cpds
         return self

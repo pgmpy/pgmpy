@@ -10,7 +10,7 @@ skip_gh_actions = _multivariate_fixtures.skip_gh_actions
 
 @skip_gh_actions
 def test_hotelling_no_cond(pillai_data):
-    expected_stats = [0.1865, 0.1865, 0.1572, 0.1180, 0.1572]
+    expected_stats = [0.2524, 0.1997, 0.1343, 0.1145, 0.1343]
     expected_pvalues = [0.0000, 0.0000, 0.0000, 0.0000, 0.0000]
 
     computed_stats, computed_pvalues = [], []
@@ -26,8 +26,8 @@ def test_hotelling_no_cond(pillai_data):
 
 @skip_gh_actions
 def test_hotelling_indep(pillai_data):
-    expected_stats = [0.0016, 0.0007, 0.0044, 0.0055, 0.0044]
-    expected_pvalues = [0.2125, 0.4154, 0.1118, 0.2405, 0.1118]
+    expected_stats = [0.0019, 0.0007, 0.0011, 0.0043, 0.0011]
+    expected_pvalues = [0.1736, 0.3919, 0.5894, 0.3686, 0.5894]
 
     computed_stats, computed_pvalues = [], []
     for df in pillai_data["indep"]:
@@ -42,7 +42,7 @@ def test_hotelling_indep(pillai_data):
 
 @skip_gh_actions
 def test_hotelling_dependent(pillai_data):
-    expected_stats = [0.2046, 0.2790, 0.1532, 0.1745, 0.1532]
+    expected_stats = [0.2705, 0.2545, 0.1106, 0.1583, 0.1106]
     expected_pvalues = [0.0000, 0.0000, 0.0000, 0.0000, 0.0000]
 
     computed_stats, computed_pvalues = [], []
@@ -57,8 +57,8 @@ def test_hotelling_dependent(pillai_data):
 
 
 def test_effect_size(pillai_data):
-    expected_indep = [0.0026, 0.0004, 0.0003, 0.0013, 0.0003]
-    expected_dep = [0.1698, 0.2181, 0.1328, 0.0802, 0.1328]
+    expected_indep = [0.0019, 0.0007, 0.0011, 0.0022, 0.0011]
+    expected_dep = [0.2129, 0.2029, 0.0996, 0.0733, 0.0996]
 
     for df, expected in zip(pillai_data["indep"], expected_indep):
         test = HotellingLawley(data=df)

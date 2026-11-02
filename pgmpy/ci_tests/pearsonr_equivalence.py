@@ -78,9 +78,10 @@ class PearsonrEquivalence(Pearsonr):
 
     _tags = {
         "name": "pearsonr_equivalence",
-        "data_types": ("continuous",),
+        "data_types": ["continuous"],
         "default_for": None,
         "requires_data": True,
+        "capability:conditioning": True,
     }
 
     def __init__(self, data: pd.DataFrame, delta_threshold: float = 0.1, use_cache: bool = True):
@@ -97,13 +98,13 @@ class PearsonrEquivalence(Pearsonr):
         """
         Perform the equivalence CI test.
 
-        Note: Independence is concluded when p_value_ < significance_level
+        Note: Independence is concluded when ``p_value_ < significance_level``
         (rejecting the null of dependence), which is the OPPOSITE of standard CI tests.
 
         Returns
         -------
         bool
-            True if X ⊥⊥ Y | Z (p_value_ < significance_level), else False.
+            True if X ⊥⊥ Y | Z (``p_value_ < significance_level``), else False.
         """
         self.run_test(X=X, Y=Y, Z=list(Z))
 

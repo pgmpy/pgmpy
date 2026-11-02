@@ -2,8 +2,9 @@ from itertools import chain, combinations, permutations
 
 from sklearn.base import BaseEstimator
 
-from pgmpy import logger
+from pgmpy.base import PDAG
 from pgmpy.ci_tests import get_ci_test
+from pgmpy.utils._warnings import _warn_external
 
 
 class ExpertKnowledge(BaseEstimator):
@@ -311,7 +312,7 @@ class ExpertKnowledge(BaseEstimator):
 
         return self
 
-    def apply_to(self, graph):
+    def apply_to(self, graph: PDAG) -> PDAG:
         """
         Orient the edges of ``graph`` according to the fitted expert knowledge.
 
@@ -319,7 +320,7 @@ class ExpertKnowledge(BaseEstimator):
         :meth:`fit`) to orient still-undirected edges of ``graph`` in place.
         Required edges ``(u, v)`` are oriented ``u -> v``; forbidden edges ``(u, v)`` are
         oriented away from the forbidden direction (``v -> u``). Edges that already
-        conflict with the learned structure are left unchanged and a warning is logged.
+        conflict with the learned structure are left unchanged and a warning is reported.
 
         This method does not mutate the expert knowledge object; temporal constraints are
         already resolved into ``forbidden_edges_`` by :meth:`fit`.
@@ -334,6 +335,13 @@ class ExpertKnowledge(BaseEstimator):
         graph : pgmpy.base.PDAG
             The same graph instance, after edge orientation.
 
+        Warns
+        -----
+        UserWarning
+            If a forbidden directed edge is already present, or a required edge
+            is absent or oppositely oriented. The conflicting constraint is not
+            enforced; the graph is not modified for that constraint.
+
         References
         ----------
         - :footcite:t:`ankan_textor_2023`
@@ -342,18 +350,21 @@ class ExpertKnowledge(BaseEstimator):
             if graph.has_edge(u, v, "--"):
                 graph.orient_undirected_edge(v, u, inplace=True)
             elif graph.has_edge(u, v, "->"):
-                logger.warning(
-                    f"Specified expert knowledge conflicts with learned structure. "
-                    f"Ignoring edge {u}->{v} from forbidden edges."
+                _warn_external(
+                    f"Forbidden edge {u}->{v} is present in the learned structure. "
+                    "The forbidden-edge constraint is not enforced; the edge is left unchanged.",
+                    UserWarning,
                 )
 
         for u, v in self.required_edges_:
             if graph.has_edge(u, v, "--"):
                 graph.orient_undirected_edge(u, v, inplace=True)
             elif graph.has_edge(u, v, "->") is False:
-                logger.warning(
-                    f"Specified expert knowledge conflicts with learned structure. "
-                    f"Ignoring edge {u}->{v} from required edges"
+                _warn_external(
+                    f"Required edge {u}->{v} is absent or oppositely oriented in the learned structure. "
+                    "The required-edge constraint is not enforced; "
+                    "no edge is added or reoriented for this constraint.",
+                    UserWarning,
                 )
 
         return graph

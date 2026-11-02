@@ -74,6 +74,12 @@ class ExpertInLoop(BaseCausalDiscovery):
     adjacency_matrix_ : pd.DataFrame
         Adjacency matrix representation of the learned causal graph.
 
+    ci_test_ : BaseCITest or callable
+        The CI test used for learning, resolved from ``ci_test``.
+
+    pairwise_estimator_ : BaseCausalDiscovery
+        The pairwise estimator used to orient edges, i.e. ``pairwise_estimator``.
+
     n_features_in_ : int
         The number of features in the data used to learn the causal graph.
 
@@ -141,6 +147,23 @@ class ExpertInLoop(BaseCausalDiscovery):
     The algorithm is inspired by active learning approaches to causal discovery
     and the GES algorithm.
     """
+
+    _tags = {
+        "name": "expert_in_loop",
+        "data_types": ["discrete", "continuous", "mixed"],
+        "identifiable_graph": "dag",
+        "requires_target": False,
+        "capability:multivariate": True,
+        "capability:expert_knowledge": ["forbidden_edges", "required_edges", "temporal_order"],
+        "assumption:causal_sufficiency": True,
+        "assumption:acyclicity": True,
+        "assumption:faithfulness": True,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
+    }
 
     def __init__(
         self,
@@ -239,7 +262,7 @@ class ExpertInLoop(BaseCausalDiscovery):
                     effect, pvalue = ci_test.run_test(x, y, Z=Z)
                     if (effect < effect_size_threshold) and (pvalue > pval_threshold):
                         edges_to_remove.append((x, y))
-                        logger.info(f"Removing edge: {x} -> {y} to fix cycle")
+                        logger.info(f"Selected edge {x} -> {y} for removal to break the cycle.")
 
         return edges_to_remove
 
@@ -263,6 +286,7 @@ class ExpertInLoop(BaseCausalDiscovery):
                 "`pairwise_estimator` must be provided to orient edges, "
                 "e.g. `ExpertInLoop(pairwise_estimator=LLMPairwise(...))`."
             )
+        self.pairwise_estimator_ = self.pairwise_estimator
 
         self.variables_ = list(X.columns)
 
@@ -282,11 +306,11 @@ class ExpertInLoop(BaseCausalDiscovery):
         dag = DAG()
         dag.add_nodes_from(self.variables_)
         dag.add_edges_from(required_edges)
-        ci_test = get_ci_test(test=self.ci_test, data=X)
+        self.ci_test_ = get_ci_test(test=self.ci_test, data=X)
 
         while True:
             # Step 1: Compute effects and p-values between every combination of variables
-            all_effects = self._test_all(dag=dag, ci_test=ci_test, data=X)
+            all_effects = self._test_all(dag=dag, ci_test=self.ci_test_, data=X)
 
             # Edge case: if only 1 feature, no combinations exist
             if all_effects.empty:
@@ -343,7 +367,7 @@ class ExpertInLoop(BaseCausalDiscovery):
 
                 if config.SHOW_PROGRESS and self.show_progress and edge_direction is not None:
                     logger.info(
-                        "\rQueried for edge orientation between "
+                        "Queried for edge orientation between "
                         f"{u} and {v}. Got: {edge_direction[0]} -> {edge_direction[1]}"
                     )
 
@@ -352,14 +376,14 @@ class ExpertInLoop(BaseCausalDiscovery):
             # 2. If new edge creates a cycle, try to resolve it
             # 3. Otherwise, add the edge
             if edge_direction is None:
-                logger.info(f"Orientation returned None for edge {u} - {v}. Skipping this edge.")
+                logger.info(f"No orientation was determined for candidate pair {u} - {v}. Skipping it.")
                 blacklist.add(frozenset((u, v)))
             elif nx.has_path(dag, edge_direction[1], edge_direction[0]):
                 edges_to_remove = self._break_cycle(
                     dag,
                     edge_direction[0],
                     edge_direction[1],
-                    ci_test=ci_test,
+                    ci_test=self.ci_test_,
                     data=X,
                     effect_size_threshold=self.effect_size_threshold,
                     pval_threshold=self.pval_threshold,
