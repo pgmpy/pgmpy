@@ -5,17 +5,15 @@ from copy import deepcopy
 import numpy as np
 import pandas as pd
 
-from pgmpy.ci_tests._tigramite_adapter import TigramiteAdapter
-
 
 class BaseTimeSeriesCausalDiscovery(ABC):
     """
-    Base class for time-series causal discovery algorithms.
+    Coordinate fitting for time-series causal discovery algorithms.
 
-    Input data follows sktime's MultiIndex DataFrame convention:
-
-    Subclasses implement algorithm initialization, discovery,
-    and result processing.
+    Input data is a DataFrame indexed by series identifier and time. The
+    conditional independence test must be a native Tigramite test.
+    Subclasses implement algorithm initialization, discovery, and result
+    processing.
     """
 
     def __init__(
@@ -51,23 +49,17 @@ class BaseTimeSeriesCausalDiscovery(ABC):
         self.series_lengths_ = None
         self.X_ = None
 
+        self.ci_test = None
+        self.tigramite_ci_test_ = None
+        self.results_ = None
+
         # Discovery results.
         self.graph_ = None
         self.p_matrix_ = None
         self.val_matrix_ = None
 
     def _validate_time_series_data(self, X):
-        """
-        Validate the input time-series DataFrame.
-
-        Checks the DataFrame structure, index integrity, variable names,
-        numeric values, missing values, and time-point ordering.
-
-        Returns
-        -------
-        pandas.DataFrame
-            The validated input DataFrame.
-        """
+        """Validate the input DataFrame and its series and time index."""
         if not isinstance(X, pd.DataFrame):
             raise TypeError("Input data must be a pandas DataFrame.")
 
@@ -117,13 +109,7 @@ class BaseTimeSeriesCausalDiscovery(ABC):
         return X
 
     def _validate_series_lengths(self):
-        """
-        Ensure every independent time series has enough observations.
-
-        Each series must contain more observations than tau_max.
-        This prevents attempting lagged discovery on a series that is
-        too short for the configured maximum lag.
-        """
+        """Require each series to contain more observations than ``tau_max``."""
         if self.series_lengths_ is None:
             raise RuntimeError("Series lengths are unavailable. Prepare the data first.")
 
@@ -136,12 +122,7 @@ class BaseTimeSeriesCausalDiscovery(ABC):
             )
 
     def _prepare_time_series_data(self, X):
-        """
-        Extract time-series metadata and prepare individual series.
-
-        Assumes that X has already passed _validate_time_series_data().
-        Each series is sorted by its time index before being stored.
-        """
+        """Store dataset metadata and sort each series by time."""
         self.series_ids_ = X.index.get_level_values(0).unique()
         self.variable_names_ = list(X.columns)
 
@@ -156,22 +137,15 @@ class BaseTimeSeriesCausalDiscovery(ABC):
         return self.series_data_
 
     def _wrap_ci_test_for_tigramite(self):
-        """
-        Adapt the configured conditional independence test for Tigramite.
-        """
+        """Copy the native Tigramite CI test for this fit."""
         if self.cond_ind_test is None:
             raise ValueError("cond_ind_test must be provided to perform causal discovery.")
 
-        # Keep the configured test separate from the adapter.
-        ci_test = deepcopy(self.cond_ind_test)
+        if not callable(getattr(self.cond_ind_test, "set_dataframe", None)):
+            raise TypeError("A native Tigramite CI test exposing 'set_dataframe()' is required.")
 
-        self.tigramite_ci_test_ = TigramiteAdapter(
-            tigramite_ci=ci_test,
-            tau_max=self.tau_max,
-            cut_off="2xtau_max",
-            alpha_or_thres=None,
-        )
-
+        self.ci_test = deepcopy(self.cond_ind_test)
+        self.tigramite_ci_test_ = self.ci_test
         return self.tigramite_ci_test_
 
     @abstractmethod
@@ -187,55 +161,21 @@ class BaseTimeSeriesCausalDiscovery(ABC):
         """Normalize the results into the public estimator attributes."""
 
     def fit(self, X):
-        """
-        Fit the estimator to one or more time series.
-
-        Parameters
-        ----------
-        X : pandas.DataFrame
-            MultiIndex DataFrame containing time-series observations.
-
-        Returns
-        -------
-        self
-            The fitted estimator.
-        """
-        # 1. Validate the complete input.
+        """Fit the estimator to one or more time series."""
         self._validate_time_series_data(X)
-
-        # 2. Preserve the original input.
         self.X_ = X.copy()
-
-        # 3. Extract individual series and metadata.
         self._prepare_time_series_data(X)
-
-        # 4. Validate the lengths of individual series.
         self._validate_series_lengths()
-
-        # 5. Adapt the conditional independence test.
         self._wrap_ci_test_for_tigramite()
-
-        # 6. Initialize the algorithm.
         self._initialize_algorithm()
-
-        # 7. Run causal discovery.
         results = self._run_discovery()
-
-        # 8. Normalize and store the results.
-        self._process_discovery_results(results=results)
+        self._process_discovery_results(results)
         self.results_ = results
 
         return self
 
     def get_causal_links(self):
-        """
-        Return the discovered causal relationships.
-
-        Raises
-        ------
-        RuntimeError
-            If the estimator has not been fitted.
-        """
+        """Return the discovered graph, or raise if the estimator is unfitted."""
         if self.graph_ is None:
             raise RuntimeError("The estimator has not been fitted yet.")
 

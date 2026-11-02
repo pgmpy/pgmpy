@@ -1,5 +1,3 @@
-from copy import deepcopy
-
 import numpy as np
 
 from pgmpy.causal_discovery._baseTimeSeries import BaseTimeSeriesCausalDiscovery
@@ -7,12 +5,10 @@ from pgmpy.causal_discovery._baseTimeSeries import BaseTimeSeriesCausalDiscovery
 
 class _BasePCMCI(BaseTimeSeriesCausalDiscovery):
     """
-    Base estimator for causal discovery algorithms built on top of
-    Tigramite's PCMCI framework.
+    Implement the Tigramite-specific steps of time-series discovery.
 
-    This class bridges the generic time-series causal discovery lifecycle
-    with Tigramite. Concrete subclasses define their own public estimator
-    interfaces while inheriting the core discovery and validation logic here.
+    Shared input validation and fit coordination are provided by
+    :class:`BaseTimeSeriesCausalDiscovery`.
     """
 
     def __init__(
@@ -26,35 +22,7 @@ class _BasePCMCI(BaseTimeSeriesCausalDiscovery):
         link_assumptions=None,
         **kwargs,
     ):
-        """
-        Initialize the PCMCI base estimator.
-
-        Parameters
-        ----------
-        cond_ind_test : object
-            Conditional independence test wrapper compatible with TigramiteAdapter.
-
-        tau_min : int, default=0
-            Minimum time lag considered during discovery.
-
-        tau_max : int, default=1
-            Maximum time lag considered during discovery.
-
-        pc_alpha : float, default=0.05
-            Significance level used for the PC-stable conditional independence tests.
-
-        fdr_method : str or None, default="fdr_bh"
-            Multiple-testing correction method applied by Tigramite.
-
-        verbosity : int, default=0
-            Verbosity level forwarded to Tigramite execution logs.
-
-        link_assumptions : dict or None, default=None
-            Optional dictionary specifying prior domain assumptions on links.
-
-        **kwargs : dict
-            Additional keyword arguments passed directly to Tigramite's `run_pcmci()`.
-        """
+        """Initialize PCMCI options and the shared time-series estimator."""
         super().__init__(
             tau_min=tau_min,
             tau_max=tau_max,
@@ -73,20 +41,14 @@ class _BasePCMCI(BaseTimeSeriesCausalDiscovery):
         self.link_assumptions = link_assumptions
         self.kwargs = kwargs
 
-        # Internal Tigramite state references
-        self.tigramite_ci_test_ = None
         self.tigramite_data_ = None
         self.pcmci_ = None
 
-        # Discovered causal outputs
         self.candidates_ = None
         self.corrected_p_matrix_ = None
 
     def _initialize_algorithm(self) -> None:
-        """
-        Convert prepared internal series data into Tigramite's DataFrame
-        representation and instantiate the PCMCI engine.
-        """
+        """Build Tigramite's data frame and initialize its PCMCI engine."""
         from tigramite import data_processing as dp
         from tigramite.pcmci import PCMCI as TigramitePCMCI
 
@@ -96,7 +58,6 @@ class _BasePCMCI(BaseTimeSeriesCausalDiscovery):
         if self.tigramite_ci_test_ is None:
             raise RuntimeError("The conditional independence test must be adapted before initializing PCMCI.")
 
-        # Map each variable index to a float NumPy array matching variable_names_
         data = {index: series.to_numpy(dtype=float) for index, series in enumerate(self.series_data_.values())}
 
         self.tigramite_data_ = dp.DataFrame(
@@ -111,14 +72,7 @@ class _BasePCMCI(BaseTimeSeriesCausalDiscovery):
         )
 
     def _set_link_assumptions(self):
-        """
-        Validate and normalize optional user-defined link assumptions.
-
-        Returns
-        -------
-        dict or None
-            A validated dictionary of link assumptions formatted for Tigramite.
-        """
+        """Validate link assumptions and normalize their indices for Tigramite."""
         assumptions = self.link_assumptions
 
         if assumptions is None:
@@ -127,6 +81,9 @@ class _BasePCMCI(BaseTimeSeriesCausalDiscovery):
         if not isinstance(assumptions, dict):
             raise TypeError("link_assumptions must be a dictionary or None.")
 
+        if self.n_variables_ is None:
+            raise RuntimeError("Prepare time-series data before validating link assumptions.")
+
         normalized = {}
         allowed_marks = {"->", "<-", "oo", "?>", "<?"}
 
@@ -134,13 +91,11 @@ class _BasePCMCI(BaseTimeSeriesCausalDiscovery):
             if not isinstance(target, (int, np.integer)) or isinstance(target, (bool, np.bool_)):
                 raise TypeError("Target variable indices in link_assumptions must be integers.")
 
-            if not 0 <= target < self.n_variables:  # type: ignore
-                raise ValueError(
-                    f"Target variable index {target} is out of valid range [0, {self.n_variables_ - 1})."  # type: ignore
-                )
+            if not 0 <= target < self.n_variables_:
+                raise ValueError(f"Target variable index {target} is out of valid range [0, {self.n_variables_ - 1}].")
 
             if not isinstance(links, dict):
-                raise TypeError(f"Link assumptions for target variable {target} must be provided as a dictionary.")
+                raise TypeError(f"Link assumptions for target variable {target} must be a dictionary.")
 
             normalized_links = {}
 
@@ -153,8 +108,10 @@ class _BasePCMCI(BaseTimeSeriesCausalDiscovery):
                 if not isinstance(source, (int, np.integer)) or isinstance(source, (bool, np.bool_)):
                     raise TypeError("Source variable indices must be integers.")
 
-                if not 0 <= source < self.n_variables:  # type: ignore
-                    raise ValueError(f"Source variable index {source} is out of valid range.")
+                if not 0 <= source < self.n_variables_:
+                    raise ValueError(
+                        f"Source variable index {source} is out of valid range [0, {self.n_variables_ - 1}]."
+                    )
 
                 if not isinstance(lag, (int, np.integer)) or isinstance(lag, (bool, np.bool_)):
                     raise TypeError("Time lags must be integer values.")
@@ -174,26 +131,8 @@ class _BasePCMCI(BaseTimeSeriesCausalDiscovery):
 
         return normalized
 
-    def _wrap_ci_test_for_tigramite(self):
-        """Prepare a native Tigramite CI test for PCMCI."""
-        if self.cond_ind_test is None:
-            raise ValueError("A Tigramite conditional-independence test must be provided.")
-
-        if not callable(getattr(self.cond_ind_test, "set_dataframe", None)):
-            raise TypeError("PCMCI requires a native Tigramite CI test exposing 'set_dataframe()'.")
-
-        self.tigramite_ci_test_ = deepcopy(self.cond_ind_test)
-        return self.tigramite_ci_test_
-
     def _run_discovery(self) -> dict[str, object]:
-        """
-        Run Tigramite's PCMCI causal discovery.
-
-        Returns
-        -------
-        dict
-            Raw dictionary returned by Tigramite's run_pcmci().
-        """
+        """Run PCMCI and return Tigramite's raw results."""
         if self.pcmci_ is None:
             raise RuntimeError("PCMCI must be initialized before running causal discovery.")
 
@@ -212,12 +151,7 @@ class _BasePCMCI(BaseTimeSeriesCausalDiscovery):
         self,
         results: dict[str, object],
     ) -> None:
-        """
-        Validate, parse, and store the results returned by Tigramite.
-
-        Ensures graphs, p-values, and test statistics conform to the expected
-        shape: (n_variables, n_variables, tau_max + 1).
-        """
+        """Validate and store the graph, p-values, and test statistics."""
         if not isinstance(results, dict):
             raise TypeError("Discovery results must be returned as a dictionary.")
 

@@ -3,15 +3,12 @@ from pgmpy.causal_discovery._base_pcmpi import _BasePCMCI
 
 class PCMCI(_BasePCMCI):
     """
-    Public estimator for PCMCI causal discovery.
-
-    Accepts a sktime-compatible MultiIndex DataFrame and exposes
-    discovery results for further processing by TimeSeriesDAG.
+    Discover causal links in one or more time series using Tigramite PCMCI.
 
     Parameters
     ----------
     cond_ind_test : object
-        Conditional independence test used by the discovery algorithm.
+        Native Tigramite conditional independence test.
 
     tau_min : int, default=0
         Minimum time lag considered during causal discovery.
@@ -20,20 +17,19 @@ class PCMCI(_BasePCMCI):
         Maximum time lag considered during causal discovery.
 
     pc_alpha : float, default=0.05
-        Significance level used during the PC-stable phase.
+        Significance level for the PC-stable phase.
 
     fdr_method : str or None, default="fdr_bh"
         Multiple-testing correction method.
 
     verbosity : int, default=0
-        Verbosity level for the discovery algorithm.
+        Tigramite verbosity level.
 
     link_assumptions : dict or None, default=None
-        Optional prior assumptions restricting candidate causal links.
+        Optional restrictions on candidate causal links.
 
     **kwargs
-        Additional keyword arguments forwarded to Tigramite's
-        run_pcmci() method.
+        Additional arguments passed to Tigramite's ``run_pcmci``.
 
     Attributes
     ----------
@@ -47,7 +43,7 @@ class PCMCI(_BasePCMCI):
         Matrix of test statistics for candidate links.
 
     candidates_ : object
-        Candidate links returned by the discovery algorithm, if available.
+        Candidate links returned by Tigramite, if available.
 
     corrected_p_matrix_ : numpy.ndarray or None
         Multiple-testing-corrected p-values, if returned by Tigramite.

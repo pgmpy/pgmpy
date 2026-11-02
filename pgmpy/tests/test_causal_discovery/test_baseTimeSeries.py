@@ -1,8 +1,10 @@
+from unittest.mock import MagicMock
+
 import numpy as np
 import pandas as pd
 
 from pgmpy.causal_discovery._baseTimeSeries import BaseTimeSeriesCausalDiscovery
-from pgmpy.ci_tests import Pearsonr
+from pgmpy.ci_tests._tigramite_adapter import TigramiteAdapter
 
 
 def _make_lagged_time_series(n_observations: int = 500) -> pd.DataFrame:
@@ -25,8 +27,8 @@ def _make_lagged_time_series(n_observations: int = 500) -> pd.DataFrame:
 class _CoordinatorTestEstimator(BaseTimeSeriesCausalDiscovery):
     """Provide predictable algorithm hooks to test the base fit coordinator."""
 
-    def __init__(self, data: pd.DataFrame):
-        super().__init__(cond_ind_test=Pearsonr(data=data), tau_max=1)
+    def __init__(self):
+        super().__init__(cond_ind_test=MagicMock(set_dataframe=MagicMock()), tau_max=1)
         self.expected_results = {
             "graph": "synthetic-link",
             "p_matrix": np.zeros((2, 2, 2)),
@@ -50,7 +52,7 @@ class _CoordinatorTestEstimator(BaseTimeSeriesCausalDiscovery):
 
 def test_base_time_series_fit_coordinates_discovery():
     data = _make_lagged_time_series()
-    estimator = _CoordinatorTestEstimator(data)
+    estimator = _CoordinatorTestEstimator()
 
     assert np.corrcoef(data["X"].to_numpy()[:-1], data["Y"].to_numpy()[1:])[0, 1] > 0.5
 
@@ -68,6 +70,22 @@ def test_base_time_series_fit_coordinates_discovery():
     assert estimator.series_data_ is not None
     np.testing.assert_array_equal(estimator.series_data_["series_1"].to_numpy(), data.to_numpy())
     assert estimator.ci_test is not estimator.cond_ind_test
-    assert estimator.tigramite_ci_test_.cond_ind_test is estimator.ci_test
+    assert estimator.tigramite_ci_test_ is estimator.ci_test
     assert estimator.results_ is estimator.expected_results
     assert estimator.get_causal_links() == "synthetic-link"
+
+
+def test_tigramite_adapter_uses_variable_lag_tuples():
+    tigramite_ci = MagicMock()
+    tigramite_ci.run_test.return_value = (0.25, 0.1)
+    adapter = TigramiteAdapter(tigramite_ci)
+
+    assert adapter.run_test("0", "1", ["2"]) == (0.25, 0.1)
+    tigramite_ci.run_test.assert_called_once_with(
+        X=[(0, 0)],
+        Y=[(1, 0)],
+        Z=[(2, 0)],
+        tau_max=0,
+        cut_off="2xtau_max",
+        alpha_or_thres=None,
+    )
