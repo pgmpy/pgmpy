@@ -3,6 +3,7 @@ from __future__ import annotations
 import itertools
 from collections.abc import Hashable, Iterable, Sequence
 from os import PathLike
+from typing import TYPE_CHECKING
 
 import networkx as nx
 import numpy as np
@@ -14,6 +15,9 @@ from pgmpy.ci_tests import BaseCITest, get_ci_test
 from pgmpy.independencies import Independencies
 from pgmpy.utils._warnings import _warn_external
 from pgmpy.utils.parser import parse_dagitty, parse_lavaan
+
+if TYPE_CHECKING:
+    from pgmpy.base import ADMG
 
 
 class DAG(_GraphRolesMixin, nx.DiGraph):
@@ -164,6 +168,8 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
     >>> sorted(G.latents)
     ['U', 'Z']
     """
+
+    SUPPORTS_LATENTS = True
 
     def __init__(
         self,
@@ -1112,6 +1118,73 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         pdag.latents = self.latents
         pdag.add_nodes_from(self.nodes())
         return pdag
+
+    def to_admg(self) -> ADMG:
+        """
+        Returns the latent projection of the DAG onto its observed variables, as an ADMG.
+
+        Every vertex of an ADMG is observed, so the latent variables of the DAG are marginalized out and their
+        effects are carried by the edges between the observed variables. For observed variables ``X`` and ``Y``,
+        the projection has:
+
+        - a directed edge ``X -> Y`` if the DAG has a directed path from ``X`` to ``Y`` whose intermediate nodes
+          are all latent, and
+        - a bidirected edge ``X <> Y`` if some latent variable has directed paths to both ``X`` and ``Y`` whose
+          intermediate nodes are all latent, i.e. ``X`` and ``Y`` share a latent common cause.
+
+        The projection preserves the d-separation relations among the observed variables, which the ADMG represents as
+        m-separation. The roles of the observed variables are kept.
+
+        Returns
+        -------
+        pgmpy.base.ADMG
+            The latent projection over the observed variables.
+
+        See Also
+        --------
+        pgmpy.base.ADMG.to_dag : The reverse conversion, replacing each bidirected edge with a latent parent.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> dag = DAG([("U", "X"), ("U", "Y"), ("X", "M"), ("M", "Y")], latents={"U"})
+        >>> admg = dag.to_admg()
+        >>> sorted(admg.get_edges(data=True))
+        [('M', 'Y', '->'), ('X', 'M', '->'), ('X', 'Y', '<>')]
+
+        References
+        ----------
+        - :footcite:t:`richardson_2003`
+        """
+        from pgmpy.base import ADMG
+
+        latents = self.latents
+        admg = ADMG()
+        admg.add_nodes_from(node for node in self.nodes() if node not in latents)
+        for source in self.nodes():
+            # Observed nodes reachable from `source` by a directed path whose intermediate nodes are all latent.
+            reached, visited, stack = [], set(), list(self.successors(source))
+            while stack:
+                node = stack.pop()
+                if node in visited:
+                    continue
+                visited.add(node)
+                if node in latents:
+                    stack.extend(self.successors(node))
+                else:
+                    reached.append(node)
+
+            if source in latents:
+                for u, v in itertools.combinations(reached, 2):
+                    if not admg.has_edge(u, v, "<>"):
+                        admg.add_edge(u, v, "<>")
+            else:
+                admg.add_edges_from([(source, v, "->") for v in reached])
+
+        # Roles on latent nodes, including the latents role itself, are dropped.
+        for role, variables in self.get_role_dict().items():
+            admg.with_role(role=role, variables=[node for node in variables if node not in latents], inplace=True)
+        return admg
 
     def to_adjacency(self, encoding: str = "edge_type", nodelist: list | None = None) -> pd.DataFrame:
         """

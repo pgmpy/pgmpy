@@ -27,11 +27,12 @@ except ImportError as e:
 
 from pgmpy.factors.discrete.CPD import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
+from pgmpy.readwrite._base import BaseReader, BaseWriter
 from pgmpy.utils import compat_fns
 from pgmpy.utils._warnings import _warn_external
 
 
-class NETWriter:
+class NETWriter(BaseWriter):
     """
     Base class for writing network file in net format
 
@@ -54,11 +55,12 @@ class NETWriter:
     - :footcite:t:`hugin_format`
     """
 
-    def __init__(self, model):
-        if not isinstance(model, DiscreteBayesianNetwork):
-            raise TypeError("model must be an instance of DiscreteBayesianNetwork")
+    format_name = "net"
+    file_extensions = ["net"]
+    supported_models = (DiscreteBayesianNetwork,)
 
-        self.model = model
+    def __init__(self, model):
+        super().__init__(model)
 
         if not self.model.name:
             self.network_name = "unknown"
@@ -293,26 +295,6 @@ class NETWriter:
             variable_parents[cpd.variable] = cpd.variables[1:]
         return variable_parents
 
-    def write(self, filename):
-        """
-        Writes the NET data into a file
-
-        Parameters
-        ----------
-        filename : Name of the file
-
-        Examples
-        --------
-        >>> from pgmpy.example_models import load_model
-        >>> from pgmpy.readwrite import NETWriter
-        >>> asia = load_model("bnlearn/asia")
-        >>> writer = NETWriter(asia)
-        >>> writer.write(filename="asia.net")
-        """
-        writer = self.__str__()
-        with open(filename, "w") as fout:
-            fout.write(writer)
-
     def write_net(self, filename):
         _warn_external(
             "`NETWriter.write_net` is deprecated since v1.1.0 and will be removed in v2.0. "
@@ -322,7 +304,7 @@ class NETWriter:
         self.write(filename)
 
 
-class NETReader:
+class NETReader(BaseReader):
     """
     Initializes a NETReader object.
 
@@ -340,6 +322,9 @@ class NETReader:
     defaultname: int (default: "bn_model")
         Default name for the network if a network name is not available in the net file.
 
+    state_name_type: int, str or bool (default: str)
+        The data type to which to convert the state names of the variables.
+
     Examples
     --------
     # asia.net file is present at
@@ -352,21 +337,22 @@ class NETReader:
     >>> reader = NETReader("asia.net")
     >>> reader # doctest: +ELLIPSIS
     <pgmpy.readwrite.NET.NETReader object at 0x...>
-    >>> model = reader.get_model()
+    >>> model = reader.read()
     """
 
-    def __init__(self, path=None, string=None, include_properties=False, defaultName="bn_model"):
-        if path:
+    format_name = "net"
+    file_extensions = ["net"]
+
+    def __init__(self, path=None, string=None, include_properties=False, defaultName="bn_model", state_name_type=str):
+        super().__init__(path=path, string=string)
+        if path is not None:
             with open(path) as network:
                 self.network = network.read()
-
-        elif string:
+        else:
             self.network = string
 
-        else:
-            raise ValueError("Must specify either path or string")
-
         self.include_properties = include_properties
+        self.state_name_type = state_name_type
 
         if "/*" in self.network or "//" in self.network:
             self.network = cppStyleComment.suppress().transform_string(self.network)  # removing comments from the file
@@ -657,14 +643,9 @@ class NETReader:
         edges = [[value, key] for key in self.variable_parents.keys() for value in self.variable_parents[key]]
         return edges
 
-    def get_model(self, state_name_type=str):
+    def read(self):
         """
         Returns the Bayesian Model read from the file/str.
-
-        Parameters
-        ----------
-        state_name_type: int, str or bool (default: str)
-            The data type to which to convert the state names of the variables.
 
         Examples
         --------
@@ -676,9 +657,10 @@ class NETReader:
         >>> writer = NETWriter(asia)
         >>> writer.write("asia.net")
         >>> reader = NETReader("asia.net")
-        >>> reader.get_model() # doctest: +ELLIPSIS
+        >>> reader.read() # doctest: +ELLIPSIS
         <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork object at 0x...>
         """
+        state_name_type = self.state_name_type
         try:
             model = DiscreteBayesianNetwork()
             model.add_nodes_from(self.variable_names)

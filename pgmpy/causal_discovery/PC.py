@@ -7,7 +7,7 @@ from sklearn.base import clone
 from pgmpy.base import PDAG
 from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.causal_discovery._base import BaseCausalDiscovery, _ConstraintMixin
-from pgmpy.ci_tests import get_ci_test
+from pgmpy.ci_tests import IndependenceMatch, get_ci_test
 
 
 class PC(_ConstraintMixin, BaseCausalDiscovery):
@@ -104,6 +104,10 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
             separating set ("witnessing set") of variables that makes them
             conditionally independent. (needed for edge orientation procedures)
 
+    ci_test_ : BaseCITest or callable
+        The CI test used for learning, resolved from ``ci_test``. If ``independencies`` are passed to ``fit``, an
+        :class:`~pgmpy.ci_tests.IndependenceMatch` over them instead.
+
     n_features_in_ : int
         The number of features in the data used to learn the causal graph.
 
@@ -140,6 +144,23 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
     - :footcite:t:`meek_1995`
     - :footcite:t:`ramsey_2016`
     """
+
+    _tags = {
+        "name": "pc",
+        "data_types": ["discrete", "continuous", "mixed"],
+        "identifiable_graph": "cpdag",
+        "requires_target": False,
+        "capability:multivariate": True,
+        "capability:expert_knowledge": ["forbidden_edges", "required_edges", "search_space", "temporal_order"],
+        "assumption:causal_sufficiency": True,
+        "assumption:acyclicity": True,
+        "assumption:faithfulness": True,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
+    }
 
     def __init__(
         self,
@@ -180,7 +201,10 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
         """
 
         # CI test
-        self.ci_test_ = get_ci_test(test=self.ci_test, data=X)
+        if independencies is not None:
+            self.ci_test_ = IndependenceMatch(independencies=independencies)
+        else:
+            self.ci_test_ = get_ci_test(test=self.ci_test, data=X)
 
         # Check if expert knowledge was specified
         if self.expert_knowledge is None:
@@ -195,7 +219,6 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
         # Step 1: Build the skeleton
         self.skeleton_, self.separating_sets_ = self._build_skeleton(
             data=X,
-            independencies=independencies,
             variant=self.variant,
             ci_test=self.ci_test_,
             significance_level=self.significance_level,
@@ -297,7 +320,6 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
                     if Z not in sepset:
                         colliders.append((X, Y, Z))
         else:
-            ci_test = self.ci_test_
             significance_level = self.significance_level
             max_cond_vars = self.max_cond_vars
 
@@ -320,8 +342,8 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
                 results = []
                 for size in range(min(len(potential), max_cond_vars) + 1):
                     for subset in combinations(potential, size):
-                        ci_test(X, Y, list(subset), significance_level=significance_level)
-                        results.append((subset, ci_test.p_value_, ci_test.effect_size_))
+                        self.ci_test_(X, Y, list(subset), significance_level=significance_level)
+                        results.append((subset, self.ci_test_.p_value_, self.ci_test_.effect_size_))
 
                 for Z in common_neighbors:
                     if orient_rule == "pvalue":

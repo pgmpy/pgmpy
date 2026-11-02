@@ -95,6 +95,23 @@ class LLMPairwise(BaseCausalDiscovery):
     ... ).fit(df)  # doctest: +SKIP
     """
 
+    _tags = {
+        "name": "llm_pairwise",
+        "data_types": ["discrete", "continuous", "mixed"],
+        "identifiable_graph": "dag",
+        "requires_target": False,
+        "capability:multivariate": False,
+        "capability:expert_knowledge": [],
+        "assumption:causal_sufficiency": False,
+        "assumption:acyclicity": False,
+        "assumption:faithfulness": False,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
+    }
+
     def __init__(
         self,
         descriptions: dict | None = None,

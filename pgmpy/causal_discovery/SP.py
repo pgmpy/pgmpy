@@ -58,6 +58,9 @@ class SP(BaseCausalDiscovery):
     optimal_permutations_ : list[tuple]
         All permutations that produce a DAG with the minimum number of edges.
 
+    ci_test_ : BaseCITest or callable
+        The CI test used for learning, resolved from ``ci_test``.
+
     n_features_in_ : int
         The number of features in the data used to learn the causal graph.
 
@@ -87,6 +90,23 @@ class SP(BaseCausalDiscovery):
     ----------
     - :footcite:t:`raskutti2019learningdirectedacyclicgraphs`
     """
+
+    _tags = {
+        "name": "sp",
+        "data_types": ["discrete", "continuous", "mixed"],
+        "identifiable_graph": "cpdag",
+        "requires_target": False,
+        "capability:multivariate": True,
+        "capability:expert_knowledge": [],
+        "assumption:causal_sufficiency": True,
+        "assumption:acyclicity": True,
+        "assumption:faithfulness": False,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
+    }
 
     def __init__(
         self,

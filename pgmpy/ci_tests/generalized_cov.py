@@ -73,9 +73,10 @@ class GeneralizedCov(_ResidualMixin, BaseCITest):
 
     _tags = {
         "name": "generalized_cov",
-        "data_types": ("discrete", "continuous", "mixed"),
+        "data_types": ["discrete", "continuous", "mixed"],
         "default_for": None,
         "requires_data": True,
+        "capability:conditioning": True,
     }
 
     def __init__(

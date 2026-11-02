@@ -34,11 +34,9 @@ class StructureScore(BaseUnsupervisedMetric):
 
     _tags = {
         "name": "structure_score",
-        "requires_true_graph": False,
-        "requires_data": True,
+        "supported_graph_types": [DAG],
+        "output_type": "scalar",
         "lower_is_better": False,
-        "supported_graph_types": (DAG,),
-        "is_default": False,
     }
 
     def __init__(self, scoring_method=None):
