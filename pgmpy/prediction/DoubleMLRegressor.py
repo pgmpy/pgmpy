@@ -191,6 +191,7 @@ class DoubleMLRegressor(BaseCausalPrediction):
 
         sample_weight : array-like of shape (n_samples,), optional
             Sample weights to be used in fitting the nuisance and effect estimators.
+            Weights are matched to samples by position, including when provided as a pandas Series.
 
         Returns
         -------
@@ -260,6 +261,10 @@ class DoubleMLRegressor(BaseCausalPrediction):
 
         if sample_weight is None:
             sample_weight = np.ones(self.n_samples_)
+        else:
+            sample_weight = np.asarray(sample_weight, dtype=float)
+            if sample_weight.shape != (self.n_samples_,):
+                raise ValueError(f"sample_weight must have shape ({self.n_samples_},), got {sample_weight.shape}.")
 
         # Step 2: Prepare covariate dataframe. If no adjustment or pretreatment
         #         variables, use intercept only.
