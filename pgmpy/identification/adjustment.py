@@ -23,7 +23,8 @@ class Adjustment(BaseGraphicalIdentification):
         The variant of backdoor identification to use. Default is 'minimal'.
 
         - 'all': Returns all adjustment sets that satisfy the backdoor criterion.
-        - 'minimal': Returns the smallest adjustment set.
+        - 'minimal': Returns a minimal adjustment set, i.e. one with no proper subset that is also an adjustment set.
+          It is not necessarily the adjustment set with the fewest variables.
         - 'minimal_variance': Returns the adjustment set for which estimators achieve minimal variance.
 
     Examples
@@ -139,8 +140,16 @@ class Adjustment(BaseGraphicalIdentification):
             exposure = causal_graph.get_role("exposures")[0]
             outcome = causal_graph.get_role("outcomes")[0]
 
+            # No set can block an edge from the outcome into the exposure.
+            if causal_graph.has_edge(outcome, exposure):
+                return causal_graph, False
+
+            # The descendants of the exposure that are ancestors of the outcome lie on causal paths and are forbidden.
+            # The other descendants are never part of a minimal d-separator.
             backdoor_graph = self._get_proper_backdoor_graph(causal_graph, inplace=False)
-            adjustment_set = backdoor_graph.minimal_dseparator(exposure, outcome)
+            adjustment_set = backdoor_graph.minimal_dseparator(
+                exposure, outcome, exclude=nx.descendants(causal_graph, exposure)
+            )
 
             if adjustment_set is None:
                 return causal_graph, False
