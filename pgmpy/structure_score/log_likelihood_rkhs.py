@@ -72,6 +72,10 @@ class RKHSLikelihood(BaseStructureScore):
         max_cache_size=10000,
     ):
         super().__init__(data, state_names=state_names, max_cache_size=max_cache_size)
+        
+        if reg_param <= 0:
+            raise ValueError("reg_param must be a positive number.")
+            
         self.kernel = kernel
         self.gamma = gamma
         self.reg_param = reg_param
