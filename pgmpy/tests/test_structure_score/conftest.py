@@ -9,7 +9,7 @@ from pgmpy.structure_score import (
     BICGauss,
     LogLikelihoodCondGauss,
     LogLikelihoodGauss,
-    LogLikelihoodRKHS,
+    RKHSLikelihood,
 )
 
 
@@ -105,4 +105,4 @@ def gauss_models():
 @pytest.fixture
 def loglik_rkhs_score():
     data = pd.read_csv("pgmpy/tests/test_estimators/testdata/gaussian_testdata.csv")
-    return LogLikelihoodRKHS(data)
+    return RKHSLikelihood(data)

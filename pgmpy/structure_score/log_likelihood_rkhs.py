@@ -5,7 +5,7 @@ import numpy as np
 from pgmpy.structure_score._base import BaseStructureScore
 
 
-class LogLikelihoodRKHS(BaseStructureScore):
+class RKHSLikelihood(BaseStructureScore):
     r"""
     Log-likelihood structure score for continuous bayesian networks using RKHS
 

@@ -11,7 +11,7 @@ from .k2 import K2
 from .log_likelihood import LogLikelihood
 from .log_likelihood_cond_gauss import LogLikelihoodCondGauss
 from .log_likelihood_gauss import LogLikelihoodGauss
-from .log_likelihood_rkhs import LogLikelihoodRKHS
+from .log_likelihood_rkhs import RKHSLikelihood
 
 __all__ = [
     "BaseStructureScore",
@@ -28,5 +28,5 @@ __all__ = [
     "LogLikelihoodCondGauss",
     "AICCondGauss",
     "BICCondGauss",
-    "LogLikelihoodRKHS",
+    "RKHSLikelihood",
 ]
