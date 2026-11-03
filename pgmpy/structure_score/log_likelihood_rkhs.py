@@ -73,8 +73,14 @@ class RKHSLikelihood(BaseStructureScore):
     ):
         super().__init__(data, state_names=state_names, max_cache_size=max_cache_size)
         
+        if data.isnull().any().any():
+            raise ValueError("Data contains missing values. RKHSLikelihood does not support missing data.")
+        
         if reg_param <= 0:
             raise ValueError("reg_param must be a positive number.")
+
+        if kernel not in ["rbf"]:
+            raise ValueError(f"Kernel '{kernel}' is not supported. Only 'rbf' is supported.")
             
         self.kernel = kernel
         self.gamma = gamma
