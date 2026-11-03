@@ -49,7 +49,7 @@ class RKHSLikelihood(BaseStructureScore):
     >>> score = RKHSLikelihood(df)
     >>> score.local_score("B", ("A",))
     np.float64(-3.1068063509697152)
-    
+
     References
     ----------
     - :cite:p:`huang_2018`
