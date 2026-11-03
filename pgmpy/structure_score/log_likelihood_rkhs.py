@@ -146,6 +146,10 @@ class RKHSLikelihood(BaseStructureScore):
         K_Z = self._centralized_kernel_matrix(Z)
         inv_reg_K_Z = self._residual_covariance(K_Z)
 
+        eigenvals = np.linalg.eigvalsh(term)
+        valid_eigenvals = eigenvals[eigenvals > 1e-10]
+        log_det = np.sum(np.log(valid_eigenvals))
+
         term = n * (self.reg_param**2) * K_X @ (inv_reg_K_Z @ inv_reg_K_Z) @ K_X
         _, log_det = np.linalg.slogdet(term)
 
