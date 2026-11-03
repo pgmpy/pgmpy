@@ -394,7 +394,63 @@ class TestNETReader:
             assert edge == edges[index]
 
     def test_get_properties(self, reader):
-        pass
+        properties = reader.get_property()
+        assert "VisitToAsia" in properties
+        assert properties["VisitToAsia"]["label"] == '"Visit To Asia?"'
+        assert properties["VisitToAsia"]["position"] == "(94 246)"
+        assert properties["Tuberculosis"]["label"] == '"Tuberculosis?"'
 
     def test_get_network_name(self, reader):
-        pass
+        assert reader.get_network_name() is False
+
+    def test_read(self, reader):
+        model = reader.read()
+        assert isinstance(model, DiscreteBayesianNetwork)
+        assert set(model.nodes()) == set(reader.get_variables())
+        expected_edges = [tuple(edge) for edge in reader.get_edges()]
+        assert set(model.edges()) == set(expected_edges)
+        assert len(model.get_cpds()) == len(reader.get_variables())
+
+        dysp_cpd = model.get_cpds("Dyspnea")
+        assert dysp_cpd.variables == ["Dyspnea", "TbOrCa", "Bronchitis"]
+        expected_values = np.array([[[0.9, 0.2], [0.3, 0.1]], [[0.1, 0.8], [0.7, 0.9]]])
+        np.testing.assert_array_almost_equal(compat_fns.to_numpy(dysp_cpd.values), expected_values)
+        assert dysp_cpd.state_names["Dyspnea"] == ["Absent", "Present"]
+
+    def test_read_with_properties(self, reader):
+        prop_reader = NETReader(string=reader.network, include_properties=True)
+        model = prop_reader.read()
+        assert model.nodes["VisitToAsia"]["label"] == '"Visit To Asia?"'
+        assert model.nodes["VisitToAsia"]["position"] == "(94 246)"
+
+    def test_reader_named_network(self):
+        net_str = """net {
+    name = "custom_net";
+}
+node A {
+    states = ("0"  "1");
+}
+potential (A |) {
+    data = (0.5 0.5);
+}
+"""
+        custom_reader = NETReader(string=net_str)
+        assert custom_reader.get_network_name() == "custom_net"
+        model = custom_reader.read()
+        assert model.name == "custom_net"
+
+    def test_writer_with_properties_roundtrip(self):
+        # NOTE: NET format specification defines network headers without a mandatory name field.
+        # NETWriter emits standard 'net { }' and NETReader sets default name 'bn_model' when omitted.
+        model = DiscreteBayesianNetwork([("A", "B")])
+        model.nodes["A"]["label"] = '"Node A"'
+        cpd_a = TabularCPD("A", 2, [[0.5], [0.5]])
+        cpd_b = TabularCPD("B", 2, [[0.6, 0.4], [0.4, 0.6]], evidence=["A"], evidence_card=[2])
+        model.add_cpds(cpd_a, cpd_b)
+        writer = NETWriter(model)
+        net_out = str(writer)
+        assert 'label = "Node A";' in net_out
+
+        read_back = NETReader(string=net_out, include_properties=True)
+        read_model = read_back.read()
+        assert read_model.nodes["A"]["label"] == '"Node A"'
