@@ -11,7 +11,7 @@ from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.base import DAG, PDAG, UndirectedGraph
 from pgmpy.causal_discovery import MMHC, ExpertKnowledge
-from pgmpy.ci_tests import ChiSquare
+from pgmpy.ci_tests import ChiSquare, GeneralizedCov
 from pgmpy.estimators import MmhcEstimator
 from pgmpy.example_models import load_model
 from pgmpy.structure_score import BDeu
@@ -117,10 +117,10 @@ def test_deprecated_estimator_keeps_chi_square_and_bdeu_defaults(data_fixture, r
 
 
 @pytest.mark.parametrize(
-    ("use_callable", "max_cond_vars", "largest_conditioning_set"),
-    [(False, None, None), (True, None, 3), (True, 1, 1)],
+    ("ci_test_name", "max_cond_vars", "largest_conditioning_set"),
+    [("chi_square", None, None), ("generalized_cov", None, None), ("callable", None, 3), ("callable", 1, 1)],
 )
-def test_skeleton_recovers_collider(collider_data, use_callable, max_cond_vars, largest_conditioning_set):
+def test_skeleton_recovers_collider(collider_data, ci_test_name, max_cond_vars, largest_conditioning_set):
     chi_square = ChiSquare(collider_data)
     conditioning_sets = []
 
@@ -128,12 +128,26 @@ def test_skeleton_recovers_collider(collider_data, use_callable, max_cond_vars, 
         conditioning_sets.append(Z)
         return chi_square(X, Y, Z, significance_level=significance_level)
 
-    ci_test = recording_chi_square if use_callable else chi_square
+    ci_test = {
+        "chi_square": chi_square,
+        "generalized_cov": GeneralizedCov(collider_data),
+        "callable": recording_chi_square,
+    }[ci_test_name]
     skeleton = MMHC(ci_test=ci_test, max_cond_vars=max_cond_vars, show_progress=False).fit(collider_data).skeleton_
 
     assert {frozenset(edge) for edge in skeleton.edges()} == {frozenset("AF"), frozenset("BF"), frozenset("CF")}
-    if use_callable:
+    if largest_conditioning_set is not None:
         assert max(len(Z) for Z in conditioning_sets) == largest_conditioning_set
+
+
+@pytest.mark.parametrize("reverse_columns", [False, True])
+def test_skeleton_recovers_sachs_in_any_column_order(reverse_columns):
+    model = load_model("bnlearn/sachs")
+    data = model.simulate(n_samples=2000, seed=42, show_progress=False)
+    columns = sorted(data.columns, reverse=reverse_columns)
+
+    skeleton = MMHC(show_progress=False).fit(data[columns]).skeleton_
+    assert {frozenset(edge) for edge in skeleton.edges()} == {frozenset(edge) for edge in model.edges()}
 
 
 @pytest.mark.parametrize(("data_fixture", "data_type"), [("cancer_data", "discrete"), ("gaussian_data", "continuous")])

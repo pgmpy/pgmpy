@@ -1,6 +1,6 @@
 from collections.abc import Callable
+from itertools import permutations
 
-import networkx as nx
 import pandas as pd
 from sklearn.base import clone
 
@@ -27,8 +27,10 @@ class MMHC(BaseCausalDiscovery):
         Conditional independence test used during MMPC. If ``None``, the default
         test for the data type is used (e.g. chi-square for discrete data). A
         candidate's association with a node is 0 when the test finds them
-        independent, and ``1 - p_value`` otherwise. A plain callable returns no
-        p-value, so every candidate it finds dependent gets an association of 1.
+        independent, and the test's ``effect_size_`` otherwise. Unlike p-values,
+        effect sizes do not underflow to a tie for strong dependencies. Tests
+        without an effect size, such as plain callables, give every dependent
+        candidate an association of 1.
 
     significance_level : float, default=0.01
         Significance level used by the conditional independence tests.
@@ -147,96 +149,50 @@ class MMHC(BaseCausalDiscovery):
         self.expert_knowledge = expert_knowledge
 
     def _fit(self, X: pd.DataFrame):
-        """Fit MMHC to ``X`` and store the learned graph attributes."""
+        """
+        The fitting procedure for the MMHC algorithm.
+
+        Parameters
+        ----------
+        X : pd.DataFrame
+            The data to learn the causal structure from.
+
+        Returns
+        -------
+        self : pgmpy.causal_discovery.MMHC
+            Returns the instance with the fitted attributes.
+        """
+        # Step 1: Initial checks and setup for arguments
         if self.return_type.lower() not in ("dag", "pdag", "cpdag"):
             raise ValueError(f"return_type must be one of: dag, pdag, or cpdag. Got: {self.return_type}")
         if self.max_cond_vars is not None and self.max_cond_vars < 0:
             raise ValueError("max_cond_vars must be non-negative or None.")
 
+        # Step 1.1: Check the CI test and the score
         self.ci_test_ = get_ci_test(test=self.ci_test, data=X)
         self.scoring_method_ = get_scoring_method(self.scoring_method, X)
+
+        # Step 2: Learn the skeleton using MMPC
         self.skeleton_ = self._learn_skeleton(
-            X,
+            data=X,
             ci_test=self.ci_test_,
             significance_level=self.significance_level,
             max_cond_vars=self.max_cond_vars,
         )
-        self.causal_graph_ = self._run_hill_climb(X, self.skeleton_)
-        self.adjacency_matrix_ = self.causal_graph_.to_adjacency(
-            encoding="binary", nodelist=list(self.causal_graph_.nodes())
-        )
-        return self
 
-    def _learn_skeleton(
-        self,
-        X: pd.DataFrame,
-        ci_test: BaseCITest | Callable,
-        significance_level: float,
-        max_cond_vars: int | None = None,
-    ) -> UndirectedGraph:
-        """Learn the MMPC skeleton."""
-        nodes = list(X.columns)
+        # Step 3: Restrict hill climbing to the skeleton by forbidding every edge outside it, except required edges.
+        if self.expert_knowledge is None:
+            expert_knowledge = ExpertKnowledge()
+        else:
+            # Clone so that adding the forbidden edges does not modify the user's object.
+            expert_knowledge = clone(self.expert_knowledge)
 
-        def association(variable, candidate, conditioning_set):
-            if ci_test(variable, candidate, list(conditioning_set), significance_level=significance_level):
-                return 0.0
-            return 1 - ci_test.p_value_ if isinstance(ci_test, BaseCITest) else 1.0
-
-        def minimum_association(variable, candidate, conditioning_set):
-            return min(
-                association(variable, candidate, subset)
-                for subset in powerset(conditioning_set, max_size=max_cond_vars)
-            )
-
-        def max_min_heuristic(variable, neighbors):
-            max_min_assoc = 0
-            best_candidate = None
-            candidates = [node for node in nodes if node != variable and node not in neighbors]
-
-            for candidate in candidates:
-                min_assoc = minimum_association(variable, candidate, neighbors)
-                if min_assoc >= max_min_assoc:
-                    best_candidate = candidate
-                    max_min_assoc = min_assoc
-
-            return best_candidate, max_min_assoc
-
-        neighbors = {}
-        for node in nodes:
-            neighbors[node] = []
-
-            while True:
-                new_neighbor, new_neighbor_min_assoc = max_min_heuristic(node, neighbors[node])
-                if new_neighbor_min_assoc > 0:
-                    neighbors[node].append(new_neighbor)
-                else:
-                    break
-
-            for neighbor in neighbors[node]:
-                other_neighbors = [n for n in neighbors[node] if n != neighbor]
-                for separating_set in powerset(other_neighbors, max_size=max_cond_vars):
-                    if ci_test(node, neighbor, list(separating_set), significance_level=significance_level):
-                        neighbors[node].remove(neighbor)
-                        break
-
-        for node in nodes:
-            for neighbor in neighbors[node]:
-                if node not in neighbors[neighbor]:
-                    neighbors[node].remove(neighbor)
-
-        skeleton = UndirectedGraph()
-        skeleton.add_nodes_from(nodes)
-        skeleton.add_edges_from((node, neighbor) for node in nodes for neighbor in neighbors[node])
-        return skeleton
-
-    def _run_hill_climb(self, X: pd.DataFrame, skeleton: UndirectedGraph):
-        """Run HillClimbSearch restricted to the MMPC skeleton and the required edges."""
-        expert_knowledge = ExpertKnowledge() if self.expert_knowledge is None else clone(self.expert_knowledge)
-        possible_edges = set(nx.complete_graph(n=X.columns, create_using=nx.DiGraph).edges())
+        outside_skeleton = set(permutations(X.columns, 2)) - set(self.skeleton_.to_directed().edges())
         expert_knowledge.forbidden_edges = set(expert_knowledge.forbidden_edges) | (
-            possible_edges - set(skeleton.to_directed().edges()) - set(expert_knowledge.required_edges)
+            outside_skeleton - set(expert_knowledge.required_edges)
         )
 
+        # Step 4: Orient and select the skeleton edges using hill climbing
         hill_climb = HillClimbSearch(
             scoring_method=self.scoring_method_,
             expert_knowledge=expert_knowledge,
@@ -246,5 +202,102 @@ class MMHC(BaseCausalDiscovery):
             epsilon=self.epsilon,
             max_iter=self.max_iter,
             show_progress=self.show_progress,
+        ).fit(X)
+
+        # Step 5: Store results
+        self.causal_graph_ = hill_climb.causal_graph_
+        self.adjacency_matrix_ = self.causal_graph_.to_adjacency(
+            encoding="binary", nodelist=list(self.causal_graph_.nodes())
         )
-        return hill_climb.fit(X).causal_graph_
+
+        return self
+
+    def _learn_skeleton(
+        self,
+        data: pd.DataFrame,
+        ci_test: BaseCITest | Callable,
+        significance_level: float,
+        max_cond_vars: int | None = None,
+    ) -> UndirectedGraph:
+        """
+        Estimates the skeleton using the Max-Min Parents and Children (MMPC) algorithm.
+
+        Parameters
+        ----------
+        data : pd.DataFrame
+            The data to learn the skeleton from.
+
+        ci_test : BaseCITest instance or callable
+            The conditional independence test to use.
+
+        significance_level : float
+            The significance level used by the conditional independence tests.
+
+        max_cond_vars : int or None, default=None
+            The maximum size of the conditioning sets. ``None`` tests every subset of the current neighbors.
+
+        Returns
+        -------
+        skeleton : pgmpy.base.UndirectedGraph
+            The estimated skeleton.
+
+        References
+        ----------
+        .. [1] Tsamardinos, I., Brown, L. E., and Aliferis, C. F. (2006). The max-min hill-climbing Bayesian network
+           structure learning algorithm. Machine Learning, 65, 31-78. Algorithms 1 and 2.
+        """
+        nodes = list(data.columns)
+        neighbors = {node: [] for node in nodes}
+
+        # Step 1: Find the candidate parents and children (the neighbors) of each node
+        for node in nodes:
+            # Step 1.1: Forward phase. Add the candidate whose minimum association with `node`, over all subsets of
+            #           the current neighbors, is the largest. Stop when every remaining candidate is independent of
+            #           `node` given some subset, i.e. its minimum association is 0.
+            while True:
+                best_candidate, max_min_assoc = None, 0
+                for candidate in nodes:
+                    if candidate == node or candidate in neighbors[node]:
+                        continue
+
+                    # The association is 0 if the test finds independence, else the test's effect size. Tests without
+                    # an effect size, such as plain callables, give every dependent candidate an association of 1.
+                    associations = []
+                    for conditioning_set in powerset(neighbors[node], max_size=max_cond_vars):
+                        if ci_test(node, candidate, list(conditioning_set), significance_level=significance_level):
+                            associations.append(0.0)
+                        elif isinstance(ci_test, BaseCITest) and ci_test.effect_size_ is not None:
+                            associations.append(ci_test.effect_size_)
+                        else:
+                            associations.append(1.0)
+
+                    min_assoc = min(associations)
+                    if min_assoc >= max_min_assoc:
+                        best_candidate, max_min_assoc = candidate, min_assoc
+
+                if max_min_assoc == 0:
+                    break
+                neighbors[node].append(best_candidate)
+
+            # Step 1.2: Backward phase. Remove the neighbors that are independent of `node` given some subset of the
+            #           other neighbors.
+            for neighbor in neighbors[node]:
+                other_neighbors = [n for n in neighbors[node] if n != neighbor]
+                for separating_set in powerset(other_neighbors, max_size=max_cond_vars):
+                    if ci_test(node, neighbor, list(separating_set), significance_level=significance_level):
+                        neighbors[node].remove(neighbor)
+                        break
+
+        # Step 2: Symmetry correction. Keep `neighbor` as a neighbor of `node` only if `node` is also a neighbor of
+        #         `neighbor`.
+        for node in nodes:
+            for neighbor in neighbors[node]:
+                if node not in neighbors[neighbor]:
+                    neighbors[node].remove(neighbor)
+
+        # Step 3: Build the skeleton from the neighbors
+        skeleton = UndirectedGraph()
+        skeleton.add_nodes_from(nodes)
+        skeleton.add_edges_from((node, neighbor) for node in nodes for neighbor in neighbors[node])
+
+        return skeleton

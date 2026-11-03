@@ -147,8 +147,8 @@ class MmhcEstimator(StructureEstimator):
         [('X', 'Z'), ('Y', 'Z')]
         """
 
-        return _MMHC(significance_level=significance_level)._learn_skeleton(
-            self.data,
+        return _MMHC()._learn_skeleton(
+            data=self.data,
             ci_test=get_ci_test(test="chi_square", data=self.data),
             significance_level=significance_level,
         )
