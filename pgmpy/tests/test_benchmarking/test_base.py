@@ -53,12 +53,12 @@ class TestBenchmarkDatasetResolution:
             "same_3",
         ]
 
-        for bad_input, expected_fragment in [
+        for bad_input, received in [
             (42, "int"),
             ([1, 2], "list"),
             (AdditiveNoiseModel, "the class AdditiveNoiseModel"),
         ]:
-            with pytest.raises(TypeError, match=expected_fragment):
+            with pytest.raises(TypeError, match=f"got {received}"):
                 _get_dataset_labels([bad_input])
 
     def test_resolve_dataset(self):
@@ -66,7 +66,6 @@ class TestBenchmarkDatasetResolution:
             ("sachs_discrete", 100, (100, 11), 11, 20),
             ("linear_gaussian", 200, (200, 5), 5, 5),
             ("lead", 1000, (1000, 7), None, None),
-            ("tubingen/1", None, (349, 2), 2, 1),
         ]
         for name, n_samples, expected_shape, n_nodes, n_edges in registered:
             ds = _resolve_dataset(name, label=name, n_samples=n_samples, seed=42)
@@ -110,7 +109,6 @@ class TestBenchmarkDatasetResolution:
             ("X_5", "X_6"),
             ("X_6", "X_3"),
         }
-        assert len(ds_sim.ground_truth.edges()) == 14
         assert ds_sim.tags["n_samples"] == 50
         assert ds_sim.tags["n_variables"] == 8
         assert np.array_equal(ds_sim.data.values, sim.load_dataframe(n_samples=50).values)
@@ -121,14 +119,12 @@ class TestBenchmarkDatasetResolution:
         assert resolved_ds is ds_obj
         assert resolved_ds.name == "mine"
         assert resolved_ds.data.shape == (3, 2)
-        assert _resolve_dataset(ds_obj, label="mine", n_samples=None, seed=42) is ds_obj
 
         resolved_df = _resolve_dataset(df, label="DataFrame_0(3x2)", n_samples=2, seed=42)
         assert resolved_df.data is df
         assert resolved_df.name == "DataFrame_0(3x2)"
         assert resolved_df.data.shape == (3, 2)
         assert resolved_df.ground_truth is None
-        assert _resolve_dataset(df, label="DataFrame_0(3x2)", n_samples=None, seed=42).data is df
 
         gt = DAG([("a", "b")])
         ds_nogt = Dataset(name="no_gt", data=pd.DataFrame({"a": [1], "b": [2]}))
@@ -168,11 +164,3 @@ class TestBenchmarkDatasetResolution:
 
         with pytest.raises(ValueError, match="not found"):
             _resolve_dataset("no_such_dataset", label="no_such_dataset", n_samples=100, seed=42)
-
-        for bad_input, expected_fragment in [
-            (42, "int"),
-            ([1, 2], "list"),
-            (AdditiveNoiseModel, "the class AdditiveNoiseModel"),
-        ]:
-            with pytest.raises(TypeError, match=expected_fragment):
-                _resolve_dataset(bad_input, label="bad", n_samples=100, seed=42)

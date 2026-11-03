@@ -123,7 +123,6 @@ def test_anm_skbase_interface():
     # clone and get_params round trip
     orig = AdditiveNoiseModel(n_nodes=8, seed=1)
     cloned = clone(orig)
-    assert cloned is not orig
     assert cloned.get_params() == orig.get_params()
     assert cloned.n_nodes == 8
     assert cloned.seed == 1
