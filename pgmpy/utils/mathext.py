@@ -215,14 +215,25 @@ def sample_discrete_maps(
     return samples
 
 
-def powerset(l_input: list):
+def powerset(l_input: list, max_size: int | None = None):
     """
-    Generates all subsets of list `l_input` (as tuples).
+    Generates all subsets of list `l_input` (as tuples), in order of increasing size.
+
+    Parameters
+    ----------
+    l_input : list
+        The elements to generate subsets of.
+
+    max_size : int or None, default=None
+        If given, only subsets with at most ``max_size`` elements are generated.
 
     Example
     -------
     >>> from pgmpy.utils.mathext import powerset
     >>> list(powerset([1, 2, 3]))
     [(), (1,), (2,), (3,), (1, 2), (1, 3), (2, 3), (1, 2, 3)]
+    >>> list(powerset([1, 2, 3], max_size=1))
+    [(), (1,), (2,), (3,)]
     """
-    return chain.from_iterable(combinations(l_input, r) for r in range(len(l_input) + 1))
+    largest = len(l_input) if max_size is None else min(max_size, len(l_input))
+    return chain.from_iterable(combinations(l_input, r) for r in range(largest + 1))

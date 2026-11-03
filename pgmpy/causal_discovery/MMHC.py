@@ -9,7 +9,7 @@ from pgmpy.causal_discovery._base import BaseCausalDiscovery
 from pgmpy.causal_discovery.ExpertKnowledge import ExpertKnowledge
 from pgmpy.causal_discovery.HillClimbSearch import HillClimbSearch
 from pgmpy.ci_tests import BaseCITest, get_ci_test
-from pgmpy.structure_score import BaseStructureScore, BDeu
+from pgmpy.structure_score import BaseStructureScore, get_scoring_method
 from pgmpy.utils.mathext import powerset
 
 
@@ -23,8 +23,12 @@ class MMHC(BaseCausalDiscovery):
 
     Parameters
     ----------
-    ci_test : str or callable, default="chi_square"
-        Conditional independence test used during MMPC.
+    ci_test : str, BaseCITest instance, callable, or None, default=None
+        Conditional independence test used during MMPC. If ``None``, the default
+        test for the data type is used (e.g. chi-square for discrete data). A
+        candidate's association with a node is 0 when the test finds them
+        independent, and ``1 - p_value`` otherwise. A plain callable returns no
+        p-value, so every candidate it finds dependent gets an association of 1.
 
     significance_level : float, default=0.01
         Significance level used by the conditional independence tests.
@@ -34,8 +38,8 @@ class MMHC(BaseCausalDiscovery):
         original MMPC behavior and tests every subset of the current neighbors.
 
     scoring_method : str or BaseStructureScore instance, default=None
-        Score optimized during the hill-climbing phase. If ``None``, BDeu with
-        an equivalent sample size of 10 is used.
+        Score optimized during the hill-climbing phase. If ``None``, the default
+        score for the data type is used (e.g. BIC for discrete data).
 
     tabu_length : int, default=10
         Number of recent graph modifications kept in the tabu list.
@@ -57,12 +61,19 @@ class MMHC(BaseCausalDiscovery):
         Whether to show progress during hill climbing.
 
     expert_knowledge : ExpertKnowledge instance, default=None
-        Expert knowledge passed to the hill-climbing phase.
+        Expert knowledge passed to the hill-climbing phase. Required edges are
+        kept even when they are not in the MMPC skeleton.
 
     Attributes
     ----------
     causal_graph_ : DAG or PDAG
         The learned causal graph.
+
+    ci_test_ : BaseCITest or callable
+        The conditional independence test used during MMPC.
+
+    scoring_method_ : BaseStructureScore
+        The score used during hill climbing.
 
     adjacency_matrix_ : pandas.DataFrame
         Adjacency matrix of the learned causal graph.
@@ -94,7 +105,7 @@ class MMHC(BaseCausalDiscovery):
 
     _tags = {
         "name": "mmhc",
-        "data_types": ["discrete"],
+        "data_types": ["discrete", "continuous", "mixed"],
         "identifiable_graph": "cpdag",
         "requires_target": False,
         "capability:multivariate": True,
@@ -111,7 +122,7 @@ class MMHC(BaseCausalDiscovery):
 
     def __init__(
         self,
-        ci_test: str | Callable | None = "chi_square",
+        ci_test: str | Callable | None = None,
         significance_level: float = 0.01,
         max_cond_vars: int | None = None,
         scoring_method: str | BaseStructureScore | None = None,
@@ -143,6 +154,7 @@ class MMHC(BaseCausalDiscovery):
             raise ValueError("max_cond_vars must be non-negative or None.")
 
         self.ci_test_ = get_ci_test(test=self.ci_test, data=X)
+        self.scoring_method_ = get_scoring_method(self.scoring_method, X)
         self.skeleton_ = self._learn_skeleton(
             X,
             ci_test=self.ci_test_,
@@ -166,42 +178,20 @@ class MMHC(BaseCausalDiscovery):
         nodes = list(X.columns)
 
         def association(variable, candidate, conditioning_set):
-            if hasattr(ci_test, "run_test"):
-                return 1 - ci_test.run_test(variable, candidate, list(conditioning_set))[1]
-            return float(
-                not ci_test(
-                    variable,
-                    candidate,
-                    list(conditioning_set),
-                    significance_level=significance_level,
-                )
-            )
-
-        def is_independent(variable, candidate, conditioning_set):
-            if hasattr(ci_test, "is_independent"):
-                return ci_test.is_independent(
-                    X=variable,
-                    Y=candidate,
-                    Z=list(conditioning_set),
-                    significance_level=significance_level,
-                )
-            return ci_test(
-                variable,
-                candidate,
-                list(conditioning_set),
-                significance_level=significance_level,
-            )
+            if ci_test(variable, candidate, list(conditioning_set), significance_level=significance_level):
+                return 0.0
+            return 1 - ci_test.p_value_ if isinstance(ci_test, BaseCITest) else 1.0
 
         def minimum_association(variable, candidate, conditioning_set):
-            subsets = powerset(conditioning_set)
-            if max_cond_vars is not None:
-                subsets = (subset for subset in subsets if len(subset) <= max_cond_vars)
-            return min(association(variable, candidate, subset) for subset in subsets)
+            return min(
+                association(variable, candidate, subset)
+                for subset in powerset(conditioning_set, max_size=max_cond_vars)
+            )
 
         def max_min_heuristic(variable, neighbors):
             max_min_assoc = 0
             best_candidate = None
-            candidates = set(nodes) - set(neighbors + [variable])
+            candidates = [node for node in nodes if node != variable and node not in neighbors]
 
             for candidate in candidates:
                 min_assoc = minimum_association(variable, candidate, neighbors)
@@ -224,11 +214,8 @@ class MMHC(BaseCausalDiscovery):
 
             for neighbor in neighbors[node]:
                 other_neighbors = [n for n in neighbors[node] if n != neighbor]
-                subsets = powerset(other_neighbors)
-                if max_cond_vars is not None:
-                    subsets = (subset for subset in subsets if len(subset) <= max_cond_vars)
-                for separating_set in subsets:
-                    if is_independent(node, neighbor, separating_set):
+                for separating_set in powerset(other_neighbors, max_size=max_cond_vars):
+                    if ci_test(node, neighbor, list(separating_set), significance_level=significance_level):
                         neighbors[node].remove(neighbor)
                         break
 
@@ -243,23 +230,15 @@ class MMHC(BaseCausalDiscovery):
         return skeleton
 
     def _run_hill_climb(self, X: pd.DataFrame, skeleton: UndirectedGraph):
-        """Run HillClimbSearch restricted to the MMPC skeleton."""
-        if self.scoring_method is None:
-            scoring_method = BDeu(X, equivalent_sample_size=10)
-        else:
-            scoring_method = self.scoring_method
-
+        """Run HillClimbSearch restricted to the MMPC skeleton and the required edges."""
+        expert_knowledge = ExpertKnowledge() if self.expert_knowledge is None else clone(self.expert_knowledge)
         possible_edges = set(nx.complete_graph(n=X.columns, create_using=nx.DiGraph).edges())
-        forbidden_edges = possible_edges - set(skeleton.to_directed().edges())
-
-        if self.expert_knowledge is None:
-            expert_knowledge = ExpertKnowledge(forbidden_edges=forbidden_edges)
-        else:
-            expert_knowledge = clone(self.expert_knowledge)
-            expert_knowledge.forbidden_edges = set(expert_knowledge.forbidden_edges) | forbidden_edges
+        expert_knowledge.forbidden_edges = set(expert_knowledge.forbidden_edges) | (
+            possible_edges - set(skeleton.to_directed().edges()) - set(expert_knowledge.required_edges)
+        )
 
         hill_climb = HillClimbSearch(
-            scoring_method=scoring_method,
+            scoring_method=self.scoring_method_,
             expert_knowledge=expert_knowledge,
             tabu_length=self.tabu_length,
             max_indegree=self.max_indegree,

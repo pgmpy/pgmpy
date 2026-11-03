@@ -1,8 +1,8 @@
-import warnings
-
 from pgmpy.causal_discovery import MMHC as _MMHC
 from pgmpy.ci_tests import get_ci_test
 from pgmpy.estimators import StructureEstimator
+from pgmpy.structure_score import BDeu
+from pgmpy.utils._warnings import _warn_external
 
 
 class MmhcEstimator(StructureEstimator):
@@ -29,11 +29,10 @@ class MmhcEstimator(StructureEstimator):
     """
 
     def __init__(self, data, **kwargs):
-        warnings.warn(
+        _warn_external(
             "`pgmpy.estimators.MmhcEstimator` is deprecated and will be removed in v2.0. "
             "Use `pgmpy.causal_discovery.MMHC` instead.",
-            DeprecationWarning,
-            stacklevel=2,
+            FutureWarning,
         )
         super().__init__(data, **kwargs)
 
@@ -83,7 +82,11 @@ class MmhcEstimator(StructureEstimator):
         >>> print(model.edges())  # doctest: +NORMALIZE_WHITESPACE
         [('X', 'sum'), ('Y', 'sum'), ('Z', 'sum'), ('W', 'sum')]
         """
+        if scoring_method is None:
+            scoring_method = BDeu(self.data, equivalent_sample_size=10)
+
         estimator = _MMHC(
+            ci_test="chi_square",
             scoring_method=scoring_method,
             tabu_length=tabu_length,
             return_type="dag",
@@ -134,7 +137,7 @@ class MmhcEstimator(StructureEstimator):
         >>> est = MmhcEstimator(data)
         >>> skel = est.mmpc()
         >>> sorted(skel.edges())
-        [('A', 'D'), ('A', 'E'), ('A', 'F'), ('B', 'E'), ('B', 'F'), ('C', 'E'), ('C', 'F')]
+        [('A', 'F'), ('B', 'F'), ('C', 'F')]
         >>> data = pd.DataFrame(rng.integers(0, 2, size=(5000, 3)), columns=list("XYZ"))
         >>> data["X"] += data["Z"]
         >>> data["Y"] += data["Z"]
@@ -144,10 +147,8 @@ class MmhcEstimator(StructureEstimator):
         [('X', 'Z'), ('Y', 'Z')]
         """
 
-        estimator = _MMHC(significance_level=significance_level)
-        ci_test = get_ci_test(test=estimator.ci_test, data=self.data)
-        return estimator._learn_skeleton(
+        return _MMHC(significance_level=significance_level)._learn_skeleton(
             self.data,
-            ci_test=ci_test,
+            ci_test=get_ci_test(test="chi_square", data=self.data),
             significance_level=significance_level,
         )
