@@ -95,6 +95,7 @@ def _resolve_dataset(
     """
     if isinstance(dataset, str):
         resolved = load_dataset(dataset, n_samples=n_samples, seed=seed)
+        resolved.tags["n_samples"], resolved.tags["n_variables"] = resolved.data.shape
     elif isinstance(dataset, BaseSimulatedDataset):
         tags = dataset.get_tags()
         df = dataset.load_dataframe(n_samples=n_samples)
@@ -106,6 +107,8 @@ def _resolve_dataset(
         resolved = Dataset(name=label, data=dataset)
 
     if resolved.ground_truth is None and ground_truth is not None and label in ground_truth:
-        resolved = replace(resolved, ground_truth=ground_truth[label])
+        new_tags = dict(resolved.tags) if resolved.tags is not None else {}
+        new_tags["has_ground_truth"] = True
+        resolved = replace(resolved, ground_truth=ground_truth[label], tags=new_tags)
 
     return resolved

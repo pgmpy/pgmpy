@@ -71,6 +71,8 @@ class TestBenchmarkDatasetResolution:
             ds = _resolve_dataset(name, label=name, n_samples=n_samples, seed=42)
             assert ds.name == name
             assert ds.data.shape == expected_shape
+            assert ds.tags["n_samples"] == expected_shape[0]
+            assert ds.tags["n_variables"] == expected_shape[1]
             if n_nodes is not None:
                 assert len(ds.ground_truth.nodes()) == n_nodes
                 assert len(ds.ground_truth.edges()) == n_edges
@@ -128,11 +130,11 @@ class TestBenchmarkDatasetResolution:
 
         gt = DAG([("a", "b")])
         ds_nogt = Dataset(name="no_gt", data=pd.DataFrame({"a": [1], "b": [2]}))
-        assert (
-            _resolve_dataset(ds_nogt, label="no_gt", n_samples=None, seed=None, ground_truth={"no_gt": gt}).ground_truth
-            is gt
-        )
+        resolved_gt = _resolve_dataset(ds_nogt, label="no_gt", n_samples=None, seed=None, ground_truth={"no_gt": gt})
+        assert resolved_gt.ground_truth is gt
+        assert resolved_gt.tags["has_ground_truth"] is True
         assert ds_nogt.ground_truth is None
+        assert ds_nogt.tags is None
 
         df_gt = pd.DataFrame({"a": [1], "b": [2]})
         assert (
@@ -140,9 +142,10 @@ class TestBenchmarkDatasetResolution:
             is gt
         )
 
-        assert (
-            _resolve_dataset("lead", label="lead", n_samples=100, seed=42, ground_truth={"lead": gt}).ground_truth is gt
-        )
+        lead_gt = _resolve_dataset("lead", label="lead", n_samples=100, seed=42, ground_truth={"lead": gt})
+        assert lead_gt.ground_truth is gt
+        assert lead_gt.tags["has_ground_truth"] is True
+        assert lead_gt.tags["n_samples"] == 100
 
         sim_5 = AdditiveNoiseModel(n_nodes=5, seed=1)
         assert (

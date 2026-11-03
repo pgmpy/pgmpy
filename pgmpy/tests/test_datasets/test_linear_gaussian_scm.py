@@ -1,7 +1,9 @@
 import pandas as pd
+from sklearn.base import clone
 
 from pgmpy.base import DAG
 from pgmpy.datasets import list_datasets, load_dataset
+from pgmpy.datasets.linear_gaussian_scm import LinearGaussianSCM
 
 
 def test_load_linear_gaussian_dataset():
@@ -60,3 +62,17 @@ def test_linear_gaussian_dataset_tags():
     ds_custom = load_dataset("linear_gaussian", n_samples=200, seed=7, n_nodes=8, edge_prob=0.3)
     assert ds_custom.tags["n_variables"] == 8
     assert ds_custom.tags["n_samples"] == 200
+
+
+def test_linear_gaussian_scm_skbase_interface():
+    sim = LinearGaussianSCM()
+    assert repr(sim) == "LinearGaussianSCM()"
+    assert repr(LinearGaussianSCM(seed=1)) == "LinearGaussianSCM(seed=1)"
+    assert repr(LinearGaussianSCM(n_nodes=8, seed=1, scale=2.0)) == "LinearGaussianSCM(n_nodes=8, scale=2.0, seed=1)"
+
+    orig = LinearGaussianSCM(n_nodes=8, seed=1, scale=2.0)
+    cloned = clone(orig)
+    assert cloned.get_params() == orig.get_params()
+    assert cloned.n_nodes == 8
+    assert cloned.seed == 1
+    assert cloned.scale == 2.0
