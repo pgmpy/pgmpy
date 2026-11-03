@@ -1135,6 +1135,7 @@ class TestEstimator(unittest.TestCase):
         inference = CausalInference(model=game1)
         ate = inference.estimate_ate("X", "Y", data=data, estimator_type="linear")
         self.assertAlmostEqual(ate, 0, places=1)
+
     @requires_statsmodels
     def test_estimate_frontdoor(self):
         model = DiscreteBayesianNetwork([("X", "Z"), ("Z", "Y"), ("U", "X"), ("U", "Y")], latents=["U"])
@@ -1160,6 +1161,7 @@ class TestEstimator(unittest.TestCase):
         infer = CausalInference(model=model)
         self.assertRaises(ValueError, infer.estimate_ate, "X", "Y", data)
 
+    @requires_statsmodels
     def test_estimate_multiple_paths(self):
         model = DiscreteBayesianNetwork(
             [("X", "Z"), ("U", "X"), ("U", "Y"), ("Z", "Y"), ("X", "P1"), ("P1", "Y")],

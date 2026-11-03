@@ -180,6 +180,7 @@ def test_custom_estimator_std_init(sem_models):
         opt="adam",
     )
 
+
 @requires_statsmodels
 def test_iv_fit(iv_models):
     estimator = IVEstimator(iv_models["model"])

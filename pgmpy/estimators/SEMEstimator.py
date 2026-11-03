@@ -8,6 +8,7 @@ from pgmpy.utils import compat_fns, optimize, pinverse
 
 OLS = _safe_import("statsmodels.api.OLS")
 
+
 class SEMEstimator:
     """
     Base class of SEM estimators. All the estimators inherit this class.

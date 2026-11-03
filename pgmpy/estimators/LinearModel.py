@@ -10,6 +10,7 @@ class LinearEstimator:
     """
     A simple linear model built on statmodels.
     """
+
     def __init__(self, graph, estimator_type="linear", **kwargs):
 
         _check_soft_dependencies("statsmodels", obj=self)
