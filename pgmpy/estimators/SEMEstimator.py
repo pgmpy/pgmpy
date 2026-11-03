@@ -1,11 +1,12 @@
 import numpy as np
 import pandas as pd
-import statsmodels.api as sm
+from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 
 from pgmpy import config
 from pgmpy.models import SEM, SEMAlg, SEMGraph
 from pgmpy.utils import compat_fns, optimize, pinverse
 
+OLS = _safe_import("statsmodels.api.OLS")
 
 class SEMEstimator:
     """
@@ -457,6 +458,7 @@ class IVEstimator:
         >>> estimator = IVEstimator(model)
         >>> param, results = estimator.fit(X="X", Y="Y", data=data)
         """
+        _check_soft_dependencies("statsmodels", obj=self)
         from pgmpy.inference import CausalInference
 
         if (ivs is None) and (civs is None):
@@ -477,11 +479,11 @@ class IVEstimator:
             civ_conditionals.extend(civ[1])
 
         # First stage regression.
-        params = sm.OLS(data.loc[:, X], data.loc[:, reg_covars + civ_conditionals]).fit().params
+        params = OLS(data.loc[:, X], data.loc[:, reg_covars + civ_conditionals]).fit().params
 
         data["X_pred"] = np.zeros(data.shape[0])
         for var in reg_covars:
             data.X_pred += params[var] * data.loc[:, var]
 
-        summary = sm.OLS(data.loc[:, Y], data.loc[:, ["X_pred"] + civ_conditionals]).fit()
+        summary = OLS(data.loc[:, Y], data.loc[:, ["X_pred"] + civ_conditionals]).fit()
         return summary.params["X_pred"], summary

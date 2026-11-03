@@ -3,11 +3,18 @@ import unittest
 import numpy as np
 import numpy.testing as np_test
 import pandas as pd
+import pytest
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy.base import DAG
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.inference.CausalInference import CausalInference
 from pgmpy.models import DiscreteBayesianNetwork, SEMGraph
+
+requires_statsmodels = pytest.mark.skipif(
+    not _check_soft_dependencies("statsmodels", severity="none"),
+    reason="statsmodels is required for this test",
+)
 
 np.random.seed(42)
 
@@ -1121,13 +1128,14 @@ class TestDoQuery(unittest.TestCase):
 
 
 class TestEstimator(unittest.TestCase):
+    @requires_statsmodels
     def test_create_estimator(self):
         game1 = DiscreteBayesianNetwork([("X", "A"), ("A", "Y"), ("A", "B")])
         data = pd.DataFrame(np.random.randint(2, size=(1000, 4)), columns=["X", "A", "B", "Y"])
         inference = CausalInference(model=game1)
         ate = inference.estimate_ate("X", "Y", data=data, estimator_type="linear")
         self.assertAlmostEqual(ate, 0, places=1)
-
+    @requires_statsmodels
     def test_estimate_frontdoor(self):
         model = DiscreteBayesianNetwork([("X", "Z"), ("Z", "Y"), ("U", "X"), ("U", "Y")], latents=["U"])
         U = np.random.randn(10000)
