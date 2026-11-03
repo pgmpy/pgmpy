@@ -50,6 +50,12 @@ class RKHSLikelihood(BaseStructureScore):
     References
     ----------
     - :cite:p:`huang_2018`
+    Raises
+    ------
+    ValueError
+        If data contains missing values, reg_param is zero or negative,
+        kernel is not "rbf", or max_cache_size is not None and is
+        zero or negative.
 
     """
 
