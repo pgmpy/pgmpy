@@ -47,19 +47,6 @@ Constraint and Hybrid Discovery
    ~pgmpy.causal_discovery.MMHC
    ~pgmpy.causal_discovery.SP
 
-Deprecated Compatibility Shims
-------------------------------
-
-.. deprecated:: 1.1.2
-   ``pgmpy.estimators.MmhcEstimator`` is deprecated and will be removed in
-   v2.0. Use :class:`pgmpy.causal_discovery.MMHC` instead.
-
-.. autosummary::
-   :toctree: generated/structure_learning
-   :template: autosummary/class.rst
-
-   ~pgmpy.estimators.MmhcEstimator
-
 Score-Based and Tree Search
 ---------------------------
 
