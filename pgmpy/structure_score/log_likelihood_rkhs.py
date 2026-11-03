@@ -16,7 +16,10 @@ class RKHSLikelihood(BaseStructureScore):
         \operatorname{max rkhs log likelihood}(X, Z) =
         \begin{cases}
         -\frac{n}{2}\log(2\pi) - \frac{1}{2}\log|\tilde{K}_X + n\lambda I| - \frac{n}{2}, & \text{if } Z = \emptyset \\
-        -\frac{n^2}{2}\log(2\pi) - \frac{n}{2}\log \left| n\lambda^2 \tilde{K}_X (\tilde{K}_{Z} + n\lambda I)^{-2} \tilde{K}_X \right| - \frac{n}{2}, & \text{if } Z \neq \emptyset
+        \begin{aligned}
+        & -\frac{n^2}{2}\log(2\pi) - \frac{n}{2}\log \left| n\lambda^2 \tilde{K}_X \right. \\
+        & \left. (\tilde{K}_{Z} + n\lambda I)^{-2} \tilde{K}_X \right| - \frac{n}{2},
+        \end{aligned} & \text{if } Z \neq \emptyset
         \end{cases}
 
     where :math:`n` is the sample size, :math:`\lambda` is the regularization parameter,
@@ -78,16 +81,16 @@ class RKHSLikelihood(BaseStructureScore):
         max_cache_size=10000,
     ):
         super().__init__(data, state_names=state_names, max_cache_size=max_cache_size)
-        
+
         if data.isnull().any().any():
             raise ValueError("Data contains missing values. RKHSLikelihood does not support missing data.")
-        
+
         if reg_param <= 0:
             raise ValueError("reg_param must be a positive number.")
 
         if kernel not in ["rbf"]:
             raise ValueError(f"Kernel '{kernel}' is not supported. Only 'rbf' is supported.")
-            
+
         self.kernel = kernel
         self.gamma = gamma
         self.reg_param = reg_param
@@ -147,7 +150,7 @@ class RKHSLikelihood(BaseStructureScore):
         inv_reg_K_Z = self._residual_covariance(K_Z)
 
         term = n * (self.reg_param**2) * K_X @ (inv_reg_K_Z @ inv_reg_K_Z) @ K_X
-        
+
         eigenvals = np.linalg.eigvalsh(term)
         valid_eigenvals = eigenvals[eigenvals > 1e-10]
         log_det = np.sum(np.log(valid_eigenvals))
