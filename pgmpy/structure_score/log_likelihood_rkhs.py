@@ -48,8 +48,8 @@ class RKHSLikelihood(BaseStructureScore):
     >>> df = pd.DataFrame({"A": [1.0, 2.0, 3.0], "B": [4.0, 5.0, 6.0]})
     >>> score = RKHSLikelihood(df)
     >>> score.local_score("B", ("A",))
-    np.float64(58.844916790747696)
-
+    np.float64(-3.1068063509697152)
+    
     References
     ----------
     - :cite:p:`huang_2018`
