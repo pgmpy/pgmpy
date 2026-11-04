@@ -12,7 +12,7 @@ requires_torch = pytest.mark.skipif(
     reason="execute only if required dependency present",
 )
 requires_statsmodels = pytest.mark.skipif(
-    not _check_soft_dependencies("statsmodels", severity="none"),
+    not _check_soft_dependencies("statsmodels>=0.14.5", severity="none"),
     reason="statsmodels is required for this test",
 )
 

@@ -12,7 +12,7 @@ from pgmpy.inference.CausalInference import CausalInference
 from pgmpy.models import DiscreteBayesianNetwork, SEMGraph
 
 requires_statsmodels = pytest.mark.skipif(
-    not _check_soft_dependencies("statsmodels", severity="none"),
+    not _check_soft_dependencies("statsmodels>=0.14.5", severity="none"),
     reason="statsmodels is required for this test",
 )
 

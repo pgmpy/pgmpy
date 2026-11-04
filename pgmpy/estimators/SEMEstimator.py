@@ -459,7 +459,7 @@ class IVEstimator:
         >>> estimator = IVEstimator(model)
         >>> param, results = estimator.fit(X="X", Y="Y", data=data)
         """
-        _check_soft_dependencies("statsmodels", obj=self)
+        _check_soft_dependencies("statsmodels>=0.14.5", obj=self)
         from pgmpy.inference import CausalInference
 
         if (ivs is None) and (civs is None):
