@@ -68,8 +68,7 @@ class YourDatasetClass(BaseDataset):
     # TODO: If the data file is compressed, set its compression format.
     # compression = "gzip"
 
-    # TODO: List intervention metadata columns, if present. load_dataset() separates these from data
-    # into a row-aligned Dataset.interventions DataFrame. Leave None when no such columns exist.
+    # TODO: List intervention columns to separate from data, or leave None.
     intervention_columns = None
 
     # TODO: If the dataset has categorical variables, list them here.

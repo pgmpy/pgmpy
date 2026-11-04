@@ -186,6 +186,14 @@ class BaseDataset(BaseObject):
         return df
 
     @classmethod
+    def split_interventions(cls, df):
+        """Separate intervention columns from data without modifying the input."""
+        if cls.intervention_columns is None:
+            return df, None
+
+        return df.drop(columns=cls.intervention_columns), df[cls.intervention_columns]
+
+    @classmethod
     def load_expert_knowledge(cls) -> ExpertKnowledge:
         """Fetches/reads from cache the expert knowledge associated with the dataset."""
         if not cls.get_class_tag("has_expert_knowledge"):
@@ -410,11 +418,7 @@ def load_dataset(
 
     df = target_cls.load_dataframe(n_samples=n_samples, seed=seed, **sim_kwargs)
 
-    if target_cls.intervention_columns is not None:
-        interventions = df[target_cls.intervention_columns]
-        df = df.drop(columns=target_cls.intervention_columns)
-    else:
-        interventions = None
+    df, interventions = target_cls.split_interventions(df)
 
     return Dataset(
         name=name,
