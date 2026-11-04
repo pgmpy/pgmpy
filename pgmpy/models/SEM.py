@@ -790,9 +790,7 @@ class SEMAlg:
             if not sem_graph.err_graph.has_node(var):
                 sem_graph.err_graph.add_node(var)
                 fixed = self.zeta_fixed_mask[i, i]
-                sem_graph.err_graph.nodes[var]["weight"] = (
-                    float(fixed) if fixed != 0 else np.nan
-                )
+                sem_graph.err_graph.nodes[var]["weight"] = float(fixed) if fixed != 0 else np.nan
 
         # Re-derive observed from the now-complete node set.
         sem_graph.observed = set(sem_graph.graph.nodes()) - sem_graph.latents
