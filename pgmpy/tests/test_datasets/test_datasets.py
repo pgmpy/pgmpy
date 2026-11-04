@@ -226,10 +226,29 @@ def test_load_causalbench(tmp_path, name, n_variables):
     dataset = load_dataset(name, data_dir=tmp_path, n_samples=3, seed=7)
     expected = table.sample(n=3, random_state=7).reset_index(drop=True)
     pd.testing.assert_frame_equal(dataset.data, expected.drop(columns="intervention"))
-    pd.testing.assert_series_equal(dataset.interventions, expected["intervention"])
+    pd.testing.assert_frame_equal(dataset.interventions, expected[["intervention"]])
     assert dataset.tags["n_variables"] == n_variables
     assert dataset.tags["is_continuous"] is True
     assert dataset.tags["is_mixed"] is False
     assert dataset.tags["is_interventional"] is True
     assert dataset.ground_truth is None
     assert dataset.expert_knowledge is None
+
+
+def test_load_multiple_intervention_columns(tmp_path, monkeypatch):
+    from pgmpy.datasets.causalbench_k562 import CausalBenchK562
+
+    intervention_columns = ["intervention", "second_target"]
+    monkeypatch.setattr(CausalBenchK562, "intervention_columns", intervention_columns)
+    table = pd.DataFrame(
+        {
+            "gene_a": [1.0, 2.0, 3.0],
+            "intervention": pd.Categorical(["gene_a", "non-targeting", "gene_b"]),
+            "second_target": ["gene_b", "non-targeting", "gene_a"],
+        }
+    )
+    table.to_csv(tmp_path / "causalbench_k562.tsv.gz", sep="\t", index=False, compression="gzip")
+    dataset = load_dataset("causalbench_k562", data_dir=tmp_path, n_samples=2, seed=7)
+    expected = table.sample(n=2, random_state=7).reset_index(drop=True)
+    pd.testing.assert_frame_equal(dataset.interventions, expected[intervention_columns])
+    pd.testing.assert_frame_equal(dataset.data, expected.drop(columns=intervention_columns))

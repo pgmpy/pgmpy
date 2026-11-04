@@ -23,9 +23,8 @@ class Dataset:
     data: pd.DataFrame
     expert_knowledge: ExpertKnowledge | None = None
     ground_truth: DAG | PDAG | ADMG | MAG | None = None
-    interventions: pd.DataFrame | None = None
-
     tags: dict[str, Any] = None
+    interventions: pd.DataFrame | None = None
 
     def __str__(self) -> str:
         return (
@@ -65,7 +64,7 @@ class BaseDataset(BaseObject):
     repo_id = "pgmpy/example_datasets"
     repo_type = "dataset"
     revision = "main"
-    intervention_column: str | None = None
+    intervention_columns: list[str] | None = None
 
     @staticmethod
     def _parse_expert_knowledge(raw_expert_knowledge: bytes) -> ExpertKnowledge:
@@ -412,7 +411,8 @@ def load_dataset(
     df = target_cls.load_dataframe(n_samples=n_samples, seed=seed, **sim_kwargs)
 
     if target_cls.intervention_columns is not None:
-        interventions = df.drop(target_cls.intervention_columns, axis=1)
+        interventions = df[target_cls.intervention_columns]
+        df = df.drop(columns=target_cls.intervention_columns)
     else:
         interventions = None
 
