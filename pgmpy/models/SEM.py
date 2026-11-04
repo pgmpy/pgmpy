@@ -751,7 +751,7 @@ class SEMAlg:
         err_var = {}
         for i, var in enumerate(self.eta):
             fixed = self.zeta_fixed_mask[i, i]
-            err_var[var] = float(fixed) if fixed != 0 else float(np.diag(self.zeta)[i])
+            err_var[var] = float(fixed) if fixed != 0 else np.nan
 
         # Error correlations: off-diagonal zeta entries as 3-tuples.
         # Use fixed_mask value when set; otherwise np.nan (free parameter).
@@ -791,7 +791,7 @@ class SEMAlg:
                 sem_graph.err_graph.add_node(var)
                 fixed = self.zeta_fixed_mask[i, i]
                 sem_graph.err_graph.nodes[var]["weight"] = (
-                    float(fixed) if fixed != 0 else float(np.diag(self.zeta)[i])
+                    float(fixed) if fixed != 0 else np.nan
                 )
 
         # Re-derive observed from the now-complete node set.
