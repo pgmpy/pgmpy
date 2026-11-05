@@ -144,13 +144,13 @@ class FactorSet:
         r"""
         Return the factor sets product with the given factor sets
 
-        Suppose :math:`\vec\phi_1` and :math:`\vec\phi_2` are two factor sets then their product is a another factors
+        Suppose :math:`\vec\phi_1` and :math:`\vec\phi_2` are two factor sets then their product is another factor
         set :math:`\vec\phi_3 = \vec\phi_1 \cup \vec\phi_2`.
 
         Parameters
         ----------
-        factorsets: FactorSet1, FactorSet2, ..., FactorSetn
-            FactorSets to be multiplied
+        factorset: FactorSet
+            The FactorSet to be multiplied with.
 
         inplace: A boolean (Default value True)
             If inplace = True , then it will modify the FactorSet object, if False, it will
@@ -158,7 +158,7 @@ class FactorSet:
 
         Returns
         -------
-        If inpalce = False, will return a new FactorSet object, which is product of two factors
+        If inplace = False, returns a new FactorSet object, which is the product of the two factor sets.
 
         Examples
         --------
