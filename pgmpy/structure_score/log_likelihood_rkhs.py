@@ -138,8 +138,20 @@ class RKHSLikelihood(BaseStructureScore):
 
         # Conditional case (with parents)
         Z = self.data[list(parents)].values
-        parent_var = parents[0] if len(parents) == 1 else None
-        K_Z = self._centralized_kernel_matrix(Z, variable=parent_var)
+        n_z = Z.shape[0]
+        H_z = np.eye(n_z) - np.ones((n_z, n_z)) / n_z
+
+        K_Z_uncentered = None
+        for i, parent in enumerate(parents):
+            Z_i = self.data[[parent]].values
+            kernel_fn = self.kernel_dict.get(parent, RBF())
+            K_i = kernel_fn(Z_i, Z_i)
+            if K_Z_uncentered is None:
+                K_Z_uncentered = K_i
+            else:
+                K_Z_uncentered = K_Z_uncentered * K_i
+
+        K_Z = H_z @ K_Z_uncentered @ H_z
 
         n = K_Z.shape[0]
         reg_K_Z = K_Z + n * self.reg_param * np.eye(n)
