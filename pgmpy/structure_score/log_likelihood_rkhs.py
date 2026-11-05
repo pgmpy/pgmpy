@@ -1,4 +1,5 @@
 import numpy as np
+
 from sklearn.gaussian_process.kernels import RBF, Kernel
 
 from collections.abc import Hashable
@@ -81,7 +82,7 @@ class RKHSLikelihood(BaseStructureScore):
         if data.isnull().any().any():
             raise ValueError("Data contains missing values. RKHSLikelihood does not support missing data.")
 
-        if reg_param <= 0:
+        if reg_param <= 0 or not np.isfinite(reg_param):
             raise ValueError("reg_param must be a positive number.")
 
         self.data = data
@@ -105,12 +106,12 @@ class RKHSLikelihood(BaseStructureScore):
         for col in self.data.columns.drop(list(self.kernel_dict)):
             self.kernel_dict[col] = RBF()
 
-    def _centralized_kernel_matrix(self, X, Y=None, Z=None):
+    def _centralized_kernel_matrix(self, X, Y=None, variable=None):
         is_symmetric = Y is None
 
         n_x = X.shape[0]
 
-        kernel_fn = self.kernel_dict.get(Z, RBF())
+        kernel_fn = self.kernel_dict.get(variable, RBF())
 
         K = kernel_fn(X, Y)
 
@@ -126,7 +127,7 @@ class RKHSLikelihood(BaseStructureScore):
     def _log_likelihood(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         X = self.data[[variable]].values
         n = X.shape[0]
-        K_X = self._centralized_kernel_matrix(X)
+        K_X = self._centralized_kernel_matrix(X, variable=variable)
         I = np.eye(n)
 
         # Unconditional case (no parents)
@@ -138,7 +139,9 @@ class RKHSLikelihood(BaseStructureScore):
 
         # Conditional case (with parents)
         Z = self.data[list(parents)].values
-        K_Z = self._centralized_kernel_matrix(Z)
+        parent_var = parents[0] if len(parents) == 1 else None
+        K_Z = self._centralized_kernel_matrix(Z, variable=parent_var)
+
         n = K_Z.shape[0]
         reg_K_Z = K_Z + n * self.reg_param * np.eye(n)
         inv_reg_K_Z = np.linalg.inv(reg_K_Z)
