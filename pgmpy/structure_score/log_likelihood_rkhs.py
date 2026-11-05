@@ -105,8 +105,6 @@ class RKHSLikelihood(BaseStructureScore):
         for col in self.data.columns.drop(list(self.kernel_dict)):
             self.kernel_dict[col] = RBF()
 
-        print(self.kernel_dict)
-
     def _centralized_kernel_matrix(self, X, Y=None, Z=None):
         is_symmetric = Y is None
 
