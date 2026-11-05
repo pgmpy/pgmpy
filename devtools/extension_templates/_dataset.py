@@ -68,10 +68,11 @@ class YourDatasetClass(BaseDataset):
     # TODO: If the data file is compressed, set its compression format.
     # compression = "gzip"
 
-    # TODO: List intervention columns to separate from data, or leave None.
+    # TODO: If the tag `is_interventional=True`, list the columns that record the interventions. `load_interventions`
+    # returns these columns and `load_dataframe` excludes them. Leave None for observational datasets.
     intervention_columns = None
 
-    # TODO: If the dataset has categorical variables, list them here.
+    # TODO: If the dataset has categorical variables (data or intervention columns), list them here.
     categorical_variables = []
 
     # TODO: If the dataset has ordinal variables, define the category orderings (lower to higher) for each of them here.

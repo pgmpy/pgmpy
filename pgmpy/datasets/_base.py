@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import io
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -27,10 +27,11 @@ class Dataset:
     interventions: pd.DataFrame | None = None
 
     def __str__(self) -> str:
+        interventions = None if self.interventions is None else f"DataFrame of size: {self.interventions.shape}"
         return (
             f"Dataset(name={self.name}, \n data=DataFrame of size: {self.data.shape}, \n "
-            f"expert_knowledge={self.expert_knowledge}, \n ground_truth={self.ground_truth},"
-            f"interventions={self.interventions.shape}, \n tags={self.tags})"
+            f"expert_knowledge={self.expert_knowledge}, \n ground_truth={self.ground_truth}, \n "
+            f"interventions={interventions}, \n tags={self.tags})"
         )
 
     def __repr__(self) -> str:
@@ -134,14 +135,58 @@ class BaseDataset(BaseObject):
         )
 
     @classmethod
+    def _read_table(cls, usecols: list[str] | Callable[[str], bool] | None) -> pd.DataFrame:
+        """
+        Reads the selected columns of the data file and applies the missing-value marker and column dtypes.
+        """
+        df = pd.read_csv(
+            io.BytesIO(cls._get_raw_data(cls.data_url)),
+            sep=getattr(cls, "sep", "\t"),
+            compression=getattr(cls, "compression", None),
+            usecols=usecols,
+        )
+
+        if cls.get_class_tag("has_missing_data"):
+            df.replace(cls.missing_values_marker, pd.NA, inplace=True)
+
+        for col in cls.categorical_variables:
+            if col in df.columns:
+                df[col] = df[col].astype("category")
+
+        for col, order in cls.ordinal_variables.items():
+            if col in df.columns:
+                df[col] = df[col].astype(pd.CategoricalDtype(categories=order, ordered=True))
+
+        return df
+
+    @staticmethod
+    def _subsample(df: pd.DataFrame, n_samples: int | None, seed: int | None) -> pd.DataFrame:
+        """
+        Returns a random subsample of ``n_samples`` rows, or all rows with a warning if the dataset is smaller.
+        """
+        if n_samples is None:
+            return df
+
+        if n_samples > len(df):
+            _warn_external(
+                f"Requested {n_samples} samples but dataset only has {len(df)}. Returning all {len(df)} rows.",
+                UserWarning,
+            )
+            return df
+
+        return df.sample(n=n_samples, random_state=seed).reset_index(drop=True)
+
+    @classmethod
     def load_dataframe(
         cls,
         n_samples: int | None = None,
         seed: int | None = None,
-        data_dir: str | Path | None = None,
     ) -> pd.DataFrame:
         """
         Fetches/reads from cache the data associated with the dataset.
+
+        For interventional datasets, the columns listed in ``intervention_columns`` are not read; use
+        ``load_interventions`` to load them.
 
         Parameters
         ----------
@@ -149,49 +194,51 @@ class BaseDataset(BaseObject):
             If provided, return a random subsample of this size. Capped at the dataset size.
         seed : int, optional
             Random seed for reproducible subsampling.
-        data_dir : str or pathlib.Path, optional
-            Directory containing the dataset file. When omitted, use the Hugging Face Hub cache.
 
+        Returns
+        -------
+        pandas.DataFrame
+            The data columns of the dataset.
         """
-        if data_dir is None:
-            raw_data = cls._get_raw_data(cls.data_url)
-            source = io.BytesIO(raw_data)
-        else:
-            source = Path(data_dir) / Path(cls.data_url).name
-        df = pd.read_csv(source, sep=getattr(cls, "sep", "\t"), compression=getattr(cls, "compression", None))
-
-        if cls.get_class_tag("has_missing_data"):
-            df.replace(cls.missing_values_marker, pd.NA, inplace=True)
+        usecols = None
+        if cls.get_class_tag("is_interventional"):
+            usecols = lambda col: col not in cls.intervention_columns
+        df = cls._read_table(usecols=usecols)
 
         if cls.get_class_tag("has_index_col"):
             df.drop(df.columns[0], axis=1, inplace=True)
 
-        if len(cls.categorical_variables) > 0:
-            for col in cls.categorical_variables:
-                df[col] = df[col].astype("category")
-
-        if len(cls.ordinal_variables) > 0:
-            for col, order in cls.ordinal_variables.items():
-                cat_type = pd.CategoricalDtype(categories=order, ordered=True)
-                df[col] = df[col].astype(cat_type)
-
-        if n_samples is not None:
-            if n_samples > len(df):
-                _warn_external(
-                    f"Requested {n_samples} samples but dataset only has {len(df)}. Returning all {len(df)} rows.",
-                    UserWarning,
-                )
-            else:
-                df = df.sample(n=n_samples, random_state=seed).reset_index(drop=True)
-        return df
+        return cls._subsample(df, n_samples=n_samples, seed=seed)
 
     @classmethod
-    def split_interventions(cls, df):
-        """Separate intervention columns from data without modifying the input."""
-        if cls.intervention_columns is None:
-            return df, None
+    def load_interventions(
+        cls,
+        n_samples: int | None = None,
+        seed: int | None = None,
+    ) -> pd.DataFrame | None:
+        """
+        Fetches/reads from cache the intervention columns associated with the dataset.
 
-        return df.drop(columns=cls.intervention_columns), df[cls.intervention_columns]
+        Only the columns listed in ``intervention_columns`` are read. Calling ``load_dataframe`` and
+        ``load_interventions`` with the same ``n_samples`` and ``seed`` selects the same rows.
+
+        Parameters
+        ----------
+        n_samples : int, optional
+            If provided, return a random subsample of this size. Capped at the dataset size.
+        seed : int, optional
+            Random seed for reproducible subsampling.
+
+        Returns
+        -------
+        pandas.DataFrame or None
+            The intervention columns, or ``None`` if the dataset is not interventional.
+        """
+        if not cls.get_class_tag("is_interventional"):
+            return None
+
+        df = cls._read_table(usecols=cls.intervention_columns)
+        return cls._subsample(df, n_samples=n_samples, seed=seed)
 
     @classmethod
     def load_expert_knowledge(cls) -> ExpertKnowledge:
@@ -333,11 +380,10 @@ def load_dataset(
     seed : int, optional
         Random seed for reproducible subsampling or simulation.
     **sim_kwargs : dict, optional
-        Dataset-specific keyword arguments forwarded to ``load_dataframe()``
-        and ``load_ground_truth()``. Static tabular datasets accept ``data_dir``
-        to read a prepared local file; unsupported arguments raise
-        ``TypeError``. For Tubingen datasets, these kwargs are ignored with
-        a warning.
+        Additional keyword arguments forwarded to the simulator's
+        ``load_dataframe()`` and ``load_ground_truth()`` methods. Passing
+        simulator kwargs to a static dataset raises ``TypeError``. For Tubingen
+        datasets, these kwargs are ignored with a warning.
 
     Examples
     --------
@@ -416,17 +462,17 @@ def load_dataset(
             tags=tags,
         )
 
-    df = target_cls.load_dataframe(n_samples=n_samples, seed=seed, **sim_kwargs)
-
-    df, interventions = target_cls.split_interventions(df)
+    if n_samples is not None and seed is None and target_cls.get_class_tag("is_interventional"):
+        # Data and interventions are subsampled separately; a shared seed makes both select the same rows.
+        seed = int(np.random.randint(np.iinfo(np.int32).max))
 
     return Dataset(
         name=name,
-        data=df,
+        data=target_cls.load_dataframe(n_samples=n_samples, seed=seed, **sim_kwargs),
         expert_knowledge=target_cls.load_expert_knowledge(),
         ground_truth=target_cls.load_ground_truth(seed=seed, **sim_kwargs),
         tags=target_cls.get_class_tags(),
-        interventions=interventions,
+        interventions=target_cls.load_interventions(n_samples=n_samples, seed=seed),
     )
 
 
