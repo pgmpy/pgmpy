@@ -27,10 +27,10 @@ to miss.
 1. Copy the template, follow its header steps and resolve every TODO. Remove the template's instruction comments.
 2. **Comments.** The only comments are step comments, so that reading a method's comments in order gives its
    pseudocode:
-   - Put `# Step N: <what the block does>` before each block, and `# Step N.M:` before each sub-block. Numbering
-     starts at 1 in every method; `# Step 0:` is for argument validation.
+   - Put `# Step N: <what the block does>` before each block, and `# Step N.M:` before each sub-block. Number in
+     order, starting at 1 in every method; `# Step 0:` is for argument validation.
    - Leave a blank line before each step. A step too long for one line continues on the next comment line, indented
-     to line up with the text after `Step N: `.
+     to line up with the text after `Step N:`.
    - No other comments: no end-of-line comments, no notes explaining a choice (that goes in the PR description), no
      commented-out code. A method short enough to read at a glance has no comments.
 
@@ -53,7 +53,8 @@ to miss.
    cross-check-reference.
 6. **Fixtures.** Datasets and example models download from the Hugging Face Hub, but tests run offline:
    `pgmpy/tests/conftest.py` serves files from `pgmpy/tests/test_data/example_datasets/<data_url>` and
-   `pgmpy/tests/test_data/example_models/<data_url>`. Commit the fixture there.
+   `pgmpy/tests/test_data/example_models/<data_url>`. Commit the fixture there. That fixture doesn't cover doctests:
+   docstring examples download from the Hub and need network access or a copy in the local Hugging Face cache.
 7. **Docs.** Add the class to the API page from the table.
 8. **Verify.** Run the new test file, the module's doctests (`pytest --doctest-modules pgmpy/<package>/<file>.py`) and
    `pre-commit run --files <changed files>`.
@@ -67,10 +68,7 @@ API.
 
 - A dataset, example model, structure score or metric file whose name starts with `_` is not discovered.
 - A missing fixture makes tests fail with `FileNotFoundError: Local test fixture not found`.
-- New code under `pgmpy/estimators/`, which is a legacy layer.
 - A CI test or structure score that raises on degenerate input (e.g. collinear columns). These run per candidate inside
   search loops that don't catch exceptions: a CI test returns independence and a score returns `-inf`.
 - Computing fit-time tags in `_fit`. `BaseCausalDiscovery.fit` narrows the tags from the `estimator_`, `ci_test_`,
   `scoring_method_` and `pairwise_estimator_` attributes that `_fit` sets.
-- Comments other than step comments, such as leftover template TODOs or end-of-line notes, or step numbers that skip
-  or repeat.

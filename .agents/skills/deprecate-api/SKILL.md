@@ -25,9 +25,10 @@ maintainer.
 
 | Change | Shim | Example |
 |---|---|---|
-| Class moved | Subclass the new class, warn in `__init__`, map legacy argument names | `pgmpy/estimators/ExpertKnowledge.py`, `pgmpy/estimators/PC.py` |
+| Class moved, compatible interface | Subclass the new class, warn in `__init__`, map legacy argument names | `pgmpy/estimators/ExpertKnowledge.py` |
+| Class moved, incompatible interface | Keep the legacy class and its interface, warn in `__init__`, delegate each method to an instance of the new class | `pgmpy/estimators/PC.py` |
 | Method renamed | Keep the old method as an alias that warns and calls the new one | `BaseReader.get_model` in `pgmpy/readwrite/_base.py` |
-| Function replaced | Warn at the top of the old function | `get_example_model` in `pgmpy/utils/utils.py` |
+| Function replaced | Warn at the top of the old function, call the replacement and convert its result to the old return type | `pearsonr` in `pgmpy/estimators/CITests.py` |
 
 The shim delegates to the new implementation. It never keeps its own copy of the logic.
 

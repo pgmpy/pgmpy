@@ -27,8 +27,18 @@ pgmpy itself only checks that the output didn't change, not that it is right.
 - **Python:** `pip install --target <scratch>/deps --no-deps <package>`, then run with `PYTHONPATH=<scratch>/deps`.
   `--no-deps` stops the target directory from shadowing the environment's numpy or pandas; install a missing dependency
   the same way.
-- **R:** write the script to a file and run `Rscript <script>.R`. pcalg needs the Bioconductor packages `graph` and
-  `RBGL` (`BiocManager::install(c("graph", "RBGL"))`).
+- **R:** install packages into a scratch library and put it first on the library path, so the user's R library is
+  untouched. Write the script to a file and run it with `Rscript`:
+
+  ```bash
+  mkdir -p <scratch>/Rlib
+  R_LIBS=<scratch>/Rlib Rscript -e 'install.packages("BiocManager", repos = "https://cloud.r-project.org")'
+  R_LIBS=<scratch>/Rlib Rscript -e 'BiocManager::install(c("graph", "RBGL", "pcalg"), update = FALSE, ask = FALSE)'
+  R_LIBS=<scratch>/Rlib Rscript <script>.R
+  ```
+
+  pcalg needs the Bioconductor packages `graph` and `RBGL`. Add bnlearn, dagitty or other references to the same
+  `BiocManager::install` call. `update = FALSE` stops it from upgrading packages that are already installed.
 - If R or a package is unavailable, say so and use the best available alternative. Never report a cross-check that
   didn't run.
 
@@ -49,7 +59,7 @@ Put the reference package, its version and the producing call in a comment above
 # KCI_CInd().compute_pvalue(df[["X"]].to_numpy(), df[["Y"]].to_numpy(), df[Z].to_numpy())
 ```
 
-`pgmpy/tests/test_ci_tests/test_kci.py` and `pgmpy/tests/test_structure_score/test_bdeu.py` follow this pattern.
+`pgmpy/tests/test_ci_tests/test_kci.py` follows this pattern.
 
 ## Known quirks
 

@@ -69,7 +69,8 @@ pytest -v pgmpy
 
 CI also runs the examples in docstrings as doctests and executes the notebooks in `examples/`. These need the optional
 dependencies (`pip install -e ".[all]"`, where `pygraphviz` also needs the Graphviz system library) and, for the
-notebooks, `nbmake` (`pip install nbmake`):
+notebooks, `nbmake` (`pip install nbmake`). Unlike the test suite, docstring examples download datasets and example
+models from the Hugging Face Hub, so the doctests need network access:
 ```bash
 pytest --doctest-modules --ignore=pgmpy/tests pgmpy/
 pytest --nbmake examples/*.ipynb
