@@ -7,6 +7,7 @@ from skbase.base import BaseObject
 from skbase.lookup import all_objects
 from sklearn.base import clone
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 
 
 class _ResidualMixin:
@@ -139,10 +140,20 @@ class _ResidualMixin:
             self.set_tags(**{"assumption:linearity": True})
             return
 
-        is_forest = any(
-            (cls.__module__.startswith("sklearn.ensemble") and "Forest" in cls.__name__) for cls in type(est).__mro__
-        ) or isinstance(est, (RandomForestClassifier, RandomForestRegressor))
-        if is_forest:
+        is_tree_or_forest = any(
+            (cls.__module__.startswith("sklearn.ensemble") and "Forest" in cls.__name__)
+            or cls.__module__.startswith("sklearn.tree")
+            for cls in type(est).__mro__
+        ) or isinstance(
+            est,
+            (
+                RandomForestClassifier,
+                RandomForestRegressor,
+                DecisionTreeClassifier,
+                DecisionTreeRegressor,
+            ),
+        )
+        if is_tree_or_forest:
             self.set_tags(**{"assumption:linearity": False})
             return
 

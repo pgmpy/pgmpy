@@ -127,6 +127,11 @@ def test_invalid_type():
         get_ci_test(test=123)
 
 
+from sklearn.tree import DecisionTreeRegressor
+
+...
+
+
 @pytest.mark.parametrize(
     "cls",
     [GCM, PillaiTrace, GeneralizedCov, WilksLambda, HotellingLawley, RoysLargestRoot],
@@ -140,6 +145,9 @@ def test_residual_ci_tests_estimator_tags(cls, cont_data):
 
     test_forest = cls(data=cont_data, estimator=RandomForestRegressor())
     assert test_forest.get_tag("assumption:linearity") is False
+
+    test_tree = cls(data=cont_data, estimator=DecisionTreeRegressor())
+    assert test_tree.get_tag("assumption:linearity") is False
 
     test_custom = cls(data=cont_data, estimator=CustomEstimator())
     assert test_custom.get_tag("assumption:linearity") is None
