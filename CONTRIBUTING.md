@@ -161,6 +161,11 @@ We welcome thoughtful use of AI coding tools (Copilot, ChatGPT, Claude, Cursor, 
 
 Misrepresenting AI tool usage in your contributions is a **violation** of our policy and may result in a **permanent ban** from contributing to the repository.
 
+### Agent instructions
+
+pgmpy includes instructions for AI coding agents: [`AGENTS.md`](AGENTS.md) for the whole repository, and task-specific skills in [`.agents/skills/`](.agents/skills/) in the [Agent Skills](https://agentskills.io) format. Nothing needs installing: agents that support these formats load them when run inside your clone, though some load project skills only after you mark the folder as trusted. If your agent reads instructions or skills only from its own files or directory, link those to `AGENTS.md` and `.agents/skills/`, and don't commit the links. Agent
+instructions don't change the guidelines above: you are still responsible for every line you submit.
+
 ## Documentation
 
 Documentation is built with Sphinx. To build docs locally, follow the steps in our [Maintenance Guide — Building Docs](https://github.com/pgmpy/pgmpy/wiki/Maintenance-Guide#building-docs).
