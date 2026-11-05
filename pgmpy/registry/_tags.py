@@ -511,7 +511,7 @@ def check_tag_is_valid(tag_name: str, tag_value) -> None:
     >>> check_tag_is_valid("requires_target", "yes")
     Traceback (most recent call last):
     ...
-    ValueError: Tag 'requires_target' must be a bool, got 'yes'.
+    ValueError: Tag 'requires_target' must be a bool or None, got 'yes'.
     """
     tag_types = {tag[0]: tag[2] for tag in TAG_REGISTER}
     if tag_name not in tag_types:
