@@ -45,7 +45,6 @@ class RKHSLikelihood(BaseStructureScore):
     >>> from pgmpy.structure_score import RKHSLikelihood
     >>> df = pd.DataFrame({"A": [1.0, 2.0, 3.0], "B": [4.0, 5.0, 6.0]})
     >>> score = RKHSLikelihood(df)
-    {'A': RBF(length_scale=1), 'B': RBF(length_scale=1)}
     >>> score.local_score("B", ("A",))
     np.float64(-0.7243932987727426)
 
