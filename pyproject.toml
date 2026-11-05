@@ -1,7 +1,7 @@
 [project]
 name = "pgmpy"
 version = "1.1.2"
-description = "Python Toolkit for Causal and Probabilistic Reasoning"
+description = "Python toolkit for causal and probabilistic reasoning with Bayesian networks"
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [
