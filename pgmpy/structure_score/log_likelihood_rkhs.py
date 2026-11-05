@@ -145,7 +145,7 @@ class RKHSLikelihood(BaseStructureScore):
         for i, parent in enumerate(parents):
             Z_i = self.data[[parent]].values
             kernel_fn = self.kernel_dict.get(parent, RBF())
-            K_i = kernel_fn(Z_i, Z_i)
+            K_i = kernel_fn(Z_i)
             if K_Z_uncentered is None:
                 K_Z_uncentered = K_i
             else:
