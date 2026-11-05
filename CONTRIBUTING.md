@@ -44,7 +44,7 @@ Before you write any code, please:
 
 ## Installing from Source
 
-Install pgmpy (plus testing dependencies) in editable mode:
+pgmpy supports Python 3.10 to 3.14. Install pgmpy (plus testing dependencies) in editable mode:
 
 For `bash` users:
 ```bash
@@ -67,15 +67,23 @@ To run the full test suite locally:
 pytest -v pgmpy
 ```
 
+CI also runs the examples in docstrings as doctests and executes the notebooks in `examples/`. These need the optional
+dependencies (`pip install -e ".[all]"`, where `pygraphviz` also needs the Graphviz system library) and, for the
+notebooks, `nbmake` (`pip install nbmake`):
+```bash
+pytest --doctest-modules --ignore=pgmpy/tests pgmpy/
+pytest --nbmake examples/*.ipynb
+```
+
 **Tip:** Use test-driven development: Write your tests first, then implement the functionality.
 
 ## Pre-commit Hooks
 
-We use **pre-commit** with ruff, Black, Flake8, and other checks to keep formatting consistent.
+We use **pre-commit** to run ruff (linting and formatting) and a few basic checks (YAML syntax, trailing whitespace,
+end-of-file newlines).
 
-1. Install hooks:
+1. Install hooks (`pre-commit` itself is installed with `.[tests]`):
    ```bash
-   pip install pre-commit
    pre-commit install
    ```
 2. On each commit, code will be automatically formatted and linted. If a hook modifies a file, re-stage it, and commit again.
@@ -99,6 +107,12 @@ If you plan to add a model, algorithm, or major feature:
    - Why it's useful for pgmpy users.
    - A rough implementation plan or API sketch.
 2. **Wait for feedback** and approval from maintainers. This prevents duplicated effort and ensures alignment with project goals.
+3. **Start from the right place.** New causal discovery algorithms, CI tests, structure scores, metrics, datasets and
+   example models should start from the matching template in
+   [`devtools/extension_templates/`](devtools/extension_templates/). Don't add new functionality to `pgmpy/estimators/`,
+   which is kept only for backwards compatibility: structure learning goes in `pgmpy/causal_discovery/`, parameter
+   learning in `pgmpy/parameter_estimator/`, structure scores in `pgmpy/structure_score/` and CI tests in
+   `pgmpy/ci_tests/`.
 
 ## Branching & Pull Requests
 
@@ -111,7 +125,9 @@ We follow a lightweight GitFlow on top of our `dev` branch:
    git push origin feature/your-descriptive-name
    ```
 4. Open a pull request against the `dev` branch via GitHub's web interface.
-5. Respond to review comments and make any requested changes.
+5. Respond to review comments and make any requested changes. PRs also get an automated review from CodeRabbit. Its
+   comments are advisory, and maintainers decide what's required. As with any other comment, reply to CodeRabbit in
+   your own words.
 
 ### What makes a good PR
 
@@ -128,6 +144,8 @@ Every new function or bug fix must include tests:
 - **Unit tests** for individual methods and edge cases.
 - **Integration tests** if your change spans multiple modules.
 - Aim for **meaningful coverage** rather than 100% line coverage: focus on boundary conditions, error paths, and realistic usage.
+- **Tests run offline.** `pgmpy/tests/conftest.py` serves Hugging Face Hub downloads from `pgmpy/tests/test_data/`, so if
+  you add a dataset or example model, commit its fixture file there.
 
 ## AI Usage Policy
 
@@ -147,7 +165,7 @@ Misrepresenting AI tool usage in your contributions is a **violation** of our po
 
 Documentation is built with Sphinx. To build docs locally, follow the steps in our [Maintenance Guide — Building Docs](https://github.com/pgmpy/pgmpy/wiki/Maintenance-Guide#building-docs).
 
-If your PR introduces or changes a user-facing API, please update the relevant docstrings and, where appropriate, add an example to the documentation.
+If your PR introduces or changes a user-facing API, please update the relevant docstrings and, where appropriate, add an example to the documentation. New public classes and functions also need to be added to the relevant page in `docs/api/`.
 
 ## Seeking Help
 
@@ -156,7 +174,7 @@ If you get stuck, want to discuss an idea, or just want to say hello:
 - **Discord:** [discord.gg/DRkdKaumBs](https://discord.gg/DRkdKaumBs) — the
   fastest way to reach maintainers and other contributors.
 - **Weekly meetings:** Dev and community meetings are open to everyone. Check the
-  pinned the schedule in Discord for times.
+  pinned schedule in Discord for times.
 
 All contributions — big and small — are welcome. Let's build a better pgmpy
 together!
