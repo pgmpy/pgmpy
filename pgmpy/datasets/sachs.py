@@ -4,7 +4,7 @@ from pgmpy.datasets._base import BaseDataset
 class SachsMixed(BaseDataset):
     _tags = {
         "name": "sachs_mixed",
-        "n_variables": 20,
+        "n_variables": 11,
         "n_samples": 7466,
         "has_ground_truth": True,
         "has_expert_knowledge": True,
@@ -13,8 +13,8 @@ class SachsMixed(BaseDataset):
         "is_simulated": False,
         "is_interventional": True,
         "is_discrete": False,
-        "is_continuous": False,
-        "is_mixed": True,
+        "is_continuous": True,
+        "is_mixed": False,
         "is_ordinal": False,
     }
 
@@ -35,6 +35,7 @@ class SachsMixed(BaseDataset):
         "pma",
         "b2camp",
     ]
+    intervention_columns = categorical_variables.copy()
     ordinal_variables = dict()
 
 
