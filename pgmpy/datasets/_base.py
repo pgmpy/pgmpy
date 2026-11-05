@@ -21,17 +21,17 @@ from pgmpy.utils.hf_hub import read_hf_file
 class Dataset:
     name: str
     data: pd.DataFrame
+    interventions: pd.DataFrame | None = None
     expert_knowledge: ExpertKnowledge | None = None
     ground_truth: DAG | PDAG | ADMG | MAG | None = None
     tags: dict[str, Any] = None
-    interventions: pd.DataFrame | None = None
 
     def __str__(self) -> str:
         interventions = None if self.interventions is None else f"DataFrame of size: {self.interventions.shape}"
         return (
             f"Dataset(name={self.name}, \n data=DataFrame of size: {self.data.shape}, \n "
-            f"expert_knowledge={self.expert_knowledge}, \n ground_truth={self.ground_truth}, \n "
-            f"interventions={interventions}, \n tags={self.tags})"
+            f"interventions={interventions}, \n expert_knowledge={self.expert_knowledge}, \n"
+            f"ground_truth={self.ground_truth}, \n tags={self.tags})"
         )
 
     def __repr__(self) -> str:
@@ -62,9 +62,6 @@ class BaseDataset(BaseObject):
     }
 
     base_url = ""
-    repo_id = "pgmpy/example_datasets"
-    repo_type = "dataset"
-    revision = "main"
     intervention_columns: list[str] | None = None
 
     @staticmethod
@@ -128,10 +125,10 @@ class BaseDataset(BaseObject):
         Fetches a dataset file from the Hugging Face Hub cache.
         """
         return read_hf_file(
-            repo_id=cls.repo_id,
+            repo_id="pgmpy/example_datasets",
             filename=f"{cls.base_url}/{filename}",
-            repo_type=cls.repo_type,
-            revision=cls.revision,
+            repo_type="dataset",
+            revision="main",
         )
 
     @classmethod
@@ -184,9 +181,6 @@ class BaseDataset(BaseObject):
     ) -> pd.DataFrame:
         """
         Fetches/reads from cache the data associated with the dataset.
-
-        For interventional datasets, the columns listed in ``intervention_columns`` are not read; use
-        ``load_interventions`` to load them.
 
         Parameters
         ----------
