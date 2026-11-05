@@ -74,7 +74,6 @@ class RKHSLikelihood(BaseStructureScore):
         self,
         data,
         kernel: Kernel | dict[str, Kernel] | None = None,
-        gamma=None,
         reg_param=1.0,
         max_cache_size=10000,
     ):
