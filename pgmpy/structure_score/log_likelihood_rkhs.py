@@ -1,6 +1,7 @@
-from collections.abc import Hashable
-
 import numpy as np
+from sklearn.gaussian_process.kernels import RBF, Kernel
+
+from collections.abc import Hashable
 
 from pgmpy.structure_score._base import BaseStructureScore
 
@@ -30,12 +31,8 @@ class RKHSLikelihood(BaseStructureScore):
     ----------
     data : pandas.DataFrame
         DataFrame where each column represents a continuous variable.
-    state_names : dict, optional
-        Dictionary mapping each variable to its allowed states.
-    kernel : str, default="rbf"
-        The kernel type to use (default: "rbf").
-    gamma : float, optional
-        kernel width parameter, If None, it is set to `1 / X.shape[1]`.
+    kernel : sklearn.gaussian_process.kernels.Kernel or dict of {str: Kernel}, default=None
+        Use a defauly RBF kernel.
     reg_param : float, default=1.0
         Ridge regularization parameter `\lambda`
     max_cache_size : int or None, default=10000
@@ -47,12 +44,14 @@ class RKHSLikelihood(BaseStructureScore):
     >>> from pgmpy.structure_score import RKHSLikelihood
     >>> df = pd.DataFrame({"A": [1.0, 2.0, 3.0], "B": [4.0, 5.0, 6.0]})
     >>> score = RKHSLikelihood(df)
+    {'A': RBF(length_scale=1), 'B': RBF(length_scale=1)}
     >>> score.local_score("B", ("A",))
-    np.float64(-3.1068063509697152)
+    np.float64(-0.7243932987727426)
 
     References
     ----------
     - :cite:p:`huang_2018`
+
     Raises
     ------
     ValueError
@@ -74,13 +73,11 @@ class RKHSLikelihood(BaseStructureScore):
     def __init__(
         self,
         data,
-        state_names=None,
-        kernel="rbf",
+        kernel: Kernel | dict[str, Kernel] | None = None,
         gamma=None,
         reg_param=1.0,
         max_cache_size=10000,
     ):
-        super().__init__(data, state_names=state_names, max_cache_size=max_cache_size)
 
         if data.isnull().any().any():
             raise ValueError("Data contains missing values. RKHSLikelihood does not support missing data.")
@@ -88,35 +85,38 @@ class RKHSLikelihood(BaseStructureScore):
         if reg_param <= 0:
             raise ValueError("reg_param must be a positive number.")
 
-        if kernel not in ["rbf"]:
-            raise ValueError(f"Kernel '{kernel}' is not supported. Only 'rbf' is supported.")
-
+        self.data = data
         self.kernel = kernel
-        self.gamma = gamma
         self.reg_param = reg_param
+        super().__init__(data, max_cache_size=max_cache_size)
 
-    def _kernel_matrix(self, X, Y=None):
-        if Y is None:
-            Y = X
+        if kernel is None:
+            self.kernel_dict = {}
+        elif isinstance(kernel, Kernel):
+            self.kernel_dict = dict.fromkeys(self.data.columns, kernel)
+        elif isinstance(kernel, dict):
+            invalid = [col for col, k in kernel.items() if col not in self.data.columns or not isinstance(k, Kernel)]
+            if invalid:
+                raise ValueError(f"kernel must map columns in data to sklearn Kernels. Invalid entries: {invalid}")
+            self.kernel_dict = dict(kernel)
+        else:
+            raise ValueError(
+                f"kernel must be a sklearn Kernel, a dict of Kernels keyed by column, or None. Got {kernel!r}"
+            )
+        for col in self.data.columns.drop(list(self.kernel_dict)):
+            self.kernel_dict[col] = RBF()
 
-        gamma = self.gamma
-        if gamma is None:
-            gamma = 1.0 / X.shape[1]
+        print(self.kernel_dict)
 
-        X_norm = np.sum(X**2, axis=1, keepdims=True)
-        Y_norm = np.sum(Y**2, axis=1, keepdims=True).T
-        dist_sq = X_norm + Y_norm - (2 * np.dot(X, Y.T))
-
-        dist_sq = np.maximum(dist_sq, 0.0)
-
-        return np.exp(-gamma * dist_sq)
-
-    def _centralized_kernel_matrix(self, X, Y=None):
+    def _centralized_kernel_matrix(self, X, Y=None, Z=None):
         is_symmetric = Y is None
 
         n_x = X.shape[0]
 
-        K = self._kernel_matrix(X, Y)
+        kernel_fn = self.kernel_dict.get(Z, RBF())
+
+        K = kernel_fn(X, Y)
+
         H_x = np.eye(n_x) - np.ones((n_x, n_x)) / n_x
 
         if is_symmetric:
@@ -125,11 +125,6 @@ class RKHSLikelihood(BaseStructureScore):
             n_y = Y.shape[0]
             H_y = np.eye(n_y) - np.ones((n_y, n_y)) / n_y
             return H_x @ K @ H_y
-
-    def _residual_covariance(self, K_Z):
-        n = K_Z.shape[0]
-        reg_K_Z = K_Z + n * self.reg_param * np.eye(n)
-        return np.linalg.inv(reg_K_Z)
 
     def _log_likelihood(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         X = self.data[[variable]].values
@@ -147,7 +142,9 @@ class RKHSLikelihood(BaseStructureScore):
         # Conditional case (with parents)
         Z = self.data[list(parents)].values
         K_Z = self._centralized_kernel_matrix(Z)
-        inv_reg_K_Z = self._residual_covariance(K_Z)
+        n = K_Z.shape[0]
+        reg_K_Z = K_Z + n * self.reg_param * np.eye(n)
+        inv_reg_K_Z = np.linalg.inv(reg_K_Z)
 
         term = n * (self.reg_param**2) * K_X @ (inv_reg_K_Z @ inv_reg_K_Z) @ K_X
 
