@@ -24,8 +24,7 @@ class CausalBenchK562(BaseDataset):
         "is_ordinal": False,
     }
 
-    repo_id = "huggingbahl21/causalbench"
-    base_url = "data/prepared"
+    base_url = "causalbench"
 
     data_url = "causalbench_k562.tsv.gz"
     ground_truth_url = None

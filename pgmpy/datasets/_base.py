@@ -30,7 +30,7 @@ class Dataset:
         return (
             f"Dataset(name={self.name}, \n data=DataFrame of size: {self.data.shape}, \n "
             f"expert_knowledge={self.expert_knowledge}, \n ground_truth={self.ground_truth},"
-            f"interventions={self.interventions}, \n tags={self.tags})"
+            f"interventions={self.interventions.shape}, \n tags={self.tags})"
         )
 
     def __repr__(self) -> str:
