@@ -405,10 +405,63 @@ class TestSEM(unittest.TestCase):
         self.assertEqual(set(model_from_file.latents), expected_latents)
 
     def test_from_lisrel(self):
-        pass  # TODO: Add this test when done writing the tests for SEMAlg
+        var_names = {"y": ["y1", "y2"], "x": ["x1", "x2"], "eta": ["eta1"], "xi": ["xi1"]}
+        params = {
+            "B": np.zeros((1, 1)),
+            "gamma": np.ones((1, 1)),
+            "wedge_y": np.ones((2, 1)),
+            "wedge_x": np.ones((2, 1)),
+            "theta_e": np.array([[1, 1], [1, 1]]),
+            "theta_del": np.eye(2),
+            "psi": np.eye(1),
+            "phi": np.eye(1),
+        }
+        fixed_masks = {name: np.zeros_like(param) for name, param in params.items()}
+
+        expected_edges = {
+            ("eta1", "y1"),
+            ("eta1", "y2"),
+            ("xi1", "x1"),
+            ("xi1", "x2"),
+            ("xi1", "eta1"),
+        }
+
+        for masks in [None, fixed_masks]:
+            with self.subTest(fixed_masks=masks):
+                model = SEM.from_lisrel(var_names=var_names, params=params, fixed_masks=masks)
+
+                self.assertSetEqual(set(model.graph.edges()), expected_edges)
+                self.assertSetEqual(set(model.latents), {"eta1", "xi1"})
+                self.assertSetEqual(set(model.observed), {"y1", "y2", "x1", "x2"})
+                self.assertSetEqual(
+                    {frozenset(edge) for edge in model.err_graph.edges()},
+                    {frozenset(("y1", "y2"))},
+                )
 
     def test_from_ram(self):
-        pass  # TODO: Add this.
+        variables = ["xi1", "eta1", "y1", "y2"]
+        B = np.zeros((4, 4))
+        B[1, 0] = B[2, 1] = B[3, 1] = 1
+        zeta = np.eye(4)
+        zeta[2, 3] = zeta[3, 2] = 1
+
+        wedge_y = np.zeros((2, 4))
+        wedge_y[0, 2] = wedge_y[1, 3] = 1
+
+        for kwargs in [{"observed": ["y1", "y2"]}, {"wedge_y": wedge_y}]:
+            with self.subTest(kwargs=list(kwargs)):
+                model = SEM.from_RAM(variables=variables, B=B, zeta=zeta, **kwargs)
+
+                self.assertSetEqual(
+                    set(model.graph.edges()),
+                    {("xi1", "eta1"), ("eta1", "y1"), ("eta1", "y2")},
+                )
+                self.assertSetEqual(set(model.latents), {"xi1", "eta1"})
+                self.assertSetEqual(set(model.observed), {"y1", "y2"})
+                self.assertSetEqual(
+                    {frozenset(edge) for edge in model.err_graph.edges()},
+                    {frozenset(("y1", "y2"))},
+                )
 
 
 class TestSEMGraph(unittest.TestCase):

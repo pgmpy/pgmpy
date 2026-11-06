@@ -890,8 +890,14 @@ class SEM(SEMGraph):
                 B=kwargs["B"],
                 zeta=kwargs["zeta"],
                 wedge_y=kwargs["wedge_y"],
-                fixed_values=kwargs.get("fixed_masks"),
-            )
+                fixed_values=kwargs.get("fixed_values"),
+            ).to_SEMGraph()
+            super().__init__(ebunch=[], latents=[], err_corr=[], err_var={})
+            self.graph = model.graph
+            self.latents = model.latents
+            self.observed = model.observed
+            self.err_graph = model.err_graph
+            self.full_graph_struct = model.full_graph_struct
 
     @classmethod
     def from_lavaan(cls, string=None, filename=None):
@@ -1073,22 +1079,26 @@ class SEM(SEMGraph):
             ]
         )
 
-        B = np.block(
-            [
-                [np.zeros((m, m + n)), fixed_masks["wedge_y"], np.zeros((m, q))],
-                [np.zeros((n, m + n + p)), fixed_masks["wedge_x"]],
-                [np.zeros((p, m + n)), fixed_masks["B"], fixed_masks["gamma"]],
-                [np.zeros((q, m + n + p + q))],
-            ]
-        )
-        zeta = np.block(
-            [
-                [fixed_masks["theta_e"], np.zeros((m, n + p + q))],
-                [np.zeros((n, m)), fixed_masks["theta_del"], np.zeros((n, p + q))],
-                [np.zeros((p, m + n)), fixed_masks["psi"], np.zeros((p, q))],
-                [np.zeros((q, m + n + p)), fixed_masks["phi"]],
-            ]
-        )
+        fixed_values = None
+        if fixed_masks is not None:
+            fixed_values = {
+                "B": np.block(
+                    [
+                        [np.zeros((m, m + n)), fixed_masks["wedge_y"], np.zeros((m, q))],
+                        [np.zeros((n, m + n + p)), fixed_masks["wedge_x"]],
+                        [np.zeros((p, m + n)), fixed_masks["B"], fixed_masks["gamma"]],
+                        [np.zeros((q, m + n + p + q))],
+                    ]
+                ),
+                "zeta": np.block(
+                    [
+                        [fixed_masks["theta_e"], np.zeros((m, n + p + q))],
+                        [np.zeros((n, m)), fixed_masks["theta_del"], np.zeros((n, p + q))],
+                        [np.zeros((p, m + n)), fixed_masks["psi"], np.zeros((p, q))],
+                        [np.zeros((q, m + n + p)), fixed_masks["phi"]],
+                    ]
+                ),
+            }
         observed = var_names["y"] + var_names["x"]
 
         return cls.from_RAM(
@@ -1096,7 +1106,7 @@ class SEM(SEMGraph):
             B=B,
             zeta=zeta,
             observed=observed,
-            fixed_values={"B": B, "zeta": zeta},
+            fixed_values=fixed_values,
         )
 
     @classmethod
@@ -1148,7 +1158,7 @@ class SEM(SEMGraph):
         >>> SEM.from_RAM  # TODO: Finish this
         """
         if observed:
-            wedge_y = np.zeros((len(variables), len(observed)))
+            wedge_y = np.zeros((len(observed), len(variables)))
             obs_dict = {var: index for index, var in enumerate(observed)}
             all_dict = {var: index for index, var in enumerate(variables)}
             for var in observed:
