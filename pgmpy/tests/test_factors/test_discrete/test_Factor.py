@@ -2920,6 +2920,84 @@ class TestTabularCPDMethods:
         assert repr(intel_cpd) == f"<TabularCPD representing P(intel:3) at {hex(id(intel_cpd))}>"
         assert repr(diff_cpd) == f"<TabularCPD representing P(grade:3 | diff:2) at {hex(id(diff_cpd))}>"
 
+    @pytest.mark.parametrize("backend", ["numpy"], indirect=True)
+    def test__str__(self, monkeypatch):
+        monkeypatch.setattr(
+            "pgmpy.factors.discrete.CPD.get_terminal_size",
+            lambda: (70, 24),
+        )
+        simple_cpd = TabularCPD(
+            "A",
+            3,
+            [[0.2], [0.5], [0.3]],
+        )
+        evidence_cpd = TabularCPD(
+            "B",
+            2,
+            [[0.2, 1.0, 0.7], [0.8, 0.0, 0.3]],
+            evidence=["A"],
+            evidence_card=[3],
+            state_names={"B": ["T", "F"], "A": ["high", "med", "low"]},
+        )
+        tuple_cpd = TabularCPD(("A", 0), 3, [[0.07], [0.31], [0.62]], state_names={("A", 0): ["high", "med", "low"]})
+        tuple_evidence_cpd = TabularCPD(
+            ("C", 0),
+            2,
+            [[0.5, 0.0, 1.0, 0.0, 0.46, 0.5], [0.5, 1.0, 0.0, 1.0, 0.54, 0.5]],
+            evidence=[("A", 0), ("B", 0)],
+            evidence_card=[3, 2],
+        )
+        expected_simple = "\n".join(
+            [
+                "+------+-----+",
+                "| A(0) | 0.2 |",
+                "+------+-----+",
+                "| A(1) | 0.5 |",
+                "+------+-----+",
+                "| A(2) | 0.3 |",
+                "+------+-----+",
+            ]
+        )
+        expected_evidence = "\n".join(
+            [
+                "+------+---------+--------+--------+",
+                "| A    | A(high) | A(med) | A(low) |",
+                "+------+---------+--------+--------+",
+                "| B(T) | 0.2     | 1.0    | 0.7    |",
+                "+------+---------+--------+--------+",
+                "| B(F) | 0.8     | 0.0    | 0.3    |",
+                "+------+---------+--------+--------+",
+            ]
+        )
+        expected_tuple = "\n".join(
+            [
+                "+----------------+------+",
+                "| ('A', 0)(high) | 0.07 |",
+                "+----------------+------+",
+                "| ('A', 0)(med)  | 0.31 |",
+                "+----------------+------+",
+                "| ('A', 0)(low)  | 0.62 |",
+                "+----------------+------+",
+            ]
+        )
+        expected_tuple_evidence = "\n".join(
+            [
+                "+-------------+-------------+-----+-------------+-------------+",
+                "| ('A', 0)    | ('A', 0)(0) | ... | ('A', 0)(2) | ('A', 0)(2) |",
+                "+-------------+-------------+-----+-------------+-------------+",
+                "| ('B', 0)    | ('B', 0)(0) | ... | ('B', 0)(0) | ('B', 0)(1) |",
+                "+-------------+-------------+-----+-------------+-------------+",
+                "| ('C', 0)(0) | 0.5         | ... | 0.46        | 0.5         |",
+                "+-------------+-------------+-----+-------------+-------------+",
+                "| ('C', 0)(1) | 0.5         | ... | 0.54        | 0.5         |",
+                "+-------------+-------------+-----+-------------+-------------+",
+            ]
+        )
+        assert str(simple_cpd) == expected_simple
+        assert str(evidence_cpd) == expected_evidence
+        assert str(tuple_cpd) == expected_tuple
+        assert str(tuple_evidence_cpd) == expected_tuple_evidence
+
     def test_copy(self):
         copy_cpd = self.cpd.copy()
         np_test.assert_array_equal(self.cpd.get_values(), copy_cpd.get_values())
