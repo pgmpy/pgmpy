@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 from pgmpy.base import DAG
@@ -16,8 +17,9 @@ class LinearGaussianSCM(BaseSimulatedDataset):
 
     Parameters
     ----------
-    seed : int, optional
-        Random seed for reproducible graph, parameter, and data generation.
+    rng : int, numpy.random.Generator, or None, default None
+        Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the operating
+        system, so results are not reproducible.
     n_nodes : int, default 5
         Number of variables in the generated DAG.
     edge_prob : float, default 0.5
@@ -37,18 +39,20 @@ class LinearGaussianSCM(BaseSimulatedDataset):
 
     def __init__(
         self,
-        seed: int | None = None,
         n_nodes: int = 5,
         edge_prob: float = 0.5,
         scale: float = 1.0,
+        *,
+        rng: int | np.random.Generator | None = None,
     ):
+        structure_rng, _ = np.random.default_rng(rng).spawn(2)
         self.model = LinearGaussianBayesianNetwork.get_random(
             n_nodes=n_nodes,
             edge_prob=edge_prob,
             scale=scale,
-            seed=seed,
+            rng=structure_rng,
         )
-        self.seed = seed
+        self.rng = rng
 
     def load_dataframe(self, n_samples: int | None = None) -> pd.DataFrame:
         """Sample data from the generated Linear Gaussian SCM.
@@ -62,9 +66,10 @@ class LinearGaussianSCM(BaseSimulatedDataset):
         -------
         pd.DataFrame
         """
+        _, data_rng = np.random.default_rng(self.rng).spawn(2)
         return self.model.simulate(
             n_samples=n_samples if n_samples is not None else 1000,
-            seed=self.seed,
+            rng=data_rng,
         )
 
     def load_ground_truth(self) -> DAG:

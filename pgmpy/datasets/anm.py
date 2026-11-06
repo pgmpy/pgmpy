@@ -42,8 +42,9 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
     weight : float or tuple of float, default ``(-1, 1)``
         Edge coefficients.  If a single float, every edge uses that fixed weight.  If a ``(low, high)`` tuple,
         each edge weight is sampled uniformly from the range.
-    seed : int, optional
-        Random seed for reproducible graph and data generation.
+    rng : int, numpy.random.Generator, or None, default None
+        Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the operating
+        system, so results are not reproducible.
 
     References
     ----------
@@ -64,8 +65,10 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
         noise: Any = None,
         function_type: tuple | list = (np.sin, np.cos, np.tanh),
         weight: float | tuple[float, float] = (-1, 1),
-        seed: int | None = None,
+        *,
+        rng: int | np.random.Generator | None = None,
     ):
+        structure_rng, _ = np.random.default_rng(rng).spawn(2)
         if dag is not None:
             if not isinstance(dag, DAG):
                 raise TypeError(f"dag must be a pgmpy.base.DAG instance, got {type(dag).__name__}.")
@@ -76,7 +79,7 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
                 )
             self.dag = dag
         else:
-            self.dag = DAG.get_random(n_nodes=n_nodes, edge_prob=edge_prob, seed=seed)
+            self.dag = DAG.get_random(n_nodes=n_nodes, edge_prob=edge_prob, rng=structure_rng)
 
         if isinstance(weight, (tuple, list)):
             if len(weight) != 2:
@@ -84,17 +87,23 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
         elif not isinstance(weight, numbers.Real) or isinstance(weight, bool):
             raise TypeError(f"weight must be a float or a (low, high) tuple, got {type(weight).__name__}.")
 
+        funcs = list(function_type)
+        self._mechanisms = {}
+        for child in nx.topological_sort(self.dag):
+            for parent in self.dag.predecessors(child):
+                w = structure_rng.uniform(*weight) if isinstance(weight, (tuple, list)) else weight
+                self._mechanisms[(parent, child)] = (structure_rng.choice(funcs), w)
+
         self.noise = noise
         self.function_type = function_type
         self.weight = weight
-        self.seed = seed
+        self.rng = rng
 
     def load_dataframe(self, n_samples: int | None = None) -> pd.DataFrame:
         """Sample data from the generated Additive Noise Model.
 
-        For each child node :math:`X_j`, every parent edge is independently assigned a random function from
-        *function_type* and a weight from *weight*.  The weighted function outputs are summed and combined
-        with additive noise.
+        For each child node :math:`X_j`, every parent edge uses the function and weight drawn at construction.
+        The weighted function outputs are summed and combined with additive noise.
 
         Parameters
         ----------
@@ -105,10 +114,9 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
         -------
         pd.DataFrame
         """
-        rng = np.random.default_rng(self.seed)
+        _, rng = np.random.default_rng(self.rng).spawn(2)
         topo_order = list(nx.topological_sort(self.dag))
         n = n_samples if n_samples is not None else 1000
-        funcs = list(self.function_type)
 
         data = pd.DataFrame(0.0, index=range(n), columns=list(self.dag.nodes()))
 
@@ -122,12 +130,12 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
             elif hasattr(self.noise, "sample"):
                 # skpro's .sample() has no random_state arg and draws from numpy's legacy global RNG.
                 skpro_seed = int(rng.integers(0, 2**32 - 1))
-                global_state = np.random.get_state()
+                global_state = np.random.get_state()  # noqa: NPY002
                 try:
-                    np.random.seed(skpro_seed)
+                    np.random.seed(skpro_seed)  # noqa: NPY002
                     noise_vals = np.asarray(self.noise.sample(n_samples=n)).flatten()
                 finally:
-                    np.random.set_state(global_state)
+                    np.random.set_state(global_state)  # noqa: NPY002
             else:
                 raise TypeError(f"noise must have a .sample() or .rvs() method, got {type(self.noise).__name__}.")
 
@@ -136,9 +144,8 @@ class AdditiveNoiseModel(BaseSimulatedDataset):
             else:
                 parent_data = data[parents].values
                 signal = np.zeros(n)
-                for i, parent_col in enumerate(parents):
-                    w = rng.uniform(*self.weight) if isinstance(self.weight, (tuple, list)) else self.weight
-                    fn = rng.choice(funcs)
+                for i, parent in enumerate(parents):
+                    fn, w = self._mechanisms[(parent, node)]
                     signal += w * fn(parent_data[:, i])
                 data[node] = signal + noise_vals
 

@@ -35,7 +35,7 @@ class TestDistributionAdapter:
         # from_values creates a fitted adapter without data, as do() needs. fit only records the target and parents.
         do = DistributionAdapter.from_values("X", Delta(c=2.5), ["b", "a"])
         assert do.is_fitted and (do.variable_, do.evidence_, do.variable_type_) == ("X", ["a", "b"], "continuous")
-        assert (do.sample(pd.DataFrame({"a": [0, 1], "b": [1, 2]}), random_state=0)["X"] == 2.5).all()
+        assert (do.sample(pd.DataFrame({"a": [0, 1], "b": [1, 2]}), rng=0)["X"] == 2.5).all()
         fitted = DistributionAdapter(normal).fit(None, pd.Series([0.3, -1.2], name="X"))
         assert fitted == DistributionAdapter.from_values("X", Normal(mu=1.5, sigma=2.0))
         histogram = Histogram(bins=[0.0, 1.0, 2.0], bin_mass=[0.5, 0.5])  # skbase can't clone it
@@ -124,13 +124,13 @@ class TestDistributionAdapter:
 
     def test_sample_and_equality(self):
         normal = DistributionAdapter.from_values("y", Normal(mu=1.5, sigma=2.0))
-        samples = normal.sample(n_samples=2000, random_state=0)["y"]
+        samples = normal.sample(n_samples=2000, rng=0)["y"]
         assert samples.mean() == pytest.approx(1.5, abs=0.2) and samples.std() == pytest.approx(2.0, rel=0.1)
-        pd.testing.assert_frame_equal(normal.sample(ROWS, n_samples=2, random_state=0), normal.sample(ROWS, 2, 0))
-        assert normal.sample(ROWS, n_samples=2, random_state=0).shape == (6, 1)
-        assert not normal.sample(ROWS, random_state=0).equals(normal.sample(ROWS, random_state=1))
+        pd.testing.assert_frame_equal(normal.sample(ROWS, n_samples=2, rng=0), normal.sample(ROWS, 2, rng=0))
+        assert normal.sample(ROWS, n_samples=2, rng=0).shape == (6, 1)
+        assert not normal.sample(ROWS, rng=0).equals(normal.sample(ROWS, rng=1))
         nominal = DistributionAdapter.from_values("y", NominalDistribution([0.3, 0.7], ["a", "b"]))
-        assert nominal.sample(n_samples=20, random_state=0)["y"].isin(["a", "b"]).all()
+        assert nominal.sample(n_samples=20, rng=0)["y"].isin(["a", "b"]).all()
 
         # Fitted adapters compare by their distribution's type and parameters.
         same = DistributionAdapter.from_values("y", Normal(mu=1.5, sigma=2.0))

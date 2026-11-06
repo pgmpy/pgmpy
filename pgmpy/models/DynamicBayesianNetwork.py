@@ -11,6 +11,7 @@ from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.utils import compat_fns, to_timeseries_format
+from pgmpy.utils._random import _rename_to_rng
 
 
 @dataclass(eq=True, frozen=True)
@@ -1023,6 +1024,7 @@ class DynamicBayesianNetwork(DAG):
         df.columns = new_cols
         return df
 
+    @_rename_to_rng("seed")
     def simulate(
         self,
         n_samples=10,
@@ -1032,7 +1034,7 @@ class DynamicBayesianNetwork(DAG):
         virtual_evidence=None,
         virtual_intervention=None,
         include_latents=False,
-        seed=None,
+        rng: int | np.random.Generator | None = None,
         show_progress=True,
         return_format="wide",
     ):
@@ -1068,8 +1070,13 @@ class DynamicBayesianNetwork(DAG):
         include_latents: boolean (default: False)
             Whether to include the latent variable values in the generated samples.
 
-        seed: int (default: None)
-            If a value is provided, sets the seed for numpy.random.
+        rng: int, numpy.random.Generator or None (default: None)
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
+
+            .. versionchanged:: 1.2.0
+                Replaces ``seed``, which is deprecated and will be removed in v2.0. None no longer follows
+                ``np.random.seed``.
 
         show_progress: bool
             If True, shows a progress bar when generating samples.
@@ -1152,21 +1159,21 @@ class DynamicBayesianNetwork(DAG):
 
         Normal simulation from the model.
 
-        >>> dbn.simulate(n_time_slices=4, n_samples=2, seed=42) # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
-          (D, 0) (G, 0) (I, 0) (D, 1)  ... (D, 3) (G, 3) (I, 2) (I, 3)
-        0      0      0      1      0  ...      1      0      1      1
-        1      1      1      0      0  ...      1      0      1      1
+        >>> dbn.simulate(n_time_slices=4, n_samples=2, rng=42) # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
+          (D, 0) (G, 0) (I, 0) (D, 1) (G, 1)  ... (G, 2) (D, 3) (G, 3) (I, 2) (I, 3)
+        0      1      1      1      0      2  ...      2      1      2      0      1
+        1      0      2      0      1      2  ...      1      1      2      0      0
         <BLANKLINE>
         [2 rows x 12 columns]
 
         Simulation with evidence.
 
         >>> dbn.simulate(
-        ...     n_time_slices=4, n_samples=2, evidence={("D", 0): 1, ("D", 2): 0}, seed=42
+        ...     n_time_slices=4, n_samples=2, evidence={("D", 0): 1, ("D", 2): 0}, rng=42
         ... )  # doctest: +NORMALIZE_WHITESPACE  +ELLIPSIS
-          (D, 0) (G, 0) (I, 0) (D, 1)  ... (D, 3) (G, 3) (I, 2) (I, 3)
-        0      1      2      0      1  ...      0      0      1      1
-        1      1      0      0      0  ...      1      0      0      1
+          (D, 0) (G, 0) (I, 0) (D, 1) (G, 1)  ... (G, 2) (D, 3) (G, 3) (I, 2) (I, 3)
+        0      1      2      0      1      0  ...      0      1      0      0      1
+        1      1      2      1      1      1  ...      1      0      0      0      1
         <BLANKLINE>
         [2 rows x 12 columns]
 
@@ -1176,21 +1183,21 @@ class DynamicBayesianNetwork(DAG):
         ...     n_time_slices=4,
         ...     n_samples=2,
         ...     virtual_evidence=[TabularCPD(("D", 2), 2, [[0.7], [0.3]])],
-        ...     seed=42
+        ...     rng=42
         ... ) # doctest: +NORMALIZE_WHITESPACE  +ELLIPSIS
-          (D, 0) (G, 0) (I, 0) (D, 1)  ... (D, 3) (G, 3) (I, 2) (I, 3)
-        0      0      0      1      0  ...      1      1      1      0
-        1      1      1      0      0  ...      1      1      1      0
+          (D, 0) (G, 0) (I, 0) (D, 1) (G, 1)  ... (G, 2) (D, 3) (G, 3) (I, 2) (I, 3)
+        0      1      1      1      1      2  ...      2      0      0      0      1
+        1      0      2      0      0      2  ...      0      0      0      1      1
         <BLANKLINE>
         [2 rows x 12 columns]
 
         Simulation with intervention.
 
         >>> dbn.simulate(n_time_slices=4, n_samples=2,
-        ...     do={("D", 0): 1, ("D", 2): 0}, seed=42) # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
-          (D, 0) (G, 0) (I, 0) (D, 1)  ... (D, 3) (G, 3) (I, 2) (I, 3)
-        0      1      2      1      0  ...      0      0      1      1
-        1      1      1      0      0  ...      1      0      1      1
+        ...     do={("D", 0): 1, ("D", 2): 0}, rng=42) # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
+          (D, 0) (G, 0) (I, 0) (D, 1) (G, 1)  ... (G, 2) (D, 3) (G, 3) (I, 2) (I, 3)
+        0      1      1      1      0      2  ...      1      1      2      0      1
+        1      1      2      0      1      2  ...      0      1      2      0      0
         <BLANKLINE>
         [2 rows x 12 columns]
 
@@ -1200,11 +1207,11 @@ class DynamicBayesianNetwork(DAG):
         ...     n_time_slices=4,
         ...     n_samples=2,
         ...     virtual_intervention=[TabularCPD(("D", 2), 2, [[0.7], [0.3]])],
-        ...     seed=42
+        ...     rng=42
         ... ) # doctest: +NORMALIZE_WHITESPACE  +ELLIPSIS
-          (D, 0) (G, 0) (I, 0) (D, 1)  ... (D, 3) (G, 3) (I, 2) (I, 3)
-        0      0      0      1      0  ...      1      0      1      1
-        1      1      1      0      0  ...      1      0      1      1
+          (D, 0) (G, 0) (I, 0) (D, 1) (G, 1)  ... (G, 2) (D, 3) (G, 3) (I, 2) (I, 3)
+        0      1      1      1      0      2  ...      0      1      2      0      1
+        1      0      2      0      1      2  ...      2      1      2      0      0
         <BLANKLINE>
         [2 rows x 12 columns]
 
@@ -1212,24 +1219,26 @@ class DynamicBayesianNetwork(DAG):
         `return_format="wide"` returns the data in standard format.
 
         >>> dbn.simulate(n_samples=2, n_time_slices=3,
-        ...         return_format="wide", seed=42) # doctest:  +ELLIPSIS +NORMALIZE_WHITESPACE
+        ...         return_format="wide", rng=42) # doctest:  +ELLIPSIS +NORMALIZE_WHITESPACE
           (D, 0) (G, 0) (I, 0) (D, 1) (G, 1) (D, 2) (G, 2) (I, 1) (I, 2)
-        0      0      0      1      0      0      0      0      1      1
-        1      1      1      0      0      1      1      0      1      1
+        0      1      1      1      0      2      1      2      0      0
+        1      0      2      0      1      2      1      1      0      0
 
         `return_format="pd-multiindex"` returns pandas dataframe with indexes of ("Variable name", "timestep").
 
         >>> dbn.simulate(n_samples=2, n_time_slices=3,
-        ...     return_format="pd-multiindex", seed=42) # doctest:  +ELLIPSIS +NORMALIZE_WHITESPACE
+        ...     return_format="pd-multiindex", rng=42) # doctest:  +ELLIPSIS +NORMALIZE_WHITESPACE
         variable       D  G  I
         instance time
-        0        0     0  0  1
-                 1     0  0  1
-                 2     0  0  1
-        1        0     1  1  0
-                 1     0  1  1
-                 2     1  0  1
+        0        0     1  1  1
+                 1     0  2  0
+                 2     1  2  0
+        1        0     0  2  0
+                 1     1  2  0
+                 2     1  1  0
         """
+
+        rng = np.random.default_rng(rng)
 
         # Step 1: Create some data structures for easily accessing values
         do = {} if do is None else do
@@ -1276,7 +1285,7 @@ class DynamicBayesianNetwork(DAG):
             virtual_evidence=[*virtual_evi_dict[0], *virtual_evi_dict[1]],
             virtual_intervention=[*virtual_inter_dict[0], *virtual_inter_dict[1]],
             include_latents=True,
-            seed=seed,
+            rng=rng,
             show_progress=False,
         )
         if n_time_slices == 1:
@@ -1307,7 +1316,7 @@ class DynamicBayesianNetwork(DAG):
                     ],
                     include_latents=True,
                     partial_samples=partial_df,
-                    seed=seed,
+                    rng=rng,
                     show_progress=False,
                 )
                 sampled = pd.concat((remaining_df, new_samples), axis=1)

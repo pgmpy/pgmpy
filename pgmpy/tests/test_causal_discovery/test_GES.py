@@ -287,7 +287,7 @@ def test_expert_knowledge_not_supported():
 
 def test_cancer_model():
     cancer_model = load_model("bnlearn/cancer")
-    data = cancer_model.simulate(3000, seed=0)
+    data = cancer_model.simulate(5000, rng=0)
 
     dag = GES().fit(data).causal_graph_
 
