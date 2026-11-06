@@ -1,13 +1,9 @@
 from math import isclose
 
-from skbase.utils.dependencies import _safe_import
 from sklearn.exceptions import ConvergenceWarning
 
 from pgmpy import logger
 from pgmpy.utils._warnings import _warn_external
-
-torch = _safe_import("torch")
-optim = _safe_import("torch.optim")
 
 
 def pinverse(t):
@@ -23,6 +19,8 @@ def pinverse(t):
     -------
     torch.tensor: Inverse of the matrix `t`.
     """
+    import torch
+
     u, s, v = t.svd()
     t_inv = v @ torch.diag(torch.where(s != 0, 1 / s, s)) @ u.t()
     return t_inv
@@ -83,6 +81,8 @@ def optimize(loss_fn, params={}, loss_args={}, opt="adam", max_iter=10000, exit_
     init_loss = float("inf")
 
     if isinstance(opt, str):
+        from torch import optim
+
         opt_dict = {
             "adadelta": optim.Adadelta,
             "adagrad": optim.Adagrad,

@@ -116,7 +116,7 @@ class NaiveAdjustmentRegressor(BaseCausalPrediction):
     >>> lgbn_with_P = DAG.from_dagitty(
     ...     "dag { P -> Y [beta=0.8] Z -> X [beta=0.5] X -> Y [beta=2.0] Z -> Y [beta=1.5] }"
     ... )
-    >>> data_with_P = lgbn_with_P.simulate(100, seed=42)
+    >>> data_with_P = lgbn_with_P.simulate(100, rng=42)
     >>>
     >>> regressor_with_P = NaiveAdjustmentRegressor(causal_graph=dag_with_pretreatment)
     >>> _ = regressor_with_P.fit(data_with_P[["X", "Z", "P"]], data_with_P["Y"])

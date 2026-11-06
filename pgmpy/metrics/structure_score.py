@@ -26,10 +26,10 @@ class StructureScore(BaseUnsupervisedMetric):
     >>> from pgmpy.example_models import load_model
     >>> from pgmpy.metrics import StructureScore
     >>> model = load_model("bnlearn/alarm")
-    >>> data = model.simulate(int(1e4), seed=42)
+    >>> data = model.simulate(int(1e4), rng=42)
     >>> scorer = StructureScore(scoring_method="bic-d")
     >>> scorer(X=data, causal_graph=model)  # doctest: +ELLIPSIS
-    np.float64(-106325.4347661653...)
+    np.float64(-105805.3433692587...)
     """
 
     _tags = {
