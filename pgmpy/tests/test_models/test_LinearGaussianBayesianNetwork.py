@@ -152,7 +152,7 @@ class TestLGBNMethods(unittest.TestCase):
 
     def test_simulate(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
-        df_cont = self.model.simulate(n_samples=1000000, seed=42)
+        df_cont = self.model.simulate(n_samples=1000000, rng=42)
 
         # Same model in terms of equations
         rng = np.random.default_rng(seed=42)
@@ -167,7 +167,7 @@ class TestLGBNMethods(unittest.TestCase):
     def test_simulate_with_evidence(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
         evidence = {"x1": 0}
-        df = self.model.simulate(n_samples=10000, seed=42, evidence=evidence)
+        df = self.model.simulate(n_samples=10000, rng=42, evidence=evidence)
 
         missing_vars, mean_cond, cov_cond = self.model.predict_probability(pd.DataFrame([evidence]))
         sorted_indices = np.argsort(missing_vars)
@@ -185,7 +185,7 @@ class TestLGBNMethods(unittest.TestCase):
     def test_simulate_with_intervention(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
         do = {"x2": 1.0}
-        df = self.model.simulate(n_samples=1000_000, seed=42, do=do)
+        df = self.model.simulate(n_samples=1000_000, rng=42, do=do)
 
         rng = np.random.default_rng(seed=42)
         x1 = 1 + rng.normal(0, 4, 1000_000)
@@ -202,7 +202,7 @@ class TestLGBNMethods(unittest.TestCase):
         new_cpd = LinearGaussianCPD(variable="x2", beta=[1.0], std=2.0)
         virtual_intervention = [new_cpd]
 
-        df = self.model.simulate(n_samples=100_000, seed=42, virtual_intervention=virtual_intervention)
+        df = self.model.simulate(n_samples=100_000, rng=42, virtual_intervention=virtual_intervention)
 
         rng = np.random.default_rng(seed=42)
         x1 = 1 + rng.normal(0, 4, 100_000)
@@ -218,8 +218,8 @@ class TestLGBNMethods(unittest.TestCase):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
         self.model.latents.add("x2")
 
-        df_with_latents = self.model.simulate(n_samples=1000, seed=42, include_latents=True)
-        df_without_latents = self.model.simulate(n_samples=1000, seed=42, include_latents=False)
+        df_with_latents = self.model.simulate(n_samples=1000, rng=42, include_latents=True)
+        df_without_latents = self.model.simulate(n_samples=1000, rng=42, include_latents=False)
 
         for latent_var in self.model.latents:
             self.assertIn(latent_var, df_with_latents.columns)
@@ -241,7 +241,7 @@ class TestLGBNMethods(unittest.TestCase):
 
         model.add_cpds(cpd_X1, cpd_X2, cpd_X3)
 
-        df = model.simulate(n_samples=100000, seed=42, do={"X1": 1.0})
+        df = model.simulate(n_samples=100000, rng=42, do={"X1": 1.0})
 
         E_X1 = 1.0
         E_X2 = 2.0 * E_X1
@@ -266,7 +266,7 @@ class TestLGBNMethods(unittest.TestCase):
             LinearGaussianCPD("X", beta=[1, 0.5, 0.5, 0.5], std=1, evidence=["Z1", "Z2", "Z3"]),
             LinearGaussianCPD("Y", beta=[-1, 0.5, 0.5, 0.5], std=1, evidence=["Z1", "Z2", "Z3"]),
         )
-        df = model.simulate(n_samples=100, seed=42)
+        df = model.simulate(n_samples=100, rng=42)
 
         noise = pd.DataFrame(np.random.default_rng(42).standard_normal((100, 5)), columns=df.columns)
         expected = pd.DataFrame(index=df.index, columns=df.columns, dtype=float)
@@ -295,7 +295,7 @@ class TestLGBNMethods(unittest.TestCase):
     def test_fit(self):
         # Test fit on a simple model
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
-        df = self.model.simulate(n_samples=int(1e5), seed=42)
+        df = self.model.simulate(n_samples=int(1e5), rng=42)
         new_model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
         # breakpoint()
         new_model.fit(
@@ -320,9 +320,9 @@ class TestLGBNMethods(unittest.TestCase):
         # Test fit on the alarm model
         model = load_model("bnlearn/alarm")
         model_lin = LinearGaussianBayesianNetwork(model.edges())
-        cpds = model_lin.get_random_cpds(seed=42)
+        cpds = model_lin.get_random_cpds(rng=42)
         model_lin.add_cpds(*cpds)
-        df = model_lin.simulate(n_samples=int(1e6), seed=42)
+        df = model_lin.simulate(n_samples=int(1e6), rng=42)
 
         new_model_lin = LinearGaussianBayesianNetwork(model.edges())
         new_model_lin.fit(df)
@@ -347,7 +347,7 @@ class TestLGBNMethods(unittest.TestCase):
 
     def test_predict_simple(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
-        df = self.model.simulate(n_samples=10, seed=42)
+        df = self.model.simulate(n_samples=10, rng=42)
         df = df.drop("x2", axis=1)
 
         result = self.model.predict(df)
@@ -365,7 +365,7 @@ class TestLGBNMethods(unittest.TestCase):
 
     def test_predict_ecoli(self):
         model = load_model("bnlearn/ecoli70")
-        df = model.simulate(n_samples=10, seed=18)
+        df = model.simulate(n_samples=10, rng=18)
         df = df.drop(["yceP", "yheI", "cspA"], axis=1)
         result = model.predict(df)
 
@@ -424,7 +424,7 @@ class TestLGBNMethods(unittest.TestCase):
 
     def test_predict_probability_simple(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
-        df = self.model.simulate(n_samples=10, seed=42)
+        df = self.model.simulate(n_samples=10, rng=42)
         df = df.drop("x2", axis=1)
         variables, mu, cov = self.model.predict_probability(df)
 
@@ -449,8 +449,8 @@ class TestLGBNMethods(unittest.TestCase):
         model_lin = LinearGaussianBayesianNetwork(model.edges())
         cpds = model_lin.get_random_cpds()
         self.assertEqual(len(cpds), len(model.nodes()))
-        cpds1 = model_lin.get_random_cpds(seed=None)
-        cpds2 = model_lin.get_random_cpds(seed=None)
+        cpds1 = model_lin.get_random_cpds(rng=None)
+        cpds2 = model_lin.get_random_cpds(rng=None)
         betas1 = [cpd.beta[0] for cpd in cpds1]
         betas2 = [cpd.beta[0] for cpd in cpds2]
         self.assertFalse(betas1 == betas2)

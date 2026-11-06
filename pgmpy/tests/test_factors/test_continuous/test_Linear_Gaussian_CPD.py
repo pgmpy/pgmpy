@@ -28,3 +28,9 @@ def test_get_random():
 def test_variable_hashable():
     with pytest.raises(ValueError, match="argument must be hashable"):
         LinearGaussianCPD(variable=["X"], beta=[0], std=1)
+
+
+def test_evidence():
+    cpd = LinearGaussianCPD(variable="Y", beta=[0, 1], std=1, evidence=("X",))
+    assert cpd.evidence == ["X"]
+    assert list(cpd.variables) == ["Y", "X"]

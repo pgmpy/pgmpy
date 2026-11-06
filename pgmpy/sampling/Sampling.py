@@ -9,6 +9,7 @@ from pgmpy import config
 from pgmpy.factors import factor_product
 from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork, MarkovChain
 from pgmpy.sampling import BayesianModelInference, _return_samples
+from pgmpy.utils._random import _rename_to_rng
 from pgmpy.utils.mathext import sample_discrete, sample_discrete_maps
 
 State = namedtuple("State", ["var", "state"])
@@ -27,11 +28,12 @@ class BayesianModelSampling(BayesianModelInference):
     def __init__(self, model):
         super().__init__(model)
 
+    @_rename_to_rng("seed")
     def forward_sample(
         self,
         size=1,
         include_latents=False,
-        seed=None,
+        rng: int | np.random.Generator | None = None,
         show_progress=True,
         partial_samples=None,
         n_jobs=-1,
@@ -47,8 +49,13 @@ class BayesianModelSampling(BayesianModelInference):
         include_latents: boolean
             Whether to include the latent variable values in the generated samples.
 
-        seed: int (default: None)
-            If a value is provided, sets the seed for numpy.random.
+        rng: int | numpy.random.Generator | None (default: None)
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
+
+            .. versionchanged:: 1.2.0
+                Replaces ``seed``, which is deprecated and will be removed in v2.0. None no longer follows
+                ``np.random.seed``.
 
         show_progress: boolean
             Whether to show a progress bar of samples getting generated.
@@ -82,10 +89,10 @@ class BayesianModelSampling(BayesianModelInference):
         ... )
         >>> student.add_cpds(cpd_d, cpd_i, cpd_g)
         >>> inference = BayesianModelSampling(student)
-        >>> inference.forward_sample(size=2, seed=42)
+        >>> inference.forward_sample(size=2, rng=42)
            diff  grade  intel
-        0     0      0      1
-        1     1      1      0
+        0     1      2      1
+        1     0      0      0
         """
         sampled = pd.DataFrame(columns=list(self.model.nodes()))
 
@@ -94,8 +101,7 @@ class BayesianModelSampling(BayesianModelInference):
         else:
             pbar = self.topological_order
 
-        if seed is not None:
-            np.random.seed(seed)
+        rng = np.random.default_rng(rng)
 
         for node in pbar:
             if show_progress and config.SHOW_PROGRESS:
@@ -120,10 +126,10 @@ class BayesianModelSampling(BayesianModelInference):
                         import torch
 
                         weight_index = torch.Tensor([state_to_index[u] for u in unique])[inverse]
-                    sampled[node] = sample_discrete_maps(states, weight_index, index_to_weight, size)
+                    sampled[node] = sample_discrete_maps(states, weight_index, index_to_weight, size, rng=rng)
                 else:
                     weights = cpd.values
-                    sampled[node] = sample_discrete(states, weights, size)
+                    sampled[node] = sample_discrete(states, weights, size, rng=rng)
 
         samples_df = _return_samples(
             sampled,
@@ -134,12 +140,13 @@ class BayesianModelSampling(BayesianModelInference):
             samples_df.drop(self.model.latents, axis=1, inplace=True)
         return samples_df
 
+    @_rename_to_rng("seed")
     def rejection_sample(
         self,
         evidence=[],
         size=1,
         include_latents=False,
-        seed=None,
+        rng: int | np.random.Generator | None = None,
         show_progress=True,
         partial_samples=None,
     ):
@@ -158,8 +165,13 @@ class BayesianModelSampling(BayesianModelInference):
         include_latents: boolean
             Whether to include the latent variable values in the generated samples.
 
-        seed: int (default: None)
-            If a value is provided, sets the seed for numpy.random.
+        rng: int | numpy.random.Generator | None (default: None)
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
+
+            .. versionchanged:: 1.2.0
+                Replaces ``seed``, which is deprecated and will be removed in v2.0. None no longer follows
+                ``np.random.seed``.
 
         show_progress: boolean
             Whether to show a progress bar of samples getting generated.
@@ -193,19 +205,17 @@ class BayesianModelSampling(BayesianModelInference):
         >>> inference = BayesianModelSampling(student)
         >>> evidence = [State(var="diff", state=0)]
         >>> inference.rejection_sample(
-        ...     evidence=evidence, size=2, seed=42
+        ...     evidence=evidence, size=2, rng=42
         ... )
            diff  grade  intel
-        0     0      1      0
-        1     0      1      0
+        0     0      2      0
+        1     0      0      1
         """
-
-        if seed is not None:
-            np.random.seed(seed)
+        rng = np.random.default_rng(rng)
 
         # If no evidence is given, it is equivalent to forward sampling.
         if len(evidence) == 0:
-            return self.forward_sample(size=size, include_latents=include_latents)
+            return self.forward_sample(size=size, include_latents=include_latents, rng=rng)
 
         # Setup array to be returned
         sampled = pd.DataFrame()
@@ -231,6 +241,7 @@ class BayesianModelSampling(BayesianModelInference):
                 include_latents=True,
                 show_progress=False,
                 partial_samples=partial_samples,
+                rng=rng,
             )
 
             for var, state in evidence:
@@ -253,12 +264,13 @@ class BayesianModelSampling(BayesianModelInference):
             sampled.drop(self.model.latents, axis=1, inplace=True)
         return sampled
 
+    @_rename_to_rng("seed")
     def likelihood_weighted_sample(
         self,
         evidence=[],
         size=1,
         include_latents=False,
-        seed=None,
+        rng: int | np.random.Generator | None = None,
         show_progress=True,
         n_jobs=-1,
     ):
@@ -279,8 +291,13 @@ class BayesianModelSampling(BayesianModelInference):
         include_latents: boolean
             Whether to include the latent variable values in the generated samples.
 
-        seed: int (default: None)
-            If a value is provided, sets the seed for numpy.random.
+        rng: int | numpy.random.Generator | None (default: None)
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
+
+            .. versionchanged:: 1.2.0
+                Replaces ``seed``, which is deprecated and will be removed in v2.0. None no longer follows
+                ``np.random.seed``.
 
         show_progress: boolean
             Whether to show a progress bar of samples getting generated.
@@ -313,14 +330,13 @@ class BayesianModelSampling(BayesianModelInference):
         >>> inference = BayesianModelSampling(student)
         >>> evidence = [State("diff", 0)]
         >>> inference.likelihood_weighted_sample(
-        ...     evidence=evidence, size=2, seed=42
+        ...     evidence=evidence, size=2, rng=42
         ... )
            diff  grade  intel  _weight
-        0     0      2      0      0.6
-        1     0      0      1      0.6
+        0     0      0      1      0.6
+        1     0      2      0      0.6
         """
-        if seed is not None:
-            np.random.seed(seed)
+        rng = np.random.default_rng(rng)
 
         # Convert evidence state names to number
         evidence = [(var, self.model.get_cpds(var).get_state_no(var, state)) for var, state in evidence]
@@ -366,7 +382,7 @@ class BayesianModelSampling(BayesianModelInference):
                         )
                     )
                 else:
-                    sampled[node] = sample_discrete_maps(states, weight_index, index_to_weight, size)
+                    sampled[node] = sample_discrete_maps(states, weight_index, index_to_weight, size, rng=rng)
             else:
                 if node in evidence_dict:
                     sampled[node] = evidence_dict[node]
@@ -374,7 +390,7 @@ class BayesianModelSampling(BayesianModelInference):
                         list(map(lambda _: cpd.values[evidence_dict[node]], range(size)))
                     )
                 else:
-                    sampled[node] = sample_discrete(states, cpd.values, size)
+                    sampled[node] = sample_discrete(states, cpd.values, size, rng=rng)
 
         # Postprocess the samples: Change state numbers to names, remove latents.
         samples_df = _return_samples(sampled, self.state_names_map)
@@ -408,11 +424,11 @@ class GibbsSampling(MarkovChain):
     >>> student.add_cpds(intel_cpd, sat_cpd)
     >>> from pgmpy.sampling import GibbsSampling
     >>> gibbs_chain = GibbsSampling(student)
-    >>> gibbs_chain.sample(size=3, seed=42)  # doctest: +SKIP
+    >>> gibbs_chain.sample(size=3, rng=42)
        intel  sat
-    0      1    0
-    1      0    1
-    2      1    1
+    0      0    1
+    1      1    1
+    2      1    0
     """
 
     def __init__(self, model=None):
@@ -486,7 +502,8 @@ class GibbsSampling(MarkovChain):
                 kernel[tup] = reduced_factor.values / sum(reduced_factor.values)
             self.transition_models[var] = kernel
 
-    def sample(self, start_state=None, size=1, seed=None, include_latents=False):
+    @_rename_to_rng("seed")
+    def sample(self, start_state=None, size=1, rng: int | np.random.Generator | None = None, include_latents=False):
         """
         Sample from the Markov Chain.
 
@@ -498,8 +515,13 @@ class GibbsSampling(MarkovChain):
         size: int
             Number of samples to be generated.
 
-        seed: int (default: None)
-            If a value is provided, sets the seed for numpy.random.
+        rng: int | numpy.random.Generator | None (default: None)
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
+
+            .. versionchanged:: 1.2.0
+                Replaces ``seed``, which is deprecated and will be removed in v2.0. None no longer follows
+                ``np.random.seed``.
 
         include_latents: boolean
             Whether to include the latent variable values in the generated samples.
@@ -519,20 +541,19 @@ class GibbsSampling(MarkovChain):
         >>> factor_cb = DiscreteFactor(["C", "B"], [2, 2], [5, 6, 7, 8])
         >>> model.add_factors(factor_ab, factor_cb)
         >>> gibbs = GibbsSampling(model)
-        >>> gibbs.sample(size=4, seed=42)  # doctest: +SKIP
+        >>> gibbs.sample(size=4, rng=42)
            A  B  C
-        0  1  0  0
-        1  1  1  1
-        2  1  0  0
-        3  0  1  1
+        0  0  1  1
+        1  1  1  0
+        2  1  1  1
+        3  0  1  0
         """
+        rng = np.random.default_rng(rng)
+
         if start_state is None and self.state is None:
-            self.state = self.random_state()
+            self.state = self._random_state(rng)
         elif start_state is not None:
             self.set_start_state(start_state)
-
-        if seed is not None:
-            np.random.seed(seed)
 
         types = [(str(var_name), "int") for var_name in self.variables]
         sampled = np.zeros(size, dtype=types).view(np.recarray)
@@ -543,6 +564,7 @@ class GibbsSampling(MarkovChain):
                 next_st = sample_discrete(
                     list(range(self.cardinalities[var])),
                     self.transition_models[var][other_st],
+                    rng=rng,
                 )[0]
                 self.state[j] = State(var, next_st)
             sampled[i + 1] = tuple(st for var, st in self.state)
@@ -552,9 +574,28 @@ class GibbsSampling(MarkovChain):
             samples_df.drop(self.latents, axis=1, inplace=True)
         return samples_df
 
-    def generate_sample(self, start_state=None, size=1, include_latents=False, seed=None):
+    @_rename_to_rng("seed")
+    def generate_sample(
+        self, start_state=None, size=1, include_latents=False, rng: int | np.random.Generator | None = None
+    ):
         """
         Generator version of self.sample
+
+        Parameters
+        ----------
+        start_state: dict or array-like iterable
+            Representing the starting states of the variables. If None is passed, a random start_state is chosen.
+        size: int
+            Number of samples to be generated.
+        include_latents: boolean
+            Whether to include the latent variable values in the generated samples.
+        rng: int | np.random.Generator | None
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
+
+            .. versionchanged:: 1.2.0
+                Replaces ``seed``, which is deprecated and will be removed in v2.0. None no longer follows
+                ``np.random.seed``.
 
         Returns
         -------
@@ -570,20 +611,19 @@ class GibbsSampling(MarkovChain):
         >>> factor_cb = DiscreteFactor(["C", "B"], [2, 2], [5, 6, 7, 8])
         >>> model.add_factors(factor_ab, factor_cb)
         >>> gibbs = GibbsSampling(model)
-        >>> gen = gibbs.generate_sample(size=2, seed=42)
+        >>> gen = gibbs.generate_sample(size=2, rng=42)
         >>> [sample for sample in gen]  # doctest: +NORMALIZE_WHITESPACE
-        [[State(var=np.str_('A'), state=np.int64(0)),
+        [[State(var=np.str_('A'), state=np.int64(1)),
           State(var=np.str_('B'), state=np.int64(1)),
-          State(var=np.str_('C'), state=np.int64(1))],
+          State(var=np.str_('C'), state=np.int64(0))],
         [State(var=np.str_('A'), state=np.int64(1)),
-         State(var=np.str_('B'), state=np.int64(0)),
+         State(var=np.str_('B'), state=np.int64(1)),
          State(var=np.str_('C'), state=np.int64(1))]]
         """
-        if seed is not None:
-            np.random.seed(seed)
+        rng = np.random.default_rng(rng)
 
         if start_state is None and self.state is None:
-            self.state = self.random_state()
+            self.state = self._random_state(rng)
         elif start_state is not None:
             self.set_start_state(start_state)
 
@@ -593,6 +633,7 @@ class GibbsSampling(MarkovChain):
                 next_st = sample_discrete(
                     list(range(self.cardinalities[var])),
                     self.transition_models[var][other_st],
+                    rng=rng,
                 )[0]
                 self.state[j] = State(var, next_st)
             if include_latents:

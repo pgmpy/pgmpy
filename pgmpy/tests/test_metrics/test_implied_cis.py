@@ -17,7 +17,7 @@ def rng():
 
 
 def simulate(model, n_samples=N_SAMPLES, seed=SEED):
-    return model.simulate(n_samples, seed=seed)
+    return model.simulate(n_samples, rng=seed)
 
 
 def random_dag_from_nodes(nodes, rng, edge_prob=EDGE_PROB):
@@ -45,7 +45,7 @@ def test_implied_cis_cancer():
 
     tests = implied_ci_tests(df, model)
     assert tests.shape[0] == 6
-    assert_pvalues(tests, [0.9816, 1.0, 0.3491, 0.8061, 0.8960, 0.9917])
+    assert_pvalues(tests, [0.2314, 0.3216, 0.6398, 0.7339, 1.0, 0.1948])
 
 
 def test_implied_cis_alarm_true_and_random(rng):

@@ -1600,6 +1600,9 @@ class TestCoreGraph:
         assert result.get_edges(data=True) == []
         assert set(result.nodes()) == {"X", "A", "B", "Y"}
 
+        # a bidirected edge between two do-variables is removed once, not twice
+        assert _CoreGraph(edge_list=[("A", "B", "<>")]).do(["A", "B"]).get_edges(data=True) == []
+
         # works on a subclass with restricted edge types (ADMG has no circle/`<o` types to query)
         admg = ADMG(edge_list=[("X", "A", "->"), ("Z", "A", "<>"), ("A", "Y", "->")])
         result = admg.do("A")

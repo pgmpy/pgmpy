@@ -125,7 +125,7 @@ def data22():
 
 @pytest.fixture
 def alarm_df():
-    return load_model("bnlearn/alarm").simulate(int(1e4), seed=42)
+    return load_model("bnlearn/alarm").simulate(int(1e4), rng=42)
 
 
 @pytest.mark.parametrize("weight_fn", ["mutual_info", "adjusted_mutual_info", "normalized_mutual_info"])
@@ -215,12 +215,12 @@ def test_tan_real_dataset(alarm_df):
         ("HR", "HRBP"),
         ("ARTCO2", "HR"),
         ("SAO2", "FIO2"),
-        ("VENTLUNG", "PAP"),
         ("PCWP", "VENTLUNG"),
         ("VENTLUNG", "EXPCO2"),
         ("VENTLUNG", "ARTCO2"),
-        ("PAP", "PULMEMBOLUS"),
         ("ARTCO2", "SAO2"),
+        ("PULMEMBOLUS", "PAP"),
+        ("SAO2", "PULMEMBOLUS"),
     ]
     features = [
         "LVFAILURE",

@@ -43,7 +43,7 @@ Fit conditional distributions for a known graph structure.
 
     # Generate some data to use for fitting.
     model = load_model("bnlearn/alarm")
-    df = model.simulate(n_samples=1000, seed=42)
+    df = model.simulate(n_samples=1000, rng=42)
 
     # Create a network structure and fit data to it.
     bn_struct = DiscreteBayesianNetwork(model.edges())
