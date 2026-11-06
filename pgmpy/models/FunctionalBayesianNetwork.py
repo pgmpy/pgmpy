@@ -507,9 +507,9 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
             raise ValueError(f"`estimator` argument needs to be either 'SVI' or 'MCMC'. Got: {estimator}.")
 
         # Step 1: Preprocess the data and initialize data structures.
-        if rng is not None:
-            import pyro
+        import pyro
 
+        if rng is not None:
             pyro.set_rng_seed(rng)
 
         sort_nodes = list(nx.topological_sort(self))
