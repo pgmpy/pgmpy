@@ -2,7 +2,6 @@
 
 import networkx as nx
 import numpy as np
-import pandas as pd
 
 from pgmpy.causal_discovery._base import BaseCausalDiscovery, _TreeSearchMixin
 
@@ -90,6 +89,8 @@ class ChowLiu(_TreeSearchMixin, BaseCausalDiscovery):
     >>> plt.show()
     """
 
+    _supports_narwhals = True
+
     _tags = {
         "name": "chow_liu",
         "data_types": ["discrete"],
@@ -119,14 +120,14 @@ class ChowLiu(_TreeSearchMixin, BaseCausalDiscovery):
         self.n_jobs = n_jobs
         self.show_progress = show_progress
 
-    def _fit(self, X: pd.DataFrame):
+    def _fit(self, X):
         """
         Estimate the ``DAG`` structure that fits best to the given data set
         without parametrization.
 
         Parameters
         ----------
-        X : pd.DataFrame
+        X : nw.DataFrame or pd.DataFrame
             The data to learn the causal structure from. Each column
             represents one variable.
 
