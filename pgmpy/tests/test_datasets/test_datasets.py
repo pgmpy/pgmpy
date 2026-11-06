@@ -108,12 +108,12 @@ def test_load_covariance_dataset():
         assert isinstance(dataset.tags, dict)
 
     # n_samples controls generated covariance dataset size.
-    dataset = load_dataset("goldberg", n_samples=25, seed=42)
+    dataset = load_dataset("goldberg", n_samples=25, rng=42)
     assert dataset.data.shape[0] == 25
 
     # The same seed produces identical generated data.
-    ds1 = load_dataset("goldberg", seed=42)
-    ds2 = load_dataset("goldberg", seed=42)
+    ds1 = load_dataset("goldberg", rng=42)
+    ds2 = load_dataset("goldberg", rng=42)
     pd.testing.assert_frame_equal(ds1.data, ds2.data)
 
 
@@ -129,7 +129,7 @@ def test_load_tubingen_dataset():
 
     # Tubingen supports n_samples by subsampling the selected pair.
     expected = load_dataset("tubingen/1")
-    dataset = load_dataset("tubingen/1", n_samples=10, seed=42)
+    dataset = load_dataset("tubingen/1", n_samples=10, rng=42)
     assert dataset.data.shape == (10, expected.data.shape[1])
     assert list(dataset.data.columns) == list(expected.data.columns)
     assert set(dataset.ground_truth.edges()) == set(expected.ground_truth.edges())
@@ -198,7 +198,7 @@ def test_static_dataset_n_samples():
     full = load_dataset("sachs_discrete")
 
     # n_samples controls the number of returned rows.
-    sampled = load_dataset("sachs_discrete", n_samples=100, seed=42)
+    sampled = load_dataset("sachs_discrete", n_samples=100, rng=42)
     assert sampled.data.shape == (100, full.data.shape[1])
     assert list(sampled.data.columns) == list(full.data.columns)
 
@@ -208,6 +208,6 @@ def test_static_dataset_n_samples():
     assert oversized.data.shape[0] == full.data.shape[0]
 
     # The same seed gives the same subsample.
-    ds1 = load_dataset("sachs_discrete", n_samples=50, seed=42)
-    ds2 = load_dataset("sachs_discrete", n_samples=50, seed=42)
+    ds1 = load_dataset("sachs_discrete", n_samples=50, rng=42)
+    ds2 = load_dataset("sachs_discrete", n_samples=50, rng=42)
     pd.testing.assert_frame_equal(ds1.data, ds2.data)

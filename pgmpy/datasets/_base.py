@@ -157,7 +157,7 @@ class BaseDataset(BaseObject):
         return df
 
     @staticmethod
-    def _subsample(df: pd.DataFrame, n_samples: int | None, seed: int | None) -> pd.DataFrame:
+    def _subsample(df: pd.DataFrame, n_samples: int | None, rng: int | np.random.Generator | None) -> pd.DataFrame:
         """
         Returns a random subsample of ``n_samples`` rows, or all rows with a warning if the dataset is smaller.
         """
@@ -171,13 +171,14 @@ class BaseDataset(BaseObject):
             )
             return df
 
-        return df.sample(n=n_samples, random_state=seed).reset_index(drop=True)
+        return df.sample(n=n_samples, random_state=np.random.default_rng(rng)).reset_index(drop=True)
 
     @classmethod
     def load_dataframe(
         cls,
         n_samples: int | None = None,
-        seed: int | None = None,
+        *,
+        rng: int | np.random.Generator | None = None,
     ) -> pd.DataFrame:
         """
         Fetches/reads from cache the data associated with the dataset.
@@ -186,8 +187,9 @@ class BaseDataset(BaseObject):
         ----------
         n_samples : int, optional
             If provided, return a random subsample of this size. Capped at the dataset size.
-        seed : int, optional
-            Random seed for reproducible subsampling.
+        rng : int, numpy.random.Generator, or None, default None
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
 
         Returns
         -------
@@ -202,26 +204,28 @@ class BaseDataset(BaseObject):
         if cls.get_class_tag("has_index_col"):
             df.drop(df.columns[0], axis=1, inplace=True)
 
-        return cls._subsample(df, n_samples=n_samples, seed=seed)
+        return cls._subsample(df, n_samples=n_samples, rng=rng)
 
     @classmethod
     def load_interventions(
         cls,
         n_samples: int | None = None,
-        seed: int | None = None,
+        *,
+        rng: int | np.random.Generator | None = None,
     ) -> pd.DataFrame | None:
         """
         Fetches/reads from cache the intervention columns associated with the dataset.
 
         Only the columns listed in ``intervention_columns`` are read. Calling ``load_dataframe`` and
-        ``load_interventions`` with the same ``n_samples`` and ``seed`` selects the same rows.
+        ``load_interventions`` with the same ``n_samples`` and the same int ``rng`` selects the same rows.
 
         Parameters
         ----------
         n_samples : int, optional
             If provided, return a random subsample of this size. Capped at the dataset size.
-        seed : int, optional
-            Random seed for reproducible subsampling.
+        rng : int, numpy.random.Generator, or None, default None
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
 
         Returns
         -------
@@ -232,7 +236,7 @@ class BaseDataset(BaseObject):
             return None
 
         df = cls._read_table(usecols=cls.intervention_columns)
-        return cls._subsample(df, n_samples=n_samples, seed=seed)
+        return cls._subsample(df, n_samples=n_samples, rng=rng)
 
     @classmethod
     def load_expert_knowledge(cls) -> ExpertKnowledge:
@@ -293,7 +297,7 @@ class BaseCovarianceDataset(BaseDataset):
         return pd.DataFrame(mat, columns=names, index=names)
 
     @classmethod
-    def load_dataframe(cls, n_samples=None, seed=None) -> pd.DataFrame:
+    def load_dataframe(cls, n_samples=None, *, rng: int | np.random.Generator | None = None) -> pd.DataFrame:
         """Generate data from a covariance matrix.
 
         Parameters
@@ -301,14 +305,14 @@ class BaseCovarianceDataset(BaseDataset):
         n_samples : int, optional
             Number of samples to generate.  Defaults to the class tag
             ``n_samples`` when not provided.
-        seed : int, optional
-            Random seed for reproducible generation.  When ``None``, the
-            existing unseeded behavior is preserved.
+        rng : int, numpy.random.Generator, or None, default None
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
         """
         cov_matrix = cls._load_covariance_matrix()
         mean = [0] * cls.get_class_tag("n_variables")
         actual_n = n_samples if n_samples is not None else cls.get_class_tag("n_samples")
-        rng = np.random.default_rng(seed) if seed is not None else np.random
+        rng = np.random.default_rng(rng)
         data = pd.DataFrame(
             rng.multivariate_normal(mean, cov_matrix.values, size=actual_n),
             columns=cov_matrix.columns,
@@ -357,7 +361,8 @@ class BaseSimulatedDataset(BaseDataset):
 def load_dataset(
     name: str,
     n_samples: int | None = None,
-    seed: int | None = None,
+    *,
+    rng: int | np.random.Generator | None = None,
     **sim_kwargs,
 ) -> Dataset:
     """
@@ -371,8 +376,9 @@ def load_dataset(
         For static datasets, return a random subsample of this size (capped
         at the dataset size).  For simulated datasets, the number of samples
         to generate.
-    seed : int, optional
-        Random seed for reproducible subsampling or simulation.
+    rng : int, np.random.Generator or None, optional
+        Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the operating
+        system, so results are not reproducible.
     **sim_kwargs : dict, optional
         Additional keyword arguments forwarded to the simulator's
         ``load_dataframe()`` and ``load_ground_truth()`` methods. Passing
@@ -388,7 +394,7 @@ def load_dataset(
 
     Subsample a static dataset:
 
-    >>> dataset = load_dataset("sachs_continuous", n_samples=100, seed=42)
+    >>> dataset = load_dataset("sachs_continuous", n_samples=100, rng=42)
     """
     all_datasets = all_objects(object_types=BaseDataset, package_name="pgmpy.datasets", return_names=False)
     if name.startswith("tubingen"):
@@ -418,7 +424,7 @@ def load_dataset(
                         UserWarning,
                     )
                 else:
-                    df = df.sample(n=n_samples, random_state=seed).reset_index(drop=True)
+                    df = df.sample(n=n_samples, random_state=np.random.default_rng(rng)).reset_index(drop=True)
 
             tags = target_cls.get_class_tags()
             tags["n_samples"] = df.shape[0]
@@ -444,7 +450,7 @@ def load_dataset(
 
     if issubclass(target_cls, BaseSimulatedDataset):
         # Build the model once and reuse it for both the data and the ground-truth graph.
-        simulator = target_cls(seed=seed, **sim_kwargs)
+        simulator = target_cls(rng=rng, **sim_kwargs)
         df = simulator.load_dataframe(n_samples=n_samples)
         tags = target_cls.get_class_tags()
         tags["n_samples"], tags["n_variables"] = df.shape
@@ -456,17 +462,17 @@ def load_dataset(
             tags=tags,
         )
 
-    if n_samples is not None and seed is None and target_cls.get_class_tag("is_interventional"):
-        # Data and interventions are subsampled separately; a shared seed makes both select the same rows.
-        seed = int(np.random.randint(np.iinfo(np.int32).max))
+    if n_samples is not None and target_cls.get_class_tag("is_interventional"):
+        # Data and interventions are subsampled separately; a shared int seed makes both select the same rows.
+        rng = int(np.random.default_rng(rng).integers(2**32))
 
     return Dataset(
         name=name,
-        data=target_cls.load_dataframe(n_samples=n_samples, seed=seed, **sim_kwargs),
+        data=target_cls.load_dataframe(n_samples=n_samples, rng=rng, **sim_kwargs),
         expert_knowledge=target_cls.load_expert_knowledge(),
-        ground_truth=target_cls.load_ground_truth(seed=seed, **sim_kwargs),
+        ground_truth=target_cls.load_ground_truth(rng=rng, **sim_kwargs),
         tags=target_cls.get_class_tags(),
-        interventions=target_cls.load_interventions(n_samples=n_samples, seed=seed),
+        interventions=target_cls.load_interventions(n_samples=n_samples, rng=rng),
     )
 
 

@@ -46,7 +46,7 @@ def adjacency_to_edges(adjacency):
 
 def test_bootstrap_dag_estimator(rand_data):
     est = BootstrapEstimator(
-        HillClimbSearch(return_type="dag"), n_bootstraps=10, warm_start=True, show_progress=False, seed=0
+        HillClimbSearch(return_type="dag"), n_bootstraps=10, warm_start=True, show_progress=False, rng=0
     )
     est.fit(rand_data)
 
@@ -111,7 +111,7 @@ def test_bootstrap_dag_estimator(rand_data):
 
 
 def test_bootstrap_pdag_estimator(rand_data):
-    est = BootstrapEstimator(PC(return_type="pdag"), n_bootstraps=10, show_progress=False, seed=42).fit(rand_data)
+    est = BootstrapEstimator(PC(return_type="pdag"), n_bootstraps=10, show_progress=False, rng=42).fit(rand_data)
 
     assert edge_type_counts(est.bootstrap_edges_) == [
         [0, 9, 0, 0, 9, 0, 9, 9, 0, 9],
@@ -153,7 +153,7 @@ def test_bootstrap_sampling_and_wrapped_estimator(rand_data):
         replace=False,
         n_jobs=1,
         show_progress=False,
-        seed=0,
+        rng=0,
     )
     est.fit(rand_data)
     assert est.bootstrap_samples_.shape == (2, 250)
