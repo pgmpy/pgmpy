@@ -1,5 +1,5 @@
-import importlib
 import os
+import sys
 import types
 from unittest.mock import MagicMock
 
@@ -121,14 +121,13 @@ def test_build_prompt():
 
 
 def test_query_llm(monkeypatch):
-    module = importlib.import_module(LLMPairwise.__module__)
     calls = {}
 
     def completion(**kwargs):
         calls.update(kwargs)
         return MagicMock(choices=[MagicMock(message=MagicMock(content="1"))])
 
-    monkeypatch.setattr(module, "litellm", types.SimpleNamespace(completion=completion))
+    monkeypatch.setitem(sys.modules, "litellm", types.SimpleNamespace(completion=completion))
     messages = [{"role": "user", "content": "hi"}]
     response = LLMPairwise(llm_kwargs={"temperature": 0})._query_llm(messages)
 

@@ -1,19 +1,20 @@
+from __future__ import annotations
+
 from collections.abc import Callable, Hashable, Iterable
-from typing import (
-    Any,
-)
+from typing import TYPE_CHECKING, Any
 
 import networkx as nx
 import numpy as np
 import pandas as pd
-from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config, logger
 from pgmpy.factors.hybrid import FunctionalCPD
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils._random import _rename_to_rng
 
-pyro = _safe_import("pyro", pkg_name="pyro-ppl")
+if TYPE_CHECKING:
+    import pyro
 
 
 class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
@@ -322,6 +323,8 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         """
         # Step 0: Set the seed if specified, check arguments and initialize data structures.
         if rng is not None:
+            import pyro
+
             pyro.set_rng_seed(rng)
 
         if do is None:
@@ -379,7 +382,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         self,
         data: pd.DataFrame,
         estimator: str = "SVI",
-        optimizer: pyro.optim.PyroOptim = pyro.optim.Adam({"lr": 1e-2}),
+        optimizer: pyro.optim.PyroOptim | None = None,
         prior_fn: Callable | None = None,
         num_steps: int = 1000,
         rng: int | None = None,
@@ -397,7 +400,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         estimator: str (default: "SVI")
             Fitting method to use. Currently supports "SVI" and "MCMC".
 
-        optimizer: Instance of pyro optimizer (default: pyro.optim.Adam({"lr": 1e-2}))
+        optimizer: Instance of pyro optimizer (default: None, which uses pyro.optim.Adam({"lr": 1e-2}))
             Only used if `estimator` is "SVI". The optimizer to use for optimization.
 
         prior_fn: function
@@ -504,6 +507,8 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
             raise ValueError(f"`estimator` argument needs to be either 'SVI' or 'MCMC'. Got: {estimator}.")
 
         # Step 1: Preprocess the data and initialize data structures.
+        import pyro
+
         if rng is not None:
             pyro.set_rng_seed(rng)
 
@@ -544,6 +549,8 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
                         )
 
             # Step 2.2: Fit the model using SVI.
+            if optimizer is None:
+                optimizer = pyro.optim.Adam({"lr": 1e-2})
             svi = pyro.infer.SVI(
                 model=combined_model_svi,
                 guide=guide,
