@@ -513,10 +513,7 @@ def to_timeseries_format(df: pd.DataFrame, return_format: str = "pd-multiindex")
 
         panel = [pd.DataFrame(panel.loc[i]) for i in range(df.shape[0])]
 
-    elif return_format == "sorted":
-        panel.sort_index(inplace=True, axis=1)
-
-    else:
+    elif return_format != "sorted":
         raise ValueError(
             f"Unknown representation: {return_format}. Supported `return_types`"
             "are: numpy3d, pd-multiindex, pd-list, sorted"
