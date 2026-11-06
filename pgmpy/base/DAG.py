@@ -802,7 +802,9 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         else:
             return False
 
-    def minimal_dseparator(self, start: Hashable, end: Hashable, include_latents=False) -> set[Hashable]:
+    def minimal_dseparator(
+        self, start: Hashable, end: Hashable, include_latents=False, exclude: Iterable[Hashable] = ()
+    ) -> set[Hashable] | None:
         """
         Finds the minimal d-separating set for `start` and `end`.
 
@@ -817,47 +819,70 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         include_latents: boolean (default: False)
             If true, latent variables are consider for minimal d-seperator.
 
+        exclude: iterable of nodes (default: ())
+            Nodes that can not be part of the d-separating set.
+
+        Returns
+        -------
+        set or None
+            A minimal d-separating set, or None if no d-separating set exists without the excluded nodes (and the
+            latent variables, unless `include_latents` is True).
+
         Examples
         --------
         >>> dag = DAG([("A", "B"), ("B", "C")])
         >>> dag.minimal_dseparator(start="A", end="C")
         {'B'}
+        >>> dag.minimal_dseparator(start="A", end="C", exclude={"B"}) is None
+        True
 
         References
         ----------
-        - :footcite:t:`tian_paz_pearl_1998` (Algorithm 4, page 10).
+        - :footcite:t:`vanderzander_2019`
+        - :footcite:t:`vanderzander_2020`
         """
         if (end in self.neighbors(start)) or (start in self.neighbors(end)):
             raise ValueError("No possible separators because start and end are adjacent")
-        an_graph = self.get_ancestral_graph([start, end])
-        separator = self.get_parents([start, end])
+        ancestors = self.get_ancestors([start, end])
+        excluded = set(exclude) if include_latents else set(exclude) | set(self.latents)
 
-        if not include_latents:
-            # If any of the parents were latents, take the latent's parent
-            while separator.intersection(self.latents):
-                separator_copy = separator.copy()
-                for u in separator:
-                    if u in self.latents:
-                        separator_copy.remove(u)
-                        separator_copy.update(set(self.predecessors(u)))
-                separator = separator_copy
-
-        # Remove the start and end nodes in case it reaches there while removing latents.
-        separator.difference_update({start, end})
-
-        # If the initial set is not able to d-separate, no d-separator is possible.
-        if an_graph.is_dconnected(start, end, observed=separator):
+        # The ancestors that are not excluded d-separate `start` and `end` whenever any set without the excluded nodes
+        # does. Keep the ones reachable from `start`; if `end` is reachable too, no d-separator is possible.
+        separator = ancestors - excluded - {start, end}
+        reachable = self._get_moral_reachable(start, ancestors, separator)
+        if end in reachable:
             return None
+        separator &= reachable
 
-        # Go through the separator set, remove one element and check if it remains
-        # a dseparating set.
-        minimal_separator = separator.copy()
+        # Of these, keep the ones also reachable from `end`.
+        return separator & self._get_moral_reachable(end, ancestors, separator)
 
-        for u in separator:
-            if not an_graph.is_dconnected(start, end, observed=minimal_separator - {u}):
-                minimal_separator.remove(u)
+    def _get_moral_reachable(
+        self, start: Hashable, ancestors: set[Hashable], separator: set[Hashable]
+    ) -> set[Hashable]:
+        """
+        Returns the nodes reachable from `start` in the moral graph of the subgraph on `ancestors`, along paths whose
+        intermediate nodes are not in `separator`.
 
-        return minimal_separator
+        Implements REACHABLE from van der Zander and Liśkiewicz (2020), which walks the DAG itself instead of building
+        the moral graph, so that it runs in time linear in the number of edges.
+        """
+        # A state is a node and whether it was entered from one of its parents. A node in `separator` blocks the path,
+        # except that entering it from a parent leads on to its other parents, i.e. along the moral edges between them.
+        visited = {(start, False)}
+        to_visit = [(start, False)]
+        while to_visit:
+            node, from_parent = to_visit.pop()
+            if node in separator:
+                next_states = [(parent, False) for parent in self.get_parents(node)] if from_parent else []
+            else:
+                next_states = [(parent, False) for parent in self.get_parents(node)]
+                next_states += [(child, True) for child in self.get_children(node) if child in ancestors]
+            for state in next_states:
+                if state not in visited:
+                    visited.add(state)
+                    to_visit.append(state)
+        return {node for node, _ in visited}
 
     def get_markov_blanket(self, node: Hashable) -> list[Hashable]:
         """
@@ -1756,7 +1781,9 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
 
     def copy(self):
         """Returns a copy of the DAG object."""
-        dag = DAG(ebunch=self.edges())
+        # Edges are added after construction to skip the constructor's cycle check, which a copy of a DAG always passes.
+        dag = DAG()
+        dag.add_edges_from(self.edges())
         dag.add_nodes_from(self.nodes())
 
         for role, vars in self.get_role_dict().items():
