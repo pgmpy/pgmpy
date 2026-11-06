@@ -324,6 +324,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         # Step 0: Set the seed if specified, check arguments and initialize data structures.
         if rng is not None:
             import pyro
+
             pyro.set_rng_seed(rng)
 
         if do is None:
@@ -508,6 +509,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         # Step 1: Preprocess the data and initialize data structures.
         if rng is not None:
             import pyro
+
             pyro.set_rng_seed(rng)
 
         sort_nodes = list(nx.topological_sort(self))
