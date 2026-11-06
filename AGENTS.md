@@ -73,6 +73,15 @@ pytest --doctest-modules --ignore=pgmpy/tests pgmpy/
 - Docstring examples must run as written: CI runs them as doctests and also executes the notebooks in `examples/`
   (`.github/workflows/doctests.yml`, `notebooks.yml`).
 
+## Scientific Python SPECs
+
+pgmpy follows these [Scientific Python SPECs](https://scientific-python.org/specs/); flag code that breaks them.
+
+- [SPEC 7](https://scientific-python.org/specs/spec-0007/): take randomness as a keyword-only
+  `rng: int | np.random.Generator | None = None`, normalize it once with `np.random.default_rng(rng)`, and pass that
+  Generator, not the seed, to callees. Never use numpy's global state (ruff `NPY002`) or pass `None` to a third-party
+  `random_state`, which falls back to it. Classes implementing a third-party interface keep its parameter name.
+
 ## Skills
 
 Task-specific procedures live in `.agents/skills/<name>/SKILL.md`. Agents that don't load skills automatically should

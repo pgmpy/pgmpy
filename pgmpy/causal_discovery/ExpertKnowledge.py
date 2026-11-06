@@ -92,7 +92,7 @@ class ExpertKnowledge(BaseEstimator):
     ...     required_edges=[("smoke", "bronc")],
     ...     forbidden_edges=[("tub", "asia"), ("lung", "smoke")],
     ... )
-    >>> data = asia_model.simulate(n_samples=int(1e4), seed=42)
+    >>> data = asia_model.simulate(n_samples=int(1e4), rng=42)
     >>> est = PC(expert_knowledge=expert_knowledge).fit(data)  # doctest: +SKIP
 
     **Temporal order**
@@ -100,7 +100,7 @@ class ExpertKnowledge(BaseEstimator):
     >>> expert_knowledge = ExpertKnowledge(
     ...     temporal_order=[["Pollution", "Smoker"], ["Cancer"], ["Dyspnoea", "Xray"]]
     ... )
-    >>> data = cancer_model.simulate(n_samples=int(1e4), seed=42)
+    >>> data = cancer_model.simulate(n_samples=int(1e4), rng=42)
     >>> est = PC(expert_knowledge=expert_knowledge).fit(data)  # doctest: +SKIP
 
     **Screening-based search space**

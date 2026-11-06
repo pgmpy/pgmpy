@@ -119,7 +119,7 @@ def get_scoring_method(
     >>> from pgmpy.example_models import load_model
     >>> from pgmpy.structure_score import BDeu, get_scoring_method
     >>> model = load_model("bnlearn/asia")
-    >>> data = model.simulate(n_samples=1000, seed=42)
+    >>> data = model.simulate(n_samples=1000, rng=42)
 
     Use a scoring method by name:
 

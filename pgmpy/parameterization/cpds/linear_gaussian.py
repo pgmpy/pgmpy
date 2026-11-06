@@ -66,7 +66,7 @@ class LinearGaussianCPD(BaseParameter):
     [1.0, 2.0, -3.0]
     >>> round(cpd.std_, 1)
     0.5
-    >>> cpd.sample(pd.DataFrame({"A": [0.0], "B": [0.0]}), random_state=0).round(2)["y"].tolist()
+    >>> cpd.sample(pd.DataFrame({"A": [0.0], "B": [0.0]}), rng=0).round(2)["y"].tolist()
     [1.19]
 
     Without ``X``, ``predict_proba`` gives the marginal distribution implied for the parent values seen in ``fit``:
