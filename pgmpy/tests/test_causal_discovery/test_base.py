@@ -300,3 +300,14 @@ def test_tree_search_mixin_weights():
     assert np.allclose(np.diag(weights), 0)
     assert np.allclose(weights, weights.T)
     assert np.isclose(weights[0, 1], np.log(2))
+
+
+def test_fit_and_score_integer_columns():
+    df = pd.DataFrame([[1, 2], [2, 1], [1, 2], [2, 1]], columns=[0, 1])
+    est = ChowLiu(n_jobs=1).fit(df)
+    assert not hasattr(est, "feature_names_in_")
+    assert est.n_features_in_ == 2
+
+    score_df = est.score(df)
+    score_arr = est.score(df.to_numpy())
+    assert np.isclose(score_df, score_arr)
