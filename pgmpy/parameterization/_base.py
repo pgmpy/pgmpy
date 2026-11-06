@@ -30,9 +30,9 @@ class BaseParameter(BaseEstimator):
     ``parent_type`` tags to the types they support for the target and for the parents (``"discrete"``, ``"continuous"``
     or both); continuous-only parents must be numeric, while discrete ones can have any labels. They also set
     ``supports_weighted_data`` if ``_fit`` uses sample weights, and ``python_dependencies`` to the packages checked at
-    construction. The default ``_sample`` passes ``random_state`` to the ``sample`` method of the predicted
+    construction. The default ``_sample`` passes ``random_state=rng`` to the ``sample`` method of the predicted
     distribution. If that method doesn't take it, as for skpro's distributions, it applies the distribution's ``ppf`` to
-    uniform values drawn from ``numpy.random.default_rng(random_state)``.
+    uniform values drawn from the ``numpy.random.Generator`` that ``sample`` builds from ``rng``.
 
     Attributes
     ----------
@@ -162,7 +162,8 @@ class BaseParameter(BaseEstimator):
         self,
         X: pd.DataFrame | None = None,
         n_samples: int | None = None,
-        random_state: int | np.random.Generator | None = None,
+        *,
+        rng: int | np.random.Generator | None = None,
     ) -> Any:
         """Draw values of the target variable.
 
@@ -173,9 +174,9 @@ class BaseParameter(BaseEstimator):
             distribution of the target.
         n_samples : int, optional
             Number of values to draw for each row of ``X``, one if omitted. Without ``X``, the total number of values.
-        random_state : int, numpy.random.Generator or None, optional
-            Controls the randomness of this call. An ``int`` gives the same values on every call, a ``Generator`` is
-            used as-is and advances across calls, and ``None`` draws fresh values.
+        rng : int, numpy.random.Generator or None, optional
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
 
         Returns
         -------
@@ -190,7 +191,7 @@ class BaseParameter(BaseEstimator):
         X = self._check_X(X)
         if X is None and n_samples is None:
             raise ValueError("Pass X, or n_samples to draw from the marginal distribution.")
-        return self._sample(X, n_samples, random_state)
+        return self._sample(X, n_samples, rng=np.random.default_rng(rng))
 
     def _check_X(self, X: pd.DataFrame | None) -> pd.DataFrame | None:
         check_is_fitted(self)
@@ -218,16 +219,13 @@ class BaseParameter(BaseEstimator):
     def _predict_proba(self, X: pd.DataFrame | None) -> Any:
         raise NotImplementedError
 
-    def _sample(
-        self, X: pd.DataFrame | None, n_samples: int | None, random_state: int | np.random.Generator | None
-    ) -> pd.DataFrame:
+    def _sample(self, X: pd.DataFrame | None, n_samples: int | None, *, rng: np.random.Generator) -> pd.DataFrame:
         # Sample on a RangeIndex and put X's index back afterwards: skpro matches values to rows by label, which mixes
         # up rows with repeated labels, and fails for some distributions with a MultiIndex.
         distribution = self._predict_proba(None if X is None else X.set_axis(pd.RangeIndex(len(X))))
         if "random_state" in inspect.signature(distribution.sample).parameters:
-            samples = distribution.sample(n_samples, random_state=random_state)
+            samples = distribution.sample(n_samples, random_state=rng)
         else:
-            rng = np.random.default_rng(random_state)
             uniform = rng.random(
                 n_samples if X is None else (1 if n_samples is None else n_samples, *distribution.shape)
             )

@@ -8,6 +8,7 @@ from scipy.linalg import eig
 
 from pgmpy.factors.discrete import State
 from pgmpy.utils import sample_discrete
+from pgmpy.utils._random import _rename_to_rng
 from pgmpy.utils._warnings import _warn_external
 
 
@@ -259,7 +260,8 @@ class MarkovChain:
 
         self.transition_models[variable] = transition_model
 
-    def sample(self, start_state=None, size=1, seed=None):
+    @_rename_to_rng("seed")
+    def sample(self, start_state=None, size=1, rng: int | np.random.Generator | None = None):
         """
         Sample from the Markov Chain.
 
@@ -269,6 +271,13 @@ class MarkovChain:
             Representing the starting states of the variables. If None is passed, a random start_state is chosen.
         size: int
             Number of samples to be generated.
+        rng: int | np.random.Generator | None
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
+
+            .. versionchanged:: 1.2.0
+                Replaces ``seed``, which is deprecated and will be removed in v2.0. None no longer follows
+                ``np.random.seed``.
 
         Returns
         -------
@@ -294,9 +303,10 @@ class MarkovChain:
         >>> list(df.columns)
         ['intel', 'diff']
         """
+        rng = np.random.default_rng(rng)
         if start_state is None:
             if self.state is None:
-                self.state = self.random_state()
+                self.state = self._random_state(rng)
             # else use previously-set state
         else:
             self.set_start_state(start_state)
@@ -311,7 +321,7 @@ class MarkovChain:
             for st in self.transition_models[var]:
                 var_states[var][st] = list(self.transition_models[var][st].keys())
                 var_values[var][st] = list(self.transition_models[var][st].values())
-                samples[var][st] = sample_discrete(var_states[var][st], var_values[var][st], size=size, seed=seed)
+                samples[var][st] = sample_discrete(var_states[var][st], var_values[var][st], size=size, rng=rng)
 
         for i in range(size - 1):
             for j, (var, st) in enumerate(self.state):
@@ -363,9 +373,24 @@ class MarkovChain:
 
         return probabilities / window_size
 
-    def generate_sample(self, start_state=None, size=1, seed=None):
+    @_rename_to_rng("seed")
+    def generate_sample(self, start_state=None, size=1, rng: int | np.random.Generator | None = None):
         """
         Generator version of self.sample
+
+        Parameters
+        ----------
+        start_state: dict or array-like iterable
+            Representing the starting states of the variables. If None is passed, a random start_state is chosen.
+        size: int
+            Number of samples to be generated.
+        rng: int | np.random.Generator | None
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
+
+            .. versionchanged:: 1.2.0
+                Replaces ``seed``, which is deprecated and will be removed in v2.0. None no longer follows
+                ``np.random.seed``.
 
         Returns
         -------
@@ -390,9 +415,10 @@ class MarkovChain:
         [[State(var='intel', state=2), State(var='diff', state=1)],
          [State(var='intel', state=2), State(var='diff', state=0)]]
         """
+        rng = np.random.default_rng(rng)
         if start_state is None:
             if self.state is None:
-                self.state = self.random_state()
+                self.state = self._random_state(rng)
             # else use previously-set state
         else:
             self.set_start_state(start_state)
@@ -403,7 +429,7 @@ class MarkovChain:
                 next_st = sample_discrete(
                     list(self.transition_models[var][st].keys()),
                     list(self.transition_models[var][st].values()),
-                    seed=seed,
+                    rng=rng,
                 )[0]
                 self.state[j] = State(var, next_st)
             yield self.state[:]
@@ -481,7 +507,11 @@ class MarkovChain:
         >>> model.random_state() # doctest: +SKIP
         [State(var='diff', state=2), State(var='intel', state=1)]
         """
-        return [State(var, np.random.randint(self.cardinalities[var])) for var in self.variables]
+        return self._random_state(np.random.default_rng())
+
+    def _random_state(self, rng: np.random.Generator) -> list[State]:
+        """Draws a random state of the Markov Chain from ``rng``."""
+        return [State(var, int(rng.integers(self.cardinalities[var]))) for var in self.variables]
 
     def copy(self):
         """

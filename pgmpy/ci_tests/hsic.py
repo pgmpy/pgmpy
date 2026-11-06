@@ -49,8 +49,10 @@ class HSIC(BaseCITest):
     n_permutations : int, default=100
         Used only when ``null_dist="permutation"``. Number of shuffles used for a permutation p-value.
 
-    seed : int or None, default=None
-        Used only when ``null_dist="permutation"``. Seed for reproducible permutations.
+    rng : int, numpy.random.Generator or None, default=None
+        Used only when ``null_dist="permutation"``. Source of randomness, passed to ``numpy.random.default_rng``. If
+        None, fresh entropy is drawn from the operating system, so results are not reproducible. When tests run in
+        parallel, only an ``int`` gives reproducible results.
 
     Examples
     --------
@@ -137,8 +139,9 @@ class HSIC(BaseCITest):
         bandwidth: str = "heuristic",
         null_dist: str = "gamma",
         n_permutations: int = 100,
-        seed: int | None = None,
         use_cache: bool = True,
+        *,
+        rng: int | np.random.Generator | None = None,
     ):
         # Step 0: Validate arguments
         if bandwidth not in ("heuristic", "median"):
@@ -154,7 +157,7 @@ class HSIC(BaseCITest):
         self.bandwidth = bandwidth
         self.null_dist = null_dist
         self.n_permutations = n_permutations
-        self.seed = seed
+        self.rng = rng
 
         # Step 2: Standardize the data.
         self._std_data = self.data.apply(lambda col: (col - col.mean()) / col.std(ddof=1))
@@ -213,7 +216,7 @@ class HSIC(BaseCITest):
         effect_size = test_stat / np.sqrt(np.vdot(Kxc, Kxc) * np.vdot(Kyc, Kyc))
 
         if self.null_dist == "permutation":
-            rng = np.random.default_rng(self.seed)
+            rng = np.random.default_rng(self.rng)
             n_exceed = 0
             for _ in range(self.n_permutations):
                 perm = rng.permutation(self._n_samples)

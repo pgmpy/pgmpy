@@ -26,18 +26,15 @@ class BaseExampleModel(BaseObject):
         "is_hybrid": bool,
     }
 
-    repo_id = "pgmpy/example_models"
-    revision = "main"
-
     @classmethod
     def _get_raw_data(cls) -> bytes:
         """
         Fetches the model file from the Hugging Face Hub cache.
         """
         return read_hf_file(
-            repo_id=cls.repo_id,
+            repo_id="pgmpy/example_models",
             filename=cls.data_url,
-            revision=cls.revision,
+            revision="main",
         )
 
 

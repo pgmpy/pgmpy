@@ -9,6 +9,7 @@ from pgmpy import config, logger
 from pgmpy.extern import tabulate
 from pgmpy.factors.base import BaseFactor
 from pgmpy.utils import StateNameMixin, compat_fns
+from pgmpy.utils._random import _rename_to_rng
 from pgmpy.utils._warnings import _warn_external
 
 State = namedtuple("State", ["var", "state"])
@@ -856,7 +857,8 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         if not inplace:
             return phi
 
-    def sample(self, n, seed=None):
+    @_rename_to_rng("seed")
+    def sample(self, n: int, rng: int | np.random.Generator | None = None):
         """
         Normalizes the factor and samples state combinations from it.
 
@@ -865,8 +867,12 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         n: int
             Number of samples to generate.
 
-        seed: int (default: None)
-            The seed value for the random number generator.
+        rng: int, np.random.Generator or None (default: None)
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
+
+            .. versionchanged:: 1.2.0
+                Replaces ``seed``, which is deprecated and will be removed in v2.0.
 
         Examples
         --------
@@ -888,7 +894,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         # TODO: Fix this to make it work natively in torch.
         p = compat_fns.to_numpy(p)
 
-        rng = np.random.default_rng(seed=seed)
+        rng = np.random.default_rng(rng)
         indexes = rng.choice(range(len(p)), size=n, p=p)
         samples = []
         index_to_state = {}

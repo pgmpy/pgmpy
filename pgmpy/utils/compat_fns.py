@@ -1,20 +1,17 @@
 """Common API for torch and numpy backends."""
 
+import sys
 from copy import deepcopy
 
 import numpy as np
-from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 
 from pgmpy import config
 
-torch = _safe_import("torch")
-
 
 def _is_torch_tensor(obj):
-    if not _check_soft_dependencies("torch", severity="none"):
-        return False
-
-    return isinstance(obj, torch.Tensor)
+    # A torch tensor can only exist once torch has been imported.
+    torch = sys.modules.get("torch")
+    return torch is not None and isinstance(obj, torch.Tensor)
 
 
 def size(arr):
@@ -32,6 +29,8 @@ def copy(arr):
             return deepcopy(arr)
         raise Exception(f"Invalid backend ({config.get_backend()}) for data type {type(arr)}")
     else:
+        import torch
+
         if isinstance(arr, torch.Tensor):
             return arr.detach().clone()
         else:
@@ -52,6 +51,8 @@ def max(arr, axis=None):
     if isinstance(arr, np.ndarray):
         return np.max(arr, axis=axis)
     else:
+        import torch
+
         return torch.amax(arr, dim=axis)
 
 
@@ -59,6 +60,8 @@ def einsum(*args):
     if config.get_backend() == "numpy":
         return np.einsum(*args)
     else:
+        import torch
+
         return torch.einsum(*args)
 
 
@@ -66,6 +69,8 @@ def argmax(arr):
     if isinstance(arr, np.ndarray):
         return np.argmax(arr)
     else:
+        import torch
+
         return torch.argmax(arr)
 
 
@@ -73,6 +78,8 @@ def stack(arr_iter):
     if config.get_backend() == "numpy":
         return np.stack(tuple(arr_iter))
     else:
+        import torch
+
         return torch.stack(tuple(arr_iter))
 
 
@@ -101,6 +108,8 @@ def ones(n):
         return np.ones(n, dtype=config.get_dtype())
 
     else:
+        import torch
+
         return torch.ones(n, dtype=config.get_dtype(), device=config.get_device())
 
 
@@ -117,6 +126,8 @@ def unique(arr, axis=0, return_counts=False, return_inverse=False):
     if isinstance(arr, np.ndarray):
         return np.unique(arr, axis=axis, return_counts=return_counts, return_inverse=return_inverse)
     else:
+        import torch
+
         return torch.unique(arr, return_inverse=return_inverse, return_counts=return_counts, dim=axis)
 
 
@@ -124,6 +135,8 @@ def flip(arr, axis=0):
     if isinstance(arr, np.ndarray):
         return np.flip(arr, axis=axis)
     else:
+        import torch
+
         return torch.flip(arr, dims=axis)
 
 
@@ -131,6 +144,8 @@ def transpose(arr, axis):
     if isinstance(arr, np.ndarray):
         return np.transpose(arr, axes=axis)
     else:
+        import torch
+
         return torch.permute(arr, dims=axis)
 
 
@@ -145,6 +160,8 @@ def sum(arr):
     if isinstance(arr, np.ndarray):
         return arr.sum()
     else:
+        import torch
+
         return torch.sum(arr)
 
 
@@ -152,6 +169,8 @@ def allclose(arr1, arr2, atol):
     if isinstance(arr1, np.ndarray) and isinstance(arr2, np.ndarray):
         return np.allclose(arr1, arr2, atol=atol)
     else:
+        import torch
+
         if isinstance(arr1, np.ndarray):
             arr1 = torch.tensor(arr1, dtype=config.get_dtype(), device=config.get_device())
         else:

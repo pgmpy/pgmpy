@@ -42,7 +42,7 @@ class TestHSIC:
         df_ind, df_dep, _ = hsic_data
         for kwargs in (
             {"bandwidth": "median"},
-            {"null_dist": "permutation", "n_permutations": 200, "seed": 0},
+            {"null_dist": "permutation", "n_permutations": 200, "rng": 0},
             {"kernel": RBF(2.0)},
         ):
             ind, dep = HSIC(data=df_ind, **kwargs), HSIC(data=df_dep, **kwargs)
