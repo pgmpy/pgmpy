@@ -432,7 +432,7 @@ class DBNInference(Inference):
             factor_values.update(end_bp.query(variable_dict[0], evidence_0, joint=False))
         return factor_values
 
-    def query(self, variables, evidence=None, args="exact"):
+    def query(self, variables, evidence=None, args="exact", **kwargs):
         """
         Query method for Dynamic Bayesian Network using Interface Algorithm.
 
@@ -444,6 +444,15 @@ class DBNInference(Inference):
         evidence: dict
             a dict key, value pair as {var: state_of_var_observed}
             None if no evidence
+
+        args: str
+            Inference algorithm to use. ``"exact"`` uses the interface algorithm;
+            ``"approximate"`` uses forward sampling.
+
+        **kwargs
+            Additional keyword arguments passed to ``ApproxInference.query`` when
+            ``args="approximate"`` (for example ``n_samples``, ``rng`` or
+            ``show_progress``).
 
         Examples
         --------
@@ -486,3 +495,16 @@ class DBNInference(Inference):
         """
         if args == "exact":
             return self.backward_inference(variables, evidence)
+        elif args == "approximate":
+            from pgmpy.inference import ApproxInference
+
+            result = ApproxInference(self.model).query(variables=variables, evidence=evidence, joint=False, **kwargs)
+            return result
+        elif args in {"boyen_koller", "factored_frontier", "loopy_belief_propagation"}:
+            raise NotImplementedError(f"{args} inference is not implemented yet. Use 'exact' or 'approximate'.")
+        else:
+            raise ValueError(
+                "args must be 'exact' or 'approximate'; the "
+                "'boyen_koller', 'factored_frontier', and 'loopy_belief_propagation' "
+                "algorithms are not implemented yet."
+            )

@@ -54,6 +54,41 @@ def unrolled_dbn_2(n_slices=3):
 
 
 class TestDBNInference:
+    def test_approximate_query(self, dbn_inference_instances):
+        _, inference = dbn_inference_instances
+        result = inference.query(
+            [("X", 2)],
+            evidence={("Y", 0): 1},
+            args="approximate",
+            n_samples=1000,
+            rng=42,
+            show_progress=False,
+        )
+        assert result[("X", 2)].variables == [("X", 2)]
+        assert result[("X", 2)].values.sum() == pytest.approx(1)
+        np_test.assert_array_equal(
+            result[("X", 2)].values,
+            inference.query(
+                [("X", 2)],
+                evidence={("Y", 0): 1},
+                args="approximate",
+                n_samples=1000,
+                rng=42,
+                show_progress=False,
+            )[("X", 2)].values,
+        )
+
+    @pytest.mark.parametrize("algorithm", ["boyen_koller", "factored_frontier", "loopy_belief_propagation"])
+    def test_unimplemented_approximate_algorithms(self, dbn_inference_instances, algorithm):
+        _, inference = dbn_inference_instances
+        with pytest.raises(NotImplementedError, match="not implemented"):
+            inference.query([("X", 0)], args=algorithm)
+
+    def test_unknown_query_algorithm(self, dbn_inference_instances):
+        _, inference = dbn_inference_instances
+        with pytest.raises(ValueError, match="args must be"):
+            inference.query([("X", 0)], args="unknown")
+
     def test_forward_inf_single_variable(self, dbn_inference_instances):
         dbn_inference_1, _ = dbn_inference_instances
         query_result = dbn_inference_1.forward_inference([("X", 0)])
