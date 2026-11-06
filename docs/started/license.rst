@@ -21,3 +21,11 @@ FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+Third-party
+------------
+
+The NOTEARS solver in ``pgmpy.causal_discovery.NOTEARS`` is adapted from
+`xunzheng/notears <https://github.com/xunzheng/notears>`_ under the Apache
+License 2.0 (http://www.apache.org/licenses/LICENSE-2.0). See the header in
+that module.
