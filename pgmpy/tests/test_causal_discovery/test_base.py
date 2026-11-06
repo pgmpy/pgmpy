@@ -1,3 +1,4 @@
+import narwhals.stable.v2 as nw
 import numpy as np
 import pandas as pd
 import pytest
@@ -5,7 +6,7 @@ from skbase.lookup import all_objects
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery import ANM, GES, IGCI, PC, BootstrapEstimator, ChowLiu, ExpertInLoop
-from pgmpy.causal_discovery._base import BaseCausalDiscovery
+from pgmpy.causal_discovery._base import BaseCausalDiscovery, _TreeSearchMixin
 from pgmpy.causal_discovery.bivariate_scores import BaseBivariateScore
 from pgmpy.ci_tests import GCM, BaseCITest, IndependenceMatch, get_ci_test
 from pgmpy.ci_tests._base import _CITestResult
@@ -185,3 +186,95 @@ def test_filter_algorithms_by_tags():
         )
     }
     assert dag_learners == {"BootstrapEstimator", "ExpertInLoop", "VarSort", "R2Sort"}
+
+
+@pytest.mark.parametrize(
+    ("data", "exc_type", "match"),
+    [
+        (pd.DataFrame({"a": [1, 2]}).drop(columns=["a"]), ValueError, "0 feature"),
+        (pd.DataFrame({"a": [1], "b": [2]}), ValueError, "at least 2 are required"),
+        (pd.DataFrame({"a": [1.0, np.nan, 3.0], "b": [1.0, 2.0, 3.0]}), ValueError, "Input contains NaN/null values"),
+        (
+            pd.DataFrame({"a": pd.Series(["x", np.nan], dtype=object), "b": [1, 2]}),
+            ValueError,
+            "Input contains NaN/null values",
+        ),
+        (pd.DataFrame({"a": [np.inf, 1.0], "b": [1.0, 2.0]}), ValueError, "Input contains infinite values"),
+        (pd.DataFrame({"a": [-np.inf, 1.0], "b": [1.0, 2.0]}), ValueError, "Input contains infinite values"),
+        (
+            pd.DataFrame({"a": [[1], [2]], "b": [1, 2]}),
+            TypeError,
+            "argument must be a string, number, or hashable object",
+        ),
+    ],
+    ids=["0_features", "1_row", "float_nan", "object_nan", "pos_inf", "neg_inf", "unhashable_list"],
+)
+def test_check_fit_invalid_input(data, exc_type, match):
+    nw_df = nw.from_native(data)
+    with pytest.raises(exc_type, match=match):
+        ChowLiu(n_jobs=1).fit(nw_df)
+
+
+@pytest.mark.parametrize("backend", ["polars", "pyarrow"])
+def test_check_fit_unhashable_backends(backend):
+    if backend == "polars":
+        pl = pytest.importorskip("polars")
+        data = pl.DataFrame({"a": [[1], [2]], "b": [1, 2]})
+    elif backend == "pyarrow":
+        pa = pytest.importorskip("pyarrow")
+        data = pa.table({"a": [[1], [2]], "b": [1, 2]})
+
+    with pytest.raises(TypeError, match="argument must be a string, number, or hashable object"):
+        ChowLiu(n_jobs=1).fit(data)
+
+
+def test_check_fit_score_parity():
+    pandas_df = pd.DataFrame({"a": [1, 2, 1, 2], "b": [2, 1, 2, 1]})
+    nw_df = nw.from_native(pandas_df)
+    est = ChowLiu(n_jobs=1)
+    est.fit(nw_df)
+    assert hasattr(est, "causal_graph_")
+
+    score_pd = est.score(pandas_df)
+    score_nw = est.score(nw_df)
+    assert np.isclose(score_pd, score_nw)
+
+
+def test_check_fit_unmigrated_bridge():
+    # Temporary migration bridge: verifies unmigrated estimators without
+    class UnmigratedDiscovery(BaseCausalDiscovery):
+        def _fit(self, X):
+            assert isinstance(X, pd.DataFrame)
+            self.causal_graph_ = DAG()
+            return self
+
+    pandas_df = pd.DataFrame({"a": [1, 2, 1, 2], "b": [2, 1, 2, 1]})
+    nw_df = nw.from_native(pandas_df)
+    unmigrated = UnmigratedDiscovery()
+    res = unmigrated.fit(nw_df)
+    assert res is unmigrated
+
+
+@pytest.mark.parametrize("backend", ["polars", "pyarrow"])
+def test_score_dataframe_backends(backend):
+    pandas_df = pd.DataFrame({"a": [1, 2, 1, 2], "b": [2, 1, 2, 1]})
+    est = ChowLiu(n_jobs=1).fit(pandas_df)
+    score_pd = est.score(pandas_df)
+
+    if backend == "polars":
+        pl = pytest.importorskip("polars")
+        data = pl.DataFrame(pandas_df)
+    elif backend == "pyarrow":
+        pa = pytest.importorskip("pyarrow")
+        data = pa.Table.from_pandas(pandas_df)
+
+    assert np.isclose(est.score(data), score_pd)
+
+
+def test_tree_search_mixin_weights():
+    arr = np.array([[1, 2], [2, 1], [1, 2], [2, 1]])
+    weights = _TreeSearchMixin._get_weights(arr, n_jobs=1, show_progress=False)
+    assert weights.shape == (2, 2)
+    assert np.allclose(np.diag(weights), 0)
+    assert np.allclose(weights, weights.T)
+    assert np.isclose(weights[0, 1], np.log(2))
