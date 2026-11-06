@@ -391,7 +391,7 @@ class LinearGaussianBayesianNetwork(_FileIOMixin, DAG):
         mean, cov = self.to_joint_gaussian()
         return np.sum(multivariate_normal.logpdf(data, mean=mean, cov=cov))
 
-    def copy(self):
+    def copy(self) -> LinearGaussianBayesianNetwork:
         """
         Returns a copy of the model.
 
@@ -424,6 +424,10 @@ class LinearGaussianBayesianNetwork(_FileIOMixin, DAG):
         model_copy.add_edges_from(self.edges())
         if self.cpds:
             model_copy.add_cpds(*[cpd.copy() for cpd in self.cpds])
+
+        for role, var in self.get_role_dict().copy().items():
+            model_copy.with_role(role=role, variables=var, inplace=True)
+
         return model_copy
 
     @_rename_to_rng("seed")
