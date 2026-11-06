@@ -5,7 +5,7 @@ import networkx as nx
 import numpy as np
 import numpy.testing as npt
 
-from pgmpy.models import SEM, SEMGraph
+from pgmpy.models import SEM, SEMAlg, SEMGraph
 
 
 class TestSEM(unittest.TestCase):
@@ -405,10 +405,62 @@ class TestSEM(unittest.TestCase):
         self.assertEqual(set(model_from_file.latents), expected_latents)
 
     def test_from_lisrel(self):
-        pass  # TODO: Add this test when done writing the tests for SEMAlg
+        # Simple model: xi1 (exo latent) -> eta1 (endo latent)
+        # eta1 -> y1, y2  (endogenous observed)
+        # xi1  -> x1, x2  (exogenous observed)
+        var_names = {
+            "y": ["y1", "y2"],
+            "x": ["x1", "x2"],
+            "eta": ["eta1"],
+            "xi": ["xi1"],
+        }
+        # m=2 (y), n=2 (x), p=1 (eta), q=1 (xi)
+        params = {
+            "B": np.array([[0.0]]),  # eta->eta (1x1, no self-loop)
+            "gamma": np.array([[1.0]]),  # xi->eta (1x1)
+            "wedge_y": np.array([[1.0], [1.0]]),  # eta->y (2x1)
+            "wedge_x": np.array([[1.0], [1.0]]),  # xi->x  (2x1)
+            "phi": np.array([[1.0]]),  # xi error var (1x1)
+            "theta_e": np.eye(2),  # y error var (2x2)
+            "theta_del": np.eye(2),  # x error var (2x2)
+            "psi": np.array([[1.0]]),  # eta error var (1x1)
+        }
+        model = SEM.from_lisrel(var_names=var_names, params=params, fixed_masks=None)
+
+        self.assertIsInstance(model, SEM)
+        self.assertEqual(model.latents, {"eta1", "xi1"})
+        self.assertEqual(model.observed, {"y1", "y2", "x1", "x2"})
+        expected_edges = {
+            ("xi1", "eta1"),
+            ("eta1", "y1"),
+            ("eta1", "y2"),
+            ("xi1", "x1"),
+            ("xi1", "x2"),
+        }
+        self.assertEqual(set(model.graph.edges()), expected_edges)
 
     def test_from_ram(self):
-        pass  # TODO: Add this.
+        # Simple model: xi1 (latent) -> x1, xi1 -> x2 (both observed)
+        # variables order: [xi1, x1, x2]
+        # B[i,j]=1 means variable j is a parent of variable i
+        variables = ["xi1", "x1", "x2"]
+        B = np.array(
+            [
+                [0.0, 0.0, 0.0],  # xi1 has no parents
+                [1.0, 0.0, 0.0],  # x1 <- xi1
+                [1.0, 0.0, 0.0],  # x2 <- xi1
+            ]
+        )
+        zeta = np.eye(3)  # independent error terms
+        observed = ["x1", "x2"]
+
+        model = SEM.from_RAM(variables=variables, B=B, zeta=zeta, observed=observed)
+
+        self.assertIsInstance(model, SEM)
+        self.assertEqual(model.latents, {"xi1"})
+        self.assertEqual(model.observed, {"x1", "x2"})
+        expected_edges = {("xi1", "x1"), ("xi1", "x2")}
+        self.assertEqual(set(model.graph.edges()), expected_edges)
 
 
 class TestSEMGraph(unittest.TestCase):
@@ -1305,6 +1357,44 @@ class TestSEMAlg(unittest.TestCase):
 
         self.small_model = SEM.from_graph(ebunch=[("X", "Y", 0.3)], latents=[], err_var={"X": 0.1, "Y": 0.1})
         self.small_model_lisrel = self.small_model.to_lisrel()
+
+    def test_to_SEMGraph_fixed_err_var(self):
+        # Nonzero zeta_fixed_mask diagonal → float(fixed) branch used for err_var weights
+        eta = ["x", "y"]
+        B = np.array([[0.0, 0.0], [1.0, 0.0]])
+        zeta = np.eye(2)
+        wedge_y = np.eye(2)
+        fixed_values = {
+            "B": np.array([[0.0, 0.0], [0.3, 0.0]]),
+            "zeta": np.diag([0.5, 0.8]),
+        }
+        semalg = SEMAlg(eta=eta, B=B, zeta=zeta, wedge_y=wedge_y, fixed_values=fixed_values)
+        sem_graph = semalg.to_SEMGraph()
+        self.assertAlmostEqual(sem_graph.err_graph.nodes["x"]["weight"], 0.5)
+        self.assertAlmostEqual(sem_graph.err_graph.nodes["y"]["weight"], 0.8)
+
+    def test_to_SEMGraph_isolated_node_fixed_err_var(self):
+        # Variable with no directed edges goes through the isolated-node path.
+        # Nonzero zeta_fixed_mask diagonal → float(fixed) branch used for that node's weight.
+        eta = ["x", "y", "z"]
+        B = np.array(
+            [
+                [0.0, 0.0, 0.0],  # x has no parents
+                [1.0, 0.0, 0.0],  # y <- x
+                [0.0, 0.0, 0.0],  # z isolated (no edges)
+            ]
+        )
+        zeta = np.eye(3)
+        wedge_y = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])  # x, y observed; z latent
+        fixed_values = {
+            "B": np.array([[0.0, 0.0, 0.0], [0.3, 0.0, 0.0], [0.0, 0.0, 0.0]]),
+            "zeta": np.diag([0.5, 0.8, 0.9]),
+        }
+        semalg = SEMAlg(eta=eta, B=B, zeta=zeta, wedge_y=wedge_y, fixed_values=fixed_values)
+        sem_graph = semalg.to_SEMGraph()
+        # z has no directed edges so it is added via the isolated-node path
+        self.assertTrue(sem_graph.err_graph.has_node("z"))
+        self.assertAlmostEqual(sem_graph.err_graph.nodes["z"]["weight"], 0.9)
 
     def test_generate_samples(self):
         self.small_model_lisrel.generate_samples(n_samples=100)
