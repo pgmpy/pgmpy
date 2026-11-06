@@ -292,7 +292,8 @@ class assumption__faithfulness(_BaseTag):
 
 
 class assumption__linearity(_BaseTag):
-    """Whether the method assumes each variable is a linear function of its parents."""
+    """Whether the method assumes each variable is a linear function of its parents.
+    Can be ``True``, ``False``, or ``None`` (unknown)"""
 
     _tags = {
         "tag_name": "assumption:linearity",
@@ -510,7 +511,7 @@ def check_tag_is_valid(tag_name: str, tag_value) -> None:
     >>> check_tag_is_valid("requires_target", "yes")
     Traceback (most recent call last):
     ...
-    ValueError: Tag 'requires_target' must be a bool, got 'yes'.
+    ValueError: Tag 'requires_target' must be a bool or None, got 'yes'.
     """
     tag_types = {tag[0]: tag[2] for tag in TAG_REGISTER}
     if tag_name not in tag_types:
@@ -518,7 +519,7 @@ def check_tag_is_valid(tag_name: str, tag_value) -> None:
     tag_type = tag_types[tag_name]
 
     if tag_type == "bool":
-        valid, expected = isinstance(tag_value, bool), "a bool"
+        valid, expected = isinstance(tag_value, bool) or tag_value is None, "a bool or None"
     elif tag_type == "str":
         valid, expected = isinstance(tag_value, str), "a str"
     elif tag_type[0] == "str":

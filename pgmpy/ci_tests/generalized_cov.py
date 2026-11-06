@@ -97,6 +97,7 @@ class GeneralizedCov(_ResidualMixin, BaseCITest):
         self.n_permutations = n_permutations
         self.rng = rng
         super().__init__(use_cache=use_cache)
+        self._set_linearity_assumption_tag()
 
     def set_params(self, **params):
         """Set the parameters of this estimator; the deprecated ``random_state`` is accepted as an alias of ``rng``."""
