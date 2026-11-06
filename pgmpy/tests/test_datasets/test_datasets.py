@@ -4,6 +4,7 @@ import pytest
 from pgmpy.base import DAG
 from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.datasets import list_datasets, load_dataset
+from pgmpy.datasets.depression_coping import DepressionCoping
 
 ALL_DATASETS = [
     "abalone_continuous",
@@ -94,6 +95,16 @@ def test_load_dataset():
 
         if dataset.tags["has_missing_data"]:
             assert dataset.data.isna().any().any()
+
+
+@pytest.mark.filterwarnings(r"error:The inplace keyword in DataFrame\.drop is deprecated")
+def test_load_dataset_drops_serialized_index(monkeypatch):
+    raw = pd.DataFrame({"row_id": [12, 8], "score": [3, 5]})
+    monkeypatch.setattr(DepressionCoping, "_read_table", lambda **kwargs: raw)
+
+    data = load_dataset("depression_coping").data
+
+    pd.testing.assert_frame_equal(data, pd.DataFrame({"score": [3, 5]}))
 
 
 def test_load_covariance_dataset():

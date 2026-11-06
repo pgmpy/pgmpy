@@ -1224,7 +1224,7 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
         predict_data = values[800:].copy()
         self.model_connected.fit(fit_data)
         self.assertRaises(ValueError, self.model_connected.predict, predict_data)
-        predict_data.drop("E", axis=1, inplace=True)
+        predict_data = predict_data.drop(columns="E")
         e_predict = self.model_connected.predict(predict_data)
         np_test.assert_array_equal(
             e_predict["E"].values.ravel(),
@@ -1444,7 +1444,7 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
         fit_data = values[:80]
         predict_data = values[80:].copy()
         self.model_connected.fit(fit_data)
-        predict_data.drop("E", axis=1, inplace=True)
+        predict_data = predict_data.drop(columns="E")
         e_prob = self.model_connected.predict_probability(predict_data)
         np_test.assert_allclose(
             e_prob.values.ravel(),
