@@ -174,6 +174,33 @@ def test_chow_liu_auto_root_node(data12):
     assert nodes == ["D", "A", "C", "B", "E"]
 
 
+@pytest.mark.parametrize("backend", ["narwhals", "polars", "pyarrow", "modin", "cudf"])
+def test_chow_liu_dataframe_backends(data12, backend):
+    if backend == "narwhals":
+        nw = pytest.importorskip("narwhals.stable.v2")
+        data = nw.from_native(data12)
+    elif backend == "polars":
+        pl = pytest.importorskip("polars")
+        data = pl.DataFrame(data12)
+    elif backend == "pyarrow":
+        pa = pytest.importorskip("pyarrow")
+        data = pa.Table.from_pandas(data12)
+    elif backend == "modin":
+        mpd = pytest.importorskip("modin.pandas")
+        data = mpd.DataFrame(data12)
+    elif backend == "cudf":
+        cd = pytest.importorskip("cudf")
+        data = cd.DataFrame(data12)
+
+    est_expected = ChowLiu(root_node="A", show_progress=False, n_jobs=1).fit(data12)
+    est_actual = ChowLiu(root_node="A", show_progress=False, n_jobs=1).fit(data)
+
+    assert set(est_actual.causal_graph_.nodes()) == set(est_expected.causal_graph_.nodes())
+    assert set(est_actual.causal_graph_.edges()) == set(est_expected.causal_graph_.edges())
+    assert list(est_actual.feature_names_in_) == list(est_expected.feature_names_in_)
+    assert np.array_equal(est_actual.adjacency_matrix_.values, est_expected.adjacency_matrix_.values)
+
+
 @pytest.fixture(autouse=True)
 def shutdown_executor():
     yield
