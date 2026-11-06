@@ -120,7 +120,7 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         for col in nw_df.columns:
             if nw_df.get_column(col).n_unique() == 1:
                 warnings.warn(
-                    f"Variable '{col}' is constant (zero variance), which can lead to unreliable results for"
+                    f"Variable '{col}' is constant (zero variance), which can lead to unreliable results for "
                     f"{type(self).__name__}. Consider removing it before fitting.",
                     UserWarning,
                 )
@@ -130,7 +130,7 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
 
         if not getattr(self, "_supports_narwhals", False):
             if not isinstance(X, pd.DataFrame):
-                X = nw_df.to_pandas()
+                X = pd.DataFrame({c: nw_df.get_column(c).to_numpy() for c in nw_df.columns})
             return X
         return nw_df
 
@@ -226,7 +226,7 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         if X is not None:
             if not isinstance(X, (np.ndarray, pd.DataFrame)):
                 nw_df = X if isinstance(X, nw.DataFrame) else nw.from_native(X, eager_only=True)
-                X = nw_df.to_pandas()
+                X = pd.DataFrame({c: nw_df.get_column(c).to_numpy() for c in nw_df.columns})
 
             validate_data(
                 self,
