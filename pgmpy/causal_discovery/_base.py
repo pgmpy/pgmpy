@@ -224,9 +224,7 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
 
         # Case 1: When data is provided.
         if X is not None:
-            if isinstance(X, np.ndarray):
-                X = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
-            elif not isinstance(X, pd.DataFrame):
+            if not isinstance(X, (np.ndarray, pd.DataFrame)):
                 nw_df = X if isinstance(X, nw.DataFrame) else nw.from_native(X, eager_only=True)
                 X = nw_df.to_pandas()
 
@@ -238,6 +236,9 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
                 ensure_all_finite=True,
                 reset=False,
             )
+
+            if isinstance(X, np.ndarray):
+                X = pd.DataFrame(X, columns=list(self.feature_names_in_))
 
             return get_metric(metric, requires_true_graph=False).evaluate(X, self.causal_graph_)
 
@@ -836,7 +837,7 @@ class _TreeSearchMixin:
         model : pgmpy.base.DAG
             The estimated DAG rooted at ``root_node``.
         """
-        G = nx.from_numpy_array(weights, nodelist=columns)
+        G = nx.relabel_nodes(nx.from_numpy_array(weights), dict(enumerate(columns)))
         T = nx.maximum_spanning_tree(G)
         D = nx.bfs_tree(T, root_node)
         return DAG(D)
