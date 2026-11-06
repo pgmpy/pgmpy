@@ -752,8 +752,9 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
             The number of CPU cores to use. If -1, uses all available cores.
 
         rng : int, numpy.random.Generator or None, default=None
-            When ``stochastic=True``, the source of randomness, passed to ``numpy.random.default_rng``. If None, fresh
-            entropy is drawn from the operating system, so results are not reproducible.
+            Source of randomness for stochastic prediction and for ``ApproxInference``, passed to
+            ``numpy.random.default_rng``. If None, fresh entropy is drawn from the operating system, so results are not
+            reproducible.
 
             .. versionchanged:: 1.2.0
                 Replaces ``seed``, which is deprecated and will be removed in v2.0. None no longer follows
@@ -775,8 +776,6 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
             - ``state_names`` (dict, default ``None``): Possible states for each
               variable. When inferred from samples, unobserved states can be
               absent from the resulting distribution.
-            - ``seed`` (int, default ``None``): Random seed used by approximate
-              inference.
             - ``joint`` (bool): Used only for stochastic prediction. If true,
               return a joint distribution; otherwise, return one distribution
               per variable. This option is supported by variable elimination,
@@ -838,17 +837,23 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
         model_inference = algo(self)
         data_unique_indexes = data.groupby(list(data.columns), dropna=False).apply(lambda t: t.index.tolist())
         data_unique = data_unique_indexes.index.to_frame()
+        rng = np.random.default_rng(rng)
+        if issubclass(algo, ApproxInference):
+            inference_kwargs = [{**kwargs, "rng": child} for child in rng.spawn(data_unique.shape[0])]
+        else:
+            inference_kwargs = [kwargs] * data_unique.shape[0]
         pred_values = Parallel(n_jobs=n_jobs, require="sharedmem")(
             delayed(model_inference.query if stochastic else model_inference.map_query)(
                 variables=missing_variables.union(set(data_point.index[data_point.isna()])),
                 evidence=data_point[~data_point.isna()].to_dict(),
                 show_progress=False,
-                **kwargs,
+                **point_kwargs,
             )
-            for index, data_point in tqdm(data_unique.iterrows(), total=data_unique.shape[0])
+            for (index, data_point), point_kwargs in zip(
+                tqdm(data_unique.iterrows(), total=data_unique.shape[0]), inference_kwargs
+            )
         )
 
-        rng = np.random.default_rng(rng) if stochastic else None
         all_columns = data.columns.tolist() + [col for col in missing_variables]
         predictions = pd.DataFrame()
 
