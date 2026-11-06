@@ -145,6 +145,7 @@ class UndirectedGraph(nx.Graph):
         When the node is not already in the model:
 
         >>> G.add_edges_from(ebunch=[("Alice", "Ankur")])
+
         >>> sorted(G.nodes())
         ['Alice', 'Ankur', 'Bob', 'Charles']
         >>> sorted(G.edges())
