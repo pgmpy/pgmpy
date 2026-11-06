@@ -125,12 +125,22 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
                     UserWarning,
                 )
 
-        self.feature_names_in_ = np.asarray(nw_df.columns, dtype=object)
+        if all(isinstance(c, str) for c in nw_df.columns):
+            self.feature_names_in_ = np.asarray(nw_df.columns, dtype=object)
+        elif hasattr(self, "feature_names_in_"):
+            del self.feature_names_in_
         self.n_features_in_ = n_features
 
         if not getattr(self, "_supports_narwhals", False):
             if not isinstance(X, pd.DataFrame):
-                X = pd.DataFrame({c: nw_df.get_column(c).to_numpy() for c in nw_df.columns})
+                native = nw.to_native(nw_df)
+                if isinstance(native, pd.DataFrame):
+                    X = native
+                else:
+                    try:
+                        X = nw_df.to_pandas()
+                    except (ImportError, ModuleNotFoundError):
+                        X = pd.DataFrame({c: nw_df.get_column(c).to_numpy() for c in nw_df.columns})
             return X
         return nw_df
 
@@ -226,7 +236,14 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         if X is not None:
             if not isinstance(X, (np.ndarray, pd.DataFrame)):
                 nw_df = X if isinstance(X, nw.DataFrame) else nw.from_native(X, eager_only=True)
-                X = pd.DataFrame({c: nw_df.get_column(c).to_numpy() for c in nw_df.columns})
+                native = nw.to_native(nw_df)
+                if isinstance(native, pd.DataFrame):
+                    X = native
+                else:
+                    try:
+                        X = nw_df.to_pandas()
+                    except (ImportError, ModuleNotFoundError):
+                        X = pd.DataFrame({c: nw_df.get_column(c).to_numpy() for c in nw_df.columns})
 
             validate_data(
                 self,
@@ -238,7 +255,12 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
             )
 
             if isinstance(X, np.ndarray):
-                X = pd.DataFrame(X, columns=list(self.feature_names_in_))
+                cols = (
+                    list(self.feature_names_in_)
+                    if hasattr(self, "feature_names_in_")
+                    else list(self.causal_graph_.nodes())
+                )
+                X = pd.DataFrame(X, columns=cols)
 
             return get_metric(metric, requires_true_graph=False).evaluate(X, self.causal_graph_)
 
