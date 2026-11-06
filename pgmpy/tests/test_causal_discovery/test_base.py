@@ -237,22 +237,44 @@ def test_check_fit_score_parity():
 
     score_pd = est.score(pandas_df)
     score_nw = est.score(nw_df)
+    score_np = est.score(pandas_df.to_numpy())
     assert np.isclose(score_pd, score_nw)
+    assert np.isclose(score_pd, score_np)
 
 
-def test_check_fit_unmigrated_bridge():
-    # Temporary migration bridge: verifies unmigrated estimators without
+@pytest.mark.parametrize("backend", ["pandas_nullable", "polars", "pyarrow"])
+def test_check_fit_unmigrated_bridge(backend):
+    # Temporary migration bridge: verifies unmigrated estimators without _supports_narwhals=True
+    captured = {}
+
     class UnmigratedDiscovery(BaseCausalDiscovery):
         def _fit(self, X):
             assert isinstance(X, pd.DataFrame)
+            captured["df"] = X
             self.causal_graph_ = DAG()
             return self
 
-    pandas_df = pd.DataFrame({"a": [1, 2, 1, 2], "b": [2, 1, 2, 1]})
-    nw_df = nw.from_native(pandas_df)
+    if backend == "pandas_nullable":
+        df = pd.DataFrame({"a": pd.Series([1, 2, 1, 2], dtype="Int64"), "b": [2, 1, 2, 1]})
+        data = nw.from_native(df)
+        expected_a_dtype = "Int64"
+    elif backend == "polars":
+        pl = pytest.importorskip("polars")
+        data = pl.DataFrame({"a": [1, 2, 1, 2], "b": [2, 1, 2, 1]})
+        expected_a_dtype = "int64"
+    elif backend == "pyarrow":
+        pa = pytest.importorskip("pyarrow")
+        data = pa.table({"a": [1, 2, 1, 2], "b": [2, 1, 2, 1]})
+        expected_a_dtype = "int64"
+
     unmigrated = UnmigratedDiscovery()
-    res = unmigrated.fit(nw_df)
+    res = unmigrated.fit(data)
     assert res is unmigrated
+    fitted_df = captured["df"]
+    assert list(fitted_df.columns) == ["a", "b"]
+    assert list(fitted_df["a"]) == [1, 2, 1, 2]
+    assert list(fitted_df["b"]) == [2, 1, 2, 1]
+    assert str(fitted_df["a"].dtype) == expected_a_dtype
 
 
 @pytest.mark.parametrize("backend", ["polars", "pyarrow"])
