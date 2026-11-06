@@ -10,11 +10,11 @@ from pgmpy.ci_tests import HSIC, KCI, get_ci_test
 @pytest.fixture
 def kci_data():
     df_ind = pd.DataFrame(np.random.default_rng(seed=42).standard_normal((200, 3)), columns=["X", "Y", "Z"])
-    df_cind = DAG.from_dagitty("dag{ Z -> X [beta=0.5]; Z -> Y [beta=0.8] }").simulate(n_samples=500, seed=42)
-    df_vstruct = DAG.from_dagitty("dag{ X -> Z [beta=0.5]; Y -> Z [beta=0.8] }").simulate(n_samples=800, seed=42)
+    df_cind = DAG.from_dagitty("dag{ Z -> X [beta=0.5]; Z -> Y [beta=0.8] }").simulate(n_samples=500, rng=42)
+    df_vstruct = DAG.from_dagitty("dag{ X -> Z [beta=0.5]; Y -> Z [beta=0.8] }").simulate(n_samples=800, rng=42)
     df_multi = DAG.from_dagitty(
         "dag{ Z1 -> X [beta=0.6]; Z2 -> X [beta=-0.4]; Z1 -> Y [beta=0.3]; Z2 -> Y [beta=0.7]; X -> Y [beta=0.3] }"
-    ).simulate(n_samples=400, seed=42)
+    ).simulate(n_samples=400, rng=42)
     return df_ind, df_cind, df_vstruct, df_multi
 
 
@@ -55,7 +55,7 @@ class TestKCI:
         # Sample sizes on the other sides of the heuristic width thresholds (200 and 1200).
         lgbn = DAG.from_dagitty("dag{ Z -> X [beta=0.5]; Z -> Y [beta=0.8] }")
         for n_samples in (150, 1250):
-            test = KCI(data=lgbn.simulate(n_samples=n_samples, seed=42))
+            test = KCI(data=lgbn.simulate(n_samples=n_samples, rng=42))
             assert not test("X", "Y", [], significance_level=0.05), n_samples
             assert test("X", "Y", ["Z"], significance_level=0.05), n_samples
 

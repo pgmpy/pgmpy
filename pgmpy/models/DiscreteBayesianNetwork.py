@@ -26,6 +26,7 @@ from pgmpy.factors.discrete import (
 from pgmpy.models._file_io import _FileIOMixin
 from pgmpy.models.DiscreteMarkovNetwork import DiscreteMarkovNetwork
 from pgmpy.utils import compat_fns
+from pgmpy.utils._random import _rename_to_rng
 
 
 class DiscreteBayesianNetwork(_FileIOMixin, DAG):
@@ -721,13 +722,14 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
 
         self.add_cpds(*cpds)
 
+    @_rename_to_rng("seed")
     def predict(
         self,
         data: pd.DataFrame,
         algo: type | None = None,
         stochastic: bool = False,
         n_jobs: int = -1,
-        seed: int | None = None,
+        rng: int | np.random.Generator | None = None,
         **kwargs: Any,
     ) -> pd.DataFrame:
         """
@@ -749,8 +751,13 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
         n_jobs : int, default=-1
             The number of CPU cores to use. If -1, uses all available cores.
 
-        seed : int, optional
-            When ``stochastic=True``, the seed value to use for random number generators.
+        rng : int, numpy.random.Generator or None, default=None
+            When ``stochastic=True``, the source of randomness, passed to ``numpy.random.default_rng``. If None, fresh
+            entropy is drawn from the operating system, so results are not reproducible.
+
+            .. versionchanged:: 1.2.0
+                Replaces ``seed``, which is deprecated and will be removed in v2.0. None no longer follows
+                ``np.random.seed``.
 
         **kwargs : dict
             Optional keyword arguments for the selected inference algorithm.
@@ -801,7 +808,7 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
         <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork object at 0x...>
         >>> predict_data = predict_data.copy()
         >>> predict_data.drop("E", axis=1, inplace=True)
-        >>> approx_inf_parameters = {"n_samples": int(1e3), "seed": 42}
+        >>> approx_inf_parameters = {"n_samples": int(1e3), "rng": 42}
         >>> y_pred = model.predict(
         ...     predict_data, algo=ApproxInference, **approx_inf_parameters
         ... )
@@ -841,12 +848,13 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
             for index, data_point in tqdm(data_unique.iterrows(), total=data_unique.shape[0])
         )
 
+        rng = np.random.default_rng(rng) if stochastic else None
         all_columns = data.columns.tolist() + [col for col in missing_variables]
         predictions = pd.DataFrame()
 
         for i, row in enumerate(data_unique_indexes):
             if stochastic:
-                predicted_df = pred_values[i].sample(n=len(row), seed=seed).reset_index(drop=True)
+                predicted_df = pred_values[i].sample(n=len(row), rng=rng).reset_index(drop=True)
             else:
                 predicted = pd.DataFrame(pred_values[i], index=[0])
                 predicted_df = predicted.loc[predicted.index.repeat(len(row))].reset_index(drop=True)
@@ -1135,6 +1143,7 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
         return list(blanket_nodes)
 
     @staticmethod
+    @_rename_to_rng("seed")
     def get_random(
         n_nodes: int = 5,
         n_edges: int | None = None,
@@ -1142,7 +1151,7 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
         node_names: list[Hashable] | None = None,
         n_states: int | dict[Hashable, int] | None = None,
         latents: bool = False,
-        seed: int | None = None,
+        rng: int | np.random.Generator | None = None,
     ) -> DiscreteBayesianNetwork:
         """
         Returns a randomly generated Bayesian Network on `n_nodes` variables
@@ -1173,8 +1182,12 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
         latents: bool (default: False)
             If True, also creates latent variables.
 
-        seed: int (default: None)
-            The seed value for random number generators.
+        rng: int, numpy.random.Generator or None (default: None)
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
+
+            .. versionchanged:: 1.2.0
+                Replaces ``seed``, which is deprecated and will be removed in v2.0.
 
         Returns
         -------
@@ -1193,12 +1206,13 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
         5
 
         """
+        rng = np.random.default_rng(rng)
+
         if node_names is None:
             node_names = [f"X_{i}" for i in range(n_nodes)]
 
         if n_states is None:
-            gen = np.random.default_rng(seed=seed)
-            n_states = gen.integers(low=1, high=5, size=n_nodes)
+            n_states = rng.integers(low=1, high=5, size=n_nodes)
             n_states_dict = {node_names[i]: n_states[i] for i in range(n_nodes)}
 
         elif isinstance(n_states, int):
@@ -1214,7 +1228,7 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
             edge_prob=edge_prob,
             node_names=node_names,
             latents=latents,
-            seed=seed,
+            rng=rng,
         )
         # Initialize with full DAG to preserve isolated nodes
         bn_model = DiscreteBayesianNetwork(dag)
@@ -1228,18 +1242,19 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
                     variable=node,
                     evidence=parents,
                     cardinality=n_states_dict,
-                    seed=seed,
+                    rng=rng,
                 )
             )
 
         bn_model.add_cpds(*cpds)
         return bn_model
 
+    @_rename_to_rng("seed")
     def get_random_cpds(
         self,
         n_states: int | dict[Hashable, int] | None = None,
         inplace: bool = False,
-        seed: int | None = None,
+        rng: int | np.random.Generator | None = None,
     ) -> list[TabularCPD] | DiscreteBayesianNetwork | None:
         """
         Given a `model`, generates and adds random `TabularCPD`
@@ -1255,23 +1270,28 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
             If inplace=True, adds the generated TabularCPDs to `model` itself, else creates
             a copy of the model.
 
-        seed: int (default: None)
-            The seed value for random number generators.
+        rng: int, numpy.random.Generator or None (default: None)
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
+
+            .. versionchanged:: 1.2.0
+                Replaces ``seed``, which is deprecated and will be removed in v2.0.
 
         """
+        rng = np.random.default_rng(rng)
+
         if isinstance(n_states, int):
             n_states = dict.fromkeys(self.nodes(), n_states)
         elif isinstance(n_states, dict):
             if set(n_states.keys()) != set(self.nodes()):
                 raise ValueError("Number of states not specified for each variable")
         elif n_states is None:
-            gen = np.random.default_rng(seed=seed)
-            n_states = {var: gen.integers(low=1, high=5, size=1)[0] for var in self.nodes()}
+            n_states = {var: rng.integers(low=1, high=5, size=1)[0] for var in self.nodes()}
 
         cpds = []
         for node in self.nodes():
             parents = list(self.predecessors(node))
-            cpds.append(TabularCPD.get_random(variable=node, evidence=parents, cardinality=n_states, seed=seed))
+            cpds.append(TabularCPD.get_random(variable=node, evidence=parents, cardinality=n_states, rng=rng))
 
         if inplace:
             self.add_cpds(*cpds)
@@ -1387,6 +1407,7 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
             adj_model.add_cpds(new_cpd)
         return adj_model
 
+    @_rename_to_rng("seed")
     def simulate(
         self,
         n_samples: int = 10,
@@ -1397,7 +1418,7 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
         missing_prob: TabularCPD | list[TabularCPD] | None = None,
         include_latents: bool = False,
         partial_samples: pd.DataFrame | None = None,
-        seed: int | None = None,
+        rng: int | np.random.Generator | None = None,
         show_progress: bool = True,
         return_full: bool = False,
     ) -> pd.DataFrame:
@@ -1449,8 +1470,13 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
             specified, the sampling procedure uses these sample values, instead of generating them.
             partial_samples.shape[0] must be equal to `n_samples`.
 
-        seed: int (default: None)
-            If a value is provided, sets the seed for numpy.random.
+        rng: int | numpy.random.Generator | None (default: None)
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
+
+            .. versionchanged:: 1.2.0
+                Replaces ``seed``, which is deprecated and will be removed in v2.0. None no longer follows
+                ``np.random.seed``.
 
         show_progress: bool
             If True, shows a progress bar when generating samples.
@@ -1654,7 +1680,7 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
             samples = BayesianModelSampling(model).forward_sample(
                 size=n_samples,
                 include_latents=include_latents,
-                seed=seed,
+                rng=rng,
                 show_progress=show_progress,
                 partial_samples=partial_samples,
             )
@@ -1665,7 +1691,7 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
                 size=n_samples,
                 evidence=[(k, v) for k, v in evidence.items()],
                 include_latents=include_latents,
-                seed=seed,
+                rng=rng,
                 show_progress=show_progress,
                 partial_samples=partial_samples,
             )
