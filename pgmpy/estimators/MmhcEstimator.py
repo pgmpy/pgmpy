@@ -1,11 +1,8 @@
-import networkx as nx
-
-from pgmpy.base import UndirectedGraph
-from pgmpy.causal_discovery import ExpertKnowledge, HillClimbSearch
-from pgmpy.ci_tests import ChiSquare
+from pgmpy.causal_discovery import MMHC as _MMHC
+from pgmpy.ci_tests import get_ci_test
 from pgmpy.estimators import StructureEstimator
 from pgmpy.structure_score import BDeu
-from pgmpy.utils.mathext import powerset
+from pgmpy.utils._warnings import _warn_external
 
 
 class MmhcEstimator(StructureEstimator):
@@ -32,6 +29,11 @@ class MmhcEstimator(StructureEstimator):
     """
 
     def __init__(self, data, **kwargs):
+        _warn_external(
+            "`pgmpy.estimators.MmhcEstimator` is deprecated and will be removed in v2.0. "
+            "Use `pgmpy.causal_discovery.MMHC` instead.",
+            FutureWarning,
+        )
         super().__init__(data, **kwargs)
 
     def estimate(self, scoring_method=None, tabu_length=10, significance_level=0.01):
@@ -83,20 +85,14 @@ class MmhcEstimator(StructureEstimator):
         if scoring_method is None:
             scoring_method = BDeu(self.data, equivalent_sample_size=10)
 
-        skel = self.mmpc(significance_level)
-
-        possible_edges = nx.complete_graph(n=self.state_names.keys(), create_using=nx.Graph).edges()
-
-        expert_knowledge = ExpertKnowledge(forbidden_edges=possible_edges - skel.to_directed().edges())
-
-        hc = HillClimbSearch(
+        estimator = _MMHC(
+            ci_test="chi_square",
             scoring_method=scoring_method,
-            expert_knowledge=expert_knowledge,
             tabu_length=tabu_length,
             return_type="dag",
+            significance_level=significance_level,
         )
-
-        return hc.fit(self.data).causal_graph_
+        return estimator.fit(self.data).causal_graph_
 
     def mmpc(self, significance_level=0.01):
         """Estimates a graph skeleton (UndirectedGraph) for the data set, using then
@@ -141,7 +137,7 @@ class MmhcEstimator(StructureEstimator):
         >>> est = MmhcEstimator(data)
         >>> skel = est.mmpc()
         >>> sorted(skel.edges())
-        [('A', 'D'), ('A', 'E'), ('A', 'F'), ('B', 'E'), ('B', 'F'), ('C', 'E'), ('C', 'F')]
+        [('A', 'F'), ('B', 'F'), ('C', 'F')]
         >>> data = pd.DataFrame(rng.integers(0, 2, size=(5000, 3)), columns=list("XYZ"))
         >>> data["X"] += data["Z"]
         >>> data["Y"] += data["Z"]
@@ -151,67 +147,8 @@ class MmhcEstimator(StructureEstimator):
         [('X', 'Z'), ('Y', 'Z')]
         """
 
-        nodes = self.state_names.keys()
-        ci_test = ChiSquare(self.data)
-
-        def assoc(X, Y, Zs):
-            """Measure for (conditional) association between variables. Use negative
-            p-value of independence test.
-            """
-            return 1 - ci_test.run_test(X, Y, list(Zs))[1]
-
-        def min_assoc(X, Y, Zs):
-            "Minimal association of X, Y given any subset of Zs."
-            return min(assoc(X, Y, Zs_subset) for Zs_subset in powerset(Zs))
-
-        def max_min_heuristic(X, Zs):
-            "Finds variable that maximizes min_assoc with `node` relative to `neighbors`."
-            max_min_assoc = 0
-            best_Y = None
-
-            for Y in set(nodes) - set(Zs + [X]):
-                min_assoc_val = min_assoc(X, Y, Zs)
-                if min_assoc_val >= max_min_assoc:
-                    best_Y = Y
-                    max_min_assoc = min_assoc_val
-
-            return (best_Y, max_min_assoc)
-
-        # Find parents and children for each node
-        neighbors = dict()
-        for node in nodes:
-            neighbors[node] = []
-
-            # Forward Phase
-            while True:
-                new_neighbor, new_neighbor_min_assoc = max_min_heuristic(node, neighbors[node])
-                if new_neighbor_min_assoc > 0:
-                    neighbors[node].append(new_neighbor)
-                else:
-                    break
-
-            # Backward Phase
-            for neigh in neighbors[node]:
-                other_neighbors = [n for n in neighbors[node] if n != neigh]
-                for sep_set in powerset(other_neighbors):
-                    if ci_test.is_independent(
-                        X=node,
-                        Y=neigh,
-                        Z=list(sep_set),
-                        significance_level=significance_level,
-                    ):
-                        neighbors[node].remove(neigh)
-                        break
-
-        # correct for false positives
-        for node in nodes:
-            for neigh in neighbors[node]:
-                if node not in neighbors[neigh]:
-                    neighbors[node].remove(neigh)
-
-        skel = UndirectedGraph()
-        skel.add_nodes_from(nodes)
-        for node in nodes:
-            skel.add_edges_from([(node, neigh) for neigh in neighbors[node]])
-
-        return skel
+        return _MMHC()._learn_skeleton(
+            data=self.data,
+            ci_test=get_ci_test(test="chi_square", data=self.data),
+            significance_level=significance_level,
+        )

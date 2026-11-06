@@ -137,6 +137,13 @@ from pgmpy.causal_discovery import PC
 est = PC(ci_test="g_sq", return_type="dag", show_progress=False).fit(data)
 ```
 
+**Hybrid MMHC discovery:**
+```python
+from pgmpy.causal_discovery import MMHC
+
+est = MMHC(return_type="dag", show_progress=False).fit(data)
+```
+
 **GES returning a PDAG:**
 ```python
 from pgmpy.causal_discovery import GES
