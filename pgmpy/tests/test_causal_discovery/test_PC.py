@@ -534,14 +534,14 @@ def test_build_dag_continuous(ci_test, variant):
 
 def test_pc_alarm():
     alarm_model = load_model("bnlearn/alarm")
-    data = BayesianModelSampling(alarm_model).forward_sample(size=int(1e4), seed=42)
+    data = BayesianModelSampling(alarm_model).forward_sample(size=int(1e4), rng=42)
     est = PC(variant="stable", max_cond_vars=5, n_jobs=1, show_progress=False)
     est.fit(X=data)
 
 
 def test_pc_asia():
     asia_model = load_model("bnlearn/asia")
-    data = asia_model.simulate(n_samples=int(1e5), seed=42)
+    data = asia_model.simulate(n_samples=int(1e5), rng=42)
     req_edges = [("xray", "either")]
     background = ExpertKnowledge(required_edges=req_edges)
     est = PC(
@@ -558,7 +558,7 @@ def test_pc_asia():
 
 def test_pc_asia_expert():
     asia_model = load_model("bnlearn/asia")
-    data = asia_model.simulate(n_samples=int(1e5), seed=42)
+    data = asia_model.simulate(n_samples=int(1e5), rng=42)
     est = PC(
         variant="stable",
         max_cond_vars=2,
@@ -584,7 +584,7 @@ def test_pc_asia_expert():
 
 def test_temporal_pc_cancer():
     cancer_model = load_model("bnlearn/cancer")
-    data = cancer_model.simulate(n_samples=int(5e4), seed=42)
+    data = cancer_model.simulate(n_samples=int(5e4), rng=42)
 
     background = ExpertKnowledge(  # e.g. we know only "Pollution", "Smoker", "Cancer" can be the causes of others
         temporal_order=[["Pollution", "Smoker", "Cancer"], ["Dyspnoea", "Xray"]],
@@ -736,7 +736,7 @@ def test_temporal_ordering_sepsets_and_skeleton():
 
 def test_score():
     asia_model = load_model("bnlearn/asia")
-    data = asia_model.simulate(n_samples=int(1e4), seed=42)
+    data = asia_model.simulate(n_samples=int(1e4), rng=42)
     est = PC(
         return_type="dag",
         variant="stable",
@@ -799,7 +799,7 @@ def test_stable_variant_order_independence():
 @pytest.mark.parametrize("orient_rule", ["pvalue", "effect"])
 def test_orient_rule(orient_rule):
     cancer_model = load_model("bnlearn/cancer")
-    data = cancer_model.simulate(n_samples=int(5e4), seed=42)
+    data = cancer_model.simulate(n_samples=int(5e4), rng=42)
 
     est = PC(
         variant="stable",

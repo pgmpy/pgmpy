@@ -8,6 +8,7 @@ from sklearn.model_selection import KFold
 from sklearn.utils.validation import check_is_fitted, validate_data
 
 from pgmpy.prediction._base import BaseCausalPrediction
+from pgmpy.utils._random import _rename_param_to_rng, _rename_to_rng
 
 
 class DoubleMLRegressor(BaseCausalPrediction):
@@ -68,8 +69,13 @@ class DoubleMLRegressor(BaseCausalPrediction):
         Number of folds to use for cross-fitting. If 1, doesn't perform
         cross-fitting and computes in-sample residuals.
 
-    seed : int or None
-        Random seed for cross-fitting splits.
+    rng : int, numpy.random.Generator or None
+        Source of randomness for the cross-fitting splits, passed to ``numpy.random.default_rng``. If None, fresh
+        entropy is drawn from the operating system, so results are not reproducible.
+
+        .. versionchanged:: 1.2.0
+            Replaces ``seed``, which is deprecated and will be removed in v2.0. None no longer follows
+            ``np.random.seed``.
 
     Attributes
     ----------
@@ -119,7 +125,7 @@ class DoubleMLRegressor(BaseCausalPrediction):
     >>> lgbn = DAG.from_dagitty(
     ...     "dag { X -> T [beta=0.2] X -> Y [beta=0.3] T -> Y [beta=0.4] }"
     ... )
-    >>> data = lgbn.simulate(n_samples=10000, seed=42)
+    >>> data = lgbn.simulate(n_samples=10000, rng=42)
     >>> X = data.loc[:, ["X", "T"]]
     >>> y = data["Y"]
 
@@ -161,20 +167,26 @@ class DoubleMLRegressor(BaseCausalPrediction):
 
     """
 
+    @_rename_to_rng("seed")
     def __init__(
         self,
         causal_graph,
         nuisance_estimators=None,
         effect_estimator=None,
         n_folds: int = 5,
-        seed: int | None = None,
+        rng: int | np.random.Generator | None = None,
     ):
 
         self.causal_graph = causal_graph
         self.nuisance_estimators = nuisance_estimators
         self.effect_estimator = effect_estimator
         self.n_folds = n_folds
-        self.seed = seed
+        self.rng = rng
+
+    def set_params(self, **params):
+        """Set the parameters of this estimator; the deprecated ``seed`` is accepted as an alias of ``rng``."""
+        _rename_param_to_rng(params, "seed", type(self).__qualname__)
+        return super().set_params(**params)
 
     def fit(self, X, y, sample_weight: Any | None = None):
         """
@@ -290,7 +302,9 @@ class DoubleMLRegressor(BaseCausalPrediction):
 
         # Step 3.2: If n_folds > 1, perform cross-fitting and compute out-of-sample predictions.
         else:
-            splitter = KFold(n_splits=self.n_folds, shuffle=True, random_state=self.seed)
+            splitter = KFold(
+                n_splits=self.n_folds, shuffle=True, random_state=int(np.random.default_rng(self.rng).integers(2**32))
+            )
 
             outcome_pred = pd.Series(0.0, index=df.index)
             treatment_pred = pd.Series(0.0, index=df.index)

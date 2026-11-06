@@ -15,6 +15,8 @@ from pgmpy import config
 from pgmpy.extern import tabulate
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.utils import compat_fns
+from pgmpy.utils._random import _rename_to_rng
+from pgmpy.utils._warnings import _warn_external
 
 
 class TabularCPD(DiscreteFactor):
@@ -702,7 +704,10 @@ class TabularCPD(DiscreteFactor):
         return self.variables[:0:-1]
 
     @staticmethod
-    def get_random(variable, evidence=None, cardinality=None, state_names={}, seed=None):
+    @_rename_to_rng("seed")
+    def get_random(
+        variable, evidence=None, cardinality=None, state_names={}, rng: int | np.random.Generator | None = None
+    ):
         """
         Generates a TabularCPD instance with random values on `variable` with
         parents/evidence `evidence` with cardinality/number of states as given
@@ -726,6 +731,13 @@ class TabularCPD(DiscreteFactor):
             for the variables in the CPD. If state_names=None, integral state names
             starting from 0 is assigned.
 
+        rng: int, np.random.Generator or None (default: None)
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
+
+            .. versionchanged:: 1.2.0
+                Replaces ``seed``, which is deprecated and will be removed in v2.0.
+
         Returns
         -------
         Random CPD: pgmpy.factors.discrete.TabularCPD
@@ -746,7 +758,7 @@ class TabularCPD(DiscreteFactor):
         ... ) # doctest: +ELLIPSIS
         <TabularCPD representing P(A:2 | B:2, C:2) at 0x...>
         """
-        generator = np.random.default_rng(seed=seed)
+        generator = np.random.default_rng(rng)
 
         if evidence is None:
             evidence = []
@@ -807,6 +819,12 @@ class TabularCPD(DiscreteFactor):
             for the variables in the CPD. If state_names=None, integral state names
             starting from 0 is assigned.
 
+        seed: None
+            Deprecated and has no effect, as the CPD is deterministic.
+
+            .. deprecated:: 1.2.0
+                Will be removed in v2.0.
+
         Returns
         -------
         Uniform CPD: pgmpy.factors.discrete.TabularCPD
@@ -828,6 +846,11 @@ class TabularCPD(DiscreteFactor):
         ... ) # doctest: +ELLIPSIS
         <TabularCPD representing P(A:2 | B:2, C:2) at 0x...>
         """
+        if seed is not None:
+            _warn_external(
+                "`seed` is deprecated since v1.2.0 and will be removed in v2.0. It has no effect.", DeprecationWarning
+            )
+
         if evidence is None:
             evidence = []
 
