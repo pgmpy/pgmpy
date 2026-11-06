@@ -16,6 +16,8 @@ ALL_DATASETS = [
     "auto_mpg",
     "blue_driver",
     "boston_housing",
+    "causalbench_k562",
+    "causalbench_rpe1",
     "cities",
     "college_plans",
     "contraceptive_method",
