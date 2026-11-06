@@ -65,7 +65,7 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         tags.target_tags.required = False
         return tags
 
-    def _check_fit_data(self, X) -> nw.DataFrame:
+    def _check_fit_data(self, X) -> nw.DataFrame | pd.DataFrame:
         """Check the input data for fitting the causal discovery algorithm.
 
         Parameters
@@ -75,8 +75,8 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
 
         Returns
         -------
-        nw_df : nw.DataFrame
-            The validated data wrapped as an eager Narwhals DataFrame.
+        nw_df : nw.DataFrame or pd.DataFrame
+            The validated data wrapped as a Narwhals DataFrame (or pd.DataFrame for unmigrated estimators).
         """
 
         if isinstance(X, (np.ndarray, pd.DataFrame)):
@@ -107,17 +107,23 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
             nan_count = s.is_nan().sum() if s.dtype.is_float() else 0
             if (null_count + nan_count) > 0:
                 raise ValueError(f"Input contains NaN/null values in column '{col}'.")
+            if s.dtype.is_float() and (~s.is_finite()).sum() > 0:
+                raise ValueError(f"Input contains infinite values in column '{col}'.")
+            if isinstance(s.dtype, (nw.dtypes.List, nw.dtypes.Array, nw.dtypes.Struct)):
+                raise TypeError("argument must be a string, number, or hashable object.")
+            if isinstance(s.dtype, (nw.dtypes.Object, nw.dtypes.Unknown)):
+                if not all(isinstance(x, Hashable) for x in s):
+                    raise TypeError("argument must be a string, number, or hashable object.")
+                if any(isinstance(x, (float, np.floating)) and np.isinf(x) for x in s):
+                    raise ValueError(f"Input contains infinite values in column '{col}'.")
 
-        try:
-            for col in nw_df.columns:
-                if nw_df.get_column(col).n_unique() == 1:
-                    warnings.warn(
-                        f"Variable '{col}' is constant (zero variance), which can lead to unreliable results for"
-                        f"{type(self).__name__}. Consider removing it before fitting.",
-                        UserWarning,
-                    )
-        except TypeError as e:
-            raise TypeError("argument must be a string, number, or hashable object.") from e
+        for col in nw_df.columns:
+            if nw_df.get_column(col).n_unique() == 1:
+                warnings.warn(
+                    f"Variable '{col}' is constant (zero variance), which can lead to unreliable results for"
+                    f"{type(self).__name__}. Consider removing it before fitting.",
+                    UserWarning,
+                )
 
         self.feature_names_in_ = np.asarray(nw_df.columns, dtype=object)
         self.n_features_in_ = n_features
@@ -186,7 +192,7 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
 
         Parameters
         ----------
-        X : pandas.DataFrame, optional
+        X : pd.DataFrame, pl.DataFrame, pa.Table, cudf.DataFrame, np.ndarray, or nw.DataFrame, optional
             Test data used for scoring the learned causal model. If provided, `metric` must be a metric that
             compares against data, i.e. one with ``requires_true_graph=False``.
 
