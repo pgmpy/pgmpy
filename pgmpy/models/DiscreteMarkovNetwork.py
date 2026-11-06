@@ -308,10 +308,11 @@ class DiscreteMarkovNetwork(UndirectedGraph):
 
         factor_graph.add_nodes_from(self.nodes())
         for factor in self.factors:
-            scope = factor.scope()
-            factor_node = "phi_" + "_".join(scope)
-            factor_graph.add_edges_from(itertools.product(scope, [factor_node]))
-            factor_graph.add_factors(factor)
+            factor_graph.add_node(factor)
+            factor_graph.add_edges_from(
+                itertools.product(factor.scope(), [factor])
+            )
+        factor_graph.add_factors(*self.factors)
 
         return factor_graph
 
