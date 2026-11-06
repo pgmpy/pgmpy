@@ -312,6 +312,55 @@ class TestVariableElimination:
         map_query = infer.map_query(["A", "R", "L"], {"J": 0, "Q": 1, "G": 0}, show_progress=False)
         assert map_query == {"A": 1, "R": 0, "L": 0}
 
+    def test_map_query_omitted_variables_with_evidence(self, bayesian_ve, backend):
+        model, infer = bayesian_ve
+        from pgmpy.inference import BeliefPropagation
+
+        bp = BeliefPropagation(model)
+        evidence = {"A": 0, "R": 0, "G": 0}
+        ve_res = infer.map_query(evidence=evidence, show_progress=False)
+        bp_res = bp.map_query(evidence=evidence, show_progress=False)
+        assert set(ve_res.keys()).isdisjoint(set(evidence.keys()))
+        assert ve_res == bp_res
+
+    def test_max_marginal_omitted_variables_with_evidence(self, bayesian_ve, backend):
+        _, infer = bayesian_ve
+        evidence = {"A": 0, "R": 0, "G": 0}
+        non_evidence_vars = [var for var in infer.variables if var not in evidence]
+        expected = infer.max_marginal(variables=non_evidence_vars, evidence=evidence, show_progress=False)
+        actual = infer.max_marginal(evidence=evidence, show_progress=False)
+        np_test.assert_almost_equal(actual, expected)
+
+    def test_map_query_and_max_marginal_evidence_no_variables(self, backend):
+        model = DiscreteBayesianNetwork([("A", "B")])
+        model.add_cpds(
+            TabularCPD("A", 2, [[0.9], [0.1]]),
+            TabularCPD(
+                "B",
+                2,
+                [[0.9, 0.1], [0.1, 0.9]],
+                evidence=["A"],
+                evidence_card=[2],
+            ),
+        )
+        ve = VariableElimination(model)
+        from pgmpy.inference import BeliefPropagation
+
+        bp = BeliefPropagation(model)
+        assert ve.map_query(evidence={"A": 1}, show_progress=False) == {"B": 1}
+        assert ve.map_query(evidence={"A": 1}, show_progress=False) == bp.map_query(
+            evidence={"A": 1}, show_progress=False
+        )
+        np_test.assert_almost_equal(ve.max_marginal(evidence={"A": 1}, show_progress=False), 0.9)
+        assert ve.map_query(evidence={"B": 1}, show_progress=False) == bp.map_query(
+            evidence={"B": 1}, show_progress=False
+        )
+        np_test.assert_almost_equal(ve.max_marginal(evidence={"B": 1}, show_progress=False), 0.5)
+        with pytest.raises(ValueError, match="at least one variable"):
+            ve.map_query(evidence={"A": 0, "B": 0}, show_progress=False)
+        with pytest.raises(ValueError, match="at least one variable"):
+            ve.max_marginal(evidence={"A": 0, "B": 0}, show_progress=False)
+
     def test_map_query_common_var(self, bayesian_ve, backend):
         _, infer = bayesian_ve
         for order in ELIMINATION_ORDERS:
