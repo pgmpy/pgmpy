@@ -54,6 +54,57 @@ def unrolled_dbn_2(n_slices=3):
 
 
 class TestDBNInference:
+    def test_approximate_query(self, dbn_inference_instances):
+        _, inference = dbn_inference_instances
+        result = inference.query(
+            [("X", 2)],
+            evidence={("Y", 0): 1},
+            args="approximate",
+            n_samples=1000,
+            rng=42,
+            show_progress=False,
+        )
+        assert result[("X", 2)].variables == [("X", 2)]
+        assert result[("X", 2)].values.sum() == pytest.approx(1)
+        exact = VariableElimination(unrolled_dbn_2(3)).query([("X", 2)], evidence={("Y", 0): 1}, show_progress=False)
+        np_test.assert_allclose(result[("X", 2)].values, exact.values, atol=0.06)
+        np_test.assert_array_equal(
+            result[("X", 2)].values,
+            inference.query(
+                [("X", 2)],
+                evidence={("Y", 0): 1},
+                args="approximate",
+                n_samples=1000,
+                rng=42,
+                show_progress=False,
+            )[("X", 2)].values,
+        )
+
+    def test_approximate_query_conditions_on_later_evidence(self, dbn_inference_instances):
+        _, inference = dbn_inference_instances
+        evidence = {("Z", 2): 1}
+        result = inference.query(
+            [("Z", 0)],
+            evidence=evidence,
+            args="approximate",
+            n_samples=10000,
+            rng=42,
+            show_progress=False,
+        )
+        exact = VariableElimination(unrolled_dbn_2(3)).query([("Z", 0)], evidence=evidence, show_progress=False)
+        np_test.assert_allclose(result[("Z", 0)].values, exact.values, atol=0.02)
+
+    @pytest.mark.parametrize("algorithm", ["boyen_koller", "factored_frontier", "loopy_belief_propagation"])
+    def test_unimplemented_approximate_algorithms(self, dbn_inference_instances, algorithm):
+        _, inference = dbn_inference_instances
+        with pytest.raises(NotImplementedError, match="not implemented"):
+            inference.query([("X", 0)], args=algorithm)
+
+    def test_unknown_query_algorithm(self, dbn_inference_instances):
+        _, inference = dbn_inference_instances
+        with pytest.raises(ValueError, match="args must be"):
+            inference.query([("X", 0)], args="unknown")
+
     def test_forward_inf_single_variable(self, dbn_inference_instances):
         dbn_inference_1, _ = dbn_inference_instances
         query_result = dbn_inference_1.forward_inference([("X", 0)])
