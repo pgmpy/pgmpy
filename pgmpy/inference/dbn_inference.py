@@ -496,8 +496,8 @@ class DBNInference(Inference):
         if args == "exact":
             return self.backward_inference(variables, evidence)
         elif args == "approximate":
-            from pgmpy.inference import ApproxInference
             from pgmpy.factors.discrete import TabularCPD
+            from pgmpy.inference import ApproxInference
             from pgmpy.models import DiscreteBayesianNetwork
 
             if kwargs.get("samples") is None:
