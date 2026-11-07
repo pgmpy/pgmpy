@@ -497,8 +497,54 @@ class DBNInference(Inference):
             return self.backward_inference(variables, evidence)
         elif args == "approximate":
             from pgmpy.inference import ApproxInference
+            from pgmpy.factors.discrete import TabularCPD
+            from pgmpy.models import DiscreteBayesianNetwork
 
-            result = ApproxInference(self.model).query(variables=variables, evidence=evidence, joint=False, **kwargs)
+            if kwargs.get("samples") is None:
+                # DBN.simulate samples each pair of adjacent slices in sequence.
+                # Evidence in a later slice therefore cannot reweight already
+                # sampled earlier slices. Build the finite unrolled BN so the
+                # sampler conditions complete trajectories instead.
+                max_time_slice = max(
+                    [
+                        0,
+                        *(var[1] for var in variables),
+                        *((var[1] for var in evidence) if evidence else []),
+                        *(cpd.variable[1] for cpd in (kwargs.get("virtual_evidence") or [])),
+                    ]
+                )
+                unrolled_model = DiscreteBayesianNetwork()
+                nodes = [(node.node, t) for t in range(max_time_slice + 1) for node in self.model.get_slice_nodes(0)]
+                unrolled_model.add_nodes_from(nodes)
+                unrolled_cpds = []
+                for node_name, time_slice in nodes:
+                    source_time_slice = 0 if time_slice == 0 else 1
+                    source_cpd = self.model.get_cpds((node_name, source_time_slice))
+                    offset = time_slice - source_time_slice
+                    mapped_vars = [(var[0], var[1] + offset) for var in source_cpd.variables]
+                    unrolled_model.add_edges_from((parent, mapped_vars[0]) for parent in mapped_vars[1:])
+                    state_names = {
+                        mapped_var: source_cpd.state_names[var]
+                        for var, mapped_var in zip(source_cpd.variables, mapped_vars)
+                    }
+                    unrolled_cpds.append(
+                        TabularCPD(
+                            variable=mapped_vars[0],
+                            variable_card=source_cpd.variable_card,
+                            values=source_cpd.get_values(),
+                            evidence=mapped_vars[1:],
+                            evidence_card=source_cpd.cardinality[1:],
+                            state_names=state_names,
+                        )
+                    )
+                unrolled_model.add_cpds(*unrolled_cpds)
+                inference_model = unrolled_model
+            else:
+                inference_model = self.model
+
+            result = ApproxInference(inference_model).query(
+                variables=variables, evidence=evidence, joint=False, **kwargs
+            )
             return result
         elif args in {"boyen_koller", "factored_frontier", "loopy_belief_propagation"}:
             raise NotImplementedError(f"{args} inference is not implemented yet. Use 'exact' or 'approximate'.")
