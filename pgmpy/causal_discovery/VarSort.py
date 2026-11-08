@@ -93,7 +93,5 @@ class VarSort(BaseOrderDiscovery):
 
         self.causal_order_ = list(causal_order)
         self.causal_graph_ = model if return_type == "dag" else model.to_pdag()
-        self.adjacency_matrix_ = self.causal_graph_.to_adjacency(
-            encoding="binary", nodelist=list(self.feature_names_in_)
-        )
+        self.adjacency_matrix_ = self.causal_graph_.to_adjacency(encoding="binary", nodelist=list(self._fit_columns))
         return self

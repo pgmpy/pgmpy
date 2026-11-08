@@ -195,7 +195,7 @@ class SP(BaseCausalDiscovery):
 
         # Step 1: Initialize variables and data structures.
         self.ci_test_ = get_ci_test(test=self.ci_test, data=X)
-        nodes = list(self.feature_names_in_)
+        nodes = list(self._fit_columns)
 
         rng = np.random.default_rng(self.rng)
         rng.shuffle(nodes)

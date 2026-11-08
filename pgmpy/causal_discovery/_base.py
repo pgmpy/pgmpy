@@ -101,6 +101,14 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         if n_samples < 2:
             raise ValueError(f"n_samples = {n_samples}, at least 2 are required.")
 
+        types = {isinstance(c, str) for c in nw_df.columns}
+        if len(types) > 1:
+            col_types = sorted({type(c).__name__ for c in nw_df.columns})
+            raise TypeError(
+                f"Feature names are only supported if all input features have string names, "
+                f"but your input has {col_types} as feature name / column name types."
+            )
+
         for col in nw_df.columns:
             s = nw_df.get_column(col)
             null_count = s.is_null().sum()
@@ -129,6 +137,7 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
             self.feature_names_in_ = np.asarray(nw_df.columns, dtype=object)
         elif hasattr(self, "feature_names_in_"):
             del self.feature_names_in_
+        self._fit_columns = list(nw_df.columns)
         self.n_features_in_ = n_features
 
         if not getattr(self, "_supports_narwhals", False):
@@ -255,11 +264,13 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
             )
 
             if isinstance(X, np.ndarray):
-                cols = (
-                    list(self.feature_names_in_)
-                    if hasattr(self, "feature_names_in_")
-                    else list(self.causal_graph_.nodes())
-                )
+                cols = getattr(self, "_fit_columns", None)
+                if cols is None:
+                    cols = (
+                        list(self.feature_names_in_)
+                        if hasattr(self, "feature_names_in_")
+                        else list(self.causal_graph_.nodes())
+                    )
                 X = pd.DataFrame(X, columns=cols)
 
             return get_metric(metric, requires_true_graph=False).evaluate(X, self.causal_graph_)
@@ -859,7 +870,11 @@ class _TreeSearchMixin:
         model : pgmpy.base.DAG
             The estimated DAG rooted at ``root_node``.
         """
-        G = nx.relabel_nodes(nx.from_numpy_array(weights), dict(enumerate(columns)))
+        G = nx.Graph()
+        G.add_nodes_from(columns)
+        G.add_weighted_edges_from(
+            (columns[i], columns[j], weights[i, j]) for i, j in combinations(range(len(columns)), 2)
+        )
         T = nx.maximum_spanning_tree(G)
         D = nx.bfs_tree(T, root_node)
         return DAG(D)

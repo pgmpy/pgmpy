@@ -95,9 +95,9 @@ class R2Sort(BaseOrderDiscovery):
             raise ValueError(f"return_type must be one of: dag, pdag. Got: {self.return_type}")
 
         model_reg = clone(self.estimator) if self.estimator is not None else LinearRegression()
-        all_nodes_set = set(self.feature_names_in_)
+        all_nodes_set = set(self._fit_columns)
         r2_values = {}
-        for target in self.feature_names_in_:
+        for target in self._fit_columns:
             other_nodes = list(all_nodes_set - {target})
             y = X[target]
             predictors = X[other_nodes]
@@ -111,7 +111,5 @@ class R2Sort(BaseOrderDiscovery):
 
         self.causal_order_ = list(causal_order)
         self.causal_graph_ = model if return_type == "dag" else model.to_pdag()
-        self.adjacency_matrix_ = self.causal_graph_.to_adjacency(
-            encoding="binary", nodelist=list(self.feature_names_in_)
-        )
+        self.adjacency_matrix_ = self.causal_graph_.to_adjacency(encoding="binary", nodelist=list(self._fit_columns))
         return self

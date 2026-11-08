@@ -142,7 +142,7 @@ class LLMPairwise(BaseCausalDiscovery):
         if X.shape[1] != 2:
             raise ValueError(f"LLMPairwise requires exactly two variables, got {X.shape[1]}.")
 
-        x, y = self.feature_names_in_
+        x, y = self._fit_columns
         cache_key = frozenset((x, y))
         cache = self.__dict__.setdefault("_orientation_cache", {})
 

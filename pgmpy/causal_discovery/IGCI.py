@@ -142,7 +142,7 @@ class IGCI(BaseCausalDiscovery):
         if get_dataset_type(X) != "continuous":
             raise ValueError("IGCI requires continuous (numeric) variables; got non-continuous data.")
 
-        x, y = self.feature_names_in_
+        x, y = self._fit_columns
 
         # Step 3: Affine normalization to the reference measure.
         x_vals = X[x].to_numpy(dtype=float)

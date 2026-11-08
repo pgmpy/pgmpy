@@ -126,6 +126,7 @@ def data22():
 @pytest.mark.parametrize("weight_fn", ["mutual_info", "adjusted_mutual_info", "normalized_mutual_info"])
 @pytest.mark.parametrize("n_jobs", [2, 1])
 def test_chow_liu(data12, data13, weight_fn, n_jobs):
+    """Test ChowLiu tree structure recovery across different mutual information scoring functions and worker counts."""
     est = ChowLiu(
         root_node="A",
         edge_weights_fn=weight_fn,
@@ -161,6 +162,7 @@ def test_chow_liu(data12, data13, weight_fn, n_jobs):
 
 
 def test_chow_liu_auto_root_node(data12):
+    """Test automatic root node selection when root_node is not specified."""
     weights = ChowLiu._get_weights(data12, show_progress=False)
     sum_weights = weights.sum(axis=0)
     maxw_idx = np.argsort(sum_weights)[::-1]
@@ -176,6 +178,7 @@ def test_chow_liu_auto_root_node(data12):
 
 @pytest.mark.parametrize("backend", ["narwhals", "polars", "pyarrow", "modin", "cudf"])
 def test_chow_liu_dataframe_backends(data12, backend):
+    """Test ChowLiu fit and DAG parity across multiple dataframe backends with fixed and auto root."""
     if backend == "narwhals":
         nw = pytest.importorskip("narwhals.stable.v2")
         data = nw.from_native(data12)
@@ -199,6 +202,38 @@ def test_chow_liu_dataframe_backends(data12, backend):
     assert set(est_actual.causal_graph_.edges()) == set(est_expected.causal_graph_.edges())
     assert list(est_actual.feature_names_in_) == list(est_expected.feature_names_in_)
     assert np.array_equal(est_actual.adjacency_matrix_.values, est_expected.adjacency_matrix_.values)
+
+    # Automatic root selection across backends
+    est_auto_exp = ChowLiu(root_node=None, show_progress=False, n_jobs=1).fit(data12)
+    est_auto_act = ChowLiu(root_node=None, show_progress=False, n_jobs=1).fit(data)
+    assert set(est_auto_act.causal_graph_.nodes()) == set(est_auto_exp.causal_graph_.nodes())
+    assert set(est_auto_act.causal_graph_.edges()) == set(est_auto_exp.causal_graph_.edges())
+
+
+@pytest.mark.parametrize("backend", ["narwhals", "polars", "pyarrow"])
+def test_chow_liu_categorical_backends(backend):
+    """Test ChowLiu with categorical columns producing identical DAGs across dataframe backends."""
+    df_pd = pd.DataFrame(
+        {
+            "A": pd.Categorical(["low", "high", "low", "high"] * 10),
+            "B": pd.Categorical(["yes", "no", "yes", "no"] * 10),
+        }
+    )
+    if backend == "narwhals":
+        nw = pytest.importorskip("narwhals.stable.v2")
+        data = nw.from_native(df_pd)
+    elif backend == "polars":
+        pl = pytest.importorskip("polars")
+        data = pl.DataFrame(df_pd)
+    elif backend == "pyarrow":
+        pa = pytest.importorskip("pyarrow")
+        data = pa.Table.from_pandas(df_pd)
+
+    est_expected = ChowLiu(root_node="A", show_progress=False, n_jobs=1).fit(df_pd)
+    est_actual = ChowLiu(root_node="A", show_progress=False, n_jobs=1).fit(data)
+
+    assert set(est_actual.causal_graph_.nodes()) == set(est_expected.causal_graph_.nodes())
+    assert set(est_actual.causal_graph_.edges()) == set(est_expected.causal_graph_.edges())
 
 
 @pytest.fixture(autouse=True)
