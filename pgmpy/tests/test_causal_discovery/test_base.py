@@ -5,7 +5,19 @@ import pytest
 from skbase.lookup import all_objects
 
 from pgmpy.base import DAG
-from pgmpy.causal_discovery import ANM, GES, IGCI, PC, SP, BootstrapEstimator, ChowLiu, ExpertInLoop, R2Sort, VarSort
+from pgmpy.causal_discovery import (
+    ANM,
+    GES,
+    IGCI,
+    PC,
+    SP,
+    BootstrapEstimator,
+    ChowLiu,
+    ExpertInLoop,
+    LLMPairwise,
+    R2Sort,
+    VarSort,
+)
 from pgmpy.causal_discovery._base import BaseCausalDiscovery, _TreeSearchMixin
 from pgmpy.causal_discovery.bivariate_scores import BaseBivariateScore
 from pgmpy.ci_tests import GCM, BaseCITest, IndependenceMatch, get_ci_test
@@ -250,6 +262,26 @@ def test_check_fit_unhashable_backends(backend):
         ChowLiu(n_jobs=1).fit(data)
 
 
+def test_check_fit_unhashable_struct_or_list():
+    """Test rejection of List/Array/Struct column types even without Polars or PyArrow installed."""
+    df = pd.DataFrame({"a": [1, 2], "b": [2, 1]})
+    nw_df = nw.from_native(df)
+
+    class FakeSeries:
+        def __init__(self, s):
+            self._s = s
+            self.dtype = nw.dtypes.List(nw.dtypes.Int64())
+
+        def __getattr__(self, name):
+            return getattr(self._s, name)
+
+    orig_get_column = nw_df.get_column
+    nw_df.get_column = lambda col: FakeSeries(orig_get_column(col)) if col == "a" else orig_get_column(col)
+
+    with pytest.raises(TypeError, match="argument must be a string, number, or hashable object"):
+        ChowLiu(n_jobs=1).fit(nw_df)
+
+
 def test_check_fit_score_parity():
     """Test fit and score parity between native pandas, Narwhals wrapper, and NumPy arrays."""
     pandas_df = pd.DataFrame({"a": [1, 2, 1, 2], "b": [2, 1, 2, 1]})
@@ -257,6 +289,12 @@ def test_check_fit_score_parity():
     est = ChowLiu(n_jobs=1)
     est.fit(nw_df)
     assert hasattr(est, "causal_graph_")
+
+    arr = np.array([[1, 2], [2, 1], [1, 2], [2, 1]])
+    est_arr = ChowLiu(n_jobs=1).fit(arr)
+    assert list(est_arr.feature_names_in_) == ["x0", "x1"]
+    assert est_arr._fit_columns == ["x0", "x1"]
+    assert hasattr(est_arr, "causal_graph_")
 
     score_pd = est.score(pandas_df)
     score_nw = est.score(nw_df)
@@ -354,6 +392,19 @@ def test_fit_and_score_integer_columns():
     est_str.fit(df)
     assert not hasattr(est_str, "feature_names_in_")
 
+    # Wrapping with Narwhals frame deletes feature_names_in_ without validate_data
+    est_str_nw = ChowLiu(n_jobs=1).fit(pd.DataFrame({"a": [1, 2], "b": [2, 1]}))
+    assert hasattr(est_str_nw, "feature_names_in_")
+    est_str_nw.fit(nw.from_native(df))
+    assert not hasattr(est_str_nw, "feature_names_in_")
+
+    # Fallback in score() when _fit_columns is absent (legacy models)
+    est_fallback = ChowLiu(n_jobs=1).fit(pd.DataFrame({"a": [1, 2], "b": [2, 1]}))
+    del est_fallback._fit_columns
+    assert est_fallback.score(np.array([[1, 2], [2, 1]])) is not None
+    del est_fallback.feature_names_in_
+    assert est_fallback.score(np.array([[1, 2], [2, 1]])) is not None
+
 
 def test_tree_search_preserve_zero_weight_edges():
     """Test that zero-weight edges are retained in the spanning tree and nodes are not dropped."""
@@ -387,13 +438,13 @@ def test_pyarrow_missing_fallback_in_bridge_and_score(monkeypatch):
             self.causal_graph_ = DAG([("a", "b")])
             return self
 
-    pl = pytest.importorskip("polars")
-    pl_df = pl.DataFrame({"a": [1, 2, 1, 2], "b": [2, 1, 2, 1]})
-    nw_df = nw.from_native(pl_df)
+    df = pd.DataFrame({"a": [1, 2, 1, 2], "b": [2, 1, 2, 1]})
+    nw_df = nw.from_native(df)
 
     def raise_module_not_found(*args, **kwargs):
         raise ModuleNotFoundError("No module named 'pyarrow'")
 
+    monkeypatch.setattr(nw, "to_native", lambda x: "not_a_df")
     monkeypatch.setattr(nw.DataFrame, "to_pandas", raise_module_not_found)
 
     # Test bridge fallback in fit
@@ -405,7 +456,7 @@ def test_pyarrow_missing_fallback_in_bridge_and_score(monkeypatch):
     assert isinstance(score, float)
 
 
-def test_unmigrated_estimators_integer_columns():
+def test_unmigrated_estimators_integer_columns(monkeypatch):
     """Test that all estimators fit on integer-labeled columns without AttributeError."""
     x = np.linspace(0.1, 2.0, 30)
     y = np.exp(x)
@@ -420,11 +471,16 @@ def test_unmigrated_estimators_integer_columns():
     # Bivariate estimators
     ANM().fit(df_biv)
     IGCI().fit(df_biv)
+    llm = LLMPairwise()
+    monkeypatch.setattr(llm, "_query_llm", lambda msg: "1")
+    llm.fit(df_biv)
+    assert (0, 1) in llm.causal_graph_.edges()
 
     # Multivariate estimators
     VarSort().fit(df_multi)
     R2Sort().fit(df_multi)
     SP().fit(df_multi)
-    BootstrapEstimator(estimator=ChowLiu(root_node=0, show_progress=False), n_bootstraps=2).fit(
-        pd.DataFrame(rng.integers(0, 2, size=(30, 3)), columns=[0, 1, 2])
-    )
+    be = BootstrapEstimator(estimator=ChowLiu(root_node=0, show_progress=False), n_bootstraps=2)
+    be.fit(pd.DataFrame(rng.integers(0, 2, size=(30, 3)), columns=[0, 1, 2]))
+    adj = be.get_adjacency_matrix(0.5)
+    assert adj.shape == (3, 3)
