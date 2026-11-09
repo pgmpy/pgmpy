@@ -6,15 +6,39 @@ import pandas as pd
 
 def collect_state_names(data: pd.DataFrame, variable: str) -> list:
     """Return the sorted observed states for `variable` in `data`."""
-    return sorted(list(data.loc[:, variable].dropna().unique()))
+    series = data.loc[:, variable]
+    non_null = series.dropna()
+    if len(non_null) == 0:
+        return []
+    observed = sorted(non_null.unique())
+    if series.isna().any():
+        import warnings
+
+        warnings.warn(
+            f"Variable '{variable}' contains NaN values which are ignored for state detection. "
+            f"Provide explicit `state_names` to include all possible states.",
+            UserWarning,
+            stacklevel=2,
+        )
+    return observed
 
 
 def build_state_names(data: pd.DataFrame, state_names: dict | None = None) -> dict:
     """Build a complete state-name mapping for all variables in `data`."""
     variables = list(data.columns.values)
 
+    if len(data) == 0:
+        raise ValueError("DataFrame is empty. Cannot infer state names from empty data.")
+
     if not isinstance(state_names, dict):
-        return {var: collect_state_names(data, var) for var in variables}
+        inferred = {var: collect_state_names(data, var) for var in variables}
+        empty_vars = [var for var, states in inferred.items() if len(states) == 0]
+        if empty_vars:
+            raise ValueError(
+                f"Variables have no observed (non-NaN) states: {empty_vars}. "
+                f"Provide explicit `state_names` for these variables."
+            )
+        return inferred
 
     inferred_state_names = {}
     for var in variables:
@@ -24,6 +48,11 @@ def build_state_names(data: pd.DataFrame, state_names: dict | None = None) -> di
                 raise ValueError(f"Data contains unexpected states for variable: {var}.")
             inferred_state_names[var] = state_names[var]
         else:
+            if len(observed_states) == 0:
+                raise ValueError(
+                    f"Variable '{var}' has no observed (non-NaN) states. "
+                    f"Provide explicit `state_names` for this variable."
+                )
             inferred_state_names[var] = observed_states
 
     return inferred_state_names
