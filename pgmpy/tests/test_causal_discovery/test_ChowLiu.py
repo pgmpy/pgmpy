@@ -178,7 +178,6 @@ def test_chow_liu_auto_root_node(data12):
 
 @pytest.mark.parametrize("backend", ["narwhals", "polars", "pyarrow", "modin", "cudf"])
 def test_chow_liu_dataframe_backends(data12, backend):
-    """Test ChowLiu fit and DAG parity across multiple dataframe backends with fixed and auto root."""
     if backend == "narwhals":
         nw = pytest.importorskip("narwhals.stable.v2")
         data = nw.from_native(data12)
@@ -212,7 +211,6 @@ def test_chow_liu_dataframe_backends(data12, backend):
 
 @pytest.mark.parametrize("backend", ["narwhals", "polars", "pyarrow"])
 def test_chow_liu_categorical_backends(backend):
-    """Test ChowLiu with categorical columns producing identical DAGs across dataframe backends."""
     df_pd = pd.DataFrame(
         {
             "A": pd.Categorical(["low", "high", "low", "high"] * 10),
