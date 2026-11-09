@@ -63,8 +63,10 @@ class MMHC(BaseCausalDiscovery):
         Whether to show progress during hill climbing.
 
     expert_knowledge : ExpertKnowledge instance, default=None
-        Expert knowledge passed to the hill-climbing phase. Required edges are
-        kept even when they are not in the MMPC skeleton.
+        Expert knowledge used in both phases. In MMPC, required edges are always
+        in the skeleton, pairs forbidden in both directions never are, and a
+        temporal order limits the conditioning sets. Hill climbing then applies
+        all the forbidden and required edges.
 
     Attributes
     ----------
@@ -172,30 +174,37 @@ class MMHC(BaseCausalDiscovery):
         self.ci_test_ = get_ci_test(test=self.ci_test, data=X)
         self.scoring_method_ = get_scoring_method(self.scoring_method, X)
 
+        # Step 1.2: Check if expert knowledge was specified
+        if self.expert_knowledge is None:
+            expert_knowledge = ExpertKnowledge()
+        else:
+            # Clone so the fitted (`*_`) attributes land on a fresh copy, not the user's object.
+            expert_knowledge = clone(self.expert_knowledge)
+
+        # Step 1.2.1: Resolve the expert knowledge into its fitted (`*_`) attributes.
+        expert_knowledge.fit(X)
+
         # Step 2: Learn the skeleton using MMPC
         self.skeleton_ = self._learn_skeleton(
             data=X,
             ci_test=self.ci_test_,
             significance_level=self.significance_level,
             max_cond_vars=self.max_cond_vars,
+            expert_knowledge=expert_knowledge,
         )
 
-        # Step 3: Restrict hill climbing to the skeleton by forbidding every edge outside it, except required edges.
-        if self.expert_knowledge is None:
-            expert_knowledge = ExpertKnowledge()
-        else:
-            # Clone so that adding the forbidden edges does not modify the user's object.
-            expert_knowledge = clone(self.expert_knowledge)
-
+        # Step 3: Restrict hill climbing to the skeleton, which contains the required edges, by forbidding every edge
+        #         outside it.
         outside_skeleton = set(permutations(X.columns, 2)) - set(self.skeleton_.to_directed().edges())
-        expert_knowledge.forbidden_edges = set(expert_knowledge.forbidden_edges) | (
-            outside_skeleton - set(expert_knowledge.required_edges)
+        hill_climb_knowledge = ExpertKnowledge(
+            forbidden_edges=expert_knowledge.forbidden_edges_ | outside_skeleton,
+            required_edges=expert_knowledge.required_edges_,
         )
 
         # Step 4: Orient and select the skeleton edges using hill climbing
         hill_climb = HillClimbSearch(
             scoring_method=self.scoring_method_,
-            expert_knowledge=expert_knowledge,
+            expert_knowledge=hill_climb_knowledge,
             tabu_length=self.tabu_length,
             max_indegree=self.max_indegree,
             return_type="pdag" if self.return_type.lower() == "cpdag" else self.return_type,
@@ -218,6 +227,7 @@ class MMHC(BaseCausalDiscovery):
         ci_test: BaseCITest | Callable,
         significance_level: float,
         max_cond_vars: int | None = None,
+        expert_knowledge: ExpertKnowledge | None = None,
     ) -> UndirectedGraph:
         """
         Estimates the skeleton using the Max-Min Parents and Children (MMPC) algorithm.
@@ -236,6 +246,11 @@ class MMHC(BaseCausalDiscovery):
         max_cond_vars : int or None, default=None
             The maximum size of the conditioning sets. ``None`` tests every subset of the current neighbors.
 
+        expert_knowledge : ExpertKnowledge instance or None, default=None
+            Fitted expert knowledge. Required edges are always in the skeleton, and pairs forbidden in both directions
+            never are. With a temporal order, conditioning sets only contain variables from tiers no later than the
+            later of the two tested variables.
+
         Returns
         -------
         skeleton : pgmpy.base.UndirectedGraph
@@ -247,42 +262,74 @@ class MMHC(BaseCausalDiscovery):
            structure learning algorithm. Machine Learning, 65, 31-78. Algorithms 1 and 2.
         """
         nodes = list(data.columns)
-        neighbors = {node: [] for node in nodes}
+        if expert_knowledge is None:
+            temporal_ordering, required_edges, forbidden_edges = {}, set(), set()
+        else:
+            temporal_ordering = expert_knowledge.temporal_ordering_
+            required_edges = expert_knowledge.required_edges_
+            forbidden_edges = expert_knowledge.forbidden_edges_
+
+        # A separating set of two variables exists among their ancestors, which lie in tiers no later than the later
+        # of the two. Without a temporal order, every variable is in the same tier.
+        tier = temporal_ordering or dict.fromkeys(nodes, 0)
+
+        # Pairs forbidden in only one direction can still be adjacent; hill climbing orients them.
+        required_pairs = {frozenset(edge) for edge in required_edges}
+        forbidden_pairs = {frozenset((u, v)) for u, v in forbidden_edges if (v, u) in forbidden_edges}
+        neighbors = {node: [other for other in nodes if frozenset((node, other)) in required_pairs] for node in nodes}
 
         # Step 1: Find the candidate parents and children (the neighbors) of each node
         for node in nodes:
             # Step 1.1: Forward phase. Add the candidate whose minimum association with `node`, over all subsets of
             #           the current neighbors, is the largest. Stop when every remaining candidate is independent of
             #           `node` given some subset, i.e. its minimum association is 0.
+            candidates = [
+                candidate
+                for candidate in nodes
+                if candidate != node
+                and candidate not in neighbors[node]
+                and frozenset((node, candidate)) not in forbidden_pairs
+            ]
+            min_assoc = dict.fromkeys(candidates, float("inf"))
+            added = None
             while True:
-                best_candidate, max_min_assoc = None, 0
-                for candidate in nodes:
-                    if candidate == node or candidate in neighbors[node]:
-                        continue
+                for candidate in candidates:
+                    conditioning_variables = [n for n in neighbors[node] if tier[n] <= max(tier[node], tier[candidate])]
+                    # The subsets without the last added neighbor were tested in earlier iterations.
+                    for conditioning_set in powerset(conditioning_variables, max_size=max_cond_vars):
+                        if added is not None and added not in conditioning_set:
+                            continue
 
-                    # The association is 0 if the test finds independence, else the test's effect size. Tests without
-                    # an effect size, such as plain callables, give every dependent candidate an association of 1.
-                    associations = []
-                    for conditioning_set in powerset(neighbors[node], max_size=max_cond_vars):
+                        # The association is 0 if the test finds independence, else the test's effect size. Tests
+                        # without an effect size, such as plain callables, give dependent candidates an association
+                        # of 1.
                         if ci_test(node, candidate, list(conditioning_set), significance_level=significance_level):
-                            associations.append(0.0)
-                        elif isinstance(ci_test, BaseCITest) and ci_test.effect_size_ is not None:
-                            associations.append(ci_test.effect_size_)
+                            min_assoc[candidate] = 0.0
+                            break
+                        if isinstance(ci_test, BaseCITest) and ci_test.effect_size_ is not None:
+                            min_assoc[candidate] = min(min_assoc[candidate], ci_test.effect_size_)
                         else:
-                            associations.append(1.0)
+                            min_assoc[candidate] = min(min_assoc[candidate], 1.0)
 
-                    min_assoc = min(associations)
-                    if min_assoc >= max_min_assoc:
-                        best_candidate, max_min_assoc = candidate, min_assoc
-
-                if max_min_assoc == 0:
+                # A minimum association of 0 stays 0 as the neighbors grow, so those candidates are dropped.
+                candidates = [candidate for candidate in candidates if min_assoc[candidate] > 0]
+                if not candidates:
                     break
-                neighbors[node].append(best_candidate)
 
-            # Step 1.2: Backward phase. Remove the neighbors that are independent of `node` given some subset of the
-            #           other neighbors.
-            for neighbor in neighbors[node]:
-                other_neighbors = [n for n in neighbors[node] if n != neighbor]
+                # Ties go to the candidate that comes last in column order.
+                added = max(reversed(candidates), key=min_assoc.__getitem__)
+                neighbors[node].append(added)
+                candidates.remove(added)
+
+            # Step 1.2: Backward phase. Remove the neighbors, other than required ones, that are independent of `node`
+            #           given some subset of the other neighbors.
+            for neighbor in list(neighbors[node]):
+                if frozenset((node, neighbor)) in required_pairs:
+                    continue
+
+                other_neighbors = [
+                    n for n in neighbors[node] if n != neighbor and tier[n] <= max(tier[node], tier[neighbor])
+                ]
                 for separating_set in powerset(other_neighbors, max_size=max_cond_vars):
                     if ci_test(node, neighbor, list(separating_set), significance_level=significance_level):
                         neighbors[node].remove(neighbor)
@@ -291,7 +338,7 @@ class MMHC(BaseCausalDiscovery):
         # Step 2: Symmetry correction. Keep `neighbor` as a neighbor of `node` only if `node` is also a neighbor of
         #         `neighbor`.
         for node in nodes:
-            for neighbor in neighbors[node]:
+            for neighbor in list(neighbors[node]):
                 if node not in neighbors[neighbor]:
                     neighbors[node].remove(neighbor)
 

@@ -118,7 +118,7 @@ def test_deprecated_estimator_keeps_chi_square_and_bdeu_defaults(data_fixture, r
 
 @pytest.mark.parametrize(
     ("ci_test_name", "max_cond_vars", "largest_conditioning_set"),
-    [("chi_square", None, None), ("generalized_cov", None, None), ("callable", None, 3), ("callable", 1, 1)],
+    [("chi_square", None, None), ("generalized_cov", None, None), ("callable", None, 2), ("callable", 1, 1)],
 )
 def test_skeleton_recovers_collider(collider_data, ci_test_name, max_cond_vars, largest_conditioning_set):
     chi_square = ChiSquare(collider_data)
@@ -150,6 +150,34 @@ def test_skeleton_recovers_sachs_in_any_column_order(reverse_columns):
     assert {frozenset(edge) for edge in skeleton.edges()} == {frozenset(edge) for edge in model.edges()}
 
 
+@pytest.mark.parametrize("use_tiers", [False, True])
+@pytest.mark.parametrize("reverse_columns", [False, True])
+@pytest.mark.parametrize("graph", ["cancer", "asia", "sachs", "seven_nodes"])
+def test_skeleton_is_exact_with_oracle_ci_test(graph, reverse_columns, use_tiers):
+    if graph == "seven_nodes":
+        dag = DAG([("X1", "X0"), ("X1", "X3"), ("X1", "X6"), ("X3", "X2"), ("X5", "X6"), ("X6", "X0"), ("X6", "X3")])
+        dag.add_node("X4")
+    else:
+        dag = DAG(load_model(f"bnlearn/{graph}").edges())
+
+    nodes = sorted(dag.nodes(), reverse=reverse_columns)
+    data = pd.DataFrame(np.random.default_rng(42).integers(0, 2, size=(100, len(nodes))), columns=nodes)
+    tiers = [sorted(generation) for generation in nx.topological_generations(dag)]
+    tier = {node: index for index, generation in enumerate(tiers) for node in generation}
+    tests_run = []
+
+    def d_separation_oracle(X, Y, Z, significance_level):
+        tests_run.append((X, Y, Z))
+        return not dag.is_dconnected(X, Y, observed=list(Z))
+
+    expert = ExpertKnowledge(temporal_order=tiers) if use_tiers else None
+    skeleton = MMHC(ci_test=d_separation_oracle, expert_knowledge=expert, show_progress=False).fit(data).skeleton_
+
+    assert {frozenset(edge) for edge in skeleton.edges()} == {frozenset(edge) for edge in dag.edges()}
+    if use_tiers:
+        assert all(tier[z] <= max(tier[X], tier[Y]) for X, Y, Z in tests_run for z in Z)
+
+
 @pytest.mark.parametrize(("data_fixture", "data_type"), [("cancer_data", "discrete"), ("gaussian_data", "continuous")])
 def test_defaults_and_tags_follow_data_type(data_fixture, data_type, request):
     data = request.getfixturevalue(data_fixture)
@@ -167,15 +195,20 @@ def test_stricter_significance_level_is_no_denser(cancer_data):
     assert strict.skeleton_.number_of_edges() <= permissive.skeleton_.number_of_edges()
 
 
-def test_expert_knowledge_is_applied_without_mutation(cancer_data):
-    data_before = cancer_data.copy(deep=True)
-    expert = ExpertKnowledge(required_edges=[("Cancer", "Dyspnoea")])
+def test_expert_knowledge_is_applied_without_mutation(collider_data):
+    data_before = collider_data.copy(deep=True)
+    expert = ExpertKnowledge(forbidden_edges=[("A", "F"), ("F", "A")], required_edges=[("D", "E")])
     expert_before = expert.get_params(deep=True)
 
-    estimator = MMHC(expert_knowledge=expert, return_type="dag", show_progress=False, max_iter=100).fit(cancer_data)
+    estimator = MMHC(expert_knowledge=expert, return_type="dag", show_progress=False, max_iter=100).fit(collider_data)
 
-    assert ("Cancer", "Dyspnoea") in estimator.causal_graph_.edges()
-    pd.testing.assert_frame_equal(cancer_data, data_before)
+    assert {frozenset(edge) for edge in estimator.skeleton_.edges()} == {
+        frozenset("BF"),
+        frozenset("CF"),
+        frozenset("DE"),
+    }
+    assert ("D", "E") in estimator.causal_graph_.edges()
+    pd.testing.assert_frame_equal(collider_data, data_before)
     assert expert.get_params(deep=True) == expert_before
     assert not hasattr(expert, "forbidden_edges_")
     assert not hasattr(expert, "required_edges_")
