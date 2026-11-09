@@ -65,18 +65,13 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         tags.target_tags.required = False
         return tags
 
-    def _check_fit_data(self, X) -> nw.DataFrame | pd.DataFrame:
+    def _check_fit_data(self, X):
         """Check the input data for fitting the causal discovery algorithm.
 
         Parameters
         ----------
         X: pd.DataFrame, pl.DataFrame, pa.Table, cudf.DataFrame, np.ndarray, or nw.DataFrame
             The data to fit the causal discovery algorithm on.
-
-        Returns
-        -------
-        nw_df : nw.DataFrame or pd.DataFrame
-            The validated data wrapped as a Narwhals DataFrame (or pd.DataFrame for unmigrated estimators).
         """
 
         if isinstance(X, (np.ndarray, pd.DataFrame)):
