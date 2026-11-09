@@ -130,7 +130,7 @@ def test_skeleton_recovers_collider(collider_data, ci_test_name, max_cond_vars, 
 
     ci_test = {
         "chi_square": chi_square,
-        "generalized_cov": GeneralizedCov(collider_data),
+        "generalized_cov": GeneralizedCov(collider_data, n_permutations=200, rng=0),
         "callable": recording_chi_square,
     }[ci_test_name]
     skeleton = MMHC(ci_test=ci_test, max_cond_vars=max_cond_vars, show_progress=False).fit(collider_data).skeleton_
