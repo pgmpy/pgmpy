@@ -126,7 +126,6 @@ def data22():
 @pytest.mark.parametrize("weight_fn", ["mutual_info", "adjusted_mutual_info", "normalized_mutual_info"])
 @pytest.mark.parametrize("n_jobs", [2, 1])
 def test_chow_liu(data12, data13, weight_fn, n_jobs):
-    """Test ChowLiu tree structure recovery across different mutual information scoring functions and worker counts."""
     est = ChowLiu(
         root_node="A",
         edge_weights_fn=weight_fn,
