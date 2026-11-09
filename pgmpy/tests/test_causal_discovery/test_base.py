@@ -289,7 +289,6 @@ def test_check_fit_score_parity():
     arr = np.array([[1, 2], [2, 1], [1, 2], [2, 1]])
     est_arr = ChowLiu(n_jobs=1).fit(arr)
     assert list(est_arr.feature_names_in_) == ["x0", "x1"]
-    assert est_arr._fit_columns == ["x0", "x1"]
     assert hasattr(est_arr, "causal_graph_")
 
     score_pd = est.score(pandas_df)
@@ -367,33 +366,31 @@ def test_fit_and_score_integer_columns():
             2: rng.choice([0, 1], size=100, p=[0.5, 0.5]),
         }
     )
-    est = ChowLiu(root_node=2, n_jobs=1).fit(df)
-    assert not hasattr(est, "feature_names_in_")
+    est = ChowLiu(root_node="x2", n_jobs=1).fit(df)
+    assert list(est.feature_names_in_) == ["x0", "x1", "x2"]
     assert est.n_features_in_ == 3
-    assert est._fit_columns == [0, 1, 2]
-    assert list(est.causal_graph_.nodes())[0] == 2
+    assert not hasattr(est, "_fit_columns")
+    assert list(est.causal_graph_.nodes())[0] == "x2"
 
     # Verify score works and maps NumPy array columns to the fitted columns correctly
     score_df = est.score(df)
     score_arr = est.score(df.to_numpy())
     assert np.isclose(score_df, score_arr)
 
-    # Refitting with integer columns deletes previous feature_names_in_
+    # Refitting with integer columns updates feature_names_in_ to defaults
     est_str = ChowLiu(n_jobs=1).fit(pd.DataFrame({"a": [1, 2], "b": [2, 1]}))
-    assert hasattr(est_str, "feature_names_in_")
+    assert list(est_str.feature_names_in_) == ["a", "b"]
     est_str.fit(df)
-    assert not hasattr(est_str, "feature_names_in_")
+    assert list(est_str.feature_names_in_) == ["x0", "x1", "x2"]
 
-    # Wrapping with Narwhals frame deletes feature_names_in_ without validate_data
+    # Wrapping with Narwhals frame sets default feature_names_in_
     est_str_nw = ChowLiu(n_jobs=1).fit(pd.DataFrame({"a": [1, 2], "b": [2, 1]}))
-    assert hasattr(est_str_nw, "feature_names_in_")
+    assert list(est_str_nw.feature_names_in_) == ["a", "b"]
     est_str_nw.fit(nw.from_native(df))
-    assert not hasattr(est_str_nw, "feature_names_in_")
+    assert list(est_str_nw.feature_names_in_) == ["x0", "x1", "x2"]
 
-    # Fallback in score() when _fit_columns is absent (legacy models)
+    # Fallback in score() when feature_names_in_ is absent
     est_fallback = ChowLiu(n_jobs=1).fit(pd.DataFrame({"a": [1, 2], "b": [2, 1]}))
-    del est_fallback._fit_columns
-    assert est_fallback.score(np.array([[1, 2], [2, 1]])) is not None
     del est_fallback.feature_names_in_
     assert est_fallback.score(np.array([[1, 2], [2, 1]])) is not None
 
@@ -462,13 +459,13 @@ def test_unmigrated_estimators_integer_columns(monkeypatch):
     llm = LLMPairwise()
     monkeypatch.setattr(llm, "_query_llm", lambda msg: "1")
     llm.fit(df_biv)
-    assert (0, 1) in llm.causal_graph_.edges()
+    assert ("x0", "x1") in llm.causal_graph_.edges()
 
     # Multivariate estimators
     VarSort().fit(df_multi)
     R2Sort().fit(df_multi)
     SP().fit(df_multi)
-    be = BootstrapEstimator(estimator=ChowLiu(root_node=0, show_progress=False), n_bootstraps=2)
+    be = BootstrapEstimator(estimator=ChowLiu(root_node="x0", show_progress=False), n_bootstraps=2)
     be.fit(pd.DataFrame(rng.integers(0, 2, size=(30, 3)), columns=[0, 1, 2]))
     adj = be.get_adjacency_matrix(0.5)
     assert adj.shape == (3, 3)
