@@ -161,7 +161,6 @@ def test_chow_liu(data12, data13, weight_fn, n_jobs):
 
 
 def test_chow_liu_auto_root_node(data12):
-    """Test automatic root node selection when root_node is not specified."""
     weights = ChowLiu._get_weights(data12, show_progress=False)
     sum_weights = weights.sum(axis=0)
     maxw_idx = np.argsort(sum_weights)[::-1]
