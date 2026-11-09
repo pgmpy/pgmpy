@@ -303,12 +303,13 @@ class BootstrapEstimator(BaseCausalDiscovery):
         )
 
         # Step 2.2: Without a warm start, initialize the results and fit `estimator_` on the full data
-        fit_columns = np.asarray(self._fit_columns)
-        rows, cols = np.triu_indices(len(fit_columns), k=1)
+        rows, cols = np.triu_indices(len(self.feature_names_in_), k=1)
         if not warm_start:
             self.bootstrap_samples_ = np.empty((0, bootstrap_sample_size), dtype=all_samples.dtype)
             self.bootstrap_edges_ = pd.DataFrame(
-                index=pd.MultiIndex.from_arrays([fit_columns[rows], fit_columns[cols]], names=["u", "v"])
+                index=pd.MultiIndex.from_arrays(
+                    [self.feature_names_in_[rows], self.feature_names_in_[cols]], names=["u", "v"]
+                )
             )
             self.estimator_ = clone(self.estimator).fit(X)
 
@@ -329,7 +330,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
             # Step 2.4: Record the edge types of the new bootstrap graphs
             edge_types = []
             for graph in graphs:
-                cells = graph.to_adjacency(encoding="edge_type", nodelist=self._fit_columns).to_numpy()[rows, cols]
+                cells = graph.to_adjacency(encoding="edge_type", nodelist=self.feature_names_in_).to_numpy()[rows, cols]
                 edge_types.append([",".join(c) if isinstance(c, tuple) else (None if c == 0 else c) for c in cells])
             new_edges = pd.DataFrame(
                 np.array(edge_types, dtype=object).T,
@@ -347,7 +348,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
 
         # Step 3.2: Compute its adjacency matrix, binary for DAGs and PDAGs
         encoding = "binary" if isinstance(self.causal_graph_, (DAG, PDAG)) else "edge_type"
-        self.adjacency_matrix_ = self.causal_graph_.to_adjacency(encoding=encoding, nodelist=self._fit_columns)
+        self.adjacency_matrix_ = self.causal_graph_.to_adjacency(encoding=encoding, nodelist=self.feature_names_in_)
 
         return self
 
@@ -400,7 +401,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
         candidates = frequency[(frequency >= threshold) & (frequency > 0)].sort_values(ascending=False, kind="stable")
 
         graph = type(self.estimator_.causal_graph_)()
-        graph.add_nodes_from(self._fit_columns)
+        graph.add_nodes_from(self.feature_names_in_)
 
         skipped = []
         for u, v in candidates.index:
@@ -476,4 +477,4 @@ class BootstrapEstimator(BaseCausalDiscovery):
         """
         graph = self.get_consensus_graph(threshold)
         encoding = "binary" if isinstance(graph, (DAG, PDAG)) else "edge_type"
-        return graph.to_adjacency(encoding=encoding, nodelist=self._fit_columns)
+        return graph.to_adjacency(encoding=encoding, nodelist=self.feature_names_in_)

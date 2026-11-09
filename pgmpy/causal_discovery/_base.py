@@ -130,9 +130,13 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
 
         if all(isinstance(c, str) for c in nw_df.columns):
             self.feature_names_in_ = np.asarray(nw_df.columns, dtype=object)
-        elif hasattr(self, "feature_names_in_"):
-            del self.feature_names_in_
-        self._fit_columns = list(nw_df.columns)
+        else:
+            default_names = [f"x{i}" for i in range(n_features)]
+            self.feature_names_in_ = np.asarray(default_names, dtype=object)
+            nw_df = nw_df.rename(dict(zip(nw_df.columns, default_names)))
+            if isinstance(X, pd.DataFrame):
+                X = nw.to_native(nw_df)
+
         self.n_features_in_ = n_features
 
         if not getattr(self, "_supports_narwhals", False):
@@ -258,15 +262,13 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
                 reset=False,
             )
 
-            if isinstance(X, np.ndarray):
-                cols = getattr(self, "_fit_columns", None)
-                if cols is None:
-                    cols = (
-                        list(self.feature_names_in_)
-                        if hasattr(self, "feature_names_in_")
-                        else list(self.causal_graph_.nodes())
-                    )
-                X = pd.DataFrame(X, columns=cols)
+            if isinstance(X, np.ndarray) or not all(isinstance(c, str) for c in X.columns):
+                cols = (
+                    list(self.feature_names_in_)
+                    if hasattr(self, "feature_names_in_")
+                    else list(self.causal_graph_.nodes())
+                )
+                X = pd.DataFrame(np.asarray(X), columns=cols)
 
             return get_metric(metric, requires_true_graph=False).evaluate(X, self.causal_graph_)
 
