@@ -438,6 +438,8 @@ class _ConstraintMixin:
             required_edges = expert_knowledge.required_edges_
             forbidden_edges = expert_knowledge.forbidden_edges_
 
+        required_pairs = {frozenset(edge) for edge in required_edges}
+
         # Remove edges that are forbidden in both directions. Directed forbidden are enforced as orientations after the
         # skeleton is learned.
         graph.remove_edges_from([(u, v) for (u, v) in forbidden_edges if (v, u) in forbidden_edges])
@@ -449,7 +451,7 @@ class _ConstraintMixin:
             # size `lim_neighbors` which makes u and v independent.
             if variant == "orig":
                 for u, v in graph.edges():
-                    if (u, v) not in required_edges:
+                    if frozenset((u, v)) not in required_pairs:
                         for separating_set in self._get_potential_sepsets(
                             u, v, temporal_ordering, graph, lim_neighbors
                         ):
@@ -470,7 +472,7 @@ class _ConstraintMixin:
                 edges_to_remove = []
                 # In case of stable, precompute neighbors as this is the stable algorithm.
                 for u, v in graph.edges():
-                    if (u, v) not in required_edges:
+                    if frozenset((u, v)) not in required_pairs:
                         sep_vars = set()
                         found_independence = False
                         for separating_set in self._get_potential_sepsets(
@@ -512,7 +514,7 @@ class _ConstraintMixin:
                         return (u, v), tuple(sorted(sep_vars, key=repr))
 
                 results = parallel_pool(
-                    delayed(_parallel_fun)(u, v) for (u, v) in graph.edges() if (u, v) not in required_edges
+                    delayed(_parallel_fun)(u, v) for (u, v) in graph.edges() if frozenset((u, v)) not in required_pairs
                 )
                 for result in results:
                     if result is not None:
@@ -553,9 +555,11 @@ class _ConstraintMixin:
         Return the temporally consistent candidate separating sets of `u`, `v`.
 
         Each candidate is a sorted tuple of size ``lim_neighbors`` drawn from
-        the (temporally filtered) neighbors of ``u`` or ``v``. Sorting both
-        input sets makes ``combinations`` yield lex-sorted tuples, so the
-        union of the two halves deduplicates directly via set semantics.
+        the neighbors of ``u`` or ``v``. With a temporal ordering, the neighbors
+        of each endpoint that lie in a later tier than that endpoint are
+        excluded. Sorting both input sets makes ``combinations`` yield
+        lex-sorted tuples, so the union of the two halves deduplicates directly
+        via set semantics.
 
         Parameters
         ----------
@@ -590,14 +594,8 @@ class _ConstraintMixin:
         separating_set_v.discard(u)
 
         if temporal_ordering != dict():
-            max_order = min(temporal_ordering[u], temporal_ordering[v])
-            for neigh in list(separating_set_u):
-                if temporal_ordering[neigh] > max_order:
-                    separating_set_u.discard(neigh)
-
-            for neigh in list(separating_set_v):
-                if temporal_ordering[neigh] > max_order:
-                    separating_set_v.discard(neigh)
+            separating_set_u = {neigh for neigh in separating_set_u if temporal_ordering[neigh] <= temporal_ordering[u]}
+            separating_set_v = {neigh for neigh in separating_set_v if temporal_ordering[neigh] <= temporal_ordering[v]}
 
         sorted_u = sorted(separating_set_u, key=repr)
         sorted_v = sorted(separating_set_v, key=repr)
