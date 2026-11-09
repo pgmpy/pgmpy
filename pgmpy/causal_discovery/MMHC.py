@@ -102,9 +102,7 @@ class MMHC(BaseCausalDiscovery):
 
     References
     ----------
-    .. [1] Tsamardinos, I., Brown, L. E., and Aliferis, C. F. (2006).
-       The max-min hill-climbing Bayesian network structure learning algorithm.
-       Machine Learning, 65, 31-78.
+    - :footcite:t:`tsamardinos_2006`
     """
 
     _tags = {
@@ -164,27 +162,25 @@ class MMHC(BaseCausalDiscovery):
         self : pgmpy.causal_discovery.MMHC
             Returns the instance with the fitted attributes.
         """
-        # Step 1: Initial checks and setup for arguments
+        # Step 0: Validate the arguments.
         if self.return_type.lower() not in ("dag", "pdag", "cpdag"):
             raise ValueError(f"return_type must be one of: dag, pdag, or cpdag. Got: {self.return_type}")
         if self.max_cond_vars is not None and self.max_cond_vars < 0:
             raise ValueError("max_cond_vars must be non-negative or None.")
 
-        # Step 1.1: Check the CI test and the score
+        # Step 1: Resolve the CI test, the score and the expert knowledge.
+        # Step 1.1: Resolve the CI test and the score.
         self.ci_test_ = get_ci_test(test=self.ci_test, data=X)
         self.scoring_method_ = get_scoring_method(self.scoring_method, X)
 
-        # Step 1.2: Check if expert knowledge was specified
+        # Step 1.2: Fit a copy of the expert knowledge, leaving the user's object unchanged.
         if self.expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
         else:
-            # Clone so the fitted (`*_`) attributes land on a fresh copy, not the user's object.
             expert_knowledge = clone(self.expert_knowledge)
-
-        # Step 1.2.1: Resolve the expert knowledge into its fitted (`*_`) attributes.
         expert_knowledge.fit(X)
 
-        # Step 2: Learn the skeleton using MMPC
+        # Step 2: Learn the skeleton using MMPC.
         self.skeleton_ = self._learn_skeleton(
             data=X,
             ci_test=self.ci_test_,
@@ -193,15 +189,14 @@ class MMHC(BaseCausalDiscovery):
             expert_knowledge=expert_knowledge,
         )
 
-        # Step 3: Restrict hill climbing to the skeleton, which contains the required edges, by forbidding every edge
-        #         outside it.
+        # Step 3: Restrict hill climbing to the skeleton by forbidding every edge outside it.
         outside_skeleton = set(permutations(X.columns, 2)) - set(self.skeleton_.to_directed().edges())
         hill_climb_knowledge = ExpertKnowledge(
             forbidden_edges=expert_knowledge.forbidden_edges_ | outside_skeleton,
             required_edges=expert_knowledge.required_edges_,
         )
 
-        # Step 4: Orient and select the skeleton edges using hill climbing
+        # Step 4: Orient and select the skeleton edges using hill climbing.
         hill_climb = HillClimbSearch(
             scoring_method=self.scoring_method_,
             expert_knowledge=hill_climb_knowledge,
@@ -213,7 +208,7 @@ class MMHC(BaseCausalDiscovery):
             show_progress=self.show_progress,
         ).fit(X)
 
-        # Step 5: Store results
+        # Step 5: Store the results.
         self.causal_graph_ = hill_climb.causal_graph_
         self.adjacency_matrix_ = self.causal_graph_.to_adjacency(
             encoding="binary", nodelist=list(self.causal_graph_.nodes())
@@ -258,9 +253,10 @@ class MMHC(BaseCausalDiscovery):
 
         References
         ----------
-        .. [1] Tsamardinos, I., Brown, L. E., and Aliferis, C. F. (2006). The max-min hill-climbing Bayesian network
-           structure learning algorithm. Machine Learning, 65, 31-78. Algorithms 1 and 2.
+        - :footcite:t:`tsamardinos_2006` (Algorithms 1 and 2)
         """
+        # Step 1: Read the tiers, the required pairs and the pairs forbidden in both directions from the expert
+        #         knowledge, and start each node's neighbors with its required neighbors.
         nodes = list(data.columns)
         if expert_knowledge is None:
             temporal_ordering, required_edges, forbidden_edges = {}, set(), set()
@@ -269,18 +265,14 @@ class MMHC(BaseCausalDiscovery):
             required_edges = expert_knowledge.required_edges_
             forbidden_edges = expert_knowledge.forbidden_edges_
 
-        # A separating set of two variables exists among their ancestors, which lie in tiers no later than the later
-        # of the two. Without a temporal order, every variable is in the same tier.
         tier = temporal_ordering or dict.fromkeys(nodes, 0)
-
-        # Pairs forbidden in only one direction can still be adjacent; hill climbing orients them.
         required_pairs = {frozenset(edge) for edge in required_edges}
         forbidden_pairs = {frozenset((u, v)) for u, v in forbidden_edges if (v, u) in forbidden_edges}
         neighbors = {node: [other for other in nodes if frozenset((node, other)) in required_pairs] for node in nodes}
 
-        # Step 1: Find the candidate parents and children (the neighbors) of each node
+        # Step 2: Find the candidate parents and children (the neighbors) of each node.
         for node in nodes:
-            # Step 1.1: Forward phase. Add the candidate whose minimum association with `node`, over all subsets of
+            # Step 2.1: Forward phase. Add the candidate whose minimum association with `node`, over all subsets of
             #           the current neighbors, is the largest. Stop when every remaining candidate is independent of
             #           `node` given some subset, i.e. its minimum association is 0.
             candidates = [
@@ -293,16 +285,13 @@ class MMHC(BaseCausalDiscovery):
             min_assoc = dict.fromkeys(candidates, float("inf"))
             added = None
             while True:
+                # Step 2.1.1: Update each candidate's minimum association with the conditioning sets that contain the
+                #             last added neighbor.
                 for candidate in candidates:
                     conditioning_variables = [n for n in neighbors[node] if tier[n] <= max(tier[node], tier[candidate])]
-                    # The subsets without the last added neighbor were tested in earlier iterations.
                     for conditioning_set in powerset(conditioning_variables, max_size=max_cond_vars):
                         if added is not None and added not in conditioning_set:
                             continue
-
-                        # The association is 0 if the test finds independence, else the test's effect size. Tests
-                        # without an effect size, such as plain callables, give dependent candidates an association
-                        # of 1.
                         if ci_test(node, candidate, list(conditioning_set), significance_level=significance_level):
                             min_assoc[candidate] = 0.0
                             break
@@ -311,17 +300,17 @@ class MMHC(BaseCausalDiscovery):
                         else:
                             min_assoc[candidate] = min(min_assoc[candidate], 1.0)
 
-                # A minimum association of 0 stays 0 as the neighbors grow, so those candidates are dropped.
+                # Step 2.1.2: Drop the candidates with a minimum association of 0, and add the remaining one with the
+                #             largest minimum association as a neighbor.
                 candidates = [candidate for candidate in candidates if min_assoc[candidate] > 0]
                 if not candidates:
                     break
 
-                # Ties go to the candidate that comes last in column order.
                 added = max(reversed(candidates), key=min_assoc.__getitem__)
                 neighbors[node].append(added)
                 candidates.remove(added)
 
-            # Step 1.2: Backward phase. Remove the neighbors, other than required ones, that are independent of `node`
+            # Step 2.2: Backward phase. Remove the neighbors, other than required ones, that are independent of `node`
             #           given some subset of the other neighbors.
             for neighbor in list(neighbors[node]):
                 if frozenset((node, neighbor)) in required_pairs:
@@ -335,14 +324,14 @@ class MMHC(BaseCausalDiscovery):
                         neighbors[node].remove(neighbor)
                         break
 
-        # Step 2: Symmetry correction. Keep `neighbor` as a neighbor of `node` only if `node` is also a neighbor of
+        # Step 3: Symmetry correction. Keep `neighbor` as a neighbor of `node` only if `node` is also a neighbor of
         #         `neighbor`.
         for node in nodes:
             for neighbor in list(neighbors[node]):
                 if node not in neighbors[neighbor]:
                     neighbors[node].remove(neighbor)
 
-        # Step 3: Build the skeleton from the neighbors
+        # Step 4: Build the skeleton from the neighbors.
         skeleton = UndirectedGraph()
         skeleton.add_nodes_from(nodes)
         skeleton.add_edges_from((node, neighbor) for node in nodes for neighbor in neighbors[node])
