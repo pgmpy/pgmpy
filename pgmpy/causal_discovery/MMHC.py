@@ -304,18 +304,19 @@ class MMHC(BaseCausalDiscovery):
                 if not candidates:
                     break
 
-                added = max(reversed(candidates), key=min_assoc.__getitem__)
+                added = max(candidates, key=min_assoc.__getitem__)
                 neighbors[node].append(added)
                 candidates.remove(added)
 
             # Step 2.2: Backward phase. Remove the neighbors, other than required ones, that are independent of `node`
-            #           given some subset of the other neighbors.
-            for neighbor in list(neighbors[node]):
+            #           given some subset of the other neighbors found in the forward phase.
+            forward_neighbors = list(neighbors[node])
+            for neighbor in forward_neighbors:
                 if frozenset((node, neighbor)) in required_pairs:
                     continue
 
                 other_neighbors = [
-                    n for n in neighbors[node] if n != neighbor and tier[n] <= max(tier[node], tier[neighbor])
+                    n for n in forward_neighbors if n != neighbor and tier[n] <= max(tier[node], tier[neighbor])
                 ]
                 for separating_set in powerset(other_neighbors, max_size=max_cond_vars):
                     if ci_test(node, neighbor, list(separating_set), significance_level=significance_level):
