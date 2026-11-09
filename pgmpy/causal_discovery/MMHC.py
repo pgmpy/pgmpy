@@ -28,9 +28,9 @@ class MMHC(BaseCausalDiscovery):
         test for the data type is used (e.g. chi-square for discrete data). A
         candidate's association with a node is 0 when the test finds them
         independent, and the test's ``effect_size_`` otherwise. Unlike p-values,
-        effect sizes do not underflow to a tie for strong dependencies. Tests
-        without an effect size, such as plain callables, give every dependent
-        candidate an association of 1.
+        effect sizes do not underflow to a tie for strong dependencies. Plain
+        callables return no effect size, so every candidate they find dependent
+        gets an association of 1.
 
     significance_level : float, default=0.01
         Significance level used by the conditional independence tests.
@@ -95,7 +95,7 @@ class MMHC(BaseCausalDiscovery):
     --------
     >>> from pgmpy.causal_discovery import MMHC
     >>> from pgmpy.example_models import load_model
-    >>> data = load_model("bnlearn/asia").simulate(n_samples=1000, seed=42)
+    >>> data = load_model("bnlearn/asia").simulate(n_samples=1000, rng=42)
     >>> mmhc = MMHC(show_progress=False).fit(data)
     >>> set(mmhc.causal_graph_.nodes()) == set(data.columns)
     True
@@ -295,10 +295,8 @@ class MMHC(BaseCausalDiscovery):
                         if ci_test(node, candidate, list(conditioning_set), significance_level=significance_level):
                             min_assoc[candidate] = 0.0
                             break
-                        if isinstance(ci_test, BaseCITest) and ci_test.effect_size_ is not None:
-                            min_assoc[candidate] = min(min_assoc[candidate], ci_test.effect_size_)
-                        else:
-                            min_assoc[candidate] = min(min_assoc[candidate], 1.0)
+                        association = ci_test.effect_size_ if isinstance(ci_test, BaseCITest) else 1.0
+                        min_assoc[candidate] = min(min_assoc[candidate], association)
 
                 # Step 2.1.2: Drop the candidates with a minimum association of 0, and add the remaining one with the
                 #             largest minimum association as a neighbor.

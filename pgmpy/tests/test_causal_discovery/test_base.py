@@ -94,7 +94,7 @@ def test_fit_narrowing_handles_untagged_and_wider_objects():
 
     class UntaggedCITest(BaseCITest):
         def _compute_result(self, X, Y, Z):
-            return _CITestResult(statistic=0.0, p_value=1.0)
+            return _CITestResult(statistic=0.0, p_value=1.0, effect_size=0.0)
 
     pc = PC(ci_test=UntaggedCITest()).fit(data)
     assert pc.get_tag("data_types") == ["discrete", "continuous", "mixed"]

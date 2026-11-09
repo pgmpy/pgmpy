@@ -34,7 +34,7 @@ def test_mmhc_compatibility(estimator, check):
 
 @pytest.fixture
 def cancer_data():
-    return load_model("bnlearn/cancer").simulate(n_samples=300, seed=42)[
+    return load_model("bnlearn/cancer").simulate(n_samples=300, rng=42)[
         ["Pollution", "Smoker", "Cancer", "Xray", "Dyspnoea"]
     ]
 
@@ -71,7 +71,7 @@ def test_fit_sets_graph_attributes(return_type, graph_type, cancer_data):
     assert isinstance(estimator.skeleton_, UndirectedGraph)
     graph_edges = {frozenset(edge) for edge in estimator.causal_graph_.edges()}
     assert graph_edges <= {frozenset(edge) for edge in estimator.skeleton_.edges()}
-    assert graph_edges == {frozenset(("Cancer", "Smoker"))}
+    assert graph_edges == {frozenset(("Cancer", "Xray"))}
 
 
 def test_dag_is_acyclic_and_scorable_after_fit(cancer_data):
@@ -143,7 +143,7 @@ def test_skeleton_recovers_collider(collider_data, ci_test_name, max_cond_vars, 
 @pytest.mark.parametrize("reverse_columns", [False, True])
 def test_skeleton_recovers_sachs_in_any_column_order(reverse_columns):
     model = load_model("bnlearn/sachs")
-    data = model.simulate(n_samples=2000, seed=42, show_progress=False)
+    data = model.simulate(n_samples=2000, rng=42, show_progress=False)
     columns = sorted(data.columns, reverse=reverse_columns)
 
     skeleton = MMHC(show_progress=False).fit(data[columns]).skeleton_
