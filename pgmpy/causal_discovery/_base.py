@@ -70,7 +70,7 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
 
         Parameters
         ----------
-        X: pd.DataFrame, pl.DataFrame, pa.Table, cudf.DataFrame, np.ndarray, or nw.DataFrame
+        X: pd.DataFrame, pl.DataFrame, pa.Table, cudf.DataFrame, modin.pandas.DataFrame, np.ndarray, or nw.DataFrame
             The data to fit the causal discovery algorithm on.
         """
 
@@ -210,7 +210,8 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
 
         Parameters
         ----------
-        X : pd.DataFrame, pl.DataFrame, pa.Table, cudf.DataFrame, np.ndarray, or nw.DataFrame, optional
+        X : pd.DataFrame, pl.DataFrame, pa.Table, cudf.DataFrame, modin.pandas.DataFrame,
+            np.ndarray, or nw.DataFrame, optional
             Test data used for scoring the learned causal model. If provided, `metric` must be a metric that
             compares against data, i.e. one with ``requires_true_graph=False``.
 
@@ -798,7 +799,7 @@ class _TreeSearchMixin:
 
         Parameters
         ----------
-        data : pd.DataFrame, pl.DataFrame, pa.Table, cudf.DataFrame, np.ndarray, or nw.DataFrame
+        data : pd.DataFrame, pl.DataFrame, pa.Table, cudf.DataFrame, modin.pandas.DataFrame, np.ndarray, or nw.DataFrame
             Dataframe or 2D array where each column represents one variable.
 
         edge_weights_fn : str or callable, default="mutual_info"
