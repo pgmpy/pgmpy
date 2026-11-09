@@ -242,7 +242,6 @@ def test_filter_algorithms_by_tags():
     ],
 )
 def test_check_fit_invalid_input(data, exc_type, match):
-    """Test input validation rejecting invalid shapes, nulls, infinities, unhashables, and mixed column names."""
     nw_df = nw.from_native(data)
     with pytest.raises(exc_type, match=match):
         ChowLiu(n_jobs=1).fit(nw_df)
@@ -250,7 +249,6 @@ def test_check_fit_invalid_input(data, exc_type, match):
 
 @pytest.mark.parametrize("backend", ["polars", "pyarrow"])
 def test_check_fit_unhashable_backends(backend):
-    """Test rejection of unhashable column types across Polars and PyArrow backends."""
     if backend == "polars":
         pl = pytest.importorskip("polars")
         data = pl.DataFrame({"a": [[1], [2]], "b": [1, 2]})
@@ -263,7 +261,6 @@ def test_check_fit_unhashable_backends(backend):
 
 
 def test_check_fit_unhashable_struct_or_list():
-    """Test rejection of List/Array/Struct column types even without Polars or PyArrow installed."""
     df = pd.DataFrame({"a": [1, 2], "b": [2, 1]})
     nw_df = nw.from_native(df)
 
@@ -283,7 +280,6 @@ def test_check_fit_unhashable_struct_or_list():
 
 
 def test_check_fit_score_parity():
-    """Test fit and score parity between native pandas, Narwhals wrapper, and NumPy arrays."""
     pandas_df = pd.DataFrame({"a": [1, 2, 1, 2], "b": [2, 1, 2, 1]})
     nw_df = nw.from_native(pandas_df)
     est = ChowLiu(n_jobs=1)
@@ -305,7 +301,6 @@ def test_check_fit_score_parity():
 
 @pytest.mark.parametrize("backend", ["pandas_nullable", "polars", "pyarrow"])
 def test_check_fit_unmigrated_bridge(backend):
-    """Test the unmigrated estimator compatibility bridge preserving column names, values, and dtypes."""
     captured = {}
 
     class UnmigratedDiscovery(BaseCausalDiscovery):
@@ -340,7 +335,6 @@ def test_check_fit_unmigrated_bridge(backend):
 
 @pytest.mark.parametrize("backend", ["polars", "pyarrow"])
 def test_score_dataframe_backends(backend):
-    """Test scoring consistency when evaluating model against different dataframe backends."""
     pandas_df = pd.DataFrame({"a": [1, 2, 1, 2], "b": [2, 1, 2, 1]})
     est = ChowLiu(n_jobs=1).fit(pandas_df)
     score_pd = est.score(pandas_df)
@@ -356,7 +350,6 @@ def test_score_dataframe_backends(backend):
 
 
 def test_tree_search_mixin_weights():
-    """Test _TreeSearchMixin._get_weights matrix symmetry, zero diagonal, and mutual information value."""
     arr = np.array([[1, 2], [2, 1], [1, 2], [2, 1]])
     weights = _TreeSearchMixin._get_weights(arr, n_jobs=1, show_progress=False)
     assert weights.shape == (2, 2)
@@ -366,7 +359,6 @@ def test_tree_search_mixin_weights():
 
 
 def test_fit_and_score_integer_columns():
-    """Test scikit-learn feature_names_in_ convention on integer columns, refit cleanup, and score column order."""
     rng = np.random.default_rng(42)
     df = pd.DataFrame(
         {
@@ -407,7 +399,6 @@ def test_fit_and_score_integer_columns():
 
 
 def test_tree_search_preserve_zero_weight_edges():
-    """Test that zero-weight edges are retained in the spanning tree and nodes are not dropped."""
     columns = ["A", "B", "C"]
     weights = np.zeros((3, 3))
     dag = _TreeSearchMixin._create_tree_and_dag(weights, columns, root_node="A")
@@ -430,8 +421,6 @@ def test_tree_search_preserve_zero_weight_edges():
 
 
 def test_pyarrow_missing_fallback_in_bridge_and_score(monkeypatch):
-    """Test fallback conversion when nw_df.to_pandas raises ModuleNotFoundError (pyarrow missing)."""
-
     class UnmigratedDiscovery(BaseCausalDiscovery):
         def _fit(self, X):
             assert isinstance(X, pd.DataFrame)
@@ -457,7 +446,6 @@ def test_pyarrow_missing_fallback_in_bridge_and_score(monkeypatch):
 
 
 def test_unmigrated_estimators_integer_columns(monkeypatch):
-    """Test that all estimators fit on integer-labeled columns without AttributeError."""
     x = np.linspace(0.1, 2.0, 30)
     y = np.exp(x)
     df_biv = pd.DataFrame({0: x, 1: y})
