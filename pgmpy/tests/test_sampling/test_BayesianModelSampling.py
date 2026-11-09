@@ -1,5 +1,10 @@
+from unittest.mock import patch
+
+import numpy as np
+import pandas as pd
 import pytest
 
+from pgmpy.example_models import load_model
 from pgmpy.factors.discrete import State, TabularCPD
 from pgmpy.inference import VariableElimination
 from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork
@@ -474,3 +479,23 @@ def test_likelihood_weighted_sample(
 def test_rejection_sample_integer_state_names(sampling_inference_int):
     sampled_y = sampling_inference_int.rejection_sample(evidence=[State("X", 2)], size=1)["Y"][0]
     assert sampled_y == 2
+
+
+def test_rejection_sample_passes_one_generator_to_every_batch():
+    sampler = BayesianModelSampling(load_model("bnlearn/asia"))
+    with patch.object(
+        BayesianModelSampling, "forward_sample", autospec=True, side_effect=BayesianModelSampling.forward_sample
+    ) as spy:
+        sampler.rejection_sample(evidence=[State("tub", "yes")], size=50, rng=0)
+    seeds = [call.kwargs["rng"] for call in spy.call_args_list]
+    assert len(seeds) > 1
+    assert all(isinstance(s, np.random.Generator) and s is seeds[0] for s in seeds)
+
+
+def test_simulate_with_shared_generator():
+    model = load_model("bnlearn/asia")
+    gen = np.random.default_rng(0)
+    first, second = model.simulate(100, rng=gen), model.simulate(100, rng=gen)
+    assert not first.equals(second)
+    gen = np.random.default_rng(0)
+    pd.testing.assert_frame_equal(model.simulate(100, rng=gen), first)

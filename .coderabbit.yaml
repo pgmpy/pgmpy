@@ -1,0 +1,87 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# Configuration for CodeRabbit AI code reviews. See https://docs.coderabbit.ai/reference/configuration
+language: "en-US"
+early_access: false
+
+reviews:
+  # "chill" keeps review comments focused on real issues rather than nitpicks.
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  high_level_summary_in_walkthrough: true
+  poem: false
+  review_status: false
+  collapse_walkthrough: true
+  sequence_diagrams: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - "dev"
+    ignore_usernames:
+      - "dependabot[bot]"
+      - "pre-commit-ci[bot]"
+  path_filters:
+    - "!pgmpy/extern/**"
+    - "!pgmpy/tests/test_data/**"
+    - "!pgmpy/tests/**/testdata/**"
+    - "!pgmpy/utils/example_models/**"
+    - "!examples/data/**"
+    - "!.test_durations"
+  path_instructions:
+    - path: "pgmpy/**/*.py"
+      instructions: |
+        Prioritize correctness of probabilistic and causal results: normalized CPDs, aligned variable order,
+        cardinality and state names, and correct graph semantics. Cross-check against bnlearn, pcalg, dagitty,
+        causal-learn or DoWhy where possible. Check edge cases such as empty, single-node or disconnected graphs.
+        Don't comment on formatting; ruff handles it.
+    - path: "pgmpy/base/**"
+      instructions: |
+        Rules that apply to only some graph classes should be enforced once in the base class via a class-attribute
+        flag (e.g. `SUPPORTED_EDGE_TYPES`), not by per-class overrides.
+    - path: "pgmpy/estimators/**"
+      instructions: |
+        Legacy compatibility layer: flag new functionality added here.
+    - path: "pgmpy/causal_discovery/**"
+      instructions: |
+        `ExpertKnowledge.forbidden_edges` are directional: forbidding u->v still allows v->u. Flag code that treats
+        them as adjacency bans.
+    - path: "pgmpy/structure_score/**"
+      instructions: |
+        Degenerate families (e.g. collinear columns) must score `-inf`, not raise; local scores run inside search
+        loops that don't catch exceptions.
+    - path: "pgmpy/ci_tests/**"
+      instructions: |
+        Degenerate inputs must return independence, not raise; CI tests run inside search loops that don't catch
+        exceptions. CI tests that copy `data` in `__init__` and so can't be cloned are intentional.
+    - path: "pgmpy/identification/**"
+      instructions: |
+        ADMGs have no latent nodes (confounding is only bidirected edges); don't ask for latent handling on ADMGs.
+    - path: "pgmpy/readwrite/**"
+      instructions: |
+        Check that models round-trip without loss: state names, ordering, CPD values and precision.
+    - path: "pgmpy/tests/**"
+      instructions: |
+        Tests must be seeded, run offline, and assert on meaningful values, not just that code runs. `conftest.py`
+        serves Hub downloads from `pgmpy/tests/test_data/`, so new datasets or models need committed fixtures.
+    - path: "devtools/extension_templates/**"
+      instructions: |
+        Templates must match the current base-class APIs.
+    - path: "examples/**/*.ipynb"
+      instructions: |
+        Notebooks run in CI; check they use the current, non-deprecated API and seed randomness.
+    - path: "docs/**"
+      instructions: |
+        Check that code examples are accurate and match the current API; new public objects belong in `docs/api/`.
+    - path: "pyproject.toml"
+      instructions: |
+        Flag new core dependencies that could be optional; optional ones must be imported lazily.
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  code_guidelines:
+    filePatterns:
+      - "CONTRIBUTING.md"
+      - "AGENTS.md"
