@@ -135,6 +135,7 @@ select = [
   "PT014",   # pytest-duplicate-parametrize-test-cases.
   "PT006",   # Checks for the type of parameter names passed to pytest.mark.parametrize.
   "PT007",   # Checks for the type of parameter values passed to pytest.mark.parametrize.
+  "NPY002",  # Legacy numpy.random global-state calls.
 ]
 
 ignore = [
@@ -174,3 +175,7 @@ ignore = [
   "UP026", # Replace mock with unittest.mock (external mock has different behavior).
   "UP031", # Use format specifier instead of %
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"pgmpy/tests/**" = ["NPY002"]
+"pgmpy/estimators/**" = ["NPY002"]

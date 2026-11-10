@@ -23,11 +23,13 @@ from pgmpy.factors.discrete import (
     JointProbabilityDistribution,
     TabularCPD,
 )
+from pgmpy.models._file_io import _FileIOMixin
 from pgmpy.models.DiscreteMarkovNetwork import DiscreteMarkovNetwork
 from pgmpy.utils import compat_fns
+from pgmpy.utils._random import _rename_to_rng
 
 
-class DiscreteBayesianNetwork(DAG):
+class DiscreteBayesianNetwork(_FileIOMixin, DAG):
     """
     Initializes a Discrete Bayesian Network.
 
@@ -720,13 +722,14 @@ class DiscreteBayesianNetwork(DAG):
 
         self.add_cpds(*cpds)
 
+    @_rename_to_rng("seed")
     def predict(
         self,
         data: pd.DataFrame,
         algo: type | None = None,
         stochastic: bool = False,
         n_jobs: int = -1,
-        seed: int | None = None,
+        rng: int | np.random.Generator | None = None,
         **kwargs: Any,
     ) -> pd.DataFrame:
         """
@@ -748,8 +751,14 @@ class DiscreteBayesianNetwork(DAG):
         n_jobs : int, default=-1
             The number of CPU cores to use. If -1, uses all available cores.
 
-        seed : int, optional
-            When ``stochastic=True``, the seed value to use for random number generators.
+        rng : int, numpy.random.Generator or None, default=None
+            Source of randomness for stochastic prediction and for ``ApproxInference``, passed to
+            ``numpy.random.default_rng``. If None, fresh entropy is drawn from the operating system, so results are not
+            reproducible.
+
+            .. versionchanged:: 1.2.0
+                Replaces ``seed``, which is deprecated and will be removed in v2.0. None no longer follows
+                ``np.random.seed``.
 
         **kwargs : dict
             Optional keyword arguments for the selected inference algorithm.
@@ -767,8 +776,6 @@ class DiscreteBayesianNetwork(DAG):
             - ``state_names`` (dict, default ``None``): Possible states for each
               variable. When inferred from samples, unobserved states can be
               absent from the resulting distribution.
-            - ``seed`` (int, default ``None``): Random seed used by approximate
-              inference.
             - ``joint`` (bool): Used only for stochastic prediction. If true,
               return a joint distribution; otherwise, return one distribution
               per variable. This option is supported by variable elimination,
@@ -800,7 +807,7 @@ class DiscreteBayesianNetwork(DAG):
         <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork object at 0x...>
         >>> predict_data = predict_data.copy()
         >>> predict_data.drop("E", axis=1, inplace=True)
-        >>> approx_inf_parameters = {"n_samples": int(1e3), "seed": 42}
+        >>> approx_inf_parameters = {"n_samples": int(1e3), "rng": 42}
         >>> y_pred = model.predict(
         ...     predict_data, algo=ApproxInference, **approx_inf_parameters
         ... )
@@ -830,14 +837,21 @@ class DiscreteBayesianNetwork(DAG):
         model_inference = algo(self)
         data_unique_indexes = data.groupby(list(data.columns), dropna=False).apply(lambda t: t.index.tolist())
         data_unique = data_unique_indexes.index.to_frame()
+        rng = np.random.default_rng(rng)
+        if issubclass(algo, ApproxInference):
+            inference_kwargs = [{**kwargs, "rng": child} for child in rng.spawn(data_unique.shape[0])]
+        else:
+            inference_kwargs = [kwargs] * data_unique.shape[0]
         pred_values = Parallel(n_jobs=n_jobs, require="sharedmem")(
             delayed(model_inference.query if stochastic else model_inference.map_query)(
                 variables=missing_variables.union(set(data_point.index[data_point.isna()])),
                 evidence=data_point[~data_point.isna()].to_dict(),
                 show_progress=False,
-                **kwargs,
+                **point_kwargs,
             )
-            for index, data_point in tqdm(data_unique.iterrows(), total=data_unique.shape[0])
+            for (index, data_point), point_kwargs in zip(
+                tqdm(data_unique.iterrows(), total=data_unique.shape[0]), inference_kwargs
+            )
         )
 
         all_columns = data.columns.tolist() + [col for col in missing_variables]
@@ -845,7 +859,7 @@ class DiscreteBayesianNetwork(DAG):
 
         for i, row in enumerate(data_unique_indexes):
             if stochastic:
-                predicted_df = pred_values[i].sample(n=len(row), seed=seed).reset_index(drop=True)
+                predicted_df = pred_values[i].sample(n=len(row), rng=rng).reset_index(drop=True)
             else:
                 predicted = pd.DataFrame(pred_values[i], index=[0])
                 predicted_df = predicted.loc[predicted.index.repeat(len(row))].reset_index(drop=True)
@@ -1134,6 +1148,7 @@ class DiscreteBayesianNetwork(DAG):
         return list(blanket_nodes)
 
     @staticmethod
+    @_rename_to_rng("seed")
     def get_random(
         n_nodes: int = 5,
         n_edges: int | None = None,
@@ -1141,7 +1156,7 @@ class DiscreteBayesianNetwork(DAG):
         node_names: list[Hashable] | None = None,
         n_states: int | dict[Hashable, int] | None = None,
         latents: bool = False,
-        seed: int | None = None,
+        rng: int | np.random.Generator | None = None,
     ) -> DiscreteBayesianNetwork:
         """
         Returns a randomly generated Bayesian Network on `n_nodes` variables
@@ -1172,8 +1187,12 @@ class DiscreteBayesianNetwork(DAG):
         latents: bool (default: False)
             If True, also creates latent variables.
 
-        seed: int (default: None)
-            The seed value for random number generators.
+        rng: int, numpy.random.Generator or None (default: None)
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
+
+            .. versionchanged:: 1.2.0
+                Replaces ``seed``, which is deprecated and will be removed in v2.0.
 
         Returns
         -------
@@ -1192,12 +1211,13 @@ class DiscreteBayesianNetwork(DAG):
         5
 
         """
+        rng = np.random.default_rng(rng)
+
         if node_names is None:
             node_names = [f"X_{i}" for i in range(n_nodes)]
 
         if n_states is None:
-            gen = np.random.default_rng(seed=seed)
-            n_states = gen.integers(low=1, high=5, size=n_nodes)
+            n_states = rng.integers(low=1, high=5, size=n_nodes)
             n_states_dict = {node_names[i]: n_states[i] for i in range(n_nodes)}
 
         elif isinstance(n_states, int):
@@ -1213,7 +1233,7 @@ class DiscreteBayesianNetwork(DAG):
             edge_prob=edge_prob,
             node_names=node_names,
             latents=latents,
-            seed=seed,
+            rng=rng,
         )
         # Initialize with full DAG to preserve isolated nodes
         bn_model = DiscreteBayesianNetwork(dag)
@@ -1227,18 +1247,19 @@ class DiscreteBayesianNetwork(DAG):
                     variable=node,
                     evidence=parents,
                     cardinality=n_states_dict,
-                    seed=seed,
+                    rng=rng,
                 )
             )
 
         bn_model.add_cpds(*cpds)
         return bn_model
 
+    @_rename_to_rng("seed")
     def get_random_cpds(
         self,
         n_states: int | dict[Hashable, int] | None = None,
         inplace: bool = False,
-        seed: int | None = None,
+        rng: int | np.random.Generator | None = None,
     ) -> list[TabularCPD] | DiscreteBayesianNetwork | None:
         """
         Given a `model`, generates and adds random `TabularCPD`
@@ -1254,23 +1275,28 @@ class DiscreteBayesianNetwork(DAG):
             If inplace=True, adds the generated TabularCPDs to `model` itself, else creates
             a copy of the model.
 
-        seed: int (default: None)
-            The seed value for random number generators.
+        rng: int, numpy.random.Generator or None (default: None)
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
+
+            .. versionchanged:: 1.2.0
+                Replaces ``seed``, which is deprecated and will be removed in v2.0.
 
         """
+        rng = np.random.default_rng(rng)
+
         if isinstance(n_states, int):
             n_states = dict.fromkeys(self.nodes(), n_states)
         elif isinstance(n_states, dict):
             if set(n_states.keys()) != set(self.nodes()):
                 raise ValueError("Number of states not specified for each variable")
         elif n_states is None:
-            gen = np.random.default_rng(seed=seed)
-            n_states = {var: gen.integers(low=1, high=5, size=1)[0] for var in self.nodes()}
+            n_states = {var: rng.integers(low=1, high=5, size=1)[0] for var in self.nodes()}
 
         cpds = []
         for node in self.nodes():
             parents = list(self.predecessors(node))
-            cpds.append(TabularCPD.get_random(variable=node, evidence=parents, cardinality=n_states, seed=seed))
+            cpds.append(TabularCPD.get_random(variable=node, evidence=parents, cardinality=n_states, rng=rng))
 
         if inplace:
             self.add_cpds(*cpds)
@@ -1386,6 +1412,7 @@ class DiscreteBayesianNetwork(DAG):
             adj_model.add_cpds(new_cpd)
         return adj_model
 
+    @_rename_to_rng("seed")
     def simulate(
         self,
         n_samples: int = 10,
@@ -1396,7 +1423,7 @@ class DiscreteBayesianNetwork(DAG):
         missing_prob: TabularCPD | list[TabularCPD] | None = None,
         include_latents: bool = False,
         partial_samples: pd.DataFrame | None = None,
-        seed: int | None = None,
+        rng: int | np.random.Generator | None = None,
         show_progress: bool = True,
         return_full: bool = False,
     ) -> pd.DataFrame:
@@ -1448,8 +1475,13 @@ class DiscreteBayesianNetwork(DAG):
             specified, the sampling procedure uses these sample values, instead of generating them.
             partial_samples.shape[0] must be equal to `n_samples`.
 
-        seed: int (default: None)
-            If a value is provided, sets the seed for numpy.random.
+        rng: int | numpy.random.Generator | None (default: None)
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
+
+            .. versionchanged:: 1.2.0
+                Replaces ``seed``, which is deprecated and will be removed in v2.0. None no longer follows
+                ``np.random.seed``.
 
         show_progress: bool
             If True, shows a progress bar when generating samples.
@@ -1653,7 +1685,7 @@ class DiscreteBayesianNetwork(DAG):
             samples = BayesianModelSampling(model).forward_sample(
                 size=n_samples,
                 include_latents=include_latents,
-                seed=seed,
+                rng=rng,
                 show_progress=show_progress,
                 partial_samples=partial_samples,
             )
@@ -1664,7 +1696,7 @@ class DiscreteBayesianNetwork(DAG):
                 size=n_samples,
                 evidence=[(k, v) for k, v in evidence.items()],
                 include_latents=include_latents,
-                seed=seed,
+                rng=rng,
                 show_progress=show_progress,
                 partial_samples=partial_samples,
             )
@@ -1684,107 +1716,3 @@ class DiscreteBayesianNetwork(DAG):
             return samples.astype("category")
         else:
             return (samples.loc[:, list(set(samples.columns) - self.latents)]).astype("category")
-
-    def save(self, filename: str, filetype: str = "bif") -> None:
-        """
-        Writes the model to a file. Please avoid using any special characters or
-        spaces in variable names or state names in the model.
-
-        Parameters
-        ----------
-        filename: str
-            The path along with the filename where to write the file.
-
-        filetype: str (default: bif)
-            The format in which to write the model to file. Can be one of
-            the following: bif, uai, xmlbif, xdsl, net.
-
-        Examples
-        --------
-        >>> from pgmpy.example_models import load_model
-        >>> alarm = load_model("bnlearn/alarm")
-        >>> alarm.save("alarm.bif", filetype="bif")
-        """
-        from pgmpy.readwrite import (
-            BIFWriter,
-            NETWriter,
-            UAIWriter,
-            XDSLWriter,
-            XMLBIFWriter,
-        )
-
-        supported_formats_writer_map = {
-            "bif": BIFWriter,
-            "uai": UAIWriter,
-            "xmlbif": XMLBIFWriter,
-            "xdsl": XDSLWriter,
-            "net": NETWriter,
-        }
-        if filetype not in supported_formats_writer_map.keys():
-            raise ValueError(f"Unsupported file format: {filetype}")
-
-        parsed_filetype = filename.split(".")[-1].lower()
-        if parsed_filetype in supported_formats_writer_map.keys():
-            filetype = parsed_filetype
-
-        writer_class = supported_formats_writer_map[filetype]
-        writer_class(self).write(filename=filename)
-
-    @staticmethod
-    def load(filename: str, filetype: str = "bif", **kwargs: Any) -> DiscreteBayesianNetwork:
-        """
-        Read the model from a file.
-
-        Parameters
-        ----------
-        filename: str
-            The path along with the filename where to read the file.
-
-        filetype: str (default: bif)
-            The format of the model file. Can be one of
-            the following: bif, uai, xmlbif, xdsl, net.
-
-        kwargs: kwargs
-            Any additional arguments for the reader class or get_model method.
-            Please refer the file format class for details.
-
-        Examples
-        --------
-        >>> from pgmpy.example_models import load_model
-        >>> alarm = load_model("bnlearn/alarm")
-        >>> alarm.save("alarm.bif", filetype="bif")
-        >>> alarm_model = DiscreteBayesianNetwork.load("alarm.bif", filetype="bif")
-        """
-        from pgmpy.readwrite import (
-            BIFReader,
-            NETReader,
-            UAIReader,
-            XDSLReader,
-            XMLBIFReader,
-        )
-
-        supported_formats_reader_map = {
-            "bif": BIFReader,
-            "uai": UAIReader,
-            "xmlbif": XMLBIFReader,
-            "xdsl": XDSLReader,
-            "net": NETReader,
-        }
-
-        if filetype not in supported_formats_reader_map.keys():
-            raise ValueError(f"Unsupported file format: {filetype}")
-
-        parsed_filetype = filename.split(".")[-1].lower()
-        if parsed_filetype in supported_formats_reader_map.keys():
-            filetype = parsed_filetype
-
-        reader_class = supported_formats_reader_map[filetype]
-
-        if filetype == "bif":
-            state_name_type = kwargs.get("state_name_type", str)
-            reader = reader_class(path=filename)
-            return reader.get_model(state_name_type=state_name_type)
-
-        else:
-            reader = reader_class(path=filename)
-            return reader.get_model()

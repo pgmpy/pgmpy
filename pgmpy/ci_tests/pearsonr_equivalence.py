@@ -78,9 +78,10 @@ class PearsonrEquivalence(Pearsonr):
 
     _tags = {
         "name": "pearsonr_equivalence",
-        "data_types": ("continuous",),
+        "data_types": ["continuous"],
         "default_for": None,
         "requires_data": True,
+        "capability:conditioning": True,
     }
 
     def __init__(self, data: pd.DataFrame, delta_threshold: float = 0.1, use_cache: bool = True):

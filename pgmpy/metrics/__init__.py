@@ -1,4 +1,4 @@
-from ._base import BaseSupervisedMetric, BaseUnsupervisedMetric, get_metrics
+from ._base import BaseSupervisedMetric, BaseUnsupervisedMetric, get_metric
 from .adjacency_cm import AdjacencyConfusionMatrix
 from .correlation_score import CorrelationScore
 from .fisher_c import FisherC
@@ -10,7 +10,7 @@ from .structure_score import StructureScore
 __all__ = [
     "BaseSupervisedMetric",
     "BaseUnsupervisedMetric",
-    "get_metrics",
+    "get_metric",
     "AdjacencyConfusionMatrix",
     "OrientationConfusionMatrix",
     "SHD",

@@ -57,9 +57,10 @@ class ChiSquare(PowerDivergence):
 
     _tags = {
         "name": "chi_square",
-        "data_types": ("discrete",),
+        "data_types": ["discrete"],
         "default_for": "discrete",
         "requires_data": True,
+        "capability:conditioning": True,
     }
 
     def __init__(self, data: pd.DataFrame, use_cache: bool = True):

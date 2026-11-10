@@ -17,16 +17,16 @@ from pgmpy.utils import compat_fns
 class TestEM(unittest.TestCase):
     def setUp(self):
         self.model1 = load_model("bnlearn/cancer")
-        self.data1 = self.model1.simulate(int(1e4), seed=42)
+        self.data1 = self.model1.simulate(int(1e4), rng=42)
 
         self.model2 = DiscreteBayesianNetwork(self.model1.edges(), latents={"Smoker"})
         self.model2.add_cpds(*self.model1.cpds)
-        self.data2 = self.model2.simulate(int(1e4), seed=42)
+        self.data2 = self.model2.simulate(int(1e4), rng=42)
 
     def test_get_parameters(self):
         # All observed
         est = EM(self.model1, self.data1)
-        cpds = est.get_parameters(seed=42, n_jobs=1, show_progress=False)
+        cpds = est.get_parameters(seed=0, n_jobs=1, show_progress=False)
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
@@ -34,7 +34,7 @@ class TestEM(unittest.TestCase):
 
         # Latent variables
         est = EM(self.model2, self.data2)
-        cpds = est.get_parameters(seed=42, n_jobs=1, show_progress=False)
+        cpds = est.get_parameters(seed=0, n_jobs=1, show_progress=False)
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model2.get_cpds(var)
@@ -47,7 +47,7 @@ class TestEM(unittest.TestCase):
         # All observed
         est = EM(self.model1, self.data1)
         cpds = est.get_parameters(
-            seed=42,
+            seed=0,
             n_jobs=1,
             apply_smoothing=True,
             prior_type="k2",
@@ -61,7 +61,7 @@ class TestEM(unittest.TestCase):
         # Latent variables
         est = EM(self.model2, self.data2)
         cpds = est.get_parameters(
-            seed=42,
+            seed=0,
             n_jobs=1,
             apply_smoothing=True,
             prior_type="k2",
@@ -79,7 +79,7 @@ class TestEM(unittest.TestCase):
         # All observed
         est = EM(self.model1, self.data1)
         cpds = est.get_parameters(
-            seed=42,
+            seed=0,
             n_jobs=1,
             apply_smoothing=True,
             prior_type="bdeu",
@@ -94,7 +94,7 @@ class TestEM(unittest.TestCase):
         # Latent variables
         est = EM(self.model2, self.data2)
         cpds = est.get_parameters(
-            seed=42,
+            seed=0,
             n_jobs=1,
             apply_smoothing=True,
             prior_type="bdeu",
@@ -113,7 +113,7 @@ class TestEM(unittest.TestCase):
         # All observed. Specify initial CPDs.
         est = EM(self.model1, self.data1)
         smoker_initial = TabularCPD("Smoker", 2, [[0.1], [0.9]], state_names={"Smoker": ["True", "False"]})
-        cpds = est.get_parameters(init_cpds={"Smoker": smoker_initial}, seed=42, n_jobs=1, show_progress=False)
+        cpds = est.get_parameters(init_cpds={"Smoker": smoker_initial}, seed=0, n_jobs=1, show_progress=False)
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
@@ -121,7 +121,7 @@ class TestEM(unittest.TestCase):
 
         # With latents. Specify initial CPDs only for latent.
         est = EM(self.model2, self.data2)
-        cpds = est.get_parameters(init_cpds={"Smoker": smoker_initial}, seed=42, n_jobs=1, show_progress=False)
+        cpds = est.get_parameters(init_cpds={"Smoker": smoker_initial}, seed=2, n_jobs=1, show_progress=False)
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
@@ -147,7 +147,7 @@ class TestEM(unittest.TestCase):
         )
         cpds = est.get_parameters(
             init_cpds={"Smoker": smoker_initial, "Xray": xray_initial},
-            seed=42,
+            seed=2,
             n_jobs=1,
             show_progress=False,
         )
@@ -166,7 +166,7 @@ class TestEM(unittest.TestCase):
                 self.assertTrue(
                     np.allclose(
                         est_cpd.values,
-                        np.array([[0.799, 0.093], [0.201, 0.907]]),
+                        np.array([[0.799, 0.123], [0.201, 0.877]]),
                         atol=0.01,
                     )
                 )
@@ -186,7 +186,7 @@ class TestEM(unittest.TestCase):
 
     def test_get_parameters_random_init_cpds(self):
         est = EM(self.model1, self.data1)
-        cpds = est.get_parameters(init_cpds="random", seed=42, n_jobs=1, show_progress=False)
+        cpds = est.get_parameters(init_cpds="random", seed=0, n_jobs=1, show_progress=False)
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
@@ -206,7 +206,7 @@ class TestEM(unittest.TestCase):
         est = EM(self.model1, self.data1)
         ess_dict = {"Smoker": 10, "Cancer": 5, "Xray": 8}
         cpds = est.get_parameters(
-            seed=42,
+            seed=0,
             n_jobs=1,
             apply_smoothing=True,
             prior_type="bdeu",
@@ -221,7 +221,7 @@ class TestEM(unittest.TestCase):
         # With latent variables
         est = EM(self.model2, self.data2)
         cpds = est.get_parameters(
-            seed=42,
+            seed=0,
             n_jobs=1,
             apply_smoothing=True,
             prior_type="bdeu",
@@ -247,7 +247,7 @@ class TestEM(unittest.TestCase):
 
         est_scalar = EM(self.model1, self.data1)
         cpds_scalar = est_scalar.get_parameters(
-            seed=42,
+            seed=0,
             n_jobs=1,
             apply_smoothing=True,
             prior_type="bdeu",
@@ -257,7 +257,7 @@ class TestEM(unittest.TestCase):
 
         est_dict = EM(self.model1, self.data1)
         cpds_dict = est_dict.get_parameters(
-            seed=42,
+            seed=0,
             n_jobs=1,
             apply_smoothing=True,
             prior_type="bdeu",
@@ -290,22 +290,22 @@ class TestEMTorch(TestEM):
         config.set_backend("torch")
 
         self.model1 = load_model("bnlearn/cancer")
-        self.data1 = self.model1.simulate(int(1e4), seed=42)
+        self.data1 = self.model1.simulate(int(1e4), rng=42)
 
         self.model2 = DiscreteBayesianNetwork(self.model1.edges(), latents={"Smoker"})
         self.model2.add_cpds(*self.model1.cpds)
-        self.data2 = self.model2.simulate(int(1e4), seed=42)
+        self.data2 = self.model2.simulate(int(1e4), rng=42)
 
     def test_get_parameters(self):
         est = EM(self.model1, self.data1)
-        cpds = est.get_parameters(seed=42, n_jobs=1, show_progress=False)
+        cpds = est.get_parameters(seed=0, n_jobs=1, show_progress=False)
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
             self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
 
         est = EM(self.model2, self.data2)
-        cpds = est.get_parameters(seed=42, n_jobs=1, show_progress=False)
+        cpds = est.get_parameters(seed=0, n_jobs=1, show_progress=False)
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model2.get_cpds(var)
@@ -319,7 +319,7 @@ class TestEMTorch(TestEM):
         # All observed. Specify initial CPDs.
         est = EM(self.model1, self.data1)
         smoker_initial = TabularCPD("Smoker", 2, [[0.1], [0.9]], state_names={"Smoker": ["True", "False"]})
-        cpds = est.get_parameters(init_cpds={"Smoker": smoker_initial}, seed=42, n_jobs=1, show_progress=False)
+        cpds = est.get_parameters(init_cpds={"Smoker": smoker_initial}, seed=0, n_jobs=1, show_progress=False)
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
@@ -327,7 +327,7 @@ class TestEMTorch(TestEM):
 
         # With latents. Specify initial CPDs only for latent.
         est = EM(self.model2, self.data2)
-        cpds = est.get_parameters(init_cpds={"Smoker": smoker_initial}, seed=42, n_jobs=1, show_progress=False)
+        cpds = est.get_parameters(init_cpds={"Smoker": smoker_initial}, seed=2, n_jobs=1, show_progress=False)
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
@@ -359,7 +359,7 @@ class TestEMTorch(TestEM):
         )
         cpds = est.get_parameters(
             init_cpds={"Smoker": smoker_initial, "Xray": xray_initial},
-            seed=42,
+            seed=2,
             n_jobs=1,
             show_progress=False,
         )
@@ -384,7 +384,7 @@ class TestEMTorch(TestEM):
                 self.assertTrue(
                     np.allclose(
                         compat_fns.to_numpy(est_cpd.values),
-                        np.array([[0.799, 0.093], [0.201, 0.907]]),
+                        np.array([[0.799, 0.123], [0.201, 0.877]]),
                         atol=0.01,
                     )
                 )

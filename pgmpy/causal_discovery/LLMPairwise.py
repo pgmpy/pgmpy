@@ -4,12 +4,9 @@ import re
 
 import networkx as nx
 import pandas as pd
-from skbase.utils.dependencies import _safe_import
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
-
-litellm = _safe_import("litellm")
 
 
 class LLMPairwise(BaseCausalDiscovery):
@@ -94,6 +91,23 @@ class LLMPairwise(BaseCausalDiscovery):
     ...     llm_kwargs={"api_base": "http://localhost:11434"},
     ... ).fit(df)  # doctest: +SKIP
     """
+
+    _tags = {
+        "name": "llm_pairwise",
+        "data_types": ["discrete", "continuous", "mixed"],
+        "identifiable_graph": "dag",
+        "requires_target": False,
+        "capability:multivariate": False,
+        "capability:expert_knowledge": [],
+        "assumption:causal_sufficiency": False,
+        "assumption:acyclicity": False,
+        "assumption:faithfulness": False,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
+    }
 
     def __init__(
         self,
@@ -183,6 +197,8 @@ class LLMPairwise(BaseCausalDiscovery):
 
     def _query_llm(self, messages):
         """Send `messages` to the LLM and return its text response."""
+        import litellm
+
         llm_kwargs = self.llm_kwargs if self.llm_kwargs is not None else {}
         response = litellm.completion(model=self.llm_model, messages=messages, **llm_kwargs)
         return response.choices[0].message.content

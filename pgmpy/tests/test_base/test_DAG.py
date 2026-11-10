@@ -9,7 +9,7 @@ import pandas as pd
 from skbase.utils.dependencies import _check_soft_dependencies
 
 import pgmpy.tests.help_functions as hf
-from pgmpy.base import DAG
+from pgmpy.base import ADMG, DAG
 from pgmpy.ci_tests import Pearsonr
 from pgmpy.example_models import load_model
 from pgmpy.models import LinearGaussianBayesianNetwork as LGBN
@@ -371,11 +371,11 @@ class TestDAGCreation(unittest.TestCase):
         max_edges = n_nodes * (n_nodes - 1) // 2
 
         for n_edges in [0, 5, max_edges]:
-            dag = DAG.get_random(n_nodes=n_nodes, n_edges=n_edges, seed=7)
+            dag = DAG.get_random(n_nodes=n_nodes, n_edges=n_edges, rng=7)
             assert_dag_props(dag, n_nodes, n_edges)
 
         with self.assertRaisesRegex(ValueError, "Only one of n_edges or edge_prob can be specified"):
-            DAG.get_random(n_nodes=n_nodes, n_edges=6, edge_prob=0.0, seed=11)
+            DAG.get_random(n_nodes=n_nodes, n_edges=6, edge_prob=0.0, rng=11)
 
         node_names = [
             "a",
@@ -392,23 +392,23 @@ class TestDAGCreation(unittest.TestCase):
             n_nodes=n_nodes,
             n_edges=6,
             node_names=node_names,
-            seed=11,
+            rng=11,
         )
         self.assertEqual(sorted(dag.nodes()), node_names)
         self.assertEqual(node_names, original_node_names)
         assert_dag_props(dag, n_nodes, 6)
 
-        dag = DAG.get_random(n_nodes=6, n_edges=4, latents=True, seed=3)
+        dag = DAG.get_random(n_nodes=6, n_edges=4, latents=True, rng=3)
         self.assertIsInstance(dag.latents, set)
         self.assertTrue(dag.latents.issubset(dag.nodes()))
         assert_dag_props(dag, 6, 4)
 
-        dag_a = DAG.get_random(n_nodes=5, n_edges=4, seed=42)
-        dag_b = DAG.get_random(n_nodes=5, n_edges=4, seed=42)
+        dag_a = DAG.get_random(n_nodes=5, n_edges=4, rng=42)
+        dag_b = DAG.get_random(n_nodes=5, n_edges=4, rng=42)
         self.assertEqual(set(dag_a.edges()), set(dag_b.edges()))
 
         node_names = [f"X_{i}" for i in range(6)]
-        dag = DAG.get_random(n_nodes=6, n_edges=15, node_names=node_names, seed=0)
+        dag = DAG.get_random(n_nodes=6, n_edges=15, node_names=node_names, rng=0)
         node_order = {node: idx for idx, node in enumerate(node_names)}
         self.assertTrue(any(node_order[u] > node_order[v] for u, v in dag.edges()))
 
@@ -427,7 +427,7 @@ class TestDAGCreation(unittest.TestCase):
 
     def test_random_dag_edge_prob_default(self):
         with self.assertLogs("pgmpy", level="DEBUG") as cm:
-            dag = DAG.get_random(n_nodes=5, n_edges=None, edge_prob=None, seed=13)
+            dag = DAG.get_random(n_nodes=5, n_edges=None, edge_prob=None, rng=13)
 
         self.assertEqual(len(dag.nodes()), 5)
         self.assertTrue(nx.is_directed_acyclic_graph(dag))
@@ -982,6 +982,57 @@ class TestDAGConversion(unittest.TestCase):
         result = dag.to_dagitty()
         expected = "dag {\nA -> B\nC -> D\nE\n}"
         self.assertEqual(result, expected)
+
+    def test_to_admg(self):
+        # Front-door graph.
+        dag = DAG([("U", "X"), ("U", "Y"), ("X", "M"), ("M", "Y")], latents={"U"}, exposures={"X"}, outcomes={"Y"})
+        expected = ADMG(
+            edge_list=[("X", "M", "->"), ("M", "Y", "->"), ("X", "Y", "<>")], exposures={"X"}, outcomes={"Y"}
+        )
+        self.assertEqual(dag.to_admg(), expected)
+
+        # Without latents every edge and isolated node is kept.
+        dag = DAG([("A", "B"), ("B", "C")])
+        dag.add_node("D")
+        expected = ADMG(edge_list=[("A", "B", "->"), ("B", "C", "->")])
+        expected.add_node("D")
+        self.assertEqual(dag.to_admg(), expected)
+
+        edges = [
+            # latent mediator: X -> L -> Y becomes X -> Y
+            ("X", "L"),
+            ("L", "Y"),
+            # latent collider: P -> C <- Q adds no edge between P and Q, but C -> Z gives P -> Z and Q -> Z
+            ("P", "C"),
+            ("Q", "C"),
+            ("C", "Z"),
+            # the latent chain U1 -> U2 -> A with U1 -> B confounds A and B, and so does V: a single A <> B,
+            # alongside the direct A -> B
+            ("U1", "U2"),
+            ("U2", "A"),
+            ("U1", "B"),
+            ("V", "A"),
+            ("V", "B"),
+            ("A", "B"),
+            # a latent with three observed children confounds every pair of them
+            ("W", "B"),
+            ("W", "D"),
+            ("W", "E"),
+        ]
+        dag = DAG(edges, latents={"L", "C", "U1", "U2", "V", "W"})
+        expected = ADMG(
+            edge_list=[
+                ("X", "Y", "->"),
+                ("P", "Z", "->"),
+                ("Q", "Z", "->"),
+                ("A", "B", "->"),
+                ("A", "B", "<>"),
+                ("B", "D", "<>"),
+                ("B", "E", "<>"),
+                ("D", "E", "<>"),
+            ]
+        )
+        self.assertEqual(dag.to_admg(), expected)
 
     def test_numeric_node_names(self):
         """Test conversion with numeric node names"""
