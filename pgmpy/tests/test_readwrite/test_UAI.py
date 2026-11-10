@@ -151,6 +151,38 @@ class TestUAIReader:
         }
         assert dict(model.nodes) == node_expected
 
+    def test_read_scientific_notation(self):
+        uai_string = """MARKOV
+2
+2 2
+1
+2 0 1
+
+4
+1e-05 9.9999e-1 2.5E-03 1E+00"""
+        reader = UAIReader(string=uai_string)
+        model = reader.read()
+        assert reader.get_tables() == [(["var_0", "var_1"], ["1e-05", "9.9999e-1", "2.5E-03", "1E+00"])]
+        factor = model.get_factors()[0]
+        np.testing.assert_allclose(factor.values.ravel(), [1e-5, 0.99999, 2.5e-3, 1.0])
+
+    def test_read_writer_roundtrip_scientific_notation(self):
+        bayes_net = DiscreteBayesianNetwork([("A", "B")])
+        cpd_a = TabularCPD("A", 2, [[1e-5], [1 - 1e-5]])
+        cpd_b = TabularCPD(
+            "B",
+            2,
+            [[0.5, 2.5e-3], [0.5, 1 - 2.5e-3]],
+            evidence=["A"],
+            evidence_card=[2],
+        )
+        bayes_net.add_cpds(cpd_a, cpd_b)
+        writer = UAIWriter(bayes_net)
+        reader = UAIReader(string=str(writer))
+        model = reader.read()
+        assert len(model.nodes()) == 2
+        assert len(model.edges()) == 1
+
 
 @pytest.fixture
 def bayes_model(backend):

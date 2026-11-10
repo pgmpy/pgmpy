@@ -86,7 +86,11 @@ class UAIReader(BaseReader):
             function_grammar = ((integer) * int(function_scope)).set_results_name("fun_" + str(function))
             grammar += function_grammar
 
-        floatnumber = Combine(Word(nums) + Optional(Literal(".") + Optional(Word(nums))))
+        floatnumber = Combine(
+            Optional(Word("+-", exact=1))
+            + (Word(nums) + Optional(Literal(".") + Optional(Word(nums))) | Literal(".") + Word(nums))
+            + Optional(Word("eE", exact=1) + Optional(Word("+-", exact=1)) + Word(nums))
+        )
         for function in range(0, self.no_functions):
             no_values_grammar = Word(nums).set_results_name("fun_no_values_" + str(function))
             grammar += no_values_grammar
