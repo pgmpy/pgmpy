@@ -70,10 +70,11 @@ class RoysLargestRoot(_ResidualMixin, BaseCITest):
 
     _tags = {
         "name": "roys_largest_root",
-        "data_types": ("discrete", "continuous", "mixed"),
+        "data_types": ["discrete", "continuous", "mixed"],
         "default_for": None,
         "requires_data": True,
         "is_symmetric": False,
+        "capability:conditioning": True,
     }
 
     def __init__(self, data: pd.DataFrame, estimator=None, use_cache: bool = True):

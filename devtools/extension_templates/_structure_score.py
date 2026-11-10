@@ -70,16 +70,15 @@ class MyStructureScore(BaseStructureScore):
     """
 
     # Required: metadata used for auto-discovery by get_scoring_method().
+    # TODO: Set every tag. `pgmpy.registry.all_tags("structure_score")` lists them, and the tag classes in
+    #       `pgmpy/registry/_tags.py` document each tag and its allowed values.
     _tags = {
-        # Unique lowercase string key. Passed as scoring_method="my-score" by users.
         "name": "my-score",
-        # Data type this score supports. One of: "discrete", "continuous", "mixed".
-        "supported_datatype": "discrete",
-        # Set to "discrete", "continuous", or "mixed" to make this the default score
-        # for that data type. Set to None if this should not be a default.
+        "data_types": ["discrete"],
         "default_for": None,
-        # Set to True if this score estimates parameters (e.g., MLE-based penalties).
-        "is_parametric": False,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
     }
 
     def __init__(self, data, state_names=None):

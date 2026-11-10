@@ -25,11 +25,12 @@ except ImportError as e:
 
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
+from pgmpy.readwrite._base import BaseReader, BaseWriter
 from pgmpy.utils import compat_fns
 from pgmpy.utils._warnings import _warn_external
 
 
-class BIFReader:
+class BIFReader(BaseReader):
     """
     Initializes a BIFReader object.
 
@@ -43,6 +44,9 @@ class BIFReader:
 
     include_properties: boolean
         If True, gets the properties tag from the file and stores in graph properties.
+
+    state_name_type: int, str or bool (default: str)
+        The data type to which to convert the state names of the variables.
 
     Examples
     --------
@@ -60,18 +64,19 @@ class BIFReader:
     - :footcite:t:`hulten_domingos_bif`
     """
 
-    def __init__(self, path=None, string=None, include_properties=False):
-        if path:
+    format_name = "bif"
+    file_extensions = ["bif"]
+
+    def __init__(self, path=None, string=None, include_properties=False, state_name_type=str):
+        super().__init__(path=path, string=string)
+        if path is not None:
             with open(path) as network:
                 self.network = network.read()
-
-        elif string:
+        else:
             self.network = string
 
-        else:
-            raise ValueError("Must specify either path or string")
-
         self.include_properties = include_properties
+        self.state_name_type = state_name_type
 
         if "/*" in self.network or "//" in self.network:
             # removing comments from the file
@@ -250,14 +255,9 @@ class BIFReader:
 
         return probability_expr, cpd_expr
 
-    def get_model(self, state_name_type=str):
+    def read(self):
         """
         Returns the Bayesian Model read from the file/str.
-
-        Parameters
-        ----------
-        state_name_type: int, str or bool (default: str)
-            The data type to which to convert the state names of the variables.
 
         Examples
         --------
@@ -267,9 +267,10 @@ class BIFReader:
         >>> writer = BIFWriter(asia)
         >>> bif_str = str(writer)
         >>> reader = BIFReader(string=bif_str)
-        >>> reader.get_model() # doctest: +ELLIPSIS
+        >>> reader.read() # doctest: +ELLIPSIS
         <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork object at 0x...>
         """
+        state_name_type = self.state_name_type
         model = DiscreteBayesianNetwork()
         model.add_nodes_from(self.variable_names)
         model.add_edges_from(self.variable_edges)
@@ -303,7 +304,7 @@ class BIFReader:
         return model
 
 
-class BIFWriter:
+class BIFWriter(BaseWriter):
     """
     Initialise a BIFWriter Object
 
@@ -325,10 +326,12 @@ class BIFWriter:
     >>> writer.write("asia.bif")
     """
 
+    format_name = "bif"
+    file_extensions = ["bif"]
+    supported_models = (DiscreteBayesianNetwork,)
+
     def __init__(self, model, round_values=None):
-        if not isinstance(model, DiscreteBayesianNetwork):
-            raise TypeError("model must be an instance of DiscreteBayesianNetwork")
-        self.model = model
+        super().__init__(model)
         self.round_values = round_values
         if not self.model.name:
             self.network_name = "unknown"
@@ -594,26 +597,6 @@ $values
         for cpd in cpds:
             tables[cpd.variable] = compat_fns.to_numpy(cpd.values.ravel(), decimals=self.round_values)
         return tables
-
-    def write(self, filename):
-        """
-        Writes the BIF data into a file
-
-        Parameters
-        ----------
-        filename : Name of the file
-
-        Examples
-        --------
-        >>> from pgmpy.example_models import load_model
-        >>> from pgmpy.readwrite import BIFReader, BIFWriter
-        >>> asia = load_model("bnlearn/asia")
-        >>> writer = BIFWriter(asia)
-        >>> writer.write(filename="asia.bif")
-        """
-        writer = self.__str__()
-        with open(filename, "w") as fout:
-            fout.write(writer)
 
     def write_bif(self, filename):
         _warn_external(

@@ -8,11 +8,12 @@ import networkx as nx
 
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
+from pgmpy.readwrite._base import BaseReader, BaseWriter
 from pgmpy.utils import compat_fns
 from pgmpy.utils._warnings import _warn_external
 
 
-class XDSLReader:
+class XDSLReader(BaseReader):
     """
     Initializes the reader object for XDSL file formats[1] created through GeNIe[2].
     Note that XDSLReader only supports cpt blocks from the XDSL file format; elements like
@@ -26,6 +27,9 @@ class XDSLReader:
     string : str
         A string containing the XDSL file content.
 
+    state_name_type: int, str or bool (default: str)
+        The data type to which to convert the state names of the variables.
+
     Examples
     --------
     >>> from pgmpy.readwrite import XDSLReader, XDSLWriter
@@ -33,7 +37,7 @@ class XDSLReader:
     >>> asia = load_model("bnlearn/asia")
     >>> XDSLWriter(asia).write("asia_test.xdsl")
     >>> reader = XDSLReader("asia_test.xdsl")
-    >>> model = reader.get_model()
+    >>> model = reader.read()
 
     References
     ----------
@@ -41,13 +45,16 @@ class XDSLReader:
     - :footcite:t:`bayesfusion_genie`
     """
 
-    def __init__(self, path=None, string=None):
-        if path:
+    format_name = "xdsl"
+    file_extensions = ["xdsl"]
+
+    def __init__(self, path=None, string=None, state_name_type=str):
+        super().__init__(path=path, string=string)
+        if path is not None:
             self.network = etree.ElementTree(file=path).getroot()
-        elif string:
-            self.network = etree.fromstring(string)
         else:
-            raise ValueError("Must specify either path or string")
+            self.network = etree.fromstring(string)
+        self.state_name_type = state_name_type
         self.network_name = self.network.attrib["id"]
         self.cpt_elements = self.network.find("nodes").findall("cpt")
         self.variables = self.get_variables()
@@ -169,14 +176,9 @@ class XDSLReader:
             variable_CPD[cpt.attrib["id"]] = cpd_arr
         return variable_CPD
 
-    def get_model(self, state_name_type=str):
+    def read(self):
         """
         Returns a Bayesian Network instance from the file/string.
-
-        Parameters
-        ----------
-        state_name_type: int, str, or bool (default: str)
-            The data type to which to convert the state names of the variables.
 
         Returns
         -------
@@ -188,8 +190,9 @@ class XDSLReader:
         >>> from pgmpy.example_models import load_model
         >>> XDSLWriter(load_model("bnlearn/asia")).write("asia_test.xdsl")
         >>> reader = XDSLReader("asia_test.xdsl")
-        >>> model = reader.get_model()
+        >>> model = reader.read()
         """
+        state_name_type = self.state_name_type
         model = DiscreteBayesianNetwork()
         model.add_nodes_from(self.variables)
         model.add_edges_from(self.edge_list)
@@ -216,7 +219,7 @@ class XDSLReader:
         return model
 
 
-class XDSLWriter:
+class XDSLWriter(BaseWriter):
     """
     Initialise a XDSL writer object to export pgmpy models to XDSL file format[1] used by GeNIe[2].
 
@@ -251,6 +254,10 @@ class XDSLWriter:
     - :footcite:t:`bayesfusion_genie`
     """
 
+    format_name = "xdsl"
+    file_extensions = ["xdsl"]
+    supported_models = (DiscreteBayesianNetwork,)
+
     def __init__(
         self,
         model,
@@ -259,9 +266,7 @@ class XDSLWriter:
         disc_samples="0",
         encoding="utf-8",
     ):
-        if not isinstance(model, DiscreteBayesianNetwork):
-            raise TypeError("model must an instance of DiscreteBayesianNetwork")
-        self.model = model
+        super().__init__(model)
         self.encoding = encoding
         self.network_id = network_id
         self.root = etree.Element(
@@ -421,7 +426,18 @@ class XDSLWriter:
                 {"active": "true", "width": "128", "height": "128"},
             )
 
-    def write(self, filename=None):
+    def _to_bytes(self):
+        xml_str = etree.tostring(self.root, encoding=self.encoding)
+        parsed = md.parseString(xml_str)
+        return parsed.toprettyxml(indent="    ", encoding=self.encoding)
+
+    def __str__(self):
+        """
+        Return the XDSL as string.
+        """
+        return self._to_bytes().decode(self.encoding)
+
+    def write(self, filename):
         """
         Write the xdsl data into the file.
 
@@ -437,13 +453,8 @@ class XDSLWriter:
         >>> writer = XDSLWriter(model)
         >>> writer.write("asia.xdsl")
         """
-        xml_str = etree.tostring(self.root, encoding=self.encoding)
-        parsed = md.parseString(xml_str)
-        pretty_xml_str = parsed.toprettyxml(indent="    ", encoding=self.encoding)
-
-        if filename is not None:
-            with open(filename, "wb") as f:
-                f.write(pretty_xml_str)
+        with open(filename, "wb") as f:
+            f.write(self._to_bytes())
 
     def write_xdsl(self, filename):
         _warn_external(
