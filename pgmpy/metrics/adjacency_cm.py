@@ -92,7 +92,7 @@ class AdjacencyConfusionMatrix(BaseSupervisedMetric):
     def _evaluate(self, true_causal_graph, est_causal_graph):
         """Evaluate adjacency confusion matrix metrics."""
         # Step 1: Get adjacency matrices for both graphs
-        nodes_list = sorted(true_causal_graph.nodes())
+        nodes_list = list(true_causal_graph.nodes())
         true_adj = nx.adjacency_matrix(true_causal_graph, nodelist=nodes_list, weight=None).todense()
         est_adj = nx.adjacency_matrix(est_causal_graph, nodelist=nodes_list, weight=None).todense()
 
