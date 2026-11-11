@@ -152,10 +152,12 @@ class DirectLiNGAM(BaseCausalDiscovery):
             var = float(np.var(x))
         if var <= 0.0:
             return True
-        scale = float(np.mean(x**2))
-        if scale == 0.0:
+        if float(np.ptp(x)) == 0.0:
             return True
-        return bool(var <= np.finfo(float).eps * scale)
+        mean_abs = float(np.abs(np.mean(x)))
+        if mean_abs > 0.0 and var <= (np.finfo(float).eps * mean_abs) ** 2:
+            return True
+        return False
 
     @staticmethod
     def _entropy(u: np.ndarray) -> float:
@@ -269,11 +271,7 @@ class DirectLiNGAM(BaseCausalDiscovery):
         elif self.measure == "mutual_info":
             from sklearn.feature_selection import mutual_info_regression
 
-            mi_seed = (
-                int(self.random_state)
-                if isinstance(self.random_state, (int, np.integer))
-                else (int(rng.integers(0, 2**31 - 1)) if self.random_state is not None else None)
-            )
+            mi_seed = int(rng.integers(0, 2**31 - 1)) if self.random_state is not None else None
 
             scores = []
             for i in U:
@@ -371,8 +369,12 @@ class DirectLiNGAM(BaseCausalDiscovery):
             predictors = self.causal_order_[:i]
             reg = LinearRegression(fit_intercept=True)
             reg.fit(X[predictors], X[target])
+            target_std = float(np.std(X[target]))
             for pred, coef in zip(predictors, reg.coef_):
-                if coef != 0.0 and not np.isclose(coef, 0.0) and abs(coef) >= self.threshold:
+                pred_std = float(np.std(X[pred]))
+                scale = target_std / (pred_std if pred_std > 0 else 1.0)
+                noise_tol = np.finfo(float).eps * scale
+                if abs(coef) > noise_tol and abs(coef) >= self.threshold:
                     B.loc[target, pred] = float(coef)
                     causal_graph.add_edge(pred, target, weight=float(coef))
 

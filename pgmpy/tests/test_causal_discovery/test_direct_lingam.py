@@ -316,3 +316,35 @@ def test_mutual_info_reproducibility(synthetic_3node_data, rs_factory):
     assert set(est1.causal_graph_.edges()) == set(est2.causal_graph_.edges())
     pd.testing.assert_frame_equal(est1.B_, est2.B_)
     pd.testing.assert_frame_equal(est1.adjacency_matrix_, est2.adjacency_matrix_)
+
+
+def test_large_offset_variables():
+    """Verify variables with large means (~1e8) and unit variance are not falsely identified as constant."""
+    rng = np.random.default_rng(42)
+    n = 2000
+    x = 1e8 + rng.uniform(-2, 2, n)
+    y = 1e8 + 1.5 * (x - 1e8) + rng.laplace(0, 1, n)
+    data = pd.DataFrame({"X": x, "Y": y})
+    est = DirectLiNGAM(random_state=42, threshold=0.1).fit(data)
+    assert est.causal_order_ == ["X", "Y"]
+    assert set(est.causal_graph_.edges()) == {("X", "Y")}
+
+
+def test_64bit_seed_mutual_info(synthetic_3node_data):
+    """Verify 64-bit integer seed (> 2**31 - 1) works with measure='mutual_info'."""
+    est = DirectLiNGAM(random_state=2**32, measure="mutual_info", threshold=0.1).fit(synthetic_3node_data)
+    assert len(est.causal_order_) == 3
+    assert isinstance(est.causal_graph_, DAG)
+
+
+def test_small_nonzero_coefficient():
+    """Verify small nonzero coefficients (1e-9) are kept when threshold allows them."""
+    rng = np.random.default_rng(42)
+    n = 2000
+    scale = 1e-9
+    x = rng.uniform(-2, 2, n)
+    y = scale * x + rng.laplace(0, 0.1, n) * scale
+    data = pd.DataFrame({"X": x, "Y": y})
+    est = DirectLiNGAM(random_state=42, threshold=1e-10).fit(data)
+    assert ("X", "Y") in est.causal_graph_.edges()
+    assert est.B_.loc["Y", "X"] != 0.0
