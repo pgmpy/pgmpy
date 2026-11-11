@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from collections.abc import Callable, Hashable, Iterable, Mapping
 from numbers import Integral, Real
 
@@ -96,8 +97,20 @@ class CausalInfluenceDiagram(DAG):
         return list(nodes)
 
     def add_node(self, node_for_adding: Hashable, **attr):
-        current_role = self.nodes[node_for_adding].get("role", "chance") if self.has_node(node_for_adding) else "chance"
-        role = attr.pop("role", current_role)
+        has_role = self.has_node(node_for_adding) and "role" in self.nodes[node_for_adding]
+        new_role = attr.pop("role", None)
+
+        if has_role:
+            role = self.nodes[node_for_adding]["role"]
+
+            if new_role is not None and new_role != role:
+                warnings.warn(
+                    f"Overwriting role of node {node_for_adding!r} from {role!r} to {new_role!r}.",
+                    UserWarning,
+                )
+                role = new_role
+        else:
+            role = new_role or "chance"
 
         if not isinstance(role, str) or role not in self._NODE_ROLES:
             raise ValueError(f"role must be one of {sorted(self._NODE_ROLES)}, but got {role!r}.")

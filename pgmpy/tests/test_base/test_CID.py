@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -59,6 +61,8 @@ def test_roles_default_to_chance_and_can_be_declared():
     assert cid.chance_nodes == ["Health"]
     assert cid.decision_nodes == ["Treatment"]
     assert cid.utility_nodes == ["Utility"]
+
+    warnings.simplefilter("always")
 
     cid.add_node("Age")
     cid.add_node("Risk", role="chance")
