@@ -60,10 +60,7 @@ class GCM(_ResidualMixin, BaseCITest):
     def __init__(self, data: pd.DataFrame, estimator=None, use_cache: bool = True):
         self.data, self.dtypes = preprocess_data(data)
         self.estimator = LinearRegression() if estimator is None else estimator
-
         super().__init__(use_cache=use_cache)
-        if isinstance(self.estimator, LinearRegression):
-            self.set_tags(**{"assumption:linearity": True})
 
     def _compute_result(
         self,

@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from skbase.lookup import all_objects
+from sklearn.base import BaseEstimator
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery import ANM, GES, IGCI, PC, BootstrapEstimator, ChowLiu, ExpertInLoop
@@ -98,7 +99,7 @@ def test_fit_narrowing_handles_untagged_and_wider_objects():
 
     pc = PC(ci_test=UntaggedCITest()).fit(data)
     assert pc.get_tag("data_types") == ["discrete", "continuous", "mixed"]
-    assert pc.get_tag("assumption:linearity") is False
+    assert pc.get_tag("assumption:linearity") is None
 
     class AnyDataScore(BaseBivariateScore):
         _tags = {"name": "any_data", "input_type": "cause_residual", "data_types": ["discrete", "continuous", "mixed"]}
@@ -108,7 +109,7 @@ def test_fit_narrowing_handles_untagged_and_wider_objects():
 
     anm = ANM(scoring_method=AnyDataScore()).fit(data)
     assert anm.get_tag("data_types") == ["continuous"]
-    assert anm.get_tag("assumption:linearity") is False
+    assert anm.get_tag("assumption:linearity") is None
 
     class UntaggedAlgorithm(BaseCausalDiscovery):
         def _fit(self, X):
@@ -185,3 +186,24 @@ def test_filter_algorithms_by_tags():
         )
     }
     assert dag_learners == {"BootstrapEstimator", "ExpertInLoop", "VarSort", "R2Sort"}
+
+
+def test_fit_propagates_unknown_assumption():
+    rng = np.random.default_rng(0)
+    data = pd.DataFrame(rng.standard_normal((100, 3)), columns=["X", "Y", "Z"])
+
+    class DummyEstimator(BaseEstimator):
+        def fit(self, X, y):
+            return self
+
+        def predict(self, X):
+            return np.zeros(len(X))
+
+    from pgmpy.causal_discovery import PC
+    from pgmpy.ci_tests import GCM
+
+    gcm = GCM(data=data, estimator=DummyEstimator())
+    assert gcm.get_tag("assumption:linearity") is None
+
+    pc = PC(ci_test=gcm, show_progress=False).fit(data)
+    assert pc.get_tag("assumption:linearity") is None

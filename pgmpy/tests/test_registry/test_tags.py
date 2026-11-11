@@ -37,8 +37,11 @@ def test_object_tags_are_registered_and_valid(cls):
     tags = cls.get_class_tags()
     assert tags.keys() == {tag[0] for tag in all_tags(tags["object_type"])}
     assert tags["name"] == tags["name"].lower()
+    tag_types = {tag[0]: tag[2] for tag in TAG_REGISTER}
     for tag_name, tag_value in tags.items():
         check_tag_is_valid(tag_name, tag_value)
+        if tag_types[tag_name] == "bool":
+            assert tag_value is not None, f"CLass '{cls.__name__}' left boolean tag '{tag_name} as None"
 
 
 @pytest.mark.parametrize("object_type", OBJECT_TYPES)
@@ -52,8 +55,9 @@ def test_check_tag_is_valid():
     check_tag_is_valid("default_for", None)
     with pytest.raises(KeyError):
         check_tag_is_valid("not_a_tag", True)
-    with pytest.raises(ValueError, match="must be a bool"):
-        check_tag_is_valid("assumption:linearity", None)
+    check_tag_is_valid("assumption:linearity", None)
+    with pytest.raises(ValueError, match="must be a bool or None"):
+        check_tag_is_valid("assumption:linearity", "invalid_value")
     with pytest.raises(ValueError, match="must be one of"):
         check_tag_is_valid("identifiable_graph", "text")
 

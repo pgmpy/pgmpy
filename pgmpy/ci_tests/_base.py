@@ -126,6 +126,26 @@ class _ResidualMixin:
 
         return residual, estimator
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._set_linearity_assumption_tag()
+
+    def _set_linearity_assumption_tag(self):
+        """Set the 'assumption:linearity' tag based on the estimator type."""
+        est = getattr(self, "estimator", None)
+
+        is_linear = any(cls.__module__.startswith("sklearn.linear_model") for cls in type(est).__mro__)
+        if is_linear:
+            self.set_tags(**{"assumption:linearity": True})
+            return
+
+        is_sklearn = type(est).__module__.startswith("sklearn.")
+        if is_sklearn:
+            self.set_tags(**{"assumption:linearity": False})
+            return
+
+        self.set_tags(**{"assumption:linearity": None})
+
 
 @dataclass(frozen=True)
 class _CITestResult:
