@@ -26,12 +26,15 @@ class _TimeSeriesCoreGraph(_CoreGraph):
 
     def __init__(
         self,
+        edge_list: Iterable[tuple] | None = None,
         tau_max: int | None = None,
     ):
         # Must precede the super().__init__(): the inherited consturctor adds the edges by calling self.add_edge(),
         # which is overridden below and reads this state.
         self._set_tau_max(tau_max)
-        super().__init__()
+        super().__init__(
+            edge_list=edge_list,
+        )
 
     def _set_tau_max(self, tau_max: int | None) -> None:
         if tau_max is not None:
