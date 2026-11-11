@@ -370,7 +370,7 @@ class DirectLiNGAM(BaseCausalDiscovery):
             for pred, coef in zip(predictors, reg.coef_):
                 pred_std = float(np.std(X[pred]))
                 scale = target_std / (pred_std if pred_std > 0 else 1.0)
-                noise_tol = np.finfo(float).eps * scale
+                noise_tol = 100 * len(X) * np.finfo(float).eps * scale
                 if abs(coef) > noise_tol and abs(coef) >= self.threshold:
                     B.loc[target, pred] = float(coef)
                     causal_graph.add_edge(pred, target, weight=float(coef))
