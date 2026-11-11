@@ -112,13 +112,12 @@ class DirectLiNGAM(BaseCausalDiscovery):
     """
 
     _tags = {
-        "object_type": "causal_discovery",
-        "name": "DirectLiNGAM",
+        "name": "direct_lingam",
         "data_types": ["continuous"],
         "identifiable_graph": "dag",
         "requires_target": False,
         "capability:multivariate": True,
-        "capability:expert_knowledge": False,
+        "capability:expert_knowledge": [],
         "assumption:causal_sufficiency": True,
         "assumption:acyclicity": True,
         "assumption:faithfulness": True,
@@ -331,9 +330,7 @@ class DirectLiNGAM(BaseCausalDiscovery):
             self.causal_order_ = feature_names
             self.causal_graph_ = DAG()
             self.causal_graph_.add_nodes_from(feature_names)
-            self.adjacency_matrix_ = self.causal_graph_.to_adjacency(
-                encoding="binary", nodelist=feature_names
-            )
+            self.adjacency_matrix_ = self.causal_graph_.to_adjacency(encoding="binary", nodelist=feature_names)
             self.B_ = pd.DataFrame(0.0, index=feature_names, columns=feature_names)
             return self
 
