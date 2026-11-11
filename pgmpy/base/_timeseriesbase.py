@@ -157,3 +157,23 @@ class _TimeSeriesCoregraph(_Coregraph):
             else:
                 edges.append((u, v, edge_type) if data else (u, v))
         return edges
+
+    def get_lag(self, u: Hashable, v: Hashable) -> int:
+        u_stored, v_stored, _ = self._normalize_edge(u, v, None)
+        if not super().has_edge(u_stored, v_stored):
+            raise ValueError(f"No such edge: {u} -- {v}")
+        return -u_stored[1]
+
+    def get_parents_by_lag(self, variable: Hashable) -> dict[int, list]:
+        variable = self._normalize_node(variable)[0]
+        if not super().has_node((variable, 0)):
+            raise ValueError(f"Variable not in the graph: {variable}.")
+        parents: dict[int, list] = {}
+        for parent in _Coregraph.get_parents(self, (variable, 0)):
+            parents.setdefault(-parent[1], []).append(parent[0])
+        return {lag: sorted(variables, key=str) for lag, variables in sorted(parents.items())}
+
+    def from_adjacency(cls, adj, encoding: str = "tigramite", variables: Iterable[Hashable] | None = None):
+        """
+        In progress.
+        """
