@@ -806,7 +806,7 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
         >>> model.fit(train_data)  # doctest: +ELLIPSIS
         <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork object at 0x...>
         >>> predict_data = predict_data.copy()
-        >>> predict_data.drop("E", axis=1, inplace=True)
+        >>> predict_data = predict_data.drop(columns="E")
         >>> approx_inf_parameters = {"n_samples": int(1e3), "rng": 42}
         >>> y_pred = model.predict(
         ...     predict_data, algo=ApproxInference, **approx_inf_parameters
@@ -901,7 +901,7 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
         >>> model.fit(values)  # doctest: +ELLIPSIS
         <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork object at 0x...>
         >>> predict_data = predict_data.copy()
-        >>> predict_data.drop("B", axis=1, inplace=True)
+        >>> predict_data = predict_data.drop(columns="B")
         >>> y_prob = model.predict_probability(predict_data)
         >>> y_prob.shape
         (20, 2)
@@ -1709,7 +1709,7 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
                     samples[variable.split("*")[0] + "_full"] = samples.loc[:, variable.split("*")[0]]
 
                 samples.loc[samples[variable] == 1, variable.split("*")[0]] = np.nan
-                samples.drop(columns=[variable], inplace=True)
+                samples = samples.drop(columns=[variable])
 
         # Step 7: Postprocess and return
         if include_latents:

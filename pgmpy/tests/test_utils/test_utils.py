@@ -3,6 +3,7 @@ import unittest
 
 import numpy as np
 import pandas as pd
+import pytest
 from tqdm.auto import tqdm
 
 from pgmpy.models import LinearGaussianBayesianNetwork
@@ -10,8 +11,20 @@ from pgmpy.utils import (
     discretize,
     get_example_model,
     preprocess_data,
+    to_timeseries_format,
 )
 from pgmpy.utils.mathext import sample_discrete
+
+
+@pytest.mark.filterwarnings(r"error:The inplace keyword in DataFrame\.sort_index is deprecated")
+def test_to_timeseries_format_sorted():
+    data = pd.DataFrame([[10, 20, 30]], columns=[("B", 0), ("A", 1), ("A", 0)])
+    expected = pd.DataFrame(
+        [[30, 20, 10]],
+        columns=pd.MultiIndex.from_tuples([("A", 0), ("A", 1), ("B", 0)], names=["variable", "time"]),
+    )
+
+    pd.testing.assert_frame_equal(to_timeseries_format(data, return_format="sorted"), expected)
 
 
 class TestDiscretization(unittest.TestCase):

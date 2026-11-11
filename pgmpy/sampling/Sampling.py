@@ -137,7 +137,7 @@ class BayesianModelSampling(BayesianModelInference):
             partial_samples.columns.tolist() if partial_samples is not None else [],
         )
         if not include_latents and any(latent in samples_df.columns for latent in self.model.latents):
-            samples_df.drop(self.model.latents, axis=1, inplace=True)
+            samples_df = samples_df.drop(columns=self.model.latents)
         return samples_df
 
     @_rename_to_rng("seed")
@@ -261,7 +261,7 @@ class BayesianModelSampling(BayesianModelInference):
 
         sampled = sampled.reset_index(drop=True)
         if not include_latents:
-            sampled.drop(self.model.latents, axis=1, inplace=True)
+            sampled = sampled.drop(columns=self.model.latents)
         return sampled
 
     @_rename_to_rng("seed")
@@ -395,7 +395,7 @@ class BayesianModelSampling(BayesianModelInference):
         # Postprocess the samples: Change state numbers to names, remove latents.
         samples_df = _return_samples(sampled, self.state_names_map)
         if not include_latents:
-            samples_df.drop(self.model.latents, axis=1, inplace=True)
+            samples_df = samples_df.drop(columns=self.model.latents)
         return samples_df
 
 
@@ -571,7 +571,7 @@ class GibbsSampling(MarkovChain):
 
         samples_df = _return_samples(sampled)
         if not include_latents:
-            samples_df.drop(self.latents, axis=1, inplace=True)
+            samples_df = samples_df.drop(columns=self.latents)
         return samples_df
 
     @_rename_to_rng("seed")

@@ -202,7 +202,7 @@ class BaseDataset(BaseObject):
         df = cls._read_table(usecols=usecols)
 
         if cls.get_class_tag("has_index_col"):
-            df.drop(df.columns[0], axis=1, inplace=True)
+            df = df.drop(columns=df.columns[0])
 
         return cls._subsample(df, n_samples=n_samples, rng=rng)
 
