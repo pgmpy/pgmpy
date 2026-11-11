@@ -7,7 +7,7 @@ import numpy as np
 from pgmpy.base._base import _CoreGraph
 
 
-class _TimeSeriesCoregraph(_CoreGraph):
+class _TimeSeriesCoreGraph(_CoreGraph):
     """
     Base class for all time-series graph types in pgmpy.
 
