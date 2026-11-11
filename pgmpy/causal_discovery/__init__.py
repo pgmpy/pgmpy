@@ -1,6 +1,7 @@
 from .ANM import ANM
 from .BootstrapEstimator import BootstrapEstimator
 from .ChowLiu import ChowLiu
+from .DirectLiNGAM import DirectLiNGAM
 from .ExpertInLoop import ExpertInLoop
 from .ExpertKnowledge import ExpertKnowledge
 from .GES import GES
@@ -18,6 +19,7 @@ __all__ = [
     "ANM",
     "BootstrapEstimator",
     "ChowLiu",
+    "DirectLiNGAM",
     "ExpertInLoop",
     "ExpertKnowledge",
     "GES",
