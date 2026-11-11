@@ -4,10 +4,10 @@ from collections.abc import Hashable, Iterable
 
 import numpy as np
 
-from pgmpy.base._base import _Coregraph
+from pgmpy.base._base import _CoreGraph
 
 
-class _TimeSeriesCoregraph(_Coregraph):
+class _TimeSeriesCoregraph(_CoreGraph):
     """
     Base class for all time-series graph types in pgmpy.
 
@@ -169,7 +169,7 @@ class _TimeSeriesCoregraph(_Coregraph):
         if not super().has_node((variable, 0)):
             raise ValueError(f"Variable not in the graph: {variable}.")
         parents: dict[int, list] = {}
-        for parent in _Coregraph.get_parents(self, (variable, 0)):
+        for parent in _CoreGraph.get_parents(self, (variable, 0)):
             parents.setdefault(-parent[1], []).append(parent[0])
         return {lag: sorted(variables, key=str) for lag, variables in sorted(parents.items())}
 
