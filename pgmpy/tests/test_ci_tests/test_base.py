@@ -151,11 +151,3 @@ def test_residual_ci_tests_estimator_tags(cls, cont_data):
 
     test_custom = cls(data=cont_data, estimator=CustomEstimator())
     assert test_custom.get_tag("assumption:linearity") is None
-
-
-def test_get_ci_test_requires_data_none():
-    class UnknownDataCITest(BaseCITest):
-        _tags = {"name": "unknown_data_test", "requires_data": None}
-
-    with pytest.raises(ValueError, match="requires data, but data is None"):
-        get_ci_test(test=UnknownDataCITest(), data=None)

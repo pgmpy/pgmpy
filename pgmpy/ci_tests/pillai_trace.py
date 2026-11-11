@@ -88,7 +88,6 @@ class PillaiTrace(_ResidualMixin, BaseCITest):
         self.data, self.dtypes = preprocess_data(data)
         self.estimator = estimator
         super().__init__(use_cache=use_cache)
-        self._set_linearity_assumption_tag()
 
     def _compute_result(
         self,
