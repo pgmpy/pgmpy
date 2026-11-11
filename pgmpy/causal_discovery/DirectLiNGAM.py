@@ -146,6 +146,18 @@ class DirectLiNGAM(BaseCausalDiscovery):
         return tags
 
     @staticmethod
+    def _is_zero_variance(x: np.ndarray, var: float | None = None) -> bool:
+        """Scale-aware check if variable x has zero variance."""
+        if var is None:
+            var = float(np.var(x))
+        if var <= 0.0:
+            return True
+        scale = float(np.mean(x**2))
+        if scale == 0.0:
+            return True
+        return bool(var <= np.finfo(float).eps * scale)
+
+    @staticmethod
     def _entropy(u: np.ndarray) -> float:
         """Approximate differential entropy of standardized 1D array u (Hyvärinen & Smith, 2013)."""
         Hv = (1.0 + np.log(2.0 * np.pi)) / 2.0
@@ -161,10 +173,18 @@ class DirectLiNGAM(BaseCausalDiscovery):
 
     def _diff_mutual_info(self, xi_std: np.ndarray, xj_std: np.ndarray, ri_j: np.ndarray, rj_i: np.ndarray) -> float:
         """Calculate the difference of mutual informations for candidate direction."""
-        std_ri = np.std(ri_j)
-        std_rj = np.std(rj_i)
-        ri_j_std = (ri_j - np.mean(ri_j)) / (std_ri if std_ri > 1e-12 else 1.0)
-        rj_i_std = (rj_i - np.mean(rj_i)) / (std_rj if std_rj > 1e-12 else 1.0)
+        std_ri = float(np.std(ri_j))
+        std_rj = float(np.std(rj_i))
+        ri_j_std = (
+            (ri_j - np.mean(ri_j)) / std_ri
+            if not self._is_zero_variance(ri_j, std_ri**2) and std_ri > 0
+            else np.zeros_like(ri_j)
+        )
+        rj_i_std = (
+            (rj_i - np.mean(rj_i)) / std_rj
+            if not self._is_zero_variance(rj_i, std_rj**2) and std_rj > 0
+            else np.zeros_like(rj_i)
+        )
         return (self._entropy(xj_std) + self._entropy(ri_j_std)) - (self._entropy(xi_std) + self._entropy(rj_i_std))
 
     @staticmethod
@@ -195,7 +215,7 @@ class DirectLiNGAM(BaseCausalDiscovery):
     @staticmethod
     def _residual(xi: np.ndarray, xj: np.ndarray, cov_ij: float, var_j: float) -> np.ndarray:
         """The residual when xi is regressed on xj."""
-        if var_j <= 1e-12:
+        if DirectLiNGAM._is_zero_variance(xj, var_j):
             return xi.copy()
         return xi - (cov_ij / var_j) * xj
 
@@ -211,7 +231,10 @@ class DirectLiNGAM(BaseCausalDiscovery):
                 xi = X_mat[:, i]
                 s = float(np.std(xi))
                 vars_u[i] = s**2
-                X_std[i] = (xi - np.mean(xi)) / (s if s > 1e-12 else 1.0)
+                if self._is_zero_variance(xi, vars_u[i]):
+                    X_std[i] = np.zeros_like(xi)
+                else:
+                    X_std[i] = (xi - np.mean(xi)) / s
 
             penalties = []
             for i in U:
@@ -246,6 +269,12 @@ class DirectLiNGAM(BaseCausalDiscovery):
         elif self.measure == "mutual_info":
             from sklearn.feature_selection import mutual_info_regression
 
+            mi_seed = (
+                int(self.random_state)
+                if isinstance(self.random_state, (int, np.integer))
+                else (int(rng.integers(0, 2**31 - 1)) if self.random_state is not None else None)
+            )
+
             scores = []
             for i in U:
                 M = 0.0
@@ -259,7 +288,7 @@ class DirectLiNGAM(BaseCausalDiscovery):
                         mi = mutual_info_regression(
                             xi[:, None],
                             rj_i,
-                            random_state=self.random_state if isinstance(self.random_state, int) else None,
+                            random_state=mi_seed,
                         )[0]
                         M += float(mi)
                 scores.append(M)
@@ -277,20 +306,37 @@ class DirectLiNGAM(BaseCausalDiscovery):
         if self.measure not in ("pwling", "kernel", "mutual_info"):
             raise ValueError(f"measure must be one of 'pwling', 'kernel', 'mutual_info'. Got: {self.measure!r}")
 
-        if self.threshold is not None and self.threshold < 0:
-            raise ValueError(f"threshold must be non-negative. Got: {self.threshold}")
+        if (
+            self.threshold is None
+            or not isinstance(self.threshold, (int, float, np.number))
+            or not np.isfinite(self.threshold)
+            or self.threshold < 0
+        ):
+            raise ValueError(f"threshold must be non-negative and finite. Got: {self.threshold!r}")
 
-        rng = np.random.default_rng(self.random_state)
-        n_features = len(self.feature_names_in_)
+        if isinstance(self.random_state, np.random.RandomState):
+            rng = np.random.default_rng(int(self.random_state.randint(0, 2**31 - 1)))
+        elif isinstance(self.random_state, np.random.Generator):
+            rng = self.random_state
+        else:
+            rng = np.random.default_rng(self.random_state)
+
+        if isinstance(X, pd.DataFrame):
+            feature_names = list(X.columns)
+        elif hasattr(self, "feature_names_in_"):
+            feature_names = list(self.feature_names_in_)
+        else:
+            feature_names = [f"x{i}" for i in range(X.shape[1])]
+        n_features = len(feature_names)
 
         if n_features == 1:
-            self.causal_order_ = list(self.feature_names_in_)
+            self.causal_order_ = feature_names
             self.causal_graph_ = DAG()
-            self.causal_graph_.add_nodes_from(self.causal_order_)
+            self.causal_graph_.add_nodes_from(feature_names)
             self.adjacency_matrix_ = self.causal_graph_.to_adjacency(
-                encoding="binary", nodelist=list(self.feature_names_in_)
+                encoding="binary", nodelist=feature_names
             )
-            self.B_ = pd.DataFrame(0.0, index=self.feature_names_in_, columns=self.feature_names_in_)
+            self.B_ = pd.DataFrame(0.0, index=feature_names, columns=feature_names)
             return self
 
         X_mat = X.to_numpy(dtype=float, copy=True)
@@ -304,7 +350,7 @@ class DirectLiNGAM(BaseCausalDiscovery):
             # Remove effect of X_m on remaining variables by linear regression residuals
             xm = X_mat[:, m]
             var_xm = float(np.var(xm))
-            if var_xm > 1e-12:
+            if not self._is_zero_variance(xm, var_xm):
                 for j in U:
                     if j != m:
                         xj = X_mat[:, j]
@@ -313,12 +359,12 @@ class DirectLiNGAM(BaseCausalDiscovery):
             U.remove(m)
 
         order_indices.append(U[0])
-        self.causal_order_ = [self.feature_names_in_[i] for i in order_indices]
+        self.causal_order_ = [feature_names[i] for i in order_indices]
 
         # Compute strictly lower triangular connection matrix B and DAG
-        B = pd.DataFrame(0.0, index=self.feature_names_in_, columns=self.feature_names_in_)
+        B = pd.DataFrame(0.0, index=feature_names, columns=feature_names)
         causal_graph = DAG()
-        causal_graph.add_nodes_from(self.feature_names_in_)
+        causal_graph.add_nodes_from(feature_names)
 
         for i in range(1, len(self.causal_order_)):
             target = self.causal_order_[i]
@@ -326,13 +372,13 @@ class DirectLiNGAM(BaseCausalDiscovery):
             reg = LinearRegression(fit_intercept=True)
             reg.fit(X[predictors], X[target])
             for pred, coef in zip(predictors, reg.coef_):
-                if abs(coef) >= self.threshold:
+                if coef != 0.0 and not np.isclose(coef, 0.0) and abs(coef) >= self.threshold:
                     B.loc[target, pred] = float(coef)
                     causal_graph.add_edge(pred, target, weight=float(coef))
 
         self.B_ = B
         self.causal_graph_ = causal_graph
-        self.adjacency_matrix_ = causal_graph.to_adjacency(encoding="binary", nodelist=list(self.feature_names_in_))
+        self.adjacency_matrix_ = causal_graph.to_adjacency(encoding="binary", nodelist=feature_names)
         return self
 
     def fit(self, X: pd.DataFrame, y=None) -> "DirectLiNGAM":

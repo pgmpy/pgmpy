@@ -67,6 +67,7 @@ Order-Based Discovery
    :toctree: generated/structure_learning
    :template: autosummary/class.rst
 
+   ~pgmpy.causal_discovery.DirectLiNGAM
    ~pgmpy.causal_discovery.R2Sort
    ~pgmpy.causal_discovery.VarSort
 

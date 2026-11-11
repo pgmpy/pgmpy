@@ -161,7 +161,7 @@ def test_validation_and_edge_cases():
         DirectLiNGAM(measure="invalid").fit(pd.DataFrame({"A": [1.0, 2.0], "B": [3.0, 4.0]}))
 
     # Negative threshold
-    with pytest.raises(ValueError, match="threshold must be non-negative"):
+    with pytest.raises(ValueError, match="threshold must be non-negative and finite"):
         DirectLiNGAM(threshold=-0.1).fit(pd.DataFrame({"A": [1.0, 2.0], "B": [3.0, 4.0]}))
 
     # Discrete / categorical data
@@ -175,3 +175,144 @@ def test_validation_and_edge_cases():
     assert est_single.causal_order_ == ["X"]
     assert len(est_single.causal_graph_.nodes()) == 1
     assert len(est_single.causal_graph_.edges()) == 0
+
+
+def test_integer_column_names(synthetic_3node_data):
+    """Test that DirectLiNGAM fits cleanly and returns valid outputs with integer column names."""
+    data = synthetic_3node_data.copy()
+    data.columns = [0, 1, 2]
+    est = DirectLiNGAM(random_state=42, threshold=0.1).fit(data)
+
+    assert est.causal_order_ == [0, 1, 2]
+    assert isinstance(est.causal_graph_, DAG)
+    assert set(est.causal_graph_.nodes()) == {0, 1, 2}
+    assert set(est.causal_graph_.edges()) == {(0, 1), (1, 2)}
+
+    # Verify B_ matrix with integer indices and columns
+    assert isinstance(est.B_, pd.DataFrame)
+    assert list(est.B_.index) == [0, 1, 2]
+    assert list(est.B_.columns) == [0, 1, 2]
+    assert pytest.approx(est.B_.loc[1, 0], rel=0.1) == 1.5
+    assert pytest.approx(est.B_.loc[2, 1], rel=0.1) == 0.8
+
+    # Verify adjacency_matrix_ with integer indices and columns
+    assert isinstance(est.adjacency_matrix_, pd.DataFrame)
+    assert list(est.adjacency_matrix_.index) == [0, 1, 2]
+    assert list(est.adjacency_matrix_.columns) == [0, 1, 2]
+    assert est.adjacency_matrix_.loc[0, 1] == 1
+    assert est.adjacency_matrix_.loc[1, 2] == 1
+    assert est.adjacency_matrix_.loc[1, 0] == 0
+    assert est.adjacency_matrix_.loc[2, 0] == 0
+
+    # Single integer column
+    single_int = pd.DataFrame({0: [1.0, 2.0, 3.0, 4.0]})
+    est_single = DirectLiNGAM().fit(single_int)
+    assert est_single.causal_order_ == [0]
+    assert list(est_single.causal_graph_.nodes()) == [0]
+    assert est_single.B_.shape == (1, 1)
+    assert list(est_single.B_.columns) == [0]
+
+
+def test_uniformly_small_scale():
+    """Test DirectLiNGAM on dataset scaled by 1e-7 where X -> Y -> Z."""
+    rng = np.random.default_rng(42)
+    n = 2000
+    scale = 1e-7
+    x = rng.uniform(-2, 2, n) * scale
+    y = 1.5 * x + rng.laplace(0, 1, n) * scale
+    z = 0.8 * y + rng.uniform(-1, 1, n) * scale
+    data = pd.DataFrame({"X": x, "Y": y, "Z": z})
+
+    est = DirectLiNGAM(random_state=42, threshold=0.1).fit(data)
+
+    assert est.causal_order_ == ["X", "Y", "Z"]
+    assert isinstance(est.causal_graph_, DAG)
+    assert set(est.causal_graph_.edges()) == {("X", "Y"), ("Y", "Z")}
+    assert pytest.approx(est.B_.loc["Y", "X"], rel=0.1) == 1.5
+    assert pytest.approx(est.B_.loc["Z", "Y"], rel=0.1) == 0.8
+    assert est.adjacency_matrix_.loc["X", "Y"] == 1
+    assert est.adjacency_matrix_.loc["Y", "Z"] == 1
+    assert est.adjacency_matrix_.loc["X", "Z"] == 0
+
+
+def test_edge_creation_zero_threshold():
+    """Test that true zero coefficients or unrelated noise do not produce edges with threshold=0.0."""
+    rng = np.random.default_rng(42)
+    n = 2000
+    x0 = rng.uniform(-2, 2, n)
+    x1 = 1.5 * x0 + rng.laplace(0, 1, n)
+
+    # Gram-Schmidt orthogonalization to ensure partial coefficient on x0 is identically zero
+    def _project_out(v: np.ndarray, u: np.ndarray) -> np.ndarray:
+        return v - (np.dot(v, u) / np.dot(u, u)) * u
+
+    u0 = np.ones(n)
+    u1 = _project_out(x0, u0)
+    u2 = _project_out(_project_out(x1, u0), u1)
+
+    raw_noise = rng.uniform(-1, 1, n)
+    ortho_noise = _project_out(_project_out(_project_out(raw_noise, u0), u1), u2)
+    x2 = 0.8 * x1 + ortho_noise
+
+    data = pd.DataFrame({"X0": x0, "X1": x1, "X2": x2})
+    est = DirectLiNGAM(random_state=42, threshold=0.0).fit(data)
+
+    assert est.causal_order_ == ["X0", "X1", "X2"]
+    # (X0, X2) edge must not be created because true partial coefficient is 0.0
+    assert ("X0", "X2") not in est.causal_graph_.edges()
+    assert set(est.causal_graph_.edges()) == {("X0", "X1"), ("X1", "X2")}
+    assert est.B_.loc["X2", "X0"] == 0.0
+    assert est.adjacency_matrix_.loc["X0", "X2"] == 0
+
+    # Independent orthogonal noise variable: no edges should be created to/from it
+    raw_indep = rng.uniform(-1, 1, n)
+    x1_indep = _project_out(_project_out(raw_indep, u0), u1)
+    df_indep = pd.DataFrame({"X0": x0, "X1": x1_indep})
+    est_indep = DirectLiNGAM(random_state=42, threshold=0.0).fit(df_indep)
+
+    assert len(est_indep.causal_graph_.edges()) == 0
+    assert est_indep.B_.loc["X1", "X0"] == 0.0
+    assert est_indep.B_.loc["X0", "X1"] == 0.0
+    assert np.all(est_indep.adjacency_matrix_.values == 0)
+
+
+@pytest.mark.parametrize("invalid_threshold", [None, np.nan, np.inf, -0.1])
+def test_threshold_validation(invalid_threshold):
+    """Test that threshold=None, np.nan, np.inf, and -0.1 raise ValueError."""
+    data = pd.DataFrame({"A": [1.0, 2.0], "B": [3.0, 4.0]})
+    with pytest.raises(ValueError, match="threshold must be non-negative and finite"):
+        DirectLiNGAM(threshold=invalid_threshold).fit(data)
+
+
+@pytest.mark.parametrize(
+    "rs",
+    [
+        np.random.RandomState(42),
+        np.random.default_rng(42),
+        42,
+        None,
+    ],
+)
+def test_random_state_support(synthetic_3node_data, rs):
+    """Test fitting with RandomState, Generator, int, and None."""
+    est = DirectLiNGAM(random_state=rs, threshold=0.1).fit(synthetic_3node_data)
+    assert est.causal_order_ == ["X0", "X1", "X2"]
+    assert set(est.causal_graph_.edges()) == {("X0", "X1"), ("X1", "X2")}
+
+
+@pytest.mark.parametrize(
+    "rs_factory",
+    [
+        lambda: np.random.RandomState(42),
+        lambda: np.random.default_rng(42),
+    ],
+)
+def test_mutual_info_reproducibility(synthetic_3node_data, rs_factory):
+    """Verify reproducibility when measure='mutual_info' with RandomState or Generator."""
+    est1 = DirectLiNGAM(random_state=rs_factory(), measure="mutual_info", threshold=0.1).fit(synthetic_3node_data)
+    est2 = DirectLiNGAM(random_state=rs_factory(), measure="mutual_info", threshold=0.1).fit(synthetic_3node_data)
+
+    assert est1.causal_order_ == est2.causal_order_
+    assert set(est1.causal_graph_.edges()) == set(est2.causal_graph_.edges())
+    pd.testing.assert_frame_equal(est1.B_, est2.B_)
+    pd.testing.assert_frame_equal(est1.adjacency_matrix_, est2.adjacency_matrix_)
