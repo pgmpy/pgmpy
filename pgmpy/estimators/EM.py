@@ -203,7 +203,7 @@ class ExpectationMaximization(ParameterEstimator):
             atol=atol,
             n_jobs=n_jobs,
             batch_size=batch_size,
-            seed=seed,
+            rng=seed,
             init_cpds=init_cpds if init_cpds else None,
             show_progress=show_progress,
         )

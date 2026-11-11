@@ -125,6 +125,7 @@ class PowerDivergence(BaseCITest):
         "data_types": ["discrete"],
         "default_for": None,
         "requires_data": True,
+        "capability:conditioning": True,
         "assumption:linearity": False,
         "assumption:additive_noise": False,
         "assumption:gaussian_noise": False,

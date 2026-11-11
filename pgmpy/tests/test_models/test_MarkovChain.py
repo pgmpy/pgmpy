@@ -3,6 +3,7 @@ import sys
 import unittest
 
 import numpy as np
+import pandas as pd
 import pytest
 from mock import call, patch
 from pandas import DataFrame
@@ -214,12 +215,14 @@ class TestMarkovChain(unittest.TestCase):
         self.assertTrue(list(sample.loc[0]) in [[0, 0], [0, 1], [1, 0], [1, 1]])
         self.assertTrue(list(sample.loc[1]) in [[0, 0], [0, 1], [1, 0], [1, 1]])
 
-    @patch("pgmpy.models.MarkovChain.random_state", autospec=True)
+    @patch("pgmpy.models.MarkovChain._random_state", autospec=True)
     def test_sample_less_arg(self, random_state):
         model = MC(["a", "b"], [2, 2])
         random_state.return_value = [State("a", 0), State("b", 1)]
         sample = model.sample(size=1)
-        random_state.assert_called_once_with(model)
+        random_state.assert_called_once()
+        self.assertIs(random_state.call_args.args[0], model)
+        self.assertIsInstance(random_state.call_args.args[1], np.random.Generator)
         self.assertEqual(model.state, random_state.return_value)
         self.assertEqual(len(sample), 1)
         self.assertEqual(list(sample.columns), ["a", "b"])
@@ -270,7 +273,7 @@ class TestMarkovChain(unittest.TestCase):
         self.assertEqual(samples, expected_samples)
 
     @patch.object(sys.modules["pgmpy.models.MarkovChain"], "sample_discrete")
-    @patch("pgmpy.models.MarkovChain.random_state", autospec=True)
+    @patch("pgmpy.models.MarkovChain._random_state", autospec=True)
     def test_generate_sample_less_arg(self, random_state, sample_discrete):
         model = MC(["a", "b"], [2, 2])
         model.transition_models["a"] = {0: {0: 0.1, 1: 0.9}, 1: {0: 0.2, 1: 0.8}}
@@ -279,6 +282,9 @@ class TestMarkovChain(unittest.TestCase):
         sample_discrete.side_effect = [[1], [0]] * 2
         gen = model.generate_sample(size=2)
         samples = [sample for sample in gen]
+        random_state.assert_called_once()
+        self.assertIs(random_state.call_args.args[0], model)
+        self.assertIsInstance(random_state.call_args.args[1], np.random.Generator)
         expected_samples = [[State("a", 1), State("b", 0)]] * 2
         self.assertEqual(samples, expected_samples)
 
@@ -306,3 +312,25 @@ class TestMarkovChain(unittest.TestCase):
 
         with pytest.raises(ValueError):
             model.add_transition_model("invalid_variable", tm)
+
+
+def _uniform_chain(variables, n_states):
+    model = MC(variables, [n_states] * len(variables))
+    uniform_tm = {i: dict.fromkeys(range(n_states), 1 / n_states) for i in range(n_states)}
+    for var in variables:
+        model.add_transition_model(var, uniform_tm)
+    return model
+
+
+def test_seeded_sampling_draws_fresh_randomness():
+    df = _uniform_chain(["A", "B"], 2).sample(size=200, rng=0)
+    assert (df["A"] != df["B"]).any()
+    states = [s[0].state for s in _uniform_chain(["A", "B"], 2).generate_sample(size=200, rng=0)]
+    assert len(set(zip(states[:-1], states[1:]))) == 4
+
+
+def test_seeded_start_state_is_reproducible():
+    def make_chain():
+        return _uniform_chain([f"V{i}" for i in range(8)], 4)
+
+    pd.testing.assert_frame_equal(make_chain().sample(size=5, rng=1), make_chain().sample(size=5, rng=1))

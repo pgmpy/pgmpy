@@ -1,18 +1,20 @@
+from __future__ import annotations
+
 from collections.abc import Callable, Hashable, Iterable
-from typing import (
-    Any,
-)
+from typing import TYPE_CHECKING, Any
 
 import networkx as nx
 import numpy as np
 import pandas as pd
-from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config, logger
 from pgmpy.factors.hybrid import FunctionalCPD
 from pgmpy.models import DiscreteBayesianNetwork
+from pgmpy.utils._random import _rename_to_rng
 
-pyro = _safe_import("pyro", pkg_name="pyro-ppl")
+if TYPE_CHECKING:
+    import pyro
 
 
 class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
@@ -260,12 +262,13 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
                     raise ValueError(f"CPD associated with {node} doesn't have proper parents associated with it.")
         return True
 
+    @_rename_to_rng("seed")
     def simulate(
         self,
         n_samples: int = 1000,
         do: dict[Hashable, Any] | None = None,
         virtual_intervention: list[FunctionalCPD] | None = None,
-        seed: int | None = None,
+        rng: int | None = None,
     ) -> pd.DataFrame:
         """
         Simulate samples from the model.
@@ -275,8 +278,11 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         n_samples : int, optional (default: 1000)
             Number of samples to generate
 
-        seed : int, optional
-            The seed value for the random number generator.
+        rng : int, optional (default: None)
+            Seed passed to ``pyro.set_rng_seed``. If None, the global Pyro random state is left unchanged.
+
+            .. versionchanged:: 1.2.0
+                Replaces ``seed``, which is deprecated and will be removed in v2.0.
 
         do : dict, optional
             Specifies hard interventions to the model. The dict should be of
@@ -316,8 +322,10 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         >>> config.set_backend('numpy')
         """
         # Step 0: Set the seed if specified, check arguments and initialize data structures.
-        if seed is not None:
-            pyro.set_rng_seed(seed)
+        if rng is not None:
+            import pyro
+
+            pyro.set_rng_seed(rng)
 
         if do is None:
             do = {}
@@ -369,14 +377,15 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         # Step 2: Return the simulated samples
         return samples
 
+    @_rename_to_rng("seed")
     def fit(
         self,
         data: pd.DataFrame,
         estimator: str = "SVI",
-        optimizer: pyro.optim.PyroOptim = pyro.optim.Adam({"lr": 1e-2}),
+        optimizer: pyro.optim.PyroOptim | None = None,
         prior_fn: Callable | None = None,
         num_steps: int = 1000,
-        seed: int | None = None,
+        rng: int | None = None,
         nuts_kwargs: dict | None = None,
         mcmc_kwargs: dict | None = None,
     ) -> dict[str, Any]:
@@ -391,7 +400,7 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
         estimator: str (default: "SVI")
             Fitting method to use. Currently supports "SVI" and "MCMC".
 
-        optimizer: Instance of pyro optimizer (default: pyro.optim.Adam({"lr": 1e-2}))
+        optimizer: Instance of pyro optimizer (default: None, which uses pyro.optim.Adam({"lr": 1e-2}))
             Only used if `estimator` is "SVI". The optimizer to use for optimization.
 
         prior_fn: function
@@ -403,8 +412,11 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
             argument for pyro.infer.SVI. For MCMC, it is the `num_samples`
             argument for pyro.infer.MCMC.
 
-        seed: int (default: None)
-            Seed value for random number generator.
+        rng: int (default: None)
+            Seed passed to ``pyro.set_rng_seed``. If None, the global Pyro random state is left unchanged.
+
+            .. versionchanged:: 1.2.0
+                Replaces ``seed``, which is deprecated and will be removed in v2.0.
 
         nuts_kwargs: dict (default: None)
             Only used if `estimator` is "MCMC". Additional arguments to pass to
@@ -495,8 +507,10 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
             raise ValueError(f"`estimator` argument needs to be either 'SVI' or 'MCMC'. Got: {estimator}.")
 
         # Step 1: Preprocess the data and initialize data structures.
-        if seed is not None:
-            pyro.set_rng_seed(seed)
+        import pyro
+
+        if rng is not None:
+            pyro.set_rng_seed(rng)
 
         sort_nodes = list(nx.topological_sort(self))
 
@@ -535,6 +549,8 @@ class FunctionalBayesianNetwork(DiscreteBayesianNetwork):
                         )
 
             # Step 2.2: Fit the model using SVI.
+            if optimizer is None:
+                optimizer = pyro.optim.Adam({"lr": 1e-2})
             svi = pyro.infer.SVI(
                 model=combined_model_svi,
                 guide=guide,

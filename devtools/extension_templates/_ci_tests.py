@@ -59,6 +59,7 @@ class YourCITest(BaseCITest):
         "default_for": None,
         "requires_data": True,
         "is_symmetric": True,
+        "capability:conditioning": True,
         "assumption:linearity": False,
         "assumption:additive_noise": False,
         "assumption:gaussian_noise": False,
