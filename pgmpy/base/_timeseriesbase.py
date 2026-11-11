@@ -130,3 +130,30 @@ class _TimeSeriesCoregraph(_Coregraph):
 
     def get_children(self, node: Hashable) -> set:
         return super().get_children(self._normalize_node(node))
+
+    def get_edges(
+        self,
+        data: bool = True,
+        edge_types: Iterable[str] | None = None,
+        lag: int | Iterable[int] | None = None,
+        lag_relative: bool = False,
+    ) -> list[tuple]:
+        if lag is None:
+            lags = None
+        elif isinstance(lag, (int, np.integer)) and not isinstance(lag, bool):
+            lags = {int(lag)}
+        else:
+            lags = {int(value) for value in lag}
+        edges = []
+        for u, v, edge_type in super().get_edges(data=True, edge_types=edge_types):
+            if u[1] > v[1]:
+                markers = self._to_markers((u, v, edge_type))
+                u, v, edge_type = v, u, self._to_edge_type(v, u, markers)
+            edge_lag = -u[1]
+            if lags is not None and edge_lag not in lags:
+                continue
+            if lag_relative:
+                edges.append((u[0], v[0], edge_lag, edge_type) if data else (u[0], v[0], edge_lag))
+            else:
+                edges.append((u, v, edge_type) if data else (u, v))
+        return edges
