@@ -29,7 +29,7 @@ def pearson_equivalence_data():
     cpd_x = LinearGaussianCPD("X", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
     cpd_y_dep = LinearGaussianCPD("Y", [0, 0.5, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3", "X"])
     model_dep.add_cpds(cpd_z1, cpd_z2, cpd_z3, cpd_x, cpd_y_dep)
-    df_dep = model_dep.simulate(n_samples=1000, seed=42)
+    df_dep = model_dep.simulate(n_samples=1000, rng=42)
 
     return df_dep
 
