@@ -134,16 +134,11 @@ class _ResidualMixin:
         """Set the 'assumption:linearity' tag based on the estimator type."""
         est = getattr(self, "estimator", None)
 
-        if est is None:
-            self.set_tags(**{"assumption:linearity": False})
-            return
-
         is_linear = any(cls.__module__.startswith("sklearn.linear_model") for cls in type(est).__mro__)
         if is_linear:
             self.set_tags(**{"assumption:linearity": True})
             return
 
-        # Check if the estimator class itself is from scikit-learn
         is_sklearn = type(est).__module__.startswith("sklearn.")
         if is_sklearn:
             self.set_tags(**{"assumption:linearity": False})
