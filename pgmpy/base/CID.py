@@ -152,17 +152,17 @@ class CausalInfluenceDiagram(DAG):
         return copied
 
     @property
-    def get_chance_nodes(self):
+    def chance_nodes(self):
         """Get the nodes with the chance role, in graph order."""
         return [node for node, data in self.nodes(data=True) if data.get("role") == "chance"]
 
     @property
-    def get_decision_nodes(self):
+    def decision_nodes(self):
         """Get the nodes with the decision role, in graph order."""
         return [node for node, data in self.nodes(data=True) if data.get("role") == "decision"]
 
     @property
-    def get_utility_nodes(self):
+    def utility_nodes(self):
         """Get the nodes with the utility role, in graph order."""
         return [node for node, data in self.nodes(data=True) if data.get("role") == "utility"]
 
@@ -370,7 +370,7 @@ class CausalInfluenceDiagram(DAG):
                 draws = parameterization.sample(n_samples=n_samples, random_state=random_state)
             samples[node] = draws.iloc[:, 0].to_numpy()
 
-        for node in self.get_utility_nodes:
+        for node in self.utility_nodes:
             utility = self._utilities.get(node)
             parent_samples = samples.reindex(columns=list(self.predecessors(node)))
             values = utility(parent_samples)
