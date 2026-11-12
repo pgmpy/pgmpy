@@ -4,7 +4,7 @@ import pytest
 from skbase.lookup import all_objects
 
 from pgmpy.base import DAG
-from pgmpy.causal_discovery import ANM, GES, IGCI, PC, BootstrapEstimator, ChowLiu, ExpertInLoop
+from pgmpy.causal_discovery import ANM, GES, IGCI, PC, BootstrapEstimator, ChowLiu, ExpertInLoop, R2Sort
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
 from pgmpy.causal_discovery.bivariate_scores import BaseBivariateScore
 from pgmpy.ci_tests import GCM, BaseCITest, IndependenceMatch, get_ci_test
@@ -14,34 +14,66 @@ from pgmpy.structure_score import get_scoring_method
 
 
 @pytest.mark.parametrize(
-    "data",
+    ("data", "estimator"),
     [
-        pd.DataFrame(
-            {
-                "const": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
-                "x": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
-                "y": [2.0, 1.0, 3.0, 2.0, 1.0, 3.0],
-            }
+        (
+            pd.DataFrame(
+                {
+                    "const": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+                    "x": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+                    "y": [2.0, 1.0, 3.0, 2.0, 1.0, 3.0],
+                }
+            ),
+            R2Sort(),
         ),
-        pd.DataFrame(
-            {
-                "const": ["a", "a", "a", "a", "a", "a"],
-                "x": ["p", "q", "p", "q", "q", "p"],
-                "y": ["m", "n", "n", "m", "n", "m"],
-            }
+        (
+            pd.DataFrame(
+                {
+                    "const": ["a", "a", "a", "a", "a", "a"],
+                    "x": ["p", "q", "p", "q", "q", "p"],
+                    "y": ["m", "n", "n", "m", "n", "m"],
+                }
+            ),
+            ChowLiu(),
         ),
     ],
     ids=["continuous", "discrete"],
 )
-def test_fit_rejects_constant_column(data):
+def test_fit_rejects_constant_column(data, estimator):
     with pytest.raises(ValueError, match="Variable 'const' is constant"):
-        ChowLiu().fit(data)
+        estimator.fit(data)
 
 
 def test_unhashable_cell_is_rejected():
     data = pd.DataFrame({"A": [[1, 2], [3, 4], [5, 6]], "B": [1.0, 2.0, 3.0]})
     with pytest.raises(TypeError, match="hashable object"):
         ChowLiu().fit(data)
+
+
+def test_fit_rejects_incompatible_data_types():
+    rng = np.random.default_rng(0)
+    integers = pd.DataFrame(rng.integers(0, 2, size=(50, 2)), columns=["A", "B"])
+    discrete = pd.DataFrame({"A": rng.choice(["a", "b"], 50), "B": rng.choice(["x", "y"], 50)})
+    booleans = integers.astype(bool)
+
+    with pytest.raises(ValueError, match=r"R2Sort supports \['continuous'\] data, but the data is discrete"):
+        R2Sort().fit(discrete)
+    for data, dataset_type in [
+        (integers, "continuous"),
+        (booleans.assign(C=rng.normal(size=50)), "continuous"),
+        (integers.assign(C=discrete["A"]), "mixed"),
+    ]:
+        with pytest.raises(ValueError, match=rf"ChowLiu supports \['discrete'\] data, but the data is {dataset_type}"):
+            ChowLiu().fit(data)
+
+    class RecordingChowLiu(ChowLiu):
+        def _fit(self, X):
+            self.fit_dtypes_ = X.dtypes.astype(str).to_dict()
+            return super()._fit(X)
+
+    for data in [discrete, booleans, integers.astype("category")]:
+        assert RecordingChowLiu().fit(data).fit_dtypes_ == {"A": "category", "B": "category"}
+    assert set(R2Sort().fit(booleans).causal_graph_.nodes()) == {"A", "B"}
 
 
 def test_estimators_use_identity_equality_and_hash():

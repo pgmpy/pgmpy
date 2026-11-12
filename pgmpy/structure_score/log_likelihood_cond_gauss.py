@@ -3,7 +3,7 @@ from collections.abc import Hashable
 import numpy as np
 
 from pgmpy.structure_score._base import BaseStructureScore
-from pgmpy.utils import residual_covariance
+from pgmpy.utils import is_discrete_type, residual_covariance, split_by_type
 
 _SINGULAR_RCOND = 1e6 * np.finfo(float).eps
 
@@ -97,17 +97,16 @@ class LogLikelihoodCondGauss(BaseStructureScore):
     def _cat_parents_product(self, parents: tuple[Hashable, ...]) -> int:
         k = 1
         for pa in parents:
-            if self.dtypes[pa] != "N":
+            if is_discrete_type(self.dtypes[pa]):
                 n_states = self.data[pa].nunique()
                 if n_states > 1:
                     k *= self.data[pa].nunique()
         return k
 
     def _get_num_parameters(self, variable: Hashable, parents: tuple[Hashable, ...]) -> int:
-        parent_dtypes = [self.dtypes[pa] for pa in parents]
-        n_cont_parents = parent_dtypes.count("N")
+        n_cont_parents = len(split_by_type(parents, self.dtypes)[0])
 
-        if self.dtypes[variable] == "N":
+        if not is_discrete_type(self.dtypes[variable]):
             k = self._cat_parents_product(parents=parents) * (n_cont_parents + 2)
         else:
             if n_cont_parents == 0:
@@ -124,8 +123,8 @@ class LogLikelihoodCondGauss(BaseStructureScore):
     def _log_likelihood(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         df = self.data.loc[:, [variable, *parents]]
         n_samples = df.shape[0]
-        continuous = [var for var in [variable, *parents] if self.dtypes[var] == "N"]
-        discrete = [var for var in parents if self.dtypes[var] != "N"]
+        continuous = split_by_type([variable, *parents], self.dtypes)[0]
+        discrete = split_by_type(parents, self.dtypes)[1]
 
         # Step 1: Standardize the continuous variables; an exactly constant one is only centered.
         values = df.loc[:, continuous].to_numpy(dtype=float)
@@ -133,7 +132,7 @@ class LogLikelihoodCondGauss(BaseStructureScore):
         scale[np.ptp(values, axis=0) == 0] = 1.0
         values = (values - values.mean(axis=0)) / scale
 
-        if self.dtypes[variable] == "N":
+        if not is_discrete_type(self.dtypes[variable]):
             # Step 2: Add the Gaussian log-likelihood of the target's regression within each discrete configuration.
             strata = list(df.groupby(discrete, observed=True).indices.values()) if discrete else [np.arange(n_samples)]
             log_like = 0.0

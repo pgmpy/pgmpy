@@ -1,5 +1,11 @@
 from ._warnings import ExperimentalWarning
 from .check_functions import _check_1d_array_object, _check_length_equal, _check_no_missing_values
+from .data_types import (
+    get_dataset_type,
+    is_discrete_type,
+    preprocess_data,
+    split_by_type,
+)
 from .mathext import (
     cartesian,
     covariance_sufficient_stats,
@@ -18,10 +24,8 @@ from .tabular import (
 )
 from .utils import (
     discretize,
-    get_dataset_type,
     get_example_model,
     manual_pairwise_orient,
-    preprocess_data,
     to_timeseries_format,
 )
 
@@ -46,7 +50,9 @@ __all__ = [
     "get_state_counts",
     "get_state_counts_array",
     "manual_pairwise_orient",
-    "preprocess_data",
     "get_dataset_type",
+    "is_discrete_type",
+    "preprocess_data",
+    "split_by_type",
     "to_timeseries_format",
 ]

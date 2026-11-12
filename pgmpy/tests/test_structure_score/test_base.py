@@ -133,8 +133,8 @@ class TestStateNameCollection:
         continuous = pd.DataFrame({"A": [0.5, 1.5, 2.5], "B": [0.1, 0.4, 0.2]})
         int_coded = pd.DataFrame({"A": [0, 1, 0, 1], "B": ["x", "y", "x", "y"]})
 
-        # Integer coded columns are typed numerical, but discrete and untagged scores still collect them.
+        # Integer coded columns are typed numerical, but discrete scores still collect them.
         assert BICGauss(continuous).state_names == {}
-        assert set(CountingScore(continuous).state_names) == {"A", "B"}
+        assert CountingScore(continuous).state_names == {}
         assert BICCondGauss(int_coded).state_names == {"B": ["x", "y"]}
         assert K2(int_coded).state_names == {"A": [0, 1], "B": ["x", "y"]}

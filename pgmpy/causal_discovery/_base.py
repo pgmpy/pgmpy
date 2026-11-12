@@ -23,6 +23,7 @@ from pgmpy.ci_tests import IndependenceMatch, get_ci_test
 from pgmpy.independencies import Independencies
 from pgmpy.metrics import get_metric
 from pgmpy.structure_score import BaseStructureScore
+from pgmpy.utils import get_dataset_type, preprocess_data
 
 
 class BaseCausalDiscovery(BaseEstimator, BaseObject):
@@ -36,7 +37,7 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
     _tags = {
         "object_type": "causal_discovery",
         "name": None,
-        "data_types": None,
+        "data_types": ["discrete", "continuous", "mixed"],
         "identifiable_graph": None,
         "requires_target": None,
         "capability:multivariate": None,
@@ -95,6 +96,12 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         if not all([isinstance(x, Hashable) for x in X.values.flat]):
             raise TypeError("argument must be a string, number, or hashable object.")
 
+        supported_types = type(self).get_class_tag("data_types")
+        X, _ = preprocess_data(X, data_types=supported_types)
+        dataset_type = get_dataset_type(X)
+        if dataset_type not in supported_types:
+            raise ValueError(f"{type(self).__name__} supports {supported_types} data, but the data is {dataset_type}.")
+
         for col in X.columns:
             if X[col].nunique() == 1:
                 raise ValueError(
@@ -138,11 +145,8 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
             assumptions = {key: bool(value) for key, value in base_tags.items() if key.startswith("assumption:")}
             for component in components:
                 component_tags = component.get_tags() if isinstance(component, BaseObject) else {}
-                component_types = component_tags.get("data_types")
-                if component_types:
-                    data_types = (
-                        list(component_types) if data_types is None else [t for t in data_types if t in component_types]
-                    )
+                component_types = component_tags.get("data_types", data_types)
+                data_types = [t for t in data_types if t in component_types]
                 assumptions = {key: value or bool(component_tags.get(key)) for key, value in assumptions.items()}
             self.set_tags(data_types=data_types, **assumptions)
         return result

@@ -114,3 +114,15 @@ class TestLogLikelihoodCondGauss:
         assert LogLikelihoodCondGauss(rescaled_parent).local_score(variable, parents) == pytest.approx(
             expected, rel=1e-9
         )
+
+    def test_bool_is_categorical_in_mixed_data(self):
+        rng = np.random.default_rng(seed=4)
+        data = pd.DataFrame({"A": rng.normal(size=80), "C": rng.normal(size=80), "G": rng.random(80) < 0.5})
+        data["A"] += data["G"]
+        data["H"] = rng.choice(["x", "y"], size=80)
+        as_category = data.assign(G=data["G"].astype("category"))
+
+        for variable, parents in [("A", ("G",)), ("G", ("A",)), ("A", ("C", "G"))]:
+            assert LogLikelihoodCondGauss(data).local_score(variable, parents) == pytest.approx(
+                LogLikelihoodCondGauss(as_category).local_score(variable, parents), rel=1e-12
+            )
