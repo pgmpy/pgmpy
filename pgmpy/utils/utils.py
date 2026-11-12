@@ -8,7 +8,6 @@ except ImportError:
     # For python 3.8 and lower
     from importlib_resources import files
 
-from pgmpy import logger
 from pgmpy.utils._warnings import _warn_external
 
 
@@ -287,99 +286,6 @@ def manual_pairwise_orient(x, y):
         return (y, x)
     elif user_input == "3":
         return None
-
-
-def preprocess_data(df):
-    """
-    Tries to figure out the data type of each variable `df`.
-
-    Assigns one of (numerical, categorical unordered, categorical ordered) datatypes to each column in `df`. Also
-    changes any object datatypes to categorical.
-
-    Parameters
-    ----------
-    df: pd.DataFrame
-        A pandas dataframe.
-
-    Returns
-    -------
-    (pd.DataFrame, dtypes): tuple of transformed dataframe and a dictionary with inferred datatype of each column.
-    """
-    df = df.copy()
-    dtypes = {}
-    for col in df.columns:
-        col_data = df[col]
-        if pd.api.types.is_numeric_dtype(col_data):
-            dtypes[col] = "N"
-            if pd.api.types.is_integer_dtype(col_data):
-                df[col] = df[col].astype("int")
-        elif pd.api.types.is_object_dtype(col_data) or pd.api.types.is_string_dtype(col_data):
-            dtypes[col] = "C"
-            df[col] = col_data.astype("category")
-        elif isinstance(col_data.dtype, pd.CategoricalDtype):
-            dtypes[col] = "O" if col_data.dtype.ordered else "C"
-        else:
-            raise ValueError(
-                f"Couldn't infer datatype of column: {col} from data. "
-                "Try specifying the appropriate datatype to the column."
-            )
-
-    logger.debug(f"Inferred variable types (N=numerical, C=unordered categorical, O=ordered categorical): {dtypes}")
-    return (df, dtypes)
-
-
-def _heuristic_categorical_detection(df, dtypes):
-    """
-    Warns when numeric columns have a low ratio of distinct to non-missing values.
-    """
-    # credit: https://stackoverflow.com/a/35827646
-    potential_categorical = []
-    for var in df.columns:
-        if dtypes[var] == "N":
-            if 1.0 * df[var].nunique() / df[var].count() < 0.1:
-                potential_categorical.append(var)
-    if len(potential_categorical) > 0:
-        _warn_external(
-            f"Numeric variables {potential_categorical} have fewer distinct values than 10% of non-missing rows. "
-            "If these variables are categorical, cast them to pandas 'category' dtype.",
-            UserWarning,
-        )
-
-
-def get_dataset_type(data: pd.DataFrame) -> str:
-    """
-    Returns continuous, discrete or mixed depending on the type of variable
-    data in the given dataset.
-
-    Parameters
-    ----------
-    data : pd.DataFrame
-        DataFrame to analyze
-
-    Returns
-    -------
-    str
-        `continuous`, `discrete` or `mixed`.
-
-    Warns
-    -----
-    UserWarning
-        If a numeric column has fewer distinct values than 10% of its non-missing rows. This heuristic does not
-        change the column's inferred type or the returned dataset type.
-    """
-
-    df, dtypes = preprocess_data(data)
-    dtypes_set = set(dtypes.values())
-
-    if "N" in dtypes_set:
-        _heuristic_categorical_detection(df, dtypes)
-
-    if len(dtypes_set) == 1:
-        if "N" in dtypes_set:
-            return "continuous"
-        elif "C" in dtypes_set:
-            return "discrete"
-    return "mixed"
 
 
 def to_timeseries_format(df: pd.DataFrame, return_format: str = "pd-multiindex"):

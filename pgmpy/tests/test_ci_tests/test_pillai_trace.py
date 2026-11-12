@@ -177,3 +177,15 @@ def test_pillai_linear_regression_no_predict_proba():
     test = PillaiTrace(data=df, estimator=LinearRegression())
     with pytest.raises(ValueError, match="predict_proba"):
         test("X", "Y", ["Z"])
+
+
+def test_pillai_bool_is_categorical_in_mixed_data():
+    rng = np.random.default_rng(seed=4)
+    data = pd.DataFrame({"A": rng.normal(size=80), "C": rng.normal(size=80), "G": rng.random(80) < 0.5})
+    data["A"] += data["G"]
+    data["H"] = rng.choice(["x", "y"], size=80)
+
+    bool_test, category_test = PillaiTrace(data=data), PillaiTrace(data=data.assign(G=data["G"].astype("category")))
+    bool_test("G", "A", ["C"])
+    category_test("G", "A", ["C"])
+    assert bool_test.p_value_ == pytest.approx(category_test.p_value_, rel=1e-9)

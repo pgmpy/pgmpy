@@ -41,7 +41,7 @@ class BaseBivariateScore(BaseObject):
         "object_type": "bivariate_score",
         "name": None,
         "input_type": None,
-        "data_types": [],
+        "data_types": ["discrete", "continuous", "mixed"],
         "assumption:linearity": None,
         "assumption:additive_noise": None,
         "assumption:gaussian_noise": None,
