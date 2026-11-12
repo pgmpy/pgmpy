@@ -7,7 +7,7 @@ from pgmpy.metrics import BaseUnsupervisedMetric
 class RMSEA(BaseUnsupervisedMetric):
     _tags = {
         "name": "rmsea",
-        "requires_data": False,
+        "requires_data": True,
         "lower_is_better": True,
         "supported_graph_types": [DAG],
         "output_type": "scalar",
@@ -19,7 +19,7 @@ class RMSEA(BaseUnsupervisedMetric):
         Computes the Root Mean Square Error of Approximation given data,
         a test_statistic(X^2 / chi_squared) and degrees of freedom. This statistic
         penalizes models based on sample size. An acceptable value is generally <0.10
-        and a good value is anything <0.08.
+        and a good value is <0.08.
 
         Parameters
         -----
@@ -37,4 +37,10 @@ class RMSEA(BaseUnsupervisedMetric):
         -----
         RMSEA
         """
-        return np.sqrt(max((test_statistic - deg_of_freedom) / (deg_of_freedom * (len(data) - 1)), 0))
+        if len(data) != 1 and deg_of_freedom != 0:
+            return np.sqrt(
+                max(
+                    (test_statistic - deg_of_freedom) / (deg_of_freedom * (len(data) - 1)),
+                    0,
+                )
+            )

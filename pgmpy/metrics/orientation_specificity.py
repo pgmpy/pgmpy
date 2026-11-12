@@ -5,8 +5,8 @@ from pgmpy.metrics import OrientationConfusionMatrix
 class OrientationSpecificity(OrientationConfusionMatrix):
     """
     Derived from the computation of true and false nodes used to build the Orientation Confusion Matrix,
-    OrientationSpecificity returns a scalar value denoting the fraction of estimated skeleton edges that are correct
-    i.e (TP / (TP + FP)).
+    OrientationSpecificity returns a scalar value denoting the fraction of estimated skeleton edges
+    that are truly absent i.e (TN / (TN + FP)).
 
     Examples
     --------

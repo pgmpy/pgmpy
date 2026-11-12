@@ -4,7 +4,7 @@ from pgmpy.metrics import OrientationConfusionMatrix
 
 class OrientationF1Score(OrientationConfusionMatrix):
     """
-    Derived from the computation of true and false nodes used to build the Irientation Confusion Matrix,
+    Derived from the computation of true and false nodes used to build the Orientation Confusion Matrix,
     OrientationF1 returns a scalar value denoting the harmonic mean of both precision and recall.
 
     Returns
@@ -43,5 +43,5 @@ class OrientationF1Score(OrientationConfusionMatrix):
 
     def _evaluate(self, true_causal_graph, est_causal_graph):
         scorer = OrientationConfusionMatrix(metrics=["f1"])
-        scorer.evaluate(true_causal_graph, est_causal_graph)["f1"]
+        scorer.evaluate(true_causal_graph, est_causal_graph)
         return scorer.f1_

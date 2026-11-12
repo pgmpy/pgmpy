@@ -4,9 +4,8 @@ from pgmpy.metrics import OrientationConfusionMatrix
 
 class OrientationNPV(OrientationConfusionMatrix):
     """
-    Derived from the computation of true and false nodes used to build the Irientation Confusion Matrix,
-    OrientationNPV returns a scalar value denoting the fraction of estimated skeleton edges that are correct
-    i.e (TN / (TN + FN)).
+    Derived from the computation of true and false nodes used to build the Orientation Confusion Matrix,
+    OrientationNPV returns a scalar value denoting the fraction of estimated skeleton edges that are truly absent.
 
     Returns
     -----

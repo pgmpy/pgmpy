@@ -5,7 +5,7 @@ from pgmpy.metrics import AdjacencyConfusionMatrix
 class AdjacencySpecificity(AdjacencyConfusionMatrix):
     """
     Derived from the computation of true and false nodes used to build the Adjacency Confusion Matrix,
-    AdjacencySpecificity returns a scalar value denoting the fraction of absent estimated edges that are truly absem=nt
+    AdjacencySpecificity returns a scalar value denoting the fraction of absent estimated edges that are truly absent
     i.e (TN / (TN + FP)).
 
     Returns
