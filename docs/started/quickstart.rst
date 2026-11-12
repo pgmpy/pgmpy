@@ -94,7 +94,7 @@ Check whether a causal effect is identifiable from the graph alone.
         roles={"exposures": "X", "outcomes": "Y"},
     )
     identified_graph, is_identified = Adjustment(variant="minimal").identify(dag)
-    identified.get_role("adjustment")
+    identified_graph.get_role("adjustment")
 
 
 .. _quickstart-causal-inference:
