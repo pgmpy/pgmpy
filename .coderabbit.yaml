@@ -31,32 +31,35 @@ reviews:
   path_instructions:
     - path: "pgmpy/**/*.py"
       instructions: |
-        Prioritize correctness of probabilistic and causal results: normalized CPDs, aligned variable order,
-        cardinality and state names, and correct graph semantics. Cross-check against bnlearn, pcalg, dagitty,
+        Prioritize correctness of algorithms and results. Refer research papers for correct causal graph semantics 
+        algorithms. Also cross-check implementation againt other known packages for example bnlearn, pcalg, dagitty,
         causal-learn or DoWhy where possible. Check edge cases such as empty, single-node or disconnected graphs.
-        Don't comment on formatting; ruff handles it.
+        Don't comment on formatting; ruff handles it. We aim for consistent interface for methods in the same module/
+        of the same type. Flag if you find an inconsistent interface.
     - path: "pgmpy/base/**"
       instructions: |
-        Rules that apply to only some graph classes should be enforced once in the base class via a class-attribute
-        flag (e.g. `SUPPORTED_EDGE_TYPES`), not by per-class overrides.
+        This provides the base representation layer for all causal graphs. The `_CoreGraph` class should own as much
+        functionality as possible and classes inheriting it should re-use it by limiting the edge types.
     - path: "pgmpy/estimators/**"
       instructions: |
         Legacy compatibility layer: flag new functionality added here.
     - path: "pgmpy/causal_discovery/**"
       instructions: |
-        `ExpertKnowledge.forbidden_edges` are directional: forbidding u->v still allows v->u. Flag code that treats
-        them as adjacency bans.
+        All causal discovery algorithms are scikit-learn compatible. Make sure that the unit tests compare the results
+        to other known implementations of the algorithm. All ExpertKnowledge attributes are directional, for example, 
+        forbidding u->v still allows v->u.
     - path: "pgmpy/structure_score/**"
       instructions: |
-        Degenerate families (e.g. collinear columns) must score `-inf`, not raise; local scores run inside search
-        loops that don't catch exceptions.
+        Provides a common interface to all structure scores in pgmpy. Verify the interface and check if it works correctly
+        with causal discovery methods.
     - path: "pgmpy/ci_tests/**"
       instructions: |
-        Degenerate inputs must return independence, not raise; CI tests run inside search loops that don't catch
-        exceptions. CI tests that copy `data` in `__init__` and so can't be cloned are intentional.
+        Provides a common interface to all conditional independence tests. Verify the interface and check if it works
+        correctly with causal discovery methods.
     - path: "pgmpy/identification/**"
       instructions: |
-        ADMGs have no latent nodes (confounding is only bidirected edges); don't ask for latent handling on ADMGs.
+        Provides implementations of causal identification methods. Important to check edge cases. Try to find edge 
+        cases specific to methods from literature and other packages.
     - path: "pgmpy/readwrite/**"
       instructions: |
         Check that models round-trip without loss: state names, ordering, CPD values and precision.

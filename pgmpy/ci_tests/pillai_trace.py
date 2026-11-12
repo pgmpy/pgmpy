@@ -85,7 +85,7 @@ class PillaiTrace(_ResidualMixin, BaseCITest):
     }
 
     def __init__(self, data: pd.DataFrame, estimator=None, use_cache: bool = True):
-        self.data, self.dtypes = preprocess_data(data)
+        self.data, self.dtypes = preprocess_data(data, data_types=self.get_class_tag("data_types"))
         self.estimator = estimator
         super().__init__(use_cache=use_cache)
 

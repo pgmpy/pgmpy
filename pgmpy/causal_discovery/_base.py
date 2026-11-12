@@ -25,6 +25,7 @@ from pgmpy.ci_tests import IndependenceMatch, get_ci_test
 from pgmpy.independencies import Independencies
 from pgmpy.metrics import get_metric
 from pgmpy.structure_score import BaseStructureScore
+from pgmpy.utils import get_dataset_type, preprocess_data
 
 
 class BaseCausalDiscovery(BaseEstimator, BaseObject):
@@ -38,7 +39,7 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
     _tags = {
         "object_type": "causal_discovery",
         "name": None,
-        "data_types": None,
+        "data_types": ["discrete", "continuous", "mixed"],
         "identifiable_graph": None,
         "requires_target": None,
         "capability:multivariate": None,
@@ -120,6 +121,25 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
                 if any(isinstance(x, (float, np.floating)) and np.isinf(x) for x in s):
                     raise ValueError(f"Input contains infinite values in column '{col}'.")
 
+        supported_types = type(self).get_class_tag("data_types")
+        if supported_types is not None:
+            if isinstance(X, pd.DataFrame):
+                X, _ = preprocess_data(X, data_types=supported_types)
+                dataset_type = get_dataset_type(X)
+                nw_df = nw.from_native(X, eager_only=True)
+            else:
+                try:
+                    df_pandas = nw_df.to_pandas()
+                except Exception:
+                    df_pandas = pd.DataFrame({c: nw_df.get_column(c).to_numpy() for c in nw_df.columns})
+                df_pandas, _ = preprocess_data(df_pandas, data_types=supported_types)
+                dataset_type = get_dataset_type(df_pandas)
+
+            if dataset_type not in supported_types:
+                raise ValueError(
+                    f"{type(self).__name__} supports {supported_types} data, but the data is {dataset_type}."
+                )
+
         for col in nw_df.columns:
             if nw_df.get_column(col).n_unique() == 1:
                 warnings.warn(
@@ -149,6 +169,8 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
                         X = nw_df.to_pandas()
                     except (ImportError, ModuleNotFoundError):
                         X = pd.DataFrame({c: nw_df.get_column(c).to_numpy() for c in nw_df.columns})
+            return X
+        if isinstance(X, pd.DataFrame):
             return X
         return nw_df
 
@@ -186,11 +208,8 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
             assumptions = {key: bool(value) for key, value in base_tags.items() if key.startswith("assumption:")}
             for component in components:
                 component_tags = component.get_tags() if isinstance(component, BaseObject) else {}
-                component_types = component_tags.get("data_types")
-                if component_types:
-                    data_types = (
-                        list(component_types) if data_types is None else [t for t in data_types if t in component_types]
-                    )
+                component_types = component_tags.get("data_types", data_types)
+                data_types = [t for t in data_types if t in component_types]
                 assumptions = {key: value or bool(component_tags.get(key)) for key, value in assumptions.items()}
             self.set_tags(data_types=data_types, **assumptions)
         return result
