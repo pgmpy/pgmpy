@@ -60,7 +60,7 @@ class CausalInfluenceDiagram(DAG):
         chance_nodes: Iterable[Hashable] | None = None,
         decision_nodes: Iterable[Hashable] | None = None,
         utility_nodes: Iterable[Hashable] | None = None,
-        latent_nodes: Iterable[Hashable] | None = None,
+        latents: Iterable[Hashable] | None = None,
     ):
         self._probabilities: dict[Hashable, BaseParameter] = {}
         self._policies: dict[Hashable, BaseParameter] = {}
@@ -70,7 +70,7 @@ class CausalInfluenceDiagram(DAG):
             "chance": self._as_node_list(chance_nodes),
             "decision": self._as_node_list(decision_nodes),
             "utility": self._as_node_list(utility_nodes),
-            "latent": self._as_node_list(latent_nodes),
+            "latent": self._as_node_list(latents),
         }
         assigned_roles = {}
         for role, nodes in declared_roles.items():

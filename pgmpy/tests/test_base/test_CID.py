@@ -55,7 +55,7 @@ def test_roles_default_to_chance_and_can_be_declared():
         ebunch=[("Treatment", "Health"), ("Treatment", "Utility"), ("Health", "Utility")],
         decision_nodes=["Treatment"],
         utility_nodes=["Utility"],
-        latent_nodes=["Latent"],
+        latents=["Latent"],
     )
 
     assert cid.chance_nodes == ["Health"]
