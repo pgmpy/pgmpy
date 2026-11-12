@@ -150,13 +150,7 @@ class CausalInfluenceDiagram(DAG):
         self._utilities.clear()
 
     def copy(self):
-        """Return a graph copy, retaining shallow copies of assigned parameterizations."""
-        copied = type(self)()
-        copied.graph.update(self.graph)
-        copied.add_nodes_from((node, data.copy()) for node, data in self.nodes(data=True))
-        for u, v, data in self.edges(data=True):
-            nx.DiGraph.add_edge(copied, u, v)
-            copied.edges[u, v].update(data.copy())
+        copied = super().copy()
         copied._probabilities = self._probabilities.copy()
         copied._policies = self._policies.copy()
         copied._utilities = self._utilities.copy()
