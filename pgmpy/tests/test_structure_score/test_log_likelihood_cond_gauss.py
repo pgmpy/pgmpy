@@ -8,23 +8,17 @@ from pgmpy.structure_score import LogLikelihoodCondGauss
 
 class TestLogLikelihoodCondGauss:
     def test_score_manual_continuous(self, loglik_cond_gauss_manual_score):
-        assert loglik_cond_gauss_manual_score.local_score(variable="A", parents=("B_cat",)) == pytest.approx(
-            -1.8378, abs=1e-3
-        )
-        assert loglik_cond_gauss_manual_score.local_score(variable="A", parents=("B_cat", "B")) == pytest.approx(
-            -1.8379, abs=1e-3
-        )
+        # bnlearn 5.0.2, score(dag, d[1:2, ], type = "loglik-cg", by.node = TRUE)["A"] -> -Inf for both families
+        assert loglik_cond_gauss_manual_score.local_score(variable="A", parents=("B_cat",)) == -np.inf
+        assert loglik_cond_gauss_manual_score.local_score(variable="A", parents=("B_cat", "B")) == -np.inf
 
     def test_score_manual_categorical(self, loglik_cond_gauss_manual_score):
-        assert loglik_cond_gauss_manual_score.local_score(variable="A_cat", parents=("B",)) == pytest.approx(
-            2.9024, abs=1e-3
+        assert loglik_cond_gauss_manual_score.local_score(variable="A_cat", parents=("B",)) == -np.inf
+        assert loglik_cond_gauss_manual_score.local_score(variable="A_cat", parents=("B_cat", "A")) == -np.inf
+        assert (
+            loglik_cond_gauss_manual_score.local_score(variable="A_cat", parents=("B", "B_cat", "C", "C_cat"))
+            == -np.inf
         )
-        assert loglik_cond_gauss_manual_score.local_score(variable="A_cat", parents=("B_cat", "A")) == pytest.approx(
-            0, abs=1e-3
-        )
-        assert loglik_cond_gauss_manual_score.local_score(
-            variable="A_cat", parents=("B", "B_cat", "C", "C_cat")
-        ) == pytest.approx(0, abs=1e-3)
 
     def test_score_bnlearn_no_parents(self, loglik_cond_gauss_score):
         # score(model2network("[A]"), d[c('A')], type='loglik-g') -> -119.7228
@@ -56,23 +50,16 @@ class TestLogLikelihoodCondGauss:
         )
 
     def test_score_bnlearn_many_parents(self, loglik_cond_gauss_score):
-        # Strata with fewer rows than dimensions: the value reflects how `_adjusted_cov` regularizes them.
         # score(model2network("[B][B_cat][C][C_cat][A|B:B_cat:C:C_cat]"), type='loglik-cg') -> -Inf
-        assert loglik_cond_gauss_score.local_score(variable="A", parents=("B_cat", "B", "C_cat", "C")) == pytest.approx(
-            15.2256, abs=1e-3
-        )
+        assert loglik_cond_gauss_score.local_score(variable="A", parents=("B_cat", "B", "C_cat", "C")) == -np.inf
 
     def test_score_bnlearn_continuous_to_categorical(self, loglik_cond_gauss_score):
         # bnlearn doesn't work. Can not have edge from continuous to categorical variable.
         assert loglik_cond_gauss_score.local_score(variable="A_cat", parents=("B",)) == pytest.approx(
             -116.7104, abs=1e-3
         )
-        assert loglik_cond_gauss_score.local_score(variable="A_cat", parents=("B_cat", "A")) == pytest.approx(
-            -6.1599, abs=1e-3
-        )
-        assert loglik_cond_gauss_score.local_score(
-            variable="A_cat", parents=("B", "B_cat", "C", "C_cat")
-        ) == pytest.approx(31.6170, abs=1e-3)
+        assert loglik_cond_gauss_score.local_score(variable="A_cat", parents=("B_cat", "A")) == -np.inf
+        assert loglik_cond_gauss_score.local_score(variable="A_cat", parents=("B", "B_cat", "C", "C_cat")) == -np.inf
 
     def test_score_is_not_floored_for_low_density_rows(self):
         rng = np.random.default_rng(seed=0)
@@ -85,13 +72,26 @@ class TestLogLikelihoodCondGauss:
         expected = gaussian_log_likelihood(df) - gaussian_log_likelihood(df[["B", "C", "D"]])
         assert LogLikelihoodCondGauss(df).local_score("A", ("B", "C", "D")) == pytest.approx(expected, abs=1e-6)
 
-    def test_adjusted_cov_regularizes_duplicated_column(self):
-        df = pd.DataFrame({"A": np.random.default_rng(seed=0).normal(size=50)})
-        df["B"] = df["A"]
+    def test_degenerate_families_score_minus_inf(self):
+        rng = np.random.default_rng(seed=0)
+        df = pd.DataFrame({"A": rng.normal(size=60), "B": rng.normal(size=60)})
+        df["B2"] = 2 * df["B"]
+        df["C"] = df["A"] + df["B"]
+        df["G"] = rng.choice(["p", "q"], size=60)
+        df["K2"] = np.where(df.index < 2, "pair", "rest")
+        df["K3"] = np.where(df.index < 3, "trio", "rest")
+        score = LogLikelihoodCondGauss(df)
 
-        cov, is_sample_cov = LogLikelihoodCondGauss._adjusted_cov(df)
-        assert not is_sample_cov
-        assert np.linalg.eigvalsh(cov.to_numpy())[0] > 0
+        # bnlearn 5.0.2, score(dag, df, type = "loglik-cg", by.node = TRUE)[child]: A | B, K2 -> -Inf;
+        # A | B, K3 -> -69.62216; C | A, B, G -> -Inf; A | B, B2, G -> -78.13329
+        assert score.local_score("A", ("B", "K2")) == -np.inf
+        assert np.isfinite(score.local_score("A", ("B", "K3")))
+        assert score.local_score("C", ("A", "B", "G")) == -np.inf
+        assert score.local_score("A", ("B", "B2", "G")) == pytest.approx(score.local_score("A", ("B", "G")), rel=1e-9)
+
+        assert score.local_score("K2", ("A", "B")) == -np.inf
+        assert np.isfinite(score.local_score("K3", ("A", "B")))
+        assert score.local_score("G", ("B", "B2")) == pytest.approx(score.local_score("G", ("B",)), rel=1e-9)
 
     @pytest.mark.parametrize(
         ("variable", "parents"), [("A", ("B",)), ("A", ("B", "C")), ("A", ("B", "G")), ("G", ("A", "B"))]
@@ -105,5 +105,12 @@ class TestLogLikelihoodCondGauss:
 
         # Each density of a continuous child is multiplied by 1 / scale; for a discrete child the Jacobians cancel.
         shift = -len(df) * np.log(scale) if variable == "A" else 0.0
-        expected = LogLikelihoodCondGauss(df).local_score(variable, parents) + shift
-        assert LogLikelihoodCondGauss(scaled).local_score(variable, parents) == pytest.approx(expected, rel=1e-9)
+        expected = LogLikelihoodCondGauss(df).local_score(variable, parents)
+        assert LogLikelihoodCondGauss(scaled).local_score(variable, parents) == pytest.approx(
+            expected + shift, rel=1e-9
+        )
+
+        rescaled_parent = df.assign(B=df["B"] * 1e-8)
+        assert LogLikelihoodCondGauss(rescaled_parent).local_score(variable, parents) == pytest.approx(
+            expected, rel=1e-9
+        )

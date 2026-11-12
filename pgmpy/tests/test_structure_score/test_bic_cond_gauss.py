@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 
@@ -26,16 +27,10 @@ class TestBICCondGauss:
 
     def test_score_bnlearn_many_parents(self, bic_cond_gauss_score):
         # score(model2network("[B][B_cat][C][C_cat][A|B:B_cat:C:C_cat]"), type='loglik-cg') -> -Inf
-        assert bic_cond_gauss_score.local_score(variable="A", parents=("B_cat", "B", "C_cat", "C")) == pytest.approx(
-            -122.9295, abs=1e-3
-        )
+        assert bic_cond_gauss_score.local_score(variable="A", parents=("B_cat", "B", "C_cat", "C")) == -np.inf
 
     def test_score_bnlearn_continuous_to_categorical(self, bic_cond_gauss_score):
         # bnlearn doesn't work. Can not have edge from continuous to categorical variable.
         assert bic_cond_gauss_score.local_score(variable="A_cat", parents=("B",)) == pytest.approx(-137.4337, abs=1e-3)
-        assert bic_cond_gauss_score.local_score(variable="A_cat", parents=("B_cat", "A")) == pytest.approx(
-            -68.3297, abs=1e-3
-        )
-        assert bic_cond_gauss_score.local_score(
-            variable="A_cat", parents=("B", "B_cat", "C", "C_cat")
-        ) == pytest.approx(-382.8483, abs=1e-3)
+        assert bic_cond_gauss_score.local_score(variable="A_cat", parents=("B_cat", "A")) == -np.inf
+        assert bic_cond_gauss_score.local_score(variable="A_cat", parents=("B", "B_cat", "C", "C_cat")) == -np.inf

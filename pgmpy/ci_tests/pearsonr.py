@@ -29,7 +29,8 @@ class Pearsonr(BaseCITest):
     Parameters
     ----------
     data : pandas.DataFrame
-        The dataset in which to test the independence condition.
+        The dataset in which to test the independence condition. Its numeric columns must not contain missing
+        values.
 
     Examples
     --------
@@ -77,23 +78,24 @@ class Pearsonr(BaseCITest):
 
     def __init__(self, data: pd.DataFrame, use_cache: bool = True):
         self.data = data
-        self._cov, _, self._col_index, self._missing = covariance_sufficient_stats(data)
+        self._cov, _, self._col_index, missing, self._values = covariance_sufficient_stats(data)
+        _check_no_missing_values(self._col_index, missing, f"The {type(self).__name__} test")
         super().__init__(use_cache=use_cache)
 
     def _partial_correlation(self, X: str, Y: str, Z: list) -> tuple[float, int]:
         """Partial correlation of `X` and `Y` given `Z`, and the degrees of freedom of the test.
 
-        A `Z` that determines `X` or `Y` makes them conditionally independent exactly, so the correlation is 0.0.
+        A `Z` that determines `X` or `Y` to machine precision makes them conditionally independent exactly, so the
+        correlation is 0.0.
         """
-        _check_no_missing_values((X, Y, *Z), self._missing, f"The partial correlation of {X} and {Y}")
         xy = [self._col_index[X], self._col_index[Y]]
-        residual_cov = residual_covariance(self._cov, xy, [self._col_index[var] for var in Z])
+        residual_cov = residual_covariance(self._cov, xy, [self._col_index[var] for var in Z], values=self._values)
         dof = self.data.shape[0] - len(Z) - 2
 
-        if len(Z) > 0:
-            tolerance = np.sqrt(np.finfo(float).eps)
-            if any(residual_cov[i, i] <= tolerance * self._cov[col, col] for i, col in enumerate(xy)):
-                return 0.0, dof
+        if len(Z) > 0 and any(
+            residual_cov[i, i] <= np.finfo(float).eps * self._cov[col, col] for i, col in enumerate(xy)
+        ):
+            return 0.0, dof
 
         with np.errstate(invalid="ignore", divide="ignore"):
             coef = residual_cov[0, 1] / np.sqrt(residual_cov[0, 0] * residual_cov[1, 1])

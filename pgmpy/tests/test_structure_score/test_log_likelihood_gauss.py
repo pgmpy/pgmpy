@@ -11,6 +11,7 @@ def collinear_data():
     df = pd.DataFrame({"A": rng.normal(size=300), "B": rng.normal(size=300)})
     df["C"] = df["A"] + df["B"]
     df["D"] = df["A"] + rng.normal(size=300)
+    df["E"] = 2 * df["A"] + 1e-4 * rng.normal(size=300)
     return df
 
 
@@ -41,15 +42,8 @@ class TestLogLikeGauss:
 
     def test_missing_values_raise_clear_error(self, collinear_data):
         collinear_data.loc[0, "B"] = np.nan
-        score = LogLikelihoodGauss(collinear_data)
-
-        with pytest.raises(ValueError, match=r"missing values.*B"):
-            score.local_score("A", ("B",))
-        with pytest.raises(ValueError, match=r"missing values.*B"):
-            score.local_score("B", ())
-
-        # A variable with missing values that is not part of the family must not interfere.
-        assert np.isfinite(score.local_score("A", ("D",)))
+        with pytest.raises(ValueError, match=r"missing values.*\['B'\]"):
+            LogLikelihoodGauss(collinear_data)
 
     def test_collinear_parents_and_determined_variable(self, collinear_data):
         score = LogLikelihoodGauss(collinear_data)
@@ -59,3 +53,11 @@ class TestLogLikeGauss:
         assert score.local_score("D", ("A", "B", "C")) == pytest.approx(score.local_score("D", ("A", "B")), abs=1e-8)
         assert score.local_score("C", ("A", "B")) == -np.inf
         assert score.local_score("A", ("B", "C")) == -np.inf
+
+        design = np.column_stack([np.ones(len(collinear_data)), collinear_data["A"]])
+        target = collinear_data["E"].to_numpy()
+        residual = target - design @ np.linalg.lstsq(design, target, rcond=None)[0]
+        n_samples = len(collinear_data)
+        expected = -0.5 * n_samples * (np.log(2 * np.pi) + 1 + np.log(residual @ residual / n_samples))
+        assert score.local_score("E", ("A",)) == pytest.approx(expected, rel=1e-9)
+        assert score.local_score("E", ("A",)) > score.local_score("E", ())

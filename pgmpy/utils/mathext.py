@@ -10,6 +10,7 @@ from pgmpy.utils._random import _rename_to_rng
 from pgmpy.utils._warnings import _warn_external
 
 State = namedtuple("State", ["var", "state"])
+_SQRT_EPS = np.sqrt(np.finfo(float).eps)
 
 
 def cartesian(arrays: list[Any], out: np.ndarray | None = None) -> np.ndarray:
@@ -244,7 +245,9 @@ def powerset(l_input: list):
     return chain.from_iterable(combinations(l_input, r) for r in range(len(l_input) + 1))
 
 
-def covariance_sufficient_stats(data: pd.DataFrame) -> tuple[np.ndarray, np.ndarray, dict[Any, int], frozenset]:
+def covariance_sufficient_stats(
+    data: pd.DataFrame,
+) -> tuple[np.ndarray, np.ndarray, dict[Any, int], frozenset, np.ndarray]:
     """Mean and covariance of the numeric and boolean columns of `data`; other columns are skipped.
 
     Parameters
@@ -262,15 +265,17 @@ def covariance_sufficient_stats(data: pd.DataFrame) -> tuple[np.ndarray, np.ndar
         Mapping from column name to its position in `cov`.
     missing : frozenset
         Retained columns with missing values; their entries in `cov` are ``nan``.
+    values : numpy.ndarray
+        The retained columns as floats, in the order of `cov`.
 
     Examples
     --------
     >>> import pandas as pd
     >>> from pgmpy.utils import covariance_sufficient_stats
     >>> data = pd.DataFrame({"A": [1.0, 2.0, 3.0], "B": [3.0, 5.0, 4.0], "C": list("xyz")})
-    >>> cov, means, col_index, missing = covariance_sufficient_stats(data)
-    >>> col_index, means, missing
-    ({'A': 0, 'B': 1}, array([2., 4.]), frozenset())
+    >>> cov, means, col_index, missing, values = covariance_sufficient_stats(data)
+    >>> col_index, means, missing, values.shape
+    ({'A': 0, 'B': 1}, array([2., 4.]), frozenset(), (3, 2))
     >>> cov.round(4)
     array([[0.6667, 0.3333],
            [0.3333, 0.6667]])
@@ -283,18 +288,89 @@ def covariance_sufficient_stats(data: pd.DataFrame) -> tuple[np.ndarray, np.ndar
         values.mean(axis=0),
         {col: index for index, col in enumerate(numeric.columns)},
         frozenset(numeric.columns[np.isnan(values).any(axis=0)]),
+        values,
     )
 
 
-def residual_covariance(cov: np.ndarray, targets: list[int], given: list[int]) -> np.ndarray:
+def regression_coefficients(cov: np.ndarray, targets: list[int], given: list[int]) -> np.ndarray:
+    r"""Least-squares coefficients of `targets` regressed on `given`, computed from their covariance matrix `cov`.
+
+    :math:`\Sigma_{GG}^{+} \Sigma_{GT}`, with `given` standardized before the pseudo-inverse so that its cutoff does
+    not depend on the scale of each variable. The pseudo-inverse gives the minimum-norm fit when `given` is rank
+    deficient.
+
+    Parameters
+    ----------
+    cov : numpy.ndarray
+        Covariance matrix of all the variables.
+    targets : list of int
+        Positions in `cov` of the regressed variables.
+    given : list of int
+        Positions in `cov` of the regressors.
+
+    Returns
+    -------
+    numpy.ndarray
+        Coefficients of shape ``(len(given), len(targets))``.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from pgmpy.utils import regression_coefficients
+    >>> cov = np.array([[2.0, 1.0], [1.0, 1.0]])
+    >>> regression_coefficients(cov, targets=[0], given=[1])
+    array([[1.]])
+    """
+    scale = np.sqrt(cov[given, given])
+    scale[scale == 0] = 1.0
+    inverse_scale = 1.0 / scale[:, None]
+    standardized = np.linalg.pinv(cov[np.ix_(given, given)] * inverse_scale * inverse_scale.T)
+    return standardized @ (cov[np.ix_(given, targets)] * inverse_scale) * inverse_scale
+
+
+def residual_covariance(
+    cov: np.ndarray, targets: list[int], given: list[int], values: np.ndarray | None = None
+) -> np.ndarray:
     r"""Covariance of `targets` after regressing them on `given`, as a block of `cov`.
 
-    Schur complement :math:`\Sigma_{TT} - \Sigma_{TG} \Sigma_{GG}^{+} \Sigma_{GT}`; the pseudo-inverse matches a
-    minimum-norm least-squares fit when `given` is rank deficient.
+    Schur complement :math:`\Sigma_{TT} - \Sigma_{TG} \Sigma_{GG}^{+} \Sigma_{GT}`, using
+    :func:`regression_coefficients`. When `given` leaves a target with less than :math:`\sqrt{\epsilon}` of its
+    variance, the subtraction has cancelled most of the significant digits; if `values` is provided, the residual
+    covariance is then recomputed from an explicit least-squares fit on the observations.
+
+    Parameters
+    ----------
+    cov : numpy.ndarray
+        Maximum likelihood (``ddof=0``) covariance matrix of all the variables.
+    targets : list of int
+        Positions in `cov` of the regressed variables.
+    given : list of int
+        Positions in `cov` of the regressors.
+    values : numpy.ndarray, optional
+        The observations `cov` was computed from, one column per variable in the order of `cov`.
+
+    Returns
+    -------
+    numpy.ndarray
+        Residual covariance matrix of shape ``(len(targets), len(targets))``, with ``ddof=0``.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from pgmpy.utils import residual_covariance
+    >>> cov = np.array([[2.0, 1.0], [1.0, 1.0]])
+    >>> residual_covariance(cov, targets=[0], given=[1])
+    array([[1.]])
     """
-    residual = cov[np.ix_(targets, targets)]
+    total = cov[np.ix_(targets, targets)]
     if len(given) == 0:
+        return total
+
+    residual = total - cov[np.ix_(targets, given)] @ regression_coefficients(cov, targets, given)
+    if values is None or (np.diagonal(residual) > _SQRT_EPS * np.diagonal(total)).all():
         return residual
 
-    cross = cov[np.ix_(targets, given)]
-    return residual - cross @ np.linalg.pinv(cov[np.ix_(given, given)]) @ cross.T
+    centered = values[:, targets + given] - values[:, targets + given].mean(axis=0)
+    responses, predictors = centered[:, : len(targets)], centered[:, len(targets) :]
+    errors = responses - predictors @ np.linalg.lstsq(predictors, responses, rcond=None)[0]
+    return errors.T @ errors / values.shape[0]

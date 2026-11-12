@@ -1,6 +1,12 @@
 from ._warnings import ExperimentalWarning
 from .check_functions import _check_1d_array_object, _check_length_equal, _check_no_missing_values
-from .mathext import cartesian, covariance_sufficient_stats, residual_covariance, sample_discrete
+from .mathext import (
+    cartesian,
+    covariance_sufficient_stats,
+    regression_coefficients,
+    residual_covariance,
+    sample_discrete,
+)
 from .optimizer import optimize, pinverse
 from .state_name import StateNameMixin
 from .tabular import (
@@ -23,6 +29,7 @@ __all__ = [
     "ExperimentalWarning",
     "cartesian",
     "covariance_sufficient_stats",
+    "regression_coefficients",
     "residual_covariance",
     "sample_discrete",
     "StateNameMixin",

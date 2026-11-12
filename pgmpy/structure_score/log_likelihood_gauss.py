@@ -29,7 +29,7 @@ class LogLikelihoodGauss(BaseStructureScore):
     Parameters
     ----------
     data : pandas.DataFrame
-        DataFrame where each column represents a continuous variable.
+        DataFrame where each column represents a continuous variable, without missing values.
     state_names : dict, optional
         Accepted for API consistency but not typically used for Gaussian networks.
     max_cache_size : int or None, default=10000
@@ -69,16 +69,16 @@ class LogLikelihoodGauss(BaseStructureScore):
 
     def __init__(self, data, state_names=None, max_cache_size=10000):
         super().__init__(data, state_names=state_names, max_cache_size=max_cache_size)
-        self._cov, _, self._col_index, self._missing = covariance_sufficient_stats(self.data)
+        self._cov, _, self._col_index, missing, self._values = covariance_sufficient_stats(self.data)
+        _check_no_missing_values(self._col_index, missing, f"The {type(self).__name__} score")
         self._n_samples = self.data.shape[0]
         self._ll_const = -0.5 * self._n_samples * (np.log(2.0 * np.pi) + 1.0)
 
     def _log_likelihood(self, variable: Hashable, parents: tuple[Hashable, ...]) -> tuple[float, float]:
-        _check_no_missing_values((variable, *parents), self._missing, f"The Gaussian log-likelihood of {variable}")
         variable_col = self._col_index[variable]
         parent_cols = [self._col_index[parent] for parent in parents]
-        residual_var = residual_covariance(self._cov, [variable_col], parent_cols)[0, 0]
-        if residual_var <= np.sqrt(np.finfo(float).eps) * self._cov[variable_col, variable_col]:
+        residual_var = residual_covariance(self._cov, [variable_col], parent_cols, values=self._values)[0, 0]
+        if residual_var <= np.finfo(float).eps * self._cov[variable_col, variable_col]:
             return (-np.inf, len(parents))
 
         ll = self._ll_const - 0.5 * self._n_samples * np.log(residual_var)

@@ -150,7 +150,7 @@ def test_degenerate_inputs():
     df = pd.DataFrame(rng.standard_normal((300, 3)), columns=["A", "B", "D"])
     df["C"] = df["A"] + df["B"]
     df["E"] = df["A"] + 1e-12 * rng.standard_normal(300)
-    df["M"] = df["D"].where(df.index > 0)
+    df["F"] = df["D"] + 1e-4 * df["A"]
     test = Pearsonr(data=df)
 
     # Given A, C is B plus a constant; given C, A and B are perfectly anticorrelated. Rounding must not
@@ -167,10 +167,13 @@ def test_degenerate_inputs():
         assert test.statistic_ == 0.0
         assert test.p_value_ == 1.0
 
-    # The missing value in M only affects the queries that involve M.
-    for X, Z in [("M", []), ("A", ["M"])]:
-        with pytest.raises(ValueError, match=r"missing values.*M"):
-            test(X, "B", Z)
+    design = np.column_stack([np.ones(len(df)), df["D"]])
+    residuals = [df[var] - design @ np.linalg.lstsq(design, df[var], rcond=None)[0] for var in ["F", "C"]]
+    assert test("F", "C", ["D"]) is False
+    assert test.statistic_ == pytest.approx(np.corrcoef(*residuals)[0, 1], rel=1e-6)
+
+    with pytest.raises(ValueError, match=r"missing values.*\['M'\]"):
+        Pearsonr(data=df.assign(M=df["D"].where(df.index > 0)))
 
 
 @pytest.mark.filterwarnings("ignore::scipy.stats.ConstantInputWarning")

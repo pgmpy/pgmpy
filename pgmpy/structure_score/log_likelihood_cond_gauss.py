@@ -1,11 +1,10 @@
 from collections.abc import Hashable
 
 import numpy as np
-import pandas as pd
 
 from pgmpy.structure_score._base import BaseStructureScore
+from pgmpy.utils import residual_covariance
 
-# Relative eigenvalue cutoff for singularity, as in `scipy.stats.multivariate_normal(allow_singular=True)`.
 _SINGULAR_RCOND = 1e6 * np.finfo(float).eps
 
 
@@ -28,6 +27,11 @@ class LogLikelihoodCondGauss(BaseStructureScore):
         d_{2t}) p(d_{2t})}.
 
     The Gaussian densities are estimated from the corresponding grouped samples.
+
+    As in bnlearn, a family scores :math:`-\infty` when a continuous target has no residual variance left within some
+    configuration of its discrete parents, for example when the configuration has no more rows than the regression has
+    coefficients. A discrete target scores :math:`-\infty` when its continuous parents span fewer dimensions within some
+    configuration of the target and its discrete parents than in the whole data.
 
     Parameters
     ----------
@@ -78,50 +82,17 @@ class LogLikelihoodCondGauss(BaseStructureScore):
         super().__init__(data, state_names=state_names, max_cache_size=max_cache_size)
 
     @staticmethod
-    def _adjusted_cov(df: pd.DataFrame) -> tuple[pd.DataFrame, bool]:
-        """`df.cov()`, ridged or replaced by the identity when degenerate, and whether it was left unchanged."""
-        n_cols = len(df.columns)
-        identity = pd.DataFrame(np.eye(n_cols), index=df.columns, columns=df.columns)
-        if (df.shape[0] == 1) or (df.shape[0] < n_cols):
-            return identity, False
+    def _gaussian_fit(values: np.ndarray) -> tuple[int, float, np.ndarray, np.ndarray]:
+        """Rank, log pseudo-determinant and pseudo-inverse of the sample covariance of `values`, and their mean."""
+        n_rows, n_cols = values.shape
+        if n_rows < 2 or n_cols == 0:
+            return 0, 0.0, np.zeros((n_cols, n_cols)), values.mean(axis=0)
 
-        df_cov = df.cov()
-        eigenvalues = np.linalg.eigvalsh(df_cov.to_numpy())
-        if eigenvalues[-1] <= 0:
-            return identity, False
-        if eigenvalues[0] <= _SINGULAR_RCOND * eigenvalues[-1]:
-            return df_cov + 1e-6 * eigenvalues[-1] * np.eye(n_cols), False
-        return df_cov, True
-
-    @staticmethod
-    def _gaussian_log_likelihood(df: pd.DataFrame, reference: pd.DataFrame | None = None) -> float:
-        """Total log density of the rows of `df` under the Gaussian fitted to `reference` (default `df`)."""
-        n_rows, n_cols = df.shape
-        if n_cols == 0:
-            return 0.0
-
-        fitted_on_df = reference is None
-        reference = df if fitted_on_df else reference
-        cov, is_sample_cov = LogLikelihoodCondGauss._adjusted_cov(reference)
-
-        # A singular covariance uses the pseudo-determinant and pseudo-inverse.
-        eigenvalues, eigenvectors = np.linalg.eigh(np.asarray(cov, dtype=float))
-        kept = eigenvalues > _SINGULAR_RCOND * np.max(np.abs(eigenvalues))
-        rank = int(np.count_nonzero(kept))
-        log_pdet = np.sum(np.log(eigenvalues[kept]))
-
-        # Summed Mahalanobis term n_rows * tr(precision @ scatter); (n_rows - 1) * rank under `df`'s own fit.
-        if fitted_on_df and is_sample_cov:
-            mahalanobis = (n_rows - 1) * rank
-        else:
-            values = df.to_numpy(dtype=float)
-            delta = values.mean(axis=0) - reference.mean(axis=0).to_numpy(dtype=float)
-            scatter = np.cov(values, rowvar=False, ddof=0).reshape(n_cols, n_cols) + np.outer(delta, delta)
-            basis = eigenvectors[:, kept]
-            precision = (basis / eigenvalues[kept]) @ basis.T
-            mahalanobis = n_rows * np.sum(precision * scatter)
-
-        return -0.5 * (n_rows * (rank * np.log(2.0 * np.pi) + log_pdet) + mahalanobis)
+        eigenvalues, eigenvectors = np.linalg.eigh(np.atleast_2d(np.cov(values, rowvar=False)))
+        kept = eigenvalues > _SINGULAR_RCOND * max(eigenvalues[-1], 1.0)
+        basis = eigenvectors[:, kept]
+        precision = (basis / eigenvalues[kept]) @ basis.T
+        return int(np.count_nonzero(kept)), float(np.sum(np.log(eigenvalues[kept]))), precision, values.mean(axis=0)
 
     def _cat_parents_product(self, parents: tuple[Hashable, ...]) -> int:
         k = 1
@@ -151,40 +122,58 @@ class LogLikelihoodCondGauss(BaseStructureScore):
         return k
 
     def _log_likelihood(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
-        parent_list = list(parents)
-        df = self.data.loc[:, [variable] + parent_list]
+        df = self.data.loc[:, [variable, *parents]]
         n_samples = df.shape[0]
+        continuous = [var for var in [variable, *parents] if self.dtypes[var] == "N"]
+        discrete = [var for var in parents if self.dtypes[var] != "N"]
+
+        # Step 1: Standardize the continuous variables; an exactly constant one is only centered.
+        values = df.loc[:, continuous].to_numpy(dtype=float)
+        scale = values.std(axis=0)
+        scale[np.ptp(values, axis=0) == 0] = 1.0
+        values = (values - values.mean(axis=0)) / scale
 
         if self.dtypes[variable] == "N":
-            c1 = variable
-            c2 = [var for var in parents if self.dtypes[var] == "N"]
-            d = list(set(parents) - set(c2))
+            # Step 2: Add the Gaussian log-likelihood of the target's regression within each discrete configuration.
+            strata = list(df.groupby(discrete, observed=True).indices.values()) if discrete else [np.arange(n_samples)]
+            log_like = 0.0
+            for rows in strata:
+                n_rows = len(rows)
+                stratum_cov = np.atleast_2d(np.cov(values[rows], rowvar=False, ddof=0))
+                residual_var = residual_covariance(
+                    stratum_cov, [0], list(range(1, len(continuous))), values=values[rows]
+                )[0, 0]
+                if residual_var <= np.finfo(float).eps:
+                    return -np.inf
+                log_like -= 0.5 * (n_rows * np.log(2.0 * np.pi * residual_var * n_rows / (n_rows - 1)) + n_rows - 1)
 
-            if len(d) == 0:
-                return self._gaussian_log_likelihood(df) - self._gaussian_log_likelihood(df.loc[:, c2])
+            # Step 3: Undo the standardization of the target.
+            return log_like - sum(len(rows) for rows in strata) * np.log(scale[0])
 
-            log_like = 0
-            for _, df_d in df.groupby(d, observed=True):
-                log_like += self._gaussian_log_likelihood(df_d.loc[:, [c1] + c2])
-                log_like -= self._gaussian_log_likelihood(df_d.loc[:, c2])
-            return log_like
+        # Step 2: Fit the continuous parents within each configuration of the discrete parents.
+        d2_ids = df.groupby(discrete, observed=True).ngroup().to_numpy() if discrete else np.zeros(n_samples, dtype=int)
+        known_target = df[variable].notna().to_numpy()
+        d2_counts, d2_fits = {}, {}
+        for d2_id in np.unique(d2_ids[d2_ids >= 0]):
+            d2_rows = d2_ids == d2_id
+            d2_counts[d2_id] = np.count_nonzero(known_target & d2_rows) if discrete else n_samples
+            d2_fits[d2_id] = self._gaussian_fit(values[d2_rows])
+        global_rank = self._gaussian_fit(values)[0]
 
-        d1 = variable
-        c = [var for var in parents if self.dtypes[var] == "N"]
-        d2 = list(set(parents) - set(c))
+        # Step 3: Add log p(d1, d2) / p(d2) and the log density ratio of the continuous parents given (d1, d2) and d2.
+        log_like = 0.0
+        for rows in df.groupby([variable, *discrete], observed=True).indices.values():
+            n_rows = len(rows)
+            d2_id = d2_ids[rows[0]]
+            rank, log_pdet, _, _ = self._gaussian_fit(values[rows])
+            d2_rank, d2_log_pdet, d2_precision, d2_mean = d2_fits[d2_id]
+            if rank != global_rank or d2_rank != global_rank:
+                return -np.inf
 
-        d2_strata = dict(list(df.groupby(d2, observed=True))) if len(d2) > 0 else {(): df}
-
-        log_like = 0
-        for d_states, df_d1d2 in df.groupby([d1] + d2, observed=True):
-            n_rows = df_d1d2.shape[0]
-            df_d2 = d2_strata[d_states[1:]]
-            log_like += self._gaussian_log_likelihood(df_d1d2.loc[:, c])
-            log_like += n_rows * np.log(n_rows / n_samples)
-            if len(c) > 0:
-                log_like -= self._gaussian_log_likelihood(df_d1d2.loc[:, c], reference=df_d2.loc[:, c])
-            if len(d2) > 0:
-                log_like -= n_rows * np.log(df_d2[d1].count() / n_samples)
+            centered = values[rows] - d2_mean
+            mahalanobis = np.sum((centered @ d2_precision) * centered)
+            log_like += n_rows * (np.log(n_rows / n_samples) - np.log(d2_counts[d2_id] / n_samples))
+            log_like -= 0.5 * (n_rows * (log_pdet - d2_log_pdet) + (n_rows - 1) * rank - mahalanobis)
         return log_like
 
     def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
