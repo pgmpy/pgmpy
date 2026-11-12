@@ -366,7 +366,7 @@ def test_check_fit_unmigrated_bridge(backend):
 
 @pytest.mark.parametrize("backend", ["polars", "pyarrow"])
 def test_score_dataframe_backends(backend):
-    pandas_df = pd.DataFrame({"a": [1, 2, 1, 2], "b": [2, 1, 2, 1]})
+    pandas_df = pd.DataFrame({"a": ["1", "2", "1", "2"], "b": ["2", "1", "2", "1"]})
     est = ChowLiu(n_jobs=1).fit(pandas_df)
     score_pd = est.score(pandas_df)
 
@@ -393,9 +393,9 @@ def test_fit_and_score_integer_columns():
     rng = np.random.default_rng(42)
     df = pd.DataFrame(
         {
-            0: rng.choice([0, 1], size=100, p=[0.8, 0.2]),
-            1: rng.choice([0, 1], size=100, p=[0.3, 0.7]),
-            2: rng.choice([0, 1], size=100, p=[0.5, 0.5]),
+            0: rng.choice(["0", "1"], size=100, p=[0.8, 0.2]),
+            1: rng.choice(["0", "1"], size=100, p=[0.3, 0.7]),
+            2: rng.choice(["0", "1"], size=100, p=[0.5, 0.5]),
         }
     )
     est = ChowLiu(root_node="x2", n_jobs=1).fit(df)
@@ -410,21 +410,21 @@ def test_fit_and_score_integer_columns():
     assert np.isclose(score_df, score_arr)
 
     # Refitting with integer columns updates feature_names_in_ to defaults
-    est_str = ChowLiu(n_jobs=1).fit(pd.DataFrame({"a": [1, 2], "b": [2, 1]}))
+    est_str = ChowLiu(n_jobs=1).fit(pd.DataFrame({"a": ["1", "2"], "b": ["2", "1"]}))
     assert list(est_str.feature_names_in_) == ["a", "b"]
     est_str.fit(df)
     assert list(est_str.feature_names_in_) == ["x0", "x1", "x2"]
 
     # Wrapping with Narwhals frame sets default feature_names_in_
-    est_str_nw = ChowLiu(n_jobs=1).fit(pd.DataFrame({"a": [1, 2], "b": [2, 1]}))
+    est_str_nw = ChowLiu(n_jobs=1).fit(pd.DataFrame({"a": ["1", "2"], "b": ["2", "1"]}))
     assert list(est_str_nw.feature_names_in_) == ["a", "b"]
     est_str_nw.fit(nw.from_native(df))
     assert list(est_str_nw.feature_names_in_) == ["x0", "x1", "x2"]
 
     # Fallback in score() when feature_names_in_ is absent
-    est_fallback = ChowLiu(n_jobs=1).fit(pd.DataFrame({"a": [1, 2], "b": [2, 1]}))
+    est_fallback = ChowLiu(n_jobs=1).fit(pd.DataFrame({"a": ["1", "2"], "b": ["2", "1"]}))
     del est_fallback.feature_names_in_
-    assert est_fallback.score(np.array([[1, 2], [2, 1]])) is not None
+    assert est_fallback.score(np.array([["1", "2"], ["2", "1"]])) is not None
 
 
 def test_tree_search_preserve_zero_weight_edges():
@@ -434,7 +434,7 @@ def test_tree_search_preserve_zero_weight_edges():
     assert set(dag.nodes()) == set(columns)
     assert len(dag.edges()) == len(columns) - 1
 
-    df = pd.DataFrame({"A": [0, 1, 0, 1], "B": [1, 1, 1, 1], "C": [0, 0, 1, 1]})
+    df = pd.DataFrame({"A": ["0", "1", "0", "1"], "B": ["1", "1", "1", "1"], "C": ["0", "0", "1", "1"]})
     est = ChowLiu(edge_weights_fn=lambda x, y: 0.0, n_jobs=1).fit(df)
     assert set(est.causal_graph_.nodes()) == {"A", "B", "C"}
     assert est.adjacency_matrix_.shape == (3, 3)
@@ -498,6 +498,6 @@ def test_unmigrated_estimators_integer_columns(monkeypatch):
     R2Sort().fit(df_multi)
     SP().fit(df_multi)
     be = BootstrapEstimator(estimator=ChowLiu(root_node="x0", show_progress=False), n_bootstraps=2)
-    be.fit(pd.DataFrame(rng.integers(0, 2, size=(30, 3)), columns=[0, 1, 2]))
+    be.fit(pd.DataFrame(rng.choice(["0", "1"], size=(30, 3)), columns=[0, 1, 2]))
     adj = be.get_adjacency_matrix(0.5)
     assert adj.shape == (3, 3)

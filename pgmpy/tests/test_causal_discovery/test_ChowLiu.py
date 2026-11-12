@@ -178,7 +178,7 @@ def test_chow_liu_dataframe_backends(data12, backend):
         data = nw.from_native(data12)
     elif backend == "polars":
         pl = pytest.importorskip("polars")
-        data = pl.DataFrame(data12)
+        data = pl.DataFrame(data12.astype(str))
     elif backend == "pyarrow":
         pa = pytest.importorskip("pyarrow")
         data = pa.Table.from_pandas(data12)
