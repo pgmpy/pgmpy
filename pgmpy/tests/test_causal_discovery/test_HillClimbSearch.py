@@ -360,7 +360,7 @@ def test_estimate_mixed_data():
 
 def test_score():
     asia_model = load_model("bnlearn/asia")
-    data = asia_model.simulate(n_samples=int(1e4), seed=42)
+    data = asia_model.simulate(n_samples=int(1e4), rng=42)
     est = HillClimbSearch(
         return_type="dag",
         show_progress=False,

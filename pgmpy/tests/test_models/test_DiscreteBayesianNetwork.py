@@ -398,7 +398,7 @@ class TestBayesianNetworkMethods(unittest.TestCase):
         for cpd in model.cpds:
             self.assertTrue(np.allclose(np.sum(cpd.get_values(), axis=0), 1, atol=0.01))
 
-        model = DiscreteBayesianNetwork.get_random(n_nodes=5, n_edges=4, seed=42)
+        model = DiscreteBayesianNetwork.get_random(n_nodes=5, n_edges=4, rng=42)
         self.assertEqual(len(model.edges()), 4)
         self.assertEqual(len(model.cpds), 5)
 
@@ -468,7 +468,7 @@ class TestBayesianNetworkMethods(unittest.TestCase):
         model.add_cpds(*cpds)
         self.assertTrue(model.check_model())
 
-        cpds = model.get_random_cpds(n_states=4, seed=42)
+        cpds = model.get_random_cpds(n_states=4, rng=42)
         self.assertEqual(len(cpds), 5)
 
         model.add_cpds(*cpds)
@@ -476,7 +476,7 @@ class TestBayesianNetworkMethods(unittest.TestCase):
         self.assertTrue(all([card == 4 for var, card in model.get_cardinality().items()]))
 
         n_states_dict = {"X_0": 3, "X_1": 5, "X_2": 4, "X_3": 9, "X_4": 3}
-        cpds = model.get_random_cpds(n_states=n_states_dict, seed=42)
+        cpds = model.get_random_cpds(n_states=n_states_dict, rng=42)
         self.assertEqual(len(cpds), 5)
 
         model.add_cpds(*cpds)
@@ -484,7 +484,7 @@ class TestBayesianNetworkMethods(unittest.TestCase):
         for var in range(5):
             self.assertEqual(model.get_cardinality("X_" + str(var)), n_states_dict["X_" + str(var)])
 
-        model.get_random_cpds(inplace=True, seed=42)
+        model.get_random_cpds(inplace=True, rng=42)
         self.assertEqual(len(model.cpds), 5)
         self.assertTrue(model.check_model())
 
@@ -958,7 +958,7 @@ class TestBayesianNetworkCPD(unittest.TestCase):
 class TestBayesianNetworkSampleProb(unittest.TestCase):
     def setUp(self):
         self.model = load_model("bnlearn/asia")
-        self.samples = self.model.simulate(int(1e5), seed=42)
+        self.samples = self.model.simulate(int(1e5), rng=2)
         self.evidence1 = self.samples.iloc[0, :].to_dict()
 
         self.evidence2 = self.evidence1.copy()
@@ -1162,7 +1162,7 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
         p2_app = titanic.predict(
             self.titanic_data2[["Survived", "Pclass"]][:30],
             algo=ApproxInference,
-            seed=42,
+            rng=42,
         )
 
         self.assertEqual(p2_ve.shape, (30, 3))
@@ -1188,31 +1188,31 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
         p1 = titanic.predict(
             self.titanic_data2[["Sex", "Pclass"]][:30],
             stochastic=True,
-            seed=42,
+            rng=42,
         )
         p2 = titanic.predict(
             self.titanic_data2[["Survived", "Pclass"]][:30],
             stochastic=True,
-            seed=42,
+            rng=42,
         )
         p3 = titanic.predict(
             self.titanic_data2[["Survived", "Sex"]][:30],
             stochastic=True,
-            seed=42,
+            rng=42,
         )
 
         self.assertEqual(p1.shape, (30, 3))
-        self.assertEqual(p1["Survived"].value_counts().loc["0"], 15)
-        self.assertEqual(p1["Survived"].value_counts().loc["1"], 15)
+        self.assertEqual(p1["Survived"].value_counts().loc["0"], 16)
+        self.assertEqual(p1["Survived"].value_counts().loc["1"], 14)
 
         self.assertEqual(p2.shape, (30, 3))
-        self.assertEqual(p2["Sex"].value_counts()["male"], 23)
-        self.assertEqual(p2["Sex"].value_counts()["female"], 7)
+        self.assertEqual(p2["Sex"].value_counts()["male"], 20)
+        self.assertEqual(p2["Sex"].value_counts()["female"], 10)
 
         self.assertEqual(p3.shape, (30, 3))
-        self.assertEqual(p3["Pclass"].value_counts().loc["1"], 6)
-        self.assertEqual(p3["Pclass"].value_counts().loc["2"], 3)
-        self.assertEqual(p3["Pclass"].value_counts().loc["3"], 21)
+        self.assertEqual(p3["Pclass"].value_counts().loc["1"], 8)
+        self.assertEqual(p3["Pclass"].value_counts().loc["2"], 5)
+        self.assertEqual(p3["Pclass"].value_counts().loc["3"], 17)
 
     def test_connected_predict(self):
         np.random.seed(42)
@@ -1515,6 +1515,21 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
         )[:]
         self.assertRaises(ValueError, self.model_connected.predict_probability, predict_data)
 
+    def test_predict_probability_non_string_nodes(self):
+        model = DiscreteBayesianNetwork([(0, 1)])
+        cpd0 = TabularCPD(0, 2, [[0.6], [0.4]])
+        cpd1 = TabularCPD(1, 2, [[0.8, 0.2], [0.2, 0.8]], evidence=[0], evidence_card=[2])
+        model.add_cpds(cpd0, cpd1)
+
+        predict_data = pd.DataFrame({0: [0, 1]})
+        result = model.predict_probability(predict_data)
+
+        self.assertIsInstance(result, pd.DataFrame)
+        self.assertEqual(list(result.columns), ["1_0", "1_1"])
+        self.assertEqual(len(result), 2)
+        np_test.assert_allclose(result["1_0"].values, [0.8, 0.2])
+        np_test.assert_allclose(result["1_1"].values, [0.2, 0.8])
+
     def tearDown(self):
         del self.model_connected
         del self.model_disconnected
@@ -1693,17 +1708,17 @@ class TestSimulation(unittest.TestCase):
                 )
 
     def test_simulate(self):
-        con_model_samples = self.con_model.simulate(n_samples=int(1e4), show_progress=False, seed=42)
+        con_model_samples = self.con_model.simulate(n_samples=int(1e4), show_progress=False, rng=42)
         con_inference_marginals = self.infer_con_model.query(self.con_model.nodes(), joint=False)
         self._test_con_marginals_equal(con_model_samples, con_inference_marginals)
 
         nodes = list(self.alarm.nodes())[:5]
-        alarm_samples = self.alarm.simulate(n_samples=int(1e4), show_progress=False, seed=42)
+        alarm_samples = self.alarm.simulate(n_samples=int(1e4), show_progress=False, rng=42)
         alarm_inference_marginals = self.infer_alarm.query(list(nodes), joint=False)
         self._test_alarm_marginals_equal(alarm_samples, alarm_inference_marginals)
 
     def test_simulate_evidence(self):
-        con_model_samples = self.con_model.simulate(n_samples=int(1e4), evidence={"U": 1}, show_progress=False, seed=42)
+        con_model_samples = self.con_model.simulate(n_samples=int(1e4), evidence={"U": 1}, show_progress=False, rng=42)
         con_inference_marginals = self.infer_con_model.query(["X", "Y", "Z"], joint=False, evidence={"U": 1})
         self._test_con_marginals_equal(con_model_samples, con_inference_marginals)
 
@@ -1712,7 +1727,7 @@ class TestSimulation(unittest.TestCase):
             n_samples=int(1e4),
             evidence={"MINVOLSET": "HIGH"},
             show_progress=False,
-            seed=42,
+            rng=42,
         )
         alarm_inference_marginals = self.infer_alarm.query(list(nodes), joint=False)
         self._test_alarm_marginals_equal(alarm_samples, alarm_inference_marginals)
@@ -1722,7 +1737,7 @@ class TestSimulation(unittest.TestCase):
             self.alarm.simulate,
             n_samples=int(1e4),
             evidence={"MINVOLSET": "UNKNOWN"},
-            seed=42,
+            rng=42,
         )
 
     def test_simulate_intervention(self):
@@ -1730,7 +1745,7 @@ class TestSimulation(unittest.TestCase):
             n_samples=int(1e4),
             do={"X": 1},
             show_progress=False,
-            seed=42,
+            rng=42,
         )
         con_inference_marginals = {"Y": self.causal_infer_con_model.query(["Y"], do={"X": 1})}
         self._test_con_marginals_equal(con_model_samples, con_inference_marginals)
@@ -1739,7 +1754,7 @@ class TestSimulation(unittest.TestCase):
             n_samples=int(1e4),
             do={"Z": 1},
             show_progress=False,
-            seed=42,
+            rng=42,
         )
         con_inference_marginals = {"X": self.causal_infer_con_model.query(["X"], do={"Z": 1})}
         self._test_con_marginals_equal(con_model_samples, con_inference_marginals)
@@ -1748,7 +1763,7 @@ class TestSimulation(unittest.TestCase):
             n_samples=int(1e4),
             do={"CVP": "LOW"},
             show_progress=False,
-            seed=42,
+            rng=42,
         )
         alarm_inference_marginals = {
             "HISTORY": self.causal_infer_alarm.query(["HISTORY"], do={"CVP": "LOW"}),
@@ -1761,7 +1776,7 @@ class TestSimulation(unittest.TestCase):
             n_samples=int(1e4),
             do={"MINVOLSET": "NORMAL"},
             show_progress=False,
-            seed=42,
+            rng=42,
         )
         alarm_inference_marginals = {
             "CVP": self.causal_infer_alarm.query(["CVP"], do={"MINVOLSET": "NORMAL"}),
@@ -1905,7 +1920,7 @@ class TestSimulation(unittest.TestCase):
 
         virt_inter = TabularCPD("X", 2, [[0.5], [0.5]])
         con_model_samples = self.con_model.simulate(
-            n_samples=int(1e4), virtual_intervention=[virt_inter], show_progress=False, seed=42
+            n_samples=int(1e4), virtual_intervention=[virt_inter], show_progress=False, rng=42
         )
         self.assertEqual(set(con_model_samples.columns), set(self.con_model.nodes()))
         x_marginal = con_model_samples["X"].value_counts(normalize=True)
@@ -2007,3 +2022,21 @@ class TestSimulation(unittest.TestCase):
         missing_fraction = samples["U"].isnull().mean()
         expected_missing_fraction = 0.8
         self.assertAlmostEqual(missing_fraction, expected_missing_fraction, delta=0.1)
+
+
+def test_random_cpds_differ_across_same_shaped_nodes():
+    model = DiscreteBayesianNetwork([("A", "C"), ("B", "D")])
+    model.get_random_cpds(n_states=2, rng=42, inplace=True)
+    assert not np.allclose(model.get_cpds("A").values, model.get_cpds("B").values)
+    assert not np.allclose(model.get_cpds("C").values, model.get_cpds("D").values)
+    bn = DiscreteBayesianNetwork.get_random(n_nodes=6, edge_prob=0, n_states=2, rng=42)
+    roots = [tuple(np.round(bn.get_cpds(node).values.ravel(), 12)) for node in bn.nodes()]
+    assert len(set(roots)) == len(roots)
+
+
+def test_stochastic_predict_draws_fresh_randomness_per_row_group():
+    model = DiscreteBayesianNetwork()
+    model.add_nodes_from(["X", "E"])
+    model.add_cpds(TabularCPD("X", 2, [[0.5], [0.5]]), TabularCPD("E", 2, [[0.5], [0.5]]))
+    pred = model.predict(pd.DataFrame({"E": [0] * 50 + [1] * 50}), stochastic=True, rng=0)
+    assert pred["X"].iloc[:50].tolist() != pred["X"].iloc[50:].tolist()

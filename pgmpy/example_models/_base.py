@@ -26,18 +26,15 @@ class BaseExampleModel(BaseObject):
         "is_hybrid": bool,
     }
 
-    repo_id = "pgmpy/example_models"
-    revision = "main"
-
     @classmethod
     def _get_raw_data(cls) -> bytes:
         """
         Fetches the model file from the Hugging Face Hub cache.
         """
         return read_hf_file(
-            repo_id=cls.repo_id,
+            repo_id="pgmpy/example_models",
             filename=cls.data_url,
-            revision=cls.revision,
+            revision="main",
         )
 
 
@@ -48,7 +45,7 @@ class DiscreteMixin:
 
     @classmethod
     def load_model_object(cls):
-        return BIFReader(string=gzip.decompress(cls._get_raw_data()).decode("utf-8")).get_model()
+        return BIFReader(string=gzip.decompress(cls._get_raw_data()).decode("utf-8")).read()
 
 
 class BIFMixin:
@@ -58,7 +55,7 @@ class BIFMixin:
 
     @classmethod
     def load_model_object(cls):
-        return BIFReader(string=cls._get_raw_data().decode("utf-8")).get_model()
+        return BIFReader(string=cls._get_raw_data().decode("utf-8")).read()
 
 
 class ContinuousMixin:

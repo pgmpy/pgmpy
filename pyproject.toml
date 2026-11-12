@@ -7,13 +7,14 @@ license = { file = "LICENSE" }
 authors = [
   { name = "Ankur Ankan", email = "ankurankan@gmail.com" }
 ]
-requires-python = ">=3.10,<3.15"
+requires-python = ">=3.10,<3.16"
 classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.15",
   "Intended Audience :: Education",
   "Intended Audience :: Science/Research",
   "Operating System :: Unix",
@@ -29,7 +30,7 @@ dependencies = [
   "networkx>=3.0",
   "numpy>=2.0",
   "scipy>=1.10",
-  "scikit-learn>=1.2",
+  "scikit-learn>=1.6",
   "pandas>=1.5",
   "statsmodels>=0.14.5",
   "tqdm>=4.64",
@@ -48,8 +49,10 @@ optional = [
   "pgmpy[torch]",
   "daft-pgm>=0.1.4",
   "xgboost>=2.0.3",
-  "litellm>=1.61.15",
+  "litellm>=1.61.15; python_version < '3.15'",
   "pygraphviz",
+  "matplotlib",
+  "skpro>=2.12.0",
 ]
 tests = [
   "xdoctest>=0.11.0",
@@ -132,6 +135,7 @@ select = [
   "PT014",   # pytest-duplicate-parametrize-test-cases.
   "PT006",   # Checks for the type of parameter names passed to pytest.mark.parametrize.
   "PT007",   # Checks for the type of parameter values passed to pytest.mark.parametrize.
+  "NPY002",  # Legacy numpy.random global-state calls.
 ]
 
 ignore = [
@@ -171,3 +175,7 @@ ignore = [
   "UP026", # Replace mock with unittest.mock (external mock has different behavior).
   "UP031", # Use format specifier instead of %
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"pgmpy/tests/**" = ["NPY002"]
+"pgmpy/estimators/**" = ["NPY002"]

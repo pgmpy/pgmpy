@@ -346,14 +346,14 @@ def test_build_dag_continuous(ci_test, variant):
 
 def test_pc_alarm():
     alarm_model = load_model("bnlearn/alarm")
-    data = BayesianModelSampling(alarm_model).forward_sample(size=int(1e4), seed=42)
+    data = BayesianModelSampling(alarm_model).forward_sample(size=int(1e4), rng=42)
     est = PC(data)
     est.estimate(variant="stable", max_cond_vars=5, n_jobs=1, show_progress=False)
 
 
 def test_pc_asia():
     asia_model = load_model("bnlearn/asia")
-    data = asia_model.simulate(n_samples=int(1e5), seed=42)
+    data = asia_model.simulate(n_samples=int(1e5), rng=42)
     est = PC(data)
     with pytest.warns(UserWarning, match="Required edge xray->either is absent or oppositely oriented"):
         est.estimate(
@@ -367,7 +367,7 @@ def test_pc_asia():
 
 def test_pc_asia_expert():
     asia_model = load_model("bnlearn/asia")
-    data = asia_model.simulate(n_samples=int(1e5), seed=42)
+    data = asia_model.simulate(n_samples=int(1e5), rng=42)
     est = PC(data)
     pdag = est.estimate(
         variant="stable",
@@ -394,7 +394,7 @@ def test_pc_asia_expert():
 
 def test_temporal_pc_cancer():
     cancer_model = load_model("bnlearn/cancer")
-    data = cancer_model.simulate(n_samples=int(5e4), seed=42)
+    data = cancer_model.simulate(n_samples=int(5e4), rng=42)
     est = PC(data)
     background = ExpertKnowledge(
         temporal_order=[["Pollution", "Smoker", "Cancer"], ["Dyspnoea", "Xray"]],

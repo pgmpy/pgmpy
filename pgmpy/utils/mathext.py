@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from pgmpy.utils import compat_fns
+from pgmpy.utils._random import _rename_to_rng
 from pgmpy.utils._warnings import _warn_external
 
 State = namedtuple("State", ["var", "state"])
@@ -109,7 +110,10 @@ def _adjusted_weights(weights: np.ndarray):
     return weights
 
 
-def sample_discrete(values, weights: np.ndarray | list[np.ndarray], size=1, seed: int | None = None):
+@_rename_to_rng("seed")
+def sample_discrete(
+    values, weights: np.ndarray | list[np.ndarray], size=1, rng: int | np.random.Generator | None = None
+):
     """
     Generate a sample of given size, given a probability mass function.
 
@@ -124,8 +128,13 @@ def sample_discrete(values, weights: np.ndarray | list[np.ndarray], size=1, seed
     size: int
         Size of the sample to be generated.
 
-    seed: int (default: None)
-        If a value is provided, sets the seed for the random number generator.
+    rng: int | np.random.Generator | None (default: None)
+        Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the operating
+        system, so results are not reproducible.
+
+        .. versionchanged:: 1.2.0
+            Replaces ``seed``, which is deprecated and will be removed in v2.0. None no longer follows
+            ``np.random.seed``.
 
     Returns
     -------
@@ -138,10 +147,10 @@ def sample_discrete(values, weights: np.ndarray | list[np.ndarray], size=1, seed
     >>> from pgmpy.utils.mathext import sample_discrete
     >>> values = np.array(["v_0", "v_1", "v_2"])
     >>> probabilities = np.array([0.2, 0.5, 0.3])
-    >>> sample_discrete(values, probabilities, 10, seed=0).tolist()
+    >>> sample_discrete(values, probabilities, 10, rng=0).tolist()
     ['v_1', 'v_1', 'v_0', 'v_0', 'v_2', 'v_2', 'v_1', 'v_2', 'v_1', 'v_2']
     """
-    rng = np.random.default_rng(seed) if seed is not None else np.random
+    rng = np.random.default_rng(rng)
     weights = compat_fns.to_numpy(weights)
     if weights.ndim == 1:
         return rng.choice(compat_fns.to_numpy(values), size=size, p=_adjusted_weights(weights))
@@ -157,12 +166,13 @@ def sample_discrete(values, weights: np.ndarray | list[np.ndarray], size=1, seed
         return samples
 
 
+@_rename_to_rng("seed")
 def sample_discrete_maps(
     states: np.ndarray,
     weight_indices: np.ndarray,
     index_to_weight: np.ndarray,
     size=1,
-    seed: int | None = None,
+    rng: int | np.random.Generator | None = None,
 ):
     """
     Generate a sample of given size, given a probability mass function.
@@ -181,8 +191,13 @@ def sample_discrete_maps(
     size: int
         Size of the sample to be generated.
 
-    seed: int (default: None)
-        If a value is provided, sets the seed for the random number generator.
+    rng: int | np.random.Generator | None (default: None)
+        Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the operating
+        system, so results are not reproducible.
+
+        .. versionchanged:: 1.2.0
+            Replaces ``seed``, which is deprecated and will be removed in v2.0. None no longer follows
+            ``np.random.seed``.
 
     Returns
     -------
@@ -195,10 +210,10 @@ def sample_discrete_maps(
     >>> from pgmpy.utils.mathext import sample_discrete
     >>> values = np.array(["v_0", "v_1", "v_2"])
     >>> probabilities = np.array([0.2, 0.5, 0.3])
-    >>> sample_discrete(values, probabilities, 10, seed=0).tolist()
+    >>> sample_discrete(values, probabilities, 10, rng=0).tolist()
     ['v_1', 'v_1', 'v_0', 'v_0', 'v_2', 'v_2', 'v_1', 'v_2', 'v_1', 'v_2']
     """
-    rng = np.random.default_rng(seed) if seed is not None else np.random
+    rng = np.random.default_rng(rng)
 
     # TODO: Remove this conversion and find a way to do this natively in torch.
     states = np.array(states)
