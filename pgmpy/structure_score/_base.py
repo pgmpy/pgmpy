@@ -43,7 +43,7 @@ class BaseStructureScore(BaseObject):
     }
 
     def __init__(self, data, state_names=None, max_cache_size=10000):
-        self.data, self.dtypes = preprocess_data(data)
+        self.data, self.dtypes = preprocess_data(data, data_types=self.get_class_tag("data_types"))
         self.max_cache_size = max_cache_size
         if max_cache_size is not None and max_cache_size <= 0:
             raise ValueError(f"max_cache_size must be a positive integer or None. Got: {max_cache_size}")

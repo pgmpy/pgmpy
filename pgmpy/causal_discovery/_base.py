@@ -24,6 +24,7 @@ from pgmpy.ci_tests import IndependenceMatch, get_ci_test
 from pgmpy.independencies import Independencies
 from pgmpy.metrics import get_metric
 from pgmpy.structure_score import BaseStructureScore
+from pgmpy.utils import get_dataset_type, preprocess_data
 
 
 class BaseCausalDiscovery(BaseEstimator, BaseObject):
@@ -95,6 +96,16 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
 
         if not all([isinstance(x, Hashable) for x in X.values.flat]):
             raise TypeError("argument must be a string, number, or hashable object.")
+
+        supported_types = type(self).get_class_tag("data_types")
+        X, _ = preprocess_data(X, data_types=supported_types)
+        dataset_type = get_dataset_type(X)
+        if supported_types is not None and dataset_type not in supported_types:
+            raise ValueError(
+                f"{type(self).__name__} supports {supported_types} data, but the data is {dataset_type}. Numeric "
+                f"columns are continuous, category, object and string columns are discrete, and boolean columns "
+                f"follow the other columns; cast discrete columns stored as numbers to the pandas 'category' dtype."
+            )
 
         for col in X.columns:
             if X[col].nunique() == 1:

@@ -16,7 +16,7 @@ def data12():
     return pd.DataFrame(
         np.random.randint(low=0, high=2, size=(100, 5)),
         columns=["A", "B", "C", "D", "E"],
-    )
+    ).astype("category")
 
 
 @pytest.fixture
@@ -55,7 +55,7 @@ def data13():
     )
     model.add_cpds(cpd_a, cpd_b, cpd_c, cpd_d, cpd_e, cpd_f)
     inference = BayesianModelSampling(model)
-    return inference.forward_sample(size=10000)
+    return inference.forward_sample(size=10000).astype("category")
 
 
 @pytest.fixture
@@ -120,7 +120,7 @@ def data22():
     )
     model.add_cpds(cpd_a, cpd_r, cpd_b, cpd_c, cpd_d, cpd_e)
     inference = BayesianModelSampling(model)
-    return inference.forward_sample(size=10000)
+    return inference.forward_sample(size=10000).astype("category")
 
 
 @pytest.mark.parametrize("weight_fn", ["mutual_info", "adjusted_mutual_info", "normalized_mutual_info"])

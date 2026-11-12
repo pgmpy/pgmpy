@@ -7,7 +7,6 @@ import pandas as pd
 from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
 from pgmpy.causal_discovery.bivariate_scores import BaseBivariateScore, get_bivariate_score
-from pgmpy.utils import get_dataset_type
 
 
 class IGCI(BaseCausalDiscovery):
@@ -139,8 +138,6 @@ class IGCI(BaseCausalDiscovery):
         # Step 2: Validate the input data.
         if X.shape[1] != 2:
             raise ValueError(f"IGCI requires exactly two variables, got {X.shape[1]}.")
-        if get_dataset_type(X) != "continuous":
-            raise ValueError("IGCI requires continuous (numeric) variables; got non-continuous data.")
 
         x, y = self.feature_names_in_
 
