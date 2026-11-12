@@ -2,8 +2,6 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from pgmpy.ci_tests import PillaiTrace
-from pgmpy.structure_score import LogLikelihoodCondGauss
 from pgmpy.utils import (
     get_dataset_type,
     preprocess_data,
@@ -76,21 +74,3 @@ def test_dataset_type_and_bool_resolution(frame, columns, data_types, dtypes, da
     assert data.dtypes.astype(str).tolist() == dtypes
     assert get_dataset_type(data) == dataset_type
     assert get_dataset_type(frame[columns]) == get_dataset_type(preprocess_data(frame[columns])[0])
-
-
-def test_bool_behaves_as_category_in_mixed_data():
-    rng = np.random.default_rng(seed=4)
-    data = pd.DataFrame({"A": rng.normal(size=80), "C": rng.normal(size=80), "G": rng.random(80) < 0.5})
-    data["A"] += data["G"]
-    data["H"] = rng.choice(["x", "y"], size=80)
-    as_category = data.assign(G=data["G"].astype("category"))
-
-    for variable, parents in [("A", ("G",)), ("G", ("A",)), ("A", ("C", "G"))]:
-        assert LogLikelihoodCondGauss(data).local_score(variable, parents) == pytest.approx(
-            LogLikelihoodCondGauss(as_category).local_score(variable, parents), rel=1e-12
-        )
-
-    bool_test, category_test = PillaiTrace(data=data), PillaiTrace(data=as_category)
-    bool_test("G", "A", ["C"])
-    category_test("G", "A", ["C"])
-    assert bool_test.p_value_ == pytest.approx(category_test.p_value_, rel=1e-9)

@@ -8,7 +8,6 @@ from pgmpy.estimators import TreeSearch
 from pgmpy.example_models import load_model
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
-from pgmpy.sampling import BayesianModelSampling
 
 
 @pytest.fixture
@@ -60,8 +59,7 @@ def data13():
     )
 
     model.add_cpds(cpd_a, cpd_b, cpd_c, cpd_d, cpd_e, cpd_f)
-    inference = BayesianModelSampling(model)
-    return inference.forward_sample(size=10000).astype("category")
+    return model.simulate(n_samples=10000, rng=0)
 
 
 @pytest.fixture
@@ -126,8 +124,7 @@ def data22():
         evidence_card=[2, 3],
     )
     model.add_cpds(cpd_a, cpd_r, cpd_b, cpd_c, cpd_d, cpd_e)
-    inference = BayesianModelSampling(model)
-    return inference.forward_sample(size=10000).astype("category")
+    return model.simulate(n_samples=10000, rng=0)
 
 
 @pytest.fixture
