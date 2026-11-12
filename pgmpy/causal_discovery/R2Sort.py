@@ -98,7 +98,6 @@ class R2Sort(BaseOrderDiscovery):
 
         model_reg = clone(self.estimator) if self.estimator is not None else LinearRegression()
         if self.estimator is None:
-            # A constant column has no correlation and is fit exactly by the intercept, so its R^2 is one.
             values = X.to_numpy(dtype=float)
             varying = np.ptp(values, axis=0) > 0
             correlation = np.atleast_2d(np.corrcoef(values[:, varying], rowvar=False))

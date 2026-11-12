@@ -100,7 +100,6 @@ class Pearsonr(BaseCITest):
         with np.errstate(invalid="ignore", divide="ignore"):
             coef = residual_cov[0, 1] / np.sqrt(residual_cov[0, 0] * residual_cov[1, 1])
 
-        # Rounding can push |coef| just past 1; clamp as numpy.corrcoef does and let nan through.
         return (-1.0 if coef < -1.0 else 1.0 if coef > 1.0 else coef), dof
 
     def _compute_result(
@@ -120,7 +119,6 @@ class Pearsonr(BaseCITest):
         if dof <= 0:
             p_value = 1.0
         elif coef >= 1.0 or coef <= -1.0:
-            # Infinite t; a clamped Python-float coef would raise ZeroDivisionError below.
             p_value = 0.0
         else:
             with np.errstate(invalid="ignore", divide="ignore"):
