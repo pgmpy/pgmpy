@@ -204,7 +204,8 @@ class NominalDistribution(BaseDistribution):
         n_samples : int, optional
             Number of draws, one if omitted.
         random_state : int, numpy.random.Generator or None, optional
-            Seed or generator for this call; ``None`` draws fresh values.
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
 
         Returns
         -------

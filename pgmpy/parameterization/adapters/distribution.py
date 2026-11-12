@@ -51,7 +51,7 @@ class DistributionAdapter(BaseParameterization):
     >>> dist = cpd.predict_proba(pd.DataFrame(index=[10, 11, 12]))
     >>> type(dist).__name__, dist.index.tolist(), dist.columns.tolist()
     ('Normal', [10, 11, 12], ['A'])
-    >>> cpd.sample(n_samples=4, random_state=0).shape
+    >>> cpd.sample(n_samples=4, rng=0).shape
     (4, 1)
     """
 

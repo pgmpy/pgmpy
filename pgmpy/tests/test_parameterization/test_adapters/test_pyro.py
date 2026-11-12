@@ -57,7 +57,7 @@ def sales_data():
 
 @pytest.fixture(scope="module")
 def sales_cpd(sales_data):
-    return PyroAdapter(sales, estimator=PyroSVI(num_samples=500, random_state=0)).fit(*sales_data)
+    return PyroAdapter(sales, estimator=PyroSVI(num_samples=500, rng=0)).fit(*sales_data)
 
 
 class TestFit:
@@ -103,7 +103,7 @@ class TestFit:
         mean = np.linalg.solve(precision, design.T @ y / 0.25)
         sd = np.sqrt(np.diag(np.linalg.inv(precision)))
 
-        nuts = PyroNUTS(num_samples=300, random_state=0)
+        nuts = PyroNUTS(num_samples=300, rng=0)
         draws = PyroAdapter(known_sigma, estimator=nuts).fit(X, y).posterior_samples_
         np.testing.assert_allclose([draws["intercept"].mean().item(), draws["coef"].mean().item()], mean, atol=0.02)
         np.testing.assert_allclose([draws["intercept"].std().item(), draws["coef"].std().item()], sd, rtol=0.2)
@@ -147,18 +147,15 @@ class TestFit:
         scores = sales_cpd.log_likelihood(new, observed)["sales"]
         np.testing.assert_allclose(scores, stats.norm.logpdf(observed, means, residual_sd), atol=0.05)
 
-    def test_random_state(self, sales_data):
+    def test_rng(self, sales_data):
         # The same seed gives the same draws, and fitting leaves the global torch random state as it was.
         X, y = sales_data
         before = torch.random.get_rng_state().clone()
-        fits = [
-            PyroAdapter(sales, estimator=PyroSVI(num_steps=50, num_samples=20, random_state=7)).fit(X, y)
-            for _ in range(2)
-        ]
+        fits = [PyroAdapter(sales, estimator=PyroSVI(num_steps=50, num_samples=20, rng=7)).fit(X, y) for _ in range(2)]
         assert torch.equal(torch.random.get_rng_state(), before)
         for name in ("intercept", "coef", "sigma"):
             assert torch.equal(fits[0].posterior_samples_[name], fits[1].posterior_samples_[name])
-        other = PyroAdapter(sales, estimator=PyroSVI(num_steps=50, num_samples=20, random_state=8)).fit(X, y)
+        other = PyroAdapter(sales, estimator=PyroSVI(num_steps=50, num_samples=20, rng=8)).fit(X, y)
         assert not torch.equal(other.posterior_samples_["coef"], fits[0].posterior_samples_["coef"])
 
     def test_global_random_state(self, monkeypatch, sales_cpd, sales_data):
@@ -175,13 +172,13 @@ class TestFit:
         seeded = []
         monkeypatch.setattr(torch.cuda, "manual_seed_all", seeded.append)
         monkeypatch.setattr(torch.mps, "manual_seed", seeded.append)
-        PyroAdapter(sales, estimator=PyroSVI(num_steps=2, num_samples=2, random_state=0)).fit(X, y).sample(new)
-        PyroAdapter(sales, estimator=PyroNUTS(num_samples=4, warmup_steps=2, random_state=0)).fit(X, y)
+        PyroAdapter(sales, estimator=PyroSVI(num_steps=2, num_samples=2, rng=0)).fit(X, y).sample(new)
+        PyroAdapter(sales, estimator=PyroNUTS(num_samples=4, warmup_steps=2, rng=0)).fit(X, y)
         assert seeded == []
 
     def test_predictive_keeps_its_fit(self):
         # A returned distribution keeps the fit it came from, after a refit or a set_params of its adapter.
-        estimator = PyroSVI(num_steps=200, num_samples=50, random_state=0)
+        estimator = PyroSVI(num_steps=200, num_samples=50, rng=0)
         node = PyroAdapter(location, estimator=estimator).fit(None, pd.Series([0.0, 0.5, 1.0], name="y"))
         distribution = node.predict_proba()
         mean = float(distribution.mean())
@@ -209,10 +206,10 @@ class TestFit:
         # the same seed, and the global random state as it was.
         new = pd.DataFrame({"temp": [15.0, 25.0]}, index=["cold", "warm"])
         before = torch.random.get_rng_state().clone()
-        samples = sales_cpd.sample(new, n_samples=3, random_state=1)
+        samples = sales_cpd.sample(new, n_samples=3, rng=1)
         assert torch.equal(torch.random.get_rng_state(), before)
         assert samples.shape == (6, 1) and samples.index.get_level_values(1).tolist() == ["cold", "warm"] * 3
-        pd.testing.assert_frame_equal(samples, sales_cpd.sample(new, n_samples=3, random_state=1))
+        pd.testing.assert_frame_equal(samples, sales_cpd.sample(new, n_samples=3, rng=1))
         assert sales_cpd.sample(new.iloc[:0]).shape == (0, 1)
 
     def test_noise_of_an_additive_noise_mechanism(self, sales_data):
@@ -225,13 +222,13 @@ class TestFit:
             scale = pyro.sample("scale", dist.HalfNormal(5.0))
             return dist.Laplace(loc, scale)
 
-        noise = PyroAdapter(laplace, estimator=PyroSVI(num_steps=300, num_samples=100, random_state=0))
+        noise = PyroAdapter(laplace, estimator=PyroSVI(num_steps=300, num_samples=100, rng=0))
         mechanism = AdditiveNoiseMechanism(SklearnAdapter(LinearRegression()), noise=noise).fit(X, y)
         new = X.iloc[:3]
         expected = mechanism.function_.predict(new)["sales"] + mechanism.noise_.predict_proba().mean()
         np.testing.assert_allclose(mechanism.predict_proba(new).mean()["sales"], expected, rtol=1e-5)
         assert mechanism.predict_proba(new).iat[0, 0].mean() == pytest.approx(expected.iloc[0], rel=1e-5)
-        assert mechanism.sample(new, n_samples=2, random_state=0).shape == (6, 1)
+        assert mechanism.sample(new, n_samples=2, rng=0).shape == (6, 1)
 
     def test_fit_errors(self, sales_data):
         X, y = sales_data
@@ -273,7 +270,7 @@ class TestDiscrete:
         wet_probability = 1 / (1 + np.exp(0.5 - 1.5 * scaled["humidity"]))
         y = pd.Series(np.where(rng.random(1000) < wet_probability, "wet", "dry"), name="ground")
         reference = LogisticRegression(penalty=None).fit(scaled, y)
-        cpd = PyroAdapter(wet, estimator=PyroSVI(random_state=0), variable_type="discrete").fit(X, y)
+        cpd = PyroAdapter(wet, estimator=PyroSVI(rng=0), variable_type="discrete").fit(X, y)
         assert abs(cpd.posterior_samples_["intercept"].mean().item() - reference.intercept_[0]) < 0.15
         assert abs(cpd.posterior_samples_["coef"].mean().item() - reference.coef_[0, 0]) < 0.15
 
@@ -285,7 +282,7 @@ class TestDiscrete:
         assert set(cpd.predict(new)["ground"]) <= {"dry", "wet"}
         expected = np.log(probs[np.arange(5), (observed == "wet").astype(int)])
         np.testing.assert_allclose(cpd.log_likelihood(new, observed)["ground"], expected)
-        assert set(cpd.sample(new, n_samples=3, random_state=0)["ground"]) <= {"dry", "wet"}
+        assert set(cpd.sample(new, n_samples=3, rng=0)["ground"]) <= {"dry", "wet"}
 
     def test_categorical_with_a_discrete_parent(self):
         # The season reaches fn as codes over its sorted states, so the posterior predictive is close to the weather's
@@ -297,7 +294,7 @@ class TestDiscrete:
         codes = rng.integers(0, 4, size=2000)
         X = pd.DataFrame({"season": np.array(seasons)[codes]})
         y = pd.Series([states[rng.choice(3, p=table[code])] for code in codes], name="weather")
-        cpd = PyroAdapter(weather, estimator=PyroSVI(random_state=0), variable_type="discrete").fit(X, y)
+        cpd = PyroAdapter(weather, estimator=PyroSVI(rng=0), variable_type="discrete").fit(X, y)
         assert cpd.state_names_ == {"weather": states, "season": seasons}
         probs = np.asarray(cpd.predict_proba(pd.DataFrame({"season": seasons})).probs)
         np.testing.assert_allclose(probs, TabularCPD().fit(X, y).cpt_.T, atol=0.03)

@@ -45,13 +45,13 @@ class TestDeterministicAdapter:
         assert (dist.index.tolist(), dist.columns.tolist()) == (X.index.tolist(), ["bmi"])
         np.testing.assert_allclose(dist.mean()["bmi"], y)
         pd.testing.assert_frame_equal(node.predict(X), y.to_frame())
-        np.testing.assert_allclose(node.sample(X, n_samples=3, random_state=0)["bmi"], np.tile(y, 3))
+        np.testing.assert_allclose(node.sample(X, n_samples=3, rng=0)["bmi"], np.tile(y, 3))
         assert node.sample(X, n_samples=0).shape == (0, 1)
 
         # A root's function gets rows without columns; without X, the root gives its Delta as a scalar.
         root = DeterministicAdapter.from_values("c", lambda X: np.full(len(X), 5.0))
         assert root.predict_proba().mean() == 5.0
-        assert root.sample(n_samples=4, random_state=0)["c"].tolist() == [5.0] * 4
+        assert root.sample(n_samples=4, rng=0)["c"].tolist() == [5.0] * 4
 
     def test_fit(self, data):
         # fit ignores the values, and says so: it only records the target and its parents, so it needs no rows.

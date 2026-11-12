@@ -166,7 +166,8 @@ class PosteriorPredictive(BaseDistribution):
         n_samples : int, optional
             Number of draws, one if omitted.
         random_state : int, numpy.random.Generator or None, optional
-            Seed or generator for this call; ``None`` draws fresh values. The global torch random state doesn't change.
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible. The global torch random state doesn't change.
 
         Returns
         -------
@@ -209,11 +210,11 @@ class PosteriorPredictive(BaseDistribution):
 
 
 @contextmanager
-def _seeded(random_state: int | np.random.Generator | None) -> Iterator[None]:
-    """Seed torch's CPU generator from ``random_state`` for the block, and restore it after. ``torch.manual_seed`` would
-    also seed the other devices' generators, which ``fork_rng(devices=[])`` doesn't restore."""
+def _seeded(rng: np.random.Generator) -> Iterator[None]:
+    """Seed torch's CPU generator from ``rng`` for the block, and restore it after. ``torch.manual_seed`` would also
+    seed the other devices' generators, which ``fork_rng(devices=[])`` doesn't restore."""
     with torch.random.fork_rng(devices=[]):
-        torch.default_generator.manual_seed(int(np.random.default_rng(random_state).integers(2**63)))
+        torch.default_generator.manual_seed(int(rng.integers(2**63)))
         yield
 
 

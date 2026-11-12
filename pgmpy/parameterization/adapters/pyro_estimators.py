@@ -71,8 +71,9 @@ class PyroSVI(BasePyroEstimator):
     optim : pyro.optim.PyroOptim, optional
         Optimizer, copied for each fit, so the object passed in doesn't change. ``None`` for ``pyro.optim.ClippedAdam``,
         with a learning rate that decays from 0.1 to 0.001 over the steps.
-    random_state : int, numpy.random.Generator or None, optional
-        Seed or generator for fitting; ``None`` draws fresh values. The global torch random state doesn't change.
+    rng : int, numpy.random.Generator or None, optional
+        Source of randomness for fitting, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from
+        the operating system, so results are not reproducible. The global torch random state doesn't change.
 
     Examples
     --------
@@ -85,7 +86,7 @@ class PyroSVI(BasePyroEstimator):
     >>> def unknown_mean(parents):
     ...     return dist.Normal(pyro.sample("mu", dist.Normal(0.0, 10.0)), 1.0)
     >>> y = pd.Series([1.0, 2.0, 3.0, 2.0], name="y")
-    >>> node = PyroAdapter(unknown_mean, estimator=PyroSVI(num_steps=500, random_state=0)).fit(None, y)
+    >>> node = PyroAdapter(unknown_mean, estimator=PyroSVI(num_steps=500, rng=0)).fit(None, y)
     >>> round(node.posterior_samples_["mu"].mean().item())
     2
     >>> node.diagnostics_["losses"].shape
@@ -100,13 +101,14 @@ class PyroSVI(BasePyroEstimator):
         num_samples: int = 1000,
         guide: Callable | None = None,
         optim: Any | None = None,
-        random_state: int | np.random.Generator | None = None,
+        *,
+        rng: int | np.random.Generator | None = None,
     ) -> None:
         self.num_steps = num_steps
         self.num_samples = num_samples
         self.guide = guide
         self.optim = optim
-        self.random_state = random_state
+        self.rng = rng
         super().__init__()
 
         _check_integer("num_steps", num_steps, 1)
@@ -115,7 +117,7 @@ class PyroSVI(BasePyroEstimator):
     def estimate(
         self, model: Callable, args: tuple, latent: list[str], params: list[str]
     ) -> tuple[dict[str, Any], dict[str, Any]]:
-        with _seeded(self.random_state):
+        with _seeded(np.random.default_rng(self.rng)):
             # Step 1: Fit the guide and the pyro.param values. Without latent sites the guide is empty, as Pyro's
             # continuous autoguides need one. By default the learning rate decays from 0.1 to 0.001 over the steps:
             # large steps reach the posterior from the priors, and small ones settle in it.
@@ -153,8 +155,9 @@ class PyroNUTS(BasePyroEstimator):
         Number of posterior draws to keep, after the warmup.
     warmup_steps : int, optional
         Number of warmup steps, which are discarded. ``None`` for ``num_samples``, as in Pyro.
-    random_state : int, numpy.random.Generator or None, optional
-        Seed or generator for fitting; ``None`` draws fresh values. The global torch random state doesn't change.
+    rng : int, numpy.random.Generator or None, optional
+        Source of randomness for fitting, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from
+        the operating system, so results are not reproducible. The global torch random state doesn't change.
 
     Examples
     --------
@@ -165,7 +168,7 @@ class PyroNUTS(BasePyroEstimator):
     >>> def unknown_mean(parents):
     ...     return dist.Normal(pyro.sample("mu", dist.Normal(0.0, 10.0)), 1.0)
     >>> y = pd.Series([1.0, 2.0, 3.0, 2.0], name="y")
-    >>> node = PyroAdapter(unknown_mean, estimator=PyroNUTS(num_samples=300, random_state=0)).fit(None, y)
+    >>> node = PyroAdapter(unknown_mean, estimator=PyroNUTS(num_samples=300, rng=0)).fit(None, y)
     >>> round(node.posterior_samples_["mu"].mean().item())
     2
     >>> sorted(node.diagnostics_["mu"])
@@ -178,11 +181,12 @@ class PyroNUTS(BasePyroEstimator):
         self,
         num_samples: int = 1000,
         warmup_steps: int | None = None,
-        random_state: int | np.random.Generator | None = None,
+        *,
+        rng: int | np.random.Generator | None = None,
     ) -> None:
         self.num_samples = num_samples
         self.warmup_steps = warmup_steps
-        self.random_state = random_state
+        self.rng = rng
         super().__init__()
 
         _check_integer("num_samples", num_samples, 1)
@@ -199,7 +203,7 @@ class PyroNUTS(BasePyroEstimator):
             )
         if not latent:
             raise ValueError("NUTS needs a latent site, a parameter with a prior from pyro.sample, but fn has none.")
-        with _seeded(self.random_state):
+        with _seeded(np.random.default_rng(self.rng)):
             mcmc = pyro.infer.MCMC(
                 pyro.infer.NUTS(model),
                 num_samples=self.num_samples,

@@ -33,8 +33,8 @@ class CountParameter(BaseParameterization):
     def _predict_proba(self, X):
         return X
 
-    def _sample(self, X, n_samples, random_state):
-        return X, n_samples, random_state
+    def _sample(self, X, n_samples, *, rng):
+        return X, n_samples, rng
 
 
 @pytest.fixture
@@ -248,14 +248,16 @@ class TestBaseParameterization:
             CountParameter().sample(X)
 
         parameter = CountParameter().fit(X, y)
-        sampled_X, n_samples, random_state = parameter.sample(X, n_samples=2, random_state=0)
+        sampled_X, n_samples, rng = parameter.sample(X, n_samples=2, rng=0)
         pd.testing.assert_frame_equal(sampled_X, X[["a", "b"]])
-        assert (n_samples, random_state) == (2, 0)
+        assert n_samples == 2
+        assert rng.random() == np.random.default_rng(0).random()
         with pytest.raises(ValueError, match="parents"):
             parameter.sample(n_samples=3)
 
         root = CountParameter().fit(None, y)
-        assert root.sample(n_samples=0) == (None, 0, None)
+        assert root.sample(n_samples=0)[:2] == (None, 0)
+        assert isinstance(root.sample(n_samples=3)[2], np.random.Generator)
         with pytest.raises(ValueError):
             root.sample()
         for n_samples in (-1, 2.5, "3", True):
@@ -264,7 +266,7 @@ class TestBaseParameterization:
 
     def test_sample_from_ppf(self, data):
         # skpro's sample() takes no random_state, so for its distributions the default _sample applies the ppf to
-        # uniform values from numpy.random.default_rng(random_state), in the layout of NominalDistribution's samples.
+        # uniform values from numpy.random.default_rng(rng), in the layout of NominalDistribution's samples.
         distributions = pytest.importorskip("skpro.distributions")
         from pgmpy.parameterization import NominalDistribution
 
@@ -285,7 +287,7 @@ class TestBaseParameterization:
         multi = pd.MultiIndex.from_arrays([[0, 0, 1, 1], ["p", "q", "p", "q"]], names=["draw", None])
         for X_test in (X, X.set_axis([10, 10, 11, 11]), X.set_axis(multi)):
             for n_samples in (None, 1, 2, 0):
-                samples = parameter.sample(X_test, n_samples=n_samples, random_state=0)
+                samples = parameter.sample(X_test, n_samples=n_samples, rng=0)
                 uniform = np.random.default_rng(0).random((1 if n_samples is None else n_samples, len(X_test)))
                 np.testing.assert_allclose(samples["t"], (np.arange(4) + 2 * norm.ppf(uniform)).ravel())
                 nominal = NominalDistribution(np.full((len(X_test), 2), 0.5), ["u", "v"], index=X_test.index)
@@ -304,7 +306,7 @@ class TestBaseParameterization:
 
         empirical = EmpiricalParameter().fit(X, y)
         for X_test in (X.set_axis([10, 10, 11, 11]), X.set_axis(multi)):
-            samples = empirical.sample(X_test, n_samples=20, random_state=0)["t"].to_numpy().reshape(20, len(X_test))
+            samples = empirical.sample(X_test, n_samples=20, rng=0)["t"].to_numpy().reshape(20, len(X_test))
             np.testing.assert_array_equal(samples % len(X_test), np.tile(np.arange(len(X_test)), (20, 1)))
 
         # Distributions with ragged parameters, such as a Histogram with different bins per row, draw each row from its
@@ -316,13 +318,13 @@ class TestBaseParameterization:
                 masses = [[np.full(size, 1 / size)] for size in sizes]
                 return distributions.Histogram(bins=bins, bin_mass=masses, index=X.index, columns=["t"])
 
-        drawn = HistogramParameter().fit(X, y).sample(X, n_samples=5, random_state=0)["t"].to_numpy().reshape(5, -1)
+        drawn = HistogramParameter().fit(X, y).sample(X, n_samples=5, rng=0)["t"].to_numpy().reshape(5, -1)
         assert ((drawn >= 0) & (drawn <= [2, 3, 2, 3])).all()
 
         # Without X, a root draws n_samples values from its own distribution.
         root = NormalParameter().fit(None, y)
         for n_samples in (3, 0):
-            samples = root.sample(n_samples=n_samples, random_state=0)
+            samples = root.sample(n_samples=n_samples, rng=0)
             expected = 1 + 2 * norm.ppf(np.random.default_rng(0).random(n_samples))
             pd.testing.assert_frame_equal(samples, pd.DataFrame({"t": expected}), rtol=1e-10)
 

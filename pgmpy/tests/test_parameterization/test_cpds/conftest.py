@@ -21,7 +21,7 @@ def legacy_network():
         LegacyTabularCPD("x3", 2, [[0.6], [0.4]]),
         LegacyTabularCPD("y", 3, rng.dirichlet([1, 1, 1], size=12).T, ["x1", "x2", "x3"], [3, 2, 2]),
     )
-    data = model.simulate(1000, seed=0, show_progress=False)
+    data = model.simulate(1000, rng=0, show_progress=False)
     data = data[~((data["x1"] == 2) & (data["x2"] == 1))]
     weights = np.where((data["x1"] == 0) & (data["x3"] == 1), 0.0, rng.uniform(0.5, 2, len(data)))
     return model, data, weights

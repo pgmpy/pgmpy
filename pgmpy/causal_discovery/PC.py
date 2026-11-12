@@ -120,7 +120,7 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
 
     >>> from pgmpy.example_models import load_model
     >>> model = load_model("bnlearn/alarm")
-    >>> df = model.simulate(n_samples=1000, seed=42)
+    >>> df = model.simulate(n_samples=1000, rng=42)
 
     Use the PC algorithm to learn the causal structure from data:
 
@@ -296,11 +296,11 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
         >>> import numpy as np
         >>> from pgmpy.causal_discovery import PC
         >>> from pgmpy.example_models import load_model
-        >>> df = load_model("bnlearn/cancer").simulate(int(1e3), seed=42)
+        >>> df = load_model("bnlearn/cancer").simulate(int(1e3), rng=42)
         >>> est = PC(ci_test='chi_square').fit(df)
         >>> pdag = est._orient_colliders()
         >>> sorted(pdag.get_edges(data=False))
-        [('Pollution', 'Cancer'), ('Xray', 'Cancer')]
+        [('Smoker', 'Cancer'), ('Xray', 'Cancer')]
         """
 
         skeleton = self.skeleton_

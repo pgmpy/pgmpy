@@ -25,8 +25,8 @@ class SumMechanism(BaseMechanism):
         means = X.sum(axis=1).to_numpy(dtype=float).reshape(-1, 1)
         return Normal(mu=means, sigma=1.0, index=X.index, columns=[self.variable_])
 
-    def _sample_noise(self, n_samples, random_state):
-        return np.random.default_rng(random_state).normal(size=n_samples)
+    def _sample_noise(self, n_samples, *, rng):
+        return rng.normal(size=n_samples)
 
     def _forward(self, X, noise):
         return pd.DataFrame({self.variable_: X.sum(axis=1).to_numpy(dtype=float) + noise}, index=X.index)
@@ -57,15 +57,15 @@ class TestBaseMechanism:
 
         # The noise doesn't depend on the parents, so sample_noise only takes how many values to draw; an array passes
         # them on by position. sample draws the noise and runs the forward pass, so a seed gives the same values.
-        u = mechanism.sample_noise(len(X), random_state=0)
+        u = mechanism.sample_noise(len(X), rng=0)
         assert u.shape == (len(X),)
-        pd.testing.assert_frame_equal(mechanism.sample(X, random_state=0), mechanism.predict(X, noise=u))
-        drawn = mechanism.sample(X, n_samples=3, random_state=0)
-        expected = np.tile(X.sum(axis=1), 3) + mechanism.sample_noise(3 * len(X), random_state=0)
+        pd.testing.assert_frame_equal(mechanism.sample(X, rng=0), mechanism.predict(X, noise=u))
+        drawn = mechanism.sample(X, n_samples=3, rng=0)
+        expected = np.tile(X.sum(axis=1), 3) + mechanism.sample_noise(3 * len(X), rng=0)
         np.testing.assert_allclose(drawn["y"], expected)
         assert drawn.index.tolist()[:2] == [(0, "p"), (0, "q")]
         root = SumMechanism().fit(None, y)
-        np.testing.assert_allclose(root.sample(n_samples=4, random_state=0)["y"], root.sample_noise(4, random_state=0))
+        np.testing.assert_allclose(root.sample(n_samples=4, rng=0)["y"], root.sample_noise(4, rng=0))
 
     def test_checks(self, data):
         X, y = data

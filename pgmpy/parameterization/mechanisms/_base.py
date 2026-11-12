@@ -12,12 +12,13 @@ class BaseMechanism(BaseParameterization):
     ``sample_noise`` draws noise, ``abduct`` recovers the noise behind observed values, and ``predict(X, noise=...)``
     runs the forward pass: the target's value given the parents and the noise. These are the steps of a counterfactual:
     abduct a unit's noise, change its parents, and predict with the same noise. ``sample`` draws noise and runs the
-    forward pass, so ``sample(X, random_state=s)`` equals ``predict(X, noise=sample_noise(len(X), random_state=s))``.
+    forward pass, so ``sample(X, rng=s)`` equals ``predict(X, noise=sample_noise(len(X), rng=s))``.
 
     Subclasses implement ``_fit`` and ``_predict_proba``, as every parameterization does, and ``_sample_noise``,
-    ``_forward`` and ``_abduct``. ``_forward`` and ``_abduct`` get ``X`` in ``evidence_`` order, with ``X``'s own labels
-    from ``predict`` and ``abduct`` and on a RangeIndex from ``sample``, and the noise or ``y`` as a 1-D float array by
-    position. Both return one column named after the target, with ``X``'s index.
+    which gets a ``numpy.random.Generator``, ``_forward`` and ``_abduct``. ``_forward`` and ``_abduct`` get ``X`` in
+    ``evidence_`` order, with ``X``'s own labels from ``predict`` and ``abduct`` and on a RangeIndex from ``sample``,
+    and the noise or ``y`` as a 1-D float array by position. Both return one column named after the target, with
+    ``X``'s index.
     """
 
     def predict(self, X: pd.DataFrame, noise: ArrayLike | pd.Series | pd.DataFrame | None = None) -> pd.DataFrame:
@@ -41,15 +42,16 @@ class BaseMechanism(BaseParameterization):
         X = self._check_X(X, "predict")
         return self._forward(X, _checked_values(noise, X, "noise"))
 
-    def sample_noise(self, n_samples: int, random_state: int | np.random.Generator | None = None) -> np.ndarray:
+    def sample_noise(self, n_samples: int, *, rng: int | np.random.Generator | None = None) -> np.ndarray:
         """Draw noise values, which don't depend on the parents.
 
         Parameters
         ----------
         n_samples : int
             Number of values to draw.
-        random_state : int, numpy.random.Generator or None, optional
-            Seed or generator for this call; ``None`` draws fresh values.
+        rng : int, numpy.random.Generator or None, optional
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
 
         Returns
         -------
@@ -58,7 +60,7 @@ class BaseMechanism(BaseParameterization):
         """
         self.check_is_fitted()
         _check_integer("n_samples", n_samples, 0)
-        return self._sample_noise(n_samples, random_state)
+        return self._sample_noise(n_samples, rng=np.random.default_rng(rng))
 
     def abduct(self, X: pd.DataFrame, y: ArrayLike | pd.Series | pd.DataFrame) -> pd.DataFrame:
         """Return the noise values that explain the observed ``y`` given the parents ``X``.
@@ -78,10 +80,10 @@ class BaseMechanism(BaseParameterization):
         X = self._check_X(X, "abduct")
         return self._abduct(X, _checked_values(y, X, "y"))
 
-    def _draw(self, rows: pd.DataFrame, random_state: int | np.random.Generator | None) -> pd.DataFrame:
-        return self._forward(rows, self._sample_noise(len(rows), random_state))
+    def _draw(self, rows: pd.DataFrame, *, rng: np.random.Generator) -> pd.DataFrame:
+        return self._forward(rows, self._sample_noise(len(rows), rng=rng))
 
-    def _sample_noise(self, n_samples: int, random_state: int | np.random.Generator | None) -> np.ndarray:
+    def _sample_noise(self, n_samples: int, *, rng: np.random.Generator) -> np.ndarray:
         raise NotImplementedError
 
     def _forward(self, X: pd.DataFrame, noise: np.ndarray) -> pd.DataFrame:

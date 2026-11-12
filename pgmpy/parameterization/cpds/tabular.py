@@ -63,7 +63,7 @@ class TabularCPD(BaseParameterization):
     [[0.67, 0.0], [0.33, 1.0]]
     >>> cpd.variable_card_, cpd.evidence_card_
     (2, [2])
-    >>> cpd.sample(pd.DataFrame({"rain": ["yes", "yes"]}), random_state=0)["wet"].tolist()
+    >>> cpd.sample(pd.DataFrame({"rain": ["yes", "yes"]}), rng=0)["wet"].tolist()
     ['yes', 'yes']
     >>> cpd.predict(pd.DataFrame({"rain": ["no", "yes"]}))["wet"].tolist()
     ['no', 'yes']

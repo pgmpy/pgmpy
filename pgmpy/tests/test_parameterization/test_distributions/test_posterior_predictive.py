@@ -60,7 +60,7 @@ class TestPosteriorPredictive:
     def test_mixture_over_draws(self, train, X):
         # Each row's density is the average of fn's densities over the posterior draws, its mean the average of their
         # means, and its variance the average variance plus the variance of the means.
-        node = PyroAdapter(regression, estimator=PyroSVI(num_steps=300, num_samples=50, random_state=0)).fit(*train)
+        node = PyroAdapter(regression, estimator=PyroSVI(num_steps=300, num_samples=50, rng=0)).fit(*train)
         draws = {name: values.numpy().astype(float) for name, values in node.posterior_samples_.items()}
         locs = draws["intercept"][:, None] + draws["coef"][:, None] * X["a"].to_numpy()
         scales = np.broadcast_to(draws["sigma"][:, None], locs.shape)
@@ -155,10 +155,10 @@ class TestPosteriorPredictive:
         # mu, is clearly larger than that of any one draw. Only picking a draw for each value reproduces it.
         root = PyroAdapter(
             lambda parents: dist.Normal(pyro.sample("mu", dist.Normal(0.0, 10.0)), 1.0),
-            estimator=PyroSVI(num_samples=200, random_state=0),
+            estimator=PyroSVI(num_samples=200, rng=0),
         ).fit(None, pd.Series([0.0, 1.0], name="r"))
         mu = root.posterior_samples_["mu"].numpy().astype(float)
-        values = root.sample(n_samples=20000, random_state=0)["r"]
+        values = root.sample(n_samples=20000, rng=0)["r"]
         assert mu.var() > 0.3
         assert abs(values.mean() - mu.mean()) < 0.05
         assert abs(values.var() - (1 + mu.var())) < 0.08
@@ -166,6 +166,6 @@ class TestPosteriorPredictive:
     def test_sample_discrete(self):
         # A Poisson has no cdf in torch, so only its own sampler works; its values are counts.
         counts = PyroAdapter(lambda parents: dist.Poisson(torch.tensor(2.0)), estimator=PyroSVI(num_steps=1))
-        values = counts.fit(None, pd.Series([0, 1, 2, 5], name="k")).sample(n_samples=20000, random_state=0)["k"]
+        values = counts.fit(None, pd.Series([0, 1, 2, 5], name="k")).sample(n_samples=20000, rng=0)["k"]
         assert (values == np.round(values)).all()
         assert abs(values.mean() - 2) < 0.05 and abs(values.var() - 2) < 0.1

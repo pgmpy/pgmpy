@@ -92,7 +92,7 @@ class PyroAdapter(BaseParameterization):
     ...     coef = pyro.sample("coef", dist.Normal(0.0, 20.0))
     ...     sigma = pyro.sample("sigma", dist.HalfNormal(10.0))
     ...     return dist.Normal(intercept + coef * (parents["temp"] - 20.0) / 5.0, sigma)
-    >>> cpd = PyroAdapter(sales, estimator=PyroSVI(random_state=0)).fit(X, y)
+    >>> cpd = PyroAdapter(sales, estimator=PyroSVI(rng=0)).fit(X, y)
     >>> round(cpd.posterior_samples_["coef"].mean().item())
     10
     >>> new = pd.DataFrame({"temp": [15.0, 25.0]})
@@ -109,7 +109,7 @@ class PyroAdapter(BaseParameterization):
     ...     intercept = pyro.sample("intercept", dist.Normal(0.0, 2.0))
     ...     coef = pyro.sample("coef", dist.Normal(0.0, 2.0))
     ...     return dist.Bernoulli(logits=intercept + coef * (parents["temp"] - 20.0) / 5.0)
-    >>> cpd = PyroAdapter(wet, estimator=PyroSVI(random_state=0), variable_type="discrete").fit(X, ground)
+    >>> cpd = PyroAdapter(wet, estimator=PyroSVI(rng=0), variable_type="discrete").fit(X, ground)
     >>> list(cpd.predict_proba(new).categories)
     ['dry', 'wet']
     >>> cpd.predict(new)["ground"].tolist()

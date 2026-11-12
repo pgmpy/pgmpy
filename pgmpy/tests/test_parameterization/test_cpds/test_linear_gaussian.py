@@ -159,25 +159,25 @@ class TestLinearGaussianCPD:
         rows = X.iloc[:3].set_axis(["a", "b", "c"])
 
         # Samples keep X's index, and n_samples adds a first index level numbering the draws.
-        samples = cpd.sample(rows, random_state=0)
+        samples = cpd.sample(rows, rng=0)
         assert (samples.index.tolist(), samples.columns.tolist()) == (["a", "b", "c"], ["y"])
-        drawn = cpd.sample(rows, n_samples=2, random_state=0)
+        drawn = cpd.sample(rows, n_samples=2, rng=0)
         assert drawn.index.tolist() == [(0, "a"), (0, "b"), (0, "c"), (1, "a"), (1, "b"), (1, "c")]
         assert cpd.sample(rows, n_samples=0).shape == (0, 1)
 
         # An int seed gives the same values on every call, a Generator advances, and None draws fresh values.
-        pd.testing.assert_frame_equal(samples, cpd.sample(rows, random_state=0))
+        pd.testing.assert_frame_equal(samples, cpd.sample(rows, rng=0))
         rng = np.random.default_rng(0)
-        assert not cpd.sample(rows, random_state=rng).equals(cpd.sample(rows, random_state=rng))
+        assert not cpd.sample(rows, rng=rng).equals(cpd.sample(rows, rng=rng))
         assert not cpd.sample(rows).equals(cpd.sample(rows))
 
         # Rows are matched by position, so repeated labels and a MultiIndex, like a parent's own draws, keep them apart.
-        repeated = cpd.sample(X.iloc[[0, 0, 1]], n_samples=2, random_state=0)
+        repeated = cpd.sample(X.iloc[[0, 0, 1]], n_samples=2, rng=0)
         assert repeated.index.tolist() == [(0, 0), (0, 0), (0, 1), (1, 0), (1, 0), (1, 1)]
-        by_position = cpd.sample(X.iloc[[0, 0, 1]].reset_index(drop=True), n_samples=2, random_state=0)
+        by_position = cpd.sample(X.iloc[[0, 0, 1]].reset_index(drop=True), n_samples=2, rng=0)
         np.testing.assert_array_equal(repeated["y"], by_position["y"])
         multi = X.iloc[:3].set_axis(pd.MultiIndex.from_tuples([(0, "a"), (0, "b"), (1, "a")]))
-        np.testing.assert_array_equal(cpd.sample(multi, random_state=0)["y"], samples["y"])
+        np.testing.assert_array_equal(cpd.sample(multi, rng=0)["y"], samples["y"])
 
         # The values follow the predicted distribution: given X, here A = 1 and B = 0 in every row, or for a root
         # without X, its own distribution.
@@ -185,8 +185,8 @@ class TestLinearGaussianCPD:
         root = LinearGaussianCPD().fit(None, y)
         X_one = pd.DataFrame({"A": np.ones(n), "B": np.zeros(n)})
         for values, mean, var in (
-            (cpd.sample(X_one, random_state=0)["y"], cpd.beta_[0] + cpd.beta_[1], cpd.std_**2),
-            (root.sample(n_samples=n, random_state=0)["y"], root.beta_[0], root.std_**2),
+            (cpd.sample(X_one, rng=0)["y"], cpd.beta_[0] + cpd.beta_[1], cpd.std_**2),
+            (root.sample(n_samples=n, rng=0)["y"], root.beta_[0], root.std_**2),
         ):
             assert values.mean() == pytest.approx(mean, abs=4 * np.sqrt(var / n))
             assert values.std() == pytest.approx(np.sqrt(var), rel=0.03)
@@ -263,7 +263,7 @@ class TestLinearGaussianCPD:
 
     def test_matches_linear_gaussian_mle(self):
         model = load_model("bnlearn/ecoli70")
-        data = model.simulate(2000, seed=0)
+        data = model.simulate(2000, rng=0)
         for std_estimator in ("unbiased", "mle"):
             expected = LinearGaussianMLE(std_estimator=std_estimator).fit(model, data).parameters_
             assert len(expected) == 46

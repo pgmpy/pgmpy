@@ -66,10 +66,10 @@ class TestSkproAdapter:
             binned.predict_proba(X_test.iloc[[3]])
 
         # Samples follow the seed and X's rows, also when X has none.
-        samples = adapter.sample(X_test, n_samples=3, random_state=0)
+        samples = adapter.sample(X_test, n_samples=3, rng=0)
         assert samples.shape == (300, 1) and samples.columns.tolist() == ["Y"]
-        pd.testing.assert_frame_equal(samples, adapter.sample(X_test, n_samples=3, random_state=0))
-        assert not samples.equals(adapter.sample(X_test, n_samples=3, random_state=1))
+        pd.testing.assert_frame_equal(samples, adapter.sample(X_test, n_samples=3, rng=0))
+        assert not samples.equals(adapter.sample(X_test, n_samples=3, rng=1))
         assert adapter.sample(X_test.iloc[:0]).shape == (0, 1)
 
         # skpro regressors take no sample weights.
@@ -84,7 +84,7 @@ class TestSkproAdapter:
         assert (dist.mean(), dist.var()) == pytest.approx((y.mean(), y.var(ddof=1)))
         np.testing.assert_allclose(root.predict_proba(pd.DataFrame(index=["p", "q"])).mean()["Y"], [y.mean()] * 2)
         np.testing.assert_allclose(root.log_likelihood(None, y)["Y"], norm.logpdf(y, y.mean(), y.std(ddof=1)))
-        assert root.sample(n_samples=10, random_state=0).shape == (10, 1)
+        assert root.sample(n_samples=10, rng=0).shape == (10, 1)
         counts = pd.Series(np.random.default_rng(0).poisson(3.0, size=200).astype(float), name="C")
         counted = SkproAdapter(GLMRegressor(family="Poisson")).fit(None, counts)
         np.testing.assert_allclose(counted.log_likelihood(None, counts)["C"], poisson.logpmf(counts, counts.mean()))
@@ -131,7 +131,7 @@ class TestSkproAdapter:
         dist = root.predict_proba(rows)
         assert dist.index.equals(rows.index)
         np.testing.assert_allclose(dist.mean()["Y"], [y.mean()] * 3)
-        assert root.sample(repeated_rows, random_state=0).index.equals(repeated_rows.index)
+        assert root.sample(repeated_rows, rng=0).index.equals(repeated_rows.index)
         with pytest.raises(ValueError, match="unique labels"):
             root.predict_proba(repeated_rows)
         repeated = SkproAdapter(GLMRegressor(add_constant=True)).fit(
@@ -141,7 +141,7 @@ class TestSkproAdapter:
         with pytest.raises(ValueError, match="unique labels"):
             repeated.predict_proba(X_repeated)
         np.testing.assert_allclose(repeated.predict(X_repeated)["Y"], plain.predict(X[:3])["Y"])
-        assert repeated.sample(X_repeated, random_state=0).index.tolist() == ["a", "a", "b"]
+        assert repeated.sample(X_repeated, rng=0).index.tolist() == ["a", "a", "b"]
         bootstrap = SkproAdapter(BootstrapRegressor(LinearRegression(), n_bootstrap_samples=20, random_state=0)).fit(
             X, y
         )
@@ -151,4 +151,4 @@ class TestSkproAdapter:
         X_named = X.set_axis([0, ("B", 1)], axis=1)
         named = SkproAdapter(GLMRegressor(add_constant=True)).fit(X_named, y.rename(("Y", 0)))
         np.testing.assert_allclose(named.predict_proba(X_named[:3]).mean(), plain.predict_proba(X[:3]).mean())
-        assert named.sample(X_named[:3], random_state=0).columns.tolist() == [("Y", 0)]
+        assert named.sample(X_named[:3], rng=0).columns.tolist() == [("Y", 0)]

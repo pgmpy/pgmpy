@@ -67,6 +67,7 @@ class Pearsonr(BaseCITest):
         "data_types": ["continuous"],
         "default_for": "continuous",
         "requires_data": True,
+        "capability:conditioning": True,
         "assumption:linearity": True,
         "assumption:additive_noise": True,
         "assumption:gaussian_noise": True,

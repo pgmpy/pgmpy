@@ -208,8 +208,8 @@ class TestSampleDiscrete(unittest.TestCase):
         weights = np.array([0.2, 0.5, 0.3])
 
         # Check reproducible values with seed
-        result1 = sample_discrete(values, weights, 50, seed=0)
-        result2 = sample_discrete(values, weights, 50, seed=0)
+        result1 = sample_discrete(values, weights, 50, rng=0)
+        result2 = sample_discrete(values, weights, 50, rng=0)
         np.testing.assert_array_equal(result1, result2)
 
         self.assertTrue(set(result1.tolist()).issubset({"a", "b", "c"}))

@@ -82,7 +82,7 @@ class TestAdditiveNoiseMechanism:
         observed = pd.Series(values, index=rows.index, name="y")
         np.testing.assert_allclose(mechanism.log_likelihood(rows, observed)["y"], laplace.logpdf(values, f(rows), 0.5))
         np.testing.assert_allclose(mechanism.predict(rows)["y"], f(rows))
-        draws = mechanism.sample(rows.iloc[[0]], n_samples=20000, random_state=0)["y"] - f(rows.iloc[[0]]).iloc[0]
+        draws = mechanism.sample(rows.iloc[[0]], n_samples=20000, rng=0)["y"] - f(rows.iloc[[0]]).iloc[0]
         assert draws.mean() == pytest.approx(0.0, abs=0.02) and draws.var() == pytest.approx(0.5, rel=0.05)
 
     def test_fit(self, data):
@@ -133,7 +133,7 @@ class TestAdditiveNoiseMechanism:
         pd.testing.assert_frame_equal(mechanism.predict(rows, noise=noise), observed.to_frame())
 
         # With shared noise, two interventions differ only through f.
-        u = mechanism.sample_noise(len(rows), random_state=0)
+        u = mechanism.sample_noise(len(rows), rng=0)
         effect = mechanism.predict(rows.assign(a=1.0), noise=u) - mechanism.predict(rows.assign(a=0.0), noise=u)
         f_effect = mechanism.function_.predict(rows.assign(a=1.0)) - mechanism.function_.predict(rows.assign(a=0.0))
         np.testing.assert_allclose(effect, f_effect)
@@ -141,7 +141,7 @@ class TestAdditiveNoiseMechanism:
         # A root is its noise around a constant f.
         root = AdditiveNoiseMechanism(SklearnAdapter(LinearRegression())).fit(None, y)
         assert root.predict_proba().mean() == pytest.approx(y.mean())
-        assert root.sample(n_samples=5, random_state=0).shape == (5, 1)
+        assert root.sample(n_samples=5, rng=0).shape == (5, 1)
 
     def test_weights_and_noise(self, data):
         X, y = data

@@ -147,8 +147,8 @@ class TestSklearnAdapter:
         )
         most_probable = adapter.classes_[adapter.estimator_.predict_proba(X_test).argmax(axis=1)]
         pd.testing.assert_frame_equal(adapter.predict(X_test), pd.DataFrame({"Y": most_probable}, index=X_test.index))
-        samples = adapter.sample(X_test, n_samples=20, random_state=0)["Y"]
-        assert samples.isin(["hi", "lo"]).all() and not samples.equals(adapter.sample(X_test, 20, random_state=1)["Y"])
+        samples = adapter.sample(X_test, n_samples=20, rng=0)["Y"]
+        assert samples.isin(["hi", "lo"]).all() and not samples.equals(adapter.sample(X_test, 20, rng=1)["Y"])
 
         # The labels are encoded before fitting, so the estimator can't change them: nullable booleans stay booleans,
         # and a TabularCPD child fitted on the original data takes the samples.
@@ -156,7 +156,7 @@ class TestSklearnAdapter:
         boolean = SklearnAdapter(LogisticRegression()).fit(X[["B"]], flag)
         assert list(boolean.predict_proba(X_test[["B"]]).categories) == [False, True]
         child = TabularCPD().fit(flag.to_frame(), labels)
-        child.predict_proba(boolean.sample(X_test[["B"]], random_state=0))
+        child.predict_proba(boolean.sample(X_test[["B"]], rng=0))
 
         # A single observed class gets all the probability without the estimator, which some can't predict with.
         single = SklearnAdapter(HistGradientBoostingClassifier()).fit(X, pd.Series("no", index=X.index, name="Y"))

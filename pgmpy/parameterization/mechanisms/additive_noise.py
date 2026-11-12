@@ -194,8 +194,8 @@ class AdditiveNoiseMechanism(BaseMechanism):
         residuals = y - self.function_.predict(X).iloc[:, 0].to_numpy(dtype=float)
         return pd.DataFrame(residuals.reshape(-1, 1), index=X.index, columns=[self.variable_])
 
-    def _sample_noise(self, n_samples: int, random_state: int | np.random.Generator | None) -> np.ndarray:
-        return self.noise_.sample(n_samples=n_samples, random_state=random_state).iloc[:, 0].to_numpy(dtype=float)
+    def _sample_noise(self, n_samples: int, *, rng: np.random.Generator) -> np.ndarray:
+        return self.noise_.sample(n_samples=n_samples, rng=rng).iloc[:, 0].to_numpy(dtype=float)
 
 
 def _check_continuous(noise: BaseParameterization) -> None:

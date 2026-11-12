@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 
 from pgmpy.utils import preprocess_data
+from pgmpy.utils._random import _rename_param_to_rng, _rename_to_rng
 
 from ._base import BaseCITest, _CITestResult, _ResidualMixin
 
@@ -49,9 +50,12 @@ class GeneralizedCov(_ResidualMixin, BaseCITest):
     n_permutations : int, default 1000
         Number of permutations used to estimate the null distribution of :math:`T`.
 
-    random_state : int, RandomState instance, or None, optional
-        Seed or random state for the permutation sampling. Pass an integer for
-        reproducible results.
+    rng : int, numpy.random.Generator or None, optional
+        Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the operating
+        system, so results are not reproducible. When tests run in parallel, only an ``int`` gives reproducible results.
+
+        .. versionchanged:: 1.2.0
+            Replaces ``random_state``, which is deprecated and will be removed in v2.0.
 
     Attributes
     ----------
@@ -76,21 +80,28 @@ class GeneralizedCov(_ResidualMixin, BaseCITest):
         "data_types": ["discrete", "continuous", "mixed"],
         "default_for": None,
         "requires_data": True,
+        "capability:conditioning": True,
     }
 
+    @_rename_to_rng("random_state")
     def __init__(
         self,
         data: pd.DataFrame,
         estimator=None,
         n_permutations: int = 1000,
-        random_state=None,
+        rng: int | np.random.Generator | None = None,
         use_cache: bool = True,
     ):
         self.data, self.dtypes = preprocess_data(data)
         self.estimator = estimator
         self.n_permutations = n_permutations
-        self.random_state = random_state
+        self.rng = rng
         super().__init__(use_cache=use_cache)
+
+    def set_params(self, **params):
+        """Set the parameters of this estimator; the deprecated ``random_state`` is accepted as an alias of ``rng``."""
+        _rename_param_to_rng(params, "random_state", type(self).__qualname__)
+        return super().set_params(**params)
 
     @staticmethod
     def _cross_covariance_statistic(res_x: pd.DataFrame, res_y: pd.DataFrame) -> float:
@@ -146,7 +157,7 @@ class GeneralizedCov(_ResidualMixin, BaseCITest):
         statistic = self._cross_covariance_statistic(res_x, res_y)
 
         # Step 3: Permutation test to obtain the null distribution of T.
-        rng = np.random.default_rng(self.random_state)
+        rng = np.random.default_rng(self.rng)
         perm_stats = np.empty(self.n_permutations)
         for t in range(self.n_permutations):
             idx = rng.permutation(res_x.shape[0])

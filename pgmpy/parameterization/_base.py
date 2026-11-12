@@ -200,7 +200,8 @@ class BaseParameterization(BaseEstimator):
         self,
         X: pd.DataFrame | None = None,
         n_samples: int | None = None,
-        random_state: int | np.random.Generator | None = None,
+        *,
+        rng: int | np.random.Generator | None = None,
     ) -> Any:
         """Draw values of the target from its distribution given each row of ``X``.
 
@@ -210,8 +211,9 @@ class BaseParameterization(BaseEstimator):
             Parent values, as for ``predict_proba``; ``None`` draws from a root's own distribution.
         n_samples : int, optional
             Number of draws per row of ``X``, one if omitted; without ``X``, the total number of draws.
-        random_state : int, numpy.random.Generator or None, optional
-            Seed or generator for this call; ``None`` draws fresh values.
+        rng : int, numpy.random.Generator or None, optional
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
 
         Returns
         -------
@@ -224,7 +226,7 @@ class BaseParameterization(BaseEstimator):
         X = self._check_X(X)
         if X is None and n_samples is None:
             raise ValueError("Pass X, or n_samples to draw that many values from the root's distribution.")
-        return self._sample(X, n_samples, random_state)
+        return self._sample(X, n_samples, rng=np.random.default_rng(rng))
 
     def _check_estimator(self, estimator: "BaseLocalEstimator | None", family: type) -> None:
         """Check that ``estimator`` is ``None`` or a local estimator of ``family``, and take the
@@ -285,9 +287,7 @@ class BaseParameterization(BaseEstimator):
         scores = distribution.log_pmf(values) if discrete else distribution.log_pdf(values)
         return pd.DataFrame(scores.to_numpy(), index=X.index, columns=[self.variable_])
 
-    def _sample(
-        self, X: pd.DataFrame | None, n_samples: int | None, random_state: int | np.random.Generator | None
-    ) -> pd.DataFrame:
+    def _sample(self, X: pd.DataFrame | None, n_samples: int | None, *, rng: np.random.Generator) -> pd.DataFrame:
         # Step 1: Repeat X's rows once per draw, or for a root without X, take n_samples rows without columns, and draw
         # one value for each, on a RangeIndex: skpro matches values to rows by label, which mixes up rows with repeated
         # labels.
@@ -295,21 +295,21 @@ class BaseParameterization(BaseEstimator):
             rows = pd.DataFrame(index=pd.RangeIndex(n_samples))
         else:
             rows = X.iloc[np.tile(np.arange(len(X)), 1 if n_samples is None else n_samples)]
-        samples = self._draw(rows.set_axis(pd.RangeIndex(len(rows))), random_state)
+        samples = self._draw(rows.set_axis(pd.RangeIndex(len(rows))), rng=rng)
 
         # Step 2: Label the samples with X's index, and a level numbering the draws, and with the target's name.
         if X is not None:
             samples = samples.set_axis(X.index if n_samples is None else _sample_index(X.index, n_samples))
         return samples.set_axis([self.variable_], axis=1)
 
-    def _draw(self, rows: pd.DataFrame, random_state: int | np.random.Generator | None) -> pd.DataFrame:
+    def _draw(self, rows: pd.DataFrame, *, rng: np.random.Generator) -> pd.DataFrame:
         """Draw one value of the target for each row of parent values, which come on a RangeIndex: with the predicted
         distribution's own sample() if it takes a random_state, as NominalDistribution's does, and otherwise, as for
-        skpro's distributions, with the ppf of uniform values from the seeded generator."""
+        skpro's distributions, with the ppf of uniform values drawn from ``rng``."""
         distribution = self._predict_proba(rows)
         if "random_state" in inspect.signature(distribution.sample).parameters:
-            return distribution.sample(random_state=random_state)
-        uniform = np.random.default_rng(random_state).random((len(rows), 1))
+            return distribution.sample(random_state=rng)
+        uniform = rng.random((len(rows), 1))
         return pd.DataFrame(distribution.ppf(uniform).to_numpy(), dtype=float)
 
     def __eq__(self, other: object) -> bool:

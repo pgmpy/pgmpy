@@ -52,16 +52,16 @@ def test_construction_errors():
 def test_guide():
     # Another autoguide fits the same posterior, whose mean is the sum of the data over 4.01.
     guide = _safe_import("pyro.infer.autoguide.AutoNormal", pkg_name="pyro-ppl")
-    estimator = PyroSVI(num_steps=500, guide=guide, random_state=0)
+    estimator = PyroSVI(num_steps=500, guide=guide, rng=0)
     node = PyroAdapter(unknown_mean, estimator=estimator).fit(None, Y)
     assert node.posterior_samples_["mu"].mean().item() == pytest.approx(5 / 4.01, abs=0.15)
 
 
 def test_diagnostics():
     # Each estimator reports its own diagnostics: SVI the loss after each step, NUTS Pyro's MCMC diagnostics.
-    svi = PyroAdapter(unknown_mean, estimator=PyroSVI(num_steps=20, num_samples=10, random_state=0)).fit(None, Y)
+    svi = PyroAdapter(unknown_mean, estimator=PyroSVI(num_steps=20, num_samples=10, rng=0)).fit(None, Y)
     assert svi.diagnostics_["losses"].shape == (20,)
-    nuts = PyroAdapter(unknown_mean, estimator=PyroNUTS(num_samples=20, warmup_steps=20, random_state=0)).fit(None, Y)
+    nuts = PyroAdapter(unknown_mean, estimator=PyroNUTS(num_samples=20, warmup_steps=20, rng=0)).fit(None, Y)
     assert nuts.posterior_samples_["mu"].shape == (20,)
     assert {"n_eff", "r_hat"} <= set(nuts.diagnostics_["mu"])
 
