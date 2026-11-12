@@ -129,7 +129,7 @@ class TOPIC(BaseCausalDiscovery):
 
         dag_current = DAG()
         dag_current.add_nodes_from(list(X.columns))
-        candidates = list(dag_current.nodes)
+        candidates = sorted(dag_current.nodes, key=repr)
         topological_order_ = []
 
         # Step 1: Find the topological order for the variables.
