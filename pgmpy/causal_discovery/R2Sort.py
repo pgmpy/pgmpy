@@ -97,21 +97,15 @@ class R2Sort(BaseOrderDiscovery):
             raise ValueError(f"return_type must be one of: dag, pdag. Got: {self.return_type}")
 
         model_reg = clone(self.estimator) if self.estimator is not None else LinearRegression()
+        r2_values = {}
         if self.estimator is None:
-            values = X.to_numpy(dtype=float)
-            varying = np.ptp(values, axis=0) > 0
-            correlation = np.atleast_2d(np.corrcoef(values[:, varying], rowvar=False))
-
-            r2 = np.ones(values.shape[1])
-            positions = np.flatnonzero(varying)
-            for offset, column in enumerate(positions):
-                others = [other for other in range(len(positions)) if other != offset]
-                residual = residual_covariance(correlation, [offset], others)[0, 0]
-                r2[column] = 1.0 - max(float(residual), 0.0) / correlation[offset, offset]
-            r2_values = dict(zip(self.feature_names_in_, r2))
+            correlation = np.atleast_2d(np.corrcoef(X.to_numpy(dtype=float), rowvar=False))
+            for column, target in enumerate(self.feature_names_in_):
+                others = [other for other in range(len(self.feature_names_in_)) if other != column]
+                residual = residual_covariance(correlation, [column], others)[0, 0]
+                r2_values[target] = 1.0 - max(float(residual), 0.0)
         else:
             all_nodes_set = set(self.feature_names_in_)
-            r2_values = {}
             for target in self.feature_names_in_:
                 other_nodes = list(all_nodes_set - {target})
                 y = X[target]

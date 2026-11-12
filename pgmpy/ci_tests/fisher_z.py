@@ -75,9 +75,8 @@ class FisherZ(Pearsonr):
         """
         partial_corr, _ = self._partial_correlation(X, Y, Z)
 
-        rho = -0.999999 if partial_corr < -0.999999 else 0.999999 if partial_corr > 0.999999 else partial_corr
-        with np.errstate(invalid="ignore"):
-            statistic = np.sqrt(self.data.shape[0] - len(Z) - 3) * np.arctanh(rho)
+        rho = np.clip(partial_corr, -0.999999, 0.999999)
+        statistic = np.sqrt(self.data.shape[0] - len(Z) - 3) * np.arctanh(rho)
         p_value = 2 * special.ndtr(-abs(statistic))
 
         return _CITestResult(statistic=statistic, p_value=p_value, effect_size=abs(partial_corr))

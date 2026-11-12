@@ -33,8 +33,8 @@ from pgmpy.structure_score import get_scoring_method
     ],
     ids=["continuous", "discrete"],
 )
-def test_fit_warns_on_constant_column(data):
-    with pytest.warns(UserWarning, match="constant"):
+def test_fit_rejects_constant_column(data):
+    with pytest.raises(ValueError, match="Variable 'const' is constant"):
         ChowLiu().fit(data)
 
 

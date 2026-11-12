@@ -74,14 +74,11 @@ def test_scale_invariance(causal_chain_data):
     )
 
 
-def test_degenerate_columns_sort_last(causal_chain_data):
-    # A constant variable, or one the others determine exactly, has a global R^2 of 1.
-    data = causal_chain_data.assign(C=causal_chain_data["X"] + causal_chain_data["Y"], K=1.0)
-    with pytest.warns(UserWarning, match="is constant"):
-        order = R2Sort().fit(data).causal_order_
+def test_determined_column_sorts_last(causal_chain_data):
+    data = causal_chain_data.assign(C=causal_chain_data["X"] + causal_chain_data["Y"])
+    order = R2Sort().fit(data).causal_order_
     assert order[0] == "Z"
-    assert set(order[1:4]) == {"X", "Y", "C"}
-    assert order[-1] == "K"
+    assert set(order[1:]) == {"X", "Y", "C"}
 
 
 def test_custom_estimator_drives_causal_order(causal_chain_data):
