@@ -1,6 +1,9 @@
+"""Tests ensuring sampling operations maintain global RNG isolation."""
+
 import unittest
 
 import numpy as np
+import pytest
 
 from pgmpy.factors.discrete import State
 from pgmpy.models import MarkovChain
@@ -8,7 +11,10 @@ from pgmpy.utils import sample_discrete
 
 
 class TestRNGSafety(unittest.TestCase):
+    """Test suite ensuring RNG operations do not pollute global numpy RNG state."""
+
     def test_sample_discrete_safety(self):
+        """Ensure sample_discrete with rng does not mutate global numpy RNG state."""
         # Set global seed
         np.random.seed(42)  # noqa: NPY002
         _ = np.random.random()  # noqa: S311
@@ -28,12 +34,14 @@ class TestRNGSafety(unittest.TestCase):
         self.assertEqual(v2, expected_v2, "Global RNG state was polluted by sample_discrete!")
 
     def test_sample_discrete_seed_deprecated_safety(self):
+        """Ensure sample_discrete with deprecated seed does not mutate global numpy RNG state."""
         # Set global seed
         np.random.seed(42)  # noqa: NPY002
         _ = np.random.random()  # noqa: S311
 
         # Call sample_discrete with legacy seed kwarg
-        sample_discrete(["a", "b"], [0.5, 0.5], size=10, seed=123)
+        with pytest.deprecated_call():
+            sample_discrete(["a", "b"], [0.5, 0.5], size=10, seed=123)
 
         v2 = np.random.random()  # noqa: S311
 
@@ -44,6 +52,7 @@ class TestRNGSafety(unittest.TestCase):
         self.assertEqual(v2, expected_v2, "Global RNG state was polluted by sample_discrete with seed!")
 
     def test_markov_chain_safety(self):
+        """Ensure MarkovChain sampling methods do not mutate global numpy RNG state."""
         model = MarkovChain(variables=["A", "B"], card=[2, 2])
         tm = {0: {0: 0.1, 1: 0.9}, 1: {0: 0.8, 1: 0.2}}
         model.add_transition_model("A", tm)
@@ -63,7 +72,8 @@ class TestRNGSafety(unittest.TestCase):
         _ = list(model.generate_sample(size=5, rng=789))
 
         # Call sample with legacy seed kwarg
-        model.sample(size=5, seed=123)
+        with pytest.deprecated_call():
+            model.sample(size=5, seed=123)
 
         v2 = np.random.random()  # noqa: S311
 

@@ -289,6 +289,7 @@ class TestMarkovChain(unittest.TestCase):
         self.assertEqual(samples, expected_samples)
 
     def test_sample_rng_reproducibility(self):
+        """Test reproducibility of MarkovChain.sample across same and different rng seeds."""
         model = MC(["a", "b"], [2, 2])
         model.transition_models["a"] = {0: {0: 0.1, 1: 0.9}, 1: {0: 0.2, 1: 0.8}}
         model.transition_models["b"] = {0: {0: 0.3, 1: 0.7}, 1: {0: 0.4, 1: 0.6}}
@@ -312,17 +313,18 @@ class TestMarkovChain(unittest.TestCase):
         self.assertTrue(df1.equals(df_seed))
 
     def test_generate_sample_rng_reproducibility(self):
+        """Test reproducibility of MarkovChain.generate_sample across same and different rng seeds."""
         model = MC(["a"], [2])
         model.transition_models["a"] = {0: {0: 0.5, 1: 0.5}, 1: {0: 0.5, 1: 0.5}}
         model.set_start_state([State("a", 0)])
 
-        gen1 = model.generate_sample(size=10, rng=42)
+        gen1 = model.generate_sample(size=50, rng=42)
         samples1 = [s[0].state for s in gen1]
         model.set_start_state([State("a", 0)])
-        gen2 = model.generate_sample(size=10, rng=42)
+        gen2 = model.generate_sample(size=50, rng=42)
         samples2 = [s[0].state for s in gen2]
         model.set_start_state([State("a", 0)])
-        gen3 = model.generate_sample(size=10, rng=99)
+        gen3 = model.generate_sample(size=50, rng=99)
         samples3 = [s[0].state for s in gen3]
 
         # Same rng -> identical results
@@ -333,7 +335,7 @@ class TestMarkovChain(unittest.TestCase):
         # Test deprecated `seed` argument compatibility
         model.set_start_state([State("a", 0)])
         with pytest.deprecated_call():
-            gen_seed = list(model.generate_sample(size=10, seed=42))
+            gen_seed = list(model.generate_sample(size=50, seed=42))
         self.assertEqual(samples1, [s[0].state for s in gen_seed])
 
     def test_random_state(self):
@@ -347,6 +349,7 @@ class TestMarkovChain(unittest.TestCase):
         self.assertLessEqual(state[1].state, 2)
 
     def test_random_state_rng_reproducibility(self):
+        """Test reproducibility of MarkovChain._random_state with specified rng."""
         model = MC(["a", "b"], [2, 3])
         state1 = model._random_state(np.random.default_rng(42))
         state2 = model._random_state(np.random.default_rng(42))
@@ -355,6 +358,7 @@ class TestMarkovChain(unittest.TestCase):
         self.assertNotEqual(state1, state3)
 
     def test_sample_rng_no_start_state(self):
+        """Test sampling from MarkovChain with rng when no start state is predefined."""
         model = MC(["a", "b"], [2, 2])
         model.transition_models["a"] = {0: {0: 0.1, 1: 0.9}, 1: {0: 0.2, 1: 0.8}}
         model.transition_models["b"] = {0: {0: 0.3, 1: 0.7}, 1: {0: 0.4, 1: 0.6}}
