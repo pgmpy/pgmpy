@@ -127,9 +127,8 @@ class CausalInfluenceDiagram(DAG):
 
     def add_edge(self, u_of_edge: Hashable, v_of_edge: Hashable, **attr):
         super().add_edge(u_of_edge, v_of_edge, **attr)
-
-        self.nodes[u_of_edge].setdefault("role", "chance")
-        self.nodes[v_of_edge].setdefault("role", "chance")
+        self.add_node(u_of_edge, role="chance")
+        self.add_node(v_of_edge, role="chance")
 
     def remove_node(self, n: Hashable):
         """Remove a node and any parameterization assigned to it."""
@@ -141,8 +140,7 @@ class CausalInfluenceDiagram(DAG):
     def remove_nodes_from(self, nodes: Iterable[Hashable]):
         """Remove nodes and any parameterizations assigned to them."""
         for node in nodes:
-            if self.has_node(node):
-                self.remove_node(node)
+            self.remove_node(node)
 
     def clear(self):
         """Remove all nodes, edges, and assigned parameterizations."""
