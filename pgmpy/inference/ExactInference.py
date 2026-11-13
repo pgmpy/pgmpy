@@ -68,6 +68,8 @@ class VariableElimination(Inference):
         list: A list of variables names in the order they need to be eliminated.
         """
         to_eliminate = set(self.variables) - set(variables) - set(evidence.keys() if evidence else [])
+        if not to_eliminate:
+            return []
 
         # Step 1: If elimination_order is a list, verify it's correct and return.
         # Step 1.1: Check that not of the `variables` and `evidence` is in the elimination_order.
@@ -420,12 +422,16 @@ class VariableElimination(Inference):
         >>> inference = VariableElimination(model)
         >>> phi_query = inference.max_marginal(["A", "B"])
         """
+        evidence = evidence if evidence is not None else dict()
         if not variables:
-            variables = []
+            variables = [var for var in self.variables if var not in evidence]
+        else:
+            variables = [variables] if isinstance(variables, str) else list(variables)
 
-        common_vars = set(evidence if evidence is not None else []).intersection(
-            set(variables if variables is not None else [])
-        )
+        if not variables:
+            raise ValueError("The `variables` argument must contain at least one variable.")
+
+        common_vars = set(evidence).intersection(variables)
         if common_vars:
             raise ValueError(
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
@@ -499,9 +505,16 @@ class VariableElimination(Inference):
         >>> inference = VariableElimination(model)
         >>> phi_query = inference.map_query(["A", "B"])
         """
-        variables = [] if variables is None else variables
         evidence = evidence if evidence is not None else dict()
-        common_vars = set(evidence if evidence is not None else []).intersection(variables)
+        if not variables:
+            variables = [var for var in self.variables if var not in evidence]
+        else:
+            variables = [variables] if isinstance(variables, str) else list(variables)
+
+        if not variables:
+            raise ValueError("The `variables` argument must contain at least one variable.")
+
+        common_vars = set(evidence).intersection(variables)
         if common_vars:
             raise ValueError(
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
