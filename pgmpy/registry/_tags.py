@@ -1,4 +1,4 @@
-"""
+﻿"""
 Register of the skbase tags used by pgmpy objects.
 
 Each tag is a subclass of ``_BaseTag``. The class name is the tag name with ``:`` replaced by ``__``, and the class
@@ -224,6 +224,17 @@ class capability__expert_knowledge(_BaseTag):
         "parent_type": ["causal_discovery"],
         "tag_type": ("list", ["forbidden_edges", "required_edges", "search_space", "temporal_order"]),
         "short_descr": "Constraints from ExpertKnowledge that the algorithm respects.",
+    }
+
+
+class capability__missing_values(_BaseTag):
+    """Whether the method supports missing values in its input data."""
+
+    _tags = {
+        "tag_name": "capability:missing_values",
+        "parent_type": ["causal_discovery", "ci_test", "structure_score"],
+        "tag_type": "bool",
+        "short_descr": "Whether the method supports missing values in its input data.",
     }
 
 

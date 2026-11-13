@@ -146,6 +146,7 @@ class BaseCITest(BaseObject):
 
     _tags = {
         "object_type": "ci_test",
+        "capability:missing_values": False,
         "name": None,
         "data_types": ["discrete", "continuous", "mixed"],
         "default_for": None,

@@ -37,6 +37,7 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
 
     _tags = {
         "object_type": "causal_discovery",
+        "capability:missing_values": False,
         "name": None,
         "data_types": ["discrete", "continuous", "mixed"],
         "identifiable_graph": None,

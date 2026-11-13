@@ -64,3 +64,17 @@ def test_all_tags():
     df = all_tags("causal_discovery", as_dataframe=True)
     assert list(df.columns) == ["name", "object_type", "type", "description"]
     assert "capability:multivariate" in df["name"].values
+
+
+@pytest.mark.parametrize(
+    "cls",
+    [
+        cls
+        for cls in OBJECTS
+        if cls.get_class_tag("object_type")
+        in {"causal_discovery", "ci_test", "structure_score"}
+    ],
+    ids=lambda cls: f"{cls.__module__}.{cls.__name__}",
+)
+def test_missing_values_capability_defaults_to_false(cls):
+    assert cls.get_class_tag("capability:missing_values") is False
