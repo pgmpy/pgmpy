@@ -237,6 +237,8 @@ def test_chow_liu_weight_fn_data_mismatch(data12, gaussian_chain_data):
         ChowLiu(edge_weights_fn="mutual_info", show_progress=False).fit(gaussian_chain_data)
     with pytest.raises(ValueError, match="requires continuous data"):
         ChowLiu(edge_weights_fn="gaussian_mutual_info", show_progress=False).fit(data12)
+    with pytest.raises(ValueError, match="edge_weights_fn should be one of"):
+        ChowLiu(edge_weights_fn="mutual_info_classif", show_progress=False).fit(data12)
 
 
 @pytest.fixture(autouse=True)

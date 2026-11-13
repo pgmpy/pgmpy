@@ -291,6 +291,14 @@ def test_tan_weight_fn_data_mismatch(data12, gaussian_tan_data):
         TAN(class_node="A", edge_weights_fn="gaussian_mutual_info", show_progress=False).fit(data12)
 
 
+def test_tan_rejects_continuous_class_node(gaussian_tan_data):
+    rng = np.random.default_rng(0)
+    continuous_class_data = gaussian_tan_data.assign(Y=rng.normal(size=len(gaussian_tan_data)))
+    for weight_fn in ["gaussian_mutual_info", "mutual_info_regression"]:
+        with pytest.raises(ValueError, match="class_node 'Y' must be discrete"):
+            TAN(class_node="Y", edge_weights_fn=weight_fn, show_progress=False).fit(continuous_class_data)
+
+
 @pytest.fixture(autouse=True)
 def shutdown_executor():
     yield

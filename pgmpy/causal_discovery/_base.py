@@ -9,7 +9,7 @@ import pandas as pd
 from joblib import Parallel, delayed
 from skbase.base import BaseObject
 from sklearn.base import BaseEstimator, clone
-from sklearn.feature_selection import mutual_info_classif, mutual_info_regression
+from sklearn.feature_selection import mutual_info_regression
 from sklearn.linear_model import LassoLarsIC, LinearRegression
 from sklearn.metrics import (
     adjusted_mutual_info_score,
@@ -742,11 +742,6 @@ def _mutual_info_regression(x, y):
     return float(mutual_info_regression(np.asarray(x).reshape(-1, 1), np.asarray(y), random_state=0)[0])
 
 
-def _mutual_info_classif(x, y):
-    """Adapt :func:`sklearn.feature_selection.mutual_info_classif` to ``fn(array, array) -> float``."""
-    return float(mutual_info_classif(np.asarray(x).reshape(-1, 1), np.asarray(y), random_state=0)[0])
-
-
 class _TreeSearchMixin:
     """
     Mixin class providing shared functionality for tree-based causal discovery
@@ -764,11 +759,10 @@ class _TreeSearchMixin:
         "normalized_mutual_info": normalized_mutual_info_score,
         "gaussian_mutual_info": gaussian_mutual_info,
         "mutual_info_regression": _mutual_info_regression,
-        "mutual_info_classif": _mutual_info_classif,
     }
 
     _DISCRETE_EDGE_WEIGHT_FNS = frozenset({"mutual_info", "adjusted_mutual_info", "normalized_mutual_info"})
-    _CONTINUOUS_EDGE_WEIGHT_FNS = frozenset({"gaussian_mutual_info", "mutual_info_regression", "mutual_info_classif"})
+    _CONTINUOUS_EDGE_WEIGHT_FNS = frozenset({"gaussian_mutual_info", "mutual_info_regression"})
 
     @staticmethod
     def _validate_edge_weights_fn(data, edge_weights_fn):
@@ -832,9 +826,6 @@ class _TreeSearchMixin:
               Gaussian continuous variables.
             - ``"mutual_info_regression"``: sklearn's k-nearest-neighbour
               mutual information estimate for continuous variables.
-            - ``"mutual_info_classif"``: sklearn's k-nearest-neighbour mutual
-              information estimate for a continuous variable against a
-              discrete target.
             - A callable of the form ``fn(array, array) -> float``.
 
         n_jobs : int, default=-1
@@ -887,11 +878,12 @@ class _TreeSearchMixin:
         model : pgmpy.base.DAG
             The estimated DAG rooted at ``root_node``.
         """
-        T = nx.maximum_spanning_tree(
-            nx.from_pandas_adjacency(
-                pd.DataFrame(weights, index=columns, columns=columns),
-                create_using=nx.Graph,
-            )
+        G = nx.Graph()
+        G.add_nodes_from(columns)
+        n_columns = len(columns)
+        G.add_weighted_edges_from(
+            (columns[i], columns[j], weights[i, j]) for i in range(n_columns) for j in range(i + 1, n_columns)
         )
+        T = nx.maximum_spanning_tree(G)
         D = nx.bfs_tree(T, root_node)
         return DAG(D)

@@ -5,7 +5,7 @@ from skbase.lookup import all_objects
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery import ANM, GES, IGCI, PC, BootstrapEstimator, ChowLiu, ExpertInLoop, R2Sort
-from pgmpy.causal_discovery._base import BaseCausalDiscovery
+from pgmpy.causal_discovery._base import BaseCausalDiscovery, _TreeSearchMixin
 from pgmpy.causal_discovery.bivariate_scores import BaseBivariateScore
 from pgmpy.ci_tests import GCM, BaseCITest, IndependenceMatch, get_ci_test
 from pgmpy.ci_tests._base import _CITestResult
@@ -74,6 +74,13 @@ def test_fit_rejects_incompatible_data_types():
     for data in [discrete, booleans, integers.astype("category")]:
         assert RecordingChowLiu().fit(data).fit_dtypes_ == {"A": "category", "B": "category"}
     assert set(R2Sort().fit(booleans).causal_graph_.nodes()) == {"A", "B"}
+
+
+def test_create_tree_and_dag_keeps_zero_weight_pairs():
+    weights = np.array([[0.0, 1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
+    dag = _TreeSearchMixin._create_tree_and_dag(weights, ["A", "B", "C"], root_node="A")
+    assert set(dag.nodes()) == {"A", "B", "C"}
+    assert len(dag.edges()) == 2
 
 
 def test_estimators_use_identity_equality_and_hash():

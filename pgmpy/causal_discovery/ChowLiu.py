@@ -31,9 +31,6 @@ class ChowLiu(_TreeSearchMixin, BaseCausalDiscovery):
           continuous variables.
         - ``"mutual_info_regression"``: sklearn's k-nearest-neighbour mutual
           information estimate for continuous variables.
-        - ``"mutual_info_classif"``: sklearn's k-nearest-neighbour mutual
-          information estimate for a continuous variable against a discrete
-          target.
         - A callable of the form ``fn(array, array) -> float``.
 
     n_jobs : int, default=-1

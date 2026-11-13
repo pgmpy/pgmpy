@@ -6,6 +6,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
+from sklearn.utils.multiclass import type_of_target
 from tqdm.auto import tqdm
 
 from pgmpy import config
@@ -45,9 +46,6 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
           continuous variables.
         - ``"mutual_info_regression"``: sklearn's k-nearest-neighbour mutual
           information estimate for continuous variables.
-        - ``"mutual_info_classif"``: sklearn's k-nearest-neighbour mutual
-          information estimate for a continuous variable against a discrete
-          target.
         - A callable of the form ``fn(array, array) -> float``.
 
     n_jobs : int, default=-1
@@ -231,9 +229,6 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
               Gaussian continuous variables.
             - ``"mutual_info_regression"``: sklearn's k-nearest-neighbour
               mutual information estimate for continuous variables.
-            - ``"mutual_info_classif"``: sklearn's k-nearest-neighbour mutual
-              information estimate for a continuous variable against a
-              discrete target.
             - A callable of the form ``fn(array, array) -> float``.
 
         n_jobs : int, default=-1
@@ -248,8 +243,11 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
             Symmetric matrix where ``weights[i, j]`` is I(i; j | class_node).
 
         """
-        # Step 0: Check that a named scoring function matches the data type,
-        # and resolve the edge weight computation function.
+        # Step 0: Check that the class variable is discrete, then check that
+        # a named scoring function matches the data type, and resolve the
+        # edge weight computation function.
+        if type_of_target(data[class_node].to_numpy()) == "continuous":
+            raise ValueError(f"class_node {class_node!r} must be discrete for TAN, but its values are continuous.")
         _TreeSearchMixin._validate_edge_weights_fn(data, edge_weights_fn)
         edge_weights_fn = _TreeSearchMixin._resolve_edge_weights_fn(edge_weights_fn)
 
