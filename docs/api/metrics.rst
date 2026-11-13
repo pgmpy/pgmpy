@@ -35,6 +35,7 @@ Unsupervised Metrics
    ~pgmpy.metrics.CorrelationScore
    ~pgmpy.metrics.ImpliedCIs
    ~pgmpy.metrics.FisherC
+   ~pgmpy.metrics.RMSEA
    ~pgmpy.metrics.StructureScore
 
 Utilities
