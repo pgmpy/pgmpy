@@ -24,7 +24,8 @@ class FisherZ(Pearsonr):
     Parameters
     ----------
     data : pandas.DataFrame
-        The dataset in which to test the independence condition.
+        The dataset in which to test the independence condition. All columns must be numeric and without missing
+        values.
 
     Attributes
     ----------

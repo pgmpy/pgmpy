@@ -56,7 +56,8 @@ class PearsonrEquivalence(Pearsonr):
     Parameters
     ----------
     data : pandas.DataFrame
-        The dataset in which to test the independence condition.
+        The dataset in which to test the independence condition. All columns must be numeric and without missing
+        values.
 
     delta_threshold : float
         The equivalence bound (threshold for practical independence).

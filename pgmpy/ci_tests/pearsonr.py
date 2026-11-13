@@ -29,7 +29,7 @@ class Pearsonr(BaseCITest):
     Parameters
     ----------
     data : pandas.DataFrame
-        The dataset in which to test the independence condition. Its numeric columns must not contain missing
+        The dataset in which to test the independence condition. All columns must be numeric and without missing
         values.
 
     Examples
