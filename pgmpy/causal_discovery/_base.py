@@ -3,6 +3,7 @@ from collections import deque
 from collections.abc import Callable, Generator, Hashable
 from itertools import combinations, permutations
 
+import narwhals.stable.v2 as nw
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -70,51 +71,110 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
 
         Parameters
         ----------
-        X: pd.DataFrame
+        X: pd.DataFrame, pl.DataFrame, pa.Table, cudf.DataFrame, modin.pandas.DataFrame, np.ndarray, or nw.DataFrame
             The data to fit the causal discovery algorithm on.
         """
-        n_samples, n_features = X.shape
 
+        if isinstance(X, (np.ndarray, pd.DataFrame)):
+            # Handle cases like complex data, sparse arrays etc. first
+            validate_data(
+                self,
+                X=X,
+                dtype=None,
+                accept_sparse=False,
+                ensure_all_finite=True,
+                reset=True,
+            )
+            if isinstance(X, np.ndarray):
+                cols = [f"x{i}" for i in range(X.shape[1])]
+                X = pd.DataFrame(X, columns=cols)
+
+        nw_df = X if isinstance(X, nw.DataFrame) else nw.from_native(X, eager_only=True)
+
+        n_samples, n_features = nw_df.shape
         if n_features == 0:
-            raise ValueError(f"0 feature(s) (shape={X.shape}) while a minimum of 1 is required.")
+            raise ValueError(f"0 feature(s) (shape={nw_df.shape}) while a minimum of 1 is required.")
         if n_samples < 2:
             raise ValueError(f"n_samples = {n_samples}, at least 2 are required.")
 
-        # Handle cases like complex data, sparse arrays etc. first
-        validate_data(
-            self,
-            X=X,
-            dtype=None,
-            accept_sparse=False,
-            ensure_all_finite=True,
-            reset=True,
-        )
+        types = {isinstance(c, str) for c in nw_df.columns}
+        if len(types) > 1:
+            col_types = sorted({type(c).__name__ for c in nw_df.columns})
+            raise TypeError(
+                f"Feature names are only supported if all input features have string names, "
+                f"but your input has {col_types} as feature name / column name types."
+            )
 
-        if not isinstance(X, pd.DataFrame):
-            X = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
-            self.feature_names_in_ = X.columns
-
-        if not all([isinstance(x, Hashable) for x in X.values.flat]):
-            raise TypeError("argument must be a string, number, or hashable object.")
+        for col in nw_df.columns:
+            s = nw_df.get_column(col)
+            null_count = s.is_null().sum()
+            nan_count = s.is_nan().sum() if s.dtype.is_float() else 0
+            if (null_count + nan_count) > 0:
+                raise ValueError(f"Input contains NaN/null values in column '{col}'.")
+            if s.dtype.is_float() and (~s.is_finite()).sum() > 0:
+                raise ValueError(f"Input contains infinite values in column '{col}'.")
+            if isinstance(s.dtype, (nw.dtypes.List, nw.dtypes.Array, nw.dtypes.Struct)):
+                raise TypeError("argument must be a string, number, or hashable object.")
+            if isinstance(s.dtype, (nw.dtypes.Object, nw.dtypes.Unknown)):
+                if not all(isinstance(x, Hashable) for x in s):
+                    raise TypeError("argument must be a string, number, or hashable object.")
+                if any(isinstance(x, (float, np.floating)) and np.isinf(x) for x in s):
+                    raise ValueError(f"Input contains infinite values in column '{col}'.")
 
         supported_types = type(self).get_class_tag("data_types")
-        X, _ = preprocess_data(X, data_types=supported_types)
-        dataset_type = get_dataset_type(X)
-        if dataset_type not in supported_types:
-            raise ValueError(f"{type(self).__name__} supports {supported_types} data, but the data is {dataset_type}.")
+        if supported_types is not None:
+            if isinstance(X, pd.DataFrame):
+                X, _ = preprocess_data(X, data_types=supported_types)
+                dataset_type = get_dataset_type(X)
+                nw_df = nw.from_native(X, eager_only=True)
+            else:
+                try:
+                    df_pandas = nw_df.to_pandas()
+                except Exception:
+                    df_pandas = pd.DataFrame({c: nw_df.get_column(c).to_numpy() for c in nw_df.columns})
+                df_pandas, _ = preprocess_data(df_pandas, data_types=supported_types)
+                dataset_type = get_dataset_type(df_pandas)
 
-        for col in X.columns:
-            if X[col].nunique() == 1:
+            if dataset_type not in supported_types:
+                raise ValueError(
+                    f"{type(self).__name__} supports {supported_types} data, but the data is {dataset_type}."
+                )
+
+        for col in nw_df.columns:
+            if nw_df.get_column(col).n_unique() == 1:
                 warnings.warn(
-                    f"Variable '{col}' is constant (zero variance), which can lead to unreliable results for"
+                    f"Variable '{col}' is constant (zero variance), which can lead to unreliable results for "
                     f"{type(self).__name__}. Consider removing it before fitting.",
                     UserWarning,
                 )
 
-        self.n_features_in_ = len(X.columns)
-        return X
+        if all(isinstance(c, str) for c in nw_df.columns):
+            self.feature_names_in_ = np.asarray(nw_df.columns, dtype=object)
+        else:
+            default_names = [f"x{i}" for i in range(n_features)]
+            self.feature_names_in_ = np.asarray(default_names, dtype=object)
+            nw_df = nw_df.rename(dict(zip(nw_df.columns, default_names)))
+            if isinstance(X, pd.DataFrame):
+                X = nw.to_native(nw_df)
 
-    def fit(self, X: pd.DataFrame, y=None, **fit_params):
+        self.n_features_in_ = n_features
+
+        if not getattr(self, "_supports_narwhals", False):
+            if not isinstance(X, pd.DataFrame):
+                native = nw.to_native(nw_df)
+                if isinstance(native, pd.DataFrame):
+                    X = native
+                else:
+                    try:
+                        X = nw_df.to_pandas()
+                    except (ImportError, ModuleNotFoundError):
+                        X = pd.DataFrame({c: nw_df.get_column(c).to_numpy() for c in nw_df.columns})
+            return X
+        if isinstance(X, pd.DataFrame):
+            return X
+        return nw_df
+
+    def fit(self, X, y=None, **fit_params):
         """Fit data (`X`) to a causal graph. The method calls the `_fit` method, which must be implemented separately in
         any causal discovery algorithm inheriting from `BaseCausalDiscovery`. Additional keyword arguments are passed to
         `_fit`.
@@ -169,7 +229,8 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
 
         Parameters
         ----------
-        X : pandas.DataFrame, optional
+        X : pd.DataFrame, pl.DataFrame, pa.Table, cudf.DataFrame, modin.pandas.DataFrame,
+            np.ndarray, or nw.DataFrame, optional
             Test data used for scoring the learned causal model. If provided, `metric` must be a metric that
             compares against data, i.e. one with ``requires_true_graph=False``.
 
@@ -201,6 +262,17 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
 
         # Case 1: When data is provided.
         if X is not None:
+            if not isinstance(X, (np.ndarray, pd.DataFrame)):
+                nw_df = X if isinstance(X, nw.DataFrame) else nw.from_native(X, eager_only=True)
+                native = nw.to_native(nw_df)
+                if isinstance(native, pd.DataFrame):
+                    X = native
+                else:
+                    try:
+                        X = nw_df.to_pandas()
+                    except (ImportError, ModuleNotFoundError):
+                        X = pd.DataFrame({c: nw_df.get_column(c).to_numpy() for c in nw_df.columns})
+
             validate_data(
                 self,
                 X=X,
@@ -209,8 +281,14 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
                 ensure_all_finite=True,
                 reset=False,
             )
-            if isinstance(X, np.ndarray):
-                X = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
+
+            if isinstance(X, np.ndarray) or not all(isinstance(c, str) for c in X.columns):
+                cols = (
+                    list(self.feature_names_in_)
+                    if hasattr(self, "feature_names_in_")
+                    else list(self.causal_graph_.nodes())
+                )
+                X = pd.DataFrame(np.asarray(X), columns=cols)
 
             return get_metric(metric, requires_true_graph=False).evaluate(X, self.causal_graph_)
 
@@ -740,8 +818,8 @@ class _TreeSearchMixin:
 
         Parameters
         ----------
-        data : pd.DataFrame
-            Dataframe where each column represents one variable.
+        data : pd.DataFrame, pl.DataFrame, pa.Table, cudf.DataFrame, modin.pandas.DataFrame, np.ndarray, or nw.DataFrame
+            Dataframe or 2D array where each column represents one variable.
 
         edge_weights_fn : str or callable, default="mutual_info"
             Method to use for computing edge weights. Options are:
@@ -763,14 +841,22 @@ class _TreeSearchMixin:
             Symmetric matrix where ``weights[i, j]`` is the edge weight between
             variable *i* and variable *j*.
         """
+        if isinstance(data, np.ndarray):
+            data = pd.DataFrame(data, columns=[f"x{i}" for i in range(data.shape[1])])
+
+        data = data if isinstance(data, nw.DataFrame) else nw.from_native(data, eager_only=True)
+
         edge_weights_fn = _TreeSearchMixin._resolve_edge_weights_fn(edge_weights_fn)
 
         n_vars = len(data.columns)
+
+        col_arrays = {col: data.get_column(col).to_numpy() for col in data.columns}
+
         pbar = combinations(data.columns, 2)
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(pbar, total=(n_vars * (n_vars - 1) / 2), desc="Building tree")
 
-        vals = Parallel(n_jobs=n_jobs)(delayed(edge_weights_fn)(data.loc[:, u], data.loc[:, v]) for u, v in pbar)
+        vals = Parallel(n_jobs=n_jobs)(delayed(edge_weights_fn)(col_arrays[u], col_arrays[v]) for u, v in pbar)
         weights = np.zeros((n_vars, n_vars))
         indices = np.triu_indices(n_vars, k=1)
         weights[indices] = vals
@@ -799,11 +885,11 @@ class _TreeSearchMixin:
         model : pgmpy.base.DAG
             The estimated DAG rooted at ``root_node``.
         """
-        T = nx.maximum_spanning_tree(
-            nx.from_pandas_adjacency(
-                pd.DataFrame(weights, index=columns, columns=columns),
-                create_using=nx.Graph,
-            )
+        G = nx.Graph()
+        G.add_nodes_from(columns)
+        G.add_weighted_edges_from(
+            (columns[i], columns[j], weights[i, j]) for i, j in combinations(range(len(columns)), 2)
         )
+        T = nx.maximum_spanning_tree(G)
         D = nx.bfs_tree(T, root_node)
         return DAG(D)
