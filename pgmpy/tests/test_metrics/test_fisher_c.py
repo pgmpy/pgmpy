@@ -36,7 +36,7 @@ def models_and_data(rng):
         out[name] = {
             "true": model,
             "random": _random_dag_with_same_nodes(model, rng),
-            "data": model.simulate(N_SAMPLES, rng=SEED),
+            "data": model.simulate(N_SAMPLES, seed=SEED),
         }
     return out
 

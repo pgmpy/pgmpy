@@ -143,18 +143,14 @@ cpd_w = FunctionalCPD(
 # Bernoulli target with logistic link: y ~ Bernoulli(sigmoid(-0.7 + 1.5*x1 + 0.8*x2 + 1.2*w))
 cpd_y = FunctionalCPD(
     "y",
-    fn=lambda parents: dist.Bernoulli(
-        logits=(-0.7 + 1.5 * parents["x1"] + 0.8 * parents["x2"] + 1.2 * parents["w"])
-    ),
+    fn=lambda parents: dist.Bernoulli(logits=(-0.7 + 1.5 * parents["x1"] + 0.8 * parents["x2"] + 1.2 * parents["w"])),
     parents=["x1", "x2", "w"],
 )
 
 # Downstream Bernoulli influenced by y and w
 cpd_z = FunctionalCPD(
     "z",
-    fn=lambda parents: dist.Bernoulli(
-        logits=(-1.2 + 0.8 * parents["y"] + 0.2 * parents["w"])
-    ),
+    fn=lambda parents: dist.Bernoulli(logits=(-1.2 + 0.8 * parents["y"] + 0.2 * parents["w"])),
     parents=["y", "w"],
 )
 

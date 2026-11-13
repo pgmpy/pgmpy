@@ -54,9 +54,7 @@ samples = model.simulate(n_samples=1000, do={"CVP": "LOW"}, show_progress=False)
 The `evidence` parameter generates samples conditioned on observed values:
 
 ```python
-samples = model.simulate(
-    n_samples=1000, evidence={"CVP": "LOW", "PCWP": "HIGH"}, show_progress=False
-)
+samples = model.simulate(n_samples=1000, evidence={"CVP": "LOW", "PCWP": "HIGH"}, show_progress=False)
 ```
 
 ## Soft Evidence
@@ -71,9 +69,7 @@ from pgmpy.factors.discrete import TabularCPD
 model = load_model("bnlearn/alarm")
 
 soft = TabularCPD("CVP", 3, [[0.7], [0.2], [0.1]])
-samples = model.simulate(
-    n_samples=100, virtual_evidence=[soft], rng=42, show_progress=False
-)
+samples = model.simulate(n_samples=100, virtual_evidence=[soft], rng=42, show_progress=False)
 print(samples["CVP"].value_counts(normalize=True))
 ```
 

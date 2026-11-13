@@ -13,7 +13,17 @@ Supervised Metrics
 
    ~pgmpy.metrics.SHD
    ~pgmpy.metrics.AdjacencyConfusionMatrix
+   ~pgmpy.metrics.AdjacencyPrecision
+   ~pgmpy.metrics.AdjacencyRecall
+   ~pgmpy.metrics.AdjacencyF1Score
+   ~pgmpy.metrics.AdjacencyNPV
+   ~pgmpy.metrics.AdjacencySpecificity
    ~pgmpy.metrics.OrientationConfusionMatrix
+   ~pgmpy.metrics.OrientationPrecision
+   ~pgmpy.metrics.OrientationRecall
+   ~pgmpy.metrics.OrientationF1Score
+   ~pgmpy.metrics.OrientationNPV
+   ~pgmpy.metrics.OrientationSpecificity
 
 Unsupervised Metrics
 --------------------
@@ -25,6 +35,7 @@ Unsupervised Metrics
    ~pgmpy.metrics.CorrelationScore
    ~pgmpy.metrics.ImpliedCIs
    ~pgmpy.metrics.FisherC
+   ~pgmpy.metrics.RMSEA
    ~pgmpy.metrics.StructureScore
 
 Utilities
