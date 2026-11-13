@@ -15,10 +15,16 @@ class RMSEA(BaseUnsupervisedMetric):
 
     @staticmethod
     def compute_rmsea(test_statistic, deg_of_freedom, data):
-        """
-        Computes the Root Mean Square Error of Approximation given data,
-        a test_statistic(X^2 / chi_squared) and degrees of freedom. This statistic
-        penalizes models based on sample size. An acceptable value is generally <0.10
+        r"""
+        Compute the Root Mean Square Error of Approximation given data,
+        a test_statistic and degrees of freedom.
+
+        .. math::
+
+            \text{RMSEA} = \sqrt{\max\left(\frac{\chi^2 - \text{df}}{\text{df} \cdot (N - 1)}, 0\right)}
+
+        where :math:`\chi^2` is the fit statistic, :math:`\text{df}` its degrees of freedom, and
+        :math:`N` the sample size (``len(data)``). An acceptable value is generally <0.10
         and a good value is <0.08.
 
         Parameters
@@ -36,11 +42,20 @@ class RMSEA(BaseUnsupervisedMetric):
         Returns
         -----
         RMSEA
+
+        Raises
+        ------
+        ValueError
+            If ``deg_of_freedom`` is 0 or ``data`` has fewer than 2 rows.
         """
-        if len(data) != 1 and deg_of_freedom != 0:
-            return np.sqrt(
-                max(
-                    (test_statistic - deg_of_freedom) / (deg_of_freedom * (len(data) - 1)),
-                    0,
-                )
+        if deg_of_freedom == 0:
+            raise ValueError("RMSEA is undefined for a model with 0 degrees of freedom.")
+        if len(data) < 2:
+            raise ValueError(f"RMSEA requires at least 2 observations, but got {len(data)}.")
+
+        return np.sqrt(
+            max(
+                (test_statistic - deg_of_freedom) / (deg_of_freedom * (len(data) - 1)),
+                0,
             )
+        )

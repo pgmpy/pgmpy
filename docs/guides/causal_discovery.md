@@ -23,7 +23,7 @@ All discovery algorithms follow the same pattern — instantiate, fit, and read 
 
 ```python
 from pgmpy.datasets import load_dataset
-from pgmpy.causal_discovery import PC   # swap in any discovery algorithm
+from pgmpy.causal_discovery import PC  # swap in any discovery algorithm
 from pgmpy.structure_score import BIC
 
 dataset = load_dataset("sachs_discrete")
@@ -64,9 +64,7 @@ expert = ExpertKnowledge(
     temporal_order=[["PKC", "Raf"], ["Mek", "PKA"]],
 )
 
-est = HillClimbSearch(
-    scoring_method="bic-d", expert_knowledge=expert, show_progress=False
-)
+est = HillClimbSearch(scoring_method="bic-d", expert_knowledge=expert, show_progress=False)
 est.fit(data)
 print(est.causal_graph_.edges())
 ```
