@@ -171,6 +171,74 @@ def test_chow_liu_auto_root_node(data12):
     assert nodes == ["D", "A", "C", "B", "E"]
 
 
+@pytest.fixture
+def gaussian_chain_data():
+    rng = np.random.default_rng(0)
+    n_samples = 2000
+    a = rng.normal(size=n_samples)
+    b = 0.9 * a + rng.normal(scale=0.4, size=n_samples)
+    c = 0.9 * b + rng.normal(scale=0.4, size=n_samples)
+    d = 0.9 * c + rng.normal(scale=0.4, size=n_samples)
+    return pd.DataFrame({"A": a, "B": b, "C": c, "D": d})
+
+
+def test_gaussian_mutual_info():
+    from pgmpy.causal_discovery._base import gaussian_mutual_info
+
+    rng = np.random.default_rng(0)
+    x = rng.normal(size=2000)
+    # Independent variables share no information.
+    y = rng.normal(size=2000)
+    assert gaussian_mutual_info(x, y) == pytest.approx(0.0, abs=0.01)
+    # Correlated Gaussians: I(X; Y) = -0.5 * ln(1 - rho^2), checked against
+    # the sample correlation so the test verifies the formula, not the sample.
+    rho = 0.6
+    z = rng.normal(size=2000)
+    y = rho * x + np.sqrt(1 - rho**2) * z
+    sample_rho = np.corrcoef(x, y)[0, 1]
+    assert gaussian_mutual_info(x, y) == pytest.approx(-0.5 * np.log(1 - sample_rho**2))
+    # Cross-check against sklearn's kNN estimator (scikit-learn 1.9.1):
+    # mutual_info_regression(x.reshape(-1, 1), y, random_state=0)[0].
+    from sklearn.feature_selection import mutual_info_regression
+
+    assert gaussian_mutual_info(x, y) == pytest.approx(
+        mutual_info_regression(x.reshape(-1, 1), y, random_state=0)[0], abs=0.05
+    )
+    assert gaussian_mutual_info(x, y) == gaussian_mutual_info(y, x)
+    # A constant variable shares no information; perfect linear dependence
+    # has infinite mutual information.
+    assert gaussian_mutual_info(np.ones(10), rng.normal(size=10)) == 0.0
+    assert gaussian_mutual_info(x, 2 * x + 1) == np.inf
+
+
+@pytest.mark.parametrize("weight_fn", ["gaussian_mutual_info", "mutual_info_regression"])
+def test_chow_liu_continuous(gaussian_chain_data, weight_fn):
+    est = ChowLiu(
+        root_node="A",
+        edge_weights_fn=weight_fn,
+        n_jobs=1,
+        show_progress=False,
+    ).fit(gaussian_chain_data)
+    dag = est.causal_graph_
+
+    assert set(dag.nodes()) == {"A", "B", "C", "D"}
+    assert nx.is_tree(dag)
+    assert set(dag.edges()) == {("A", "B"), ("B", "C"), ("C", "D")}
+
+
+def test_chow_liu_continuous_tags():
+    assert "continuous" in ChowLiu.get_class_tag("data_types")
+    assert ChowLiu(edge_weights_fn="gaussian_mutual_info").get_tags()["data_types"] == ["continuous"]
+    assert ChowLiu(edge_weights_fn="mutual_info").get_tags()["data_types"] == ["discrete"]
+
+
+def test_chow_liu_weight_fn_data_mismatch(data12, gaussian_chain_data):
+    with pytest.raises(ValueError, match="requires discrete data"):
+        ChowLiu(edge_weights_fn="mutual_info", show_progress=False).fit(gaussian_chain_data)
+    with pytest.raises(ValueError, match="requires continuous data"):
+        ChowLiu(edge_weights_fn="gaussian_mutual_info", show_progress=False).fit(data12)
+
+
 @pytest.fixture(autouse=True)
 def shutdown_executor():
     yield

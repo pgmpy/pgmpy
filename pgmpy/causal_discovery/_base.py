@@ -9,6 +9,7 @@ import pandas as pd
 from joblib import Parallel, delayed
 from skbase.base import BaseObject
 from sklearn.base import BaseEstimator, clone
+from sklearn.feature_selection import mutual_info_classif, mutual_info_regression
 from sklearn.linear_model import LassoLarsIC, LinearRegression
 from sklearn.metrics import (
     adjusted_mutual_info_score,
@@ -697,6 +698,55 @@ class _ScoreMixin:
                     yield (operation, score_delta)
 
 
+def gaussian_mutual_info(x, y):
+    """
+    Mutual information between two jointly Gaussian variables.
+
+    For jointly Gaussian ``x`` and ``y`` with Pearson correlation ``rho``,
+    ``I(x; y) = -0.5 * ln(1 - rho**2)``.
+
+    Parameters
+    ----------
+    x, y : array-like
+        One-dimensional samples of the two variables. Must have the same length.
+
+    Returns
+    -------
+    float
+        The mutual information in nats. Returns ``0.0`` when either variable
+        is constant and ``inf`` when the variables are perfectly correlated.
+
+    Examples
+    --------
+    >>> gaussian_mutual_info([1.0, 2.0, 3.0, 4.0], [1.0, 2.0, 3.0, 4.0])
+    inf
+    >>> gaussian_mutual_info([1.0, 1.0, 1.0, 1.0], [1.0, 2.0, 3.0, 4.0])
+    0.0
+    """
+    x = np.asarray(x, dtype=float).ravel()
+    y = np.asarray(y, dtype=float).ravel()
+
+    # Step 1: A constant variable shares no information.
+    if np.std(x) == 0.0 or np.std(y) == 0.0:
+        return 0.0
+
+    # Step 2: Apply the closed form for the Gaussian mutual information.
+    rho = np.corrcoef(x, y)[0, 1]
+    if abs(rho) >= 1.0:
+        return np.inf
+    return float(-0.5 * np.log(1.0 - rho**2))
+
+
+def _mutual_info_regression(x, y):
+    """Adapt :func:`sklearn.feature_selection.mutual_info_regression` to ``fn(array, array) -> float``."""
+    return float(mutual_info_regression(np.asarray(x).reshape(-1, 1), np.asarray(y), random_state=0)[0])
+
+
+def _mutual_info_classif(x, y):
+    """Adapt :func:`sklearn.feature_selection.mutual_info_classif` to ``fn(array, array) -> float``."""
+    return float(mutual_info_classif(np.asarray(x).reshape(-1, 1), np.asarray(y), random_state=0)[0])
+
+
 class _TreeSearchMixin:
     """
     Mixin class providing shared functionality for tree-based causal discovery
@@ -712,7 +762,36 @@ class _TreeSearchMixin:
         "mutual_info": mutual_info_score,
         "adjusted_mutual_info": adjusted_mutual_info_score,
         "normalized_mutual_info": normalized_mutual_info_score,
+        "gaussian_mutual_info": gaussian_mutual_info,
+        "mutual_info_regression": _mutual_info_regression,
+        "mutual_info_classif": _mutual_info_classif,
     }
+
+    _DISCRETE_EDGE_WEIGHT_FNS = frozenset({"mutual_info", "adjusted_mutual_info", "normalized_mutual_info"})
+    _CONTINUOUS_EDGE_WEIGHT_FNS = frozenset({"gaussian_mutual_info", "mutual_info_regression", "mutual_info_classif"})
+
+    @staticmethod
+    def _validate_edge_weights_fn(data, edge_weights_fn):
+        """
+        Raise ``ValueError`` when a named ``edge_weights_fn`` does not match the data type.
+
+        Discrete scoring functions need discrete data and continuous scoring
+        functions need continuous data. Callables are not checked, since their
+        requirements are not known.
+        """
+        if not isinstance(edge_weights_fn, str):
+            return
+        if edge_weights_fn in _TreeSearchMixin._DISCRETE_EDGE_WEIGHT_FNS:
+            required = "discrete"
+        elif edge_weights_fn in _TreeSearchMixin._CONTINUOUS_EDGE_WEIGHT_FNS:
+            required = "continuous"
+        else:
+            return
+        dataset_type = get_dataset_type(data)
+        if dataset_type != required:
+            raise ValueError(
+                f"edge_weights_fn {edge_weights_fn!r} requires {required} data, but the data is {dataset_type}."
+            )
 
     @staticmethod
     def _resolve_edge_weights_fn(edge_weights_fn):
@@ -749,6 +828,13 @@ class _TreeSearchMixin:
             - ``"mutual_info"``: Mutual Information Score.
             - ``"adjusted_mutual_info"``: Adjusted Mutual Information Score.
             - ``"normalized_mutual_info"``: Normalized Mutual Information Score.
+            - ``"gaussian_mutual_info"``: Mutual information for jointly
+              Gaussian continuous variables.
+            - ``"mutual_info_regression"``: sklearn's k-nearest-neighbour
+              mutual information estimate for continuous variables.
+            - ``"mutual_info_classif"``: sklearn's k-nearest-neighbour mutual
+              information estimate for a continuous variable against a
+              discrete target.
             - A callable of the form ``fn(array, array) -> float``.
 
         n_jobs : int, default=-1
@@ -763,6 +849,8 @@ class _TreeSearchMixin:
             Symmetric matrix where ``weights[i, j]`` is the edge weight between
             variable *i* and variable *j*.
         """
+        # Step 0: Check that a named scoring function matches the data type.
+        _TreeSearchMixin._validate_edge_weights_fn(data, edge_weights_fn)
         edge_weights_fn = _TreeSearchMixin._resolve_edge_weights_fn(edge_weights_fn)
 
         n_vars = len(data.columns)

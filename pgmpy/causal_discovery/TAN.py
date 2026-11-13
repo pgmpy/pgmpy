@@ -41,6 +41,13 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
         - ``"mutual_info"``: Mutual Information Score.
         - ``"adjusted_mutual_info"``: Adjusted Mutual Information Score.
         - ``"normalized_mutual_info"``: Normalized Mutual Information Score.
+        - ``"gaussian_mutual_info"``: Mutual information for jointly Gaussian
+          continuous variables.
+        - ``"mutual_info_regression"``: sklearn's k-nearest-neighbour mutual
+          information estimate for continuous variables.
+        - ``"mutual_info_classif"``: sklearn's k-nearest-neighbour mutual
+          information estimate for a continuous variable against a discrete
+          target.
         - A callable of the form ``fn(array, array) -> float``.
 
     n_jobs : int, default=-1
@@ -106,7 +113,7 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
 
     _tags = {
         "name": "tan",
-        "data_types": ["discrete"],
+        "data_types": ["discrete", "continuous"],
         "identifiable_graph": "cpdag",
         "requires_target": True,
         "capability:multivariate": True,
@@ -134,6 +141,11 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
         self.edge_weights_fn = edge_weights_fn
         self.n_jobs = n_jobs
         self.show_progress = show_progress
+        if isinstance(edge_weights_fn, str):
+            if edge_weights_fn in _TreeSearchMixin._DISCRETE_EDGE_WEIGHT_FNS:
+                self.set_tags(data_types=["discrete"])
+            elif edge_weights_fn in _TreeSearchMixin._CONTINUOUS_EDGE_WEIGHT_FNS:
+                self.set_tags(data_types=["continuous"])
 
     def _fit(self, X: pd.DataFrame):
         """
@@ -215,6 +227,13 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
             - ``"mutual_info"``: Mutual Information Score.
             - ``"adjusted_mutual_info"``: Adjusted Mutual Information Score.
             - ``"normalized_mutual_info"``: Normalized Mutual Information Score.
+            - ``"gaussian_mutual_info"``: Mutual information for jointly
+              Gaussian continuous variables.
+            - ``"mutual_info_regression"``: sklearn's k-nearest-neighbour
+              mutual information estimate for continuous variables.
+            - ``"mutual_info_classif"``: sklearn's k-nearest-neighbour mutual
+              information estimate for a continuous variable against a
+              discrete target.
             - A callable of the form ``fn(array, array) -> float``.
 
         n_jobs : int, default=-1
@@ -229,7 +248,9 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
             Symmetric matrix where ``weights[i, j]`` is I(i; j | class_node).
 
         """
-        # Step 0: Resolve the edge weight computation function.
+        # Step 0: Check that a named scoring function matches the data type,
+        # and resolve the edge weight computation function.
+        _TreeSearchMixin._validate_edge_weights_fn(data, edge_weights_fn)
         edge_weights_fn = _TreeSearchMixin._resolve_edge_weights_fn(edge_weights_fn)
 
         # Step 1: Compute conditional edge weights for a fully connected graph.

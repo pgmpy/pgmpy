@@ -55,10 +55,16 @@ def test_fit_rejects_incompatible_data_types():
     for data, dataset_type in [
         (integers, "continuous"),
         (booleans.assign(C=rng.normal(size=50)), "continuous"),
-        (integers.assign(C=discrete["A"]), "mixed"),
     ]:
-        with pytest.raises(ValueError, match=rf"ChowLiu supports \['discrete'\] data, but the data is {dataset_type}"):
+        with pytest.raises(
+            ValueError, match=rf"edge_weights_fn 'mutual_info' requires discrete data, but the data is {dataset_type}"
+        ):
             ChowLiu().fit(data)
+    with pytest.raises(ValueError, match=r"ChowLiu supports \['discrete', 'continuous'\] data, but the data is mixed"):
+        ChowLiu().fit(integers.assign(C=discrete["A"]))
+    assert set(
+        ChowLiu(edge_weights_fn="gaussian_mutual_info", show_progress=False).fit(integers).causal_graph_.nodes()
+    ) == {"A", "B"}
 
     class RecordingChowLiu(ChowLiu):
         def _fit(self, X):

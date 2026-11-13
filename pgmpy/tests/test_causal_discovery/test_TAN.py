@@ -252,6 +252,45 @@ def test_tan_real_dataset(alarm_df):
     assert set(expected_edges) == set(edges)
 
 
+@pytest.fixture
+def gaussian_tan_data():
+    rng = np.random.default_rng(0)
+    n_samples = 2000
+    y = rng.integers(0, 2, size=n_samples)
+    a = np.where(y == 1, 1.0, -1.0) + rng.normal(scale=0.5, size=n_samples)
+    b = 0.9 * a + rng.normal(scale=0.4, size=n_samples)
+    c = 0.9 * b + rng.normal(scale=0.4, size=n_samples)
+    return pd.DataFrame({"A": a, "B": b, "C": c, "Y": y})
+
+
+@pytest.mark.parametrize("weight_fn", ["gaussian_mutual_info", "mutual_info_regression"])
+def test_tan_continuous(gaussian_tan_data, weight_fn):
+    est = TAN(
+        class_node="Y",
+        root_node="A",
+        edge_weights_fn=weight_fn,
+        n_jobs=1,
+        show_progress=False,
+    ).fit(gaussian_tan_data)
+    dag = est.causal_graph_
+
+    assert set(dag.nodes()) == {"A", "B", "C", "Y"}
+    assert set(dag.edges()) == {
+        ("Y", "A"),
+        ("Y", "B"),
+        ("Y", "C"),
+        ("A", "B"),
+        ("B", "C"),
+    }
+
+
+def test_tan_weight_fn_data_mismatch(data12, gaussian_tan_data):
+    with pytest.raises(ValueError, match="requires discrete data"):
+        TAN(class_node="A", edge_weights_fn="mutual_info", show_progress=False).fit(gaussian_tan_data)
+    with pytest.raises(ValueError, match="requires continuous data"):
+        TAN(class_node="A", edge_weights_fn="gaussian_mutual_info", show_progress=False).fit(data12)
+
+
 @pytest.fixture(autouse=True)
 def shutdown_executor():
     yield
