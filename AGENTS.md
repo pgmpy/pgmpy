@@ -20,7 +20,7 @@ pytest --doctest-modules --ignore=pgmpy/tests pgmpy/
 ## Instructions for Tasks
 1. Always make a plan before coding.
 2. Write tests first for behavior changes and bug fixes when practical. Refactors and documentation changes need tests
-   only if behavior changes. Prefer a few combined tests over many small ones.
+   only if behavior changes. Prefer a few combined tests over many small ones. Try to incorporate new tests within existing ones if possible.
 3. Follow existing patterns: check for a similar implementation before creating a new one. New extensions start from
    the templates in `devtools/extension_templates/`, and base-class API changes update them (`add-extension` skill).
 4. Look at how other Python and R packages solve the same problem, and verify pgmpy's results against them where
@@ -37,7 +37,7 @@ pytest --doctest-modules --ignore=pgmpy/tests pgmpy/
    of silently skipping verification.
 10. For code that supports multiple backends or optional dependencies, preserve existing `numpy` and `torch` behavior
     and guard optional-dependency tests.
-11. Never run `git commit` or `git push`. Leave all changes in the working tree — the user always reviews and commits
+11. Never run `git commit` or `git push`. Leave all changes in the working tree. The user always reviews and commits
     manually. Suggesting logical commit units or a commit message is fine.
 
 ## Code Style
@@ -46,6 +46,8 @@ pytest --doctest-modules --ignore=pgmpy/tests pgmpy/
   can be followed in one place. Only factor out a helper when it is called from multiple locations.
 - Do not add comments that explain your own reasoning for a change (that belongs in the commit/PR message). Comment
   only what the code cannot express itself.
+- Use the Step x.x style comments in code such that the Step outlines the pseudo code. You can look up existing methods for examples.
+- Method need to be single purpose. Do not write a method that do many things and return many values.
 
 ## Architecture Notes
 
