@@ -71,6 +71,17 @@ class TestPDAG:
         ]
         assert pdag.latents == {"D"}
 
+        # String roles in init
+        pdag = PDAG(
+            edge_list=[("treatment", "outcome", "->"), ("confounder", "treatment", "->")],
+            exposures="treatment",
+            outcomes="outcome",
+            latents="confounder",
+        )
+        assert pdag.exposures == {"treatment"}
+        assert pdag.outcomes == {"outcome"}
+        assert pdag.latents == {"confounder"}
+
     def test_all_neighbors(self):
         pdag = PDAG(edge_list=[("A", "C", "->"), ("D", "C", "->"), ("B", "A", "--"), ("B", "D", "--")])
 

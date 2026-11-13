@@ -596,6 +596,17 @@ class TestDAGCreation(unittest.TestCase):
         self.assertEqual(self.dag1.latents, set())
         self.assertEqual(set(self.dag1.get_role("latents")), set())
 
+    def test_init_string_roles(self):
+        dag = DAG(
+            ebunch=[("treatment", "outcome"), ("confounder", "treatment")],
+            exposures="treatment",
+            outcomes="outcome",
+            latents="confounder",
+        )
+        self.assertEqual(dag.exposures, {"treatment"})
+        self.assertEqual(dag.outcomes, {"outcome"})
+        self.assertEqual(dag.latents, {"confounder"})
+
     def test_get_stats(self):
         from pgmpy.example_models import load_model
 
