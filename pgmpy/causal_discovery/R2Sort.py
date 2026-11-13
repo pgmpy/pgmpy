@@ -5,7 +5,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 
 from pgmpy.causal_discovery._base import BaseOrderDiscovery
-from pgmpy.utils import residual_covariance
+from pgmpy.utils import regression_residual_covariance
 
 
 class R2Sort(BaseOrderDiscovery):
@@ -97,23 +97,16 @@ class R2Sort(BaseOrderDiscovery):
             raise ValueError(f"return_type must be one of: dag, pdag. Got: {self.return_type}")
 
         model_reg = clone(self.estimator) if self.estimator is not None else LinearRegression()
-        r2_values = {}
         if self.estimator is None:
-            correlation = np.atleast_2d(np.corrcoef(X.to_numpy(dtype=float), rowvar=False))
-            for column, target in enumerate(self.feature_names_in_):
-                others = [other for other in range(len(self.feature_names_in_)) if other != column]
-                residual = residual_covariance(correlation, [column], others)[0, 0]
-                r2_values[target] = 1.0 - max(float(residual), 0.0)
-        else:
-            all_nodes_set = set(self.feature_names_in_)
-            for target in self.feature_names_in_:
-                other_nodes = list(all_nodes_set - {target})
-                y = X[target]
-                predictors = X[other_nodes]
-
-                model_reg.fit(predictors, y)
-                predictions = model_reg.predict(predictors)
-                r2_values[target] = r2_score(y, predictions)
+            correlation_matrix = np.atleast_2d(np.corrcoef(X.to_numpy(dtype=float), rowvar=False))
+        r2_values = {}
+        for column, target in enumerate(self.feature_names_in_):
+            others = [other for other in range(len(self.feature_names_in_)) if other != column]
+            if self.estimator is None:
+                r2_values[target] = 1.0 - regression_residual_covariance(correlation_matrix, [column], others)[0, 0]
+            else:
+                model_reg.fit(X.iloc[:, others], X.iloc[:, column])
+                r2_values[target] = r2_score(X.iloc[:, column], model_reg.predict(X.iloc[:, others]))
 
         causal_order = sorted(r2_values, key=r2_values.get)
         model = self._estimate_dag_from_causal_order(X, causal_order, regressor=model_reg)

@@ -3,7 +3,6 @@ from itertools import chain, combinations
 from typing import Any
 
 import numpy as np
-import pandas as pd
 
 from pgmpy.utils import compat_fns
 from pgmpy.utils._random import _rename_to_rng
@@ -245,53 +244,6 @@ def powerset(l_input: list):
     return chain.from_iterable(combinations(l_input, r) for r in range(len(l_input) + 1))
 
 
-def covariance_sufficient_stats(
-    data: pd.DataFrame,
-) -> tuple[np.ndarray, np.ndarray, dict[Any, int], frozenset, np.ndarray]:
-    """Mean and covariance of the numeric and boolean columns of `data`; other columns are skipped.
-
-    Parameters
-    ----------
-    data : pandas.DataFrame
-        Dataset to summarize.
-
-    Returns
-    -------
-    cov : numpy.ndarray
-        Maximum likelihood (``ddof=0``) covariance matrix of the retained columns.
-    means : numpy.ndarray
-        Column means, in the order of `cov`.
-    col_index : dict
-        Mapping from column name to its position in `cov`.
-    missing : frozenset
-        Retained columns with missing values; their entries in `cov` are ``nan``.
-    values : numpy.ndarray
-        The retained columns as floats, in the order of `cov`.
-
-    Examples
-    --------
-    >>> import pandas as pd
-    >>> from pgmpy.utils import covariance_sufficient_stats
-    >>> data = pd.DataFrame({"A": [1.0, 2.0, 3.0], "B": [3.0, 5.0, 4.0], "C": list("xyz")})
-    >>> cov, means, col_index, missing, values = covariance_sufficient_stats(data)
-    >>> col_index, means, missing, values.shape
-    ({'A': 0, 'B': 1}, array([2., 4.]), frozenset(), (3, 2))
-    >>> cov.round(4)
-    array([[0.6667, 0.3333],
-           [0.3333, 0.6667]])
-    """
-    numeric = data.select_dtypes(include=["number", "bool"])
-    values = numeric.to_numpy(dtype=float)
-
-    return (
-        np.atleast_2d(np.cov(values, rowvar=False, ddof=0)),
-        values.mean(axis=0),
-        {col: index for index, col in enumerate(numeric.columns)},
-        frozenset(numeric.columns[np.isnan(values).any(axis=0)]),
-        values,
-    )
-
-
 def regression_coefficients(cov: np.ndarray, targets: list[int], given: list[int]) -> np.ndarray:
     r"""Least-squares coefficients of `targets` regressed on `given`, computed from their covariance matrix `cov`.
 
@@ -328,10 +280,10 @@ def regression_coefficients(cov: np.ndarray, targets: list[int], given: list[int
     return standardized @ (cov[np.ix_(given, targets)] * inverse_scale) * inverse_scale
 
 
-def residual_covariance(
+def regression_residual_covariance(
     cov: np.ndarray, targets: list[int], given: list[int], values: np.ndarray | None = None
 ) -> np.ndarray:
-    r"""Covariance of `targets` after regressing them on `given`, as a block of `cov`.
+    r"""Covariance of the residuals of a linear least-squares regression of `targets` on `given`, from `cov`.
 
     Schur complement :math:`\Sigma_{TT} - \Sigma_{TG} \Sigma_{GG}^{+} \Sigma_{GT}`, using
     :func:`regression_coefficients`. When `given` leaves a target with less than :math:`\sqrt{\epsilon}` of its
@@ -357,9 +309,9 @@ def residual_covariance(
     Examples
     --------
     >>> import numpy as np
-    >>> from pgmpy.utils import residual_covariance
+    >>> from pgmpy.utils import regression_residual_covariance
     >>> cov = np.array([[2.0, 1.0], [1.0, 1.0]])
-    >>> residual_covariance(cov, targets=[0], given=[1])
+    >>> regression_residual_covariance(cov, targets=[0], given=[1])
     array([[1.]])
     """
     total = cov[np.ix_(targets, targets)]

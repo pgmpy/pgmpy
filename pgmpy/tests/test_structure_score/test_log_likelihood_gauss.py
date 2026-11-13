@@ -40,11 +40,6 @@ class TestLogLikeGauss:
         assert loglik_gauss_score.score(m1) == pytest.approx(-455.1058, abs=1e-3)
         assert loglik_gauss_score.score(m2) == pytest.approx(-569.4505, abs=1e-3)
 
-    def test_missing_values_raise_clear_error(self, collinear_data):
-        collinear_data.loc[0, "B"] = np.nan
-        with pytest.raises(ValueError, match=r"missing values.*\['B'\]"):
-            LogLikelihoodGauss(collinear_data)
-
     def test_collinear_parents_and_determined_variable(self, collinear_data):
         score = LogLikelihoodGauss(collinear_data)
 

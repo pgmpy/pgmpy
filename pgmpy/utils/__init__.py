@@ -1,5 +1,5 @@
 from ._warnings import ExperimentalWarning
-from .check_functions import _check_1d_array_object, _check_length_equal, _check_no_missing_values
+from .check_functions import _check_1d_array_object, _check_length_equal
 from .data_types import (
     get_dataset_type,
     is_discrete_type,
@@ -8,9 +8,8 @@ from .data_types import (
 )
 from .mathext import (
     cartesian,
-    covariance_sufficient_stats,
     regression_coefficients,
-    residual_covariance,
+    regression_residual_covariance,
     sample_discrete,
 )
 from .optimizer import optimize, pinverse
@@ -32,14 +31,12 @@ from .utils import (
 __all__ = [
     "ExperimentalWarning",
     "cartesian",
-    "covariance_sufficient_stats",
     "regression_coefficients",
-    "residual_covariance",
+    "regression_residual_covariance",
     "sample_discrete",
     "StateNameMixin",
     "_check_1d_array_object",
     "_check_length_equal",
-    "_check_no_missing_values",
     "optimize",
     "pinverse",
     "get_example_model",

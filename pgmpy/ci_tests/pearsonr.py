@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from scipy import special
 
-from pgmpy.utils import _check_no_missing_values, covariance_sufficient_stats, residual_covariance
+from pgmpy.utils import regression_residual_covariance
 
 from ._base import BaseCITest, _CITestResult
 
@@ -78,8 +78,9 @@ class Pearsonr(BaseCITest):
 
     def __init__(self, data: pd.DataFrame, use_cache: bool = True):
         self.data = data
-        self._cov, _, self._col_index, missing, self._values = covariance_sufficient_stats(data)
-        _check_no_missing_values(self._col_index, missing, f"The {type(self).__name__} test")
+        self._values = data.to_numpy(dtype=float)
+        self._cov = np.atleast_2d(np.cov(self._values, rowvar=False, ddof=0))
+        self._col_index = {col: index for index, col in enumerate(data.columns)}
         super().__init__(use_cache=use_cache)
 
     def _partial_correlation(self, X: str, Y: str, Z: list) -> tuple[float, int]:
@@ -89,7 +90,9 @@ class Pearsonr(BaseCITest):
         correlation is 0.0.
         """
         xy = [self._col_index[X], self._col_index[Y]]
-        residual_cov = residual_covariance(self._cov, xy, [self._col_index[var] for var in Z], values=self._values)
+        residual_cov = regression_residual_covariance(
+            self._cov, xy, [self._col_index[var] for var in Z], values=self._values
+        )
         dof = self.data.shape[0] - len(Z) - 2
 
         if len(Z) > 0 and any(
@@ -97,10 +100,7 @@ class Pearsonr(BaseCITest):
         ):
             return 0.0, dof
 
-        with np.errstate(invalid="ignore", divide="ignore"):
-            coef = residual_cov[0, 1] / np.sqrt(residual_cov[0, 0] * residual_cov[1, 1])
-
-        return (-1.0 if coef < -1.0 else 1.0 if coef > 1.0 else coef), dof
+        return residual_cov[0, 1] / np.sqrt(residual_cov[0, 0] * residual_cov[1, 1]), dof
 
     def _compute_result(
         self,
@@ -116,13 +116,7 @@ class Pearsonr(BaseCITest):
         coef, dof = self._partial_correlation(X, Y, Z)
         attributes = {"dof_": dof} if len(Z) > 0 else {}
 
-        if dof <= 0:
-            p_value = 1.0
-        elif coef >= 1.0 or coef <= -1.0:
-            p_value = 0.0
-        else:
-            with np.errstate(invalid="ignore", divide="ignore"):
-                t_statistic = coef * np.sqrt(dof / (1 - coef**2))
-            p_value = 2 * special.stdtr(dof, -abs(t_statistic))
+        t_statistic = coef * np.sqrt(dof / (1 - coef**2))
+        p_value = 2 * special.stdtr(dof, -abs(t_statistic))
 
         return _CITestResult(statistic=coef, p_value=p_value, effect_size=abs(coef), attributes=attributes)

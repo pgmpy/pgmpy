@@ -4,12 +4,7 @@ import numpy as np
 
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.models import LinearGaussianBayesianNetwork
-from pgmpy.utils import (
-    _check_no_missing_values,
-    covariance_sufficient_stats,
-    regression_coefficients,
-    residual_covariance,
-)
+from pgmpy.utils import regression_coefficients, regression_residual_covariance
 
 from .base import GaussianParameterEstimator
 
@@ -100,8 +95,10 @@ class LinearGaussianMLE(GaussianParameterEstimator):
         self._initialize_fit(model, data, sample_weight=sample_weight)
 
         nodes = list(self._model.nodes())
-        cov, means, col_index, missing, values = covariance_sufficient_stats(self._data.loc[:, nodes])
-        _check_no_missing_values(nodes, missing, "Maximum likelihood estimation of a linear Gaussian network")
+        values = self._data.loc[:, nodes].to_numpy(dtype=float)
+        cov = np.atleast_2d(np.cov(values, rowvar=False, ddof=0))
+        means = values.mean(axis=0)
+        col_index = {node: index for index, node in enumerate(nodes)}
         n_samples = self._data.shape[0]
 
         cpds = []
@@ -122,7 +119,7 @@ class LinearGaussianMLE(GaussianParameterEstimator):
                 parent_cols = [col_index[parent] for parent in parents]
                 coef = regression_coefficients(cov, [node_col], parent_cols)[:, 0]
                 intercept = means[node_col] - coef @ means[parent_cols]
-                residual_var = residual_covariance(cov, [node_col], parent_cols, values=values)[0, 0]
+                residual_var = regression_residual_covariance(cov, [node_col], parent_cols, values=values)[0, 0]
                 if residual_var <= np.finfo(float).eps * cov[node_col, node_col]:
                     raise ValueError(
                         f"Cannot estimate the CPD of {node!r}: its parents {parents} determine it to within "

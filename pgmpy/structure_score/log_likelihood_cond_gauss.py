@@ -3,7 +3,7 @@ from collections.abc import Hashable
 import numpy as np
 
 from pgmpy.structure_score._base import BaseStructureScore
-from pgmpy.utils import is_discrete_type, residual_covariance, split_by_type
+from pgmpy.utils import is_discrete_type, regression_residual_covariance, split_by_type
 
 _SINGULAR_RCOND = 1e6 * np.finfo(float).eps
 
@@ -82,17 +82,16 @@ class LogLikelihoodCondGauss(BaseStructureScore):
         super().__init__(data, state_names=state_names, max_cache_size=max_cache_size)
 
     @staticmethod
-    def _gaussian_fit(values: np.ndarray) -> tuple[int, float, np.ndarray, np.ndarray]:
-        """Rank, log pseudo-determinant and pseudo-inverse of the sample covariance of `values`, and their mean."""
+    def _gaussian_log_likelihood(values: np.ndarray) -> tuple[float, int]:
+        """Log-likelihood of the rows of `values` under the Gaussian fitted to them, and the rank of its covariance."""
         n_rows, n_cols = values.shape
         if n_rows < 2 or n_cols == 0:
-            return 0, 0.0, np.zeros((n_cols, n_cols)), values.mean(axis=0)
+            return 0.0, 0
 
-        eigenvalues, eigenvectors = np.linalg.eigh(np.atleast_2d(np.cov(values, rowvar=False)))
-        kept = eigenvalues > _SINGULAR_RCOND * max(eigenvalues[-1], 1.0)
-        basis = eigenvectors[:, kept]
-        precision = (basis / eigenvalues[kept]) @ basis.T
-        return int(np.count_nonzero(kept)), float(np.sum(np.log(eigenvalues[kept]))), precision, values.mean(axis=0)
+        eigenvalues = np.linalg.eigvalsh(np.atleast_2d(np.cov(values, rowvar=False)))
+        kept = eigenvalues[eigenvalues > _SINGULAR_RCOND * max(eigenvalues[-1], 1.0)]
+        rank = len(kept)
+        return -0.5 * (n_rows * (rank * np.log(2.0 * np.pi) + np.sum(np.log(kept))) + (n_rows - 1) * rank), rank
 
     def _cat_parents_product(self, parents: tuple[Hashable, ...]) -> int:
         k = 1
@@ -126,10 +125,9 @@ class LogLikelihoodCondGauss(BaseStructureScore):
         continuous = split_by_type([variable, *parents], self.dtypes)[0]
         discrete = split_by_type(parents, self.dtypes)[1]
 
-        # Step 1: Standardize the continuous variables; an exactly constant one is only centered.
+        # Step 1: Standardize the continuous variables.
         values = df.loc[:, continuous].to_numpy(dtype=float)
         scale = values.std(axis=0)
-        scale[np.ptp(values, axis=0) == 0] = 1.0
         values = (values - values.mean(axis=0)) / scale
 
         if not is_discrete_type(self.dtypes[variable]):
@@ -139,7 +137,7 @@ class LogLikelihoodCondGauss(BaseStructureScore):
             for rows in strata:
                 n_rows = len(rows)
                 stratum_cov = np.atleast_2d(np.cov(values[rows], rowvar=False, ddof=0))
-                residual_var = residual_covariance(
+                residual_var = regression_residual_covariance(
                     stratum_cov, [0], list(range(1, len(continuous))), values=values[rows]
                 )[0, 0]
                 if residual_var <= np.finfo(float).eps:
@@ -149,30 +147,18 @@ class LogLikelihoodCondGauss(BaseStructureScore):
             # Step 3: Undo the standardization of the target.
             return log_like - sum(len(rows) for rows in strata) * np.log(scale[0])
 
-        # Step 2: Fit the continuous parents within each configuration of the discrete parents.
-        d2_ids = df.groupby(discrete, observed=True).ngroup().to_numpy() if discrete else np.zeros(n_samples, dtype=int)
-        known_target = df[variable].notna().to_numpy()
-        d2_counts, d2_fits = {}, {}
-        for d2_id in np.unique(d2_ids[d2_ids >= 0]):
-            d2_rows = d2_ids == d2_id
-            d2_counts[d2_id] = np.count_nonzero(known_target & d2_rows) if discrete else n_samples
-            d2_fits[d2_id] = self._gaussian_fit(values[d2_rows])
-        global_rank = self._gaussian_fit(values)[0]
-
-        # Step 3: Add log p(d1, d2) / p(d2) and the log density ratio of the continuous parents given (d1, d2) and d2.
+        # Step 2: Add the Gaussian log-likelihood of the continuous parents and log p(target, discrete parents) within
+        # each configuration of the target and the discrete parents, and subtract the same within each configuration
+        # of the discrete parents alone.
+        global_rank = self._gaussian_log_likelihood(values)[1]
         log_like = 0.0
-        for rows in df.groupby([variable, *discrete], observed=True).indices.values():
-            n_rows = len(rows)
-            d2_id = d2_ids[rows[0]]
-            rank, log_pdet, _, _ = self._gaussian_fit(values[rows])
-            d2_rank, d2_log_pdet, d2_precision, d2_mean = d2_fits[d2_id]
-            if rank != global_rank or d2_rank != global_rank:
-                return -np.inf
-
-            centered = values[rows] - d2_mean
-            mahalanobis = np.sum((centered @ d2_precision) * centered)
-            log_like += n_rows * (np.log(n_rows / n_samples) - np.log(d2_counts[d2_id] / n_samples))
-            log_like -= 0.5 * (n_rows * (log_pdet - d2_log_pdet) + (n_rows - 1) * rank - mahalanobis)
+        for keys, sign in [([variable, *discrete], 1.0), (discrete, -1.0)]:
+            strata = df.groupby(keys, observed=True).indices.values() if keys else [np.arange(n_samples)]
+            for rows in strata:
+                stratum_log_like, rank = self._gaussian_log_likelihood(values[rows])
+                if rank != global_rank:
+                    return -np.inf
+                log_like += sign * (stratum_log_like + len(rows) * np.log(len(rows) / n_samples))
         return log_like
 
     def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
