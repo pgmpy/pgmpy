@@ -68,12 +68,7 @@ def test_all_tags():
 
 @pytest.mark.parametrize(
     "cls",
-    [
-        cls
-        for cls in OBJECTS
-        if cls.get_class_tag("object_type")
-        in {"causal_discovery", "ci_test", "structure_score"}
-    ],
+    [cls for cls in OBJECTS if cls.get_class_tag("object_type") in {"causal_discovery", "ci_test", "structure_score"}],
     ids=lambda cls: f"{cls.__module__}.{cls.__name__}",
 )
 def test_missing_values_capability_defaults_to_false(cls):

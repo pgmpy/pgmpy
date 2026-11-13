@@ -1,4 +1,4 @@
-﻿"""
+"""
 Register of the skbase tags used by pgmpy objects.
 
 Each tag is a subclass of ``_BaseTag``. The class name is the tag name with ``:`` replaced by ``__``, and the class
