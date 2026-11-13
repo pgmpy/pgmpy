@@ -119,14 +119,7 @@ class LinearGaussianMLE(GaussianParameterEstimator):
                 parent_cols = [col_index[parent] for parent in parents]
                 coef = regression_coefficients(cov, [node_col], parent_cols)[:, 0]
                 intercept = means[node_col] - coef @ means[parent_cols]
-                residual_var = regression_residual_covariance(cov, [node_col], parent_cols, values=values)[0, 0]
-                if residual_var <= np.finfo(float).eps * cov[node_col, node_col]:
-                    raise ValueError(
-                        f"Cannot estimate the CPD of {node!r}: its parents {parents} determine it to within "
-                        f"floating point precision, leaving no residual variance to estimate. Drop one of the "
-                        f"redundant variables."
-                    )
-
+                residual_var = regression_residual_covariance(cov, [node_col], parent_cols)[0, 0]
                 ddof = 0 if self.std_estimator == "mle" else 1 + len(parents)
                 cpds.append(
                     LinearGaussianCPD(

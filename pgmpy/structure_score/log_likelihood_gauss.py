@@ -23,9 +23,6 @@ class LogLikelihoodGauss(BaseStructureScore):
 
     If `parents` is empty, the fitted model reduces to :math:`X_i = \beta_0 + \varepsilon_i`.
 
-    A family whose parents determine :math:`X_i` to within floating point precision scores
-    :math:`-\infty`, as in bnlearn.
-
     Parameters
     ----------
     data : pandas.DataFrame
@@ -69,8 +66,7 @@ class LogLikelihoodGauss(BaseStructureScore):
 
     def __init__(self, data, state_names=None, max_cache_size=10000):
         super().__init__(data, state_names=state_names, max_cache_size=max_cache_size)
-        self._values = self.data.to_numpy(dtype=float)
-        self._cov = np.atleast_2d(np.cov(self._values, rowvar=False, ddof=0))
+        self._cov = np.atleast_2d(np.cov(self.data.to_numpy(dtype=float), rowvar=False, ddof=0))
         self._col_index = {col: index for index, col in enumerate(self.data.columns)}
         self._n_samples = self.data.shape[0]
         self._ll_const = -0.5 * self._n_samples * (np.log(2.0 * np.pi) + 1.0)
@@ -78,10 +74,7 @@ class LogLikelihoodGauss(BaseStructureScore):
     def _log_likelihood(self, variable: Hashable, parents: tuple[Hashable, ...]) -> tuple[float, float]:
         variable_col = self._col_index[variable]
         parent_cols = [self._col_index[parent] for parent in parents]
-        residual_var = regression_residual_covariance(self._cov, [variable_col], parent_cols, values=self._values)[0, 0]
-        if residual_var <= np.finfo(float).eps * self._cov[variable_col, variable_col]:
-            return (-np.inf, len(parents))
-
+        residual_var = regression_residual_covariance(self._cov, [variable_col], parent_cols)[0, 0]
         ll = self._ll_const - 0.5 * self._n_samples * np.log(residual_var)
         return (ll, len(parents))
 

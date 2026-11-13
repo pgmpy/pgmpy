@@ -9,7 +9,6 @@ from pgmpy.utils._random import _rename_to_rng
 from pgmpy.utils._warnings import _warn_external
 
 State = namedtuple("State", ["var", "state"])
-_SQRT_EPS = np.sqrt(np.finfo(float).eps)
 
 
 def cartesian(arrays: list[Any], out: np.ndarray | None = None) -> np.ndarray:
@@ -280,15 +279,11 @@ def regression_coefficients(cov: np.ndarray, targets: list[int], given: list[int
     return standardized @ (cov[np.ix_(given, targets)] * inverse_scale) * inverse_scale
 
 
-def regression_residual_covariance(
-    cov: np.ndarray, targets: list[int], given: list[int], values: np.ndarray | None = None
-) -> np.ndarray:
+def regression_residual_covariance(cov: np.ndarray, targets: list[int], given: list[int]) -> np.ndarray:
     r"""Covariance of the residuals of a linear least-squares regression of `targets` on `given`, from `cov`.
 
     Schur complement :math:`\Sigma_{TT} - \Sigma_{TG} \Sigma_{GG}^{+} \Sigma_{GT}`, using
-    :func:`regression_coefficients`. When `given` leaves a target with less than :math:`\sqrt{\epsilon}` of its
-    variance, the subtraction has cancelled most of the significant digits; if `values` is provided, the residual
-    covariance is then recomputed from an explicit least-squares fit on the observations.
+    :func:`regression_coefficients`.
 
     Parameters
     ----------
@@ -298,8 +293,6 @@ def regression_residual_covariance(
         Positions in `cov` of the regressed variables.
     given : list of int
         Positions in `cov` of the regressors.
-    values : numpy.ndarray, optional
-        The observations `cov` was computed from, one column per variable in the order of `cov`.
 
     Returns
     -------
@@ -318,11 +311,4 @@ def regression_residual_covariance(
     if len(given) == 0:
         return total
 
-    residual = total - cov[np.ix_(targets, given)] @ regression_coefficients(cov, targets, given)
-    if values is None or (np.diagonal(residual) > _SQRT_EPS * np.diagonal(total)).all():
-        return residual
-
-    centered = values[:, targets + given] - values[:, targets + given].mean(axis=0)
-    responses, predictors = centered[:, : len(targets)], centered[:, len(targets) :]
-    errors = responses - predictors @ np.linalg.lstsq(predictors, responses, rcond=None)[0]
-    return errors.T @ errors / values.shape[0]
+    return total - cov[np.ix_(targets, given)] @ regression_coefficients(cov, targets, given)

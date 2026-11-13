@@ -78,28 +78,16 @@ class Pearsonr(BaseCITest):
 
     def __init__(self, data: pd.DataFrame, use_cache: bool = True):
         self.data = data
-        self._values = data.to_numpy(dtype=float)
-        self._cov = np.atleast_2d(np.cov(self._values, rowvar=False, ddof=0))
+        self._cov = np.atleast_2d(np.cov(data.to_numpy(dtype=float), rowvar=False, ddof=0))
         self._col_index = {col: index for index, col in enumerate(data.columns)}
         super().__init__(use_cache=use_cache)
 
     def _partial_correlation(self, X: str, Y: str, Z: list) -> tuple[float, int]:
-        """Partial correlation of `X` and `Y` given `Z`, and the degrees of freedom of the test.
-
-        A `Z` that determines `X` or `Y` to machine precision makes them conditionally independent exactly, so the
-        correlation is 0.0.
-        """
-        xy = [self._col_index[X], self._col_index[Y]]
+        """Partial correlation of `X` and `Y` given `Z`, and the degrees of freedom of the test."""
         residual_cov = regression_residual_covariance(
-            self._cov, xy, [self._col_index[var] for var in Z], values=self._values
+            self._cov, [self._col_index[X], self._col_index[Y]], [self._col_index[var] for var in Z]
         )
         dof = self.data.shape[0] - len(Z) - 2
-
-        if len(Z) > 0 and any(
-            residual_cov[i, i] <= np.finfo(float).eps * self._cov[col, col] for i, col in enumerate(xy)
-        ):
-            return 0.0, dof
-
         return residual_cov[0, 1] / np.sqrt(residual_cov[0, 0] * residual_cov[1, 1]), dof
 
     def _compute_result(

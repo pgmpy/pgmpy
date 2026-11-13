@@ -28,10 +28,10 @@ class LogLikelihoodCondGauss(BaseStructureScore):
 
     The Gaussian densities are estimated from the corresponding grouped samples.
 
-    As in bnlearn, a family scores :math:`-\infty` when a continuous target has no residual variance left within some
-    configuration of its discrete parents, for example when the configuration has no more rows than the regression has
-    coefficients. A discrete target scores :math:`-\infty` when its continuous parents span fewer dimensions within some
-    configuration of the target and its discrete parents than in the whole data.
+    As in bnlearn, a family with a continuous target scores :math:`-\infty` when some configuration of its discrete
+    parents has no more rows than the regression has coefficients. A family with a discrete target scores
+    :math:`-\infty` when the covariance of its continuous parents is singular within some configuration of the target
+    and its discrete parents, for example when the configuration has no more rows than there are continuous parents.
 
     Parameters
     ----------
@@ -136,12 +136,10 @@ class LogLikelihoodCondGauss(BaseStructureScore):
             log_like = 0.0
             for rows in strata:
                 n_rows = len(rows)
-                stratum_cov = np.atleast_2d(np.cov(values[rows], rowvar=False, ddof=0))
-                residual_var = regression_residual_covariance(
-                    stratum_cov, [0], list(range(1, len(continuous))), values=values[rows]
-                )[0, 0]
-                if residual_var <= np.finfo(float).eps:
+                if n_rows <= len(continuous):
                     return -np.inf
+                stratum_cov = np.atleast_2d(np.cov(values[rows], rowvar=False, ddof=0))
+                residual_var = regression_residual_covariance(stratum_cov, [0], list(range(1, len(continuous))))[0, 0]
                 log_like -= 0.5 * (n_rows * np.log(2.0 * np.pi * residual_var * n_rows / (n_rows - 1)) + n_rows - 1)
 
             # Step 3: Undo the standardization of the target.
@@ -150,13 +148,12 @@ class LogLikelihoodCondGauss(BaseStructureScore):
         # Step 2: Add the Gaussian log-likelihood of the continuous parents and log p(target, discrete parents) within
         # each configuration of the target and the discrete parents, and subtract the same within each configuration
         # of the discrete parents alone.
-        global_rank = self._gaussian_log_likelihood(values)[1]
         log_like = 0.0
         for keys, sign in [([variable, *discrete], 1.0), (discrete, -1.0)]:
             strata = df.groupby(keys, observed=True).indices.values() if keys else [np.arange(n_samples)]
             for rows in strata:
                 stratum_log_like, rank = self._gaussian_log_likelihood(values[rows])
-                if rank != global_rank:
+                if rank < values.shape[1]:
                     return -np.inf
                 log_like += sign * (stratum_log_like + len(rows) * np.log(len(rows) / n_samples))
         return log_like

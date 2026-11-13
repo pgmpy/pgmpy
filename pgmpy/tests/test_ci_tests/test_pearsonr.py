@@ -145,34 +145,13 @@ def test_pearsonr_residual_approx(residual_data):
     assert test.p_value_ <= 0.05
 
 
-def test_degenerate_inputs():
+def test_no_degrees_of_freedom():
     rng = np.random.default_rng(seed=16)
-    df = pd.DataFrame(rng.standard_normal((300, 3)), columns=["A", "B", "D"])
-    df["C"] = df["A"] + df["B"]
-    df["E"] = df["A"] + 1e-12 * rng.standard_normal(300)
-    df["F"] = df["D"] + 1e-4 * df["A"]
-    test = Pearsonr(data=df)
+    test = Pearsonr(data=pd.DataFrame(rng.standard_normal((3, 3)), columns=["A", "B", "D"]))
 
-    assert test("B", "C", ["A"]) is False
-    assert test.statistic_ == pytest.approx(1.0, abs=1e-12)
-    assert test("A", "B", ["C"]) is False
-    assert test.statistic_ == pytest.approx(-1.0, abs=1e-12)
-
-    # Z determines X exactly (B, C fix A) or up to floating point noise (A fixes E).
-    for X, Y, Z in [("A", "D", ["B", "C"]), ("E", "D", ["A"])]:
-        assert test(X, Y, Z) is True
-        assert test.statistic_ == 0.0
-        assert test.p_value_ == 1.0
-
-    design = np.column_stack([np.ones(len(df)), df["D"]])
-    residuals = [df[var] - design @ np.linalg.lstsq(design, df[var], rcond=None)[0] for var in ["F", "C"]]
-    assert test("F", "C", ["D"]) is False
-    assert test.statistic_ == pytest.approx(np.corrcoef(*residuals)[0, 1], rel=1e-6)
-
-    small = Pearsonr(data=df.iloc[:3])
-    assert small("A", "B", ["D"]) is True
-    assert small.p_value_ == 1.0
-    assert small.dof_ == 0
+    assert test("A", "B", ["D"]) is True
+    assert test.p_value_ == 1.0
+    assert test.dof_ == 0
 
 
 @pytest.mark.filterwarnings("ignore::scipy.stats.ConstantInputWarning")
