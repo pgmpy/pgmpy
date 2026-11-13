@@ -53,3 +53,19 @@ def test_topic_recovers_linear_non_gaussian(linear_non_gaussian_data):
     assert order.index("A") < order.index("C")
     assert order.index("B") < order.index("D")
     assert order.index("C") < order.index("D")
+
+
+def test_topic_ignores_pairs_scoring_minus_inf_both_ways():
+    rng = np.random.default_rng(0)
+    n = 500
+    A = rng.normal(size=n)
+    C = rng.normal(size=n)
+    B = A + C + 0.5 * rng.normal(size=n)
+    K = np.where(A > 0, "hi", "lo").astype(object)
+    K[0] = "rare"
+    data = pd.DataFrame({"A": A, "B": B, "C": C, "K": pd.Categorical(K)})
+
+    with_k = TOPIC(scoring_method="bic-cg", show_progress=False).fit(data)
+    without_k = TOPIC(scoring_method="bic-cg", show_progress=False).fit(data[["A", "B", "C"]])
+    assert [var for var in with_k.topological_order_ if var != "K"] == without_k.topological_order_
+    assert set(with_k.causal_graph_.edges()) == set(without_k.causal_graph_.edges())

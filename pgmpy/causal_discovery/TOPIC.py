@@ -161,7 +161,7 @@ class TOPIC(BaseCausalDiscovery):
             # preferred sink).
             delta = score_improvement - score_improvement.T
             np.fill_diagonal(delta, -np.inf)
-            source = candidates[np.argmin(delta.max(axis=0))]
+            source = candidates[np.argmin(np.nanmax(delta, axis=0))]
             candidates.remove(source)
             topological_order_.append(source)
 
