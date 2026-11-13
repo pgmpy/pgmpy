@@ -141,6 +141,29 @@ def test_get_minimal_adjustment_set():
     assert set(dag_lat2_iden.get_role("adjustment")) in ({"Z1"}, {"Z3"})
 
 
+def test_minimal_adjustment_set_excludes_forbidden_nodes():
+    # The mediator M d-separates X and Y in the proper backdoor graph, but it lies on the causal path X -> M -> Y.
+    dag = DAG([("C", "X"), ("C", "M"), ("X", "M"), ("M", "Y")], roles={"exposures": "X", "outcomes": "Y"})
+    dag_iden, success = Adjustment(variant="minimal").identify(dag)
+    assert success
+    assert dag_iden.get_role("adjustment") == ["C"]
+
+    # With C latent, only the forbidden M could block X <- C -> M -> Y, so no adjustment set exists.
+    dag_lat = DAG(
+        [("C", "X"), ("C", "M"), ("X", "M"), ("M", "Y")],
+        latents={"C"},
+        roles={"exposures": "X", "outcomes": "Y"},
+    )
+    dag_lat_iden, success = Adjustment(variant="minimal").identify(dag_lat)
+    assert not success
+    assert dag_lat_iden == dag_lat
+
+    # No set can block the edge from the outcome into the exposure.
+    dag_reverse = DAG([("Y", "X")], roles={"exposures": "X", "outcomes": "Y"})
+    _, success = Adjustment(variant="minimal").identify(dag_reverse)
+    assert not success
+
+
 class TestBackdoorPaths:
     """
     These tests are drawn from games presented in The Book of Why by Judea Pearl. See the Jupyter Notebook called
