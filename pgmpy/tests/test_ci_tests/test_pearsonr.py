@@ -169,11 +169,16 @@ def test_degenerate_inputs():
     assert test("F", "C", ["D"]) is False
     assert test.statistic_ == pytest.approx(np.corrcoef(*residuals)[0, 1], rel=1e-6)
 
+    small = Pearsonr(data=df.iloc[:3])
+    assert small("A", "B", ["D"]) is True
+    assert small.p_value_ == 1.0
+    assert small.dof_ == 0
+
 
 @pytest.mark.filterwarnings("ignore::scipy.stats.ConstantInputWarning")
 def test_unconditional_matches_scipy():
     rng = np.random.default_rng(seed=0)
-    for a, b in [rng.standard_normal((2, 200)), ([1.0, 1.0, 1.0], [3.0, 7.0, 2.0])]:
+    for a, b in [rng.standard_normal((2, 200)), ([1.0, 1.0, 1.0], [3.0, 7.0, 2.0]), ([0.0, 1.0], [5.0, 2.0])]:
         expected = stats.pearsonr(a, b)
         result = Pearsonr(data=pd.DataFrame({"A": a, "B": b}))._compute_result("A", "B", [])
         assert result.statistic == pytest.approx(expected.statistic, rel=1e-12, nan_ok=True)

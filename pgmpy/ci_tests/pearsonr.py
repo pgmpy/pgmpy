@@ -111,10 +111,14 @@ class Pearsonr(BaseCITest):
         """
         Compute Pearson correlation coefficient and p-value.
 
-        Returns Pearson's r, p-value, and optional degrees of freedom metadata.
+        Returns Pearson's r, p-value, and optional degrees of freedom metadata. Without residual degrees of freedom
+        (``n_samples <= len(Z) + 2``) the data carry no evidence against independence and the p-value is 1, as in
+        :func:`scipy.stats.pearsonr` for two samples.
         """
         coef, dof = self._partial_correlation(X, Y, Z)
         attributes = {"dof_": dof} if len(Z) > 0 else {}
+        if dof <= 0:
+            return _CITestResult(statistic=coef, p_value=1.0, effect_size=abs(coef), attributes=attributes)
 
         t_statistic = coef * np.sqrt(dof / (1 - coef**2))
         p_value = 2 * special.stdtr(dof, -abs(t_statistic))
