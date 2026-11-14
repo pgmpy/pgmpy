@@ -21,22 +21,24 @@ class TestLogLikelihoodCondGauss:
         )
 
     def test_score_bnlearn_no_parents(self, loglik_cond_gauss_score):
-        # score(model2network("[A]"), d[c('A')], type='loglik-g') -> -119.7228
-        assert loglik_cond_gauss_score.local_score(variable="A", parents=()) == pytest.approx(-119.7228, abs=1e-3)
-        assert loglik_cond_gauss_score.local_score(variable="B", parents=()) == pytest.approx(-257.0067, abs=1e-3)
+        # R 4.4.3, logLik(lm(X ~ 1, d)): A -> -119.7202, B -> -257.0042, C -> -328.2361. bnlearn 5.0.2 plugs the
+        # residual standard error, RSS / (n - p), into the likelihood instead of the MLE, so its by.node values
+        # differ by about p^2 / (4n), e.g. A -> -119.7228.
+        assert loglik_cond_gauss_score.local_score(variable="A", parents=()) == pytest.approx(-119.7202, abs=1e-3)
+        assert loglik_cond_gauss_score.local_score(variable="B", parents=()) == pytest.approx(-257.0042, abs=1e-3)
         assert loglik_cond_gauss_score.local_score(variable="B_cat", parents=()) == pytest.approx(-81.6952, abs=1e-3)
-        assert loglik_cond_gauss_score.local_score(variable="C", parents=()) == pytest.approx(-328.2386, abs=1e-3)
+        assert loglik_cond_gauss_score.local_score(variable="C", parents=()) == pytest.approx(-328.2361, abs=1e-3)
         assert loglik_cond_gauss_score.local_score(variable="C_cat", parents=()) == pytest.approx(-130.1208, abs=1e-3)
         assert loglik_cond_gauss_score.local_score(variable="A_cat", parents=()) == pytest.approx(-121.527, abs=1e-3)
 
     def test_score_bnlearn_continuous_parent(self, loglik_cond_gauss_score):
-        # score(model2network("[B][A|B]"), d[c('A', 'B')], type='loglik-g') -> 376.5078
-        assert loglik_cond_gauss_score.local_score(variable="A", parents=("B",)) == pytest.approx(-119.4935, abs=1e-3)
+        # R 4.4.3, logLik(lm(A ~ B, d)) -> -119.4910; bnlearn 5.0.2 by.node loglik-g -> -119.5012
+        assert loglik_cond_gauss_score.local_score(variable="A", parents=("B",)) == pytest.approx(-119.4910, abs=1e-3)
 
     def test_score_bnlearn_categorical_parent(self, loglik_cond_gauss_score):
-        # score(model2network("[B_cat][A|B_cat]"), d[c('A', 'B_cat')], type='loglik-cg') -> 200.2201
+        # R 4.4.3, sum of logLik(lm(A ~ 1, d_k)) over the B_cat strata d_k -> -118.4768; bnlearn 5.0.2 -> -118.5250
         assert loglik_cond_gauss_score.local_score(variable="A", parents=("B_cat",)) == pytest.approx(
-            -118.5250, abs=1e-3
+            -118.4768, abs=1e-3
         )
         # score(model2network("[B_cat][A_cat|B_cat]"), d[c('A_cat', 'B_cat')], type='loglik') -> -199.3171
         assert loglik_cond_gauss_score.local_score(variable="A_cat", parents=("B_cat",)) == pytest.approx(
@@ -44,9 +46,9 @@ class TestLogLikelihoodCondGauss:
         )
 
     def test_score_bnlearn_mixed_parents(self, loglik_cond_gauss_score):
-        # score(model2network("[B][B_cat][A|B:B_cat]"), d[c('A', 'B', 'B_cat')], type='loglik-cg') -> 452.0991
+        # R 4.4.3, sum of logLik(lm(A ~ B, d_k)) over the B_cat strata d_k -> -113.1890; bnlearn 5.0.2 -> -113.3972
         assert loglik_cond_gauss_score.local_score(variable="A", parents=("B_cat", "B")) == pytest.approx(
-            -113.2371, abs=1e-3
+            -113.1890, abs=1e-3
         )
 
     def test_score_bnlearn_many_parents(self, loglik_cond_gauss_score):
@@ -54,9 +56,11 @@ class TestLogLikelihoodCondGauss:
         assert loglik_cond_gauss_score.local_score(variable="A", parents=("B_cat", "B", "C_cat", "C")) == -np.inf
 
     def test_score_bnlearn_continuous_to_categorical(self, loglik_cond_gauss_score):
-        # bnlearn doesn't work. Can not have edge from continuous to categorical variable.
+        # bnlearn does not allow continuous parents of a discrete node. scipy 1.17.0: sum over the A_cat strata of
+        # multivariate_normal.logpdf of B with ddof=0 moments plus n_k log(n_k / n), minus the same for all of B
+        # -> -116.6293
         assert loglik_cond_gauss_score.local_score(variable="A_cat", parents=("B",)) == pytest.approx(
-            -116.7104, abs=1e-3
+            -116.6293, abs=1e-3
         )
         assert loglik_cond_gauss_score.local_score(variable="A_cat", parents=("B_cat", "A")) == -np.inf
         assert loglik_cond_gauss_score.local_score(variable="A_cat", parents=("B", "B_cat", "C", "C_cat")) == -np.inf
@@ -67,7 +71,7 @@ class TestLogLikelihoodCondGauss:
         df.loc[0, ["B", "C", "D"]] = [12.0, -12.0, 12.0]
 
         def gaussian_log_likelihood(frame):
-            return multivariate_normal.logpdf(frame, mean=frame.mean(), cov=frame.cov()).sum()
+            return multivariate_normal.logpdf(frame, mean=frame.mean(), cov=frame.cov(ddof=0)).sum()
 
         expected = gaussian_log_likelihood(df) - gaussian_log_likelihood(df[["B", "C", "D"]])
         assert LogLikelihoodCondGauss(df).local_score("A", ("B", "C", "D")) == pytest.approx(expected, abs=1e-6)
@@ -97,7 +101,6 @@ class TestLogLikelihoodCondGauss:
         scale = 1e-5
         scaled = df.assign(**{col: df[col] * scale for col in ("A", "B", "C")})
 
-        # Each density of a continuous child is multiplied by 1 / scale; for a discrete child the Jacobians cancel.
         shift = -len(df) * np.log(scale) if variable == "A" else 0.0
         expected = LogLikelihoodCondGauss(df).local_score(variable, parents)
         assert LogLikelihoodCondGauss(scaled).local_score(variable, parents) == pytest.approx(

@@ -40,7 +40,7 @@ class AICCondGauss(LogLikelihoodCondGauss):
     ... )
     >>> score = AICCondGauss(data)
     >>> round(score.local_score("A", ("B", "C")), 3)
-    np.float64(-141.319)
+    np.float64(-141.317)
 
     Raises
     ------

@@ -26,7 +26,7 @@ class LogLikelihoodCondGauss(BaseStructureScore):
         \ell(D_1 \mid C, D_2) = \sum_{t=1}^{n} \log \frac{p(c_t \mid d_{1t}, d_{2t}) p(d_{1t}, d_{2t})} {p(c_t \mid
         d_{2t}) p(d_{2t})}.
 
-    The Gaussian densities are estimated from the corresponding grouped samples.
+    The Gaussian densities are maximum likelihood fits to the corresponding grouped samples.
 
     As in bnlearn, a family with a continuous target scores :math:`-\infty` when some configuration of its discrete
     parents has no more rows than the regression has coefficients. A family with a discrete target scores
@@ -57,7 +57,7 @@ class LogLikelihoodCondGauss(BaseStructureScore):
     ... )
     >>> score = LogLikelihoodCondGauss(data)
     >>> round(score.local_score("A", ("B", "C")), 3)
-    np.float64(-137.319)
+    np.float64(-137.317)
 
     Raises
     ------
@@ -83,15 +83,16 @@ class LogLikelihoodCondGauss(BaseStructureScore):
 
     @staticmethod
     def _gaussian_log_likelihood(values: np.ndarray) -> tuple[float, int]:
-        """Log-likelihood of the rows of `values` under the Gaussian fitted to them, and the rank of its covariance."""
+        """Log-likelihood of the rows of `values` under their maximum likelihood Gaussian, and the rank of its
+        covariance."""
         n_rows, n_cols = values.shape
         if n_rows < 2 or n_cols == 0:
             return 0.0, 0
 
-        eigenvalues = np.linalg.eigvalsh(np.atleast_2d(np.cov(values, rowvar=False)))
+        eigenvalues = np.linalg.eigvalsh(np.atleast_2d(np.cov(values, rowvar=False, ddof=0)))
         kept = eigenvalues[eigenvalues > _SINGULAR_RCOND * max(eigenvalues[-1], 1.0)]
         rank = len(kept)
-        return -0.5 * (n_rows * (rank * np.log(2.0 * np.pi) + np.sum(np.log(kept))) + (n_rows - 1) * rank), rank
+        return -0.5 * n_rows * (rank * (np.log(2.0 * np.pi) + 1.0) + np.sum(np.log(kept))), rank
 
     def _cat_parents_product(self, parents: tuple[Hashable, ...]) -> int:
         k = 1
@@ -140,7 +141,7 @@ class LogLikelihoodCondGauss(BaseStructureScore):
                     return -np.inf
                 stratum_cov = np.atleast_2d(np.cov(values[rows], rowvar=False, ddof=0))
                 residual_var = regression_residual_covariance(stratum_cov, [0], list(range(1, len(continuous))))[0, 0]
-                log_like -= 0.5 * (n_rows * np.log(2.0 * np.pi * residual_var * n_rows / (n_rows - 1)) + n_rows - 1)
+                log_like -= 0.5 * n_rows * (np.log(2.0 * np.pi * residual_var) + 1.0)
 
             # Step 3: Undo the standardization of the target.
             return log_like - sum(len(rows) for rows in strata) * np.log(scale[0])
