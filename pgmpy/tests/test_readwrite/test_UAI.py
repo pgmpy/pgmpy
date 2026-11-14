@@ -295,3 +295,17 @@ class TestUAIWriter:
 12
 2.25 3.25 3.75 0.0 0.0 10.0 1.875 4.0 3.333 2.0 2.0 3.4"""
         assert str(markov_writer) == str(expected_markov_file)
+
+    def test_values_are_not_written_in_scientific_notation(self):
+        model = DiscreteBayesianNetwork([("A", "B")])
+        cpd_a = TabularCPD("A", 2, [[1e-05], [0.99999]])
+        cpd_b = TabularCPD("B", 2, [[7.5e-07, 0.4], [0.99999925, 0.6]], evidence=["A"], evidence_card=[2])
+        model.add_cpds(cpd_a, cpd_b)
+
+        writer = UAIWriter(model)
+        assert writer.get_tables() == [["0.00001", "0.99999"], ["0.00000075", "0.4", "0.99999925", "0.6"]]
+
+        read_model = UAIReader(string=str(writer)).read()
+        for cpd in model.get_cpds():
+            read_cpd = read_model.get_cpds("var_" + str(sorted(model.nodes()).index(cpd.variable)))
+            np.testing.assert_array_equal(read_cpd.get_values(), cpd.get_values())
