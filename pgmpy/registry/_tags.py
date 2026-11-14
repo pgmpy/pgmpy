@@ -99,7 +99,8 @@ class data_types(_BaseTag):
     """
     Data types the object can be applied to.
 
-    For causal discovery algorithms that use a CI test, a structure score, a bivariate score, or a pairwise estimator,
+    The base classes declare every data type, and each concrete class narrows it to the types it supports. For causal
+    discovery algorithms that use a CI test, a structure score, a bivariate score, or a pairwise estimator,
     the class-level value is every data type supported by some available component. ``fit`` narrows it to the data
     types that every component used for fitting also supports.
 

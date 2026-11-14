@@ -11,7 +11,7 @@ from skbase.utils.dependencies import _check_estimator_deps
 from sklearn.base import BaseEstimator as SklearnEstimator
 
 from pgmpy.parameterization.distributions.nominal import _sample_index
-from pgmpy.utils import preprocess_data
+from pgmpy.utils import is_discrete_type, preprocess_data, split_by_type
 
 
 class BaseParameterization(BaseEstimator):
@@ -100,10 +100,12 @@ class BaseParameterization(BaseEstimator):
 
         # Step 2: Check that a continuous target and continuous-only parents are numeric.
         [variable_type] = self.get_tag("variable_type")
-        if variable_type == "continuous" and preprocess_data(y)[1][y.columns[0]] != "N":
+        if variable_type == "continuous" and is_discrete_type(
+            preprocess_data(y, data_types=[variable_type])[1][y.columns[0]]
+        ):
             raise ValueError(f"{type(self).__name__} needs a numeric target, but y has dtype {y.dtypes.iloc[0]}.")
         if self.get_tag("parent_data_types") == ["continuous"]:
-            non_numeric = [column for column, kind in preprocess_data(X)[1].items() if kind != "N"]
+            _, non_numeric = split_by_type(list(X.columns), preprocess_data(X, data_types=["continuous"])[1])
             if non_numeric:
                 raise ValueError(f"{type(self).__name__} needs numeric parents, but {non_numeric} aren't numeric.")
 
