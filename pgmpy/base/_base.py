@@ -470,7 +470,7 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
             edge_types = {canonical.get(edge_type, edge_type) for edge_type in edge_types}
 
         edges = []
-        for u, v, markers in super().edges(data=True):
+        for u, v, markers in self.edges(data=True):
             edge_type = self._to_edge_type(u, v, markers)
             if edge_type in canonical:
                 u, v, edge_type = v, u, canonical[edge_type]

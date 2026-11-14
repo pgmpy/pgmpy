@@ -1,7 +1,9 @@
 import itertools
+from functools import cached_property
 from typing import TYPE_CHECKING
 
 import networkx as nx
+from networkx.classes.reportviews import MultiEdgeDataView, MultiEdgeView
 
 from pgmpy import logger
 from pgmpy.base._base import _CoreGraph
@@ -9,6 +11,25 @@ from pgmpy.utils._warnings import _warn_external
 
 if TYPE_CHECKING:
     from pgmpy.base import DAG
+
+
+class _PDAGEdgeDataView(MultiEdgeDataView):
+    """Report directed edges in source-to-target order, retaining NetworkX data options."""
+
+    def __iter__(self):
+        for u, v, key, markers in MultiEdgeDataView(self._viewer, self._nbunch, data=True, keys=True):
+            if markers[u] == ">" and markers[v] == "-":
+                u, v = v, u
+            yield self._report(u, v, key, markers)
+
+
+class _PDAGEdgeView(MultiEdgeView):
+    """A live NetworkX edge view whose iteration respects PDAG orientations."""
+
+    dataview = _PDAGEdgeDataView
+
+    def __iter__(self):
+        return iter(self.dataview(self, keys=True))
 
 
 class PDAG(_CoreGraph):
@@ -47,6 +68,20 @@ class PDAG(_CoreGraph):
 
     SUPPORTED_EDGE_TYPES = frozenset(["->", "<-", "--"])
     SUPPORTS_LATENTS = True
+
+    @cached_property
+    def edges(self) -> MultiEdgeView:
+        """A live edge view with directed endpoints ordered from source to target.
+
+        Iteration yields ``(u, v, key)`` tuples; the third value is a NetworkX
+        multiedge key, not an edge type. Call ``edges()`` for endpoint pairs or
+        ``edges(data=True)`` to include the endpoint marker dictionaries.
+        Use :meth:`get_edges` for tuples containing edge-type strings.
+
+        Node filtering selects incident edges, including incoming edges.
+        Undirected edges retain NetworkX's iteration order.
+        """
+        return _PDAGEdgeView(self)
 
     @property
     def directed_edges(self) -> set[tuple]:
