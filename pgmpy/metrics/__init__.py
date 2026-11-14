@@ -5,6 +5,7 @@ from .fisher_c import FisherC
 from .implied_cis import ImpliedCIs
 from .orientation_cm import OrientationConfusionMatrix
 from .shd import SHD
+from .sid import SID
 from .structure_score import StructureScore
 
 __all__ = [
@@ -14,6 +15,7 @@ __all__ = [
     "AdjacencyConfusionMatrix",
     "OrientationConfusionMatrix",
     "SHD",
+    "SID",
     "CorrelationScore",
     "ImpliedCIs",
     "FisherC",

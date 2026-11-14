@@ -12,6 +12,7 @@ Supervised Metrics
    :template: autosummary/class.rst
 
    ~pgmpy.metrics.SHD
+   ~pgmpy.metrics.SID
    ~pgmpy.metrics.AdjacencyConfusionMatrix
    ~pgmpy.metrics.OrientationConfusionMatrix
 
