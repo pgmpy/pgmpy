@@ -7,6 +7,7 @@ from .GES import GES
 from .HillClimbSearch import HillClimbSearch
 from .IGCI import IGCI
 from .LLMPairwise import LLMPairwise
+from .MMHC import MMHC
 from .PC import PC
 from .R2Sort import R2Sort
 from .SP import SP
@@ -24,6 +25,7 @@ __all__ = [
     "HillClimbSearch",
     "IGCI",
     "LLMPairwise",
+    "MMHC",
     "PC",
     "R2Sort",
     "SP",

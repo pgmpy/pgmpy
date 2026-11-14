@@ -44,7 +44,7 @@ Constraint and Hybrid Discovery
    :template: autosummary/class.rst
 
    ~pgmpy.causal_discovery.PC
-   ~pgmpy.estimators.MmhcEstimator
+   ~pgmpy.causal_discovery.MMHC
    ~pgmpy.causal_discovery.SP
 
 Score-Based and Tree Search

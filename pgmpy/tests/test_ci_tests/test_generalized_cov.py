@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
+import pytest
 
-from pgmpy.ci_tests import GeneralizedCov
+from pgmpy.ci_tests import GeneralizedCov, PillaiTrace
 from pgmpy.tests.test_ci_tests import _multivariate_fixtures
 
 pillai_data = _multivariate_fixtures.pillai_data
@@ -45,11 +46,15 @@ def test_generalized_cov_statistic_matches_rectangular_generalization(pillai_dat
     assert test.statistic_ == expected
 
 
-def test_effect_size(pillai_data):
-    df = pillai_data["indep"][0]
-    test = GeneralizedCov(data=df, n_permutations=10, rng=0)
-    test("X", "Y", ["Z1", "Z2", "Z3"])
-    assert test.effect_size_ is None
+@pytest.mark.parametrize(("variant", "Z"), [(0, ["Z1", "Z2", "Z3"]), (2, ["Z1", "Z2", "Z3"]), (3, [])])
+def test_effect_size_is_rms_canonical_correlation(pillai_data, variant, Z):
+    df = pillai_data["indep"][variant]
+    generalized_cov = GeneralizedCov(data=df, n_permutations=10, rng=0)
+    generalized_cov("X", "Y", Z)
+    pillai = PillaiTrace(data=df)
+    pillai("X", "Y", Z)
+
+    assert generalized_cov.effect_size_**2 == pytest.approx(pillai.effect_size_, abs=1e-4)
 
 
 def test_generalized_cov_approx(pillai_data):

@@ -133,7 +133,7 @@ class _ResidualMixin:
 class _CITestResult:
     statistic: float | None
     p_value: float
-    effect_size: float | None = None
+    effect_size: float
     attributes: dict[str, object] = field(default_factory=dict)
 
 
