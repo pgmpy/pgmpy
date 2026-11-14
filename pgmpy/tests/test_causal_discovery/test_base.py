@@ -216,4 +216,4 @@ def test_filter_algorithms_by_tags():
             filter_tags={"identifiable_graph": "dag", "capability:multivariate": True},
         )
     }
-    assert dag_learners == {"BootstrapEstimator", "ExpertInLoop", "VarSort", "R2Sort"}
+    assert dag_learners == {"BootstrapEstimator", "ExpertInLoop", "NOTEARS", "VarSort", "R2Sort"}
