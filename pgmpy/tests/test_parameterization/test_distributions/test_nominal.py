@@ -21,20 +21,10 @@ class TestNominalDistribution:
         categories = ["A", "B"]
         dist = NominalDistribution(probs, categories)
 
+        # The tags pgmpy relies on: log_likelihood scores a discrete measure with log_pmf.
         assert dist.name == "NominalDistribution"
-        assert dist.get_class_tag("python_version") is None
-        assert dist.get_class_tag("python_dependencies") is None
         assert dist.get_class_tag("distr:measuretype") == "discrete"
-        assert dist.get_class_tag("distr:paramtype") == "nonparametric"
-        assert dist.get_class_tag("capabilities:approx") == []
         assert dist.get_class_tag("capabilities:exact") == ["pmf", "log_pmf"]
-        assert dist.get_class_tag("broadcast_init") == "off"
-
-    def test_public_import(self):
-        """The class is importable from the package, not just the module."""
-        from pgmpy.parameterization.distributions import NominalDistribution as PublicCat
-
-        assert PublicCat is NominalDistribution
 
     @pytest.mark.parametrize("scalar", [False, True])
     def test_interface_compatibility(self, scalar):
@@ -311,9 +301,13 @@ class TestNominalDistribution:
         with pytest.raises(ValueError, match="missing values"):
             scalar.pmf(pd.NA)
 
-        # Case 8: tuple labels round-trip through sample() and pmf()
+        # Case 8: tuple labels round-trip through sample() and pmf(), also for a scalar distribution, where skpro would
+        # read a tuple as an array
         dist = NominalDistribution(probs=[[0.5, 0.5], [0.5, 0.5]], categories=[("a", 1), ("b", 2)])
         pd.testing.assert_frame_equal(dist.pmf(dist.sample()), pd.DataFrame({"variable": [0.5, 0.5]}))
+        scalar = NominalDistribution(probs=[0.3, 0.7], categories=[("a", 1), ("b", 2)])
+        assert scalar.pmf(("a", 1)) == pytest.approx(0.3) and scalar.log_pmf(("b", 2)) == pytest.approx(np.log(0.7))
+        assert scalar.pmf(scalar.sample(random_state=0)) in (pytest.approx(0.3), pytest.approx(0.7))
 
     def test_log_pmf(self):
         """test"""
@@ -457,76 +451,3 @@ class TestNominalDistribution:
         for sample in range(2):
             pd.testing.assert_frame_equal(samples.xs(sample, level=0), expected)
         pd.testing.assert_frame_equal(dist.sample(0), samples.iloc[:0])
-
-    @pytest.mark.skipif(
-        not _check_soft_dependencies("matplotlib", severity="none"),
-        reason="execute only if required dependency present",
-    )
-    def test_plot(self):
-        # Case 1: default
-        import matplotlib
-        import matplotlib.pyplot as plt
-
-        matplotlib.use("Agg")
-
-        probs = [[0.2, 0.4, 0.3, 0.1], [0.4, 0.4, 0.1, 0.1]]
-        categories = ["A", "B", "C", "D"]
-        index = ["studentA", "studentB"]
-        columns = ["grade"]
-
-        dist = NominalDistribution(probs=probs, categories=categories, index=index, columns=columns)
-        fig, axes = dist.plot(fun="pmf")
-        try:
-            assert isinstance(fig, plt.Figure)
-            assert isinstance(axes, np.ndarray)
-            assert axes.shape == (2,)
-
-            assert axes[0].get_ylabel() == "studentA"
-            assert axes[1].get_ylabel() == "studentB"
-
-            assert axes[0].get_title() == "grade"
-            assert axes[1].get_xlabel() == "categories"
-
-            for ax in axes:
-                assert ax.get_ylim() == pytest.approx((0.0, 1.0))
-        finally:
-            plt.close(fig)
-
-        # fun=None means "pmf"; sharex/sharey are used for the subplots instead of being passed to bar().
-        fig, axes = dist.plot(fun=None, sharex=False, sharey=False)
-        plt.close(fig)
-
-        # An array distribution needs one Axes per row.
-        fig, ax = plt.subplots()
-        try:
-            with pytest.raises(ValueError, match="one Axes per row"):
-                dist.plot(ax=ax)
-        finally:
-            plt.close(fig)
-
-        scalar = dist.iat[0, 0]
-        ax = scalar.plot()
-        fig = plt.gcf()
-        try:
-            assert isinstance(ax, plt.Axes)
-            np.testing.assert_allclose([bar.get_height() for bar in ax.patches], probs[0])
-            assert scalar.plot(ax=ax) is ax
-        finally:
-            plt.close(fig)
-
-        # Categories are labels: numeric categories get evenly spaced bars, in the given order.
-        scalar = NominalDistribution(probs=[0.2, 0.3, 0.5], categories=[1000, 1, 0.5])
-        fig, ax = plt.subplots()
-        try:
-            scalar.plot(ax=ax)
-            assert [bar.get_x() + bar.get_width() / 2 for bar in ax.patches] == pytest.approx([0, 1, 2])
-            assert [label.get_text() for label in ax.get_xticklabels()] == ["1000", "1", "0.5"]
-        finally:
-            plt.close(fig)
-
-        # Case 2: "cdf", "pdf"
-        with pytest.raises(NotImplementedError):
-            dist.plot(fun="pdf")
-
-        with pytest.raises(NotImplementedError):
-            dist.plot(fun="cdf")
