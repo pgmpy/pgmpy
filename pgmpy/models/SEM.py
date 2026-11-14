@@ -736,30 +736,67 @@ class SEMAlg:
         # TODO: Finish this example
         """
 
-        err_var = {var: np.diag(self.zeta)[i] for i, var in enumerate(self.eta)}
-        graph = nx.relabel_nodes(
-            nx.from_numpy_array(self.B.T, create_using=nx.DiGraph),
-            mapping={i: self.eta[i] for i in range(self.B.shape[0])},
-        )
-        # Fill zeta diagonal with 0's as they represent variance and would add self loops in the graph.
-        zeta = self.zeta.copy()
-        np.fill_diagonal(zeta, 0)
-        err_graph = nx.relabel_nodes(
-            nx.from_numpy_array(zeta.T, create_using=nx.Graph),
-            mapping={i: self.eta[i] for i in range(self.zeta.shape[0])},
-        )
+        # Build ebunch as 3-tuples so edge weights are preserved.
+        # Use the fixed value from B_fixed_mask when set; otherwise np.nan (free parameter).
+        ebunch = []
+        for i in range(self.B.shape[0]):
+            for j in range(self.B.shape[1]):
+                if self.B[i, j] != 0:
+                    fixed = self.B_fixed_mask[i, j]
+                    weight = float(fixed) if fixed != 0 else np.nan
+                    ebunch.append((self.eta[j], self.eta[i], weight))
+
+        # Error variances: prefer fixed_mask diagonal over structural zeta diagonal
+        # so that caller-supplied fixed values are not silently replaced.
+        err_var = {}
+        for i, var in enumerate(self.eta):
+            fixed = self.zeta_fixed_mask[i, i]
+            err_var[var] = float(fixed) if fixed != 0 else np.nan
+
+        # Error correlations: off-diagonal zeta entries as 3-tuples.
+        # Use fixed_mask value when set; otherwise np.nan (free parameter).
+        seen = set()
+        err_corr = []
+        for i in range(self.zeta.shape[0]):
+            for j in range(self.zeta.shape[1]):
+                if i == j:
+                    continue
+                if self.zeta[i, j] != 0 or self.zeta_fixed_mask[i, j] != 0:
+                    pair = tuple(sorted([i, j]))
+                    if pair not in seen:
+                        seen.add(pair)
+                        fixed = self.zeta_fixed_mask[i, j]
+                        weight = float(fixed) if fixed != 0 else np.nan
+                        err_corr.append((self.eta[i], self.eta[j], weight))
 
         latents = set(self.eta) - set(self.y)
 
         from pgmpy.models import SEMGraph
 
-        # TODO: Add edge weights
         sem_graph = SEMGraph(
-            ebunch=graph.edges(),
+            ebunch=ebunch,
             latents=latents,
-            err_corr=err_graph.edges(),
+            err_corr=err_corr,
             err_var=err_var,
         )
+
+        # SEMGraph builds its node sets from edges only.  Variables that have no
+        # directed edges in B (isolated nodes) would otherwise be absent from
+        # graph, observed, and err_graph.  Add them explicitly from self.eta so
+        # the full RAM variable list is preserved.
+        for i, var in enumerate(self.eta):
+            if not sem_graph.graph.has_node(var):
+                sem_graph.graph.add_node(var)
+            if not sem_graph.err_graph.has_node(var):
+                sem_graph.err_graph.add_node(var)
+                fixed = self.zeta_fixed_mask[i, i]
+                sem_graph.err_graph.nodes[var]["weight"] = float(fixed) if fixed != 0 else np.nan
+
+        # Re-derive observed from the now-complete node set.
+        sem_graph.observed = set(sem_graph.graph.nodes()) - sem_graph.latents
+        # Rebuild full_graph_struct so it includes any newly added isolated nodes.
+        sem_graph.full_graph_struct = sem_graph._get_full_graph_struct()
+
         return sem_graph
 
     def set_params(self, B, zeta):
@@ -885,13 +922,20 @@ class SEM(SEMGraph):
             self.full_graph_struct = model.full_graph_struct
 
         elif syntax.lower() == "ram":
-            model = SEMAlg(
+            semalg = SEMAlg(
                 eta=kwargs["var_names"],
                 B=kwargs["B"],
                 zeta=kwargs["zeta"],
                 wedge_y=kwargs["wedge_y"],
-                fixed_values=kwargs.get("fixed_masks"),
+                fixed_values=kwargs.get("fixed_values"),
             )
+            model = semalg.to_SEMGraph()
+            super().__init__(ebunch=[], latents=[], err_corr=[], err_var={})
+            self.graph = model.graph
+            self.latents = model.latents
+            self.observed = model.observed
+            self.err_graph = model.err_graph
+            self.full_graph_struct = model.full_graph_struct
 
     @classmethod
     def from_lavaan(cls, string=None, filename=None):
@@ -1073,22 +1117,27 @@ class SEM(SEMGraph):
             ]
         )
 
-        B = np.block(
-            [
-                [np.zeros((m, m + n)), fixed_masks["wedge_y"], np.zeros((m, q))],
-                [np.zeros((n, m + n + p)), fixed_masks["wedge_x"]],
-                [np.zeros((p, m + n)), fixed_masks["B"], fixed_masks["gamma"]],
-                [np.zeros((q, m + n + p + q))],
-            ]
-        )
-        zeta = np.block(
-            [
-                [fixed_masks["theta_e"], np.zeros((m, n + p + q))],
-                [np.zeros((n, m)), fixed_masks["theta_del"], np.zeros((n, p + q))],
-                [np.zeros((p, m + n)), fixed_masks["psi"], np.zeros((p, q))],
-                [np.zeros((q, m + n + p)), fixed_masks["phi"]],
-            ]
-        )
+        if fixed_masks is not None:
+            B_mask = np.block(
+                [
+                    [np.zeros((m, m + n)), fixed_masks["wedge_y"], np.zeros((m, q))],
+                    [np.zeros((n, m + n + p)), fixed_masks["wedge_x"]],
+                    [np.zeros((p, m + n)), fixed_masks["B"], fixed_masks["gamma"]],
+                    [np.zeros((q, m + n + p + q))],
+                ]
+            )
+            zeta_mask = np.block(
+                [
+                    [fixed_masks["theta_e"], np.zeros((m, n + p + q))],
+                    [np.zeros((n, m)), fixed_masks["theta_del"], np.zeros((n, p + q))],
+                    [np.zeros((p, m + n)), fixed_masks["psi"], np.zeros((p, q))],
+                    [np.zeros((q, m + n + p)), fixed_masks["phi"]],
+                ]
+            )
+            fixed_values = {"B": B_mask, "zeta": zeta_mask}
+        else:
+            fixed_values = None
+
         observed = var_names["y"] + var_names["x"]
 
         return cls.from_RAM(
@@ -1096,7 +1145,7 @@ class SEM(SEMGraph):
             B=B,
             zeta=zeta,
             observed=observed,
-            fixed_values={"B": B, "zeta": zeta},
+            fixed_values=fixed_values,
         )
 
     @classmethod
@@ -1148,7 +1197,7 @@ class SEM(SEMGraph):
         >>> SEM.from_RAM  # TODO: Finish this
         """
         if observed:
-            wedge_y = np.zeros((len(variables), len(observed)))
+            wedge_y = np.zeros((len(observed), len(variables)))
             obs_dict = {var: index for index, var in enumerate(observed)}
             all_dict = {var: index for index, var in enumerate(variables)}
             for var in observed:
