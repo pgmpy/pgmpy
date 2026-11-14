@@ -3,6 +3,7 @@ from collections.abc import Hashable
 import numpy as np
 
 from pgmpy.structure_score._base import BaseStructureScore
+from pgmpy.utils import regression_residual_covariance
 
 
 class LogLikelihoodGauss(BaseStructureScore):
@@ -25,7 +26,7 @@ class LogLikelihoodGauss(BaseStructureScore):
     Parameters
     ----------
     data : pandas.DataFrame
-        DataFrame where each column represents a continuous variable.
+        DataFrame where each column represents a continuous variable, without missing values.
     state_names : dict, optional
         Accepted for API consistency but not typically used for Gaussian networks.
     max_cache_size : int or None, default=10000
@@ -65,33 +66,17 @@ class LogLikelihoodGauss(BaseStructureScore):
 
     def __init__(self, data, state_names=None, max_cache_size=10000):
         super().__init__(data, state_names=state_names, max_cache_size=max_cache_size)
-        self._np_data = self.data.to_numpy()
-        self._col_index = {col: i for i, col in enumerate(self.data.columns)}
-        self._n_samples = self._np_data.shape[0]
+        self._cov = np.atleast_2d(np.cov(self.data.to_numpy(dtype=float), rowvar=False, ddof=0))
+        self._col_index = {col: index for index, col in enumerate(self.data.columns)}
+        self._n_samples = self.data.shape[0]
         self._ll_const = -0.5 * self._n_samples * (np.log(2.0 * np.pi) + 1.0)
 
     def _log_likelihood(self, variable: Hashable, parents: tuple[Hashable, ...]) -> tuple[float, float]:
-        n = self._n_samples
-        y = self._np_data[:, self._col_index[variable]]
-
-        if len(parents) == 0:
-            resid = y - y.mean()
-            df_model = 0
-        else:
-            # Create the covariate matrix
-            parent_cols = [self._col_index[p] for p in parents]
-            X = np.empty((n, len(parents) + 1))
-            X[:, 0] = 1.0
-            X[:, 1:] = self._np_data[:, parent_cols]
-
-            # Fit a OLS and compute residuals.
-            beta, *_ = np.linalg.lstsq(X, y, rcond=None)
-            resid = y - X @ beta
-            df_model = len(parents)
-
-        rss = float(resid @ resid)
-        ll = self._ll_const - 0.5 * n * np.log(rss / n)
-        return (ll, df_model)
+        variable_col = self._col_index[variable]
+        parent_cols = [self._col_index[parent] for parent in parents]
+        residual_var = regression_residual_covariance(self._cov, [variable_col], parent_cols)[0, 0]
+        ll = self._ll_const - 0.5 * self._n_samples * np.log(residual_var)
+        return (ll, len(parents))
 
     def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         ll, _ = self._log_likelihood(variable=variable, parents=parents)

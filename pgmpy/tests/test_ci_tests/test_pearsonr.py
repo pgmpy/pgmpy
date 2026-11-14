@@ -3,6 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 import pytest
+from scipy import stats
 
 from pgmpy.ci_tests import Pearsonr
 from pgmpy.factors.continuous import LinearGaussianCPD
@@ -142,3 +143,23 @@ def test_pearsonr_residual_approx(residual_data):
     test("X", "Y", ["Z1", "Z2", "Z3"])
     assert test.statistic_ >= 0.1
     assert test.p_value_ <= 0.05
+
+
+def test_no_degrees_of_freedom():
+    rng = np.random.default_rng(seed=16)
+    test = Pearsonr(data=pd.DataFrame(rng.standard_normal((3, 3)), columns=["A", "B", "D"]))
+
+    assert test("A", "B", ["D"]) is True
+    assert test.p_value_ == 1.0
+    assert test.dof_ == 0
+
+
+@pytest.mark.filterwarnings("ignore::scipy.stats.ConstantInputWarning")
+def test_unconditional_matches_scipy():
+    rng = np.random.default_rng(seed=0)
+    for a, b in [rng.standard_normal((2, 200)), ([1.0, 1.0, 1.0], [3.0, 7.0, 2.0]), ([0.0, 1.0], [5.0, 2.0])]:
+        expected = stats.pearsonr(a, b)
+        result = Pearsonr(data=pd.DataFrame({"A": a, "B": b}))._compute_result("A", "B", [])
+        assert result.statistic == pytest.approx(expected.statistic, rel=1e-12, nan_ok=True)
+        assert result.p_value == pytest.approx(expected.pvalue, rel=1e-9, nan_ok=True)
+        assert result.attributes == {}

@@ -1,11 +1,11 @@
 from collections.abc import Hashable
 
 import numpy as np
-import pandas as pd
-from scipy.stats import multivariate_normal
 
 from pgmpy.structure_score._base import BaseStructureScore
-from pgmpy.utils import is_discrete_type, split_by_type
+from pgmpy.utils import is_discrete_type, regression_residual_covariance, split_by_type
+
+_SINGULAR_RCOND = 1e6 * np.finfo(float).eps
 
 
 class LogLikelihoodCondGauss(BaseStructureScore):
@@ -26,7 +26,12 @@ class LogLikelihoodCondGauss(BaseStructureScore):
         \ell(D_1 \mid C, D_2) = \sum_{t=1}^{n} \log \frac{p(c_t \mid d_{1t}, d_{2t}) p(d_{1t}, d_{2t})} {p(c_t \mid
         d_{2t}) p(d_{2t})}.
 
-    The Gaussian densities are estimated from the corresponding grouped samples.
+    The Gaussian densities are maximum likelihood fits to the corresponding grouped samples.
+
+    As in bnlearn, a family with a continuous target scores :math:`-\infty` when some configuration of its discrete
+    parents has no more rows than the regression has coefficients. A family with a discrete target scores
+    :math:`-\infty` when the covariance of its continuous parents is singular within some configuration of the target
+    and its discrete parents, for example when the configuration has no more rows than there are continuous parents.
 
     Parameters
     ----------
@@ -52,7 +57,7 @@ class LogLikelihoodCondGauss(BaseStructureScore):
     ... )
     >>> score = LogLikelihoodCondGauss(data)
     >>> round(score.local_score("A", ("B", "C")), 3)
-    np.float64(-137.319)
+    np.float64(-137.317)
 
     Raises
     ------
@@ -77,14 +82,17 @@ class LogLikelihoodCondGauss(BaseStructureScore):
         super().__init__(data, state_names=state_names, max_cache_size=max_cache_size)
 
     @staticmethod
-    def _adjusted_cov(df: pd.DataFrame) -> pd.DataFrame:
-        if (df.shape[0] == 1) or (df.shape[0] < len(df.columns)):
-            return pd.DataFrame(np.eye(len(df.columns)), index=df.columns, columns=df.columns)
+    def _gaussian_log_likelihood(values: np.ndarray) -> tuple[float, int]:
+        """Log-likelihood of the rows of `values` under their maximum likelihood Gaussian, and the rank of its
+        covariance."""
+        n_rows, n_cols = values.shape
+        if n_rows < 2 or n_cols == 0:
+            return 0.0, 0
 
-        df_cov = df.cov()
-        if np.any(np.isclose(np.linalg.eig(df_cov)[0], 0)):
-            df_cov = df_cov + 1e-6
-        return df_cov
+        eigenvalues = np.linalg.eigvalsh(np.atleast_2d(np.cov(values, rowvar=False, ddof=0)))
+        kept = eigenvalues[eigenvalues > _SINGULAR_RCOND * max(eigenvalues[-1], 1.0)]
+        rank = len(kept)
+        return -0.5 * n_rows * (rank * (np.log(2.0 * np.pi) + 1.0) + np.sum(np.log(kept))), rank
 
     def _cat_parents_product(self, parents: tuple[Hashable, ...]) -> int:
         k = 1
@@ -113,123 +121,43 @@ class LogLikelihoodCondGauss(BaseStructureScore):
         return k
 
     def _log_likelihood(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
-        parent_list = list(parents)
-        df = self.data.loc[:, [variable] + parent_list]
+        df = self.data.loc[:, [variable, *parents]]
+        n_samples = df.shape[0]
+        continuous = split_by_type([variable, *parents], self.dtypes)[0]
+        discrete = split_by_type(parents, self.dtypes)[1]
+
+        # Step 1: Standardize the continuous variables.
+        values = df.loc[:, continuous].to_numpy(dtype=float)
+        scale = values.std(axis=0)
+        values = (values - values.mean(axis=0)) / scale
 
         if not is_discrete_type(self.dtypes[variable]):
-            c1 = variable
-            c2, d = split_by_type(parents, self.dtypes)
+            # Step 2: Add the Gaussian log-likelihood of the target's regression within each discrete configuration.
+            strata = list(df.groupby(discrete, observed=True).indices.values()) if discrete else [np.arange(n_samples)]
+            log_like = 0.0
+            for rows in strata:
+                n_rows = len(rows)
+                if n_rows <= len(continuous):
+                    return -np.inf
+                stratum_cov = np.atleast_2d(np.cov(values[rows], rowvar=False, ddof=0))
+                residual_var = regression_residual_covariance(stratum_cov, [0], list(range(1, len(continuous))))[0, 0]
+                log_like -= 0.5 * n_rows * (np.log(2.0 * np.pi * residual_var) + 1.0)
 
-            if len(d) == 0:
-                if len(c2) == 0:
-                    p_c1c2_d = multivariate_normal.pdf(
-                        x=df,
-                        mean=df.mean(axis=0),
-                        cov=LogLikelihoodCondGauss._adjusted_cov(df),
-                        allow_singular=True,
-                    )
-                    return np.sum(np.log(p_c1c2_d))
-                else:
-                    p_c1c2_d = multivariate_normal.pdf(
-                        x=df,
-                        mean=df.mean(axis=0),
-                        cov=LogLikelihoodCondGauss._adjusted_cov(df),
-                        allow_singular=True,
-                    )
-                    df_c2 = df.loc[:, c2]
-                    p_c2_d = np.maximum(
-                        1e-8,
-                        multivariate_normal.pdf(
-                            x=df_c2,
-                            mean=df_c2.mean(axis=0),
-                            cov=LogLikelihoodCondGauss._adjusted_cov(df_c2),
-                            allow_singular=True,
-                        ),
-                    )
+            # Step 3: Undo the standardization of the target.
+            return log_like - sum(len(rows) for rows in strata) * np.log(scale[0])
 
-                    return np.sum(np.log(p_c1c2_d / p_c2_d))
-            else:
-                log_like = 0
-                for d_states, df_d in df.groupby(d, observed=True):
-                    p_c1c2_d = multivariate_normal.pdf(
-                        x=df_d.loc[:, [c1] + c2],
-                        mean=df_d.loc[:, [c1] + c2].mean(axis=0),
-                        cov=LogLikelihoodCondGauss._adjusted_cov(df_d.loc[:, [c1] + c2]),
-                        allow_singular=True,
-                    )
-                    if len(c2) == 0:
-                        p_c2_d = 1
-                    else:
-                        p_c2_d = np.maximum(
-                            1e-8,
-                            multivariate_normal.pdf(
-                                x=df_d.loc[:, c2],
-                                mean=df_d.loc[:, c2].mean(axis=0),
-                                cov=LogLikelihoodCondGauss._adjusted_cov(df_d.loc[:, c2]),
-                                allow_singular=True,
-                            ),
-                        )
-
-                    log_like += np.sum(np.log(p_c1c2_d / p_c2_d))
-                return log_like
-
-        else:
-            d1 = variable
-            c, d2 = split_by_type(parents, self.dtypes)
-
-            log_like = 0
-            for d_states, df_d1d2 in df.groupby([d1] + d2, observed=True):
-                if len(c) == 0:
-                    p_c_d1d2 = 1
-                else:
-                    p_c_d1d2 = multivariate_normal.pdf(
-                        x=df_d1d2.loc[:, c],
-                        mean=df_d1d2.loc[:, c].mean(axis=0),
-                        cov=LogLikelihoodCondGauss._adjusted_cov(df_d1d2.loc[:, c]),
-                        allow_singular=True,
-                    )
-
-                p_d1d2 = np.repeat(df_d1d2.shape[0] / df.shape[0], df_d1d2.shape[0])
-
-                if len(d2) == 0:
-                    if len(c) == 0:
-                        p_c_d2 = 1
-                    else:
-                        p_c_d2 = np.maximum(
-                            1e-8,
-                            multivariate_normal.pdf(
-                                x=df_d1d2.loc[:, c],
-                                mean=df.loc[:, c].mean(axis=0),
-                                cov=LogLikelihoodCondGauss._adjusted_cov(df.loc[:, c]),
-                                allow_singular=True,
-                            ),
-                        )
-
-                    log_like += np.sum(np.log(p_c_d1d2 * p_d1d2 / p_c_d2))
-                else:
-                    if len(c) == 0:
-                        p_c_d2 = 1
-                    else:
-                        df_d2 = df
-                        for var, state in zip(d2, d_states[1:]):
-                            df_d2 = df_d2.loc[df_d2[var] == state]
-
-                        p_c_d2 = np.maximum(
-                            1e-8,
-                            multivariate_normal.pdf(
-                                x=df_d1d2.loc[:, c],
-                                mean=df_d2.loc[:, c].mean(axis=0),
-                                cov=LogLikelihoodCondGauss._adjusted_cov(df_d2.loc[:, c]),
-                                allow_singular=True,
-                            ),
-                        )
-
-                    p_d2 = df.groupby(d2, observed=True).count() / df.shape[0]
-                    for var, value in zip(d2, d_states[1:]):
-                        p_d2 = p_d2.loc[p_d2.index.get_level_values(var) == value]
-
-                    log_like += np.sum(np.log((p_c_d1d2 * p_d1d2) / (p_c_d2 * p_d2.values.ravel()[0])))
-            return log_like
+        # Step 2: Add the Gaussian log-likelihood of the continuous parents and log p(target, discrete parents) within
+        # each configuration of the target and the discrete parents, and subtract the same within each configuration
+        # of the discrete parents alone.
+        log_like = 0.0
+        for keys, sign in [([variable, *discrete], 1.0), (discrete, -1.0)]:
+            strata = df.groupby(keys, observed=True).indices.values() if keys else [np.arange(n_samples)]
+            for rows in strata:
+                stratum_log_like, rank = self._gaussian_log_likelihood(values[rows])
+                if rank < values.shape[1]:
+                    return -np.inf
+                log_like += sign * (stratum_log_like + len(rows) * np.log(len(rows) / n_samples))
+        return log_like
 
     def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         ll = self._log_likelihood(variable=variable, parents=parents)

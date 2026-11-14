@@ -39,9 +39,15 @@ from pgmpy.structure_score import get_scoring_method
     ],
     ids=["continuous", "discrete"],
 )
-def test_fit_warns_on_constant_column(data, estimator):
-    with pytest.warns(UserWarning, match="constant"):
+def test_fit_rejects_constant_column(data, estimator):
+    with pytest.raises(ValueError, match="Variable 'const' is constant"):
         estimator.fit(data)
+
+
+def test_unhashable_cell_is_rejected():
+    data = pd.DataFrame({"A": [[1, 2], [3, 4], [5, 6]], "B": [1.0, 2.0, 3.0]})
+    with pytest.raises(TypeError, match="hashable object"):
+        ChowLiu().fit(data)
 
 
 def test_fit_rejects_incompatible_data_types():

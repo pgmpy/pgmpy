@@ -241,3 +241,74 @@ def powerset(l_input: list):
     [(), (1,), (2,), (3,), (1, 2), (1, 3), (2, 3), (1, 2, 3)]
     """
     return chain.from_iterable(combinations(l_input, r) for r in range(len(l_input) + 1))
+
+
+def regression_coefficients(cov: np.ndarray, targets: list[int], given: list[int]) -> np.ndarray:
+    r"""Least-squares coefficients of `targets` regressed on `given`, computed from their covariance matrix `cov`.
+
+    :math:`\Sigma_{GG}^{+} \Sigma_{GT}`, with `given` standardized before the pseudo-inverse so that its cutoff does
+    not depend on the scale of each variable. The pseudo-inverse gives the minimum-norm fit when `given` is rank
+    deficient.
+
+    Parameters
+    ----------
+    cov : numpy.ndarray
+        Covariance matrix of all the variables.
+    targets : list of int
+        Positions in `cov` of the regressed variables.
+    given : list of int
+        Positions in `cov` of the regressors.
+
+    Returns
+    -------
+    numpy.ndarray
+        Coefficients of shape ``(len(given), len(targets))``.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from pgmpy.utils import regression_coefficients
+    >>> cov = np.array([[2.0, 1.0], [1.0, 1.0]])
+    >>> regression_coefficients(cov, targets=[0], given=[1])
+    array([[1.]])
+    """
+    scale = np.sqrt(cov[given, given])
+    scale[scale == 0] = 1.0
+    inverse_scale = 1.0 / scale[:, None]
+    standardized = np.linalg.pinv(cov[np.ix_(given, given)] * inverse_scale * inverse_scale.T)
+    return standardized @ (cov[np.ix_(given, targets)] * inverse_scale) * inverse_scale
+
+
+def regression_residual_covariance(cov: np.ndarray, targets: list[int], given: list[int]) -> np.ndarray:
+    r"""Covariance of the residuals of a linear least-squares regression of `targets` on `given`, from `cov`.
+
+    Schur complement :math:`\Sigma_{TT} - \Sigma_{TG} \Sigma_{GG}^{+} \Sigma_{GT}`, using
+    :func:`regression_coefficients`.
+
+    Parameters
+    ----------
+    cov : numpy.ndarray
+        Maximum likelihood (``ddof=0``) covariance matrix of all the variables.
+    targets : list of int
+        Positions in `cov` of the regressed variables.
+    given : list of int
+        Positions in `cov` of the regressors.
+
+    Returns
+    -------
+    numpy.ndarray
+        Residual covariance matrix of shape ``(len(targets), len(targets))``, with ``ddof=0``.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from pgmpy.utils import regression_residual_covariance
+    >>> cov = np.array([[2.0, 1.0], [1.0, 1.0]])
+    >>> regression_residual_covariance(cov, targets=[0], given=[1])
+    array([[1.]])
+    """
+    total = cov[np.ix_(targets, targets)]
+    if len(given) == 0:
+        return total
+
+    return total - cov[np.ix_(targets, given)] @ regression_coefficients(cov, targets, given)

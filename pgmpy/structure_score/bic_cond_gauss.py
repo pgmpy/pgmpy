@@ -42,7 +42,7 @@ class BICCondGauss(LogLikelihoodCondGauss):
     ... )
     >>> score = BICCondGauss(data)
     >>> round(score.local_score("A", ("B", "C")), 3)
-    np.float64(-146.529)
+    np.float64(-146.527)
 
     Raises
     ------

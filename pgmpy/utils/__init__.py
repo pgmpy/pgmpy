@@ -6,7 +6,12 @@ from .data_types import (
     preprocess_data,
     split_by_type,
 )
-from .mathext import cartesian, sample_discrete
+from .mathext import (
+    cartesian,
+    regression_coefficients,
+    regression_residual_covariance,
+    sample_discrete,
+)
 from .optimizer import optimize, pinverse
 from .state_name import StateNameMixin
 from .tabular import (
@@ -26,6 +31,8 @@ from .utils import (
 __all__ = [
     "ExperimentalWarning",
     "cartesian",
+    "regression_coefficients",
+    "regression_residual_covariance",
     "sample_discrete",
     "StateNameMixin",
     "_check_1d_array_object",

@@ -129,7 +129,7 @@ class TOPIC(BaseCausalDiscovery):
 
         dag_current = DAG()
         dag_current.add_nodes_from(list(X.columns))
-        candidates = list(dag_current.nodes)
+        candidates = sorted(dag_current.nodes, key=repr)
         topological_order_ = []
 
         # Step 1: Find the topological order for the variables.
@@ -161,7 +161,7 @@ class TOPIC(BaseCausalDiscovery):
             # preferred sink).
             delta = score_improvement - score_improvement.T
             np.fill_diagonal(delta, -np.inf)
-            source = candidates[np.argmin(delta.max(axis=0))]
+            source = candidates[np.argmin(np.nanmax(delta, axis=0))]
             candidates.remove(source)
             topological_order_.append(source)
 

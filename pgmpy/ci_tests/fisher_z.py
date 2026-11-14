@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from scipy import stats
+from scipy import special
 
 from ._base import _CITestResult
 from .pearsonr import Pearsonr
@@ -24,7 +24,8 @@ class FisherZ(Pearsonr):
     Parameters
     ----------
     data : pandas.DataFrame
-        The dataset in which to test the independence condition.
+        The dataset in which to test the independence condition. All columns must be numeric and without missing
+        values.
 
     Attributes
     ----------
@@ -73,11 +74,10 @@ class FisherZ(Pearsonr):
 
         Returns the Fisher Z statistic and p-value.
         """
-        pearsonr_result = super()._compute_result(X=X, Y=Y, Z=Z)
-        partial_corr = pearsonr_result.statistic
+        partial_corr, _ = self._partial_correlation(X, Y, Z)
 
         rho = np.clip(partial_corr, -0.999999, 0.999999)
         statistic = np.sqrt(self.data.shape[0] - len(Z) - 3) * np.arctanh(rho)
-        p_value = 2 * stats.norm.sf(np.abs(statistic))
+        p_value = 2 * special.ndtr(-abs(statistic))
 
         return _CITestResult(statistic=statistic, p_value=p_value, effect_size=abs(partial_corr))
