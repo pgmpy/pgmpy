@@ -179,14 +179,14 @@ class BootstrapEstimator(BaseCausalDiscovery):
         "requires_target": False,
         "capability:multivariate": True,
         "capability:expert_knowledge": ["forbidden_edges", "required_edges", "search_space", "temporal_order"],
-        "assumption:causal_sufficiency": False,
-        "assumption:acyclicity": False,
-        "assumption:faithfulness": False,
-        "assumption:linearity": False,
-        "assumption:additive_noise": False,
-        "assumption:gaussian_noise": False,
-        "assumption:non_gaussian_noise": False,
-        "assumption:low_noise": False,
+        "assumption:causal_sufficiency": None,
+        "assumption:acyclicity": None,
+        "assumption:faithfulness": None,
+        "assumption:linearity": None,
+        "assumption:additive_noise": None,
+        "assumption:gaussian_noise": None,
+        "assumption:non_gaussian_noise": None,
+        "assumption:low_noise": None,
     }
 
     def __init__(

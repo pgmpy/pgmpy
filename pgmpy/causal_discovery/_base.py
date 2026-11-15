@@ -138,7 +138,6 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         if components:
             base_tags = self.get_tags() if estimator is not None else type(self).get_class_tags()
             data_types = base_tags["data_types"]
-            # Preserve None (unknown) instead of collapsing via bool(value)
             assumptions = {key: base_tags.get(key) for key in base_tags if key.startswith("assumption:")}
             for component in components:
                 component_tags = component.get_tags() if isinstance(component, BaseObject) else {}
@@ -147,16 +146,18 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
                     data_types = (
                         list(component_types) if data_types is None else [t for t in data_types if t in component_types]
                     )
-                for key in assumptions:
-                    if key in component_tags:
-                        comp_val = component_tags[key]
-                        curr_val = assumptions[key]
-                        if curr_val is True or comp_val is True:
-                            assumptions[key] = True
-                        elif curr_val is None or comp_val is None:
-                            assumptions[key] = None
-                        else:
-                            assumptions[key] = False
+                for key, curr_val in assumptions.items():
+                    comp_val = component_tags.get(key)
+                    if curr_val is None:
+                        assumptions[key] = comp_val
+                    elif comp_val is not None and curr_val != comp_val:
+                        warnings.warn(
+                            f"Assumption mismatch for '{key}': {type(self).__name__} has "
+                            f"{key}={curr_val}, but component {type(component).__name__} "
+                            f"has {key}={comp_val}.",
+                            UserWarning,
+                            stacklevel=2,
+                        )
             self.set_tags(data_types=data_types, **assumptions)
         return result
 

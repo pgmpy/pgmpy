@@ -40,8 +40,8 @@ def test_object_tags_are_registered_and_valid(cls):
     tag_types = {tag[0]: tag[2] for tag in TAG_REGISTER}
     for tag_name, tag_value in tags.items():
         check_tag_is_valid(tag_name, tag_value)
-        if tag_types[tag_name] == "bool":
-            assert tag_value is not None, f"CLass '{cls.__name__}' left boolean tag '{tag_name} as None"
+        if tag_types[tag_name] == "bool" and not tag_name.startswith("assumption:"):
+            assert tag_value is not None, f"Class '{cls.__name__}' left boolean tag '{tag_name}' as None"
 
 
 @pytest.mark.parametrize("object_type", OBJECT_TYPES)

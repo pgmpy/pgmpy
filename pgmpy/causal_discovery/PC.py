@@ -155,11 +155,11 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
         "assumption:causal_sufficiency": True,
         "assumption:acyclicity": True,
         "assumption:faithfulness": True,
-        "assumption:linearity": False,
-        "assumption:additive_noise": False,
-        "assumption:gaussian_noise": False,
-        "assumption:non_gaussian_noise": False,
-        "assumption:low_noise": False,
+        "assumption:linearity": None,
+        "assumption:additive_noise": None,
+        "assumption:gaussian_noise": None,
+        "assumption:non_gaussian_noise": None,
+        "assumption:low_noise": None,
     }
 
     def __init__(

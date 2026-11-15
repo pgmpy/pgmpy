@@ -129,8 +129,6 @@ def test_invalid_type():
 
 from sklearn.tree import DecisionTreeRegressor
 
-...
-
 
 @pytest.mark.parametrize(
     "cls",

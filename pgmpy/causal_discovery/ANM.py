@@ -114,10 +114,10 @@ class ANM(BaseCausalDiscovery):
         "assumption:causal_sufficiency": True,
         "assumption:acyclicity": True,
         "assumption:faithfulness": False,
-        "assumption:linearity": False,
+        "assumption:linearity": None,
         "assumption:additive_noise": True,
-        "assumption:gaussian_noise": False,
-        "assumption:non_gaussian_noise": False,
+        "assumption:gaussian_noise": None,
+        "assumption:non_gaussian_noise": None,
         "assumption:low_noise": False,
     }
 
