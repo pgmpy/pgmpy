@@ -18,7 +18,6 @@ class _BasePCMCI(BaseTimeSeriesCausalDiscovery):
         tau_max=1,
         pc_alpha=0.05,
         fdr_method="fdr_bh",
-        verbosity=0,
         link_assumptions=None,
         **kwargs,
     ):
@@ -27,7 +26,6 @@ class _BasePCMCI(BaseTimeSeriesCausalDiscovery):
             tau_min=tau_min,
             tau_max=tau_max,
             cond_ind_test=cond_ind_test,
-            verbosity=verbosity,
         )
 
         if not isinstance(pc_alpha, (int, float)) or isinstance(pc_alpha, bool):
@@ -68,7 +66,6 @@ class _BasePCMCI(BaseTimeSeriesCausalDiscovery):
         self.pcmci_ = TigramitePCMCI(
             dataframe=self.tigramite_data_,
             cond_ind_test=self.tigramite_ci_test_,
-            verbosity=self.verbosity,
         )
 
     def _set_link_assumptions(self):
