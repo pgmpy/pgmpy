@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 from collections.abc import Hashable, Iterable
 
 import numpy as np
@@ -192,6 +193,83 @@ class _TimeSeriesCoreGraph(_CoreGraph):
         return {lag: sorted(variables, key=str) for lag, variables in sorted(parents.items())}
 
     def from_adjacency(cls, adj, encoding: str = "tigramite", variables: Iterable[Hashable] | None = None):
-        """
-        In progress.
-        """
+        if encoding != "tigramite":
+            raise ValueError(
+                f"{cls.__name__} only supports encoding='tigramite'; got encoding={encoding!r}. The "
+                f"two-dimensional encodings have no axis for the lag."
+            )
+        mark_to_edge_type = {
+            "-->": "->",
+            "<--": "<-",
+            "o-o": "--",
+            "<->": "<>",
+            "o->": "o>",
+            "<-o": "<o",
+        }
+        adj = np.asarray(adj)
+        if adj.ndim != 3 or adj.shape[0] != adj.shape[1]:
+            raise ValueError(
+                f"Expected a three-dimensional array of shape (N, N, tau_max + 1), the third axis being "
+                f"the lag. Got shape {adj.shape}."
+            )
+        n_vars, _, n_lags = adj.shape
+        if variables is None:
+            variables = list(range(n_vars))
+        else:
+            variables = list(variables)
+            if len(variables) != n_vars:
+                raise ValueError(f"Got {len(variables)} names for {n_vars} variables.")
+            if len(set(variables)) != n_vars:
+                raise ValueError(f"Variable names must be unique. Got: {variables}")
+
+        is_string = adj.dtype.kind in "US"
+        if adj.dtype.kind == "O":
+            kinds = {isinstance(cell, str) for cell in adj.flat}
+            if kinds == {True, False}:
+                raise ValueError("adj mixes string marks and numbers. Use tigramite marks or 0/1, not both.")
+            is_string = kinds == {True}
+        if is_string:
+            mirror = str.maketrans("<>", "><")
+            for i, j in itertools.combinations(range(n_vars), 2):
+                upper, lower = str(adj[i, j, 0]), str(adj[j, i, 0])
+                if upper[::-1].translate(mirror) != lower:
+                    raise ValueError(
+                        f"adj[{i}, {j}, 0] = '{upper}' and adj[{j}, {i}, 0] = '{lower}' do not describe the same "
+                        f"link. A lag-0 link is written in both cells, the second the mirror of the first."
+                    )
+        edge_list = []
+        for i, j, tau in itertools.product(range(n_vars), range(n_vars), range(n_lags)):
+            cell = adj[i, j, tau]
+            if is_string:
+                mark = str(cell)
+                if mark == "":
+                    continue
+                if tau == 0 and i > j:
+                    continue
+                edge_type = mark_to_edge_type.get(mark)
+                if edge_type is None or edge_type not in cls.SUPPORTED_EDGE_TYPES:
+                    raise ValueError(
+                        f"adj[{i}, {j}, {tau}] = '{mark}' is not a link {cls.__name__} can hold. Supported "
+                        f"edge types are {sorted(cls.SUPPORTED_EDGE_TYPES)}."
+                    )
+                edge_list.append(((variables[i], -tau), (variables[j], 0), edge_type))
+            else:
+                if cell == 0:
+                    continue
+                if cell != 1:
+                    raise ValueError(f"adj[{i}, {j}, {tau}] = {cell} is not a 0/1 link marker.")
+                symmetric = tau == 0 and adj[j, i, 0] == 1
+                edge_type = "--" if symmetric else "->"
+                if edge_type not in cls.SUPPORTED_EDGE_TYPES:
+                    raise ValueError(
+                        f"adj[{i}, {j}, 0] and adj[{j}, {i}, 0] are both 1, which marks an unoriented link. "
+                        f"{cls.__name__} supports {sorted(cls.SUPPORTED_EDGE_TYPES)}."
+                    )
+                if symmetric and i > j:
+                    continue
+                edge_list.append(((variables[i], -tau), (variables[j], 0), edge_type))
+
+        model = cls(edge_list=edge_list, tau_max=n_lags - 1)
+        present = set(model.variables)
+        model.add_nodes_from([variable for variable in variables if variable not in present])
+        return model
