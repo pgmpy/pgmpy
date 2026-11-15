@@ -123,6 +123,14 @@ class _TimeSeriesCoreGraph(_CoreGraph):
         u, v, edge_type = self._normalize_edge(u, v, edge_type)
         return super().has_edge(u, v, edge_type)
 
+    def with_role(self, role: str, variables, inplace: bool = False):
+        return super().with_role(role=role, variables=self._to_nodes(variables), inplace=inplace)
+
+    def without_role(self, role: str, variables=None, inplace: bool = False):
+        if variables is None:
+            return super().without_role(role=role, variables=None, inplace=inplace)
+        return super().without_role(role=role, variables=self._to_nodes(variables), inplace=inplace)
+
     def variables(self) -> list:
         """
         Returns the list of distinct variable names, with times dropped and duplicates removed.
