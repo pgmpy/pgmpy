@@ -7,13 +7,14 @@ license = { file = "LICENSE" }
 authors = [
   { name = "Ankur Ankan", email = "ankurankan@gmail.com" }
 ]
-requires-python = ">=3.10,<3.15"
+requires-python = ">=3.10,<3.16"
 classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.15",
   "Intended Audience :: Education",
   "Intended Audience :: Science/Research",
   "Operating System :: Unix",
@@ -48,7 +49,7 @@ optional = [
   "pgmpy[torch]",
   "daft-pgm>=0.1.4",
   "xgboost>=2.0.3",
-  "litellm>=1.61.15",
+  "litellm>=1.61.15; python_version < '3.15'",
   "pygraphviz",
   "matplotlib",
   "skpro>=2.12.0",

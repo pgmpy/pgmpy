@@ -108,9 +108,6 @@ class BaseParameter(BaseEstimator):
 
         supported_types = _as_list(self.get_tag("variable_type"))
         variable_type = supported_types[0] if len(supported_types) == 1 else get_dataset_type(y)
-        # For one column, get_dataset_type says "mixed" only for an ordered categorical with non-string categories.
-        if variable_type == "mixed":
-            variable_type = "discrete"
         if variable_type not in supported_types:
             raise ValueError(f"{type(self).__name__} supports {supported_types} targets, but y is {variable_type}.")
         if variable_type == "continuous" and not _is_numeric(y.dtypes.iloc[0]):

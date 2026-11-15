@@ -92,7 +92,7 @@ class GeneralizedCov(_ResidualMixin, BaseCITest):
         rng: int | np.random.Generator | None = None,
         use_cache: bool = True,
     ):
-        self.data, self.dtypes = preprocess_data(data)
+        self.data, self.dtypes = preprocess_data(data, data_types=self.get_class_tag("data_types"))
         self.estimator = estimator
         self.n_permutations = n_permutations
         self.rng = rng
