@@ -8,7 +8,6 @@ from sklearn.base import BaseEstimator, clone
 from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
 from pgmpy.causal_discovery.bivariate_scores import BaseBivariateScore, get_bivariate_score
-from pgmpy.utils import get_dataset_type
 
 
 class ANM(BaseCausalDiscovery):
@@ -153,9 +152,6 @@ class ANM(BaseCausalDiscovery):
         # Step 0: Validate the inputs and initialize attributes.
         if X.shape[1] != 2:
             raise ValueError(f"ANM requires exactly two variables, got {X.shape[1]}.")
-
-        if get_dataset_type(X) != "continuous":
-            raise ValueError("ANM requires continuous (numeric) variables; got non-continuous data.")
 
         x, y = self.feature_names_in_
 

@@ -1,12 +1,9 @@
 import numpy as np
 import pandas as pd
-from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
+from skbase.utils.dependencies import _check_soft_dependencies
 
 from pgmpy import config
 from pgmpy.factors.base import BaseFactor
-
-torch = _safe_import("torch")
-pyro = _safe_import("pyro", pkg_name="pyro-ppl")
 
 
 class FunctionalCPD(BaseFactor):
@@ -99,6 +96,8 @@ class FunctionalCPD(BaseFactor):
         array([2.63669035, 2.82880941])
         >>> config.set_backend('numpy')
         """
+        import pyro
+
         sampled_values = []
 
         if parent_sample is not None:
@@ -116,6 +115,8 @@ class FunctionalCPD(BaseFactor):
                 samples = pyro.sample(f"{self.variable}_vectorized", dists)
                 sampled_values = samples.detach().numpy()
             else:
+                import torch
+
                 for i in range(n_samples):
                     row = parent_sample.iloc[i]
                     parents_t = {
