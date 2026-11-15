@@ -120,8 +120,8 @@ class _TimeSeriesCoreGraph(_CoreGraph):
         super().remove_edge(u, v, edge_type=edge_type)
 
     def has_edge(self, u: Hashable, v: Hashable, edge_type: str | None = None) -> bool:
-        u, v, edge_type = self._normalize_edge(u, v, edge_type or "--")
-        return super().has_edge(u, v, edge_type if edge_type != "--" else None)
+        u, v, edge_type = self._normalize_edge(u, v, edge_type)
+        return super().has_edge(u, v, edge_type)
 
     def variables(self) -> list:
         """
