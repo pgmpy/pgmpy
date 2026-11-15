@@ -106,6 +106,13 @@ class _TimeSeriesCoreGraph(_CoreGraph):
     def add_edge(self, u: Hashable, v: Hashable, edge_type: str) -> None:
         u, v, edge_type = self._normalize_edge(u, v, edge_type)
         self._check_lag(-u[1])
+        if u[1] != 0:
+            markers = self._to_markers((u, v, edge_type))
+            if markers[u] == ">" and markers[v] != ">":
+                raise ValueError(
+                    f"The edge {u} {edge_type} {v} points backwards in time. A lagged link must not put an "
+                    f"arrowhead on the earlier endpoint alone."
+                )
         super().add_edge(u, v, edge_type=edge_type)
 
     def remove_edge(self, u: Hashable, v: Hashable, edge_type: str) -> None:
