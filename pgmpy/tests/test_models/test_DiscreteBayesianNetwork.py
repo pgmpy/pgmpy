@@ -1085,14 +1085,43 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
         model = load_model("bnlearn/asia")
         model_copy = model.copy()
         data = BayesianModelSampling(model).forward_sample(int(1e3))
-        model.fit_update(data, n_prev_samples=int(1e3))
+        with pytest.warns(
+            FutureWarning,
+            match="`DiscreteBayesianNetwork.fit_update` is deprecated since v1.2.0 and will be removed in v2.0.",
+        ):
+            model.fit_update(data, n_prev_samples=int(1e3))
         for var in model.nodes():
             self.assertTrue(model_copy.get_cpds(var).__eq__(model.get_cpds(var), atol=0.1))
 
         model = model_copy.copy()
-        model.fit_update(data)
+        with pytest.warns(
+            FutureWarning,
+            match="`DiscreteBayesianNetwork.fit_update` is deprecated since v1.2.0 and will be removed in v2.0.",
+        ):
+            model.fit_update(data)
         for var in model.nodes():
             self.assertTrue(model_copy.get_cpds(var).__eq__(model.get_cpds(var), atol=0.1))
+
+    def test_fit_warm_start(self):
+        model = load_model("bnlearn/asia")
+        model_copy = model.copy()
+        data = BayesianModelSampling(model).forward_sample(int(1e3))
+
+        # Warm start on already fitted model updates CPDs
+        model.fit(data, warm_start=True, n_prev_samples=int(1e3))
+        for var in model.nodes():
+            self.assertTrue(model_copy.get_cpds(var).__eq__(model.get_cpds(var), atol=0.1))
+
+        model = model_copy.copy()
+        model.fit(data, warm_start=True)
+        for var in model.nodes():
+            self.assertTrue(model_copy.get_cpds(var).__eq__(model.get_cpds(var), atol=0.1))
+
+        # Warm start on unfitted model fits from scratch
+        fresh_model = DiscreteBayesianNetwork(model.edges())
+        self.assertEqual(len(fresh_model.cpds), 0)
+        fresh_model.fit(data, warm_start=True)
+        self.assertEqual(len(fresh_model.cpds), len(model.nodes()))
 
     def test_dag_with_independent_node_fit(self):
         edge_list = [("A", "C"), ("B", "C")]

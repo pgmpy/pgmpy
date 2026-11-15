@@ -966,11 +966,11 @@ class DynamicBayesianNetwork(DAG):
             new_colnames = [str(node) + "_" + str(int(t) - t_slice) for (node, t) in tuple_colnames]
             df_slice.columns = new_colnames
 
-            # Fit or fit_update with df_slice depending on the time slice
+            # Fit or fit with warm_start depending on the time slice
             if t_slice == 0:
                 const_bn.fit(df_slice)
             else:
-                const_bn.fit_update(df_slice, n_prev_samples=t_slice * n_samples)
+                const_bn.fit(df_slice, warm_start=True, n_prev_samples=t_slice * n_samples)
 
         cpds = []
         for cpd in const_bn.cpds:

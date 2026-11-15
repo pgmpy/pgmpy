@@ -27,6 +27,7 @@ from pgmpy.models._file_io import _FileIOMixin
 from pgmpy.models.DiscreteMarkovNetwork import DiscreteMarkovNetwork
 from pgmpy.utils import compat_fns
 from pgmpy.utils._random import _rename_to_rng
+from pgmpy.utils._warnings import _warn_external
 
 
 class DiscreteBayesianNetwork(_FileIOMixin, DAG):
@@ -600,7 +601,15 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
         mm = self.to_markov_model()
         return mm.to_junction_tree(heuristic=heuristic, order=order)
 
-    def fit(self, data, estimator=None, sample_weight=None) -> DAG:
+    def fit(
+        self,
+        data: pd.DataFrame,
+        estimator=None,
+        sample_weight=None,
+        warm_start: bool = False,
+        n_prev_samples: int | None = None,
+        n_jobs: int = 1,
+    ) -> DiscreteBayesianNetwork:
         """
         Estimates the CPD for each variable based on a given data set.
 
@@ -619,6 +628,19 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
         sample_weight: array-like of shape (n_samples,), optional
             Per-row weights for `data`. Forwarded to the estimator's `fit`. Only
             accepted by estimators whose `supports_weighted_data` tag is True.
+
+        warm_start: bool, default=False
+            When set to True, reuse the solution of the previous call to fit
+            and update the model parameters with the new data using a Dirichlet
+            prior. If False (default), previous parameters are overwritten.
+
+        n_prev_samples: int, optional
+            The number of samples/datapoints on which the model was trained before.
+            Used when `warm_start=True` to determine how much weight should be
+            given to the previous parameters. If None, defaults to `data.shape[0]`.
+
+        n_jobs: int, default=1
+            Number of threads/processes to use for estimation when `warm_start=True`.
 
         Returns
         -------
@@ -645,7 +667,40 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
          <TabularCPD representing P(sex:2) at 0x...>,
          <TabularCPD representing P(pe:2 | ses:4, sex:2) at 0x...>,
          <TabularCPD representing P(cp:2 | iq:4, pe:2) at 0x...>]
+        >>> # Warm start example
+        >>> fitted_model = model.fit(data, warm_start=True)
+        >>> len(fitted_model.get_cpds())
+        5
         """
+        if warm_start and len(self.cpds) > 0:
+            from pgmpy.parameter_estimator import DiscreteBayesianEstimator
+
+            if n_prev_samples is None:
+                n_prev_samples = data.shape[0]
+
+            # Step 1: Compute the pseudo_counts for the dirichlet prior.
+            pseudo_counts = {
+                var: compat_fns.to_numpy(self.get_cpds(var).get_values()) * n_prev_samples for var in data.columns
+            }
+
+            # Step 2: Get the current order of state names for aligning pseudo counts.
+            state_names = {}
+            for var in data.columns:
+                state_names.update(self.get_cpds(var).state_names)
+
+            # Step 3: Estimate the new CPDs.
+            _est = DiscreteBayesianEstimator(
+                state_names=state_names,
+                prior_type="dirichlet",
+                pseudo_counts=pseudo_counts,
+                n_jobs=n_jobs,
+            )
+            _est.fit(self, data)
+            cpds = _est.parameters_
+
+            self.add_cpds(*cpds)
+            return self
+
         from pgmpy.parameter_estimator import DiscreteMLE
         from pgmpy.parameter_estimator.base import DiscreteParameterEstimator
 
@@ -664,8 +719,9 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
     def fit_update(self, data: pd.DataFrame, n_prev_samples: int | None = None, n_jobs: int = 1) -> None:
         """
         Method to update the parameters of the DiscreteBayesianNetwork with more data.
-        Internally, uses DiscreteBayesianEstimator with dirichlet prior, and uses
-        the current CPDs (along with `n_prev_samples`) to compute the pseudo_counts.
+
+        Deprecated since v1.2.0: `fit_update` is deprecated and will be removed in v2.0.
+        Use `DiscreteBayesianNetwork.fit(..., warm_start=True)` instead.
 
         Parameters
         ----------
@@ -693,34 +749,14 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
         >>> model = load_model("bnlearn/alarm")
         >>> # Generate some new data.
         >>> data = BayesianModelSampling(model).forward_sample(int(1e3))
-        >>> model.fit_update(data)
+        >>> model.fit(data, warm_start=True)
         """
-        from pgmpy.parameter_estimator import DiscreteBayesianEstimator
-
-        if n_prev_samples is None:
-            n_prev_samples = data.shape[0]
-
-        # Step 1: Compute the pseudo_counts for the dirichlet prior.
-        pseudo_counts = {
-            var: compat_fns.to_numpy(self.get_cpds(var).get_values()) * n_prev_samples for var in data.columns
-        }
-
-        # Step 2: Get the current order of state names for aligning pseudo counts.
-        state_names = {}
-        for var in data.columns:
-            state_names.update(self.get_cpds(var).state_names)
-
-        # Step 3: Estimate the new CPDs.
-        _est = DiscreteBayesianEstimator(
-            state_names=state_names,
-            prior_type="dirichlet",
-            pseudo_counts=pseudo_counts,
-            n_jobs=n_jobs,
+        _warn_external(
+            "`DiscreteBayesianNetwork.fit_update` is deprecated since v1.2.0 and will be removed in v2.0. "
+            "Use `DiscreteBayesianNetwork.fit(data, warm_start=True)` instead.",
+            FutureWarning,
         )
-        _est.fit(self, data)
-        cpds = _est.parameters_
-
-        self.add_cpds(*cpds)
+        self.fit(data, warm_start=True, n_prev_samples=n_prev_samples, n_jobs=n_jobs)
 
     @_rename_to_rng("seed")
     def predict(
