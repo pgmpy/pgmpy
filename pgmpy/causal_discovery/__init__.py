@@ -6,6 +6,7 @@ from .ExpertKnowledge import ExpertKnowledge
 from .GES import GES
 from .HillClimbSearch import HillClimbSearch
 from .IGCI import IGCI
+from .LatentPC import LatentPC
 from .LLMPairwise import LLMPairwise
 from .PC import PC
 from .R2Sort import R2Sort
@@ -23,6 +24,7 @@ __all__ = [
     "GES",
     "HillClimbSearch",
     "IGCI",
+    "LatentPC",
     "LLMPairwise",
     "PC",
     "R2Sort",

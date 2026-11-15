@@ -1,20 +1,20 @@
+from collections.abc import Callable, Hashable, Iterable
+from itertools import chain, combinations
+from typing import Any
+
 import networkx as nx
 import pandas as pd
-
-from collections.abc import Callable, Hashable
-from itertools import combinations, chain
 from sklearn.base import clone
-from sklearn.utils.validation import check_is_fitted, validate_data
 from tqdm.auto import tqdm
-from typing import List, Any, Iterable
 
 from pgmpy import config, logger
 from pgmpy.base import PDAG
 from pgmpy.causal_discovery import ExpertKnowledge
-from pgmpy.ci_tests import get_ci_test, IndependenceMatch
+from pgmpy.causal_discovery._base import BaseCausalDiscovery
+from pgmpy.ci_tests import IndependenceMatch, get_ci_test
 
 
-class LatentPC():
+class LatentPC(BaseCausalDiscovery):
     """
     The Latent-PC algorithm for causal discovery / structure learning.
 
@@ -24,8 +24,8 @@ class LatentPC():
     variables in the data as a Ψ-Partially Directed Acyclic Graph (Ψ-PDAG).
 
     The algorithm uses data from a combination of observational and experimental data (assuming soft
-    interventions), with the interventional targets being unknown. The latent variables represent the 
-    difference in mechanism between any two datasets; in other words, the latent variables form edges 
+    interventions), with the interventional targets being unknown. The latent variables represent the
+    difference in mechanism between any two datasets; in other words, the latent variables form edges
     with the variables in the two datasets where the interventions took place.
     The algorithm does this by combining conditional independency tests and mechanism shift tests
     and estimates a PDAG pattern that satisfies the identified dependencies.
@@ -149,7 +149,7 @@ class LatentPC():
         self.show_progress = show_progress
         self._ci_test_mechanisms = {}
 
-    def _fit(self, datasets: list[pd.DataFrame], independencies=None):
+    def _fit(self, datasets: list[pd.DataFrame], independencies=None) -> PDAG:
         """
         The fitting procedure for the PC algorithm.
 
@@ -166,7 +166,10 @@ class LatentPC():
         """
 
         # CI test
-        self.ci_test_ = get_ci_test(test=self.ci_test, data=datasets[0])
+        if independencies is not None:
+            self.ci_test_ = IndependenceMatch(independencies=independencies)
+        else:
+            self.ci_test_ = get_ci_test(test=self.ci_test, data=datasets[0])
 
         # Check if expert knowledge was specified
         if self.expert_knowledge is None:
@@ -184,11 +187,6 @@ class LatentPC():
         lim_neighbors = 0
         separating_sets = dict()
 
-        # if independencies is not None:
-        #    ci_test = IndependenceMatch(independencies=independencies)
-        # else:
-        #    ci_test = get_ci_test(test=self.ci_test, data=datasets[0])
-
         if self.show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(total=self.max_cond_vars)
             pbar.set_description("Working for n conditional variables: 0")
@@ -202,9 +200,7 @@ class LatentPC():
         for i in range(1, len(datasets) + 1):
             for j in range(i + 1, len(datasets) + 1):
                 if f"f_{k}" in variables:
-                    raise ValueError(
-                        f"Observed variable f_{k} conflicts with a mechanism-node name."
-                    )
+                    raise ValueError(f"Observed variable f_{k} conflicts with a mechanism-node name.")
                 distribution_map[f"f_{k}"] = (i, j)
                 f_nodes.append(f"f_{k}")
                 k += 1
@@ -222,9 +218,7 @@ class LatentPC():
 
         # Remove edges that are forbidden in both directions. Directed forbidden are enforced as orientations after the
         # skeleton is learned. Also remove edges between mechanism nodes.
-        graph.remove_edges_from(
-            [(u, v) for (u, v) in forbidden_edges if (v, u) in forbidden_edges]
-        )
+        graph.remove_edges_from([(u, v) for (u, v) in forbidden_edges if (v, u) in forbidden_edges])
         for idx, f1 in enumerate(f_nodes):
             for f2 in f_nodes[idx + 1 :]:
                 graph.remove_edge(f1, f2)
@@ -232,17 +226,18 @@ class LatentPC():
 
         # Exit condition: 1. If all the nodes in graph has less than `lim_neighbors` neighbors.
         #             or  2. `lim_neighbors` is greater than `max_conditional_variables`.
-        while not all(
-            [len(list(graph.neighbors(var))) < lim_neighbors for var in variables]
-        ):
+        while not all([len(list(graph.neighbors(var))) < lim_neighbors for var in variables]):
             # Step 2.1: Iterate over the edges and find a conditioning set of
             # size `lim_neighbors` which makes u and v independent.
 
             curr_edges = list(graph.edges())
             for u, v in curr_edges:
                 edges_to_remove = []
+                sep_flag = False
+                sep_set = tuple()
+
                 if u in f_nodes and v in f_nodes:
-                    sep_flag, sep_set = True, set()
+                    sep_flag, sep_set = True, tuple()
 
                 elif (u, v) not in required_edges:
                     sep_flag, sep_set = self.latent_separating_set(
@@ -255,9 +250,8 @@ class LatentPC():
                         lim_neighbors,
                     )
 
-                separating_sets[frozenset((u, v))] = sep_set
-
                 if sep_flag is True:
+                    separating_sets[frozenset((u, v))] = tuple(sorted(sep_set, key=repr))
                     edges_to_remove.append((u, v))
 
                 graph.remove_edges_from(edges_to_remove)
@@ -265,17 +259,13 @@ class LatentPC():
             # Step 2.2: After iterating over all the edges, expand the search space by increasing the size
             #         of conditioning set by 1.
             if lim_neighbors >= self.max_cond_vars:
-                logger.info(
-                    f"Reached the maximum number of conditional variables ({self.max_cond_vars}). Exiting."
-                )
+                logger.info(f"Reached the maximum number of conditional variables ({self.max_cond_vars}). Exiting.")
                 break
 
             lim_neighbors += 1
             if self.show_progress and config.SHOW_PROGRESS:
                 pbar.update(1)
-                pbar.set_description(
-                    f"Working for n conditional variables: {lim_neighbors}"
-                )
+                pbar.set_description(f"Working for n conditional variables: {lim_neighbors}")
 
         if self.show_progress and config.SHOW_PROGRESS:
             pbar.update(self.max_cond_vars - lim_neighbors)
@@ -283,7 +273,7 @@ class LatentPC():
 
         # Step 3: Use separating sets to orient colliders
         self.skeleton_, self.separating_sets_ = graph, separating_sets
-        pdag = self._orient_colliders(temporal_ordering=temporal_ordering)
+        pdag = self._orient_colliders(temporal_ordering=temporal_ordering, latent_nodes=self.latent_nodes)
 
         # Step 4: Apply orientation rules and expert knowledge as hard directional constraints.
         curr_edges = list(pdag.edges)
@@ -296,18 +286,17 @@ class LatentPC():
                 pdag.orient_undirected_edge(v, u, inplace=True)
                 # pdag.replace_edge(v, u, '<-', 'o-')
 
+        pdag = expert_knowledge.apply_to(pdag)
         pdag = pdag.apply_meeks_rules(apply_r4=False)
         pdag.add_nodes_from(set(X.columns) - set(pdag.nodes()))
 
         self.causal_graph_ = pdag
-        self.adjacency_matrix_ = self.causal_graph_.to_adjacency(
-            encoding="binary", nodelist=list(self.causal_graph_.nodes())
-        )
+        self.adjacency_matrix_ = self.causal_graph_.to_adjacency(encoding="binary", nodelist=all_variables)
         return self
 
     def latent_separating_set(
         self,
-        datasets: List[pd.DataFrame],
+        datasets: list[pd.DataFrame],
         u: Any,
         v: Any,
         graph_nodes: Iterable,
@@ -327,33 +316,23 @@ class LatentPC():
             ci_test = getattr(self, "ci_test_", None)
             if ci_test is None:
                 ci_test = get_ci_test(test=self.ci_test, data=datasets[0])
-                self.ci_test_ = ci_test
 
             conditioning_set = list(graph_nodes - {u, v})
             conditioning_set = list(
-                chain.from_iterable(
-                    combinations(conditioning_set, r)
-                    for r in range(limit_neighbors + 1)
-                )
+                chain.from_iterable(combinations(conditioning_set, r) for r in range(limit_neighbors + 1))
             )
             for nodes in conditioning_set:
-                if ci_test.is_independent(
-                    u, v, nodes, significance_level=self.significance_level
-                ):
+                if ci_test(u, v, nodes, significance_level=self.significance_level):
                     return True, set(nodes) | latent_nodes
 
         else:
             i, j = distribution_map[u]
             conditioning_set = list(graph_nodes - {v})
             conditioning_set = list(
-                chain.from_iterable(
-                    combinations(conditioning_set, r)
-                    for r in range(limit_neighbors + 1)
-                )
+                chain.from_iterable(combinations(conditioning_set, r) for r in range(limit_neighbors + 1))
             )
 
             if u not in self._ci_test_mechanisms:
-
                 d_i = datasets[i - 1].copy()
                 d_j = datasets[j - 1].copy()
 
@@ -376,7 +355,7 @@ class LatentPC():
 
             for nodes in conditioning_set:
                 if (
-                    ci_test.is_independent(
+                    ci_test(
                         v,
                         "_mechanism",
                         nodes,
@@ -391,6 +370,7 @@ class LatentPC():
     def _orient_colliders(
         self,
         temporal_ordering: dict[Hashable, int] = dict(),
+        latent_nodes=set(),
     ) -> PDAG:
         """
         Orients the edges that form v-structures in a graph skeleton to form a PDAG.
@@ -432,19 +412,13 @@ class LatentPC():
         colliders = []
         if orient_rule is None:
             for X, Y in combinations(sorted(skeleton.nodes()), 2):
-                if (
-                    skeleton.has_edge(X, Y)
-                    or X in self.latent_nodes
-                    or Y in self.latent_nodes
-                ):
+                if skeleton.has_edge(X, Y) or X in latent_nodes or Y in latent_nodes:
                     continue
                 sepset = separating_sets.get(frozenset((X, Y)))
                 if sepset is None:
                     # This edge was removed by expert knowledge. Ignore.
                     continue
-                for Z in sorted(
-                    set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y))
-                ):
+                for Z in sorted(set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y))):
                     if Z not in sepset:
                         colliders.append((X, Y, Z))
         else:
@@ -454,49 +428,34 @@ class LatentPC():
 
             candidates = []
             for X, Y in combinations(sorted(skeleton.nodes()), 2):
-                if (
-                    skeleton.has_edge(X, Y)
-                    or X in self.latent_nodes
-                    or Y in self.latent_nodes
-                ):
+                if skeleton.has_edge(X, Y) or X in latent_nodes or Y in latent_nodes:
                     continue
                 if frozenset((X, Y)) not in separating_sets:
                     # This edge was removed by expert knowledge. Ignore.
                     continue
-                common_neighbors = set(skeleton.neighbors(X)) & set(
-                    skeleton.neighbors(Y)
-                )
+                common_neighbors = set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y))
                 if not common_neighbors:
                     continue
 
                 potential = sorted(
-                    (set(skeleton.neighbors(X)) - {Y})
-                    | (set(skeleton.neighbors(Y)) - {X}),
+                    (set(skeleton.neighbors(X)) - {Y}) | (set(skeleton.neighbors(Y)) - {X}),
                     key=repr,
                 )
 
                 results = []
                 for size in range(min(len(potential), max_cond_vars) + 1):
                     for subset in combinations(potential, size):
-                        ci_test(
-                            X, Y, list(subset), significance_level=significance_level
-                        )
+                        ci_test(X, Y, list(subset), significance_level=significance_level)
                         results.append((subset, ci_test.p_value_, ci_test.effect_size_))
 
                 for Z in common_neighbors:
                     if orient_rule == "pvalue":
-                        max_p_with = max(
-                            (p for s, p, _ in results if Z in s), default=-1.0
-                        )
-                        max_p_without = max(
-                            (p for s, p, _ in results if Z not in s), default=-1.0
-                        )
+                        max_p_with = max((p for s, p, _ in results if Z in s), default=-1.0)
+                        max_p_without = max((p for s, p, _ in results if Z not in s), default=-1.0)
                         is_collider = max_p_without > max_p_with
                         priority = max_p_with
                     else:
-                        min_eff_with = min(
-                            (e for s, _, e in results if Z in s), default=float("inf")
-                        )
+                        min_eff_with = min((e for s, _, e in results if Z in s), default=float("inf"))
                         min_eff_without = min(
                             (e for s, _, e in results if Z not in s),
                             default=float("inf"),
@@ -528,9 +487,7 @@ class LatentPC():
             # conflict with a committed orientation (including one fixed by the temporal
             # ordering) or close a directed cycle; keep the first orientation and leave these
             # edges for the Meek rules.
-            if pdag.has_path(Z, X, edge_types="->") or pdag.has_path(
-                Z, Y, edge_types="->"
-            ):
+            if pdag.has_path(Z, X, edge_types="->") or pdag.has_path(Z, Y, edge_types="->"):
                 continue
 
             if pdag.has_edge(X, Z, "--"):

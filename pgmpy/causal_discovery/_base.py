@@ -79,6 +79,24 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         if n_samples < 2:
             raise ValueError(f"n_samples = {n_samples}, at least 2 are required.")
 
+        if not isinstance(X, pd.DataFrame):
+            X = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
+            feature_names = getattr(self, "feature_names_in_", None)
+            if feature_names is not None:
+                if set(feature_names) != set(X.columns):
+                    raise ValueError(
+                        f"Inconsistent naming in dataframe columns:\nPrevious: {feature_names}\nCurrent: {X.columns}"
+                    )
+                else:
+                    self.feature_names_in_ = np.asarray(X.columns, dtype="object")
+        else:
+            feature_names = getattr(self, "feature_names_in_", None)
+            if feature_names is not None:
+                if set(feature_names) != set(X.columns):
+                    raise ValueError(
+                        f"Inconsistent naming in dataframe columns.\nPrevious: {feature_names}\nCurrent: {X.columns}"
+                    )
+
         # Handle cases like complex data, sparse arrays etc. first
         validate_data(
             self,
@@ -88,10 +106,6 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
             ensure_all_finite=True,
             reset=True,
         )
-
-        if not isinstance(X, pd.DataFrame):
-            X = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
-            self.feature_names_in_ = X.columns
 
         if not all([isinstance(x, Hashable) for x in X.values.flat]):
             raise TypeError("argument must be a string, number, or hashable object.")
@@ -107,7 +121,7 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         self.n_features_in_ = len(X.columns)
         return X
 
-    def fit(self, X: pd.DataFrame, y=None, **fit_params):
+    def fit(self, X: pd.DataFrame | list[pd.DataFrame], y=None, **fit_params):
         """Fit data (`X`) to a causal graph. The method calls the `_fit` method, which must be implemented separately in
         any causal discovery algorithm inheriting from `BaseCausalDiscovery`. Additional keyword arguments are passed to
         `_fit`.
@@ -118,7 +132,11 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         the `assumption:*` tags.
         """
         # Step 1: Run checks on the dataset.
-        X = self._check_fit_data(X)
+        if type(X) in (list,):
+            for i in range(len(X)):
+                X[i] = self._check_fit_data(X[i])
+        else:
+            X = self._check_fit_data(X)
 
         # Step 2: Run the fitting algorithm.
         result = self._fit(X, **fit_params)
