@@ -117,7 +117,7 @@ class ANM(BaseCausalDiscovery):
         "assumption:additive_noise": True,
         "assumption:gaussian_noise": None,
         "assumption:non_gaussian_noise": None,
-        "assumption:low_noise": False,
+        "assumption:low_noise": None,
     }
 
     def __init__(

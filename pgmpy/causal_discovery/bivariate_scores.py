@@ -77,7 +77,7 @@ class IndependenceScore(BaseBivariateScore):
         "input_type": "cause_residual",
         "data_types": ["continuous"],
         "assumption:linearity": False,
-        "assumption:additive_noise": False,
+        "assumption:additive_noise": None,
         "assumption:gaussian_noise": False,
     }
 
@@ -131,7 +131,7 @@ class EntropyScore(BaseBivariateScore):
         "input_type": "cause_residual",
         "data_types": ["continuous"],
         "assumption:linearity": False,
-        "assumption:additive_noise": False,
+        "assumption:additive_noise": None,
         "assumption:gaussian_noise": False,
     }
 
@@ -178,7 +178,7 @@ class EntropyDifferenceScore(BaseBivariateScore):
         "input_type": "cause_effect",
         "data_types": ["continuous"],
         "assumption:linearity": False,
-        "assumption:additive_noise": False,
+        "assumption:additive_noise": None,
         "assumption:gaussian_noise": False,
     }
 
@@ -222,7 +222,7 @@ class GaussScore(BaseBivariateScore):
         "input_type": "cause_residual",
         "data_types": ["continuous"],
         "assumption:linearity": False,
-        "assumption:additive_noise": False,
+        "assumption:additive_noise": None,
         "assumption:gaussian_noise": True,
     }
 
@@ -244,7 +244,7 @@ class SlopeScore(BaseBivariateScore):
         "input_type": "cause_effect",
         "data_types": ["continuous"],
         "assumption:linearity": False,
-        "assumption:additive_noise": False,
+        "assumption:additive_noise": None,
         "assumption:gaussian_noise": False,
     }
 
