@@ -13,8 +13,23 @@ from pgmpy.parameterization._base import BaseParameter
 
 
 class CausalInfluenceDiagram(DAG):
-    """A directed acyclic graph with chance, decision, and utility nodes.
+    """A representation class for influence diagrams with chance, decision, and utility nodes.
+    This class extends :class:`pgmpy.base.DAG`.
 
+    * Nodes represent random variables, decisions, or utility quantities.
+    * A directed edge ``A -> B`` indicates that ``A`` is a parent of ``B``.
+    * The graph must not contain directed cycles.
+    * The parents of a chance or decision node define the evidence available to its
+    probability parameterization or policy.
+    * Nodes are processed in topological order during :meth:`simulate`, so all
+    parent values are available before a node is sampled.
+    * Utility nodes must be leaves. Their parent values are passed to the assigned
+    utility function, but utility nodes are not sampled from a probability
+    distribution.
+
+    Unlike a plain ``DAG``, this class uses mutually exclusive node roles:
+    ``"chance"``, ``"decision"``, ``"utility"``, and ``"latent"``. These roles
+    determine which parameterization is required during validation and simulation.
     Chance nodes have conditional probability parameterizations, decision nodes have policies, and utility nodes have
     functions of their parents. Nodes added without a role default to ``"chance"``.
 
@@ -28,7 +43,7 @@ class CausalInfluenceDiagram(DAG):
         Nodes to assign the ``"decision"`` role.
     utility_nodes : iterable of hashable, optional
         Nodes to assign the ``"utility"`` role. Utility nodes must be leaves.
-    latent_nodes : iterable of hashable, optional
+    latents : iterable of hashable, optional
         Nodes to assign the ``"latent"`` role. Latent nodes can only be either chance or decision nodes.
         They cannot be utility nodes.
 
