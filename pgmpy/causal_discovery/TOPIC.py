@@ -38,7 +38,8 @@ class TOPIC(BaseCausalDiscovery):
     min_improvement : float, default=1e-6
         Threshold used symmetrically for edge addition and pruning. An edge ``source -> node`` is added if its local
         score improvement exceeds ``min_improvement``; an incoming edge to ``source`` is removed if doing so decreases
-        the local score by at most ``min_improvement``.
+        the local score by at most ``min_improvement``. Candidates for the next source whose maximum incoming
+        improvement is within ``min_improvement`` of the smallest are tied, and the first in sorted order is taken.
 
     show_progress : bool, default=False
         If True, shows a progress bar while learning the causal structure.
@@ -158,10 +159,11 @@ class TOPIC(BaseCausalDiscovery):
                     )
 
             # Step 1.1.2: Source is the candidate with the smallest maximum incoming improvement (i.e. the least
-            # preferred sink).
+            # preferred sink); candidates within min_improvement of the smallest are tied, and the first one wins.
             delta = score_improvement - score_improvement.T
             np.fill_diagonal(delta, -np.inf)
-            source = candidates[np.argmin(np.nanmax(delta, axis=0))]
+            pressure = np.nanmax(delta, axis=0)
+            source = candidates[np.flatnonzero(pressure <= pressure.min() + self.min_improvement)[0]]
             candidates.remove(source)
             topological_order_.append(source)
 

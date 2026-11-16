@@ -246,9 +246,10 @@ def powerset(l_input: list):
 def regression_coefficients(cov: np.ndarray, targets: list[int], given: list[int]) -> np.ndarray:
     r"""Least-squares coefficients of `targets` regressed on `given`, computed from their covariance matrix `cov`.
 
-    :math:`\Sigma_{GG}^{+} \Sigma_{GT}`, with `given` standardized before the pseudo-inverse so that its cutoff does
-    not depend on the scale of each variable. The pseudo-inverse gives the minimum-norm fit when `given` is rank
-    deficient.
+    :math:`\Sigma_{GG}^{-1} \Sigma_{GT}`, solved as a linear system after standardizing `given`, which keeps the
+    system well conditioned when the variables differ in scale. When `given` is singular (collinear or constant
+    regressors), the pseudo-inverse gives the minimum-norm fit instead, as in
+    :class:`sklearn.linear_model.LinearRegression`.
 
     Parameters
     ----------
@@ -275,14 +276,18 @@ def regression_coefficients(cov: np.ndarray, targets: list[int], given: list[int
     scale = np.sqrt(cov[given, given])
     scale[scale == 0] = 1.0
     inverse_scale = 1.0 / scale[:, None]
-    standardized = np.linalg.pinv(cov[np.ix_(given, given)] * inverse_scale * inverse_scale.T)
-    return standardized @ (cov[np.ix_(given, targets)] * inverse_scale) * inverse_scale
+    standardized = cov[np.ix_(given, given)] * inverse_scale * inverse_scale.T
+    rhs = cov[np.ix_(given, targets)] * inverse_scale
+    try:
+        return np.linalg.solve(standardized, rhs) * inverse_scale
+    except np.linalg.LinAlgError:
+        return np.linalg.pinv(standardized) @ rhs * inverse_scale
 
 
 def regression_residual_covariance(cov: np.ndarray, targets: list[int], given: list[int]) -> np.ndarray:
     r"""Covariance of the residuals of a linear least-squares regression of `targets` on `given`, from `cov`.
 
-    Schur complement :math:`\Sigma_{TT} - \Sigma_{TG} \Sigma_{GG}^{+} \Sigma_{GT}`, using
+    Schur complement :math:`\Sigma_{TT} - \Sigma_{TG} \Sigma_{GG}^{-1} \Sigma_{GT}`, using
     :func:`regression_coefficients`.
 
     Parameters
