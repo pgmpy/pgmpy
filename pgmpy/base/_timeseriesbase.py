@@ -94,6 +94,29 @@ class _TimeSeriesCoreGraph(_CoreGraph):
             lag = -lag
         return ((u[0], -lag), (v[0], 0), edge_type)
 
+    def _to_nodes(self, nodes) -> list:
+        def is_node(target) -> bool:
+            return hasattr(target, "to_tuple") or (
+                isinstance(target, tuple)
+                and len(target) == 2
+                and isinstance(target[1], (int, np.integer))
+                and not isinstance(target[1], bool)
+            )
+
+        if isinstance(nodes, str) or is_node(nodes) or not hasattr(nodes, "__iter__"):
+            nodes = [nodes]
+        resolved = []
+        for target in nodes:
+            node = self._normalize_node(target)
+            if is_node(target):
+                resolved.append(node)
+                continue
+            stored = [other for other in self.nodes() if other[0] == node[0]]
+            if not stored:
+                raise ValueError(f"Variable {node[0]} not found in the graph.")
+            resolved.extend(stored)
+        return resolved
+
     def add_node(self, node: Hashable, **attr) -> None:
         node = self._normalize_node(node)
         if not super().has_node(node):
