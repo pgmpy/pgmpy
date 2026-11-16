@@ -1103,6 +1103,16 @@ class TestDAGConversion(unittest.TestCase):
         expected_dagitty = "dag {\nA\n}"
         self.assertEqual(dagitty_result, expected_dagitty)
 
+    def test_check_model(self):
+        """check_model returns True for a DAG and reports the edges of a cycle otherwise"""
+        self.assertTrue(DAG().check_model())
+        self.assertTrue(DAG([("A", "B"), ("B", "C"), ("A", "C")]).check_model())
+
+        dag = DAG([("A", "B"), ("B", "C")])
+        dag.add_edge("C", "A")
+        with self.assertRaisesRegex(ValueError, r"(?s)Cycles are not allowed.*\(A,B\).*\(B,C\).*\(C,A\)"):
+            dag.check_model()
+
     def test_self_loops_prevention(self):
         """Test that self-loops are prevented (DAG constraint)"""
         # This should raise an error when creating the DAG
