@@ -153,6 +153,7 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
 
     SUPPORTED_EDGE_TYPES = frozenset(["--", "-o", "o-", "->", "<-", "o>", "<o", "<>", "oo"])
     SUPPORTS_LATENTS = True
+    MARKERS_TO_EDGE_TYPE = {(">", "-"): "<-", ("o", "-"): "o-", (">", "o"): "<o", (">", ">"): "<>"}
 
     def __init__(
         self,
@@ -831,7 +832,8 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
         subgraph.add_nodes_from(node for node in self.nodes() if node in nodes)
         for u, v, edge_type in self.get_edges(data=True, edge_types=edge_types):
             if u in nodes and v in nodes:
-                subgraph.add_edge(u, v, edge_type=edge_type)
+                key = nx.MultiGraph.add_edge(subgraph, u, v)
+                subgraph.edges[u, v, key].update(self._to_markers(edge=(u, v, edge_type)))
 
         for role, variables in self.get_role_dict().items():
             retained = [node for node in variables if node in nodes]
@@ -973,7 +975,7 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
         # Step 2: Remove every incoming (arrowhead-at-`node`) edge.
         for node in nodes:
             for edge_type in arrowhead_types:
-                for neighbor in self.get_neighbors(node, edge_type):
+                for neighbor in graph.get_neighbors(node, edge_type):
                     graph.remove_edge(node, neighbor, edge_type)
         return graph
 
@@ -1845,11 +1847,4 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
         """
         u_marker = markers[u]
         v_marker = markers[v]
-
-        marker_map = {
-            (">", "-"): "<-",
-            ("o", "-"): "o-",
-            (">", "o"): "<o",
-            (">", ">"): "<>",
-        }
-        return marker_map.get((u_marker, v_marker), f"{u_marker}{v_marker}")
+        return self.MARKERS_TO_EDGE_TYPE.get((u_marker, v_marker), f"{u_marker}{v_marker}")

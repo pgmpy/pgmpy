@@ -739,8 +739,8 @@ class TestDynamicBayesianNetworkMethods3(unittest.TestCase):
         self.cancer_inf = DBNInference(self.cancer_model)
         self.cancer_query_result = self.cancer_inf.query([("Xray", 1)], {("Smoker", 0): 0})[("Xray", 1)].values
 
-        self.assertAlmostEqual(self.cancer_query_result[0], 0.213307, 4)
-        self.assertAlmostEqual(self.cancer_query_result[1], 0.786693, 4)
+        self.assertAlmostEqual(self.cancer_query_result[0], 0.2173922, 4)
+        self.assertAlmostEqual(self.cancer_query_result[1], 0.7826078, 4)
 
     def test_initialize_and_infer3(self):
         self.cancer_model.add_edges_from(
@@ -1369,7 +1369,7 @@ class TestDBNSampling(unittest.TestCase):
             n_time_slices=timeslices,
             show_progress=False,
             return_format="numpy3D",
-            seed=None,
+            rng=None,
         )
 
         # check the shapes
@@ -1391,7 +1391,7 @@ class TestDBNSampling(unittest.TestCase):
             n_time_slices=timeslices,
             show_progress=False,
             return_format="wide",
-            seed=seed,
+            rng=seed,
         )
 
         samples = self.dbn.simulate(
@@ -1399,7 +1399,7 @@ class TestDBNSampling(unittest.TestCase):
             n_time_slices=timeslices,
             show_progress=False,
             return_format="numpy3D",
-            seed=seed,
+            rng=seed,
         )
 
         assert isinstance(samples, np.ndarray), "return from numpy3D should be numpy array"
@@ -1449,7 +1449,7 @@ class TestDBNSampling(unittest.TestCase):
             n_time_slices=timeslices,
             show_progress=False,
             return_format="wide",
-            seed=seed,
+            rng=seed,
         )
 
         samples = self.dbn.simulate(
@@ -1457,7 +1457,7 @@ class TestDBNSampling(unittest.TestCase):
             n_time_slices=timeslices,
             show_progress=False,
             return_format="numpy3D",
-            seed=seed,
+            rng=seed,
         )
 
         assert isinstance(samples, np.ndarray), "return from numpy3D should be numpy array"
@@ -1506,7 +1506,7 @@ class TestDBNSampling(unittest.TestCase):
             n_time_slices=timeslices,
             show_progress=False,
             return_format="wide",
-            seed=seed,
+            rng=seed,
         )
 
         samples = self.dbn.simulate(
@@ -1514,7 +1514,7 @@ class TestDBNSampling(unittest.TestCase):
             n_time_slices=timeslices,
             show_progress=False,
             return_format="numpy3D",
-            seed=seed,
+            rng=seed,
         )
 
         assert isinstance(samples, np.ndarray), "return from numpy3D should be numpy array"
@@ -1545,7 +1545,7 @@ class TestDBNSampling(unittest.TestCase):
             n_time_slices=timeslices,
             show_progress=False,
             return_format="pd-multiindex",
-            seed=None,
+            rng=None,
         )
 
         # check the names of indexes ( should be (instance, timestep))
@@ -1572,7 +1572,7 @@ class TestDBNSampling(unittest.TestCase):
             n_time_slices=timeslices,
             show_progress=False,
             return_format="pd-multiindex",
-            seed=seed,
+            rng=seed,
         )
 
         # check the shape
@@ -1587,7 +1587,7 @@ class TestDBNSampling(unittest.TestCase):
             n_time_slices=timeslices,
             show_progress=False,
             return_format="wide",
-            seed=seed,
+            rng=seed,
         )
         wide.columns = pd.MultiIndex.from_tuples(wide.columns, names=["variable", "time"])
         wide = wide.sort_index(axis=1)
@@ -1611,7 +1611,7 @@ class TestDBNSampling(unittest.TestCase):
             n_time_slices=timeslices,
             show_progress=False,
             return_format="pd-multiindex",
-            seed=None,
+            rng=None,
         )
 
         # check the names of indexes ( should be (instance, timestep))
@@ -1637,7 +1637,7 @@ class TestDBNSampling(unittest.TestCase):
             n_time_slices=timeslices,
             show_progress=False,
             return_format="pd-multiindex",
-            seed=seed,
+            rng=seed,
         )
 
         # check the shape
@@ -1652,7 +1652,7 @@ class TestDBNSampling(unittest.TestCase):
             n_time_slices=timeslices,
             show_progress=False,
             return_format="wide",
-            seed=seed,
+            rng=seed,
         )
         wide.columns = pd.MultiIndex.from_tuples(wide.columns, names=["variable", "time"])
         wide = wide.sort_index(axis=1)
@@ -1676,7 +1676,7 @@ class TestDBNSampling(unittest.TestCase):
             n_time_slices=timeslices,
             show_progress=False,
             return_format="pd-multiindex",
-            seed=None,
+            rng=None,
         )
 
         # check the names of indexes ( should be (instance, timestep))
@@ -1702,7 +1702,7 @@ class TestDBNSampling(unittest.TestCase):
             n_time_slices=timeslices,
             show_progress=False,
             return_format="pd-multiindex",
-            seed=seed,
+            rng=seed,
         )
 
         # check the shape
@@ -1717,7 +1717,7 @@ class TestDBNSampling(unittest.TestCase):
             n_time_slices=timeslices,
             show_progress=False,
             return_format="wide",
-            seed=seed,
+            rng=seed,
         )
         wide.columns = pd.MultiIndex.from_tuples(wide.columns, names=["variable", "time"])
         wide = wide.sort_index(axis=1)
@@ -1741,7 +1741,7 @@ class TestDBNSampling(unittest.TestCase):
             n_time_slices=timeslices,
             show_progress=False,
             return_format="pd-list",
-            seed=None,
+            rng=None,
         )
 
         # panel here is in format of list of Dataframes
@@ -1762,7 +1762,7 @@ class TestDBNSampling(unittest.TestCase):
             n_time_slices=timeslices,
             show_progress=False,
             return_format="pd-list",
-            seed=seed,
+            rng=seed,
         )
 
         # panel here is in format of list of Dataframes
@@ -1780,7 +1780,7 @@ class TestDBNSampling(unittest.TestCase):
             n_time_slices=timeslices,
             show_progress=False,
             return_format="wide",
-            seed=seed,
+            rng=seed,
         )
 
         wide.columns = pd.MultiIndex.from_tuples(wide.columns, names=["variable", "time"])
@@ -1805,7 +1805,7 @@ class TestDBNSampling(unittest.TestCase):
             n_time_slices=timeslices,
             show_progress=False,
             return_format="pd-list",
-            seed=None,
+            rng=None,
         )
 
         # panel here is in format of list of Dataframes
@@ -1826,7 +1826,7 @@ class TestDBNSampling(unittest.TestCase):
             n_time_slices=timeslices,
             show_progress=False,
             return_format="pd-list",
-            seed=seed,
+            rng=seed,
         )
 
         # panel here is in format of list of Dataframes
@@ -1844,7 +1844,7 @@ class TestDBNSampling(unittest.TestCase):
             n_time_slices=timeslices,
             show_progress=False,
             return_format="wide",
-            seed=seed,
+            rng=seed,
         )
 
         wide.columns = pd.MultiIndex.from_tuples(wide.columns, names=["variable", "time"])
@@ -1869,7 +1869,7 @@ class TestDBNSampling(unittest.TestCase):
             n_time_slices=timeslices,
             show_progress=False,
             return_format="pd-list",
-            seed=None,
+            rng=None,
         )
 
         # panel here is in format of list of Dataframes
@@ -1890,7 +1890,7 @@ class TestDBNSampling(unittest.TestCase):
             n_time_slices=timeslices,
             show_progress=False,
             return_format="pd-list",
-            seed=seed,
+            rng=seed,
         )
 
         # panel here is in format of list of Dataframes
@@ -1908,7 +1908,7 @@ class TestDBNSampling(unittest.TestCase):
             n_time_slices=timeslices,
             show_progress=False,
             return_format="wide",
-            seed=seed,
+            rng=seed,
         )
 
         wide.columns = pd.MultiIndex.from_tuples(wide.columns, names=["variable", "time"])
@@ -1933,7 +1933,7 @@ class TestDBNSampling(unittest.TestCase):
             n_time_slices=timeslices,
             show_progress=False,
             return_format="sorted",
-            seed=None,
+            rng=None,
         )
 
         # check the columns
@@ -1945,7 +1945,7 @@ class TestDBNSampling(unittest.TestCase):
             n_time_slices=timeslices,
             show_progress=False,
             return_format="sorted",
-            seed=None,
+            rng=None,
         )
 
         assert sorted(panel.columns.copy()) == list(panel.columns), "the columns has to be sorted !"
@@ -1961,7 +1961,7 @@ class TestDBNSampling(unittest.TestCase):
             n_time_slices=timeslices,
             show_progress=False,
             return_format="sorted",
-            seed=None,
+            rng=None,
         )
 
         # check the columns
@@ -2131,3 +2131,15 @@ class TestDBNWithStateName(unittest.TestCase):
                 "G_3": ["A", "B", "C"],
             },
         )
+
+
+def test_simulate_draws_fresh_randomness_per_slice():
+    model = DBN([(("A", 0), ("A", 1))])
+    model.add_cpds(
+        TabularCPD(("A", 0), 2, [[0.5], [0.5]]),
+        TabularCPD(("A", 1), 2, [[0.5, 0.5], [0.5, 0.5]], evidence=[("A", 0)], evidence_card=[2]),
+    )
+    model.initialize_initial_state()
+    df = model.simulate(n_samples=200, n_time_slices=5, rng=0, show_progress=False)
+    assert not df[("A", 2)].equals(df[("A", 3)])
+    assert not df[("A", 3)].equals(df[("A", 4)])

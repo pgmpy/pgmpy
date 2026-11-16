@@ -13,6 +13,7 @@ from pgmpy import logger
 from pgmpy.base._mixin_roles import _GraphRolesMixin
 from pgmpy.ci_tests import BaseCITest, get_ci_test
 from pgmpy.independencies import Independencies
+from pgmpy.utils._random import _rename_to_rng
 from pgmpy.utils._warnings import _warn_external
 from pgmpy.utils.parser import parse_dagitty, parse_lavaan
 
@@ -317,13 +318,12 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             std = 1
             intercept = 0
 
+            rng = np.random.default_rng()
             cpds = []
             for i, var in enumerate(lgbn.nodes()):
                 parents = lgbn.get_parents(var)
                 if var not in coefs:
                     coefs[var] = {}
-
-                rng = np.random.default_rng()
 
                 beta = rng.normal(loc=0, scale=1, size=(len(parents) + 1))
                 beta[0] = intercept
@@ -1458,13 +1458,14 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         return daft_pgm
 
     @staticmethod
+    @_rename_to_rng("seed")
     def get_random(
         n_nodes=5,
         n_edges: int | None = None,
         edge_prob: float | None = None,
         node_names: list[Hashable] | None = None,
         latents=False,
-        seed: int | None = None,
+        rng: int | np.random.Generator | None = None,
     ) -> DAG:
         """
         Returns a randomly generated DAG with `n_nodes` number of nodes.
@@ -1492,8 +1493,12 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         latents: bool (default: False)
             If True, includes latent variables in the generated DAG.
 
-        seed: int (default: None)
-            The seed for the random number generator.
+        rng: int, numpy.random.Generator or None (default: None)
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
+
+            .. versionchanged:: 1.2.0
+                Replaces ``seed``, which is deprecated and will be removed in v2.0.
 
         Returns
         -------
@@ -1510,7 +1515,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         Examples
         --------
         >>> from pgmpy.base import DAG
-        >>> random_dag = DAG.get_random(n_nodes=10, edge_prob=0.3, seed=42)
+        >>> random_dag = DAG.get_random(n_nodes=10, edge_prob=0.3, rng=42)
         >>> sorted(random_dag.nodes())
         ['X_0', 'X_1', 'X_2', 'X_3', 'X_4', 'X_5', 'X_6', 'X_7', 'X_8', 'X_9']
         >>> sorted(random_dag.edges())  # doctest: +NORMALIZE_WHITESPACE
@@ -1520,11 +1525,11 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
          ('X_6', 'X_4'), ('X_6', 'X_9'), ('X_7', 'X_1'), ('X_7', 'X_2'),
          ('X_7', 'X_4'), ('X_7', 'X_8')]
 
-        >>> dag = DAG.get_random(n_nodes=5, n_edges=6, seed=42)
+        >>> dag = DAG.get_random(n_nodes=5, n_edges=6, rng=42)
         >>> dag.number_of_edges()
         6
         """
-        gen = np.random.default_rng(seed=seed)
+        gen = np.random.default_rng(rng)
 
         if node_names is None:
             node_names = [f"X_{i}" for i in range(n_nodes)]
@@ -1848,9 +1853,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         >>> # Add CPDs to the model
         >>> linear_model.add_cpds(x_cpd, y_cpd, z_cpd)
         >>> # Simulate data from the model
-        >>> import numpy as np
-        >>> np.random.seed(42)
-        >>> data = linear_model.simulate(n_samples=int(1e4))
+        >>> data = linear_model.simulate(n_samples=int(1e4), rng=42)
         >>> # Create DAG and compute edge strengths
         >>> dag = DAG([("X", "Y"), ("Z", "Y")])
         >>> strengths = dag.edge_strength(data)  # doctest: +SKIP

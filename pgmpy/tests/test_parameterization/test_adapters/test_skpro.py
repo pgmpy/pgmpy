@@ -85,10 +85,10 @@ class TestSkproAdapter:
             binned.predict_proba(X_test.iloc[[3]])
 
         # Samples follow the seed and X's rows, also when X has none.
-        samples = adapter.sample(X_test, n_samples=3, random_state=0)
+        samples = adapter.sample(X_test, n_samples=3, rng=0)
         assert samples.shape == (300, 1) and samples.columns.tolist() == ["Y"]
-        pd.testing.assert_frame_equal(samples, adapter.sample(X_test, n_samples=3, random_state=0))
-        assert not samples.equals(adapter.sample(X_test, n_samples=3, random_state=1))
+        pd.testing.assert_frame_equal(samples, adapter.sample(X_test, n_samples=3, rng=0))
+        assert not samples.equals(adapter.sample(X_test, n_samples=3, rng=1))
         assert adapter.sample(X_test.iloc[:0]).shape == (0, 1)
 
         # skpro regressors take no sample weights.
@@ -100,7 +100,7 @@ class TestSkproAdapter:
         assert type(root.predict_proba()).__name__ == "Empirical"
         assert root.predict_proba().mean() == pytest.approx(y.mean())
         np.testing.assert_allclose(root.predict_proba(pd.DataFrame(index=["p", "q"])).mean()["Y"], [y.mean()] * 2)
-        assert root.sample(n_samples=10, random_state=0)["Y"].isin(y).all()
+        assert root.sample(n_samples=10, rng=0)["Y"].isin(y).all()
 
         # A fitted estimator compares by identity, so a fitted adapter only equals itself.
         assert adapter == adapter and len({adapter, adapter}) == 1
@@ -135,7 +135,7 @@ class TestSkproAdapter:
         draws = y.set_axis(pd.MultiIndex.from_arrays([np.arange(len(y)) % 5, np.arange(len(y)) // 5]))
         root = SkproAdapter(GLMRegressor()).fit(None, draws)
         np.testing.assert_allclose(root.predict_proba(pd.DataFrame(index=[0, 1, 2])).mean()["Y"], [y.mean()] * 3)
-        assert root.sample(pd.DataFrame(index=[0, 1, 2]), random_state=0).shape == (3, 1)
+        assert root.sample(pd.DataFrame(index=[0, 1, 2]), rng=0).shape == (3, 1)
         repeated = SkproAdapter(GLMRegressor(add_constant=True)).fit(
             X.set_axis(["r"] * len(X)), y.set_axis(["r"] * len(y))
         )
@@ -153,4 +153,4 @@ class TestSkproAdapter:
         X_named = X.set_axis([0, ("B", 1)], axis=1)
         named = SkproAdapter(GLMRegressor(add_constant=True)).fit(X_named, y.rename(("Y", 0)))
         np.testing.assert_allclose(named.predict_proba(X_named[:3]).mean(), plain.predict_proba(X[:3]).mean())
-        assert named.sample(X_named[:3], random_state=0).columns.tolist() == [("Y", 0)]
+        assert named.sample(X_named[:3], rng=0).columns.tolist() == [("Y", 0)]

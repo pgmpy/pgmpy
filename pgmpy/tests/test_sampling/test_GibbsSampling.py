@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 from mock import MagicMock, patch
 
+from pgmpy.example_models import load_model
 from pgmpy.factors.discrete import DiscreteFactor, State, TabularCPD
 from pgmpy.inference import VariableElimination
 from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork
@@ -149,7 +150,7 @@ def test_sample_limit(gibbs, bayesian_model):
         )
 
 
-@patch("pgmpy.sampling.GibbsSampling.random_state", autospec=True)
+@patch("pgmpy.sampling.GibbsSampling._random_state", autospec=True)
 def test_sample_less_arg(random_state, gibbs):
     gibbs.state = None
     random_state.return_value = [
@@ -158,7 +159,9 @@ def test_sample_less_arg(random_state, gibbs):
         State("grade", 0),
     ]
     sample = gibbs.sample(size=2)
-    random_state.assert_called_once_with(gibbs)
+    random_state.assert_called_once()
+    assert random_state.call_args.args[0] is gibbs
+    assert isinstance(random_state.call_args.args[1], np.random.Generator)
     assert len(sample) == 2
 
 
@@ -179,10 +182,19 @@ def test_generate_sample(gibbs):
     } == {"diff", "intel", "grade"}
 
 
-@patch("pgmpy.sampling.GibbsSampling.random_state", autospec=True)
+@patch("pgmpy.sampling.GibbsSampling._random_state", autospec=True)
 def test_generate_sample_less_arg(random_state, gibbs):
     gibbs.state = None
     gen = gibbs.generate_sample(size=2)
     samples = [sample for sample in gen]
-    random_state.assert_called_once_with(gibbs)
+    random_state.assert_called_once()
+    assert random_state.call_args.args[0] is gibbs
+    assert isinstance(random_state.call_args.args[1], np.random.Generator)
     assert len(samples) == 2
+
+
+def test_seeded_start_state_is_reproducible():
+    model = load_model("bnlearn/asia")
+    assert np.array_equal(
+        np.asarray(GibbsSampling(model).sample(size=3, rng=1)), np.asarray(GibbsSampling(model).sample(size=3, rng=1))
+    )

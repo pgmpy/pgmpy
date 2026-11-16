@@ -305,9 +305,8 @@ class NominalDistribution(BaseDistribution):
         n_samples : int, optional, default = None
             Number of samples to draw. ``None`` draws a single sample.
         random_state : int, np.random.Generator, or None, optional, default = None
-            Controls the randomness of this call. An ``int`` produces the same draws on every call. A
-            ``numpy.random.Generator`` is used as-is, advancing across calls. ``None`` draws fresh, non-reproducible
-            samples.
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
 
         Returns
         -------

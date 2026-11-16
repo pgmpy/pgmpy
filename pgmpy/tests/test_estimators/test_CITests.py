@@ -268,7 +268,7 @@ class TestResidualMethods(unittest.TestCase):
         self.cpd_x = LinearGaussianCPD("X", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
         self.cpd_y_indep = LinearGaussianCPD("Y", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
         self.model_indep.add_cpds(self.cpd_z1, self.cpd_z2, self.cpd_z3, self.cpd_x, self.cpd_y_indep)
-        self.df_indep = self.model_indep.simulate(n_samples=1000, seed=42)
+        self.df_indep = self.model_indep.simulate(n_samples=1000, rng=42)
 
         self.df_indep_cont_cont = self.df_indep.copy()
         self.df_indep_cont_cont.Z2 = pd.cut(
@@ -316,7 +316,7 @@ class TestResidualMethods(unittest.TestCase):
         )
         self.cpd_y_dep = LinearGaussianCPD("Y", [0, 0.5, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3", "X"])
         self.model_dep.add_cpds(self.cpd_z1, self.cpd_z2, self.cpd_z3, self.cpd_x, self.cpd_y_dep)
-        self.df_dep = self.model_dep.simulate(n_samples=1000, seed=42)
+        self.df_dep = self.model_dep.simulate(n_samples=1000, rng=42)
 
         self.df_dep_cont_cont = self.df_dep.copy()
         self.df_dep_cont_cont.Z2 = pd.cut(
@@ -358,12 +358,12 @@ class TestResidualMethods(unittest.TestCase):
             Z=["Z1", "Z2", "Z3"],
             data=self.df_indep,
             boolean=False,
-            seed=42,
+            rng=42,
         )
         self.assertTrue(abs(coef) <= 0.1)
         self.assertTrue(p_value >= 0.04)
 
-        coef, p_value = pearsonr(X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=self.df_dep, boolean=False, seed=42)
+        coef, p_value = pearsonr(X="X", Y="Y", Z=["Z1", "Z2", "Z3"], data=self.df_dep, boolean=False, rng=42)
         self.assertTrue(coef >= 0.1)
         self.assertTrue(np.isclose(p_value, 0, atol=1e-1))
 

@@ -34,27 +34,27 @@ class TestApproxInferenceBN:
         self.alarm_model = load_model("bnlearn/alarm")
         self.infer_alarm = ApproxInference(self.alarm_model)
         self.alarm_ve = VariableElimination(self.alarm_model)
-        self.samples = self.alarm_model.simulate(int(1e4), seed=42)
+        self.samples = self.alarm_model.simulate(int(1e4), rng=42)
 
     @pytest.mark.parametrize("evidence", [None, {"PVSAT": "LOW"}])
     def test_query(self, evidence):
         samples = self.samples if evidence is None else self.samples[self.samples.PVSAT == "LOW"]
         for variables, joint in [(["HISTORY"], True), (["HISTORY", "CVP"], True), (["HISTORY", "CVP"], False)]:
             ve_results = self.alarm_ve.query(variables=variables, evidence=evidence, joint=joint)
-            for s, atol in ((None, 0.01), (samples, 0.02)):
+            for s in (None, samples):
                 query_results = self.infer_alarm.query(
-                    variables=variables, evidence=evidence, samples=s, joint=joint, seed=42
+                    variables=variables, evidence=evidence, samples=s, joint=joint, rng=42
                 )
                 if joint:
-                    assert query_results.__eq__(ve_results, atol=atol)
+                    assert query_results.__eq__(ve_results, atol=0.01)
                 else:
-                    assert all(query_results[var].__eq__(ve_results[var], atol=atol) for var in variables)
+                    assert all(query_results[var].__eq__(ve_results[var], atol=0.01) for var in variables)
 
     def test_virtual_evidence(self):
         virtual_evid = [TabularCPD("PAP", 3, [[0.2], [0.3], [0.5]], state_names={"PAP": ["LOW", "NORMAL", "HIGH"]})]
         for evidence in (None, {"PVSAT": "LOW"}):
             query_results = self.infer_alarm.query(
-                variables=["HISTORY"], evidence=evidence, virtual_evidence=virtual_evid, seed=42
+                variables=["HISTORY"], evidence=evidence, virtual_evidence=virtual_evid, rng=42
             )
             ve_results = self.alarm_ve.query(variables=["HISTORY"], evidence=evidence, virtual_evidence=virtual_evid)
             assert query_results.__eq__(ve_results, atol=0.01)
@@ -79,12 +79,14 @@ class TestApproxInferenceDBN:
             ([("Y", 0), ("Y", 1)], {}, [0.0510, 0.1763, 0.1698, 0.6029]),
             ([("Y", 1), ("Y", 5)], {}, [0.0476, 0.1732, 0.1762, 0.6030]),
             ([("Y", 4)], {"evidence": {("Y", 2): 0}}, [0.2232, 0.7768]),
-            ([("Y", 4)], {"virtual_evidence": [TabularCPD(("Y", 2), 2, [[0.2], [0.8]])]}, [0.2205, 0.7795]),
+            ([("Y", 4)], {"virtual_evidence": [TabularCPD(("Y", 2), 2, [[0.2], [0.8]])]}, [0.2261, 0.7739]),
         ]
         for variables, kwargs, values in cases:
-            result = self.infer.query(variables, seed=42, **kwargs)
+            result = self.infer.query(variables, rng=42, **kwargs)
             assert result.__eq__(DiscreteFactor(variables, [2] * len(variables), values), atol=0.01)
 
         # Evidence in a later time slice than the query variable.
-        assert self.infer.query([("Y", 0)], evidence={("Y", 1): 0}) is not None
-        assert self.infer.query([("Y", 0)], virtual_evidence=[TabularCPD(("Y", 1), 2, [[0.2], [0.8]])]) is not None
+        assert self.infer.query([("Y", 0)], evidence={("Y", 1): 0}, rng=42) is not None
+        assert (
+            self.infer.query([("Y", 0)], virtual_evidence=[TabularCPD(("Y", 1), 2, [[0.2], [0.8]])], rng=42) is not None
+        )
