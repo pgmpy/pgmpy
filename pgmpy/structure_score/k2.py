@@ -63,6 +63,7 @@ class K2(BaseStructureScore):
         "name": "k2",
         "data_types": ["discrete"],
         "default_for": None,
+        "capability:missing_values": False,
         "assumption:linearity": False,
         "assumption:additive_noise": False,
         "assumption:gaussian_noise": False,

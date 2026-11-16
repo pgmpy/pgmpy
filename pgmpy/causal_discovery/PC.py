@@ -152,6 +152,7 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
         "requires_target": False,
         "capability:multivariate": True,
         "capability:expert_knowledge": ["forbidden_edges", "required_edges", "search_space", "temporal_order"],
+        "capability:missing_values": False,
         "assumption:causal_sufficiency": True,
         "assumption:acyclicity": True,
         "assumption:faithfulness": True,

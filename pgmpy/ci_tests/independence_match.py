@@ -22,6 +22,7 @@ class IndependenceMatch(BaseCITest):
         "default_for": None,
         "requires_data": False,
         "capability:conditioning": True,
+        "capability:missing_values": False,
         "assumption:linearity": False,
         "assumption:additive_noise": False,
         "assumption:gaussian_noise": False,

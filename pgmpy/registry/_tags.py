@@ -242,6 +242,21 @@ class capability__conditioning(_BaseTag):
     }
 
 
+class capability__missing_values(_BaseTag):
+    """
+    Whether the method supports dataset with missing values (like ``no.nan``).
+
+    ``False`` for methods that do not support dataset with missing values and need complete data.
+    """
+
+    _tags = {
+        "tag_name": "capability:missing_values",
+        "parent_type": ["causal_discovery", "ci_test", "structure_score"],
+        "tag_type": "bool",
+        "short_descr": "Whether the method supports dataset with missing values.",
+    }
+
+
 # -----------
 # Assumptions
 # -----------
