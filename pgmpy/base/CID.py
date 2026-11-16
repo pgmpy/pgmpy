@@ -87,6 +87,10 @@ class CausalInfluenceDiagram(DAG):
             "utility": self._as_node_list(utility_nodes),
             "latent": self._as_node_list(latents),
         }
+        # if delcared_roles["chance"].intersection(declared_roles["decision"]).intersection(declared_roles["utility"]):
+        #     raise ValueError("A node cannot be both a chance and decision node.")
+        # chance_nodes = self.nodes() - declared_roles["decision"].union(declared_roles["utility"])
+
         assigned_roles = {}
         for role, nodes in declared_roles.items():
             for node in nodes:
@@ -94,14 +98,14 @@ class CausalInfluenceDiagram(DAG):
                     raise ValueError(f"Cannot assign more than one role to node {node!r}.")
                 assigned_roles[node] = role
 
-        super().__init__(ebunch=ebunch)
+        super().__init__(ebunch=ebunch, roles=declared_roles)
 
-        for node in self.nodes:
-            self.nodes[node].setdefault("role", "chance")
+        # for node in self.nodes:
+        #     self.nodes[node].setdefault("role", "chance")
 
-        for role, nodes in declared_roles.items():
-            for node in nodes:
-                self.add_node(node, role=role)
+        # for role, nodes in declared_roles.items():
+        #     for node in nodes:
+        #         self.add_node(node, role=role)
 
     @staticmethod
     def _as_node_list(nodes: Iterable[Hashable] | None):
