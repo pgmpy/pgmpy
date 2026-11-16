@@ -296,3 +296,37 @@ class _TimeSeriesCoreGraph(_CoreGraph):
         present = set(model.variables)
         model.add_nodes_from([variable for variable in variables if variable not in present])
         return model
+
+    def to_adjacency(
+        self,
+        encoding: str = "tigramite",
+        variables: Iterable[Hashable] | None = None,
+    ):
+        if encoding != "tigramite":
+            raise ValueError(
+                f"{type(self).__name__} only supports encoding='tigramite'; got encoding={encoding!r}. The "
+                f"two-dimensional encodings have no axis for the lag."
+            )
+
+        to_mark = {
+            "->": "-->",
+            "<-": "<--",
+            "--": "o-o",
+            "<>": "<->",
+            "o>": "o->",
+            "<o": "<-o",
+        }
+
+        variables = list(self.variables()) if variables is None else list(variables)
+        if missing := (set(self.variables()) - set(variables)):
+            raise ValueError(f"Variables missing from the requested order: {sorted(missing, key=str)}")
+        index = {var: i for i, var in enumerate(variables)}
+        out = np.full((len(variables), len(variables), self.tau_max + 1), "", dtype="<U3")
+        for u, v, tau, edge_type in self.get_edges(lag_relative=True):
+            if edge_type not in to_mark:
+                raise ValueError(f"No tigramite mark for the edge type '{edge_type}'.")
+            out[index[u], index[v], tau] = to_mark[edge_type]
+            if tau == 0:
+                markers = self._to_markers(((u, 0), (v, 0), edge_type))
+                out[index[v], index[u], 0] = to_mark[self._to_edge_type((v, 0), (u, 0), markers)]
+        return out
