@@ -214,6 +214,13 @@ class TestAdjustmentSet(unittest.TestCase):
         adj_set = infer.get_minimal_adjustment_set(X="X", Y="Y")
         self.assertTrue((adj_set == {"Z1"}) or (adj_set == {"Z3"}))
 
+        # The mediator M must not be returned even though it d-separates X and Y in the proper backdoor graph.
+        dag_med = DAG([("C", "X"), ("C", "M"), ("X", "M"), ("M", "Y")])
+        self.assertEqual(CausalInference(dag_med).get_minimal_adjustment_set(X="X", Y="Y"), {"C"})
+
+        dag_med_lat = DAG([("C", "X"), ("C", "M"), ("X", "M"), ("M", "Y")], latents={"C"})
+        self.assertIsNone(CausalInference(dag_med_lat).get_minimal_adjustment_set(X="X", Y="Y"))
+
     def test_get_minimal_adjustment_set_sem(self):
         # Without latent variables
         dag1 = SEMGraph([("X", "Y"), ("Z", "X"), ("Z", "Y")])

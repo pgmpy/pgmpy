@@ -272,8 +272,9 @@ class TestDAGCreation(unittest.TestCase):
         dag1 = DAG([("A", "B"), ("B", "C")])
         self.assertEqual(dag1.minimal_dseparator(start="A", end="C"), {"B"})
 
+        # {C, E} is also a minimal d-separator.
         dag2 = DAG([("A", "B"), ("B", "C"), ("C", "D"), ("A", "E"), ("E", "D")])
-        self.assertEqual(dag2.minimal_dseparator(start="A", end="D"), {"C", "E"})
+        self.assertEqual(dag2.minimal_dseparator(start="A", end="D"), {"B", "E"})
 
         dag3 = DAG([("B", "A"), ("B", "C"), ("A", "D"), ("D", "C"), ("A", "E"), ("C", "E")])
         self.assertEqual(dag3.minimal_dseparator(start="A", end="C"), {"B", "D"})
@@ -294,6 +295,14 @@ class TestDAGCreation(unittest.TestCase):
 
         dag_lat5 = DAG([("A", "B"), ("B", "C"), ("A", "D"), ("D", "E"), ("E", "C")], latents={"E"})
         self.assertEqual(dag_lat5.minimal_dseparator(start="A", end="C"), {"B", "D"})
+
+        # Conditioning on the collider B opens A -> B <- D <- L -> C, which only the child D of the latent L blocks.
+        dag_lat6 = DAG([("A", "B"), ("B", "C"), ("D", "B"), ("L", "D"), ("L", "C")], latents={"L"})
+        self.assertEqual(dag_lat6.minimal_dseparator(start="A", end="C"), {"B", "D"})
+
+        # Excluded nodes
+        self.assertEqual(dag2.minimal_dseparator(start="A", end="D", exclude={"C"}), {"B", "E"})
+        self.assertIsNone(dag2.minimal_dseparator(start="A", end="D", exclude={"B", "C"}))
 
     def test_copy(self):
         model = load_model("dagitty/m_bias")

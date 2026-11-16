@@ -10,6 +10,7 @@ from pgmpy import config
 from pgmpy.base import DAG
 from pgmpy.estimators.LinearModel import LinearEstimator
 from pgmpy.factors.discrete import DiscreteFactor
+from pgmpy.identification import Adjustment
 from pgmpy.models import (
     DiscreteBayesianNetwork,
     FunctionalBayesianNetwork,
@@ -920,7 +921,7 @@ class CausalInference:
         Returns
         -------
         Minimal adjustment set: set or None
-            A set of variables which are the minimal possible adjustment set. If
+            An adjustment set with no proper subset that is also an adjustment set. If
             None, no adjustment set is possible.
 
         Examples
@@ -936,8 +937,9 @@ class CausalInference:
         ----------
         - :footcite:t:`perkovic_2018`
         """
-        backdoor_graph = self.get_proper_backdoor_graph([X], [Y], inplace=False)
-        return backdoor_graph.minimal_dseparator(X, Y)
+        causal_graph = self.dag.with_role("exposures", X, inplace=False).with_role("outcomes", Y, inplace=False)
+        adjusted_graph, success = Adjustment(variant="minimal").identify(causal_graph)
+        return set(adjusted_graph.get_role("adjustment")) if success else None
 
     def query(
         self,
