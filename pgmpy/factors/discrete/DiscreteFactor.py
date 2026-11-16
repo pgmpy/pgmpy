@@ -670,6 +670,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             phi.values += phi1
         else:
             phi1 = phi1.copy()
+            phi.add_state_names(phi1)
 
             # modifying phi to add new variables
             extra_vars = set(phi1.variables) - set(phi.variables)
@@ -682,7 +683,6 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
                 new_var_card = phi1.get_cardinality(extra_vars)
                 phi.cardinality = np.append(phi.cardinality, [new_var_card[var] for var in extra_vars])
-                phi.add_state_names(phi1)
 
             # modifying phi1 to add new variables
             extra_vars = set(phi.variables) - set(phi1.variables)
@@ -829,6 +829,8 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
 
         if set(phi1.variables) - set(phi.variables):
             raise ValueError("Scope of divisor should be a subset of dividend")
+
+        phi.add_state_names(phi1)
 
         # Adding extra variables in phi1.
         extra_vars = set(phi.variables) - set(phi1.variables)

@@ -754,6 +754,24 @@ class TestFactorMethods:
         assert phi1.get_cardinality(phi1.variables) == {"x1": 2, "x2": 3, "x3": 2}
         np_test.assert_almost_equal(phi1.values, np.arange(2, 14).reshape(2, 3, 2))
 
+    def test_factor_arithmetic_state_name_conflict(self):
+        phi1 = DiscreteFactor(["x1", "x2"], [2, 2], [1, 2, 3, 4], state_names={"x1": ["a", "b"], "x2": ["c", "d"]})
+        phi2 = DiscreteFactor(["x1"], [2], [1, 2], state_names={"x1": ["b", "a"]})
+        phi3 = DiscreteFactor(["x1", "x2"], [2, 2], [1, 2, 3, 4], state_names={"x1": ["b", "a"], "x2": ["c", "d"]})
+
+        for left, right in [(phi1, phi2), (phi1, phi3), (phi3, phi1)]:
+            with pytest.raises(ValueError, match="State name conflict"):
+                left.product(right, inplace=False)
+            with pytest.raises(ValueError, match="State name conflict"):
+                left.sum(right, inplace=False)
+            with pytest.raises(ValueError, match="State name conflict"):
+                left.divide(right, inplace=False)
+
+        # Numeric state names are still replaced by string state names.
+        phi4 = DiscreteFactor(["x1"], [2], [1, 2])
+        np_test.assert_almost_equal(phi1.sum(phi4, inplace=False).values, np.array([[2, 3], [5, 6]]))
+        np_test.assert_almost_equal(phi1.divide(phi4, inplace=False).values, np.array([[1, 2], [1.5, 2]]))
+
     def test_eq(self):
         assert not self.phi == self.phi1
         assert self.phi == self.phi
