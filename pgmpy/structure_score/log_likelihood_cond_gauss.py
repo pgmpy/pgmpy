@@ -81,19 +81,6 @@ class LogLikelihoodCondGauss(BaseStructureScore):
     def __init__(self, data, state_names=None, max_cache_size=10000):
         super().__init__(data, state_names=state_names, max_cache_size=max_cache_size)
 
-    @staticmethod
-    def _gaussian_log_likelihood(values: np.ndarray) -> tuple[float, int]:
-        """Log-likelihood of the rows of `values` under their maximum likelihood Gaussian, and the rank of its
-        covariance."""
-        n_rows, n_cols = values.shape
-        if n_rows < 2 or n_cols == 0:
-            return 0.0, 0
-
-        eigenvalues = np.linalg.eigvalsh(np.atleast_2d(np.cov(values, rowvar=False, ddof=0)))
-        kept = eigenvalues[eigenvalues > _SINGULAR_RCOND * max(eigenvalues[-1], 1.0)]
-        rank = len(kept)
-        return -0.5 * n_rows * (rank * (np.log(2.0 * np.pi) + 1.0) + np.sum(np.log(kept))), rank
-
     def _cat_parents_product(self, parents: tuple[Hashable, ...]) -> int:
         k = 1
         for pa in parents:
@@ -155,10 +142,17 @@ class LogLikelihoodCondGauss(BaseStructureScore):
         for keys, sign in [([variable, *discrete], 1.0), (discrete, -1.0)]:
             strata = df.groupby(keys, observed=True).indices.values() if keys else [np.arange(n_samples)]
             for rows in strata:
-                stratum_log_like, rank = self._gaussian_log_likelihood(values[rows])
-                if rank < values.shape[1]:
-                    return -np.inf
-                log_like += sign * (stratum_log_like + len(rows) * np.log(len(rows) / n_samples))
+                n_rows = len(rows)
+                stratum_log_like = 0.0
+                if continuous:
+                    eigenvalues = np.linalg.eigvalsh(np.atleast_2d(np.cov(values[rows], rowvar=False, ddof=0)))
+                    kept = eigenvalues[eigenvalues > _SINGULAR_RCOND * max(eigenvalues[-1], 1.0)]
+                    if len(kept) < len(continuous):
+                        return -np.inf
+                    stratum_log_like = (
+                        -0.5 * n_rows * (len(continuous) * (np.log(2.0 * np.pi) + 1.0) + np.sum(np.log(kept)))
+                    )
+                log_like += sign * (stratum_log_like + n_rows * np.log(n_rows / n_samples))
         return log_like
 
     def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
