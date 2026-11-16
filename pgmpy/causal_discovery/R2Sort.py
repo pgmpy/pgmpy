@@ -92,25 +92,37 @@ class R2Sort(BaseOrderDiscovery):
     }
 
     def _fit(self, X: pd.DataFrame) -> "R2Sort":
+        # Step 1: Validate the return type.
         return_type = self.return_type.lower()
         if return_type not in ("dag", "pdag"):
             raise ValueError(f"return_type must be one of: dag, pdag. Got: {self.return_type}")
 
-        model_reg = clone(self.estimator) if self.estimator is not None else LinearRegression()
+        # Step 2: Compute the R^2 of each variable regressed on all the others: from the correlation matrix for the
+        # default linear regression, otherwise by fitting the given estimator.
+        model_reg = clone(estimator=self.estimator) if self.estimator is not None else LinearRegression()
         if self.estimator is None:
             correlation_matrix = np.atleast_2d(np.corrcoef(X.to_numpy(dtype=float), rowvar=False))
         r2_values = {}
-        for column, target in enumerate(self.feature_names_in_):
-            others = [other for other in range(len(self.feature_names_in_)) if other != column]
+        for target_index, target in enumerate(self.feature_names_in_):
+            other_indices = [index for index in range(len(self.feature_names_in_)) if index != target_index]
             if self.estimator is None:
-                r2_values[target] = 1.0 - regression_residual_covariance(correlation_matrix, [column], others)[0, 0]
+                residual_variance = regression_residual_covariance(
+                    cov=correlation_matrix, targets=[target_index], given=other_indices
+                )[0, 0]
+                r2_values[target] = 1.0 - residual_variance
             else:
-                model_reg.fit(X.iloc[:, others], X.iloc[:, column])
-                r2_values[target] = r2_score(X.iloc[:, column], model_reg.predict(X.iloc[:, others]))
+                model_reg.fit(X=X.iloc[:, other_indices], y=X.iloc[:, target_index])
+                r2_values[target] = r2_score(
+                    y_true=X.iloc[:, target_index], y_pred=model_reg.predict(X=X.iloc[:, other_indices])
+                )
 
+        # Step 3: Order the variables by increasing R^2.
         causal_order = sorted(r2_values, key=r2_values.get)
+
+        # Step 4: Estimate the DAG from the causal order.
         model = self._estimate_dag_from_causal_order(X, causal_order, regressor=model_reg)
 
+        # Step 5: Store the fitted attributes.
         self.causal_order_ = list(causal_order)
         self.causal_graph_ = model if return_type == "dag" else model.to_pdag()
         self.adjacency_matrix_ = self.causal_graph_.to_adjacency(

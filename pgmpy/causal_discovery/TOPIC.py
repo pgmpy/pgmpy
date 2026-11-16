@@ -38,8 +38,7 @@ class TOPIC(BaseCausalDiscovery):
     min_improvement : float, default=1e-6
         Threshold used symmetrically for edge addition and pruning. An edge ``source -> node`` is added if its local
         score improvement exceeds ``min_improvement``; an incoming edge to ``source`` is removed if doing so decreases
-        the local score by at most ``min_improvement``. Candidates for the next source whose maximum incoming
-        improvement is within ``min_improvement`` of the smallest are tied, and the first in sorted order is taken.
+        the local score by at most ``min_improvement``.
 
     show_progress : bool, default=False
         If True, shows a progress bar while learning the causal structure.

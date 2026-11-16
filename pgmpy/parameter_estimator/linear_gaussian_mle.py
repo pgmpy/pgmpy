@@ -117,9 +117,9 @@ class LinearGaussianMLE(GaussianParameterEstimator):
                 )
             else:
                 parent_cols = [col_index[parent] for parent in parents]
-                coef = regression_coefficients(cov, [node_col], parent_cols)[:, 0]
+                coef = regression_coefficients(cov=cov, targets=[node_col], given=parent_cols)[:, 0]
                 intercept = means[node_col] - coef @ means[parent_cols]
-                residual_var = regression_residual_covariance(cov, [node_col], parent_cols)[0, 0]
+                residual_var = regression_residual_covariance(cov=cov, targets=[node_col], given=parent_cols)[0, 0]
                 ddof = 0 if self.std_estimator == "mle" else 1 + len(parents)
                 cpds.append(
                     LinearGaussianCPD(

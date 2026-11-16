@@ -85,7 +85,9 @@ class Pearsonr(BaseCITest):
     def _partial_correlation(self, X: str, Y: str, Z: list) -> tuple[float, int]:
         """Partial correlation of `X` and `Y` given `Z`, and the degrees of freedom of the test."""
         residual_cov = regression_residual_covariance(
-            self._cov, [self._col_index[X], self._col_index[Y]], [self._col_index[var] for var in Z]
+            cov=self._cov,
+            targets=[self._col_index[X], self._col_index[Y]],
+            given=[self._col_index[var] for var in Z],
         )
         dof = self.data.shape[0] - len(Z) - 2
         return residual_cov[0, 1] / np.sqrt(residual_cov[0, 0] * residual_cov[1, 1]), dof

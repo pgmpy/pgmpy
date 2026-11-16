@@ -316,4 +316,4 @@ def regression_residual_covariance(cov: np.ndarray, targets: list[int], given: l
     if len(given) == 0:
         return total
 
-    return total - cov[np.ix_(targets, given)] @ regression_coefficients(cov, targets, given)
+    return total - cov[np.ix_(targets, given)] @ regression_coefficients(cov=cov, targets=targets, given=given)

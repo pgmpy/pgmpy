@@ -74,7 +74,7 @@ class LogLikelihoodGauss(BaseStructureScore):
     def _log_likelihood(self, variable: Hashable, parents: tuple[Hashable, ...]) -> tuple[float, float]:
         variable_col = self._col_index[variable]
         parent_cols = [self._col_index[parent] for parent in parents]
-        residual_var = regression_residual_covariance(self._cov, [variable_col], parent_cols)[0, 0]
+        residual_var = regression_residual_covariance(cov=self._cov, targets=[variable_col], given=parent_cols)[0, 0]
         ll = self._ll_const - 0.5 * self._n_samples * np.log(residual_var)
         return (ll, len(parents))
 
