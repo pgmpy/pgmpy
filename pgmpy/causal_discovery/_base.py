@@ -64,7 +64,7 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         tags.target_tags.required = False
         return tags
 
-    def _check_fit_data(self, X):
+    def _check_fit_data(self, X, X_type="singular"):
         """Check the input data for fitting the causal discovery algorithm.
 
         Parameters
@@ -79,23 +79,19 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         if n_samples < 2:
             raise ValueError(f"n_samples = {n_samples}, at least 2 are required.")
 
+        # Enforce consistent dataframes for fitting on list of dataframes
         if not isinstance(X, pd.DataFrame):
             X = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
             feature_names = getattr(self, "feature_names_in_", None)
-            if feature_names is not None:
+
+            # Rejection when a list of dataframes is not consistent
+            if feature_names is not None and X_type == "list":
                 if set(feature_names) != set(X.columns):
                     raise ValueError(
                         f"Inconsistent naming in dataframe columns:\nPrevious: {feature_names}\nCurrent: {X.columns}"
                     )
-                else:
-                    self.feature_names_in_ = np.asarray(X.columns, dtype="object")
-        else:
-            feature_names = getattr(self, "feature_names_in_", None)
-            if feature_names is not None:
-                if set(feature_names) != set(X.columns):
-                    raise ValueError(
-                        f"Inconsistent naming in dataframe columns.\nPrevious: {feature_names}\nCurrent: {X.columns}"
-                    )
+            else:
+                self.feature_names_in_ = np.asarray(X.columns, dtype="object")
 
         # Handle cases like complex data, sparse arrays etc. first
         validate_data(
@@ -134,9 +130,9 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         # Step 1: Run checks on the dataset.
         if type(X) in (list,):
             for i in range(len(X)):
-                X[i] = self._check_fit_data(X[i])
+                X[i] = self._check_fit_data(X[i], X_type="list")
         else:
-            X = self._check_fit_data(X)
+            X = self._check_fit_data(X, X_type="singular")
 
         # Step 2: Run the fitting algorithm.
         result = self._fit(X, **fit_params)

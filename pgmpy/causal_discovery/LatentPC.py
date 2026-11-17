@@ -111,11 +111,12 @@ class LatentPC(BaseCausalDiscovery):
 
     >>> import pandas as pd
     >>> import numpy as np
-    >>> values = pd.DataFrame(np.random.normal(size=(1000, 2)),columns=["A", "B"])
+    >>> rng = np.random.default_rng(seed=42)
+    >>> values = pd.DataFrame(rng.normal(size=(1000, 2)),columns=["A", "B"])
     >>> values["C"] = values["A"] + values["B"]
 
     >>> shifted_values = values.copy(deep=True)
-    >>> shifted_values["A"] = np.random.randint(low=2, high=4, size=(1000,))
+    >>> shifted_values["A"] = rng.integers(low=2, high=4, size=(1000,))
     >>> shifted_values["C"] = shifted_values["A"] + shifted_values["B"]
 
     Use the Latent-PC algorithm to learn the causal structure from data:
@@ -123,7 +124,8 @@ class LatentPC(BaseCausalDiscovery):
     >>> from pgmpy.causal_discovery.LatentPC import LatentPC
 
     >>> latent_pc = LatentPC(significance_level=0.05)
-    >>> latent_pc._fit([values, shifted_values])
+    >>> latent_pc.fit([values, shifted_values])
+    LatentPC(significance_level=0.05)
     >>> latent_pc.causal_graph_.get_edges()
     [('A', 'C', '->'), ('f_1', 'A', '->'), ('B', 'C', '->')]
     """
