@@ -130,6 +130,23 @@ class LatentPC(BaseCausalDiscovery):
     [('A', 'C', '->'), ('f_1', 'A', '->'), ('B', 'C', '->')]
     """
 
+    _tags = {
+        "name": "latent_pc",
+        "data_types": ["discrete", "continuous", "mixed"],
+        "identifiable_graph": "cpdag",
+        "requires_target": False,
+        "capability:multivariate": True,
+        "capability:expert_knowledge": ["forbidden_edges", "required_edges", "search_space", "temporal_order"],
+        "assumption:causal_sufficiency": True,
+        "assumption:acyclicity": True,
+        "assumption:faithfulness": True,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
+    }
+
     def __init__(
         self,
         variant: str = "parallel",
