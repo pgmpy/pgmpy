@@ -401,9 +401,10 @@ class DBNInference(Inference):
         for time_slice in range(time_range, 0, -1):
             evidence_time = self._get_evidence(evidence, time_slice, 1)
             evidence_prev_time = self._get_evidence(evidence, time_slice - 1, 0)
+            interface_nodes_dict = {}
             if evidence_prev_time:
                 interface_nodes_dict = {k: v for k, v in evidence_prev_time.items() if k in self.interface_nodes_0}
-            if evidence_time:
+            if interface_nodes_dict:
                 evidence_time.update(interface_nodes_dict)
             mid_bp = BeliefPropagation(self.one_and_half_junction_tree)
             self._update_belief(mid_bp, self.in_clique, potential_dict[time_slice - 1])

@@ -1,6 +1,7 @@
 import numpy as np
 
 from pgmpy.factors.base import BaseFactor
+from pgmpy.utils._random import _rename_to_rng
 
 
 class LinearGaussianCPD(BaseFactor):
@@ -75,7 +76,7 @@ class LinearGaussianCPD(BaseFactor):
         self.beta = np.array(beta)
         self.std = std
         self.evidence = list(evidence)
-        self.variables = [variable] + evidence
+        self.variables = [variable] + self.evidence
 
     def copy(self):
         """
@@ -128,7 +129,8 @@ class LinearGaussianCPD(BaseFactor):
         return f"<LinearGaussianCPD: {str_repr} at {hex(id(self))}>"
 
     @staticmethod
-    def get_random(variable, evidence, loc=0.0, scale=1.0, seed=None):
+    @_rename_to_rng("seed")
+    def get_random(variable, evidence, loc=0.0, scale=1.0, rng: int | np.random.Generator | None = None):
         """
         Generates a LinearGaussianCPD instance with random values on `variable` with
         parents/evidence `evidence` with beta and std sampled from loc and scale
@@ -149,8 +151,12 @@ class LinearGaussianCPD(BaseFactor):
             The standard deviation of the normal distribution from which the
             coefficients are sampled.
 
-        seed: int (default: None)
-            The seed for the random number generator.
+        rng: int, np.random.Generator or None (default: None)
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
+
+            .. versionchanged:: 1.2.0
+                Replaces ``seed``, which is deprecated and will be removed in v2.0.
 
         Returns
         -------
@@ -165,11 +171,11 @@ class LinearGaussianCPD(BaseFactor):
         ...     evidence=["Age", "Experience"],
         ...     loc=2.0,
         ...     scale=0.5,
-        ...     seed=5,
+        ...     rng=5,
         ... ) # doctest: +ELLIPSIS
         <LinearGaussianCPD: P(Income | Age, Experience) = N(1.338*Age + 1.876*Experience + 1.599; 2.21) at 0x...
         """
-        rng = np.random.default_rng(seed=seed)
+        rng = np.random.default_rng(rng)
 
         beta = rng.normal(loc=loc, scale=scale, size=(len(evidence) + 1))
         std = abs(rng.normal(loc=loc, scale=scale))

@@ -6,11 +6,11 @@ def _variable_or_iterable_to_set(x):
     """
     Convert variable, set, or iterable x to a frozenset.
 
-    If x is None, returns the empty set.
+    If x is None, returns the empty set. A string is one variable.
 
     Parameters
     ---------
-    x : None, str or Iterable[str]
+    x : None, str or Iterable[Hashable]
 
     Returns
     -------
@@ -22,8 +22,8 @@ def _variable_or_iterable_to_set(x):
     if isinstance(x, str):
         return frozenset([x])
 
-    if not isinstance(x, Iterable) or not all(isinstance(xx, str) for xx in x):
-        raise ValueError(f"{x} is expected to be either a string, set of strings, or an iterable of strings")
+    if not isinstance(x, Iterable):
+        raise ValueError(f"{x} is expected to be either a string or an iterable of variable names")
 
     return frozenset(x)
 
