@@ -1,27 +1,22 @@
-#!/usr/bin/env python
+"""Deprecated compatibility shim for :class:`pgmpy.causal_discovery.ExhaustiveSearch`."""
 
-from itertools import combinations
-
-import networkx as nx
-
-from pgmpy.base import DAG
+from pgmpy.causal_discovery import ExhaustiveSearch as _ExhaustiveSearch
 from pgmpy.estimators import StructureEstimator
 from pgmpy.structure_score import get_scoring_method
 from pgmpy.utils._warnings import _warn_external
-from pgmpy.utils.mathext import powerset
 
 
 class ExhaustiveSearch(StructureEstimator):
     """
-    Search class for exhaustive searches over all DAGs with a given set of variables.
-    Takes a `StructureScore`-Instance as parameter; `estimate` finds the model with maximal score.
+    Deprecated: use :class:`pgmpy.causal_discovery.ExhaustiveSearch` instead.
+
+    Search class for exhaustive searches over all DAGs with a given set of variables. This class delegates to the
+    canonical implementation in `pgmpy.causal_discovery`.
 
     Parameters
     ----------
     data: pandas DataFrame object
         dataframe object where each column represents one variable.
-        (If some values in the data are missing the data cells should be set to `numpy.NaN`.
-        Note that pandas converts each column containing `numpy.NaN`s to dtype `float`.)
 
     scoring_method: Instance of a `StructureScore`-subclass (`K2` is used as default)
         An instance of `K2`, `BDeu`, `BIC` or 'AIC'.
@@ -32,16 +27,18 @@ class ExhaustiveSearch(StructureEstimator):
         that the variable can take. If unspecified, the observed values in the data set
         are taken to be the only possible states.
 
-    use_caching: boolean
-        If True, uses caching of score for faster computation.
-        Note: Caching only works for scoring methods which are decomposable. Can
-        give wrong results in case of custom scoring methods.
+    use_cache: bool (default: True)
+        Retained for backwards compatibility; canonical structure scores cache
+        local scores internally.
     """
 
     def __init__(self, data, scoring_method=None, use_cache=True, **kwargs):
+        _warn_external(
+            "`pgmpy.estimators.ExhaustiveSearch` is deprecated and will be removed in v2.0. "
+            "Use `pgmpy.causal_discovery.ExhaustiveSearch` instead.",
+            FutureWarning,
+        )
         super().__init__(data, **kwargs)
-        # Canonical structure scores cache local scores internally (see their
-        # `max_cache_size` parameter), so `use_cache` no longer needs a wrapper.
         self.scoring_method = get_scoring_method(scoring_method, self.data)
 
     def all_dags(self, nodes=None):
@@ -111,23 +108,7 @@ class ExhaustiveSearch(StructureEstimator):
         """
         if nodes is None:
             nodes = sorted(self.state_names.keys())
-        if len(nodes) > 6:
-            candidate_count = 2 ** (len(nodes) * (len(nodes) - 1))
-            _warn_external(
-                f"Exhaustive search over {len(nodes)} nodes examines {candidate_count:,} candidate directed graphs. "
-                "Reduce the node set or use a non-exhaustive estimator.",
-                UserWarning,
-            )
-
-        edges = list(combinations(nodes, 2))  # n*(n-1) possible directed edges
-        edges.extend([(y, x) for x, y in edges])
-        all_graphs = powerset(edges)  # 2^(n*(n-1)) graphs
-
-        for graph_edges in all_graphs:
-            graph = nx.DiGraph(graph_edges)
-            graph.add_nodes_from(nodes)
-            if nx.is_directed_acyclic_graph(graph):
-                yield graph
+        return _ExhaustiveSearch._all_dags(nodes)
 
     def all_scores(self):
         """
@@ -222,9 +203,5 @@ class ExhaustiveSearch(StructureEstimator):
         [('B', 'C')]
         """
 
-        best_dag = max(self.all_dags(), key=self.scoring_method.score)
-
-        best_model = DAG()
-        best_model.add_nodes_from(sorted(best_dag.nodes()))
-        best_model.add_edges_from(sorted(best_dag.edges()))
-        return best_model
+        est = _ExhaustiveSearch(scoring_method=self.scoring_method, return_type="dag", show_progress=False)
+        return est.fit(self.data).causal_graph_
