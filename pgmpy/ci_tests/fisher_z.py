@@ -53,9 +53,10 @@ class FisherZ(Pearsonr):
 
     _tags = {
         "name": "fisher_z",
-        "data_types": ("continuous",),
+        "data_types": ["continuous"],
         "default_for": None,
         "requires_data": True,
+        "capability:conditioning": True,
     }
 
     def __init__(self, data: pd.DataFrame, use_cache: bool = True):

@@ -8,7 +8,6 @@ from sklearn.base import BaseEstimator, clone
 from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
 from pgmpy.causal_discovery.bivariate_scores import BaseBivariateScore, get_bivariate_score
-from pgmpy.utils import get_dataset_type
 
 
 class ANM(BaseCausalDiscovery):
@@ -61,6 +60,9 @@ class ANM(BaseCausalDiscovery):
         Direction score for the second-column -> first-column direction. The edge is oriented toward whichever
         direction has the smaller score.
 
+    scoring_method_ : BaseBivariateScore or callable
+        The direction score used for learning, resolved from ``scoring_method``.
+
     n_features_in_ : int
         The number of features in the data used to learn the causal graph.
 
@@ -101,6 +103,23 @@ class ANM(BaseCausalDiscovery):
 
     """
 
+    _tags = {
+        "name": "anm",
+        "data_types": ["continuous"],
+        "identifiable_graph": "dag",
+        "requires_target": False,
+        "capability:multivariate": False,
+        "capability:expert_knowledge": [],
+        "assumption:causal_sufficiency": True,
+        "assumption:acyclicity": True,
+        "assumption:faithfulness": False,
+        "assumption:linearity": False,
+        "assumption:additive_noise": True,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
+    }
+
     def __init__(
         self,
         regressor: BaseEstimator | None = None,
@@ -134,15 +153,12 @@ class ANM(BaseCausalDiscovery):
         if X.shape[1] != 2:
             raise ValueError(f"ANM requires exactly two variables, got {X.shape[1]}.")
 
-        if get_dataset_type(X) != "continuous":
-            raise ValueError("ANM requires continuous (numeric) variables; got non-continuous data.")
-
         x, y = self.feature_names_in_
 
         # Step 1: Fit models in both directions and compute the residual-dependence scores.
-        score_fn = get_bivariate_score(self.scoring_method, algorithm="anm")
-        forward_score = self._direction_score(cause=X[[x]], effect=X[y], score_fn=score_fn)
-        backward_score = self._direction_score(cause=X[[y]], effect=X[x], score_fn=score_fn)
+        self.scoring_method_ = get_bivariate_score(self.scoring_method, input_type="cause_residual")
+        forward_score = self._direction_score(cause=X[[x]], effect=X[y], score_fn=self.scoring_method_)
+        backward_score = self._direction_score(cause=X[[y]], effect=X[x], score_fn=self.scoring_method_)
 
         if np.isnan(forward_score) or np.isnan(backward_score):
             raise ValueError("ANM scoring_method returned NaN; cannot determine a causal direction.")

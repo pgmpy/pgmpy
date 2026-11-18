@@ -44,8 +44,9 @@ class SP(BaseCausalDiscovery):
     show_progress : bool, default=True
         If True, shows a progress bar while learning the causal structure.
 
-    seed : int or None, default=None
-        Seed for the random number generator used to shuffle the variables before searching over permutations.
+    rng : int, numpy.random.Generator or None, default=None
+        Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the operating
+        system, so results are not reproducible. It shuffles the variables before searching over permutations.
 
     Attributes
     ----------
@@ -57,6 +58,9 @@ class SP(BaseCausalDiscovery):
 
     optimal_permutations_ : list[tuple]
         All permutations that produce a DAG with the minimum number of edges.
+
+    ci_test_ : BaseCITest or callable
+        The CI test used for learning, resolved from ``ci_test``.
 
     n_features_in_ : int
         The number of features in the data used to learn the causal graph.
@@ -70,7 +74,7 @@ class SP(BaseCausalDiscovery):
 
     >>> from pgmpy.example_models import load_model
     >>> model = load_model("bnlearn/cancer")
-    >>> df = model.simulate(n_samples=1000, seed=42)
+    >>> df = model.simulate(n_samples=1000, rng=42)
 
     Use the SP algorithm to learn the causal structure from data:
 
@@ -88,6 +92,23 @@ class SP(BaseCausalDiscovery):
     - :footcite:t:`raskutti2019learningdirectedacyclicgraphs`
     """
 
+    _tags = {
+        "name": "sp",
+        "data_types": ["discrete", "continuous", "mixed"],
+        "identifiable_graph": "cpdag",
+        "requires_target": False,
+        "capability:multivariate": True,
+        "capability:expert_knowledge": [],
+        "assumption:causal_sufficiency": True,
+        "assumption:acyclicity": True,
+        "assumption:faithfulness": False,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
+    }
+
     def __init__(
         self,
         ci_test: str | Callable | None = None,
@@ -95,14 +116,15 @@ class SP(BaseCausalDiscovery):
         max_iter: int | None = None,
         return_type: str = "dag",
         show_progress: bool = True,
-        seed: int | None = None,
+        *,
+        rng: int | np.random.Generator | None = None,
     ):
         self.ci_test = ci_test
         self.significance_level = significance_level
         self.max_iter = max_iter
         self.return_type = return_type
         self.show_progress = show_progress
-        self.seed = seed
+        self.rng = rng
 
     def _build_imap_edges(
         self,
@@ -175,7 +197,7 @@ class SP(BaseCausalDiscovery):
         self.ci_test_ = get_ci_test(test=self.ci_test, data=X)
         nodes = list(self.feature_names_in_)
 
-        rng = np.random.default_rng(self.seed)
+        rng = np.random.default_rng(self.rng)
         rng.shuffle(nodes)
 
         # Step 2: Run the iterations.

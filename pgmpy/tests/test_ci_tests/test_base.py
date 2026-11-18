@@ -30,6 +30,20 @@ def test_ci_registry():
     assert "hotelling_lawley" in all_tests
 
 
+def test_filter_ci_tests_by_data_type():
+    names = {
+        cls.__name__
+        for cls in all_objects(
+            object_types=BaseCITest,
+            package_name="pgmpy.ci_tests",
+            return_names=False,
+            filter_tags={"data_types": "continuous"},
+        )
+    }
+    assert {"Pearsonr", "FisherZ", "PillaiTrace"} <= names
+    assert "ChiSquare" not in names
+
+
 @pytest.fixture
 def cont_data():
     rng = np.random.default_rng(seed=42)

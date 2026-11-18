@@ -8,6 +8,8 @@ from skbase.lookup import all_objects
 from sklearn.base import clone
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 
+from pgmpy.utils import is_discrete_type
+
 
 class _ResidualMixin:
     """
@@ -33,6 +35,12 @@ class _ResidualMixin:
         for numerical variables.
     """
 
+    _tags = {
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+    }
+
     def _fit_predict(self, target_col: str, Z_data: pd.DataFrame):
         """
         Fit an estimator on ``Z_data`` to predict ``target_col``.
@@ -53,7 +61,7 @@ class _ResidualMixin:
             Category index returned by :func:`pandas.factorize`; ``None`` for
             numerical targets.
         """
-        is_cat = self.dtypes[target_col] in ("C", "O")
+        is_cat = is_discrete_type(self.dtypes[target_col])
         target_data = self.data.loc[:, target_col]
         cat_index = None
 
@@ -112,8 +120,8 @@ class _ResidualMixin:
         Z_data = pd.get_dummies(z_data_source.loc[:, z_cols])
         pred, cat_index, estimator = self._fit_predict(X, Z_data)
 
-        if self.dtypes[X] in ("C", "O"):
-            dummies = pd.get_dummies(self.data.loc[:, X]).loc[:, cat_index.categories[cat_index.codes]]
+        if is_discrete_type(self.dtypes[X]):
+            dummies = pd.get_dummies(self.data.loc[:, X]).reindex(columns=cat_index.categories[cat_index.codes])
             residual = (dummies - pred).iloc[:, :-1]
         else:
             residual = self.data.loc[:, X] - pred
@@ -137,11 +145,16 @@ class BaseCITest(BaseObject):
     """
 
     _tags = {
+        "object_type": "ci_test",
         "name": None,
-        "data_types": (),
+        "data_types": ["discrete", "continuous", "mixed"],
         "default_for": None,
         "requires_data": True,
         "is_symmetric": True,
+        "capability:conditioning": None,
+        "assumption:linearity": None,
+        "assumption:additive_noise": None,
+        "assumption:gaussian_noise": None,
     }
 
     def __init__(self, use_cache: bool = True):

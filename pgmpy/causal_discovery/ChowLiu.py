@@ -63,7 +63,7 @@ class ChowLiu(_TreeSearchMixin, BaseCausalDiscovery):
     >>> values = pd.DataFrame(
     ...     np.random.randint(low=0, high=2, size=(1000, 5)),
     ...     columns=["A", "B", "C", "D", "E"],
-    ... )
+    ... ).astype("category")
 
     With a fixed root node:
 
@@ -89,6 +89,23 @@ class ChowLiu(_TreeSearchMixin, BaseCausalDiscovery):
     ... )
     >>> plt.show()
     """
+
+    _tags = {
+        "name": "chow_liu",
+        "data_types": ["discrete"],
+        "identifiable_graph": "cpdag",
+        "requires_target": False,
+        "capability:multivariate": True,
+        "capability:expert_knowledge": [],
+        "assumption:causal_sufficiency": True,
+        "assumption:acyclicity": True,
+        "assumption:faithfulness": False,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
+    }
 
     def __init__(
         self,
