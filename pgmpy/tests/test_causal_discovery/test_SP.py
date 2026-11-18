@@ -25,16 +25,16 @@ def test_sp_compatibility(estimator, check):
 @pytest.fixture
 def cancer_data():
     model = load_model("bnlearn/cancer")
-    return model.simulate(n_samples=1000, seed=42)
+    return model.simulate(n_samples=1000, rng=42)
 
 
 class TestSP:
     def test_chain_recovery_and_attributes(self, cancer_data):
-        est = SP(ci_test="g_sq", return_type="dag", seed=42)
+        est = SP(ci_test="g_sq", return_type="dag", rng=42)
         est.fit(cancer_data)
         assert isinstance(est.causal_graph_, DAG)
 
-        assert set(est.causal_graph_.edges()) == {("Xray", "Cancer")}
+        assert set(est.causal_graph_.edges()) == {("Xray", "Cancer"), ("Smoker", "Cancer")}
         assert est.n_features_in_ == cancer_data.shape[1]
         assert list(est.feature_names_in_) == list(cancer_data.columns)
 
@@ -49,8 +49,8 @@ class TestSP:
         assert isinstance(est.causal_graph_, PDAG)
 
     def test_seed_and_max_iter(self, cancer_data):
-        est1 = SP(ci_test="g_sq", max_iter=10, seed=42)
-        est2 = SP(ci_test="g_sq", max_iter=10, seed=42)
+        est1 = SP(ci_test="g_sq", max_iter=10, rng=42)
+        est2 = SP(ci_test="g_sq", max_iter=10, rng=42)
         est1.fit(cancer_data)
         est2.fit(cancer_data)
         assert set(est1.causal_graph_.edges()) == set(est2.causal_graph_.edges())

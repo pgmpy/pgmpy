@@ -28,7 +28,7 @@ class ChowLiu(_TreeSearchMixin, BaseCausalDiscovery):
 
         - ``None``: Chosen from the type of the data (see :func:`~pgmpy.utils.get_dataset_type`):
           ``"mutual_info"`` for discrete data and ``"gaussian_mutual_info"`` for continuous
-          data. Raises a ``ValueError`` for mixed data.
+          data.
         - ``"mutual_info"``: Mutual Information Score.
         - ``"adjusted_mutual_info"``: Adjusted Mutual Information Score.
         - ``"normalized_mutual_info"``: Normalized Mutual Information Score.

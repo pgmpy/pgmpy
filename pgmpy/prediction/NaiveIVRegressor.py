@@ -70,7 +70,7 @@ class NaiveIVRegressor(BaseCausalPrediction):
     >>> lgbn = DAG.from_dagitty(
     ...     "dag { Z1 -> X [beta=0.2] Z2 -> X [beta=0.2] X -> Y [beta=0.3] }"
     ... )
-    >>> data = lgbn.simulate(1000, seed=42)  # returns a pandas DataFrame
+    >>> data = lgbn.simulate(1000, rng=42)  # returns a pandas DataFrame
     >>> df = data.loc[:, ["X", "Z1", "Z2"]]
     >>> df = (df - df.mean(axis=0)) / df.std(axis=0)
     >>> y = data["Y"]
@@ -101,7 +101,7 @@ class NaiveIVRegressor(BaseCausalPrediction):
     ...     "dag { U1 -> X [beta=0.3] U2 -> X [beta=0.2] U3 -> X [beta=0.1] "
     ...     "U4 -> X [beta=0.2] X -> Y [beta=0.6] P -> Y [beta=0.2] }"
     ... )
-    >>> data = lgbn.simulate(300, seed=42)
+    >>> data = lgbn.simulate(300, rng=42)
     >>> df = data.loc[:, ["X", "U1", "U2", "U3", "P"]]
     >>>
     >>> dag = DAG(

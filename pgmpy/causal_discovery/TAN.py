@@ -130,7 +130,7 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
 
     _tags = {
         "name": "tan",
-        "data_types": ["discrete", "continuous"],
+        "data_types": ["discrete", "continuous", "mixed"],
         "identifiable_graph": "cpdag",
         "requires_target": True,
         "capability:multivariate": True,
