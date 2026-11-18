@@ -10,7 +10,7 @@ coverage:
         threshold: 2%
 comment:
   layout: "reach, diff, flags, files"
-  behavior: new
+  behavior: default
   require_changes: true
 codecov:
   notify:

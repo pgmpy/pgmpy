@@ -113,11 +113,11 @@ class TestSklearnAdapter:
         assert adapter.sample(X_test.iloc[:0]).shape == root.sample(pd.DataFrame(index=[])).shape == (0, 1)
 
         # Samples follow the Normals, and the seed matters.
-        samples = adapter.sample(X_test, n_samples=50, random_state=0)["Y"].to_numpy().reshape(50, -1)
+        samples = adapter.sample(X_test, n_samples=50, rng=0)["Y"].to_numpy().reshape(50, -1)
         z = (samples - dist.mean()["Y"].to_numpy()) / adapter.std_
         assert abs(z.mean()) < 0.05 and z.std() == pytest.approx(1, abs=0.05)
-        pd.testing.assert_frame_equal(adapter.sample(X_test, random_state=0), adapter.sample(X_test, random_state=0))
-        assert not adapter.sample(X_test, random_state=0).equals(adapter.sample(X_test, random_state=1))
+        pd.testing.assert_frame_equal(adapter.sample(X_test, rng=0), adapter.sample(X_test, rng=0))
+        assert not adapter.sample(X_test, rng=0).equals(adapter.sample(X_test, rng=1))
 
         # Training residuals of 0, as from a model that interpolates its data, can't give a Normal, and neither can a
         # prediction that isn't finite, e.g. from isotonic regression outside its training range.
@@ -141,8 +141,8 @@ class TestSklearnAdapter:
         assert (dist.index.tolist(), dist.columns.tolist()) == (X_test.index.tolist(), ["Y"])
         assert list(dist.categories) == list(adapter.classes_) == ["hi", "lo"]
         np.testing.assert_allclose(np.asarray(dist.probs), adapter.estimator_.predict_proba(X_test))
-        samples = adapter.sample(X_test, n_samples=20, random_state=0)["Y"]
-        assert samples.isin(["hi", "lo"]).all() and not samples.equals(adapter.sample(X_test, 20, random_state=1)["Y"])
+        samples = adapter.sample(X_test, n_samples=20, rng=0)["Y"]
+        assert samples.isin(["hi", "lo"]).all() and not samples.equals(adapter.sample(X_test, 20, rng=1)["Y"])
 
         # Without X, the marginal averages the training predictions, and changing it leaves the adapter as it was.
         marginal, expected = adapter.predict_proba(), adapter.estimator_.predict_proba(X).mean(axis=0)
@@ -156,7 +156,7 @@ class TestSklearnAdapter:
         boolean = SklearnAdapter(LogisticRegression()).fit(X[["B"]], flag)
         assert list(boolean.predict_proba().categories) == [False, True]
         child = TabularCPD().fit(flag.to_frame(), labels)
-        child.predict_proba(boolean.sample(X_test[["B"]], random_state=0))
+        child.predict_proba(boolean.sample(X_test[["B"]], rng=0))
 
         # A single observed class gets all the probability without the estimator, which some can't predict with.
         single = SklearnAdapter(HistGradientBoostingClassifier()).fit(X, pd.Series("no", index=X.index, name="Y"))

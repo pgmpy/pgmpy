@@ -51,7 +51,7 @@ class TabularCPD(BaseParameter):
     >>> cpd = TabularCPD().fit(data[["rain"]], data["wet"])
     >>> cpd.CPT_.round(2).tolist()
     [[0.67, 0.0], [0.33, 1.0]]
-    >>> cpd.sample(pd.DataFrame({"rain": ["yes", "yes"]}), random_state=0)["wet"].tolist()
+    >>> cpd.sample(pd.DataFrame({"rain": ["yes", "yes"]}), rng=0)["wet"].tolist()
     ['yes', 'yes']
 
     Without ``X``, ``predict_proba`` gives the marginal distribution over the parent values seen in ``fit``:

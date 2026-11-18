@@ -39,7 +39,7 @@ def test_basic_functionality_with_adjustment():
 
     lgbn = DAG.from_dagitty("dag { Z -> X [beta=0.5] X -> Y [beta=2.0] Z -> Y [beta=1.5] }")
 
-    data = lgbn.simulate(1000, seed=42)
+    data = lgbn.simulate(1000, rng=42)
 
     dag = DAG(
         ebunch=[("Z", "X"), ("Z", "Y"), ("X", "Y")],
@@ -99,7 +99,7 @@ def test_dataframe_input_for_both_x_and_y():
     cpd_y = LinearGaussianCPD("Y", beta=[0, 0.3, 0.2], std=0.01, evidence=["X", "Z"])
     cpd_z = LinearGaussianCPD("Z", beta=[0], std=0.01)
     lgbn.add_cpds(cpd_x, cpd_y, cpd_z)
-    data = lgbn.simulate(10000, seed=42)
+    data = lgbn.simulate(10000, rng=42)
 
     regressor = NaiveAdjustmentRegressor(causal_graph=dag)
 
@@ -122,7 +122,7 @@ def test_no_adjustment_variables():
     """Test case where there are no adjustment variables (no confounders)."""
     lgbn = DAG.from_dagitty("dag { X -> Y [beta=2.0] }")
 
-    data = lgbn.simulate(100, seed=42)
+    data = lgbn.simulate(100, rng=42)
 
     dag = DAG(
         ebunch=[("X", "Y")],
@@ -149,7 +149,7 @@ def test_multiple_adjustment_variables():
         "dag { U1 -> X [beta=0.3] U1 -> Y [beta=0.6] U2 -> X [beta=0.4] U2 -> Y [beta=0.7] X -> Y [beta=1.5] }"
     )
 
-    data = lgbn.simulate(200, seed=42)
+    data = lgbn.simulate(200, rng=42)
 
     np.random.seed(42)
     data["noise1"] = np.random.normal(0, 1, len(data))
@@ -239,7 +239,7 @@ def test_numpy_array_input():
 def test_sample_weight_support():
     """Test that sample_weight parameter is properly passed to base estimator."""
     lgbn = DAG.from_dagitty("dag { X -> Y [beta=2.0] }")
-    data = lgbn.simulate(4, seed=42)
+    data = lgbn.simulate(4, rng=42)
 
     dag = DAG(
         ebunch=[("X", "Y")],

@@ -133,7 +133,7 @@ class TestFBNMethods(unittest.TestCase):
             data,
             estimator="svi",
             optimizer=pyro.optim.Adam({"lr": 0.05}),
-            seed=42,
+            rng=42,
             num_steps=100,
         )
 
@@ -185,7 +185,7 @@ class TestFBNMethods(unittest.TestCase):
             data,
             estimator="SVI",
             optimizer=pyro.optim.Adam({"lr": 0.05}),
-            seed=42,
+            rng=42,
             num_steps=100,
         )
 
@@ -249,7 +249,7 @@ class TestFBNMethods(unittest.TestCase):
             data,
             estimator="MCMC",
             prior_fn=prior_fn,
-            seed=42,
+            rng=42,
             num_steps=100,
             nuts_kwargs={"target_accept_prob": 0.8},
             mcmc_kwargs={"num_chains": 1, "warmup_steps": 100},
@@ -311,7 +311,7 @@ class TestFBNMethods(unittest.TestCase):
         model.add_cpds(cpd1, cpd2, cpd3)
 
         pyro.clear_param_store()
-        params = model.fit(data, estimator="MCMC", prior_fn=prior_fn, seed=42, num_steps=100)
+        params = model.fit(data, estimator="MCMC", prior_fn=prior_fn, rng=42, num_steps=100)
 
         self.assertIn("x1_concen1", params)
         self.assertIn("x1_concen0", params)
@@ -325,7 +325,7 @@ class TestFBNMethods(unittest.TestCase):
 
     def test_fit_complex_svi(self):
         sim_model = load_model("bnlearn/ecoli70")
-        df = sim_model.simulate(n_samples=int(1e3), seed=42)
+        df = sim_model.simulate(n_samples=int(1e3), rng=42)
 
         model = FunctionalBayesianNetwork(
             [
@@ -438,7 +438,7 @@ class TestFBNMethods(unittest.TestCase):
             df,
             estimator="SVI",
             optimizer=pyro.optim.Adam({"lr": 0.05}),
-            seed=42,
+            rng=42,
             num_steps=200,
         )
 
@@ -488,7 +488,7 @@ class TestFBNMethods(unittest.TestCase):
 
     def test_fit_complex_mcmc(self):
         sim_model = load_model("bnlearn/ecoli70")
-        df = sim_model.simulate(n_samples=int(1e3), seed=42)
+        df = sim_model.simulate(n_samples=int(1e3), rng=42)
 
         model = FunctionalBayesianNetwork(
             [
@@ -584,7 +584,7 @@ class TestFBNMethods(unittest.TestCase):
             df,
             estimator="MCMC",
             prior_fn=prior_fn,
-            seed=42,
+            rng=42,
             num_steps=100,
             nuts_kwargs={"target_accept_prob": 0.8},
             mcmc_kwargs={"num_chains": 1, "warmup_steps": 100},
@@ -682,8 +682,8 @@ class TestFBNSimulation(unittest.TestCase):
 
         n_samples = 5000
         seed = 42
-        lg_samples = lg_model.simulate(n_samples=n_samples, seed=seed)
-        fn_samples = fn_model.simulate(n_samples=n_samples, seed=seed)
+        lg_samples = lg_model.simulate(n_samples=n_samples, rng=seed)
+        fn_samples = fn_model.simulate(n_samples=n_samples, rng=seed)
 
         for var in ["x1", "x2", "x3"]:
             np.testing.assert_allclose(
@@ -730,7 +730,7 @@ class TestFBNSimulation(unittest.TestCase):
 
         model.add_cpds(cpd1, cpd2, cpd3, cpd4)
         n_samples = 10000
-        samples = model.simulate(n_samples=n_samples, seed=42)
+        samples = model.simulate(n_samples=n_samples, rng=42)
 
         self.assertEqual(len(samples), n_samples)
         self.assertEqual(set(samples.columns), {"exponential", "uniform", "lognormal", "gamma"})
@@ -750,7 +750,7 @@ class TestFBNSimulation(unittest.TestCase):
         cpd_x2 = FunctionalCPD("x2", fn=lambda p: dist.Delta(2.0 * p["x1"] + 1.0), parents=["x1"])
         model.add_cpds(cpd_x1, cpd_x2)
 
-        df = model.simulate(n_samples=10, seed=42, do={"x1": 3.0})
+        df = model.simulate(n_samples=10, rng=42, do={"x1": 3.0})
 
         self.assertTrue(np.allclose(df["x1"].values, 3.0))
         self.assertTrue(np.allclose(df["x2"].values, 7.0))
@@ -763,7 +763,7 @@ class TestFBNSimulation(unittest.TestCase):
         )
 
         with self.assertRaises(ValueError):
-            model.simulate(n_samples=5, seed=0, do={"not_a_node": 1.0})
+            model.simulate(n_samples=5, rng=0, do={"not_a_node": 1.0})
 
     def test_simulate_with_virtual_intervention(self):
         import torch
@@ -780,7 +780,7 @@ class TestFBNSimulation(unittest.TestCase):
         const = torch.tensor(4.2, dtype=config.get_dtype(), device=config.get_device())
         vi_x1 = FunctionalCPD("x1", fn=lambda _: dist.Delta(const))  # unconditional VI
 
-        df = model.simulate(n_samples=12, seed=13, virtual_intervention=[vi_x1])
+        df = model.simulate(n_samples=12, rng=13, virtual_intervention=[vi_x1])
 
         self.assertTrue(np.allclose(df["x1"].values, 4.2))
         self.assertTrue(np.allclose(df["x2"].values, 2.0 * 4.2 + 1.0))
@@ -794,11 +794,11 @@ class TestFBNSimulation(unittest.TestCase):
 
         bad_vi = FunctionalCPD("x2", fn=lambda p: dist.Normal(p["x1"], 1.0), parents=["x1"])
         with self.assertRaises(ValueError):
-            model.simulate(n_samples=5, seed=0, virtual_intervention=[bad_vi])
+            model.simulate(n_samples=5, rng=0, virtual_intervention=[bad_vi])
 
         missing_vi = FunctionalCPD("does_not_exist", fn=lambda _: dist.Delta(0.0))
         with self.assertRaises(ValueError):
-            model.simulate(n_samples=5, seed=0, virtual_intervention=[missing_vi])
+            model.simulate(n_samples=5, rng=0, virtual_intervention=[missing_vi])
 
     def test_simulate_do_and_virtual_intervention_conflict_raises(self):
         model = FunctionalBayesianNetwork([("x1", "x2")])
@@ -812,7 +812,7 @@ class TestFBNSimulation(unittest.TestCase):
         with self.assertRaises(ValueError):
             model.simulate(
                 n_samples=5,
-                seed=0,
+                rng=0,
                 do={"x1": 3.0},
                 virtual_intervention=[vi_x1],
             )
