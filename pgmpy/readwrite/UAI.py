@@ -473,7 +473,7 @@ class UAIWriter(BaseWriter):
             tables = []
             for cpd in cpds:
                 values = [
-                    self._format_value(value)
+                    np.format_float_positional(value, trim="0")
                     for value in compat_fns.to_numpy(cpd.values.ravel(), decimals=self.round_values)
                 ]
                 tables.append(values)
@@ -483,23 +483,13 @@ class UAIWriter(BaseWriter):
             tables = []
             for factor in factors:
                 values = [
-                    self._format_value(value)
+                    np.format_float_positional(value, trim="0")
                     for value in compat_fns.to_numpy(factor.values.ravel(), decimals=self.round_values)
                 ]
                 tables.append(values)
             return tables
         else:
             raise TypeError("Model must be an instance of Markov or Bayesian model.")
-
-    @staticmethod
-    def _format_value(value):
-        """
-        Returns the string for a table value in positional notation.
-
-        `str` switches to scientific notation for small and large values (e.g. `1e-05`), which
-        is not a valid number in the UAI format.
-        """
-        return np.format_float_positional(value, trim="0")
 
     def write_uai(self, filename):
         _warn_external(
