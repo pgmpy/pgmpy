@@ -2,10 +2,28 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import pytest
+from sklearn.utils.estimator_checks import parametrize_with_checks
 
 from pgmpy.base import PDAG
 from pgmpy.causal_discovery import ExpertKnowledge, LatentPC
 from pgmpy.example_models import load_model
+
+
+def expected_failed_checks(estimator):
+    return {
+        "check_fit_score_takes_y": "Causal discovery estimators do not take y parameter in score method.",
+        "check_n_features_in_after_fitting": "Failing for score method (not for fit) for unknown reason.",
+        "check_pipeline_consistency": "The causal_graph must be one of the following types: "
+        "(<class 'pgmpy.base.DAG.DAG'>,), but got <class 'pgmpy.base.PDAG.PDAG'> instead.",
+    }
+
+
+@parametrize_with_checks(
+    [LatentPC(show_progress=False)],
+    expected_failed_checks=expected_failed_checks,
+)
+def test_latent_pc_compatibility(estimator, check):
+    check(estimator)
 
 
 def test_skeleton_to_pdag():

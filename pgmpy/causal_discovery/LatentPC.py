@@ -12,6 +12,7 @@ from pgmpy.base import PDAG
 from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
 from pgmpy.ci_tests import IndependenceMatch, get_ci_test
+from pgmpy.utils._warnings import _warn_external
 
 
 class LatentPC(BaseCausalDiscovery):
@@ -168,7 +169,7 @@ class LatentPC(BaseCausalDiscovery):
         self.show_progress = show_progress
         self._ci_test_mechanisms = {}
 
-    def _fit(self, datasets: list[pd.DataFrame], independencies=None) -> PDAG:
+    def _fit(self, datasets: list[pd.DataFrame] | pd.DataFrame, independencies=None) -> PDAG:
         """
         The fitting procedure for the PC algorithm.
 
@@ -183,6 +184,15 @@ class LatentPC(BaseCausalDiscovery):
         self : pgmpy.causal_discovery.PC
             Returns the instance with the fitted attributes.
         """
+        # Dataset check
+        if type(datasets) in (pd.DataFrame,):
+            datasets = [datasets]
+            _warn_external(
+                "Singular dataset passed to LatentPC's fit method. "
+                "This should default to a normal PC run."
+                "Please consider changing the estimator to PC",
+                UserWarning,
+            )
 
         # CI test
         if independencies is not None:
@@ -225,7 +235,7 @@ class LatentPC(BaseCausalDiscovery):
                 k += 1
 
         all_variables = variables + f_nodes
-        self.latent_nodes = set(f_nodes)
+        self.latent_nodes_ = set(f_nodes)
 
         graph = nx.complete_graph(n=all_variables, create_using=nx.Graph)
         if expert_knowledge is None:
@@ -292,7 +302,7 @@ class LatentPC(BaseCausalDiscovery):
 
         # Step 3: Use separating sets to orient colliders
         self.skeleton_, self.separating_sets_ = graph, separating_sets
-        pdag = self._orient_colliders(temporal_ordering=temporal_ordering, latent_nodes=self.latent_nodes)
+        pdag = self._orient_colliders(temporal_ordering=temporal_ordering, latent_nodes=self.latent_nodes_)
 
         # Step 4: Apply orientation rules and expert knowledge as hard directional constraints.
         curr_edges = list(pdag.edges)

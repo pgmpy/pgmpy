@@ -80,6 +80,16 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         if n_samples < 2:
             raise ValueError(f"n_samples = {n_samples}, at least 2 are required.")
 
+        # Handle cases like complex data, sparse arrays etc. first
+        validate_data(
+            self,
+            X=X,
+            dtype=None,
+            accept_sparse=False,
+            ensure_all_finite=True,
+            reset=True,
+        )
+
         # Enforce consistent dataframes for fitting on list of dataframes
         if not isinstance(X, pd.DataFrame):
             X = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
@@ -93,16 +103,6 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
                     )
             else:
                 self.feature_names_in_ = np.asarray(X.columns, dtype="object")
-
-        # Handle cases like complex data, sparse arrays etc. first
-        validate_data(
-            self,
-            X=X,
-            dtype=None,
-            accept_sparse=False,
-            ensure_all_finite=True,
-            reset=True,
-        )
 
         if not all([isinstance(x, Hashable) for x in X.values.flat]):
             raise TypeError("argument must be a string, number, or hashable object.")
