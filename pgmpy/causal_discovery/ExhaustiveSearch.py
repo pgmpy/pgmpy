@@ -1,5 +1,5 @@
 from collections.abc import Generator, Hashable
-from itertools import combinations
+from itertools import combinations, islice
 from math import comb
 
 import networkx as nx
@@ -178,14 +178,14 @@ class ExhaustiveSearch(BaseCausalDiscovery):
         self : pgmpy.causal_discovery.ExhaustiveSearch
             Returns the instance with the fitted attributes.
         """
-        # Step 1: Check the arguments and resolve the scoring method.
+        # Step 0: Check the arguments.
         if self.return_type.lower() not in ("dag", "pdag"):
             raise ValueError(f"return_type must be one of: dag, pdag. Got: {self.return_type}")
 
+        # Step 1: Resolve the scoring method.
         self.scoring_method_ = get_scoring_method(self.scoring_method, X)
 
-        # Step 2: Score every DAG. The total of the progress bar is the number of labelled DAGs, computed using
-        #         Robinson's recurrence.
+        # Step 2: Count the DAGs over the variables using Robinson's recurrence.
         nodes = sorted(X.columns)
 
         n_dags = [1]
@@ -194,19 +194,20 @@ class ExhaustiveSearch(BaseCausalDiscovery):
                 sum((-1) ** (k + 1) * comb(n, k) * 2 ** (k * (n - k)) * n_dags[n - k] for k in range(1, n + 1))
             )
 
+        # Step 3: Score every DAG, stopping the enumeration after the last one.
         dag_scores = []
         for dag in tqdm(
-            self._all_dags(nodes),
+            islice(self._all_dags(nodes), n_dags[-1]),
             total=n_dags[-1],
             desc="Scoring DAGs",
             disable=not (self.show_progress and config.SHOW_PROGRESS),
         ):
             dag_scores.append((self.scoring_method_.score(dag), tuple(sorted(dag.edges()))))
 
-        # Step 3: Rank the DAGs. The sort is stable, so DAGs with the same score remain sparsest first.
+        # Step 4: Rank the DAGs by score, keeping the sparsest first among equal scores.
         self.dag_scores_ = sorted(dag_scores, key=lambda dag_score: dag_score[0], reverse=True)
 
-        # Step 4: Store results
+        # Step 5: Store the results.
         best_model = DAG()
         best_model.add_nodes_from(nodes)
         best_model.add_edges_from(self.dag_scores_[0][1])

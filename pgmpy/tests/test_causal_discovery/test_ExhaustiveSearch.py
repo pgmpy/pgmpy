@@ -1,3 +1,5 @@
+from itertools import combinations
+
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -7,7 +9,7 @@ from sklearn.utils.estimator_checks import parametrize_with_checks
 from pgmpy.base import DAG, PDAG
 from pgmpy.causal_discovery import ExhaustiveSearch
 from pgmpy.estimators import ExhaustiveSearch as LegacyExhaustiveSearch
-from pgmpy.structure_score import K2
+from pgmpy.structure_score import BDeu
 
 # sklearn checks that fit on five or more columns, which an exhaustive search cannot finish in reasonable time.
 TOO_WIDE_CHECKS = {"check_estimators_dtypes", "check_dtype_object"}
@@ -60,30 +62,33 @@ def test_all_dags():
         next(ExhaustiveSearch._all_dags(list("ABCDEFG")))
 
 
-@pytest.mark.parametrize(
-    ("scoring_method", "expected_edges"),
-    [
-        ("k2", {("Survived", "Pclass"), ("Sex", "Pclass"), ("Sex", "Survived")}),
-        (None, {("Sex", "Survived"), ("Pclass", "Survived"), ("Pclass", "Sex")}),
-    ],
-)
-def test_fit_titanic(titanic_data, scoring_method, expected_edges):
-    est = ExhaustiveSearch(scoring_method=scoring_method, return_type="dag", show_progress=False).fit(titanic_data)
+def test_fit_titanic(titanic_data):
+    est = ExhaustiveSearch(scoring_method="k2", return_type="dag", show_progress=False).fit(titanic_data)
+    expected_edges = {("Survived", "Pclass"), ("Sex", "Pclass"), ("Sex", "Survived")}
     assert isinstance(est.causal_graph_, DAG)
     assert set(est.causal_graph_.nodes()) == {"Survived", "Sex", "Pclass"}
     assert set(est.causal_graph_.edges()) == expected_edges
     assert est.n_features_in_ == 3
-    assert est.adjacency_matrix_.shape == (3, 3)
-    assert est.adjacency_matrix_.to_numpy().sum() == 3
+    adjacency = est.adjacency_matrix_
+    assert {(u, v) for u in adjacency.index for v in adjacency.columns if adjacency.loc[u, v]} == expected_edges
+
+    # With the default score, the scores of the complete DAGs differ only by round-off, so check their PDAG.
+    pdag = ExhaustiveSearch(show_progress=False).fit(titanic_data).causal_graph_
+    assert pdag.directed_edges == set()
+    assert {frozenset(edge) for edge in pdag.undirected_edges} == {
+        frozenset(pair) for pair in combinations(titanic_data.columns, 2)
+    }
 
 
 @pytest.mark.parametrize("scoring_method", [None, "k2", "bdeu", "bic-d"])
 def test_fit_rand(rand_data, scoring_method):
     dag = ExhaustiveSearch(scoring_method=scoring_method, return_type="dag", show_progress=False).fit(rand_data)
+    assert set(dag.causal_graph_.nodes()) == {"A", "B", "C"}
     assert set(dag.causal_graph_.edges()) == {("B", "C")}
 
     pdag = ExhaustiveSearch(scoring_method=scoring_method, show_progress=False).fit(rand_data).causal_graph_
     assert isinstance(pdag, PDAG)
+    assert set(pdag.nodes()) == {"A", "B", "C"}
     assert pdag.directed_edges == set()
     assert {frozenset(edge) for edge in pdag.undirected_edges} == {frozenset({"B", "C"})}
 
@@ -103,6 +108,10 @@ def test_dag_scores(titanic_data):
         dag.add_edges_from(edges)
         assert score == pytest.approx(est.scoring_method_.score(dag))
 
+    est.fit(titanic_data[["Survived", "Sex"]])
+    assert len(est.dag_scores_) == 3
+    assert set(est.causal_graph_.nodes()) == {"Survived", "Sex"}
+
 
 def test_fit_continuous():
     data = pd.read_csv("pgmpy/tests/test_estimators/testdata/gaussian_testdata.csv", index_col=0)[["A", "B", "C"]]
@@ -110,11 +119,18 @@ def test_fit_continuous():
     assert est.get_tag("data_types") == ["continuous"]
     assert len(est.dag_scores_) == 25
 
+    # Reference graph from causal-learn v0.1.4.5, which returns A -> C <- B:
+    # bic_exact_search((data - data.mean()).to_numpy(), search_method="dp")
+    assert est.causal_graph_.directed_edges == {("A", "C"), ("B", "C")}
+    assert est.causal_graph_.undirected_edges == set()
+
 
 def test_deprecated_estimator_matches(titanic_data):
-    with pytest.warns(FutureWarning, match=r"pgmpy\.causal_discovery\.ExhaustiveSearch"):
-        legacy = LegacyExhaustiveSearch(titanic_data, scoring_method=K2(titanic_data))
-    est = ExhaustiveSearch(scoring_method=K2(titanic_data), return_type="dag", show_progress=False).fit(titanic_data)
+    scoring_method = BDeu(titanic_data, equivalent_sample_size=200)
+    with pytest.warns(FutureWarning, match=r"deprecated since v1\.2\.0 .* `pgmpy\.causal_discovery\.ExhaustiveSearch`"):
+        legacy = LegacyExhaustiveSearch(titanic_data, scoring_method=scoring_method)
+    est = ExhaustiveSearch(scoring_method=scoring_method, return_type="dag", show_progress=False).fit(titanic_data)
+    assert est.scoring_method_ is scoring_method
 
     assert list(legacy.estimate().edges()) == list(est.causal_graph_.edges())
     legacy_scores = [(score, tuple(sorted(dag.edges()))) for score, dag in legacy.all_scores()]

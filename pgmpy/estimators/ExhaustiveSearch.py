@@ -34,7 +34,7 @@ class ExhaustiveSearch(StructureEstimator):
 
     def __init__(self, data, scoring_method=None, use_cache=True, **kwargs):
         _warn_external(
-            "`pgmpy.estimators.ExhaustiveSearch` is deprecated and will be removed in v2.0. "
+            "`pgmpy.estimators.ExhaustiveSearch` is deprecated since v1.2.0 and will be removed in v2.0. "
             "Use `pgmpy.causal_discovery.ExhaustiveSearch` instead.",
             FutureWarning,
         )
