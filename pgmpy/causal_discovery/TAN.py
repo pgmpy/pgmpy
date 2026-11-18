@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from collections.abc import Callable
 from itertools import combinations
 
 import networkx as nx
@@ -34,13 +35,21 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
         feature node with the highest sum of marginal edge weights is chosen
         automatically. Must not equal ``class_node``.
 
-    edge_weights_fn : str or callable, default="mutual_info"
+    edge_weights_fn : str, callable or None, default=None
         Base scoring function used when computing conditional edge weights
         I(X; Y | class_node). Options are:
 
+        - ``None``: Chosen from the type of the feature variables (see
+          :func:`~pgmpy.utils.get_dataset_type`): ``"mutual_info"`` for discrete features and
+          ``"gaussian_mutual_info"`` for continuous features. Raises a ``ValueError`` for mixed
+          features.
         - ``"mutual_info"``: Mutual Information Score.
         - ``"adjusted_mutual_info"``: Adjusted Mutual Information Score.
         - ``"normalized_mutual_info"``: Normalized Mutual Information Score.
+        - ``"gaussian_mutual_info"``: Mutual information of jointly Gaussian variables,
+          :math:`-\\frac{1}{2} \\ln(1 - \\rho^2)`, for continuous features.
+        - ``"mutual_info_regression"``: scikit-learn's mutual information estimate for
+          continuous features. Passing ``sklearn.feature_selection.mutual_info_regression`` itself also works.
         - A callable of the form ``fn(array, array) -> float``.
 
     n_jobs : int, default=-1
@@ -56,6 +65,9 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
 
     adjacency_matrix_ : pd.DataFrame
         Adjacency matrix representation of ``causal_graph_``.
+
+    edge_weights_fn_ : callable
+        The function used for computing edge weights, resolved from ``edge_weights_fn``.
 
     n_features_in_ : int
         The number of features in the data used to learn the causal graph.
@@ -77,7 +89,7 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
     >>> values = pd.DataFrame(
     ...     np.random.randint(low=0, high=2, size=(1000, 5)),
     ...     columns=["A", "B", "C", "D", "E"],
-    ... )
+    ... ).astype("category")
 
     With a fixed root node and class node:
 
@@ -102,11 +114,23 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
     ...     est.causal_graph_, with_labels=True, arrowsize=20, arrowstyle="fancy", alpha=0.3
     ... )
     >>> plt.show()
+
+    With a discrete class and continuous features, the Gaussian mutual information is used by default:
+
+    >>> rng = np.random.default_rng(42)
+    >>> label = rng.integers(0, 2, size=1000)
+    >>> x = label + rng.normal(size=1000)
+    >>> y = x + rng.normal(size=1000)
+    >>> z = y + rng.normal(size=1000)
+    >>> data = pd.DataFrame({"label": pd.Categorical(label), "x": x, "y": y, "z": z})
+    >>> est = TAN(class_node="label", root_node="x").fit(data)
+    >>> sorted(est.causal_graph_.edges())
+    [('label', 'x'), ('label', 'y'), ('label', 'z'), ('x', 'y'), ('y', 'z')]
     """
 
     _tags = {
         "name": "tan",
-        "data_types": ["discrete"],
+        "data_types": ["discrete", "continuous"],
         "identifiable_graph": "cpdag",
         "requires_target": True,
         "capability:multivariate": True,
@@ -125,7 +149,7 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
         self,
         class_node,
         root_node=None,
-        edge_weights_fn: str = "mutual_info",
+        edge_weights_fn: str | Callable | None = None,
         n_jobs: int = -1,
         show_progress: bool = True,
     ):
@@ -159,19 +183,19 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
         if self.root_node is not None and self.root_node not in X.columns:
             raise ValueError(f"Root node: {self.root_node} not found in data columns.")
 
+        # Step 2: Resolve the edge weight function from the feature variables and determine root node.
+        features = X.drop(columns=[self.class_node])
+        self.edge_weights_fn_ = self._resolve_edge_weights_fn(self.edge_weights_fn, features)
         root_node = self.root_node
-        # Step 2: Determine root node.
         if root_node is None:
-            # Exclude class node
-            features = X.drop(columns=[self.class_node])
-            weights = self._get_weights(features, self.edge_weights_fn, self.n_jobs, self.show_progress)
+            weights = self._get_weights(features, self.edge_weights_fn_, self.n_jobs, self.show_progress)
             sum_weights = weights.sum(axis=0)
             maxw_idx = np.argsort(sum_weights)[::-1]
             root_node = features.columns[maxw_idx[0]]
 
         # Step 3: Compute conditional edge weights I(X; Y | class_node).
         weights = self._get_conditional_weights(
-            X, self.class_node, self.edge_weights_fn, self.n_jobs, self.show_progress
+            X, self.class_node, self.edge_weights_fn_, self.n_jobs, self.show_progress
         )
 
         # Step 4: Ensure root_node and class_node are distinct.
@@ -215,6 +239,8 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
             - ``"mutual_info"``: Mutual Information Score.
             - ``"adjusted_mutual_info"``: Adjusted Mutual Information Score.
             - ``"normalized_mutual_info"``: Normalized Mutual Information Score.
+            - ``"gaussian_mutual_info"``: Mutual information of jointly Gaussian variables.
+            - ``"mutual_info_regression"``: scikit-learn's mutual information estimate for continuous variables.
             - A callable of the form ``fn(array, array) -> float``.
 
         n_jobs : int, default=-1

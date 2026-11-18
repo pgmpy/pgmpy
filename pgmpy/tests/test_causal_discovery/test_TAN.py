@@ -2,8 +2,10 @@ import numpy as np
 import pandas as pd
 import pytest
 from joblib.externals.loky import get_reusable_executor
+from sklearn.metrics import mutual_info_score
 
 from pgmpy.causal_discovery import TAN
+from pgmpy.causal_discovery._base import gaussian_mutual_info
 from pgmpy.example_models import load_model
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
@@ -120,7 +122,7 @@ def data22():
     )
     model.add_cpds(cpd_a, cpd_r, cpd_b, cpd_c, cpd_d, cpd_e)
     inference = BayesianModelSampling(model)
-    return inference.forward_sample(size=10000)
+    return inference.forward_sample(size=10000).astype("category")
 
 
 @pytest.fixture
@@ -253,6 +255,43 @@ def test_tan_real_dataset(alarm_df):
     edges = est.causal_graph_.edges()
 
     assert set(expected_edges) == set(edges)
+
+
+@pytest.fixture
+def gaussian_tan_data():
+    rng = np.random.default_rng(0)
+    label = rng.integers(0, 2, size=1000)
+    x = label + rng.normal(size=1000)
+    y = x + rng.normal(size=1000)
+    z = y + rng.normal(size=1000)
+    return pd.DataFrame({"label": pd.Categorical(label), "x": x, "y": y, "z": z})
+
+
+@pytest.mark.parametrize("weight_fn", [None, "gaussian_mutual_info", "mutual_info_regression"])
+def test_tan_continuous(gaussian_tan_data, weight_fn):
+    est = TAN(class_node="label", root_node="x", edge_weights_fn=weight_fn, n_jobs=1, show_progress=False).fit(
+        gaussian_tan_data
+    )
+
+    assert set(est.causal_graph_.edges()) == {
+        ("label", "x"),
+        ("label", "y"),
+        ("label", "z"),
+        ("x", "y"),
+        ("y", "z"),
+    }
+
+
+def test_tan_default_edge_weights_fn(data22, gaussian_tan_data):
+    est = TAN(class_node="A", n_jobs=1, show_progress=False)
+    assert est.fit(data22).edge_weights_fn_ is mutual_info_score
+
+    est = TAN(class_node="label", n_jobs=1, show_progress=False)
+    assert est.fit(gaussian_tan_data).edge_weights_fn_ is gaussian_mutual_info
+
+    mixed = gaussian_tan_data.assign(w=pd.Categorical(gaussian_tan_data["label"]))
+    with pytest.raises(ValueError, match="mixed"):
+        est.fit(mixed)
 
 
 @pytest.fixture(autouse=True)

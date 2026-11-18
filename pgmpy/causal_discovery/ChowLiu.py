@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from collections.abc import Callable
+
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -21,12 +23,19 @@ class ChowLiu(_TreeSearchMixin, BaseCausalDiscovery):
         The root node of the directed tree. If ``None``, the node with the
         highest sum of edge weights is chosen automatically.
 
-    edge_weights_fn : str or callable, default="mutual_info"
+    edge_weights_fn : str, callable or None, default=None
         Method to use for computing pairwise edge weights. Options are:
 
+        - ``None``: Chosen from the type of the data (see :func:`~pgmpy.utils.get_dataset_type`):
+          ``"mutual_info"`` for discrete data and ``"gaussian_mutual_info"`` for continuous
+          data. Raises a ``ValueError`` for mixed data.
         - ``"mutual_info"``: Mutual Information Score.
         - ``"adjusted_mutual_info"``: Adjusted Mutual Information Score.
         - ``"normalized_mutual_info"``: Normalized Mutual Information Score.
+        - ``"gaussian_mutual_info"``: Mutual information of jointly Gaussian variables,
+          :math:`-\\frac{1}{2} \\ln(1 - \\rho^2)`, for continuous data.
+        - ``"mutual_info_regression"``: scikit-learn's mutual information estimate for
+          continuous data. Passing ``sklearn.feature_selection.mutual_info_regression`` itself also works.
         - A callable of the form ``fn(array, array) -> float``.
 
     n_jobs : int, default=-1
@@ -42,6 +51,9 @@ class ChowLiu(_TreeSearchMixin, BaseCausalDiscovery):
 
     adjacency_matrix_ : pd.DataFrame
         Adjacency matrix representation of ``causal_graph_``.
+
+    edge_weights_fn_ : callable
+        The function used for computing pairwise edge weights, resolved from ``edge_weights_fn``.
 
     n_features_in_ : int
         The number of features in the data used to learn the causal graph.
@@ -63,7 +75,7 @@ class ChowLiu(_TreeSearchMixin, BaseCausalDiscovery):
     >>> values = pd.DataFrame(
     ...     np.random.randint(low=0, high=2, size=(1000, 5)),
     ...     columns=["A", "B", "C", "D", "E"],
-    ... )
+    ... ).astype("category")
 
     With a fixed root node:
 
@@ -88,11 +100,21 @@ class ChowLiu(_TreeSearchMixin, BaseCausalDiscovery):
     ...     est.causal_graph_, with_labels=True, arrowsize=20, arrowstyle="fancy", alpha=0.3
     ... )
     >>> plt.show()
+
+    With continuous data, the Gaussian mutual information is used by default:
+
+    >>> rng = np.random.default_rng(42)
+    >>> x = rng.normal(size=1000)
+    >>> y = x + rng.normal(size=1000)
+    >>> z = y + rng.normal(size=1000)
+    >>> est = ChowLiu(root_node="x").fit(pd.DataFrame({"x": x, "y": y, "z": z}))
+    >>> sorted(est.causal_graph_.edges())
+    [('x', 'y'), ('y', 'z')]
     """
 
     _tags = {
         "name": "chow_liu",
-        "data_types": ["discrete"],
+        "data_types": ["discrete", "continuous"],
         "identifiable_graph": "cpdag",
         "requires_target": False,
         "capability:multivariate": True,
@@ -110,7 +132,7 @@ class ChowLiu(_TreeSearchMixin, BaseCausalDiscovery):
     def __init__(
         self,
         root_node=None,
-        edge_weights_fn: str = "mutual_info",
+        edge_weights_fn: str | Callable | None = None,
         n_jobs: int = -1,
         show_progress: bool = True,
     ):
@@ -140,7 +162,8 @@ class ChowLiu(_TreeSearchMixin, BaseCausalDiscovery):
             raise ValueError(f"Root node: {self.root_node} not found in data columns.")
 
         # Step 2: Compute all pairwise edge weights.
-        weights = self._get_weights(X, self.edge_weights_fn, self.n_jobs, self.show_progress)
+        self.edge_weights_fn_ = self._resolve_edge_weights_fn(self.edge_weights_fn, X)
+        weights = self._get_weights(X, self.edge_weights_fn_, self.n_jobs, self.show_progress)
 
         # Step 3: If root_node isn't specified, auto-pick the node with the
         # highest sum of edge weights.

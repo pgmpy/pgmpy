@@ -3,8 +3,11 @@ import numpy as np
 import pandas as pd
 import pytest
 from joblib.externals.loky import get_reusable_executor
+from sklearn.feature_selection import mutual_info_regression
+from sklearn.metrics import mutual_info_score
 
 from pgmpy.causal_discovery import ChowLiu
+from pgmpy.causal_discovery._base import gaussian_mutual_info
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.sampling import BayesianModelSampling
@@ -172,6 +175,53 @@ def test_chow_liu_auto_root_node(data12):
 
     assert nodes[0] == root_node
     assert nodes == ["D", "A", "C", "B", "E"]
+
+
+@pytest.fixture
+def gaussian_chain():
+    rng = np.random.default_rng(0)
+    x = rng.normal(size=500)
+    y = x + rng.normal(size=500)
+    z = y + rng.normal(size=500)
+    return pd.DataFrame({"x": x, "y": y, "z": z})
+
+
+@pytest.mark.parametrize("weight_fn", [None, "gaussian_mutual_info", "mutual_info_regression", mutual_info_regression])
+def test_chow_liu_continuous(gaussian_chain, weight_fn):
+    est = ChowLiu(root_node="x", edge_weights_fn=weight_fn, n_jobs=1, show_progress=False).fit(gaussian_chain)
+
+    assert set(est.causal_graph_.edges()) == {("x", "y"), ("y", "z")}
+
+
+def test_chow_liu_default_edge_weights_fn(data12, gaussian_chain):
+    discrete = data12.astype("category")
+    est = ChowLiu(n_jobs=1, show_progress=False)
+    assert est.fit(discrete).edge_weights_fn_ is mutual_info_score
+    assert est.fit(gaussian_chain).edge_weights_fn_ is gaussian_mutual_info
+
+    mixed = discrete.assign(F=gaussian_chain["x"].iloc[:100].to_numpy())
+    with pytest.raises(ValueError, match="mixed"):
+        est.fit(mixed)
+    assert set(est.set_params(edge_weights_fn="mutual_info_regression").fit(mixed).causal_graph_.nodes()) == set(
+        mixed.columns
+    )
+
+
+def test_gaussian_mutual_info(gaussian_chain):
+    x, y = gaussian_chain["x"], gaussian_chain["y"]
+    rho = np.corrcoef(x, y)[0, 1]
+    assert gaussian_mutual_info(x, y) == pytest.approx(-0.5 * np.log(1 - rho**2))
+    assert gaussian_mutual_info(x, y) == gaussian_mutual_info(y, x)
+
+    # Perfectly collinear and constant variables give finite scores.
+    assert np.isfinite(gaussian_mutual_info(x, 2 * x + 1))
+    assert np.isfinite(gaussian_mutual_info(x, -x))
+    assert gaussian_mutual_info(x, np.ones(len(x))) == 0.0
+
+    collinear = gaussian_chain.assign(w=2 * gaussian_chain["x"] + 1)
+    est = ChowLiu(n_jobs=1, show_progress=False).fit(collinear)
+    assert nx.is_tree(est.causal_graph_)
+    assert set(est.causal_graph_.nodes()) == set(collinear.columns)
 
 
 @pytest.fixture(autouse=True)

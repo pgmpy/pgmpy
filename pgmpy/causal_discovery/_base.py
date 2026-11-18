@@ -9,6 +9,7 @@ import pandas as pd
 from joblib import Parallel, delayed
 from skbase.base import BaseObject
 from sklearn.base import BaseEstimator, clone
+from sklearn.feature_selection import mutual_info_regression
 from sklearn.linear_model import LassoLarsIC, LinearRegression
 from sklearn.metrics import (
     adjusted_mutual_info_score,
@@ -24,6 +25,7 @@ from pgmpy.ci_tests import IndependenceMatch, get_ci_test
 from pgmpy.independencies import Independencies
 from pgmpy.metrics import get_metric
 from pgmpy.structure_score import BaseStructureScore
+from pgmpy.utils import get_dataset_type
 
 
 class BaseCausalDiscovery(BaseEstimator, BaseObject):
@@ -695,6 +697,34 @@ class _ScoreMixin:
                     yield (operation, score_delta)
 
 
+def gaussian_mutual_info(x, y):
+    r"""
+    Mutual information between two jointly Gaussian variables.
+
+    Computed as :math:`-\frac{1}{2} \ln(1 - \rho^2)`, where :math:`\rho` is the Pearson correlation between ``x`` and
+    ``y``. :math:`1 - \rho^2` is clipped away from 0 so that perfectly collinear variables get a large finite score,
+    and a constant variable (undefined correlation) gets a score of 0.
+
+    Parameters
+    ----------
+    x, y : array-like of shape (n_samples,)
+        The two continuous variables.
+
+    Returns
+    -------
+    float
+        The mutual information in nats.
+    """
+    with np.errstate(invalid="ignore"):
+        rho = np.nan_to_num(np.corrcoef(x, y)[0, 1])
+    return -0.5 * np.log(np.clip(1 - rho**2, 1e-15, 1.0))
+
+
+def _mutual_info_regression(x, y):
+    """Pairwise adapter of sklearn's ``mutual_info_regression`` to the ``fn(array, array) -> float`` form."""
+    return mutual_info_regression(np.asarray(x).reshape(-1, 1), np.asarray(y), random_state=0)[0]
+
+
 class _TreeSearchMixin:
     """
     Mixin class providing shared functionality for tree-based causal discovery
@@ -710,17 +740,35 @@ class _TreeSearchMixin:
         "mutual_info": mutual_info_score,
         "adjusted_mutual_info": adjusted_mutual_info_score,
         "normalized_mutual_info": normalized_mutual_info_score,
+        "gaussian_mutual_info": gaussian_mutual_info,
+        "mutual_info_regression": _mutual_info_regression,
+    }
+
+    _DEFAULT_EDGE_WEIGHT_FNS = {
+        "discrete": "mutual_info",
+        "continuous": "gaussian_mutual_info",
     }
 
     @staticmethod
-    def _resolve_edge_weights_fn(edge_weights_fn):
+    def _resolve_edge_weights_fn(edge_weights_fn, data=None):
         """
         Resolve ``edge_weights_fn`` to a callable of the form ``fn(array, array)``.
 
         Accepts either one of the string shorthands in
-        :attr:`_EDGE_WEIGHT_FNS` or a callable (returned unchanged). Anything
-        else raises ``ValueError``.
+        :attr:`_EDGE_WEIGHT_FNS` or a callable (returned unchanged). If ``None``,
+        the default for the type of ``data`` (see :func:`~pgmpy.utils.get_dataset_type`)
+        is used. Anything else raises ``ValueError``.
         """
+        if edge_weights_fn is None:
+            dataset_type = get_dataset_type(data)
+            if dataset_type == "mixed":
+                raise ValueError(
+                    "Cannot determine a suitable edge_weights_fn for mixed data. Please specify edge_weights_fn."
+                )
+            edge_weights_fn = _TreeSearchMixin._DEFAULT_EDGE_WEIGHT_FNS[dataset_type]
+
+        if edge_weights_fn is mutual_info_regression:
+            return _mutual_info_regression
         if callable(edge_weights_fn):
             return edge_weights_fn
         try:
@@ -747,6 +795,8 @@ class _TreeSearchMixin:
             - ``"mutual_info"``: Mutual Information Score.
             - ``"adjusted_mutual_info"``: Adjusted Mutual Information Score.
             - ``"normalized_mutual_info"``: Normalized Mutual Information Score.
+            - ``"gaussian_mutual_info"``: Mutual information of jointly Gaussian variables.
+            - ``"mutual_info_regression"``: scikit-learn's mutual information estimate for continuous variables.
             - A callable of the form ``fn(array, array) -> float``.
 
         n_jobs : int, default=-1
