@@ -422,7 +422,9 @@ def test_search_space():
         assert frozenset((u, v)) in allowed_adjacencies
 
 
-def test_required_edge_enforced_against_independent_data():
+@pytest.mark.parametrize("required_edge", [("A", "B"), ("B", "A")])
+@pytest.mark.parametrize("variant", ["orig", "stable", "parallel"])
+def test_required_edge_enforced_against_independent_data(variant, required_edge):
     # A, B, C are mutually independent, so PC would normally drop every edge.
     rng = np.random.default_rng(42)
     data = pd.DataFrame(
@@ -432,9 +434,9 @@ def test_required_edge_enforced_against_independent_data():
             "C": rng.integers(0, 2, size=2000),
         }
     )
-    expert = ExpertKnowledge(required_edges=[("A", "B")])
+    expert = ExpertKnowledge(required_edges=[required_edge])
     est = PC(
-        variant="stable",
+        variant=variant,
         ci_test="chi_square",
         expert_knowledge=expert,
         n_jobs=1,
@@ -442,8 +444,7 @@ def test_required_edge_enforced_against_independent_data():
     )
     est.fit(X=data)
     pdag = est.causal_graph_
-    # The required edge is retained and oriented A->B despite A, B being independent.
-    assert ("A", "B") in pdag.directed_edges
+    assert required_edge in pdag.directed_edges
 
 
 @pytest.mark.parametrize("ci_test", ["pearsonr", "pillai", "gcm"])
@@ -663,75 +664,39 @@ def test_temporal_pc_sachs():
     assert temporal_forbidden_edges.isdisjoint(learned_edges)
 
 
-def _fake_ci_temporal(X, Y, Z=[], **kwargs):
-    Z = list(Z)
-    pair = frozenset((X, Y))
-    if pair == frozenset(("A", "B")) and sorted(Z) == ["C"]:
-        return True
-    return False
+@pytest.mark.parametrize(("separator", "edge_removed"), [("C", True), ("E", False)])
+def test_temporal_ordering_sepsets_and_skeleton(separator, edge_removed):
+    graph = UndirectedGraph([("A", "B"), ("A", "C"), ("A", "D"), ("A", "E"), ("B", "C"), ("B", "D"), ("B", "E")])
+    temporal_ordering = {"D": 0, "B": 1, "C": 2, "A": 3, "E": 4}
 
-
-def test_temporal_ordering_sepsets_and_skeleton():
-    graph = UndirectedGraph([("A", "B"), ("A", "C"), ("A", "D"), ("B", "C"), ("B", "D")])
-    temporal_ordering = {"A": 3, "B": 1, "C": 2, "D": 0}
-
-    result_ab = sorted(
-        PC._get_potential_sepsets(
-            u="A",
-            v="B",
-            temporal_ordering=temporal_ordering,
-            graph=graph,
-            lim_neighbors=1,
-        )
+    sepsets_ab = sorted(
+        PC._get_potential_sepsets(u="A", v="B", temporal_ordering=temporal_ordering, graph=graph, lim_neighbors=1)
     )
-    assert result_ab == [("D",)]
-
-    # Symmetry: swapping u and v gives the same separating sets.
-    result_ba = sorted(
-        PC._get_potential_sepsets(
-            u="B",
-            v="A",
-            temporal_ordering=temporal_ordering,
-            graph=graph,
-            lim_neighbors=1,
-        )
+    assert sepsets_ab == [("C",), ("D",)]
+    assert sepsets_ab == sorted(
+        PC._get_potential_sepsets(u="B", v="A", temporal_ordering=temporal_ordering, graph=graph, lim_neighbors=1)
     )
-    assert result_ab == result_ba
+    assert sorted(PC._get_potential_sepsets(u="A", v="B", temporal_ordering={}, graph=graph, lim_neighbors=1)) == [
+        ("C",),
+        ("D",),
+        ("E",),
+    ]
 
-    # Without temporal ordering, all neighbors are candidates: C and D, deduplicated across u/v sides.
-    result_no_temporal = sorted(
-        PC._get_potential_sepsets(
-            u="A",
-            v="B",
-            temporal_ordering={},
-            graph=graph,
-            lim_neighbors=1,
-        )
-    )
-    assert result_no_temporal == [("C",), ("D",)]
+    def fake_ci_test(X, Y, Z=(), **kwargs):
+        return frozenset((X, Y)) == frozenset(("A", "B")) and list(Z) == [separator]
 
-    np.random.seed(42)
-    data = pd.DataFrame(np.random.randint(0, 2, size=(100, 4)), columns=["A", "B", "C", "D"])
-    expert = ExpertKnowledge(temporal_order=[["D"], ["B"], ["C"], ["A"]])
+    data = pd.DataFrame(np.random.default_rng(42).integers(0, 2, size=(100, 5)), columns=["A", "B", "C", "D", "E"])
+    expert = ExpertKnowledge(temporal_order=[["D"], ["B"], ["C"], ["A"], ["E"]])
     expert.fit(data)
-
-    skel, _ = PC(
-        variant="stable",
-        ci_test=_fake_ci_temporal,
-        expert_knowledge=expert,
-        show_progress=False,
-    )._build_skeleton(
+    skel, _ = PC(variant="stable", ci_test=fake_ci_test, expert_knowledge=expert, show_progress=False)._build_skeleton(
         data,
-        ci_test=_fake_ci_temporal,
+        ci_test=fake_ci_test,
         expert_knowledge=expert,
         variant="stable",
         show_progress=False,
     )
 
-    assert skel.has_edge("A", "B"), (
-        "Edge A-B was incorrectly removed: temporal ordering should have "
-        "filtered C from candidate separators (bug: min(u,u) instead of min(u,v))"
-    )
+    assert skel.has_edge("A", "B") != edge_removed
 
 
 def test_score():
