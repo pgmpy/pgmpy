@@ -2,8 +2,8 @@ import numpy as np
 import numpy.testing as np_test
 import pandas as pd
 import pytest
-
 from skbase.utils.dependencies import _check_soft_dependencies
+
 from pgmpy.base import DAG
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.inference.CausalInference import CausalInference
