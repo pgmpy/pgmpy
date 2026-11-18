@@ -754,20 +754,30 @@ class TestFactorMethods:
         assert phi1.get_cardinality(phi1.variables) == {"x1": 2, "x2": 3, "x3": 2}
         np_test.assert_almost_equal(phi1.values, np.arange(2, 14).reshape(2, 3, 2))
 
-    def test_factor_arithmetic_state_name_conflict(self):
+    def test_factor_arithmetic_state_name_alignment(self):
+        # Same states in a different order are realigned by name, not matched by
+        # position, in both sum and divide (issue #3714).
+        left = DiscreteFactor(["x1"], [2], [0.2, 0.8], state_names={"x1": ["a", "b"]})
+        right = DiscreteFactor(["x1"], [2], [0.3, 0.7], state_names={"x1": ["b", "a"]})
+        np_test.assert_almost_equal(left.sum(right, inplace=False).values, np.array([0.9, 1.1]))
+        np_test.assert_almost_equal(left.divide(right, inplace=False).values, np.array([0.285714, 2.666667]), decimal=6)
+
+        # Alignment also works when the divisor is a subset and its shared
+        # variable is ordered differently.
         phi1 = DiscreteFactor(["x1", "x2"], [2, 2], [1, 2, 3, 4], state_names={"x1": ["a", "b"], "x2": ["c", "d"]})
-        phi2 = DiscreteFactor(["x1"], [2], [1, 2], state_names={"x1": ["b", "a"]})
-        phi3 = DiscreteFactor(["x1", "x2"], [2, 2], [1, 2, 3, 4], state_names={"x1": ["b", "a"], "x2": ["c", "d"]})
+        phi2 = DiscreteFactor(["x1"], [2], [10, 20], state_names={"x1": ["b", "a"]})
+        np_test.assert_almost_equal(phi1.sum(phi2, inplace=False).values, np.array([[21, 22], [13, 14]]))
+        np_test.assert_almost_equal(phi1.divide(phi2, inplace=False).values, np.array([[0.05, 0.1], [0.3, 0.4]]))
 
-        for left, right in [(phi1, phi2), (phi1, phi3), (phi3, phi1)]:
-            with pytest.raises(ValueError, match="State name conflict"):
-                left.product(right, inplace=False)
-            with pytest.raises(ValueError, match="State name conflict"):
-                left.sum(right, inplace=False)
-            with pytest.raises(ValueError, match="State name conflict"):
-                left.divide(right, inplace=False)
+        # Genuinely different states (not a reordering) still raise.
+        conflict = DiscreteFactor(["x1"], [2], [1, 2], state_names={"x1": ["p", "q"]})
+        with pytest.raises(ValueError, match="State name conflict"):
+            left.sum(conflict, inplace=False)
+        with pytest.raises(ValueError, match="State name conflict"):
+            left.divide(conflict, inplace=False)
 
-        # Numeric state names are still replaced by string state names.
+        # A factor with default numeric states still merges positionally and
+        # adopts the string state names.
         phi4 = DiscreteFactor(["x1"], [2], [1, 2])
         np_test.assert_almost_equal(phi1.sum(phi4, inplace=False).values, np.array([[2, 3], [5, 6]]))
         np_test.assert_almost_equal(phi1.divide(phi4, inplace=False).values, np.array([[1, 2], [1.5, 2]]))

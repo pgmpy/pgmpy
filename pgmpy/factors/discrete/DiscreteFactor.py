@@ -612,6 +612,61 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         if not inplace:
             return phi
 
+    def _align_state_names(self, phi1):
+        """
+        Reorders `phi1` values so its state names line up with `self` for every
+        shared variable before an elementwise operation.
+
+        Same states listed in a different order are realigned by name. States
+        that are genuinely different (not a reordering of each other) raise a
+        `ValueError`. Variables where one factor only carries the default integer
+        states are left untouched for `add_state_names` to merge positionally.
+
+        Parameters
+        ----------
+        phi1: pgmpy.factors.discrete.DiscreteFactor
+            The other factor, modified in place to match `self`.
+        """
+        for var in phi1.state_names:
+            # Step 1: Only shared variables with mismatched orderings need work.
+            if var not in self.state_names:
+                continue
+            self_states = self.state_names[var]
+            phi1_states = phi1.state_names[var]
+            if self_states == phi1_states:
+                continue
+
+            # Step 2: Restrict realignment to explicitly named states on both
+            # sides; a default integer range on either side keeps positional
+            # merging, handled by add_state_names.
+            self_named = any(isinstance(s, str) and not s.isdigit() for s in self_states)
+            phi1_named = any(isinstance(s, str) and not s.isdigit() for s in phi1_states)
+            if not (self_named and phi1_named):
+                continue
+
+            # Step 3: A genuine conflict is states that are not a permutation of
+            # each other.
+            if set(self_states) != set(phi1_states):
+                raise ValueError(
+                    f"State name conflict detected for variable '{var}'.\n"
+                    f"First factor has states: {self_states}\n"
+                    f"Second factor has states: {phi1_states}\n"
+                    f"The factors share a variable with different states, so the "
+                    f"operation cannot align them by name."
+                )
+
+            # Step 4: Reindex phi1 along this variable's axis so its states match
+            # self's ordering, then record the new ordering on phi1.
+            axis = phi1.variables.index(var)
+            permutation = [phi1_states.index(state) for state in self_states]
+            indexer = [slice(None)] * phi1.values.ndim
+            indexer[axis] = permutation
+            phi1.values = phi1.values[tuple(indexer)]
+
+            phi1.state_names[var] = list(self_states)
+            phi1.name_to_no[var] = {name: no for no, name in enumerate(self_states)}
+            phi1.no_to_name[var] = {no: name for no, name in enumerate(self_states)}
+
     def sum(self, phi1, inplace=True):
         """
         DiscreteFactor sum with `phi1`.
@@ -670,6 +725,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
             phi.values += phi1
         else:
             phi1 = phi1.copy()
+            phi._align_state_names(phi1)
             phi.add_state_names(phi1)
 
             # modifying phi to add new variables
@@ -830,6 +886,7 @@ class DiscreteFactor(BaseFactor, StateNameMixin):
         if set(phi1.variables) - set(phi.variables):
             raise ValueError("Scope of divisor should be a subset of dividend")
 
+        phi._align_state_names(phi1)
         phi.add_state_names(phi1)
 
         # Adding extra variables in phi1.
