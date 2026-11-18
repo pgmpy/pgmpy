@@ -74,7 +74,7 @@ class FisherZ(Pearsonr):
 
         Returns the Fisher Z statistic and p-value.
         """
-        partial_corr, _ = self._partial_correlation(X, Y, Z)
+        partial_corr, _ = self._partial_correlation(X=X, Y=Y, Z=Z)
 
         rho = np.clip(partial_corr, -0.999999, 0.999999)
         statistic = np.sqrt(self.data.shape[0] - len(Z) - 3) * np.arctanh(rho)

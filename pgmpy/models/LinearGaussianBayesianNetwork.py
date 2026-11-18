@@ -711,7 +711,8 @@ class LinearGaussianBayesianNetwork(_FileIOMixin, DAG):
         Parameters
         ----------
         data : pd.DataFrame
-            Continuous-valued data containing all model variables.
+            Continuous-valued data containing all model variables. Rows with missing values in any model variable
+            are dropped with a warning.
 
         estimator : LinearGaussianMLE, optional
             An initialized Gaussian parameter estimator from

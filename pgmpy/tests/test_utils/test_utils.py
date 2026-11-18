@@ -9,6 +9,8 @@ from pgmpy.models import LinearGaussianBayesianNetwork
 from pgmpy.utils import (
     discretize,
     get_example_model,
+    regression_coefficients,
+    regression_residual_covariance,
 )
 from pgmpy.utils.mathext import sample_discrete
 
@@ -144,3 +146,33 @@ class TestSampleDiscrete(unittest.TestCase):
         np.testing.assert_array_equal(result1, result2)
 
         self.assertTrue(set(result1.tolist()).issubset({"a", "b", "c"}))
+
+
+def test_regression_helpers_match_least_squares():
+    rng = np.random.default_rng(seed=0)
+    n = 500
+    given = rng.normal(size=(n, 3)) * [1e-6, 1.0, 1e5] + [1e3, -2.0, 7e5]
+    targets = given @ [[3e5, -1.0], [2.0, 0.5], [1e-5, 4e-6]] + rng.normal(size=(n, 2))
+    cov = np.cov(np.column_stack([targets, given]), rowvar=False, ddof=0)
+    centered_given = given - given.mean(axis=0)
+    centered_targets = targets - targets.mean(axis=0)
+    expected = np.linalg.lstsq(centered_given, centered_targets, rcond=None)[0]
+    residuals = centered_targets - centered_given @ expected
+
+    np.testing.assert_allclose(regression_coefficients(cov=cov, targets=[0, 1], given=[2, 3, 4]), expected, rtol=1e-8)
+    np.testing.assert_allclose(
+        regression_residual_covariance(cov=cov, targets=[0, 1], given=[2, 3, 4]),
+        np.cov(residuals, rowvar=False, ddof=0),
+        rtol=1e-8,
+    )
+    np.testing.assert_array_equal(regression_residual_covariance(cov=cov, targets=[0, 1], given=[]), cov[:2, :2])
+
+    x = rng.normal(size=n)
+    values = np.column_stack([3.0 * x + rng.normal(size=n), x, x, np.full(n, 5.0)])
+    centered = values - values.mean(axis=0)
+    np.testing.assert_allclose(
+        regression_coefficients(cov=np.cov(values, rowvar=False, ddof=0), targets=[0], given=[1, 2, 3]),
+        np.linalg.lstsq(centered[:, 1:], centered[:, :1], rcond=None)[0],
+        rtol=1e-10,
+        atol=1e-12,
+    )

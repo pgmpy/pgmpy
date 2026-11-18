@@ -67,7 +67,8 @@ class LinearGaussianMLE(GaussianParameterEstimator):
             The model structure for which to estimate CPDs.
 
         data: pandas.DataFrame
-            DataFrame with column names identical to the variable names of the network.
+            DataFrame with column names identical to the variable names of the network. Rows with missing values in
+            any model variable are dropped with a warning.
 
         Returns
         -------

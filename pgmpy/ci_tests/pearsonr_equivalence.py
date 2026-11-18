@@ -123,7 +123,7 @@ class PearsonrEquivalence(Pearsonr):
         Returns the Fisher z-transformed partial correlation statistic and p-value.
         """
         # Step 2: Compute Partial Pearson Correlation via parent and clip to avoid infinities
-        partial_corr, dof = self._partial_correlation(X, Y, Z)
+        partial_corr, dof = self._partial_correlation(X=X, Y=Y, Z=Z)
         rho = np.clip(partial_corr, -0.999999, 0.999999)
 
         # Step 3: Fisher Z-Transformation

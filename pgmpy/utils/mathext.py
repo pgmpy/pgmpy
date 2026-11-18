@@ -270,7 +270,7 @@ def regression_coefficients(cov: np.ndarray, targets: list[int], given: list[int
     >>> import numpy as np
     >>> from pgmpy.utils import regression_coefficients
     >>> cov = np.array([[2.0, 1.0], [1.0, 1.0]])
-    >>> regression_coefficients(cov, targets=[0], given=[1])
+    >>> regression_coefficients(cov=cov, targets=[0], given=[1])
     array([[1.]])
     """
     scale = np.sqrt(cov[given, given])
@@ -309,7 +309,7 @@ def regression_residual_covariance(cov: np.ndarray, targets: list[int], given: l
     >>> import numpy as np
     >>> from pgmpy.utils import regression_residual_covariance
     >>> cov = np.array([[2.0, 1.0], [1.0, 1.0]])
-    >>> regression_residual_covariance(cov, targets=[0], given=[1])
+    >>> regression_residual_covariance(cov=cov, targets=[0], given=[1])
     array([[1.]])
     """
     total = cov[np.ix_(targets, targets)]

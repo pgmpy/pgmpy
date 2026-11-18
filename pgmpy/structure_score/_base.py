@@ -50,10 +50,10 @@ class BaseStructureScore(BaseObject):
 
         if self.data is not None:
             self.variables = list(self.data.columns.values)
-            named_data = self.data
+            columns = self.variables
             if self.get_class_tag("data_types") != ["discrete"]:
-                named_data = self.data.loc[:, [col for col in self.variables if is_discrete_type(self.dtypes[col])]]
-            self.state_names = build_state_names(named_data, state_names=state_names)
+                columns = [col for col in self.variables if is_discrete_type(code=self.dtypes[col])]
+            self.state_names = build_state_names(data=self.data.loc[:, columns], state_names=state_names)
 
         self._cache = OrderedDict()
 

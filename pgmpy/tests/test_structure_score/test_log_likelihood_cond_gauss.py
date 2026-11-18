@@ -74,7 +74,9 @@ class TestLogLikelihoodCondGauss:
             return multivariate_normal.logpdf(frame, mean=frame.mean(), cov=frame.cov(ddof=0)).sum()
 
         expected = gaussian_log_likelihood(df) - gaussian_log_likelihood(df[["B", "C", "D"]])
-        assert LogLikelihoodCondGauss(df).local_score("A", ("B", "C", "D")) == pytest.approx(expected, abs=1e-6)
+        assert LogLikelihoodCondGauss(df).local_score(variable="A", parents=("B", "C", "D")) == pytest.approx(
+            expected, abs=1e-6
+        )
 
     def test_degenerate_families_score_minus_inf(self):
         rng = np.random.default_rng(seed=0)
@@ -84,12 +86,24 @@ class TestLogLikelihoodCondGauss:
         score = LogLikelihoodCondGauss(df)
 
         # bnlearn 5.0.2, score(dag, df, type = "loglik-cg", by.node = TRUE)[child]: A | B, K2 -> -Inf;
-        # A | B, K3 -> -69.62216
-        assert score.local_score("A", ("B", "K2")) == -np.inf
-        assert np.isfinite(score.local_score("A", ("B", "K3")))
+        # A | B, K3 -> -69.62216. R 4.4.3, sum of logLik(lm(A ~ B, d_k)) over the K3 strata d_k -> -68.956279
+        assert score.local_score(variable="A", parents=("B", "K2")) == -np.inf
+        assert score.local_score(variable="A", parents=("B", "K3")) == pytest.approx(-68.956279, abs=1e-6)
 
-        assert score.local_score("K2", ("A", "B")) == -np.inf
-        assert np.isfinite(score.local_score("K3", ("A", "B")))
+        assert score.local_score(variable="K2", parents=("A", "B")) == -np.inf
+        assert np.isfinite(score.local_score(variable="K3", parents=("A", "B")))
+
+    def test_target_constant_within_configuration_scores_minus_inf(self):
+        rng = np.random.default_rng(seed=0)
+        df = pd.DataFrame({"K": rng.choice(["no", "yes"], size=80), "X": rng.normal(size=80)})
+        df["H"] = np.where(df["K"] == "no", 0.0, 2.0 + df["X"] + rng.normal(size=80))
+        score = LogLikelihoodCondGauss(df)
+
+        # bnlearn 5.0.2, score(dag, df, type = "loglik-cg", by.node = TRUE)["H"]: H | K -> -Inf; H | K, X -> -Inf.
+        # R 4.4.3, sum of logLik(lm(X ~ H, d_k)) over the K strata d_k -> -98.148396
+        assert score.local_score(variable="H", parents=("K",)) == -np.inf
+        assert score.local_score(variable="H", parents=("K", "X")) == -np.inf
+        assert score.local_score(variable="X", parents=("K", "H")) == pytest.approx(-98.148396, abs=1e-6)
 
     @pytest.mark.parametrize(
         ("variable", "parents"), [("A", ("B",)), ("A", ("B", "C")), ("A", ("B", "G")), ("G", ("A", "B"))]
@@ -102,13 +116,13 @@ class TestLogLikelihoodCondGauss:
         scaled = df.assign(**{col: df[col] * scale for col in ("A", "B", "C")})
 
         shift = -len(df) * np.log(scale) if variable == "A" else 0.0
-        expected = LogLikelihoodCondGauss(df).local_score(variable, parents)
-        assert LogLikelihoodCondGauss(scaled).local_score(variable, parents) == pytest.approx(
+        expected = LogLikelihoodCondGauss(df).local_score(variable=variable, parents=parents)
+        assert LogLikelihoodCondGauss(scaled).local_score(variable=variable, parents=parents) == pytest.approx(
             expected + shift, rel=1e-9
         )
 
         rescaled_parent = df.assign(B=df["B"] * 1e-8)
-        assert LogLikelihoodCondGauss(rescaled_parent).local_score(variable, parents) == pytest.approx(
+        assert LogLikelihoodCondGauss(rescaled_parent).local_score(variable=variable, parents=parents) == pytest.approx(
             expected, rel=1e-9
         )
 

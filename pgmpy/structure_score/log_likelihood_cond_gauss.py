@@ -29,9 +29,10 @@ class LogLikelihoodCondGauss(BaseStructureScore):
     The Gaussian densities are maximum likelihood fits to the corresponding grouped samples.
 
     As in bnlearn, a family with a continuous target scores :math:`-\infty` when some configuration of its discrete
-    parents has no more rows than the regression has coefficients. A family with a discrete target scores
-    :math:`-\infty` when the covariance of its continuous parents is singular within some configuration of the target
-    and its discrete parents, for example when the configuration has no more rows than there are continuous parents.
+    parents has no more rows than the regression has coefficients, or the target is constant within it. A family with
+    a discrete target scores :math:`-\infty` when the covariance of its continuous parents is singular within some
+    configuration of the target and its discrete parents, for example when the configuration has no more rows than
+    there are continuous parents.
 
     Parameters
     ----------
@@ -110,15 +111,15 @@ class LogLikelihoodCondGauss(BaseStructureScore):
     def _log_likelihood(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         df = self.data.loc[:, [variable, *parents]]
         n_samples = df.shape[0]
-        continuous = split_by_type([variable, *parents], self.dtypes)[0]
-        discrete = split_by_type(parents, self.dtypes)[1]
+        continuous = split_by_type(variables=[variable, *parents], types=self.dtypes)[0]
+        discrete = split_by_type(variables=parents, types=self.dtypes)[1]
 
         # Step 1: Standardize the continuous variables.
         values = df.loc[:, continuous].to_numpy(dtype=float)
         scale = values.std(axis=0)
         values = (values - values.mean(axis=0)) / scale
 
-        if not is_discrete_type(self.dtypes[variable]):
+        if not is_discrete_type(code=self.dtypes[variable]):
             # Step 2: Add the Gaussian log-likelihood of the target's regression within each discrete configuration.
             strata = list(df.groupby(discrete, observed=True).indices.values()) if discrete else [np.arange(n_samples)]
             log_like = 0.0
@@ -127,6 +128,8 @@ class LogLikelihoodCondGauss(BaseStructureScore):
                 if n_rows <= len(continuous):
                     return -np.inf
                 stratum_cov = np.atleast_2d(np.cov(values[rows], rowvar=False, ddof=0))
+                if stratum_cov[0, 0] <= _SINGULAR_RCOND:
+                    return -np.inf
                 residual_var = regression_residual_covariance(
                     cov=stratum_cov, targets=[0], given=list(range(1, len(continuous)))
                 )[0, 0]
