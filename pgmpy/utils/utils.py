@@ -254,7 +254,7 @@ def discretize(data, cardinality, labels=dict(), method="rounding"):
         for column in data.columns:
             df_copy[column] = pd.qcut(df_copy[column], q=cardinality[column], labels=labels.get(column))
     else:
-        raise ValueError(f"Unknown representation: {method}. Supported `method_types`are: rounding and quantile")
+        raise ValueError(f"Unknown method: {method}. Supported methods are 'rounding' and 'quantile'.")
 
     return df_copy
 
