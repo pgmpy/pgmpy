@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -29,6 +27,13 @@ class ChowLiu(_TreeSearchMixin, BaseCausalDiscovery):
         - ``"normalized_mutual_info"``: Normalized Mutual Information Score.
         - A callable of the form ``fn(array, array) -> float``.
 
+    return_type : str, default="dag"
+        The type of graph to return. Options are:
+
+        - 'dag': A fully directed DAG rooted at ``root_node``.
+        - 'pdag' or 'cpdag': A partially directed acyclic graph (PDAG)
+          representing the Markov equivalence class of the tree.
+
     n_jobs : int, default=-1
         Number of jobs to run in parallel. ``-1`` means use all processors.
 
@@ -37,11 +42,12 @@ class ChowLiu(_TreeSearchMixin, BaseCausalDiscovery):
 
     Attributes
     ----------
-    causal_graph_ : pgmpy.base.DAG
-        The learned causal graph as a DAG.
+    causal_graph_ : pgmpy.base.DAG or pgmpy.base.PDAG
+        The learned causal graph (a DAG if return_type="dag", a PDAG if
+        return_type="pdag" or return_type="cpdag").
 
     adjacency_matrix_ : pd.DataFrame
-        Adjacency matrix representation of ``causal_graph_``.
+        Adjacency matrix representation of causal_graph_
 
     n_features_in_ : int
         The number of features in the data used to learn the causal graph.
@@ -111,17 +117,19 @@ class ChowLiu(_TreeSearchMixin, BaseCausalDiscovery):
         self,
         root_node=None,
         edge_weights_fn: str = "mutual_info",
+        return_type: str = "dag",
         n_jobs: int = -1,
         show_progress: bool = True,
     ):
         self.root_node = root_node
         self.edge_weights_fn = edge_weights_fn
+        self.return_type = return_type
         self.n_jobs = n_jobs
         self.show_progress = show_progress
 
     def _fit(self, X: pd.DataFrame):
         """
-        Estimate the ``DAG`` structure that fits best to the given data set
+        Estimate the causal graph structure that fits best to the given data set
         without parametrization.
 
         Parameters
@@ -135,6 +143,10 @@ class ChowLiu(_TreeSearchMixin, BaseCausalDiscovery):
         self : ChowLiu
             Returns the instance with the fitted attributes set.
         """
+        return_type = self.return_type.lower()
+        if return_type not in ("dag", "pdag", "cpdag"):
+            raise ValueError(f"return_type must be one of: dag, pdag, or cpdag. Got: {self.return_type}")
+
         # Step 1: Validate root_node if explicitly provided.
         if self.root_node is not None and self.root_node not in X.columns:
             raise ValueError(f"Root node: {self.root_node} not found in data columns.")
@@ -151,7 +163,8 @@ class ChowLiu(_TreeSearchMixin, BaseCausalDiscovery):
             root_node = X.columns[maxw_idx[0]]
 
         # Step 4: Build the causal graph and store fitted attributes.
-        self.causal_graph_ = self._create_tree_and_dag(weights, X.columns, root_node)
+        model = self._create_tree_and_dag(weights, X.columns, root_node)
+        self.causal_graph_ = model if return_type == "dag" else model.to_pdag()
         self.adjacency_matrix_ = nx.to_pandas_adjacency(self.causal_graph_, weight=1, dtype="int")
 
         return self

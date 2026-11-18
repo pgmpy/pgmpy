@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 from itertools import combinations
 
 import networkx as nx
@@ -43,6 +41,13 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
         - ``"normalized_mutual_info"``: Normalized Mutual Information Score.
         - A callable of the form ``fn(array, array) -> float``.
 
+    return_type : str, default="dag"
+        The type of graph to return. Options are:
+
+        - "dag": A fully directed DAG.
+        - "pdag" or "cpdag": A partially directed acyclic graph (PDAG)
+          representing the Markov equivalence class of the graph.
+
     n_jobs : int, default=-1
         Number of jobs to run in parallel. ``-1`` means use all processors.
 
@@ -51,8 +56,9 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
 
     Attributes
     ----------
-    causal_graph_ : pgmpy.base.DAG
-        The learned causal graph as a DAG.
+    causal_graph_ : pgmpy.base.DAG or pgmpy.base.PDAG
+        The learned causal graph (a DAG if return_type="dag", a PDAG if
+        return_type="pdag" or return_type="cpdag").
 
     adjacency_matrix_ : pd.DataFrame
         Adjacency matrix representation of ``causal_graph_``.
@@ -126,18 +132,20 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
         class_node,
         root_node=None,
         edge_weights_fn: str = "mutual_info",
+        return_type: str = "dag",
         n_jobs: int = -1,
         show_progress: bool = True,
     ):
         self.class_node = class_node
         self.root_node = root_node
         self.edge_weights_fn = edge_weights_fn
+        self.return_type = return_type
         self.n_jobs = n_jobs
         self.show_progress = show_progress
 
     def _fit(self, X: pd.DataFrame):
         """
-        Estimate the ``DAG`` structure that fits best to the given data set
+        Estimate the causal graph structure that fits best to the given data set
         without parametrization.
 
         Parameters
@@ -151,6 +159,10 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
         self : TAN
             Returns the instance with the fitted attributes set.
         """
+        return_type = self.return_type.lower()
+        if return_type not in ("dag", "pdag", "cpdag"):
+            raise ValueError(f"return_type must be one of: dag, pdag, or cpdag. Got: {self.return_type}")
+
         # Step 1: Validate class_node and root_node.
         if self.class_node is None:
             raise ValueError("class_node argument must be specified")
@@ -187,7 +199,7 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
 
         # Step 6: Add edges from class_node to every feature node and store.
         D.add_edges_from([(self.class_node, node) for node in reduced_columns])
-        self.causal_graph_ = D
+        self.causal_graph_ = D if return_type == "dag" else D.to_pdag()
         self.adjacency_matrix_ = nx.to_pandas_adjacency(self.causal_graph_, weight=1, dtype="int")
 
         return self
