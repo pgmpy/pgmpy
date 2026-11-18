@@ -299,11 +299,9 @@ class LatentPC(BaseCausalDiscovery):
         for u, v, _ in curr_edges:
             if u in f_nodes:
                 pdag.orient_undirected_edge(u, v, inplace=True)
-                # pdag.replace_edge(u, v, '->', '-o')
 
             elif v in f_nodes:
                 pdag.orient_undirected_edge(v, u, inplace=True)
-                # pdag.replace_edge(v, u, '<-', 'o-')
 
         pdag = expert_knowledge.apply_to(pdag)
         pdag = pdag.apply_meeks_rules(apply_r4=False)

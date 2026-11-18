@@ -481,8 +481,8 @@ def test_latent_model_gaussian():
         )
 
     datasets = [
-        generate_gaussian_df(n=3000, mean_s=-1.5, seed=42),
-        generate_gaussian_df(n=3000, mean_s=1.5, seed=0),
+        generate_gaussian_df(n=5000, mean_s=-1.5, seed=42),
+        generate_gaussian_df(n=5000, mean_s=1.5, seed=0),
     ]
 
     model = LatentPC(significance_level=0.005, max_cond_vars=4, show_progress=False)
