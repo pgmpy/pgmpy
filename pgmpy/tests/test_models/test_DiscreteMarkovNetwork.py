@@ -1,7 +1,8 @@
-import unittest
+from collections import Counter
 
 import networkx as nx
 import numpy as np
+import pytest
 
 from pgmpy.example_models import load_model
 from pgmpy.factors import factor_product
@@ -11,101 +12,101 @@ from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork, FactorG
 from pgmpy.tests import help_functions as hf
 
 
-class TestMarkovNetworkCreation(unittest.TestCase):
-    def setUp(self):
+class TestMarkovNetworkCreation:
+    @pytest.fixture(autouse=True)
+    def setup(self):
         self.graph = DiscreteMarkovNetwork()
 
     def test_class_init_without_data(self):
-        self.assertIsInstance(self.graph, DiscreteMarkovNetwork)
+        assert isinstance(self.graph, DiscreteMarkovNetwork)
 
     def test_class_init_with_data_string(self):
         self.g = DiscreteMarkovNetwork([("a", "b"), ("b", "c")])
-        self.assertListEqual(sorted(self.g.nodes()), ["a", "b", "c"])
-        self.assertListEqual(hf.recursive_sorted(self.g.edges()), [["a", "b"], ["b", "c"]])
+        assert sorted(self.g.nodes()) == ["a", "b", "c"]
+        assert hf.recursive_sorted(self.g.edges()) == [["a", "b"], ["b", "c"]]
 
     def test_class_init_with_data_nonstring(self):
         self.g = DiscreteMarkovNetwork([(1, 2), (2, 3)])
 
     def test_add_node_string(self):
         self.graph.add_node("a")
-        self.assertListEqual(list(self.graph.nodes()), ["a"])
+        assert list(self.graph.nodes()) == ["a"]
 
     def test_add_node_nonstring(self):
         self.graph.add_node(1)
 
     def test_add_nodes_from_string(self):
         self.graph.add_nodes_from(["a", "b", "c", "d"])
-        self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c", "d"])
+        assert sorted(self.graph.nodes()) == ["a", "b", "c", "d"]
 
     def test_add_nodes_from_non_string(self):
         self.graph.add_nodes_from([1, 2, 3, 4])
 
     def test_add_edge_string(self):
         self.graph.add_edge("d", "e")
-        self.assertListEqual(sorted(self.graph.nodes()), ["d", "e"])
-        self.assertListEqual(hf.recursive_sorted(self.graph.edges()), [["d", "e"]])
+        assert sorted(self.graph.nodes()) == ["d", "e"]
+        assert hf.recursive_sorted(self.graph.edges()) == [["d", "e"]]
         self.graph.add_nodes_from(["a", "b", "c"])
         self.graph.add_edge("a", "b")
-        self.assertListEqual(hf.recursive_sorted(self.graph.edges()), [["a", "b"], ["d", "e"]])
+        assert hf.recursive_sorted(self.graph.edges()) == [["a", "b"], ["d", "e"]]
 
     def test_add_edge_nonstring(self):
         self.graph.add_edge(1, 2)
 
     def test_add_edge_selfloop(self):
-        self.assertRaises(ValueError, self.graph.add_edge, "a", "a")
+        with pytest.raises(ValueError):
+            self.graph.add_edge("a", "a")
 
     def test_add_edges_from_string(self):
         self.graph.add_edges_from([("a", "b"), ("b", "c")])
-        self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c"])
-        self.assertListEqual(hf.recursive_sorted(self.graph.edges()), [["a", "b"], ["b", "c"]])
+        assert sorted(self.graph.nodes()) == ["a", "b", "c"]
+        assert hf.recursive_sorted(self.graph.edges()) == [["a", "b"], ["b", "c"]]
         self.graph.add_nodes_from(["d", "e", "f"])
         self.graph.add_edges_from([("d", "e"), ("e", "f")])
-        self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c", "d", "e", "f"])
-        self.assertListEqual(
-            hf.recursive_sorted(self.graph.edges()),
-            hf.recursive_sorted([("a", "b"), ("b", "c"), ("d", "e"), ("e", "f")]),
+        assert sorted(self.graph.nodes()) == ["a", "b", "c", "d", "e", "f"]
+        assert hf.recursive_sorted(self.graph.edges()) == hf.recursive_sorted(
+            [("a", "b"), ("b", "c"), ("d", "e"), ("e", "f")]
         )
 
     def test_add_edges_from_nonstring(self):
         self.graph.add_edges_from([(1, 2), (2, 3)])
 
     def test_add_edges_from_self_loop(self):
-        self.assertRaises(ValueError, self.graph.add_edges_from, [("a", "a")])
+        with pytest.raises(ValueError):
+            self.graph.add_edges_from([("a", "a")])
 
     def test_number_of_neighbors(self):
         self.graph.add_edges_from([("a", "b"), ("b", "c")])
-        self.assertEqual(len(list(self.graph.neighbors("b"))), 2)
-
-    def tearDown(self):
-        del self.graph
+        assert len(list(self.graph.neighbors("b"))) == 2
 
 
-class TestMarkovNetworkMethods(unittest.TestCase):
-    def setUp(self):
+class TestMarkovNetworkMethods:
+    @pytest.fixture(autouse=True)
+    def setup(self):
         self.graph = DiscreteMarkovNetwork()
 
     def test_get_cardinality(self):
         self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "d"), ("d", "a")])
 
-        self.assertDictEqual(self.graph.get_cardinality(), {})
+        assert self.graph.get_cardinality() == {}
 
         phi1 = DiscreteFactor(["a", "b"], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi1)
-        self.assertDictEqual(self.graph.get_cardinality(), {"a": 1, "b": 2})
+        assert self.graph.get_cardinality() == {"a": 1, "b": 2}
         self.graph.remove_factors(phi1)
-        self.assertDictEqual(self.graph.get_cardinality(), {})
+        assert self.graph.get_cardinality() == {}
 
         phi1 = DiscreteFactor(["a", "b"], [2, 2], np.random.rand(4))
         phi2 = DiscreteFactor(["c", "d"], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi1, phi2)
-        self.assertDictEqual(self.graph.get_cardinality(), {"d": 2, "a": 2, "b": 2, "c": 1})
+        assert self.graph.get_cardinality() == {"d": 2, "a": 2, "b": 2, "c": 1}
 
         phi3 = DiscreteFactor(["d", "a"], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi3)
-        self.assertDictEqual(self.graph.get_cardinality(), {"d": 1, "c": 1, "b": 2, "a": 2})
+        assert self.graph.get_cardinality() == {"d": 1, "c": 1, "b": 2, "a": 2}
 
         self.graph.remove_factors(phi1, phi2, phi3)
-        self.assertDictEqual(self.graph.get_cardinality(), {})
+        assert self.graph.get_cardinality() == {}
 
     def test_get_cardinality_with_node(self):
         self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "d"), ("d", "a")])
@@ -113,21 +114,23 @@ class TestMarkovNetworkMethods(unittest.TestCase):
         phi1 = DiscreteFactor(["a", "b"], [2, 2], np.random.rand(4))
         phi2 = DiscreteFactor(["c", "d"], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi1, phi2)
-        self.assertEqual(self.graph.get_cardinality("a"), 2)
-        self.assertEqual(self.graph.get_cardinality("b"), 2)
-        self.assertEqual(self.graph.get_cardinality("c"), 1)
-        self.assertEqual(self.graph.get_cardinality("d"), 2)
+        assert self.graph.get_cardinality("a") == 2
+        assert self.graph.get_cardinality("b") == 2
+        assert self.graph.get_cardinality("c") == 1
+        assert self.graph.get_cardinality("d") == 2
 
     def test_check_model(self):
         self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "d"), ("d", "a")])
 
         phi1 = DiscreteFactor(["a", "b"], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi1)
-        self.assertRaises(ValueError, self.graph.check_model)
+        with pytest.raises(ValueError):
+            self.graph.check_model()
 
         phi2 = DiscreteFactor(["a", "c"], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi2)
-        self.assertRaises(ValueError, self.graph.check_model)
+        with pytest.raises(ValueError):
+            self.graph.check_model()
 
     def test_check_model1(self):
         self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "d"), ("d", "a")])
@@ -137,12 +140,12 @@ class TestMarkovNetworkMethods(unittest.TestCase):
         phi4 = DiscreteFactor(["d", "a"], [4, 1], np.random.rand(4))
 
         self.graph.add_factors(phi1, phi2, phi3, phi4)
-        self.assertTrue(self.graph.check_model())
+        assert self.graph.check_model()
 
         self.graph.remove_factors(phi1, phi4)
         phi1 = DiscreteFactor(["a", "b"], [4, 2], np.random.rand(8))
         self.graph.add_factors(phi1)
-        self.assertTrue(self.graph.check_model())
+        assert self.graph.check_model()
 
     def test_check_model2(self):
         self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "d"), ("d", "a")])
@@ -151,24 +154,28 @@ class TestMarkovNetworkMethods(unittest.TestCase):
 
         phi2 = DiscreteFactor(["b", "c"], [3, 3], np.random.rand(9))
         self.graph.add_factors(phi1, phi2)
-        self.assertRaises(ValueError, self.graph.check_model)
+        with pytest.raises(ValueError):
+            self.graph.check_model()
         self.graph.remove_factors(phi2)
 
         phi3 = DiscreteFactor(["c", "a"], [4, 4], np.random.rand(16))
         self.graph.add_factors(phi3)
-        self.assertRaises(ValueError, self.graph.check_model)
+        with pytest.raises(ValueError):
+            self.graph.check_model()
         self.graph.remove_factors(phi3)
 
         phi2 = DiscreteFactor(["b", "c"], [2, 3], np.random.rand(6))
         phi3 = DiscreteFactor(["c", "d"], [3, 4], np.random.rand(12))
         phi4 = DiscreteFactor(["d", "a"], [4, 3], np.random.rand(12))
         self.graph.add_factors(phi2, phi3, phi4)
-        self.assertRaises(ValueError, self.graph.check_model)
+        with pytest.raises(ValueError):
+            self.graph.check_model()
         self.graph.remove_factors(phi2, phi3, phi4)
 
         phi2 = DiscreteFactor(["a", "b"], [1, 3], np.random.rand(3))
         self.graph.add_factors(phi1, phi2)
-        self.assertRaises(ValueError, self.graph.check_model)
+        with pytest.raises(ValueError):
+            self.graph.check_model()
         self.graph.remove_factors(phi2)
 
     def test_check_model3(self):
@@ -176,13 +183,15 @@ class TestMarkovNetworkMethods(unittest.TestCase):
 
         phi1 = DiscreteFactor(["a", "c"], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi1)
-        self.assertRaises(ValueError, self.graph.check_model)
+        with pytest.raises(ValueError):
+            self.graph.check_model()
         self.graph.remove_factors(phi1)
 
         phi1 = DiscreteFactor(["a", "b"], [1, 2], np.random.rand(2))
         phi2 = DiscreteFactor(["a", "c"], [1, 2], np.random.rand(2))
         self.graph.add_factors(phi1, phi2)
-        self.assertRaises(ValueError, self.graph.check_model)
+        with pytest.raises(ValueError):
+            self.graph.check_model()
         self.graph.remove_factors(phi1, phi2)
 
         phi1 = DiscreteFactor(["a", "b"], [1, 2], np.random.rand(2))
@@ -191,7 +200,8 @@ class TestMarkovNetworkMethods(unittest.TestCase):
         phi4 = DiscreteFactor(["d", "a"], [4, 1], np.random.rand(4))
         phi5 = DiscreteFactor(["d", "b"], [4, 2], np.random.rand(8))
         self.graph.add_factors(phi1, phi2, phi3, phi4, phi5)
-        self.assertRaises(ValueError, self.graph.check_model)
+        with pytest.raises(ValueError):
+            self.graph.check_model()
         self.graph.remove_factors(phi1, phi2, phi3, phi4, phi5)
 
     def test_states(self):
@@ -202,10 +212,7 @@ class TestMarkovNetworkMethods(unittest.TestCase):
         phi4 = DiscreteFactor(["d", "a"], [4, 1], np.random.rand(4))
         phi5 = DiscreteFactor(["d", "b"], [4, 2], np.random.rand(8))
         self.graph.add_factors(phi1, phi2, phi3, phi4, phi5)
-        self.assertDictEqual(
-            self.graph.states,
-            {"a": [0], "b": [0, 1], "c": [0, 1, 2], "d": [0, 1, 2, 3]},
-        )
+        assert self.graph.states == {"a": [0], "b": [0, 1], "c": [0, 1, 2], "d": [0, 1, 2, 3]}
 
     def test_factor_graph(self):
         phi1 = DiscreteFactor(["Alice", "Bob"], [3, 2], np.random.rand(6))
@@ -214,25 +221,20 @@ class TestMarkovNetworkMethods(unittest.TestCase):
         self.graph.add_factors(phi1, phi2)
 
         factor_graph = self.graph.to_factor_graph()
-        self.assertIsInstance(factor_graph, FactorGraph)
-        self.assertListEqual(
-            sorted(factor_graph.nodes()),
-            ["Alice", "Bob", "Charles", "phi_Alice_Bob", "phi_Bob_Charles"],
-        )
-        self.assertListEqual(
-            hf.recursive_sorted(factor_graph.edges()),
-            [
-                ["Alice", "phi_Alice_Bob"],
-                ["Bob", "phi_Alice_Bob"],
-                ["Bob", "phi_Bob_Charles"],
-                ["Charles", "phi_Bob_Charles"],
-            ],
-        )
-        self.assertListEqual(factor_graph.get_factors(), [phi1, phi2])
+        assert isinstance(factor_graph, FactorGraph)
+        assert sorted(factor_graph.nodes()) == ["Alice", "Bob", "Charles", "phi_Alice_Bob", "phi_Bob_Charles"]
+        assert hf.recursive_sorted(factor_graph.edges()) == [
+            ["Alice", "phi_Alice_Bob"],
+            ["Bob", "phi_Alice_Bob"],
+            ["Bob", "phi_Bob_Charles"],
+            ["Charles", "phi_Bob_Charles"],
+        ]
+        assert factor_graph.get_factors() == [phi1, phi2]
 
     def test_factor_graph_raises_error(self):
         self.graph.add_edges_from([("Alice", "Bob"), ("Bob", "Charles")])
-        self.assertRaises(ValueError, self.graph.to_factor_graph)
+        with pytest.raises(ValueError):
+            self.graph.to_factor_graph()
 
     def test_junction_tree(self):
         self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "d"), ("d", "a")])
@@ -244,20 +246,14 @@ class TestMarkovNetworkMethods(unittest.TestCase):
 
         # default (MinFill): every node has one fill-in edge, so the first node (a) is eliminated first -> chord b-d
         junction_tree = self.graph.to_junction_tree()
-        self.assertListEqual(
-            hf.recursive_sorted(junction_tree.nodes()),
-            [["a", "b", "d"], ["b", "c", "d"]],
-        )
-        self.assertEqual(len(junction_tree.edges()), 1)
+        assert hf.recursive_sorted(junction_tree.nodes()) == [["a", "b", "d"], ["b", "c", "d"]]
+        assert len(junction_tree.edges()) == 1
         # the heuristic / elimination order are forwarded to triangulate: H1 eliminates b first -> chord a-c
         for kwargs in ({"heuristic": "H1"}, {"order": ["b", "a", "c", "d"]}):
             junction_tree = self.graph.to_junction_tree(**kwargs)
-            self.assertListEqual(
-                hf.recursive_sorted(junction_tree.nodes()),
-                [["a", "b", "c"], ["a", "c", "d"]],
-            )
-            self.assertTrue(junction_tree.check_model())
-        with self.assertRaises(ValueError):
+            assert hf.recursive_sorted(junction_tree.nodes()) == [["a", "b", "c"], ["a", "c", "d"]]
+            assert junction_tree.check_model()
+        with pytest.raises(ValueError):
             self.graph.to_junction_tree(heuristic="bogus")
 
     def test_junction_tree_disconnected_model_raises(self):
@@ -266,7 +262,7 @@ class TestMarkovNetworkMethods(unittest.TestCase):
             DiscreteFactor(["a", "b"], [2, 2], np.random.rand(4)),
             DiscreteFactor(["c", "d"], [2, 2], np.random.rand(4)),
         )
-        with self.assertRaisesRegex(ValueError, "connected"):
+        with pytest.raises(ValueError, match="connected"):
             self.graph.to_junction_tree()
 
     def test_junction_tree_single_clique(self):
@@ -275,9 +271,9 @@ class TestMarkovNetworkMethods(unittest.TestCase):
         self.graph.add_factors(*phi)
 
         junction_tree = self.graph.to_junction_tree()
-        self.assertListEqual(hf.recursive_sorted(junction_tree.nodes()), [["x1", "x2", "x3"]])
+        assert hf.recursive_sorted(junction_tree.nodes()) == [["x1", "x2", "x3"]]
         factors = junction_tree.get_factors()
-        self.assertEqual(factors[0], factor_product(*phi))
+        assert factors[0] == factor_product(*phi)
 
     def test_junction_tree_with_empty_clique_factors(self):
         """
@@ -296,28 +292,28 @@ class TestMarkovNetworkMethods(unittest.TestCase):
         junction_tree = self.graph.to_junction_tree()
 
         # Check that we have a single clique containing all three nodes
-        self.assertEqual(len(junction_tree.nodes()), 1)
+        assert len(junction_tree.nodes()) == 1
         clique = list(junction_tree.nodes())[0]
-        self.assertEqual(set(clique), {"A", "B", "C"})
+        assert set(clique) == {"A", "B", "C"}
 
         # Verify that the clique potential was created correctly
         clique_factors = junction_tree.get_factors()
-        self.assertEqual(len(clique_factors), 1)
+        assert len(clique_factors) == 1
 
         # Verify the junction tree structure
-        self.assertListEqual(hf.recursive_sorted(junction_tree.nodes()), [["A", "B", "C"]])
-        self.assertEqual(len(junction_tree.edges()), 0)  # Single clique means no edges
+        assert hf.recursive_sorted(junction_tree.nodes()) == [["A", "B", "C"]]
+        assert len(junction_tree.edges()) == 0  # Single clique means no edges
 
     def test_markov_blanket(self):
         self.graph.add_edges_from([("a", "b"), ("b", "c")])
-        self.assertListEqual(list(self.graph.markov_blanket("a")), ["b"])
-        self.assertListEqual(sorted(self.graph.markov_blanket("b")), ["a", "c"])
+        assert list(self.graph.markov_blanket("a")) == ["b"]
+        assert sorted(self.graph.markov_blanket("b")) == ["a", "c"]
 
     def test_local_independencies(self):
         self.graph.add_edges_from([("a", "b"), ("b", "c")])
         independencies = self.graph.get_local_independencies()
-        self.assertIsInstance(independencies, Independencies)
-        self.assertEqual(independencies, Independencies(["a", "c", "b"]))
+        assert isinstance(independencies, Independencies)
+        assert independencies == Independencies(["a", "c", "b"])
 
     def test_bayesian_model(self):
         self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "d"), ("d", "a")])
@@ -328,16 +324,14 @@ class TestMarkovNetworkMethods(unittest.TestCase):
         self.graph.add_factors(phi1, phi2, phi3, phi4)
 
         bm = self.graph.to_bayesian_model()
-        self.assertIsInstance(bm, DiscreteBayesianNetwork)
-        self.assertListEqual(sorted(bm.nodes()), ["a", "b", "c", "d"])
-        self.assertTrue(nx.is_chordal(bm.to_undirected()))
-
-    def tearDown(self):
-        del self.graph
+        assert isinstance(bm, DiscreteBayesianNetwork)
+        assert sorted(bm.nodes()) == ["a", "b", "c", "d"]
+        assert nx.is_chordal(bm.to_undirected())
 
 
-class TestUndirectedGraphFactorOperations(unittest.TestCase):
-    def setUp(self):
+class TestUndirectedGraphFactorOperations:
+    @pytest.fixture(autouse=True)
+    def setup(self):
         self.graph = DiscreteMarkovNetwork()
 
     def test_add_factor_raises_error(self):
@@ -350,29 +344,30 @@ class TestUndirectedGraphFactorOperations(unittest.TestCase):
             ]
         )
         factor = DiscreteFactor(["Alice", "Bob", "John"], [2, 2, 2], np.random.rand(8))
-        self.assertRaises(ValueError, self.graph.add_factors, factor)
+        with pytest.raises(ValueError):
+            self.graph.add_factors(factor)
 
     def test_add_single_factor(self):
         self.graph.add_nodes_from(["a", "b", "c"])
         phi = DiscreteFactor(["a", "b"], [2, 2], range(4))
         self.graph.add_factors(phi)
-        self.assertCountEqual(self.graph.factors, [phi])
+        assert Counter(list(self.graph.factors)) == Counter([phi])
 
     def test_add_multiple_factors(self):
         self.graph.add_nodes_from(["a", "b", "c"])
         phi1 = DiscreteFactor(["a", "b"], [2, 2], range(4))
         phi2 = DiscreteFactor(["b", "c"], [2, 2], range(4))
         self.graph.add_factors(phi1, phi2)
-        self.assertCountEqual(self.graph.factors, [phi1, phi2])
+        assert Counter(list(self.graph.factors)) == Counter([phi1, phi2])
 
     def test_get_factors(self):
         self.graph.add_nodes_from(["a", "b", "c"])
         phi1 = DiscreteFactor(["a", "b"], [2, 2], range(4))
         phi2 = DiscreteFactor(["b", "c"], [2, 2], range(4))
-        self.assertCountEqual(self.graph.get_factors(), [])
+        assert Counter(list(self.graph.get_factors())) == Counter([])
         self.graph.add_factors(phi1, phi2)
-        self.assertCountEqual(self.graph.get_factors(), [phi1, phi2])
-        self.assertCountEqual(self.graph.get_factors("a"), [phi1])
+        assert Counter(list(self.graph.get_factors())) == Counter([phi1, phi2])
+        assert Counter(list(self.graph.get_factors("a"))) == Counter([phi1])
 
     def test_remove_single_factor(self):
         self.graph.add_nodes_from(["a", "b", "c"])
@@ -380,7 +375,7 @@ class TestUndirectedGraphFactorOperations(unittest.TestCase):
         phi2 = DiscreteFactor(["b", "c"], [2, 2], range(4))
         self.graph.add_factors(phi1, phi2)
         self.graph.remove_factors(phi1)
-        self.assertCountEqual(self.graph.factors, [phi2])
+        assert Counter(list(self.graph.factors)) == Counter([phi2])
 
     def test_remove_multiple_factors(self):
         self.graph.add_nodes_from(["a", "b", "c"])
@@ -388,7 +383,7 @@ class TestUndirectedGraphFactorOperations(unittest.TestCase):
         phi2 = DiscreteFactor(["b", "c"], [2, 2], range(4))
         self.graph.add_factors(phi1, phi2)
         self.graph.remove_factors(phi1, phi2)
-        self.assertCountEqual(self.graph.factors, [])
+        assert Counter(list(self.graph.factors)) == Counter([])
 
     def test_partition_function(self):
         self.graph.add_nodes_from(["a", "b", "c"])
@@ -396,30 +391,29 @@ class TestUndirectedGraphFactorOperations(unittest.TestCase):
         phi2 = DiscreteFactor(["b", "c"], [2, 2], range(4))
         self.graph.add_factors(phi1, phi2)
         self.graph.add_edges_from([("a", "b"), ("b", "c")])
-        self.assertEqual(self.graph.get_partition_function(), 22.0)
+        assert self.graph.get_partition_function() == 22.0
 
     def test_partition_function_raises_error(self):
         self.graph.add_nodes_from(["a", "b", "c", "d"])
         phi1 = DiscreteFactor(["a", "b"], [2, 2], range(4))
         phi2 = DiscreteFactor(["b", "c"], [2, 2], range(4))
         self.graph.add_factors(phi1, phi2)
-        self.assertRaises(ValueError, self.graph.get_partition_function)
-
-    def tearDown(self):
-        del self.graph
+        with pytest.raises(ValueError):
+            self.graph.get_partition_function()
 
 
-class TestUndirectedGraphTriangulation(unittest.TestCase):
-    def setUp(self):
+class TestUndirectedGraphTriangulation:
+    @pytest.fixture(autouse=True)
+    def setup(self):
         self.graph = DiscreteMarkovNetwork()
 
     def test_check_clique(self):
         self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "a")])
-        self.assertTrue(self.graph.is_clique(["a", "b", "c"]))
+        assert self.graph.is_clique(["a", "b", "c"])
 
     def test_is_triangulated(self):
         self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "a")])
-        self.assertTrue(self.graph.is_triangulated())
+        assert self.graph.is_triangulated()
 
     def _add_four_cycle(self, graph=None):
         graph = self.graph if graph is None else graph
@@ -451,37 +445,32 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
             "H6": ["a", "c"],
         }
         for heuristic, chord in expected_chord.items():
-            with self.subTest(heuristic=heuristic):
-                graph = self._add_four_cycle(DiscreteMarkovNetwork())
-                expected_edges = hf.recursive_sorted([["a", "b"], ["b", "c"], ["c", "d"], ["d", "a"], chord])
-                # inplace=False: a new triangulated graph, the original untouched
-                H = graph.triangulate(heuristic=heuristic)
-                self.assertTrue(H.is_triangulated())
-                self.assertListEqual(hf.recursive_sorted(H.edges()), expected_edges)
-                self.assertEqual(len(graph.edges()), 4)
-                # the ordering is deterministic
-                self.assertListEqual(
-                    hf.recursive_sorted(graph.triangulate(heuristic=heuristic).edges()), expected_edges
-                )
-                # inplace=True: modifies and returns the graph itself
-                self.assertIs(graph.triangulate(heuristic=heuristic, inplace=True), graph)
-                self.assertTrue(graph.is_triangulated())
-                self.assertListEqual(hf.recursive_sorted(graph.edges()), expected_edges)
+            graph = self._add_four_cycle(DiscreteMarkovNetwork())
+            expected_edges = hf.recursive_sorted([["a", "b"], ["b", "c"], ["c", "d"], ["d", "a"], chord])
+            # inplace=False: a new triangulated graph, the original untouched
+            H = graph.triangulate(heuristic=heuristic)
+            assert H.is_triangulated()
+            assert hf.recursive_sorted(H.edges()) == expected_edges
+            assert len(graph.edges()) == 4
+            # the ordering is deterministic
+            assert hf.recursive_sorted(graph.triangulate(heuristic=heuristic).edges()) == expected_edges
+            # inplace=True: modifies and returns the graph itself
+            assert graph.triangulate(heuristic=heuristic, inplace=True) is graph
+            assert graph.is_triangulated()
+            assert hf.recursive_sorted(graph.edges()) == expected_edges
         # the default heuristic is MinFill; unknown heuristics raise
         graph = self._add_four_cycle(DiscreteMarkovNetwork())
-        self.assertListEqual(
-            hf.recursive_sorted(graph.triangulate().edges()),
-            hf.recursive_sorted([["a", "b"], ["b", "c"], ["c", "d"], ["d", "a"], ["b", "d"]]),
+        assert hf.recursive_sorted(graph.triangulate().edges()) == hf.recursive_sorted(
+            [["a", "b"], ["b", "c"], ["c", "d"], ["d", "a"], ["b", "d"]]
         )
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             graph.triangulate(heuristic="H7")
 
     def test_triangulation_given_order(self):
         self._add_four_cycle()
         H = self.graph.triangulate(order=["b", "d", "a", "c"])
-        self.assertListEqual(
-            hf.recursive_sorted(H.edges()),
-            hf.recursive_sorted([["a", "b"], ["b", "c"], ["c", "d"], ["d", "a"], ["a", "c"]]),
+        assert hf.recursive_sorted(H.edges()) == hf.recursive_sorted(
+            [["a", "b"], ["b", "c"], ["c", "d"], ["d", "a"], ["a", "c"]]
         )
 
     def test_triangulation_keeps_isolated_nodes(self):
@@ -489,26 +478,26 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
         self.graph.add_node("e")
         self.graph.add_factors(DiscreteFactor(["e"], [2], [0.4, 0.6]))
         H = self.graph.triangulate()
-        self.assertTrue(H.is_triangulated())
-        self.assertIn("e", H.nodes())
-        self.assertEqual(len(H.edges()), 5)
+        assert H.is_triangulated()
+        assert "e" in H.nodes()
+        assert len(H.edges()) == 5
 
     def test_triangulation_of_larger_models_stays_small(self):
         # regression: the old H6 default produced cliques of 19 variables on alarm (treewidth 4)
         markov_model = load_model("bnlearn/alarm").to_markov_model()
         cardinality = markov_model.get_cardinality()
         for heuristic in ["MinFill", "WeightedMinFill", "MinWeight", "H1"]:
-            with self.subTest(heuristic=heuristic):
-                cliques = list(nx.find_cliques(markov_model.triangulate(heuristic=heuristic)))
-                self.assertLessEqual(max(len(clique) for clique in cliques), 6)
-                self.assertLess(sum(int(np.prod([cardinality[v] for v in clique])) for clique in cliques), 5000)
+            cliques = list(nx.find_cliques(markov_model.triangulate(heuristic=heuristic)))
+            assert max(len(clique) for clique in cliques) <= 6
+            assert sum(int(np.prod([cardinality[v] for v in clique])) for clique in cliques) < 5000
 
     def test_cardinality_mismatch_raises_error(self):
         self.graph.add_edges_from([("a", "b"), ("b", "c"), ("c", "d"), ("d", "a")])
         factor_list = [DiscreteFactor(edge, [2, 2], np.random.rand(4)) for edge in self.graph.edges()]
         self.graph.add_factors(*factor_list)
         self.graph.add_factors(DiscreteFactor(["a", "b"], [2, 3], np.random.rand(6)))
-        self.assertRaises(ValueError, self.graph.triangulate)
+        with pytest.raises(ValueError):
+            self.graph.triangulate()
 
     def test_copy(self):
         # Setup the original graph
@@ -519,43 +508,43 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
         copy = self.graph.copy()
 
         # Ensure the copied model is correct
-        self.assertTrue(copy.check_model())
+        assert copy.check_model()
 
         # Basic sanity checks to ensure the graph was copied correctly
-        self.assertEqual(len(copy.nodes()), 2)
-        self.assertListEqual(list(copy.neighbors("a")), ["b"])
-        self.assertListEqual(list(copy.neighbors("b")), ["a"])
+        assert len(copy.nodes()) == 2
+        assert list(copy.neighbors("a")) == ["b"]
+        assert list(copy.neighbors("b")) == ["a"]
 
         # Modify the original graph ...
         self.graph.add_nodes_from(["c"])
         self.graph.add_edges_from([("c", "b")])
 
         # ... and ensure none of those changes get propagated
-        self.assertEqual(len(copy.nodes()), 2)
-        self.assertListEqual(list(copy.neighbors("a")), ["b"])
-        self.assertListEqual(list(copy.neighbors("b")), ["a"])
-        with self.assertRaises(nx.NetworkXError):
+        assert len(copy.nodes()) == 2
+        assert list(copy.neighbors("a")) == ["b"]
+        assert list(copy.neighbors("b")) == ["a"]
+        with pytest.raises(nx.NetworkXError):
             list(copy.neighbors("c"))
 
         # Ensure the copy has no factors at this point
-        self.assertEqual(len(copy.get_factors()), 0)
+        assert len(copy.get_factors()) == 0
 
         # Add factors to the original graph
         phi1 = DiscreteFactor(["a", "b"], [2, 2], [[0.3, 0.7], [0.9, 0.1]])
         self.graph.add_factors(phi1)
 
         # The factors should not get copied over
-        with self.assertRaises(AssertionError):
-            self.assertListEqual(list(copy.get_factors()), self.graph.get_factors())
+        with pytest.raises(AssertionError):
+            assert list(copy.get_factors()) == self.graph.get_factors()
 
         # Create a fresh copy
         del copy
         copy = self.graph.copy()
-        self.assertListEqual(list(copy.get_factors()), self.graph.get_factors())
+        assert list(copy.get_factors()) == self.graph.get_factors()
 
         # If we change factors in the original, it should not be passed to the clone
         phi1.values = np.array([[0.5, 0.5], [0.5, 0.5]])
-        self.assertNotEqual(self.graph.get_factors(), copy.get_factors())
+        assert self.graph.get_factors() != copy.get_factors()
 
         # Start with a fresh copy
         del copy
@@ -563,34 +552,34 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
         copy = self.graph.copy()
 
         # Ensure an unconnected node gets copied over as well
-        self.assertEqual(len(copy.nodes()), 4)
-        self.assertListEqual(list(self.graph.neighbors("a")), ["b"])
-        self.assertTrue("a" in self.graph.neighbors("b"))
-        self.assertTrue("c" in self.graph.neighbors("b"))
-        self.assertListEqual(list(self.graph.neighbors("c")), ["b"])
-        self.assertListEqual(list(self.graph.neighbors("d")), [])
+        assert len(copy.nodes()) == 4
+        assert list(self.graph.neighbors("a")) == ["b"]
+        assert "a" in self.graph.neighbors("b")
+        assert "c" in self.graph.neighbors("b")
+        assert list(self.graph.neighbors("c")) == ["b"]
+        assert list(self.graph.neighbors("d")) == []
 
         # Verify that changing the copied model should not update the original
         copy.add_nodes_from(["e"])
-        self.assertListEqual(list(copy.neighbors("e")), [])
-        with self.assertRaises(nx.NetworkXError):
+        assert list(copy.neighbors("e")) == []
+        with pytest.raises(nx.NetworkXError):
             self.graph.neighbors("e")
 
         # Verify that changing edges in the copy doesn't create edges in the original
         copy.add_edges_from([("d", "b")])
 
-        self.assertTrue("a" in copy.neighbors("b"))
-        self.assertTrue("c" in copy.neighbors("b"))
-        self.assertTrue("d" in copy.neighbors("b"))
+        assert "a" in copy.neighbors("b")
+        assert "c" in copy.neighbors("b")
+        assert "d" in copy.neighbors("b")
 
-        self.assertTrue("a" in self.graph.neighbors("b"))
-        self.assertTrue("c" in self.graph.neighbors("b"))
-        self.assertFalse("d" in self.graph.neighbors("b"))
+        assert "a" in self.graph.neighbors("b")
+        assert "c" in self.graph.neighbors("b")
+        assert "d" not in self.graph.neighbors("b")
 
         # If we remove factors from the copied model, it should not reflect in the original
         copy.remove_factors(phi1)
-        self.assertEqual(len(self.graph.get_factors()), 1)
-        self.assertEqual(len(copy.get_factors()), 0)
+        assert len(self.graph.get_factors()) == 1
+        assert len(copy.get_factors()) == 0
 
     def test_junction_tree_with_state_names(self):
         """
@@ -630,18 +619,15 @@ class TestUndirectedGraphTriangulation(unittest.TestCase):
         # Check that the factors in the junction tree have the correct state names
         for factor in junction_tree.factors:
             for var in factor.variables:
-                self.assertEqual(factor.state_names[var], state_names[var])
+                assert factor.state_names[var] == state_names[var]
 
         # Verify state names were correctly passed to clique potentials
         for clique_potential in junction_tree.factors:
             for var in clique_potential.variables:
-                self.assertIn(var, state_names)
-                self.assertEqual(clique_potential.state_names[var], state_names[var])
+                assert var in state_names
+                assert clique_potential.state_names[var] == state_names[var]
 
                 # Verify the name_to_no and no_to_name mappings are correct
                 for i, state in enumerate(state_names[var]):
-                    self.assertEqual(clique_potential.name_to_no[var][state], i)
-                    self.assertEqual(clique_potential.no_to_name[var][i], state)
-
-    def tearDown(self):
-        del self.graph
+                    assert clique_potential.name_to_no[var][state] == i
+                    assert clique_potential.no_to_name[var][i] == state

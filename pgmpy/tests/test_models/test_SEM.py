@@ -1,14 +1,14 @@
 import os
-import unittest
 
 import networkx as nx
 import numpy as np
 import numpy.testing as npt
+import pytest
 
 from pgmpy.models import SEM, SEMGraph
 
 
-class TestSEM(unittest.TestCase):
+class TestSEM:
     def test_from_graph(self):
         self.demo = SEM.from_graph(
             ebunch=[
@@ -38,66 +38,57 @@ class TestSEM(unittest.TestCase):
             ],
         )
 
-        self.assertSetEqual(self.demo.latents, {"xi1", "eta1", "eta2"})
-        self.assertSetEqual(
-            self.demo.observed,
-            {"x1", "x2", "x3", "y1", "y2", "y3", "y4", "y5", "y6", "y7", "y8"},
-        )
-        self.assertListEqual(
-            sorted(self.demo.graph.nodes()),
+        assert self.demo.latents == {"xi1", "eta1", "eta2"}
+        assert self.demo.observed == {"x1", "x2", "x3", "y1", "y2", "y3", "y4", "y5", "y6", "y7", "y8"}
+        assert sorted(self.demo.graph.nodes()) == [
+            "eta1",
+            "eta2",
+            "x1",
+            "x2",
+            "x3",
+            "xi1",
+            "y1",
+            "y2",
+            "y3",
+            "y4",
+            "y5",
+            "y6",
+            "y7",
+            "y8",
+        ]
+        assert sorted(self.demo.graph.edges()) == sorted(
             [
-                "eta1",
-                "eta2",
-                "x1",
-                "x2",
-                "x3",
-                "xi1",
-                "y1",
-                "y2",
-                "y3",
-                "y4",
-                "y5",
-                "y6",
-                "y7",
-                "y8",
-            ],
-        )
-        self.assertListEqual(
-            sorted(self.demo.graph.edges()),
-            sorted(
-                [
-                    ("eta1", "eta2"),
-                    ("eta1", "y1"),
-                    ("eta1", "y2"),
-                    ("eta1", "y3"),
-                    ("eta1", "y4"),
-                    ("eta2", "y5"),
-                    ("eta2", "y6"),
-                    ("eta2", "y7"),
-                    ("eta2", "y8"),
-                    ("xi1", "eta1"),
-                    ("xi1", "eta2"),
-                    ("xi1", "x1"),
-                    ("xi1", "x2"),
-                    ("xi1", "x3"),
-                ]
-            ),
+                ("eta1", "eta2"),
+                ("eta1", "y1"),
+                ("eta1", "y2"),
+                ("eta1", "y3"),
+                ("eta1", "y4"),
+                ("eta2", "y5"),
+                ("eta2", "y6"),
+                ("eta2", "y7"),
+                ("eta2", "y8"),
+                ("xi1", "eta1"),
+                ("xi1", "eta2"),
+                ("xi1", "x1"),
+                ("xi1", "x2"),
+                ("xi1", "x3"),
+            ]
         )
 
-        self.assertDictEqual(self.demo.graph.edges[("xi1", "x1")], {"weight": np.nan})
-        self.assertDictEqual(self.demo.graph.edges[("xi1", "x2")], {"weight": np.nan})
-        self.assertDictEqual(self.demo.graph.edges[("xi1", "x3")], {"weight": np.nan})
-        self.assertDictEqual(self.demo.graph.edges[("xi1", "eta1")], {"weight": np.nan})
-        self.assertDictEqual(self.demo.graph.edges[("eta1", "y1")], {"weight": np.nan})
-        self.assertDictEqual(self.demo.graph.edges[("eta1", "y2")], {"weight": np.nan})
-        self.assertDictEqual(self.demo.graph.edges[("eta1", "y3")], {"weight": np.nan})
-        self.assertDictEqual(self.demo.graph.edges[("eta1", "y4")], {"weight": np.nan})
-        self.assertDictEqual(self.demo.graph.edges[("eta1", "eta2")], {"weight": np.nan})
-        self.assertDictEqual(self.demo.graph.edges[("xi1", "eta2")], {"weight": np.nan})
-        self.assertDictEqual(self.demo.graph.edges[("eta2", "y5")], {"weight": np.nan})
-        self.assertDictEqual(self.demo.graph.edges[("eta2", "y6")], {"weight": np.nan})
-        self.assertDictEqual(self.demo.graph.edges[("eta2", "y7")], {"weight": np.nan})
-        self.assertDictEqual(self.demo.graph.edges[("eta2", "y8")], {"weight": np.nan})
+        assert self.demo.graph.edges[("xi1", "x1")] == {"weight": np.nan}
+        assert self.demo.graph.edges[("xi1", "x2")] == {"weight": np.nan}
+        assert self.demo.graph.edges[("xi1", "x3")] == {"weight": np.nan}
+        assert self.demo.graph.edges[("xi1", "eta1")] == {"weight": np.nan}
+        assert self.demo.graph.edges[("eta1", "y1")] == {"weight": np.nan}
+        assert self.demo.graph.edges[("eta1", "y2")] == {"weight": np.nan}
+        assert self.demo.graph.edges[("eta1", "y3")] == {"weight": np.nan}
+        assert self.demo.graph.edges[("eta1", "y4")] == {"weight": np.nan}
+        assert self.demo.graph.edges[("eta1", "eta2")] == {"weight": np.nan}
+        assert self.demo.graph.edges[("xi1", "eta2")] == {"weight": np.nan}
+        assert self.demo.graph.edges[("eta2", "y5")] == {"weight": np.nan}
+        assert self.demo.graph.edges[("eta2", "y6")] == {"weight": np.nan}
+        assert self.demo.graph.edges[("eta2", "y7")] == {"weight": np.nan}
+        assert self.demo.graph.edges[("eta2", "y8")] == {"weight": np.nan}
 
         npt.assert_equal(
             nx.to_numpy_array(
@@ -336,9 +327,9 @@ class TestSEM(unittest.TestCase):
         )
 
         for edge in self.demo.err_graph.edges():
-            self.assertDictEqual(self.demo.err_graph.edges[edge], {"weight": np.nan})
+            assert self.demo.err_graph.edges[edge] == {"weight": np.nan}
         for node in self.demo.err_graph.nodes():
-            self.assertDictEqual(self.demo.err_graph.nodes[node], {"weight": np.nan})
+            assert self.demo.err_graph.nodes[node] == {"weight": np.nan}
 
     def test_from_lavaan(self):
         model_str = """# %load model.lav
@@ -397,12 +388,12 @@ class TestSEM(unittest.TestCase):
         }
 
         expected_latents = {"dem60", "dem65", "ind60"}
-        self.assertEqual(set(model_from_str.graph.edges()), expected_edges)
-        self.assertEqual(set(model_from_file.graph.edges()), expected_edges)
-        self.assertFalse(set(model_from_str.err_graph.edges()) - expected_err_edges)
-        self.assertFalse(set(model_from_file.err_graph.edges()) - expected_err_edges)
-        self.assertEqual(set(model_from_str.latents), expected_latents)
-        self.assertEqual(set(model_from_file.latents), expected_latents)
+        assert set(model_from_str.graph.edges()) == expected_edges
+        assert set(model_from_file.graph.edges()) == expected_edges
+        assert not set(model_from_str.err_graph.edges()) - expected_err_edges
+        assert not set(model_from_file.err_graph.edges()) - expected_err_edges
+        assert set(model_from_str.latents) == expected_latents
+        assert set(model_from_file.latents) == expected_latents
 
     def test_from_lisrel(self):
         pass  # TODO: Add this test when done writing the tests for SEMAlg
@@ -411,8 +402,9 @@ class TestSEM(unittest.TestCase):
         pass  # TODO: Add this.
 
 
-class TestSEMGraph(unittest.TestCase):
-    def setUp(self):
+class TestSEMGraph:
+    @pytest.fixture(autouse=True)
+    def setup(self):
         self.demo = SEMGraph(
             ebunch=[
                 ("xi1", "x1"),
@@ -518,66 +510,57 @@ class TestSEMGraph(unittest.TestCase):
         )
 
     def test_demo_init(self):
-        self.assertSetEqual(self.demo.latents, {"xi1", "eta1", "eta2"})
-        self.assertSetEqual(
-            self.demo.observed,
-            {"x1", "x2", "x3", "y1", "y2", "y3", "y4", "y5", "y6", "y7", "y8"},
-        )
-        self.assertListEqual(
-            sorted(self.demo.graph.nodes()),
+        assert self.demo.latents == {"xi1", "eta1", "eta2"}
+        assert self.demo.observed == {"x1", "x2", "x3", "y1", "y2", "y3", "y4", "y5", "y6", "y7", "y8"}
+        assert sorted(self.demo.graph.nodes()) == [
+            "eta1",
+            "eta2",
+            "x1",
+            "x2",
+            "x3",
+            "xi1",
+            "y1",
+            "y2",
+            "y3",
+            "y4",
+            "y5",
+            "y6",
+            "y7",
+            "y8",
+        ]
+        assert sorted(self.demo.graph.edges()) == sorted(
             [
-                "eta1",
-                "eta2",
-                "x1",
-                "x2",
-                "x3",
-                "xi1",
-                "y1",
-                "y2",
-                "y3",
-                "y4",
-                "y5",
-                "y6",
-                "y7",
-                "y8",
-            ],
-        )
-        self.assertListEqual(
-            sorted(self.demo.graph.edges()),
-            sorted(
-                [
-                    ("eta1", "eta2"),
-                    ("eta1", "y1"),
-                    ("eta1", "y2"),
-                    ("eta1", "y3"),
-                    ("eta1", "y4"),
-                    ("eta2", "y5"),
-                    ("eta2", "y6"),
-                    ("eta2", "y7"),
-                    ("eta2", "y8"),
-                    ("xi1", "eta1"),
-                    ("xi1", "eta2"),
-                    ("xi1", "x1"),
-                    ("xi1", "x2"),
-                    ("xi1", "x3"),
-                ]
-            ),
+                ("eta1", "eta2"),
+                ("eta1", "y1"),
+                ("eta1", "y2"),
+                ("eta1", "y3"),
+                ("eta1", "y4"),
+                ("eta2", "y5"),
+                ("eta2", "y6"),
+                ("eta2", "y7"),
+                ("eta2", "y8"),
+                ("xi1", "eta1"),
+                ("xi1", "eta2"),
+                ("xi1", "x1"),
+                ("xi1", "x2"),
+                ("xi1", "x3"),
+            ]
         )
 
-        self.assertDictEqual(self.demo.graph.edges[("xi1", "x1")], {"weight": np.nan})
-        self.assertDictEqual(self.demo.graph.edges[("xi1", "x2")], {"weight": np.nan})
-        self.assertDictEqual(self.demo.graph.edges[("xi1", "x3")], {"weight": np.nan})
-        self.assertDictEqual(self.demo.graph.edges[("xi1", "eta1")], {"weight": np.nan})
-        self.assertDictEqual(self.demo.graph.edges[("eta1", "y1")], {"weight": np.nan})
-        self.assertDictEqual(self.demo.graph.edges[("eta1", "y2")], {"weight": np.nan})
-        self.assertDictEqual(self.demo.graph.edges[("eta1", "y3")], {"weight": np.nan})
-        self.assertDictEqual(self.demo.graph.edges[("eta1", "y4")], {"weight": np.nan})
-        self.assertDictEqual(self.demo.graph.edges[("eta1", "eta2")], {"weight": np.nan})
-        self.assertDictEqual(self.demo.graph.edges[("xi1", "eta2")], {"weight": np.nan})
-        self.assertDictEqual(self.demo.graph.edges[("eta2", "y5")], {"weight": np.nan})
-        self.assertDictEqual(self.demo.graph.edges[("eta2", "y6")], {"weight": np.nan})
-        self.assertDictEqual(self.demo.graph.edges[("eta2", "y7")], {"weight": np.nan})
-        self.assertDictEqual(self.demo.graph.edges[("eta2", "y8")], {"weight": np.nan})
+        assert self.demo.graph.edges[("xi1", "x1")] == {"weight": np.nan}
+        assert self.demo.graph.edges[("xi1", "x2")] == {"weight": np.nan}
+        assert self.demo.graph.edges[("xi1", "x3")] == {"weight": np.nan}
+        assert self.demo.graph.edges[("xi1", "eta1")] == {"weight": np.nan}
+        assert self.demo.graph.edges[("eta1", "y1")] == {"weight": np.nan}
+        assert self.demo.graph.edges[("eta1", "y2")] == {"weight": np.nan}
+        assert self.demo.graph.edges[("eta1", "y3")] == {"weight": np.nan}
+        assert self.demo.graph.edges[("eta1", "y4")] == {"weight": np.nan}
+        assert self.demo.graph.edges[("eta1", "eta2")] == {"weight": np.nan}
+        assert self.demo.graph.edges[("xi1", "eta2")] == {"weight": np.nan}
+        assert self.demo.graph.edges[("eta2", "y5")] == {"weight": np.nan}
+        assert self.demo.graph.edges[("eta2", "y6")] == {"weight": np.nan}
+        assert self.demo.graph.edges[("eta2", "y7")] == {"weight": np.nan}
+        assert self.demo.graph.edges[("eta2", "y8")] == {"weight": np.nan}
 
         npt.assert_equal(
             nx.to_numpy_array(
@@ -816,38 +799,32 @@ class TestSEMGraph(unittest.TestCase):
         )
 
         for edge in self.demo.err_graph.edges():
-            self.assertDictEqual(self.demo.err_graph.edges[edge], {"weight": np.nan})
+            assert self.demo.err_graph.edges[edge] == {"weight": np.nan}
         for node in self.demo.err_graph.nodes():
-            self.assertDictEqual(self.demo.err_graph.nodes[node], {"weight": np.nan})
+            assert self.demo.err_graph.nodes[node] == {"weight": np.nan}
 
     def test_union_init(self):
-        self.assertSetEqual(self.union.latents, set())
-        self.assertSetEqual(self.union.observed, {"yrsmill", "unionsen", "age", "laboract", "deferenc"})
+        assert self.union.latents == set()
+        assert self.union.observed == {"yrsmill", "unionsen", "age", "laboract", "deferenc"}
 
-        self.assertListEqual(
-            sorted(self.union.graph.nodes()),
-            sorted(["yrsmill", "unionsen", "age", "laboract", "deferenc"]),
-        )
-        self.assertListEqual(
-            sorted(self.union.graph.edges()),
-            sorted(
-                [
-                    ("yrsmill", "unionsen"),
-                    ("age", "laboract"),
-                    ("age", "deferenc"),
-                    ("deferenc", "laboract"),
-                    ("deferenc", "unionsen"),
-                    ("laboract", "unionsen"),
-                ]
-            ),
+        assert sorted(self.union.graph.nodes()) == sorted(["yrsmill", "unionsen", "age", "laboract", "deferenc"])
+        assert sorted(self.union.graph.edges()) == sorted(
+            [
+                ("yrsmill", "unionsen"),
+                ("age", "laboract"),
+                ("age", "deferenc"),
+                ("deferenc", "laboract"),
+                ("deferenc", "unionsen"),
+                ("laboract", "unionsen"),
+            ]
         )
 
-        self.assertDictEqual(self.union.graph.edges[("yrsmill", "unionsen")], {"weight": np.nan})
-        self.assertDictEqual(self.union.graph.edges[("age", "laboract")], {"weight": np.nan})
-        self.assertDictEqual(self.union.graph.edges[("age", "deferenc")], {"weight": np.nan})
-        self.assertDictEqual(self.union.graph.edges[("deferenc", "laboract")], {"weight": np.nan})
-        self.assertDictEqual(self.union.graph.edges[("deferenc", "unionsen")], {"weight": np.nan})
-        self.assertDictEqual(self.union.graph.edges[("laboract", "unionsen")], {"weight": np.nan})
+        assert self.union.graph.edges[("yrsmill", "unionsen")] == {"weight": np.nan}
+        assert self.union.graph.edges[("age", "laboract")] == {"weight": np.nan}
+        assert self.union.graph.edges[("age", "deferenc")] == {"weight": np.nan}
+        assert self.union.graph.edges[("deferenc", "laboract")] == {"weight": np.nan}
+        assert self.union.graph.edges[("deferenc", "unionsen")] == {"weight": np.nan}
+        assert self.union.graph.edges[("laboract", "unionsen")] == {"weight": np.nan}
 
         npt.assert_equal(
             nx.to_numpy_array(
@@ -867,50 +844,50 @@ class TestSEMGraph(unittest.TestCase):
         )
 
         for edge in self.union.err_graph.edges():
-            self.assertDictEqual(self.union.err_graph.edges[edge], {"weight": np.nan})
+            assert self.union.err_graph.edges[edge] == {"weight": np.nan}
         for node in self.union.err_graph.nodes():
-            self.assertDictEqual(self.union.err_graph.nodes[node], {"weight": np.nan})
+            assert self.union.err_graph.nodes[node] == {"weight": np.nan}
 
     def test_demo_param_init(self):
-        self.assertDictEqual(self.demo_params.graph.edges[("xi1", "x1")], {"weight": 0.4})
-        self.assertDictEqual(self.demo_params.graph.edges[("xi1", "x2")], {"weight": 0.5})
-        self.assertDictEqual(self.demo_params.graph.edges[("xi1", "x3")], {"weight": 0.6})
-        self.assertDictEqual(self.demo_params.graph.edges[("xi1", "eta1")], {"weight": 0.3})
-        self.assertDictEqual(self.demo_params.graph.edges[("eta1", "y1")], {"weight": 1.1})
-        self.assertDictEqual(self.demo_params.graph.edges[("eta1", "y2")], {"weight": 1.2})
-        self.assertDictEqual(self.demo_params.graph.edges[("eta1", "y3")], {"weight": 1.3})
-        self.assertDictEqual(self.demo_params.graph.edges[("eta1", "y4")], {"weight": 1.4})
-        self.assertDictEqual(self.demo_params.graph.edges[("eta1", "eta2")], {"weight": 0.1})
-        self.assertDictEqual(self.demo_params.graph.edges[("xi1", "eta2")], {"weight": 0.2})
-        self.assertDictEqual(self.demo_params.graph.edges[("eta2", "y5")], {"weight": 0.7})
-        self.assertDictEqual(self.demo_params.graph.edges[("eta2", "y6")], {"weight": 0.8})
-        self.assertDictEqual(self.demo_params.graph.edges[("eta2", "y7")], {"weight": 0.9})
-        self.assertDictEqual(self.demo_params.graph.edges[("eta2", "y8")], {"weight": 1.0})
+        assert self.demo_params.graph.edges[("xi1", "x1")] == {"weight": 0.4}
+        assert self.demo_params.graph.edges[("xi1", "x2")] == {"weight": 0.5}
+        assert self.demo_params.graph.edges[("xi1", "x3")] == {"weight": 0.6}
+        assert self.demo_params.graph.edges[("xi1", "eta1")] == {"weight": 0.3}
+        assert self.demo_params.graph.edges[("eta1", "y1")] == {"weight": 1.1}
+        assert self.demo_params.graph.edges[("eta1", "y2")] == {"weight": 1.2}
+        assert self.demo_params.graph.edges[("eta1", "y3")] == {"weight": 1.3}
+        assert self.demo_params.graph.edges[("eta1", "y4")] == {"weight": 1.4}
+        assert self.demo_params.graph.edges[("eta1", "eta2")] == {"weight": 0.1}
+        assert self.demo_params.graph.edges[("xi1", "eta2")] == {"weight": 0.2}
+        assert self.demo_params.graph.edges[("eta2", "y5")] == {"weight": 0.7}
+        assert self.demo_params.graph.edges[("eta2", "y6")] == {"weight": 0.8}
+        assert self.demo_params.graph.edges[("eta2", "y7")] == {"weight": 0.9}
+        assert self.demo_params.graph.edges[("eta2", "y8")] == {"weight": 1.0}
 
-        self.assertDictEqual(self.demo_params.err_graph.edges[("y1", "y5")], {"weight": 1.5})
-        self.assertDictEqual(self.demo_params.err_graph.edges[("y2", "y6")], {"weight": 1.6})
-        self.assertDictEqual(self.demo_params.err_graph.edges[("y2", "y4")], {"weight": 1.9})
-        self.assertDictEqual(self.demo_params.err_graph.edges[("y3", "y7")], {"weight": 1.7})
-        self.assertDictEqual(self.demo_params.err_graph.edges[("y4", "y8")], {"weight": 1.8})
-        self.assertDictEqual(self.demo_params.err_graph.edges[("y6", "y8")], {"weight": 2.0})
+        assert self.demo_params.err_graph.edges[("y1", "y5")] == {"weight": 1.5}
+        assert self.demo_params.err_graph.edges[("y2", "y6")] == {"weight": 1.6}
+        assert self.demo_params.err_graph.edges[("y2", "y4")] == {"weight": 1.9}
+        assert self.demo_params.err_graph.edges[("y3", "y7")] == {"weight": 1.7}
+        assert self.demo_params.err_graph.edges[("y4", "y8")] == {"weight": 1.8}
+        assert self.demo_params.err_graph.edges[("y6", "y8")] == {"weight": 2.0}
 
-        self.assertDictEqual(self.demo_params.err_graph.nodes["y1"], {"weight": 2.1})
-        self.assertDictEqual(self.demo_params.err_graph.nodes["y2"], {"weight": 2.2})
-        self.assertDictEqual(self.demo_params.err_graph.nodes["y3"], {"weight": 2.3})
-        self.assertDictEqual(self.demo_params.err_graph.nodes["y4"], {"weight": 2.4})
-        self.assertDictEqual(self.demo_params.err_graph.nodes["y5"], {"weight": 2.5})
-        self.assertDictEqual(self.demo_params.err_graph.nodes["y6"], {"weight": 2.6})
-        self.assertDictEqual(self.demo_params.err_graph.nodes["y7"], {"weight": 2.7})
-        self.assertDictEqual(self.demo_params.err_graph.nodes["y8"], {"weight": 2.8})
-        self.assertDictEqual(self.demo_params.err_graph.nodes["x1"], {"weight": 3.1})
-        self.assertDictEqual(self.demo_params.err_graph.nodes["x2"], {"weight": 3.2})
-        self.assertDictEqual(self.demo_params.err_graph.nodes["x3"], {"weight": 3.3})
-        self.assertDictEqual(self.demo_params.err_graph.nodes["eta1"], {"weight": 2.9})
-        self.assertDictEqual(self.demo_params.err_graph.nodes["eta2"], {"weight": 3.0})
+        assert self.demo_params.err_graph.nodes["y1"] == {"weight": 2.1}
+        assert self.demo_params.err_graph.nodes["y2"] == {"weight": 2.2}
+        assert self.demo_params.err_graph.nodes["y3"] == {"weight": 2.3}
+        assert self.demo_params.err_graph.nodes["y4"] == {"weight": 2.4}
+        assert self.demo_params.err_graph.nodes["y5"] == {"weight": 2.5}
+        assert self.demo_params.err_graph.nodes["y6"] == {"weight": 2.6}
+        assert self.demo_params.err_graph.nodes["y7"] == {"weight": 2.7}
+        assert self.demo_params.err_graph.nodes["y8"] == {"weight": 2.8}
+        assert self.demo_params.err_graph.nodes["x1"] == {"weight": 3.1}
+        assert self.demo_params.err_graph.nodes["x2"] == {"weight": 3.2}
+        assert self.demo_params.err_graph.nodes["x3"] == {"weight": 3.3}
+        assert self.demo_params.err_graph.nodes["eta1"] == {"weight": 2.9}
+        assert self.demo_params.err_graph.nodes["eta2"] == {"weight": 3.0}
 
     def test_get_full_graph_struct(self):
         full_struct = self.union._get_full_graph_struct()
-        self.assertFalse(
+        assert not (
             set(full_struct.nodes())
             - {
                 "yrsmill",
@@ -927,7 +904,7 @@ class TestSEMGraph(unittest.TestCase):
                 "..yrsmillage",
             }
         )
-        self.assertFalse(
+        assert not (
             set(full_struct.edges())
             - {
                 ("yrsmill", "unionsen"),
@@ -951,17 +928,17 @@ class TestSEMGraph(unittest.TestCase):
     def test_active_trail_nodes(self):
         demo_nodes = ["x1", "x2", "x3", "y1", "y2", "y3", "y4", "y5", "y6", "y7", "y8"]
         for node in demo_nodes:
-            self.assertSetEqual(self.demo.active_trail_nodes(node, struct="full")[node], set(demo_nodes))
+            assert self.demo.active_trail_nodes(node, struct="full")[node] == set(demo_nodes)
 
         union_nodes = self.union.graph.nodes()
         active_trails = self.union.active_trail_nodes(list(union_nodes), struct="full")
         for node in union_nodes:
-            self.assertSetEqual(active_trails[node], set(union_nodes))
+            assert active_trails[node] == set(union_nodes)
 
-        self.assertSetEqual(
-            self.union.active_trail_nodes("age", observed=["laboract", "deferenc", "unionsen"])["age"],
-            {"age", "yrsmill"},
-        )
+        assert self.union.active_trail_nodes("age", observed=["laboract", "deferenc", "unionsen"])["age"] == {
+            "age",
+            "yrsmill",
+        }
 
     def test_to_lisrel(self):
         demo = SEMGraph(
@@ -1037,7 +1014,7 @@ class TestSEMGraph(unittest.TestCase):
         zeta_reorder = demo_lisrel.zeta[indexing, :][:, indexing]
         zeta_fixed_reorder = demo_lisrel.zeta_fixed_mask[indexing, :][:, indexing]
 
-        self.assertEqual(vars_ordered, eta_reorder)
+        assert vars_ordered == eta_reorder
         npt.assert_array_equal(
             B_reorder,
             np.array(
@@ -1157,57 +1134,42 @@ class TestSEMGraph(unittest.TestCase):
         custom_graph = custom_lisrel.to_SEMGraph()
 
         # Test demo
-        self.assertSetEqual(set(self.demo.graph.nodes()), set(demo_graph.graph.nodes()))
-        self.assertSetEqual(set(self.demo.graph.edges()), set(demo_graph.graph.edges()))
+        assert set(self.demo.graph.nodes()) == set(demo_graph.graph.nodes())
+        assert set(self.demo.graph.edges()) == set(demo_graph.graph.edges())
 
-        self.assertSetEqual(set(self.demo.err_graph.nodes()), set(demo_graph.err_graph.nodes()))
+        assert set(self.demo.err_graph.nodes()) == set(demo_graph.err_graph.nodes())
         npt.assert_array_equal(
             nx.to_numpy_array(self.demo.err_graph, nodelist=sorted(self.demo.err_graph.nodes())),
             nx.to_numpy_array(demo_graph.err_graph, nodelist=sorted(demo_graph.err_graph.nodes())),
         )
 
-        self.assertSetEqual(
-            set(self.demo.full_graph_struct.nodes()),
-            set(demo_graph.full_graph_struct.nodes()),
-        )
-        self.assertSetEqual(
-            set(self.demo.full_graph_struct.edges()),
-            set(demo_graph.full_graph_struct.edges()),
-        )
+        assert set(self.demo.full_graph_struct.nodes()) == set(demo_graph.full_graph_struct.nodes())
+        assert set(self.demo.full_graph_struct.edges()) == set(demo_graph.full_graph_struct.edges())
 
-        self.assertSetEqual(self.demo.latents, demo_graph.latents)
-        self.assertSetEqual(self.demo.observed, demo_graph.observed)
+        assert self.demo.latents == demo_graph.latents
+        assert self.demo.observed == demo_graph.observed
 
         # Test union
-        self.assertSetEqual(set(self.union.graph.nodes()), set(union_graph.graph.nodes()))
-        self.assertSetEqual(set(self.union.graph.edges()), set(union_graph.graph.edges()))
+        assert set(self.union.graph.nodes()) == set(union_graph.graph.nodes())
+        assert set(self.union.graph.edges()) == set(union_graph.graph.edges())
 
-        self.assertSetEqual(set(self.union.err_graph.nodes()), set(union_graph.err_graph.nodes()))
+        assert set(self.union.err_graph.nodes()) == set(union_graph.err_graph.nodes())
         npt.assert_array_equal(
             nx.to_numpy_array(self.union.err_graph, nodelist=sorted(self.union.err_graph.nodes())),
             nx.to_numpy_array(union_graph.err_graph, nodelist=sorted(union_graph.err_graph.nodes())),
         )
 
-        self.assertSetEqual(
-            set(self.union.full_graph_struct.nodes()),
-            set(union_graph.full_graph_struct.nodes()),
-        )
-        self.assertSetEqual(
-            set(self.union.full_graph_struct.edges()),
-            set(union_graph.full_graph_struct.edges()),
-        )
+        assert set(self.union.full_graph_struct.nodes()) == set(union_graph.full_graph_struct.nodes())
+        assert set(self.union.full_graph_struct.edges()) == set(union_graph.full_graph_struct.edges())
 
-        self.assertSetEqual(self.union.latents, union_graph.latents)
-        self.assertSetEqual(self.union.observed, union_graph.observed)
+        assert self.union.latents == union_graph.latents
+        assert self.union.observed == union_graph.observed
 
         # Test demo_params
-        self.assertSetEqual(set(self.demo_params.graph.nodes()), set(demo_params_graph.graph.nodes()))
-        self.assertSetEqual(set(self.demo_params.graph.edges()), set(demo_params_graph.graph.edges()))
+        assert set(self.demo_params.graph.nodes()) == set(demo_params_graph.graph.nodes())
+        assert set(self.demo_params.graph.edges()) == set(demo_params_graph.graph.edges())
 
-        self.assertSetEqual(
-            set(self.demo_params.err_graph.nodes()),
-            set(demo_params_graph.err_graph.nodes()),
-        )
+        assert set(self.demo_params.err_graph.nodes()) == set(demo_params_graph.err_graph.nodes())
         npt.assert_array_equal(
             nx.to_numpy_array(
                 self.demo_params.err_graph,
@@ -1221,43 +1183,32 @@ class TestSEMGraph(unittest.TestCase):
             ),
         )
 
-        self.assertSetEqual(
-            set(self.demo_params.full_graph_struct.nodes()),
-            set(demo_params_graph.full_graph_struct.nodes()),
-        )
-        self.assertSetEqual(
-            set(self.demo_params.full_graph_struct.edges()),
-            set(demo_params_graph.full_graph_struct.edges()),
-        )
+        assert set(self.demo_params.full_graph_struct.nodes()) == set(demo_params_graph.full_graph_struct.nodes())
+        assert set(self.demo_params.full_graph_struct.edges()) == set(demo_params_graph.full_graph_struct.edges())
 
-        self.assertSetEqual(self.demo_params.latents, demo_params_graph.latents)
-        self.assertSetEqual(self.demo_params.observed, demo_params_graph.observed)
+        assert self.demo_params.latents == demo_params_graph.latents
+        assert self.demo_params.observed == demo_params_graph.observed
 
         # Test demo
-        self.assertSetEqual(set(self.custom.graph.nodes()), set(custom_graph.graph.nodes()))
-        self.assertSetEqual(set(self.custom.graph.edges()), set(custom_graph.graph.edges()))
+        assert set(self.custom.graph.nodes()) == set(custom_graph.graph.nodes())
+        assert set(self.custom.graph.edges()) == set(custom_graph.graph.edges())
 
-        self.assertSetEqual(set(self.custom.err_graph.nodes()), set(custom_graph.err_graph.nodes()))
+        assert set(self.custom.err_graph.nodes()) == set(custom_graph.err_graph.nodes())
         npt.assert_array_equal(
             nx.to_numpy_array(self.custom.err_graph, nodelist=sorted(self.custom.err_graph.nodes())),
             nx.to_numpy_array(custom_graph.err_graph, nodelist=sorted(custom_graph.err_graph.nodes())),
         )
 
-        self.assertSetEqual(
-            set(self.custom.full_graph_struct.nodes()),
-            set(custom_graph.full_graph_struct.nodes()),
-        )
-        self.assertSetEqual(
-            set(self.custom.full_graph_struct.edges()),
-            set(custom_graph.full_graph_struct.edges()),
-        )
+        assert set(self.custom.full_graph_struct.nodes()) == set(custom_graph.full_graph_struct.nodes())
+        assert set(self.custom.full_graph_struct.edges()) == set(custom_graph.full_graph_struct.edges())
 
-        self.assertSetEqual(self.custom.latents, custom_graph.latents)
-        self.assertSetEqual(self.custom.observed, custom_graph.observed)
+        assert self.custom.latents == custom_graph.latents
+        assert self.custom.observed == custom_graph.observed
 
 
-class TestSEMAlg(unittest.TestCase):
-    def setUp(self):
+class TestSEMAlg:
+    @pytest.fixture(autouse=True)
+    def setup(self):
         self.demo = SEMGraph(
             ebunch=[
                 ("xi1", "x1", 1.000),
