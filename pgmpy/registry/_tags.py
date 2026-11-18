@@ -96,7 +96,8 @@ class data_types(_BaseTag):
     """
     Data types the object can be applied to.
 
-    For causal discovery algorithms that use a CI test, a structure score, a bivariate score, or a pairwise estimator,
+    The base classes declare every data type, and each concrete class narrows it to the types it supports. For causal
+    discovery algorithms that use a CI test, a structure score, a bivariate score, or a pairwise estimator,
     the class-level value is every data type supported by some available component. ``fit`` narrows it to the data
     types that every component used for fitting also supports.
 
@@ -223,6 +224,21 @@ class capability__expert_knowledge(_BaseTag):
         "parent_type": ["causal_discovery"],
         "tag_type": ("list", ["forbidden_edges", "required_edges", "search_space", "temporal_order"]),
         "short_descr": "Constraints from ExpertKnowledge that the algorithm respects.",
+    }
+
+
+class capability__conditioning(_BaseTag):
+    """
+    Whether the CI test supports a non-empty conditioning set ``Z``.
+
+    ``False`` for marginal independence tests, such as ``HSIC``, that only test ``X`` against ``Y``.
+    """
+
+    _tags = {
+        "tag_name": "capability:conditioning",
+        "parent_type": ["ci_test"],
+        "tag_type": "bool",
+        "short_descr": "Whether the test supports a non-empty conditioning set Z.",
     }
 
 

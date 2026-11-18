@@ -9,7 +9,6 @@ from pgmpy.models import LinearGaussianBayesianNetwork
 from pgmpy.utils import (
     discretize,
     get_example_model,
-    preprocess_data,
 )
 from pgmpy.utils.mathext import sample_discrete
 
@@ -33,67 +32,6 @@ class TestDiscretization(unittest.TestCase):
         self.assertEqual(df_disc["X"].nunique(), 5)
         self.assertEqual(df_disc["Y"].nunique(), 4)
         self.assertEqual(df_disc["Z"].nunique(), 3)
-
-
-class TestPreprocessData(unittest.TestCase):
-    def setUp(self):
-        self.data_raw = pd.read_csv("pgmpy/tests/test_estimators/testdata/mixed_testdata.csv", index_col=0)
-
-        self.data_proc = self.data_raw.copy()
-        self.data_proc["A_cat"] = self.data_proc.A_cat.astype("category")
-        self.data_proc["B_cat"] = self.data_proc.C_cat.astype("category")
-        self.data_proc["C_cat"] = self.data_proc.C_cat.astype("category")
-
-        self.data_proc_proc = self.data_proc.copy()
-        cat_type = pd.CategoricalDtype(
-            categories=np.array(sorted(self.data_proc_proc.B_int.unique())),
-            ordered=True,
-        )
-
-        self.data_proc_proc["B_int"] = self.data_proc_proc.B_int.astype(cat_type)
-
-    def test_preprocess_data(self):
-        df, dtypes = preprocess_data(self.data_raw)
-        self.assertEqual(
-            dtypes,
-            {
-                "A": "N",
-                "B": "N",
-                "C": "N",
-                "A_cat": "C",
-                "B_cat": "C",
-                "C_cat": "C",
-                "B_int": "N",
-            },
-        )
-
-        df, dtypes = preprocess_data(self.data_proc)
-        self.assertEqual(
-            dtypes,
-            {
-                "A": "N",
-                "B": "N",
-                "C": "N",
-                "A_cat": "C",
-                "B_cat": "C",
-                "C_cat": "C",
-                "B_int": "N",
-            },
-        )
-
-        df, dtypes = preprocess_data(self.data_proc_proc)
-        self.assertEqual(
-            dtypes,
-            {
-                "A": "N",
-                "B": "N",
-                "C": "N",
-                "A_cat": "C",
-                "B_cat": "C",
-                "C_cat": "C",
-                "B_int": "O",
-            },
-        )
 
 
 class TestGetExampleModel(unittest.TestCase):
@@ -201,8 +139,8 @@ class TestSampleDiscrete(unittest.TestCase):
         weights = np.array([0.2, 0.5, 0.3])
 
         # Check reproducible values with seed
-        result1 = sample_discrete(values, weights, 50, seed=0)
-        result2 = sample_discrete(values, weights, 50, seed=0)
+        result1 = sample_discrete(values, weights, 50, rng=0)
+        result2 = sample_discrete(values, weights, 50, rng=0)
         np.testing.assert_array_equal(result1, result2)
 
         self.assertTrue(set(result1.tolist()).issubset({"a", "b", "c"}))

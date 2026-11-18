@@ -142,7 +142,7 @@ def test_naiveiv_recovers_theta_with_LR():
 
     lgbn = DAG.from_dagitty("dag { Z1 -> X [beta=1.0] Z2 -> X [beta=1.0] X -> Y [beta=0.3]}")
 
-    data = lgbn.simulate(1000, seed=42)  # returns a pandas DataFrame
+    data = lgbn.simulate(1000, rng=42)  # returns a pandas DataFrame
 
     df = data.loc[:, ["X", "Z1", "Z2"]]
     y = data["Y"]
@@ -234,7 +234,7 @@ def test_multiple_instrument_variables_and_noise_columns():
     lgbn = DAG.from_dagitty(
         "dag { U1 -> X [beta=0.3] U2 -> X [beta=0.2] U3 -> X [beta=0.3] U4 -> X [beta=0.4] X -> Y [beta=0.6] }"
     )
-    data = lgbn.simulate(n_samples=300, seed=42)
+    data = lgbn.simulate(n_samples=300, rng=42)
     # add unrelated noise columns
     rng = np.random.RandomState(42)
     data["noise1"] = rng.normal(size=len(data))
@@ -282,7 +282,7 @@ def test_naiveiv_recovers_theta_high_dim():
                Z10 -> D [beta=-0.3]}"""
     )
 
-    data = dag.simulate(10000, seed=42)
+    data = dag.simulate(10000, rng=42)
 
     df = data.loc[:, list(set(dag.nodes()).difference({"Y"}))]
     df = df - df.mean(axis=0)

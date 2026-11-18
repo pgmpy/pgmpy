@@ -3,6 +3,7 @@ import pytest
 from pgmpy.identification.probability_expression import (
     DivisionNode,
     MarginalNode,
+    OneNode,
     ProbabilityExpressionTree,
     ProbabilityNode,
     ProductNode,
@@ -100,6 +101,59 @@ class TestTreeNodeAbstract:
         assert isinstance(MarginalNode(prob_y, sumset=frozenset({"Y"})), _TreeNode)
         assert isinstance(ProductNode([prob_y, prob_x]), _TreeNode)
         assert isinstance(DivisionNode(prob_y, prob_x), _TreeNode)
+        assert isinstance(OneNode(), _TreeNode)
+
+
+class TestMarginalize:
+    """Summing over an expression, and the exact simplifications each node type applies."""
+
+    def test_marginalize_over_nothing_is_the_identity(self):
+        node = ProbabilityNode(frozenset({"X", "Y"}))
+        assert node.marginalize(frozenset()) is node
+
+    def test_marginalize_shrinks_a_plain_joint(self):
+        """sum_X P(X, Y) is P(Y), not a MarginalNode wrapping P(X, Y). This keeps an estimand a plain joint for as
+        long as it genuinely is one, which is what lets the ID algorithm emit atomic conditionals instead of ratios."""
+        assert ProbabilityNode(frozenset({"X", "Y"})).marginalize({"X"}) == ProbabilityNode(frozenset({"Y"}))
+
+    def test_marginalize_does_not_shrink_a_conditional(self):
+        node = ProbabilityNode(frozenset({"Y", "W"}), cond=frozenset({"X"}))
+        assert node.marginalize({"W"}) == MarginalNode(node, sumset=frozenset({"W"}))
+
+    def test_marginalize_does_not_shrink_an_interventional_term(self):
+        node = ProbabilityNode(frozenset({"Y", "Z"}), do=frozenset({"X"}))
+        assert node.marginalize({"Z"}) == MarginalNode(node, sumset=frozenset({"Z"}))
+
+    def test_marginalize_flattens_nested_sums(self):
+        inner = MarginalNode(ProbabilityNode(frozenset({"Y"}), cond=frozenset({"X"})), sumset=frozenset({"X"}))
+        result = inner.marginalize({"Y"})
+        assert result.sumset == frozenset({"X", "Y"})
+        assert result.children[0] == inner.children[0]
+
+    def test_marginalize_wraps_a_composite_expression(self, prob_y_cond_x, prob_x):
+        product = ProductNode([prob_y_cond_x, prob_x])
+        assert product.marginalize({"X"}) == MarginalNode(product, sumset=frozenset({"X"}))
+
+    def test_marginalize_coerces_and_leaves_the_original_untouched(self, prob_y_cond_x):
+        result = prob_y_cond_x.marginalize(["X"])
+        assert result.sumset == frozenset({"X"})
+        assert prob_y_cond_x.cond == frozenset({"X"})
+
+        # A string is one variable name, not an iterable of characters.
+        assert ProbabilityNode(frozenset({"W1", "Y"})).marginalize("W1") == ProbabilityNode(frozenset({"Y"}))
+
+    def test_marginalize_over_exactly_a_terms_variables_is_one(self):
+        assert ProbabilityNode(frozenset({"X", "Y"})).marginalize({"X", "Y"}) == OneNode()
+
+        node = ProbabilityNode(frozenset({"X", "Y"}), do=frozenset({"W"}), cond=frozenset({"Z"}))
+        assert node.marginalize({"X", "Y"}) == OneNode()
+        assert node.marginalize({"X"}).marginalize({"Y"}) == OneNode()
+
+    def test_marginalize_keeps_the_sum_over_variables_outside_a_term(self):
+        """sum_Z P(X, Y) is |Z| P(X, Y), so the sum cannot be dropped."""
+        node = ProbabilityNode(frozenset({"X", "Y"}))
+        assert node.marginalize({"Z"}) == MarginalNode(node, sumset=frozenset({"Z"}))
+        assert node.marginalize({"X", "Y", "Z"}) == MarginalNode(node, sumset=frozenset({"X", "Y", "Z"}))
 
 
 class TestProbabilityNode:
@@ -118,6 +172,12 @@ class TestProbabilityNode:
         assert isinstance(p_coerced.variables, frozenset)
         assert isinstance(p_coerced.do, frozenset)
         assert isinstance(p_coerced.cond, frozenset)
+
+        p_strings = ProbabilityNode("Y1", do="X1", cond="Z1")
+        assert p_strings.variables == frozenset({"Y1"})
+        assert p_strings.do == frozenset({"X1"})
+        assert p_strings.cond == frozenset({"Z1"})
+        assert ProbabilityNode([1, 2]).variables == frozenset({1, 2})
 
         with pytest.raises(TypeError):
             ProbabilityNode(["Y"], sumset=["W"])
@@ -151,6 +211,7 @@ class TestMarginalNode:
         assert m.children[0] is prob_y
         assert isinstance(m.sumset, frozenset)
         assert m.sumset == frozenset({"Y"})
+        assert MarginalNode(prob_y, sumset="Y1").sumset == frozenset({"Y1"})
 
         with pytest.raises(ValueError, match="sum over"):
             MarginalNode(prob_y, sumset=frozenset())
@@ -212,6 +273,17 @@ class TestDivisionNode:
         assert latex.startswith(r"\frac{")
         assert r"P(Y, Z \mid do(X))" in latex
         assert r"P(Z \mid do(X))" in latex
+
+
+class TestOneNode:
+    def test_init_and_to_latex(self, prob_y):
+        one = OneNode()
+        assert one.children == []
+        assert one.to_latex() == "1"
+        assert repr(one) == "OneNode()"
+        assert one == OneNode()
+        assert hash(one) == hash(OneNode())
+        assert one != prob_y
 
 
 class TestProbabilityExpressionTree:

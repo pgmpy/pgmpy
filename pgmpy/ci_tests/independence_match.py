@@ -21,6 +21,7 @@ class IndependenceMatch(BaseCITest):
         "data_types": ["discrete", "continuous", "mixed"],
         "default_for": None,
         "requires_data": False,
+        "capability:conditioning": True,
         "assumption:linearity": False,
         "assumption:additive_noise": False,
         "assumption:gaussian_noise": False,
@@ -49,9 +50,11 @@ class IndependenceMatch(BaseCITest):
             No test statistic (this is a lookup, not a statistical test).
         p_value : float
             1.0 if the assertion is found, 0.0 otherwise.
+        effect_size : float
+            0.0 if the assertion is found, 1.0 otherwise.
         """
         if self.independencies is None:
             raise ValueError("independencies must be provided in __init__.")
 
         p_value = 1.0 if IndependenceAssertion(X, Y, list(Z)) in self.independencies else 0.0
-        return _CITestResult(statistic=None, p_value=p_value)
+        return _CITestResult(statistic=None, p_value=p_value, effect_size=1.0 - p_value)

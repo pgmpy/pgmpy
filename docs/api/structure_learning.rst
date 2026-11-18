@@ -44,7 +44,7 @@ Constraint and Hybrid Discovery
    :template: autosummary/class.rst
 
    ~pgmpy.causal_discovery.PC
-   ~pgmpy.estimators.MmhcEstimator
+   ~pgmpy.causal_discovery.MMHC
    ~pgmpy.causal_discovery.SP
 
 Score-Based and Tree Search
@@ -57,7 +57,7 @@ Score-Based and Tree Search
    ~pgmpy.causal_discovery.HillClimbSearch
    ~pgmpy.causal_discovery.GES
    ~pgmpy.estimators.TreeSearch
-   ~pgmpy.estimators.ExhaustiveSearch
+   ~pgmpy.causal_discovery.ExhaustiveSearch
    ~pgmpy.causal_discovery.TOPIC
 
 Order-Based Discovery
@@ -79,6 +79,15 @@ Expert-Guided Discovery
 
    ~pgmpy.estimators.ExpertInLoop
    ~pgmpy.causal_discovery.ExpertKnowledge
+
+Stability Assessment and Bootstrapping
+--------------------------------------
+
+.. autosummary::
+   :toctree: generated/structure_learning
+   :template: autosummary/class.rst
+
+   ~pgmpy.causal_discovery.BootstrapEstimator
 
 .. seealso::
 

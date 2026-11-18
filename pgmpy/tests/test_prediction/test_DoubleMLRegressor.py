@@ -25,7 +25,7 @@ def estimator_for_sklearn_checks():
         nuisance_estimators=(LinearRegression(), LinearRegression()),
         effect_estimator=LinearRegression(),
         n_folds=1,
-        seed=0,
+        rng=0,
     )
     return est
 
@@ -34,6 +34,24 @@ def estimator_for_sklearn_checks():
 def test_sklearn_compatibility(estimator, check):
     """Run sklearn's compatibility checks."""
     check(estimator)
+
+
+def test_fit_accepts_generator_seed(dag):
+    X, y = make_simulated_plr(n=200, seed=1)
+    y = y["Y"]
+
+    def build(seed):
+        return DoubleMLRegressor(
+            causal_graph=dag,
+            nuisance_estimators=LinearRegression(),
+            effect_estimator=LinearRegression(),
+            n_folds=3,
+            rng=seed,
+        )
+
+    build(np.random.default_rng(0)).fit(X, y)
+    first = build(0).fit(X, y).predict(X)
+    np.testing.assert_array_equal(build(0).fit(X, y).predict(X), first)
 
 
 def make_simulated_plr(n=500, effect=0.6, nuisance_scale=0.5, seed=42):
@@ -59,7 +77,7 @@ def test_dataframe_input_for_both_x_and_y(dag):
         nuisance_estimators=LinearRegression(),
         effect_estimator=LinearRegression(),
         n_folds=3,
-        seed=0,
+        rng=0,
     )
 
     model.fit(X, y)
@@ -108,7 +126,7 @@ def test_no_adjustment_variables():
     # Create simple DAG D -> Y with no adjustments
     # Use small simulation via dagitty to create data
     lgbn = DAG.from_dagitty("dag { D -> Y [beta=0.6] }")
-    data = lgbn.simulate(n_samples=200, seed=42)
+    data = lgbn.simulate(n_samples=200, rng=42)
 
     dag = DAG(ebunch=[("D", "Y")], roles={"exposures": "D", "outcomes": "Y", "adjustment": []})
     model = DoubleMLRegressor(
@@ -132,7 +150,7 @@ def test_multiple_adjustment_variables_and_noise_columns():
     lgbn = DAG.from_dagitty(
         "dag { U1 -> X [beta=0.3] U1 -> Y [beta=0.2] U2 -> X [beta=0.3] U2 -> Y [beta=0.4] X -> Y [beta=0.6] }"
     )
-    data = lgbn.simulate(n_samples=300, seed=42)
+    data = lgbn.simulate(n_samples=300, rng=42)
     # add unrelated noise columns
     rng = np.random.RandomState(42)
     data["noise1"] = rng.normal(size=len(data))
@@ -202,7 +220,8 @@ def test_error_handling_missing_roles_and_multiple_exposure():
         model3.fit(incomplete, [5, 6])
 
 
-def test_sample_weight_support_and_shapes(dag):
+@pytest.mark.parametrize("n_folds", [1, 3])
+def test_sample_weight_support_and_shapes(dag, n_folds):
     """Test that sample_weight parameter is accepted and shape-validated."""
     X, y = make_simulated_plr(n=150, seed=5)
 
@@ -210,20 +229,23 @@ def test_sample_weight_support_and_shapes(dag):
         causal_graph=dag,
         nuisance_estimators=LinearRegression(),
         effect_estimator=LinearRegression(),
-        n_folds=1,
+        n_folds=n_folds,
+        rng=0,
     )
 
-    # list-like sample weight accepted
-    sw_list = [1.0] * X.shape[0]
-    _ = model.fit(X, y, sample_weight=sw_list)
+    weights = np.linspace(0.5, 2.0, len(X))
+    model.fit(X, y, sample_weight=weights)
+    expected_predictions = model.predict(X)
+    expected_coef = model.effect_est_.coef_.copy()
 
-    # pandas Series accepted
-    sw_ser = pd.Series([1.0] * X.shape[0])
-    _ = model.fit(X, y, sample_weight=sw_ser)
+    for sample_weight in [weights.tolist(), pd.Series(weights, index=np.arange(len(X)) + 100)]:
+        model.fit(X, y, sample_weight=sample_weight)
+        np.testing.assert_allclose(model.predict(X), expected_predictions)
+        np.testing.assert_allclose(model.effect_est_.coef_, expected_coef)
 
-    # wrong-length should raise
-    with pytest.raises(ValueError):
-        model.fit(X, y, sample_weight=[1.0] * (X.shape[0] - 1))
+    for sample_weight in [weights[:-1].tolist(), weights.reshape(-1, 1)]:
+        with pytest.raises(ValueError, match="sample_weight"):
+            model.fit(X, y, sample_weight=sample_weight)
 
 
 def test_dag_roles_validation_and_pretreatment_support():
@@ -275,7 +297,7 @@ def test_doubleml_recovers_theta_with_RF():
         "dag { U1 -> X [beta=0.3] U1 -> Y [beta=0.2] U2 -> X [beta=0.3] U2 -> Y [beta=0.4] X -> Y [beta=0.6] }"
     )
 
-    data = lgbn.simulate(1000, seed=42)  # returns a pandas DataFrame
+    data = lgbn.simulate(1000, rng=42)  # returns a pandas DataFrame
 
     df = data.loc[:, ["X", "U1", "U2"]]
     y = data["Y"]
@@ -293,7 +315,7 @@ def test_doubleml_recovers_theta_with_RF():
         ),
         effect_estimator=LinearRegression(),
         n_folds=3,
-        seed=0,
+        rng=0,
     )
 
     est.fit(df, y)
@@ -333,7 +355,7 @@ def test_doubleml_recovers_theta_high_dim():
                Z10 -> Y [beta=0.1]}"""
     )
 
-    data = dag.simulate(10000, seed=42)
+    data = dag.simulate(10000, rng=42)
 
     df = data.loc[:, list(set(dag.nodes()).difference({"Y"}))]
     df = df - df.mean(axis=0)
@@ -357,7 +379,7 @@ def test_doubleml_recovers_theta_high_dim():
         ),
         effect_estimator=LinearRegression(),
         n_folds=3,
-        seed=0,
+        rng=0,
     )
 
     est.fit(df, y)
