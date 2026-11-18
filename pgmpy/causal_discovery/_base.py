@@ -145,26 +145,12 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         if components:
             base_tags = self.get_tags() if estimator is not None else type(self).get_class_tags()
             data_types = base_tags["data_types"]
-            assumptions = {key: base_tags.get(key) for key in base_tags if key.startswith("assumption:")}
+            assumptions = {key: bool(value) for key, value in base_tags.items() if key.startswith("assumption:")}
             for component in components:
                 component_tags = component.get_tags() if isinstance(component, BaseObject) else {}
-                component_types = component_tags.get("data_types")
-                if component_types:
-                    data_types = (
-                        list(component_types) if data_types is None else [t for t in data_types if t in component_types]
-                    )
-                for key, curr_val in assumptions.items():
-                    comp_val = component_tags.get(key)
-                    if curr_val is None:
-                        assumptions[key] = comp_val
-                    elif comp_val is not None and curr_val != comp_val:
-                        warnings.warn(
-                            f"Assumption mismatch for '{key}': {type(self).__name__} has "
-                            f"{key}={curr_val}, but component {type(component).__name__} "
-                            f"has {key}={comp_val}.",
-                            UserWarning,
-                            stacklevel=2,
-                        )
+                component_types = component_tags.get("data_types", data_types)
+                data_types = [t for t in data_types if t in component_types]
+                assumptions = {key: value or bool(component_tags.get(key)) for key, value in assumptions.items()}
             self.set_tags(data_types=data_types, **assumptions)
         return result
 

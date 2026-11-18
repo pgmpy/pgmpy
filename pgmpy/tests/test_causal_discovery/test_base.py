@@ -2,13 +2,12 @@ import numpy as np
 import pandas as pd
 import pytest
 from skbase.lookup import all_objects
-from sklearn.base import BaseEstimator
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery import ANM, GES, IGCI, PC, BootstrapEstimator, ChowLiu, ExpertInLoop, R2Sort
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
 from pgmpy.causal_discovery.bivariate_scores import BaseBivariateScore
-from pgmpy.ci_tests import GCM, BaseCITest, IndependenceMatch, Pearsonr, PillaiTrace, get_ci_test
+from pgmpy.ci_tests import GCM, BaseCITest, IndependenceMatch, get_ci_test
 from pgmpy.ci_tests._base import _CITestResult
 from pgmpy.independencies import Independencies
 from pgmpy.structure_score import get_scoring_method
@@ -83,14 +82,14 @@ def test_fit_narrows_union_tags_to_component():
     x = rng.normal(size=200)
     data = pd.DataFrame({"x": x, "y": 2 * x + rng.normal(size=200), "z": rng.normal(size=200)})
 
-    assert PC.get_class_tag("assumption:linearity") is None
+    assert PC.get_class_tag("assumption:linearity") is False
     pc = PC(ci_test="pearsonr").fit(data)
     assert pc.get_tag("data_types") == ["continuous"]
     assert pc.get_tag("assumption:linearity") is True
     assert pc.get_tag("assumption:faithfulness") is True
 
     pc.set_params(ci_test=lambda X, Y, Z, **kwargs: True).fit(data)
-    assert pc.get_tag("assumption:linearity") is None
+    assert pc.get_tag("assumption:linearity") is False
     assert pc.get_tag("data_types") == PC.get_class_tag("data_types")
 
     assert GCM(data=data).get_tag("assumption:linearity") is True
@@ -131,7 +130,7 @@ def test_fit_narrowing_handles_untagged_and_wider_objects():
 
     pc = PC(ci_test=UntaggedCITest()).fit(data)
     assert pc.get_tag("data_types") == ["discrete", "continuous", "mixed"]
-    assert pc.get_tag("assumption:linearity") is None
+    assert pc.get_tag("assumption:linearity") is False
 
     class AnyDataScore(BaseBivariateScore):
         _tags = {"name": "any_data", "input_type": "cause_residual", "data_types": ["discrete", "continuous", "mixed"]}
@@ -141,7 +140,7 @@ def test_fit_narrowing_handles_untagged_and_wider_objects():
 
     anm = ANM(scoring_method=AnyDataScore()).fit(data)
     assert anm.get_tag("data_types") == ["continuous"]
-    assert anm.get_tag("assumption:linearity") is None
+    assert anm.get_tag("assumption:linearity") is False
 
     class UntaggedAlgorithm(BaseCausalDiscovery):
         def _fit(self, X):
@@ -202,7 +201,7 @@ def test_filter_algorithms_by_tags():
             object_types=BaseCausalDiscovery,
             package_name="pgmpy.causal_discovery",
             return_names=False,
-            filter_tags={"data_types": "continuous", "assumption:faithfulness": True, "capability:multivariate": True},
+            filter_tags={"data_types": "continuous", "assumption:linearity": False, "capability:multivariate": True},
         )
     }
     assert {"PC", "GES"} <= names
@@ -218,66 +217,3 @@ def test_filter_algorithms_by_tags():
         )
     }
     assert dag_learners == {"BootstrapEstimator", "ExpertInLoop", "VarSort", "R2Sort"}
-
-
-def test_fit_assumption_override_mismatch_and_edge_cases():
-    rng = np.random.default_rng(0)
-    data = pd.DataFrame(rng.standard_normal((100, 3)), columns=["X", "Y", "Z"])
-
-    class DummyEstimator(BaseEstimator):
-        def fit(self, X, y):
-            return self
-
-        def predict(self, X):
-            return np.zeros(len(X))
-
-    pc = PC(ci_test=Pearsonr(data=data), show_progress=False).fit(data)
-    assert pc.get_tag("assumption:linearity") is True
-
-    pc.set_params(ci_test=PillaiTrace(data=data)).fit(data)
-    assert pc.get_tag("assumption:linearity") is False
-
-    gcm_unknown = GCM(data=data, estimator=DummyEstimator())
-    assert gcm_unknown.get_tag("assumption:linearity") is None
-    pc.set_params(ci_test=gcm_unknown).fit(data)
-    assert pc.get_tag("assumption:linearity") is None
-
-    pc.set_params(ci_test=lambda X, Y, Z, **kwargs: True).fit(data)
-    assert pc.get_tag("assumption:linearity") is None
-
-    class ExplicitLinearPC(PC):
-        _tags = {"assumption:linearity": True}
-
-    with pytest.warns(UserWarning, match="Assumption mismatch for 'assumption:linearity'"):
-        explicit_pc = ExplicitLinearPC(ci_test=PillaiTrace(data=data), show_progress=False).fit(data)
-    assert explicit_pc.get_tag("assumption:linearity") is True
-
-    explicit_pc_unknown = ExplicitLinearPC(ci_test=gcm_unknown, show_progress=False).fit(data)
-    assert explicit_pc_unknown.get_tag("assumption:linearity") is True
-
-    class ExplicitNonLinearPC(PC):
-        _tags = {"assumption:linearity": False}
-
-    with pytest.warns(UserWarning, match="Assumption mismatch for 'assumption:linearity'"):
-        explicit_nl = ExplicitNonLinearPC(ci_test=Pearsonr(data=data), show_progress=False).fit(data)
-    assert explicit_nl.get_tag("assumption:linearity") is False
-
-    class MultiComponentAlgo(BaseCausalDiscovery):
-        def __init__(self, comp1, comp2):
-            self.comp1 = comp1
-            self.comp2 = comp2
-            super().__init__()
-
-        def _fit(self, X):
-            self.ci_test_ = self.comp1
-            self.pairwise_estimator_ = self.comp2
-            self.causal_graph_ = DAG()
-            self.causal_graph_.add_nodes_from(X.columns)
-            return self
-
-    algo_ok = MultiComponentAlgo(Pearsonr(data=data), gcm_unknown).fit(data)
-    assert algo_ok.get_tag("assumption:linearity") is True
-
-    with pytest.warns(UserWarning, match="Assumption mismatch for 'assumption:linearity'"):
-        algo_conflict = MultiComponentAlgo(Pearsonr(data=data), PillaiTrace(data=data)).fit(data)
-    assert algo_conflict.get_tag("assumption:linearity") is True

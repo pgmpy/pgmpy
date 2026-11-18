@@ -41,7 +41,7 @@ def test_score_tags():
 def test_fit_sets_score_assumption_tags(nonlinear_data):
     from pgmpy.causal_discovery.bivariate_scores import EntropyScore, GaussScore
 
-    assert ANM.get_class_tag("assumption:gaussian_noise") is None
+    assert ANM.get_class_tag("assumption:gaussian_noise") is False
     assert ANM(scoring_method=GaussScore()).fit(nonlinear_data).get_tag("assumption:gaussian_noise") is True
     est = ANM(scoring_method=EntropyScore()).fit(nonlinear_data)
     assert est.get_tag("assumption:gaussian_noise") is False

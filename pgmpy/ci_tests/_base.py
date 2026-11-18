@@ -415,7 +415,8 @@ def get_ci_test(test=None, data=None, use_cache=True):
 
     if tests:
         cls = tests[0]
-        if cls.get_class_tag("requires_data", tag_value_default=True):
+        requires_data = cls.get_class_tag("requires_data", tag_value_default=True)
+        if requires_data is True or requires_data is None:
             if data is None:
                 raise ValueError(f"CI test '{cls.__name__}' requires data, but data is None.")
             return cls(data=data, use_cache=use_cache)

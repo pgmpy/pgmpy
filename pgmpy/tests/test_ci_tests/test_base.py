@@ -3,7 +3,8 @@ import pandas as pd
 import pytest
 from skbase.lookup import all_objects
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.linear_model import Ridge
+from sklearn.linear_model import LinearRegression, Ridge
+from sklearn.tree import DecisionTreeRegressor
 
 from pgmpy.ci_tests import (
     GCM,
@@ -127,25 +128,44 @@ def test_invalid_type():
         get_ci_test(test=123)
 
 
-from sklearn.tree import DecisionTreeRegressor
-
-
 @pytest.mark.parametrize(
     "cls",
     [GCM, PillaiTrace, GeneralizedCov, WilksLambda, HotellingLawley, RoysLargestRoot],
 )
 def test_residual_ci_tests_estimator_tags(cls, cont_data):
+    class CustomLinear(LinearRegression):
+        pass
+
     class CustomEstimator:
         pass
 
-    test_linear = cls(data=cont_data, estimator=Ridge())
-    assert test_linear.get_tag("assumption:linearity") is True
+    # Class-level tag keeps the most permissive value (False) for tag searches
+    assert cls.get_class_tag("assumption:linearity") is False
 
-    test_forest = cls(data=cont_data, estimator=RandomForestRegressor())
-    assert test_forest.get_tag("assumption:linearity") is False
+    # sklearn.linear_model estimators and subclasses -> True
+    assert cls(data=cont_data, estimator=LinearRegression()).get_tag("assumption:linearity") is True
+    assert cls(data=cont_data, estimator=Ridge()).get_tag("assumption:linearity") is True
+    assert cls(data=cont_data, estimator=CustomLinear()).get_tag("assumption:linearity") is True
 
-    test_tree = cls(data=cont_data, estimator=DecisionTreeRegressor())
-    assert test_tree.get_tag("assumption:linearity") is False
+    # Non-linear sklearn models -> False
+    assert cls(data=cont_data, estimator=RandomForestRegressor()).get_tag("assumption:linearity") is False
+    assert cls(data=cont_data, estimator=DecisionTreeRegressor()).get_tag("assumption:linearity") is False
 
-    test_custom = cls(data=cont_data, estimator=CustomEstimator())
-    assert test_custom.get_tag("assumption:linearity") is None
+    # Non-sklearn / custom estimator -> None (unknown)
+    assert cls(data=cont_data, estimator=CustomEstimator()).get_tag("assumption:linearity") is None
+
+
+def test_residual_ci_tests_default_estimator_tags(cont_data):
+    assert GCM(data=cont_data).get_tag("assumption:linearity") is True
+    for cls in (PillaiTrace, GeneralizedCov, WilksLambda, HotellingLawley, RoysLargestRoot):
+        assert cls(data=cont_data).get_tag("assumption:linearity") is False
+
+
+def test_requires_data_none():
+    orig_requires_data = ChiSquare._tags["requires_data"]
+    try:
+        ChiSquare._tags["requires_data"] = None
+        with pytest.raises(ValueError):
+            get_ci_test(test="chi_square", data=None)
+    finally:
+        ChiSquare._tags["requires_data"] = orig_requires_data

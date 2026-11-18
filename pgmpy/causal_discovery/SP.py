@@ -102,11 +102,11 @@ class SP(BaseCausalDiscovery):
         "assumption:causal_sufficiency": True,
         "assumption:acyclicity": True,
         "assumption:faithfulness": False,
-        "assumption:linearity": None,
-        "assumption:additive_noise": None,
-        "assumption:gaussian_noise": None,
-        "assumption:non_gaussian_noise": None,
-        "assumption:low_noise": None,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
     }
 
     def __init__(
