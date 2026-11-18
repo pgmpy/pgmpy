@@ -7,7 +7,6 @@ from pgmpy.causal_discovery import TAN
 from pgmpy.example_models import load_model
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
-from pgmpy.sampling import BayesianModelSampling
 
 
 @pytest.fixture
@@ -16,7 +15,7 @@ def data12():
     return pd.DataFrame(
         np.random.randint(low=0, high=2, size=(100, 5)),
         columns=["A", "B", "C", "D", "E"],
-    )
+    ).astype("category")
 
 
 @pytest.fixture
@@ -54,8 +53,7 @@ def data13():
         evidence_card=[2],
     )
     model.add_cpds(cpd_a, cpd_b, cpd_c, cpd_d, cpd_e, cpd_f)
-    inference = BayesianModelSampling(model)
-    return inference.forward_sample(size=10000)
+    return model.simulate(n_samples=10000, rng=0)
 
 
 @pytest.fixture
@@ -119,13 +117,12 @@ def data22():
         evidence_card=[2, 3],
     )
     model.add_cpds(cpd_a, cpd_r, cpd_b, cpd_c, cpd_d, cpd_e)
-    inference = BayesianModelSampling(model)
-    return inference.forward_sample(size=10000)
+    return model.simulate(n_samples=10000, rng=0)
 
 
 @pytest.fixture
 def alarm_df():
-    return load_model("bnlearn/alarm").simulate(int(1e4), seed=42)
+    return load_model("bnlearn/alarm").simulate(int(1e4), rng=42)
 
 
 @pytest.mark.parametrize("weight_fn", ["mutual_info", "adjusted_mutual_info", "normalized_mutual_info"])
@@ -215,12 +212,12 @@ def test_tan_real_dataset(alarm_df):
         ("HR", "HRBP"),
         ("ARTCO2", "HR"),
         ("SAO2", "FIO2"),
-        ("VENTLUNG", "PAP"),
         ("PCWP", "VENTLUNG"),
         ("VENTLUNG", "EXPCO2"),
         ("VENTLUNG", "ARTCO2"),
-        ("PAP", "PULMEMBOLUS"),
         ("ARTCO2", "SAO2"),
+        ("PULMEMBOLUS", "PAP"),
+        ("SAO2", "PULMEMBOLUS"),
     ]
     features = [
         "LVFAILURE",

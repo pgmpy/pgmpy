@@ -64,8 +64,11 @@ class BootstrapEstimator(BaseCausalDiscovery):
         If True, displays a progress bar during fitting. Set `show_progress` on the wrapped estimator to control its
         own progress bars.
 
-    seed : int or None, default=None
-        Seed for the random number generator to ensure reproducibility.
+    rng : int, numpy.random.Generator or None, default=None
+        Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the operating
+        system, so results are not reproducible. The inner ``estimator`` keeps its own ``rng``: an ``int`` gives it the
+        same randomness on every bootstrap sample, a ``Generator`` is copied into each clone and does not advance, and
+        ``None`` is not reproducible.
 
     Attributes
     ----------
@@ -102,10 +105,10 @@ class BootstrapEstimator(BaseCausalDiscovery):
     # Simulate a dataset and fit BootstrapEstimator with PC, which returns a CPDAG for each bootstrap sample:
     >>> from pgmpy.causal_discovery import PC, BootstrapEstimator
     >>> from pgmpy.example_models import load_model
-    >>> data = load_model("bnlearn/cancer").simulate(n_samples=1000, seed=42)
+    >>> data = load_model("bnlearn/cancer").simulate(n_samples=1000, rng=0)
     >>> data = data[sorted(data.columns)]
     >>> pc = PC(return_type="pdag")
-    >>> est = BootstrapEstimator(pc, n_bootstraps=10, seed=42, show_progress=False)
+    >>> est = BootstrapEstimator(pc, n_bootstraps=10, rng=42, show_progress=False)
     >>> est = est.fit(data)
 
     # Show the edge between each pair of variables (rows) in each bootstrap graph (columns):
@@ -114,28 +117,28 @@ class BootstrapEstimator(BaseCausalDiscovery):
     ...     print(est.bootstrap_edges_)
                            0    1    2    3    4    5    6    7    8    9
     u         v
-    Cancer    Dyspnoea    <-  NaN  NaN   <-  NaN  NaN  NaN  NaN  NaN  NaN
-              Pollution  NaN  NaN   <-  NaN  NaN  NaN  NaN   <-  NaN  NaN
-              Smoker      <-  NaN  NaN   <-   <-   --   <-   <-   <-   <-
-              Xray        <-   --   <-   <-   <-   --   <-   <-   <-   <-
-    Dyspnoea  Pollution  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN
+    Cancer    Dyspnoea   NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN
+              Pollution  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN
+              Smoker     NaN  NaN   ->  NaN   <-   <-  NaN  NaN  NaN   <-
+              Xray        --   --   --   --   <-   <-   --   --   --   <-
+    Dyspnoea  Pollution  NaN   --  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN
               Smoker     NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN
               Xray       NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN
-    Pollution Smoker     NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN
+    Pollution Smoker     NaN  NaN   ->  NaN  NaN  NaN  NaN  NaN  NaN  NaN
               Xray       NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN
     Smoker    Xray       NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN  NaN
 
     # Fraction of the bootstrap graphs in which each pair of variables is adjacent:
     >>> est.bootstrap_edges_.notna().mean(axis=1)  # doctest: +NORMALIZE_WHITESPACE
     u          v
-    Cancer     Dyspnoea     0.2
-               Pollution    0.2
-               Smoker       0.8
+    Cancer     Dyspnoea     0.0
+               Pollution    0.0
+               Smoker       0.4
                Xray         1.0
-    Dyspnoea   Pollution    0.0
+    Dyspnoea   Pollution    0.1
                Smoker       0.0
                Xray         0.0
-    Pollution  Smoker       0.0
+    Pollution  Smoker       0.1
                Xray         0.0
     Smoker     Xray         0.0
     dtype: float64
@@ -143,26 +146,26 @@ class BootstrapEstimator(BaseCausalDiscovery):
     # Frequency of each edge type among the bootstrap graphs in which the pair is adjacent:
     >>> orientations = est.bootstrap_edges_.apply(lambda row: row.value_counts(normalize=True), axis=1)
     >>> orientations.round(2)  # doctest: +NORMALIZE_WHITESPACE
-                           --    <-
+                           --    ->    <-
     u         v
-    Cancer    Dyspnoea   0.00  1.00
-              Pollution  0.00  1.00
-              Smoker     0.12  0.88
-              Xray       0.20  0.80
-    Dyspnoea  Pollution   NaN   NaN
-              Smoker      NaN   NaN
-              Xray        NaN   NaN
-    Pollution Smoker      NaN   NaN
-              Xray        NaN   NaN
-    Smoker    Xray        NaN   NaN
+    Cancer    Dyspnoea   NaN   NaN   NaN
+              Pollution  NaN   NaN   NaN
+              Smoker     0.0  0.25  0.75
+              Xray       0.7  0.00  0.30
+    Dyspnoea  Pollution  1.0  0.00  0.00
+              Smoker     NaN   NaN   NaN
+              Xray       NaN   NaN   NaN
+    Pollution Smoker     0.0  1.00  0.00
+              Xray       NaN   NaN   NaN
+    Smoker    Xray       NaN   NaN   NaN
 
     # Show the adjacency matrix of the consensus graph:
     >>> est.adjacency_matrix_
                Cancer  Dyspnoea  Pollution  Smoker  Xray
-    Cancer          0         0          0       0     0
+    Cancer          0         0          0       0     1
     Dyspnoea        0         0          0       0     0
     Pollution       0         0          0       0     0
-    Smoker          1         0          0       0     0
+    Smoker          0         0          0       0     0
     Xray            1         0          0       0     0
 
     # Show the shapes of the bootstrap samples and bootstrap edges:
@@ -199,7 +202,8 @@ class BootstrapEstimator(BaseCausalDiscovery):
         warm_start: bool = False,
         n_jobs: int = -1,
         show_progress: bool = True,
-        seed: int | None = None,
+        *,
+        rng: int | np.random.Generator | None = None,
     ):
 
         self.estimator = estimator
@@ -210,7 +214,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
         self.warm_start = warm_start
         self.n_jobs = n_jobs
         self.show_progress = show_progress
-        self.seed = seed
+        self.rng = rng
 
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
@@ -293,7 +297,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
 
         # Step 2: Fit the estimator on the bootstrap samples
         # Step 2.1: Draw the bootstrap samples
-        rng = np.random.default_rng(self.seed)
+        rng = np.random.default_rng(self.rng)
         all_samples = np.array(
             [rng.choice(len(X), size=bootstrap_sample_size, replace=self.replace) for _ in range(self.n_bootstraps)]
         )
@@ -375,16 +379,16 @@ class BootstrapEstimator(BaseCausalDiscovery):
         # Fit BootstrapEstimator on dataset:
         >>> from pgmpy.causal_discovery import PC, BootstrapEstimator
         >>> from pgmpy.example_models import load_model
-        >>> data = load_model("bnlearn/cancer").simulate(n_samples=1000, seed=42)
+        >>> data = load_model("bnlearn/cancer").simulate(n_samples=1000, rng=0)
         >>> data = data[sorted(data.columns)]
         >>> pc = PC(return_type="pdag")
-        >>> est = BootstrapEstimator(pc, n_bootstraps=10, seed=42, show_progress=False)
+        >>> est = BootstrapEstimator(pc, n_bootstraps=10, rng=42, show_progress=False)
         >>> est = est.fit(data)
 
         # Extract consensus graph with threshold 0.2:
         >>> consensus_graph = est.get_consensus_graph(threshold=0.2)
         >>> sorted(consensus_graph.directed_edges)
-        [('Dyspnoea', 'Cancer'), ('Pollution', 'Cancer'), ('Smoker', 'Cancer'), ('Xray', 'Cancer')]
+        [('Smoker', 'Cancer')]
         """
         if not (0.0 <= threshold <= 1.0):
             raise ValueError(f"Threshold must be between 0.0 and 1.0. Got {threshold} instead.")
@@ -455,19 +459,19 @@ class BootstrapEstimator(BaseCausalDiscovery):
         # Fit BootstrapEstimator on dataset:
         >>> from pgmpy.causal_discovery import PC, BootstrapEstimator
         >>> from pgmpy.example_models import load_model
-        >>> data = load_model("bnlearn/cancer").simulate(n_samples=1000, seed=42)
+        >>> data = load_model("bnlearn/cancer").simulate(n_samples=1000, rng=0)
         >>> data = data[sorted(data.columns)]
         >>> pc = PC(return_type="pdag")
-        >>> est = BootstrapEstimator(pc, n_bootstraps=10, seed=42, show_progress=False)
+        >>> est = BootstrapEstimator(pc, n_bootstraps=10, rng=42, show_progress=False)
         >>> est = est.fit(data)
 
         # Extract adjacency matrix with threshold 0.2:
         >>> adj_matrix = est.get_adjacency_matrix(threshold=0.2)
         >>> adj_matrix
                    Cancer  Dyspnoea  Pollution  Smoker  Xray
-        Cancer          0         0          0       0     0
-        Dyspnoea        1         0          0       0     0
-        Pollution       1         0          0       0     0
+        Cancer          0         0          0       0     1
+        Dyspnoea        0         0          0       0     0
+        Pollution       0         0          0       0     0
         Smoker          1         0          0       0     0
         Xray            1         0          0       0     0
         """

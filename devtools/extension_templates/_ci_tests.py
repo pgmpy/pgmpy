@@ -37,6 +37,9 @@ class YourCITest(BaseCITest):
     p_value_ : float
         p-value corresponding to the test statistic.
 
+    effect_size_ : float
+        Non-negative strength of the dependence, comparable across variable pairs.
+
     Examples
     --------
     >>> import pandas as pd
@@ -85,7 +88,7 @@ class YourCITest(BaseCITest):
         Z: list,
     ):
         """
-        Compute the test statistic and p-value payload for a single query.
+        Compute the test statistic, p-value and effect size payload for a single query.
 
         Parameters
         ----------
@@ -105,7 +108,12 @@ class YourCITest(BaseCITest):
         statistic = None
         p_value = None
 
+        # TODO: Compute a non-negative effect size that is comparable across variable pairs, e.g. an absolute partial
+        #       correlation (`Pearsonr`), Cramér's V (`ChiSquare`) or partial eta-squared (`PillaiTrace`). It is
+        #       required: causal discovery algorithms such as MMHC rank candidates by it.
+        effect_size = None
+
         # TODO: If you need to expose extra result attributes (for example `dof_`),
         # return them in the `attributes` dict. The base class will project them onto
         # the instance after cache lookup / execution.
-        return _CITestResult(statistic=statistic, p_value=p_value, attributes={})
+        return _CITestResult(statistic=statistic, p_value=p_value, effect_size=effect_size, attributes={})

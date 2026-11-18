@@ -84,7 +84,7 @@ class TestTabularCPD:
             LegacyTabularCPD("x3", 2, [[0.6], [0.4]]),
             LegacyTabularCPD("y", 3, rng.dirichlet([1, 1, 1], size=12).T, ["x1", "x2", "x3"], [3, 2, 2]),
         )
-        data = model.simulate(3000, seed=0, show_progress=False)
+        data = model.simulate(3000, rng=0, show_progress=False)
         data = data[~((data["x1"] == 2) & (data["x2"] == 1))]
         weights = np.where((data["x1"] == 0) & (data["x3"] == 1), 0.0, rng.uniform(0.5, 2, len(data)))
 
@@ -184,14 +184,14 @@ class TestTabularCPD:
         X, y = discrete_data
 
         root = TabularCPD().fit(None, y)
-        samples = root.sample(n_samples=5, random_state=0)
+        samples = root.sample(n_samples=5, rng=0)
         assert samples.shape == (5, 1) and list(samples.columns) == ["y"]
-        pd.testing.assert_frame_equal(samples, root.sample(n_samples=5, random_state=0))
+        pd.testing.assert_frame_equal(samples, root.sample(n_samples=5, rng=0))
 
         cpd = TabularCPD().fit(X, y)
         X_test = X[:3].set_axis(["a", "b", "c"])
-        assert cpd.sample(X_test, random_state=0).index.tolist() == ["a", "b", "c"]
-        assert cpd.sample(X_test, n_samples=2, random_state=0).shape == (6, 1)
+        assert cpd.sample(X_test, rng=0).index.tolist() == ["a", "b", "c"]
+        assert cpd.sample(X_test, n_samples=2, rng=0).shape == (6, 1)
 
     def test_from_values(self, discrete_data):
         X, y = discrete_data

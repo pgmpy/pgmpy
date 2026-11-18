@@ -6,6 +6,7 @@ import numpy as np
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.readwrite._base import BaseReader, BaseWriter
+from pgmpy.utils import compat_fns
 from pgmpy.utils._warnings import _warn_external
 
 
@@ -476,7 +477,7 @@ class XBNWriter(BaseWriter):
         cpds = self.model.get_cpds()
         cpds.sort(key=lambda x: x.variable)
         for cpd in cpds:
-            cpd_values = cpd.get_values().transpose()
+            cpd_values = compat_fns.to_numpy(cpd.get_values()).transpose()
             var = cpd.variable
             dist = etree.SubElement(
                 distributions,
