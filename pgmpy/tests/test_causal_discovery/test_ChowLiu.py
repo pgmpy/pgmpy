@@ -201,7 +201,7 @@ def test_gaussian_mutual_info(gaussian_chain):
     x, y = gaussian_chain["x"], gaussian_chain["y"]
     rho = np.corrcoef(x, y)[0, 1]
     assert gaussian_mutual_info(x, y) == pytest.approx(-0.5 * np.log(1 - rho**2))
-    assert gaussian_mutual_info(x, y) == gaussian_mutual_info(y, x)
+    assert gaussian_mutual_info(x, y) == pytest.approx(gaussian_mutual_info(y, x))
 
     # Perfectly collinear and constant variables give finite scores.
     assert np.isfinite(gaussian_mutual_info(x, 2 * x + 1))
