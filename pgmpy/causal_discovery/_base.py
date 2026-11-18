@@ -68,11 +68,11 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
 
     def _check_fit_data(self, X):
         """Check the input data for fitting the causal discovery algorithm.
-                
-                Parameters
-                ----------
-                X: pd.DataFrame, pl.DataFrame, pa.Table, cudf.DataFrame, modin.pandas.DataFrame, np.ndarray, or nw.DataFrame
-                The data to fit the causal discovery algorithm on.
+
+        Parameters
+        ----------
+        X: pd.DataFrame, pl.DataFrame, pa.Table, cudf.DataFrame, modin.pandas.DataFrame, np.ndarray, or nw.DataFrame
+            The data to fit the causal discovery algorithm on.
         """
         # Step 1: Validate input data and wrap into Narwhals DataFrame.
         X, nw_df = _validate_dataframe(X)
