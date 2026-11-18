@@ -137,6 +137,8 @@ def flip(arr, axis=0):
     else:
         import torch
 
+        if isinstance(axis, int):
+            axis = (axis,)
         return torch.flip(arr, dims=axis)
 
 
