@@ -34,6 +34,11 @@ class TestDiscretization:
         assert df_disc["Y"].nunique() == 4
         assert df_disc["Z"].nunique() == 3
 
+    def test_invalid_method(self):
+        """Test that invalid method raises ValueError."""
+        with pytest.raises(ValueError):
+            discretize(data=self.data, cardinality={"X": 5, "Y": 4, "Z": 3}, method="invalid")
+
 
 class TestGetExampleModel:
     def test_get_categorical_models(self):
