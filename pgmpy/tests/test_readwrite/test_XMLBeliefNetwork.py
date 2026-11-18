@@ -118,26 +118,30 @@ TEST_STRING = """<ANALYSISNOTEBOOK NAME="Notebook.Cancer Example From Neapolitan
                     </ANALYSISNOTEBOOK>"""
 
 
-@pytest.fixture(params=["numpy", "torch"])
+BACKEND_PARAMS = ["numpy"]
+if _check_soft_dependencies("torch", severity="none"):
+    BACKEND_PARAMS.append("torch")
+
+
+@pytest.fixture(params=BACKEND_PARAMS, autouse=True)
 def backend(request):
-    if request.param == "torch":
-        if not _check_soft_dependencies("torch", severity="none"):
-            pytest.skip("torch not installed")
-        config.set_backend("torch")
+    prev_backend = config.get_backend()
+
+    config.set_backend(request.param)
     yield request.param
-    config.set_backend("numpy")
+    config.set_backend(prev_backend)
 
 
 class TestXBNReader:
     @pytest.fixture
-    def reader_string(self, backend):
+    def reader_string(self):
         return XMLBeliefNetwork.XBNReader(string=TEST_STRING)
 
     @pytest.fixture
-    def reader_file(self, backend):
+    def reader_file(self):
         return XMLBeliefNetwork.XBNReader(path=io.StringIO(TEST_STRING))
 
-    def test_init_exception(self, backend):
+    def test_init_exception(self):
         with pytest.raises(ValueError):
             XMLBeliefNetwork.XBNReader()
 
