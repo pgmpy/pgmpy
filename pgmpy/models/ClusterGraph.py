@@ -58,6 +58,13 @@ class ClusterGraph(UndirectedGraph):
             self.add_edges_from(ebunch)
         self.factors = []
 
+    def __repr__(self):
+        return (
+            f"<ClusterGraph(nodes={len(self.nodes())},"
+            f" edges={len(self.edges())},"
+            f" factors={len(self.factors)}) at {hex(id(self))}>"
+        )
+
     def add_node(self, node, **kwargs):
         """
         Add a single node to the cluster graph.
