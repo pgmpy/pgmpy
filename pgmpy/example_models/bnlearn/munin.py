@@ -1,11 +1,11 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Munin(DiscreteMixin, _BaseExampleModel):
+class Munin(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`andreassen_munin`
+    - :footcite:t:`andreassen_munin`
     """
 
     _tags = {

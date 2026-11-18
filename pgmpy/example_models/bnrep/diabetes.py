@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Diabetes(BIFMixin, _BaseExampleModel):
+class Diabetes(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/diabetes",
         "n_nodes": 9,

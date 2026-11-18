@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Bankruptcy(BIFMixin, _BaseExampleModel):
+class Bankruptcy(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/bankruptcy",
         "n_nodes": 9,

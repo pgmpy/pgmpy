@@ -1,11 +1,11 @@
-from .._base import ContinuousMixin, _BaseExampleModel
+from .._base import BaseExampleModel, ContinuousMixin
 
 
-class MagicIRRI(ContinuousMixin, _BaseExampleModel):
+class MagicIRRI(ContinuousMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`scutari_2016b`
+    - :footcite:t:`scutari_2016b`
     """
 
     _tags = {

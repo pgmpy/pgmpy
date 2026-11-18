@@ -5,10 +5,10 @@ from sklearn.base import clone
 from sklearn.linear_model import LinearRegression
 from sklearn.utils.validation import check_is_fitted, validate_data
 
-from pgmpy.prediction._base import _BaseCausalPrediction
+from pgmpy.prediction._base import BaseCausalPrediction
 
 
-class NaiveIVRegressor(_BaseCausalPrediction):
+class NaiveIVRegressor(BaseCausalPrediction):
     """
     Implements Naive Instrumental Variable (IV) regressor (single exposure, multiple instruments).
 
@@ -70,7 +70,7 @@ class NaiveIVRegressor(_BaseCausalPrediction):
     >>> lgbn = DAG.from_dagitty(
     ...     "dag { Z1 -> X [beta=0.2] Z2 -> X [beta=0.2] X -> Y [beta=0.3] }"
     ... )
-    >>> data = lgbn.simulate(1000, seed=42)  # returns a pandas DataFrame
+    >>> data = lgbn.simulate(1000, rng=42)  # returns a pandas DataFrame
     >>> df = data.loc[:, ["X", "Z1", "Z2"]]
     >>> df = (df - df.mean(axis=0)) / df.std(axis=0)
     >>> y = data["Y"]
@@ -101,7 +101,7 @@ class NaiveIVRegressor(_BaseCausalPrediction):
     ...     "dag { U1 -> X [beta=0.3] U2 -> X [beta=0.2] U3 -> X [beta=0.1] "
     ...     "U4 -> X [beta=0.2] X -> Y [beta=0.6] P -> Y [beta=0.2] }"
     ... )
-    >>> data = lgbn.simulate(300, seed=42)
+    >>> data = lgbn.simulate(300, rng=42)
     >>> df = data.loc[:, ["X", "U1", "U2", "U3", "P"]]
     >>>
     >>> dag = DAG(
@@ -161,8 +161,7 @@ class NaiveIVRegressor(_BaseCausalPrediction):
 
     References
     ----------
-    .. [1] “Instrumental Variables Estimation.”
-           Wikipedia: https://en.wikipedia.org/wiki/Instrumental_variables_estimation
+    - :footcite:t:`instrumental_variables_estimation`
     """
 
     def __init__(

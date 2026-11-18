@@ -1,9 +1,9 @@
 from pgmpy.base import DAG
-from pgmpy.metrics import _BaseUnsupervisedMetric
+from pgmpy.metrics import BaseUnsupervisedMetric
 from pgmpy.structure_score import get_scoring_method
 
 
-class StructureScore(_BaseUnsupervisedMetric):
+class StructureScore(BaseUnsupervisedMetric):
     """
     Uses the standard model scoring methods to give a score for each structure.
     The score doesn't have very straight forward interpretability but can be
@@ -26,19 +26,17 @@ class StructureScore(_BaseUnsupervisedMetric):
     >>> from pgmpy.example_models import load_model
     >>> from pgmpy.metrics import StructureScore
     >>> model = load_model("bnlearn/alarm")
-    >>> data = model.simulate(int(1e4), seed=42)
+    >>> data = model.simulate(int(1e4), rng=42)
     >>> scorer = StructureScore(scoring_method="bic-d")
-    >>> scorer(X=data, causal_graph=model)
-    np.float64(-106325.43476616534)
+    >>> scorer(X=data, causal_graph=model)  # doctest: +ELLIPSIS
+    np.float64(-105805.3433692587...)
     """
 
     _tags = {
         "name": "structure_score",
-        "requires_true_graph": False,
-        "requires_data": True,
+        "supported_graph_types": [DAG],
+        "output_type": "scalar",
         "lower_is_better": False,
-        "supported_graph_types": (DAG,),
-        "is_default": False,
     }
 
     def __init__(self, scoring_method=None):

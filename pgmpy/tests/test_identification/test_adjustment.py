@@ -1,7 +1,20 @@
 import pytest
 
-from pgmpy.base import DAG
+from pgmpy.base import ADMG, DAG
 from pgmpy.identification import Adjustment
+
+
+def test_validate_admg():
+    # regression: validate() on an ADMG used to raise AttributeError (is_dconnected is DAG-only)
+    admg = ADMG(
+        edge_list=[("X", "Y", "->"), ("Z", "X", "->"), ("Z", "Y", "->")],
+        exposures={"X"},
+        outcomes={"Y"},
+    )
+    valid = admg.with_role("adjustment", ["Z"], inplace=False)
+    assert Adjustment(variant="all").validate(causal_graph=valid) is True
+    # without adjusting for Z, the parent Z stays m-connected to Y -> invalid
+    assert Adjustment(variant="all").validate(causal_graph=admg) is False
 
 
 @pytest.fixture

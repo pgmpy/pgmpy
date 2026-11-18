@@ -1,11 +1,11 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Alarm(DiscreteMixin, _BaseExampleModel):
+class Alarm(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`beinlich_alarm_1989`
+    - :footcite:t:`beinlich_alarm_1989`
     """
 
     _tags = {

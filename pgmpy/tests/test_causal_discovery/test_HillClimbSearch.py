@@ -8,8 +8,7 @@ import pytest
 from sklearn.exceptions import NotFittedError
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
-from pgmpy.causal_discovery import HillClimbSearch
-from pgmpy.estimators import ExpertKnowledge
+from pgmpy.causal_discovery import ExpertKnowledge, HillClimbSearch
 from pgmpy.example_models import load_model
 from pgmpy.metrics import SHD, CorrelationScore
 from pgmpy.models import DiscreteBayesianNetwork
@@ -361,7 +360,7 @@ def test_estimate_mixed_data():
 
 def test_score():
     asia_model = load_model("bnlearn/asia")
-    data = asia_model.simulate(n_samples=int(1e4), seed=42)
+    data = asia_model.simulate(n_samples=int(1e4), rng=42)
     est = HillClimbSearch(
         return_type="dag",
         show_progress=False,

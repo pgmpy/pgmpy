@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Perioperative(BIFMixin, _BaseExampleModel):
+class Perioperative(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/perioperative",
         "n_nodes": 5,

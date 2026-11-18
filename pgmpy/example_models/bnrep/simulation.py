@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Simulation(BIFMixin, _BaseExampleModel):
+class Simulation(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/simulation",
         "n_nodes": 4,

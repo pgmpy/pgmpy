@@ -1,11 +1,11 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Barley(DiscreteMixin, _BaseExampleModel):
+class Barley(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`barley_preliminary`
+    - :footcite:t:`barley_preliminary`
     """
 
     _tags = {

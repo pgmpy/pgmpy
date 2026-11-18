@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from functools import cached_property
 
 import numpy as np
 import pandas as pd
@@ -6,6 +7,8 @@ from skbase.base import BaseObject
 from skbase.lookup import all_objects
 from sklearn.base import clone
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+
+from pgmpy.utils import is_discrete_type
 
 
 class _ResidualMixin:
@@ -32,6 +35,12 @@ class _ResidualMixin:
         for numerical variables.
     """
 
+    _tags = {
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+    }
+
     def _fit_predict(self, target_col: str, Z_data: pd.DataFrame):
         """
         Fit an estimator on ``Z_data`` to predict ``target_col``.
@@ -52,7 +61,7 @@ class _ResidualMixin:
             Category index returned by :func:`pandas.factorize`; ``None`` for
             numerical targets.
         """
-        is_cat = self.dtypes[target_col] in ("C", "O")
+        is_cat = is_discrete_type(self.dtypes[target_col])
         target_data = self.data.loc[:, target_col]
         cat_index = None
 
@@ -111,8 +120,8 @@ class _ResidualMixin:
         Z_data = pd.get_dummies(z_data_source.loc[:, z_cols])
         pred, cat_index, estimator = self._fit_predict(X, Z_data)
 
-        if self.dtypes[X] in ("C", "O"):
-            dummies = pd.get_dummies(self.data.loc[:, X]).loc[:, cat_index.categories[cat_index.codes]]
+        if is_discrete_type(self.dtypes[X]):
+            dummies = pd.get_dummies(self.data.loc[:, X]).reindex(columns=cat_index.categories[cat_index.codes])
             residual = (dummies - pred).iloc[:, :-1]
         else:
             residual = self.data.loc[:, X] - pred
@@ -124,11 +133,11 @@ class _ResidualMixin:
 class _CITestResult:
     statistic: float | None
     p_value: float
-    effect_size: float | None = None
+    effect_size: float
     attributes: dict[str, object] = field(default_factory=dict)
 
 
-class _BaseCITest(BaseObject):
+class BaseCITest(BaseObject):
     """
     Base class for all Conditional Independence (CI) tests.
 
@@ -136,17 +145,26 @@ class _BaseCITest(BaseObject):
     """
 
     _tags = {
+        "object_type": "ci_test",
         "name": None,
-        "data_types": (),
+        "data_types": ["discrete", "continuous", "mixed"],
         "default_for": None,
         "requires_data": True,
         "is_symmetric": True,
+        "capability:conditioning": None,
+        "assumption:linearity": None,
+        "assumption:additive_noise": None,
+        "assumption:gaussian_noise": None,
     }
 
     def __init__(self, use_cache: bool = True):
         self.use_cache = use_cache
         self._result_cache = {}
         super().__init__()
+
+    @cached_property
+    def _is_symmetric(self) -> bool:
+        return self.get_tag("is_symmetric", tag_value_default=True)
 
     def __call__(
         self,
@@ -199,7 +217,7 @@ class _BaseCITest(BaseObject):
         """
         self.run_test(X=X, Y=Y, Z=list(Z))
 
-        return self.p_value_ >= significance_level
+        return bool(self.p_value_ >= significance_level)
 
     def run_test(self, X, Y, Z):
         """
@@ -228,7 +246,7 @@ class _BaseCITest(BaseObject):
         Z = list(Z)
 
         if self.use_cache:
-            if self.get_tag("is_symmetric", tag_value_default=True):
+            if self._is_symmetric:
                 x_key, y_key = sorted((X, Y), key=repr)
             else:
                 x_key, y_key = X, Y
@@ -275,7 +293,7 @@ def get_ci_test(test=None, data=None, use_cache=True):
     This is the recommended factory for obtaining a CI test. It supports four
     calling patterns:
 
-    1. **Pass-through**: if ``test`` is already a :class:`_BaseCITest` instance, it is
+    1. **Pass-through**: if ``test`` is already a :class:`BaseCITest` instance, it is
        returned as-is.
     2. **Callable**: if ``test`` is any other callable (e.g. a custom function), it is
        returned as-is.
@@ -286,7 +304,7 @@ def get_ci_test(test=None, data=None, use_cache=True):
 
     Parameters
     ----------
-    test : str, _BaseCITest instance, callable, or None
+    test : str, BaseCITest instance, callable, or None
         The CI test to retrieve. If a string, must match the ``name`` tag of a
         registered CI test (e.g. ``"chi_square"``, ``"pearsonr"``). If ``None``,
         the default test for the data type of ``data`` is used.
@@ -296,7 +314,7 @@ def get_ci_test(test=None, data=None, use_cache=True):
 
     Returns
     -------
-    _BaseCITest or callable
+    BaseCITest or callable
         An instantiated CI test object ready to call, or the original callable if
         ``test`` was already callable.
 
@@ -309,7 +327,7 @@ def get_ci_test(test=None, data=None, use_cache=True):
     ValueError
         If the resolved CI test requires data but ``data`` is ``None``.
     ValueError
-        If ``test`` is not a string, ``_BaseCITest`` instance, callable, or ``None``.
+        If ``test`` is not a string, ``BaseCITest`` instance, callable, or ``None``.
 
     Examples
     --------
@@ -347,7 +365,7 @@ def get_ci_test(test=None, data=None, use_cache=True):
 
     from pgmpy.utils import get_dataset_type
 
-    if isinstance(test, _BaseCITest):
+    if isinstance(test, BaseCITest):
         return test
 
     if callable(test):
@@ -366,7 +384,7 @@ def get_ci_test(test=None, data=None, use_cache=True):
         raise ValueError(f"Invalid `test` argument: {test!r}")
 
     tests = all_objects(
-        object_types=_BaseCITest,
+        object_types=BaseCITest,
         package_name="pgmpy.ci_tests",
         return_names=False,
         filter_tags=filter_tags,

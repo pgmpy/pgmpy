@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Soilliquefaction2(BIFMixin, _BaseExampleModel):
+class Soilliquefaction2(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/soilliquefaction2",
         "n_nodes": 7,

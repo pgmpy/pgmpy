@@ -1,11 +1,11 @@
-from .._base import DAGMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DAGMixin
 
 
-class Sebastiani2005(DAGMixin, _BaseExampleModel):
+class Sebastiani2005(DAGMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`sebastiani_2005`
+    - :footcite:t:`sebastiani_2005`
     """
 
     _tags = {

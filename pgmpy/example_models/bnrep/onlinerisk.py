@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Onlinerisk(BIFMixin, _BaseExampleModel):
+class Onlinerisk(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/onlinerisk",
         "n_nodes": 84,

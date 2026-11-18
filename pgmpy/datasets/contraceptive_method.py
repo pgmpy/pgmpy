@@ -1,11 +1,11 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class ContraceptiveMethod(_BaseDataset):
+class ContraceptiveMethod(BaseDataset):
     """
     References
     ----------
-    - :cite:p:`uci_contraceptive_method`
+    - :footcite:t:`uci_contraceptive_method`
     """
 
     _tags = {

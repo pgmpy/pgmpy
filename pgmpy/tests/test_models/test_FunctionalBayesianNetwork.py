@@ -1,7 +1,6 @@
-import unittest
-
 import numpy as np
 import pandas as pd
+import pytest
 from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 
 from pgmpy import config
@@ -18,12 +17,12 @@ pyro = _safe_import("pyro", pkg_name="pyro-ppl")
 dist = _safe_import("pyro.distributions", pkg_name="pyro-ppl")
 
 
-@unittest.skipUnless(
-    _check_soft_dependencies("pyro-ppl", severity="none"),
-    reason="execute only if required dependency present",
+@pytest.mark.skipif(
+    not _check_soft_dependencies("pyro-ppl", severity="none"), reason="execute only if required dependency present"
 )
-class TestFBNMethods(unittest.TestCase):
-    def setUp(self):
+class TestFBNMethods:
+    @pytest.fixture(autouse=True)
+    def setup(self):
         config.set_backend("torch")
         self.model = FunctionalBayesianNetwork([("x1", "x2"), ("x2", "x3")])
         self.cpd1 = FunctionalCPD(
@@ -36,23 +35,23 @@ class TestFBNMethods(unittest.TestCase):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
 
     def test_cpds_simple(self):
-        self.assertEqual("x1", self.cpd1.variable)
+        assert "x1" == self.cpd1.variable
         cpd = self.model.get_cpds("x1")
-        self.assertEqual(cpd.variable, self.cpd1.variable)
-        self.assertEqual(cpd.parents, self.cpd1.parents)
-        self.assertEqual(cpd.parents, [])
+        assert cpd.variable == self.cpd1.variable
+        assert cpd.parents == self.cpd1.parents
+        assert cpd.parents == []
 
     def test_add_cpds(self):
         cpd = self.model.get_cpds("x1")
-        self.assertEqual(cpd.variable, self.cpd1.variable)
+        assert cpd.variable == self.cpd1.variable
 
         cpd = self.model.get_cpds("x2")
-        self.assertEqual(cpd.variable, self.cpd2.variable)
-        self.assertEqual(cpd.parents, self.cpd2.parents)
+        assert cpd.variable == self.cpd2.variable
+        assert cpd.parents == self.cpd2.parents
 
         cpd = self.model.get_cpds("x3")
-        self.assertEqual(cpd.variable, self.cpd3.variable)
-        self.assertEqual(cpd.parents, self.cpd3.parents)
+        assert cpd.variable == self.cpd3.variable
+        assert cpd.parents == self.cpd3.parents
 
         tab_cpd = TabularCPD(
             "grade",
@@ -65,25 +64,30 @@ class TestFBNMethods(unittest.TestCase):
             evidence=["diff", "intel"],
             evidence_card=[2, 3],
         )
-        self.assertRaises(ValueError, self.model.add_cpds, tab_cpd)
-        self.assertRaises(ValueError, self.model.add_cpds, 1)
-        self.assertRaises(ValueError, self.model.add_cpds, 1, tab_cpd)
+        with pytest.raises(ValueError):
+            self.model.add_cpds(tab_cpd)
+        with pytest.raises(ValueError):
+            self.model.add_cpds(1)
+        with pytest.raises(ValueError):
+            self.model.add_cpds(1, tab_cpd)
 
-        self.assertRaises(ValueError, self.model.add_cpds, tab_cpd)
+        with pytest.raises(ValueError):
+            self.model.add_cpds(tab_cpd)
 
         # Test that duplicate CPDs get replaced.
-        self.assertEqual(len(self.model.cpds), 3)
+        assert len(self.model.cpds) == 3
         self.model.add_cpds(self.cpd1)
-        self.assertEqual(len(self.model.cpds), 3)
+        assert len(self.model.cpds) == 3
 
     def test_check_model(self):
-        self.assertEqual(self.model.check_model(), True)
+        assert self.model.check_model() == True
 
         self.model.add_edge("x1", "x4")
         cpd4 = FunctionalCPD("x4", lambda parent: dist.Normal(parent["x2"] * -1 + 4, 3), ["x2"])
         self.model.add_cpds(cpd4)
 
-        self.assertRaises(ValueError, self.model.check_model)
+        with pytest.raises(ValueError):
+            self.model.check_model()
 
     def test_svi_fit_normal(self):
         alpha = 0.5
@@ -133,27 +137,27 @@ class TestFBNMethods(unittest.TestCase):
             data,
             estimator="svi",
             optimizer=pyro.optim.Adam({"lr": 0.05}),
-            seed=42,
+            rng=42,
             num_steps=100,
         )
 
-        self.assertIn("x1_mu", params)
-        self.assertIn("x1_sigma", params)
-        self.assertIn("x2_inter", params)
-        self.assertIn("x2_sigma", params)
-        self.assertIn("x2_alpha", params)
-        self.assertIn("x3_inter", params)
-        self.assertIn("x3_sigma", params)
-        self.assertIn("x3_beta", params)
+        assert "x1_mu" in params
+        assert "x1_sigma" in params
+        assert "x2_inter" in params
+        assert "x2_sigma" in params
+        assert "x2_alpha" in params
+        assert "x3_inter" in params
+        assert "x3_sigma" in params
+        assert "x3_beta" in params
 
-        self.assertAlmostEqual(params["x1_mu"], 0.2, delta=0.1)
-        self.assertAlmostEqual(params["x1_sigma"], 0.9, delta=0.1)
-        self.assertAlmostEqual(params["x2_inter"], 0.5, delta=0.1)
-        self.assertAlmostEqual(params["x2_sigma"], 0.6, delta=0.1)
-        self.assertAlmostEqual(params["x2_alpha"], 0.5, delta=0.1)
-        self.assertAlmostEqual(params["x3_inter"], 0.3, delta=0.1)
-        self.assertAlmostEqual(params["x3_sigma"], 0.7, delta=0.1)
-        self.assertAlmostEqual(params["x3_beta"], 0.8, delta=0.1)
+        assert abs(params["x1_mu"] - 0.2) <= 0.1
+        assert abs(params["x1_sigma"] - 0.9) <= 0.1
+        assert abs(params["x2_inter"] - 0.5) <= 0.1
+        assert abs(params["x2_sigma"] - 0.6) <= 0.1
+        assert abs(params["x2_alpha"] - 0.5) <= 0.1
+        assert abs(params["x3_inter"] - 0.3) <= 0.1
+        assert abs(params["x3_sigma"] - 0.7) <= 0.1
+        assert abs(params["x3_beta"] - 0.8) <= 0.1
 
     def test_svi_fit_different_distributions(self):
         x1 = np.random.beta(0.2, 0.8, size=1000)
@@ -185,19 +189,19 @@ class TestFBNMethods(unittest.TestCase):
             data,
             estimator="SVI",
             optimizer=pyro.optim.Adam({"lr": 0.05}),
-            seed=42,
+            rng=42,
             num_steps=100,
         )
 
-        self.assertIn("x1_concen1", params)
-        self.assertIn("x1_concen0", params)
-        self.assertIn("x2_rate", params)
-        self.assertIn("x3_rate", params)
+        assert "x1_concen1" in params
+        assert "x1_concen0" in params
+        assert "x2_rate" in params
+        assert "x3_rate" in params
 
-        self.assertAlmostEqual(params["x1_concen1"], 0.2, delta=0.1)
-        self.assertAlmostEqual(params["x1_concen0"], 0.8, delta=0.1)
-        self.assertAlmostEqual(params["x2_rate"], 0.3, delta=0.1)
-        self.assertAlmostEqual(params["x3_rate"], 0.5, delta=0.1)
+        assert abs(params["x1_concen1"] - 0.2) <= 0.1
+        assert abs(params["x1_concen0"] - 0.8) <= 0.1
+        assert abs(params["x2_rate"] - 0.3) <= 0.1
+        assert abs(params["x3_rate"] - 0.5) <= 0.1
 
     def test_mcmc_fit_normal(self):
         alpha = 0.5
@@ -249,7 +253,7 @@ class TestFBNMethods(unittest.TestCase):
             data,
             estimator="MCMC",
             prior_fn=prior_fn,
-            seed=42,
+            rng=42,
             num_steps=100,
             nuts_kwargs={"target_accept_prob": 0.8},
             mcmc_kwargs={"num_chains": 1, "warmup_steps": 100},
@@ -265,16 +269,16 @@ class TestFBNMethods(unittest.TestCase):
             "x3_sigma",
             "x3_beta",
         ]:
-            self.assertIn(k, params)
+            assert k in params
 
-        self.assertAlmostEqual(params["x1_mu"].mean().item(), 0.2, delta=0.1)
-        self.assertAlmostEqual(params["x1_sigma"].mean().item(), 0.9, delta=0.1)
-        self.assertAlmostEqual(params["x2_inter"].mean().item(), 0.5, delta=0.1)
-        self.assertAlmostEqual(params["x2_sigma"].mean().item(), 0.6, delta=0.1)
-        self.assertAlmostEqual(params["x2_alpha"].mean().item(), 0.5, delta=0.1)
-        self.assertAlmostEqual(params["x3_inter"].mean().item(), 0.3, delta=0.1)
-        self.assertAlmostEqual(params["x3_sigma"].mean().item(), 0.7, delta=0.1)
-        self.assertAlmostEqual(params["x3_beta"].mean().item(), 0.8, delta=0.1)
+        assert abs(params["x1_mu"].mean().item() - 0.2) <= 0.1
+        assert abs(params["x1_sigma"].mean().item() - 0.9) <= 0.1
+        assert abs(params["x2_inter"].mean().item() - 0.5) <= 0.1
+        assert abs(params["x2_sigma"].mean().item() - 0.6) <= 0.1
+        assert abs(params["x2_alpha"].mean().item() - 0.5) <= 0.1
+        assert abs(params["x3_inter"].mean().item() - 0.3) <= 0.1
+        assert abs(params["x3_sigma"].mean().item() - 0.7) <= 0.1
+        assert abs(params["x3_beta"].mean().item() - 0.8) <= 0.1
 
     def test_mcmc_fit_different_distributions(self):
         # synthetic data
@@ -311,21 +315,21 @@ class TestFBNMethods(unittest.TestCase):
         model.add_cpds(cpd1, cpd2, cpd3)
 
         pyro.clear_param_store()
-        params = model.fit(data, estimator="MCMC", prior_fn=prior_fn, seed=42, num_steps=100)
+        params = model.fit(data, estimator="MCMC", prior_fn=prior_fn, rng=42, num_steps=100)
 
-        self.assertIn("x1_concen1", params)
-        self.assertIn("x1_concen0", params)
-        self.assertIn("x2_rate", params)
-        self.assertIn("x3_rate", params)
+        assert "x1_concen1" in params
+        assert "x1_concen0" in params
+        assert "x2_rate" in params
+        assert "x3_rate" in params
 
-        self.assertAlmostEqual(params["x1_concen1"].mean().item(), 0.2, delta=0.1)
-        self.assertAlmostEqual(params["x1_concen0"].mean().item(), 0.8, delta=0.1)
-        self.assertAlmostEqual(params["x2_rate"].mean().item(), 0.3, delta=0.1)
-        self.assertAlmostEqual(params["x3_rate"].mean().item(), 0.5, delta=0.1)
+        assert abs(params["x1_concen1"].mean().item() - 0.2) <= 0.1
+        assert abs(params["x1_concen0"].mean().item() - 0.8) <= 0.1
+        assert abs(params["x2_rate"].mean().item() - 0.3) <= 0.1
+        assert abs(params["x3_rate"].mean().item() - 0.5) <= 0.1
 
     def test_fit_complex_svi(self):
         sim_model = load_model("bnlearn/ecoli70")
-        df = sim_model.simulate(n_samples=int(1e3), seed=42)
+        df = sim_model.simulate(n_samples=int(1e3), rng=42)
 
         model = FunctionalBayesianNetwork(
             [
@@ -438,57 +442,57 @@ class TestFBNMethods(unittest.TestCase):
             df,
             estimator="SVI",
             optimizer=pyro.optim.Adam({"lr": 0.05}),
-            seed=42,
+            rng=42,
             num_steps=200,
         )
 
-        self.assertIn("b1191_mu", params)
-        self.assertIn("b1191_sigma", params)
-        self.assertIn("eutG_mu", params)
-        self.assertIn("fixC_inter", params)
-        self.assertIn("fixC_alpha", params)
-        self.assertIn("ygbD_inter", params)
-        self.assertIn("ygbD_alpha", params)
-        self.assertIn("ygbO_inter", params)
-        self.assertIn("ygbO_alpha", params)
-        self.assertIn("yceP_inter", params)
-        self.assertIn("yceP_alpha0", params)
-        self.assertIn("yceP_alpha1", params)
-        self.assertIn("ibpB_inter", params)
-        self.assertIn("ibpB_alpha0", params)
-        self.assertIn("ibpB_alpha1", params)
+        assert "b1191_mu" in params
+        assert "b1191_sigma" in params
+        assert "eutG_mu" in params
+        assert "fixC_inter" in params
+        assert "fixC_alpha" in params
+        assert "ygbD_inter" in params
+        assert "ygbD_alpha" in params
+        assert "ygbO_inter" in params
+        assert "ygbO_alpha" in params
+        assert "yceP_inter" in params
+        assert "yceP_alpha0" in params
+        assert "yceP_alpha1" in params
+        assert "ibpB_inter" in params
+        assert "ibpB_alpha0" in params
+        assert "ibpB_alpha1" in params
 
-        self.assertAlmostEqual(params["b1191_mu"], 1.273, delta=0.2)
-        self.assertAlmostEqual(params["b1191_sigma"], 0.609, delta=0.25)
+        assert abs(params["b1191_mu"] - 1.273) <= 0.2
+        assert abs(params["b1191_sigma"] - 0.609) <= 0.25
 
-        self.assertAlmostEqual(params["eutG_mu"], 1.265, delta=0.2)
-        self.assertAlmostEqual(params["eutG_sigma"], 0.691, delta=0.2)
+        assert abs(params["eutG_mu"] - 1.265) <= 0.2
+        assert abs(params["eutG_sigma"] - 0.691) <= 0.2
 
-        self.assertAlmostEqual(params["fixC_inter"], 0.316, delta=0.2)
-        self.assertAlmostEqual(params["fixC_alpha"], 0.941, delta=0.2)
-        self.assertAlmostEqual(params["fixC_sigma"], 1.131, delta=0.2)
+        assert abs(params["fixC_inter"] - 0.316) <= 0.2
+        assert abs(params["fixC_alpha"] - 0.941) <= 0.2
+        assert abs(params["fixC_sigma"] - 1.131) <= 0.2
 
-        self.assertAlmostEqual(params["ygbD_inter"], 1.35, delta=0.2)
-        self.assertAlmostEqual(params["ygbD_alpha"], 0.661, delta=0.2)
-        self.assertAlmostEqual(params["ygbD_sigma"], 0.74, delta=0.2)
+        assert abs(params["ygbD_inter"] - 1.35) <= 0.2
+        assert abs(params["ygbD_alpha"] - 0.661) <= 0.2
+        assert abs(params["ygbD_sigma"] - 0.74) <= 0.2
 
-        self.assertAlmostEqual(params["ygbO_inter"], 1.591, delta=0.2)
-        self.assertAlmostEqual(params["ygbO_alpha"], -0.071, delta=0.2)
-        self.assertAlmostEqual(params["ygbO_sigma"], 1.851, delta=0.6)
+        assert abs(params["ygbO_inter"] - 1.591) <= 0.2
+        assert abs(params["ygbO_alpha"] - (-0.071)) <= 0.2
+        assert abs(params["ygbO_sigma"] - 1.851) <= 0.6
 
-        self.assertAlmostEqual(params["yceP_inter"], -0.128, delta=0.2)
-        self.assertAlmostEqual(params["yceP_alpha0"], 1.141, delta=0.2)
-        self.assertAlmostEqual(params["yceP_alpha1"], -0.327, delta=0.2)
-        self.assertAlmostEqual(params["yceP_sigma"], 0.167, delta=0.3)
+        assert abs(params["yceP_inter"] - (-0.128)) <= 0.2
+        assert abs(params["yceP_alpha0"] - 1.141) <= 0.2
+        assert abs(params["yceP_alpha1"] - (-0.327)) <= 0.2
+        assert abs(params["yceP_sigma"] - 0.167) <= 0.3
 
-        self.assertAlmostEqual(params["ibpB_inter"], -0.423, delta=0.2)
-        self.assertAlmostEqual(params["ibpB_alpha0"], 1.447, delta=0.2)
-        self.assertAlmostEqual(params["ibpB_alpha1"], 0.125, delta=0.2)
-        self.assertAlmostEqual(params["ibpB_sigma"], 0.461, delta=0.3)
+        assert abs(params["ibpB_inter"] - (-0.423)) <= 0.2
+        assert abs(params["ibpB_alpha0"] - 1.447) <= 0.2
+        assert abs(params["ibpB_alpha1"] - 0.125) <= 0.2
+        assert abs(params["ibpB_sigma"] - 0.461) <= 0.3
 
     def test_fit_complex_mcmc(self):
         sim_model = load_model("bnlearn/ecoli70")
-        df = sim_model.simulate(n_samples=int(1e3), seed=42)
+        df = sim_model.simulate(n_samples=int(1e3), rng=42)
 
         model = FunctionalBayesianNetwork(
             [
@@ -584,7 +588,7 @@ class TestFBNMethods(unittest.TestCase):
             df,
             estimator="MCMC",
             prior_fn=prior_fn,
-            seed=42,
+            rng=42,
             num_steps=100,
             nuts_kwargs={"target_accept_prob": 0.8},
             mcmc_kwargs={"num_chains": 1, "warmup_steps": 100},
@@ -613,50 +617,43 @@ class TestFBNMethods(unittest.TestCase):
             "ibpB_alpha1",
             "ibpB_sigma",
         ]:
-            self.assertIn(k, params)
+            assert k in params
 
-        self.assertAlmostEqual(params["b1191_mu"].mean().item(), 1.273, delta=0.2)
-        self.assertAlmostEqual(params["b1191_sigma"].mean().item(), 0.609, delta=0.25)
+        assert abs(params["b1191_mu"].mean().item() - 1.273) <= 0.2
+        assert abs(params["b1191_sigma"].mean().item() - 0.609) <= 0.25
 
-        self.assertAlmostEqual(params["eutG_mu"].mean().item(), 1.265, delta=0.2)
-        self.assertAlmostEqual(params["eutG_sigma"].mean().item(), 0.691, delta=0.25)
+        assert abs(params["eutG_mu"].mean().item() - 1.265) <= 0.2
+        assert abs(params["eutG_sigma"].mean().item() - 0.691) <= 0.25
 
-        self.assertAlmostEqual(params["fixC_inter"].mean().item(), 0.316, delta=0.2)
-        self.assertAlmostEqual(params["fixC_alpha"].mean().item(), 0.941, delta=0.2)
-        self.assertAlmostEqual(params["fixC_sigma"].mean().item(), 1.131, delta=0.2)
+        assert abs(params["fixC_inter"].mean().item() - 0.316) <= 0.2
+        assert abs(params["fixC_alpha"].mean().item() - 0.941) <= 0.2
+        assert abs(params["fixC_sigma"].mean().item() - 1.131) <= 0.2
 
-        self.assertAlmostEqual(params["ygbD_inter"].mean().item(), 1.350, delta=0.2)
-        self.assertAlmostEqual(params["ygbD_alpha"].mean().item(), 0.661, delta=0.2)
-        self.assertAlmostEqual(params["ygbD_sigma"].mean().item(), 0.740, delta=0.2)
+        assert abs(params["ygbD_inter"].mean().item() - 1.350) <= 0.2
+        assert abs(params["ygbD_alpha"].mean().item() - 0.661) <= 0.2
+        assert abs(params["ygbD_sigma"].mean().item() - 0.740) <= 0.2
 
-        self.assertAlmostEqual(params["ygbO_inter"].mean().item(), 1.591, delta=0.2)
-        self.assertAlmostEqual(params["ygbO_alpha"].mean().item(), -0.071, delta=0.2)
-        self.assertAlmostEqual(params["ygbO_sigma"].mean().item(), 1.851, delta=0.6)
+        assert abs(params["ygbO_inter"].mean().item() - 1.591) <= 0.2
+        assert abs(params["ygbO_alpha"].mean().item() - (-0.071)) <= 0.2
+        assert abs(params["ygbO_sigma"].mean().item() - 1.851) <= 0.6
 
-        self.assertAlmostEqual(params["yceP_inter"].mean().item(), -0.128, delta=0.2)
-        self.assertAlmostEqual(params["yceP_alpha0"].mean().item(), 1.141, delta=0.2)
-        self.assertAlmostEqual(params["yceP_alpha1"].mean().item(), -0.327, delta=0.2)
-        self.assertAlmostEqual(params["yceP_sigma"].mean().item(), 0.167, delta=0.3)
+        assert abs(params["yceP_inter"].mean().item() - (-0.128)) <= 0.2
+        assert abs(params["yceP_alpha0"].mean().item() - 1.141) <= 0.2
+        assert abs(params["yceP_alpha1"].mean().item() - (-0.327)) <= 0.2
+        assert abs(params["yceP_sigma"].mean().item() - 0.167) <= 0.3
 
-        self.assertAlmostEqual(params["ibpB_inter"].mean().item(), -0.423, delta=0.2)
-        self.assertAlmostEqual(params["ibpB_alpha0"].mean().item(), 1.447, delta=0.2)
-        self.assertAlmostEqual(params["ibpB_alpha1"].mean().item(), 0.125, delta=0.2)
-        self.assertAlmostEqual(params["ibpB_sigma"].mean().item(), 0.461, delta=0.3)
-
-    def tearDown(self):
-        del self.model
-        del self.cpd1
-        del self.cpd2
-        del self.cpd3
+        assert abs(params["ibpB_inter"].mean().item() - (-0.423)) <= 0.2
+        assert abs(params["ibpB_alpha0"].mean().item() - 1.447) <= 0.2
+        assert abs(params["ibpB_alpha1"].mean().item() - 0.125) <= 0.2
+        assert abs(params["ibpB_sigma"].mean().item() - 0.461) <= 0.3
 
 
-@unittest.skipUnless(
-    _check_soft_dependencies("pyro-ppl", severity="none"),
-    reason="execute only if required dependency present",
+@pytest.mark.skipif(
+    not _check_soft_dependencies("pyro-ppl", severity="none"), reason="execute only if required dependency present"
 )
-class TestFBNSimulation(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
+class TestFBNSimulation:
+    @pytest.fixture(autouse=True, scope="class")
+    def set_torch(self):
         config.set_backend("torch")
 
     def test_simulate_linear_gaussian(self):
@@ -682,8 +679,8 @@ class TestFBNSimulation(unittest.TestCase):
 
         n_samples = 5000
         seed = 42
-        lg_samples = lg_model.simulate(n_samples=n_samples, seed=seed)
-        fn_samples = fn_model.simulate(n_samples=n_samples, seed=seed)
+        lg_samples = lg_model.simulate(n_samples=n_samples, rng=seed)
+        fn_samples = fn_model.simulate(n_samples=n_samples, rng=seed)
 
         for var in ["x1", "x2", "x3"]:
             np.testing.assert_allclose(
@@ -730,19 +727,19 @@ class TestFBNSimulation(unittest.TestCase):
 
         model.add_cpds(cpd1, cpd2, cpd3, cpd4)
         n_samples = 10000
-        samples = model.simulate(n_samples=n_samples, seed=42)
+        samples = model.simulate(n_samples=n_samples, rng=42)
 
-        self.assertEqual(len(samples), n_samples)
-        self.assertEqual(set(samples.columns), {"exponential", "uniform", "lognormal", "gamma"})
+        assert len(samples) == n_samples
+        assert set(samples.columns) == {"exponential", "uniform", "lognormal", "gamma"}
 
-        self.assertTrue(np.all(samples["exponential"] >= 0))
-        self.assertAlmostEqual(samples["exponential"].mean(), 2.0, delta=0.2)
+        assert np.all(samples["exponential"] >= 0)
+        assert abs(samples["exponential"].mean() - 2.0) <= 0.2
 
-        self.assertTrue(np.all(samples["uniform"] >= samples["exponential"]))
-        self.assertTrue(np.all(samples["uniform"] <= samples["exponential"] + 2))
+        assert np.all(samples["uniform"] >= samples["exponential"])
+        assert np.all(samples["uniform"] <= samples["exponential"] + 2)
 
-        self.assertTrue(np.all(samples["lognormal"] > 0))
-        self.assertTrue(np.all(samples["gamma"] > 0))
+        assert np.all(samples["lognormal"] > 0)
+        assert np.all(samples["gamma"] > 0)
 
     def test_simulate_with_do_scalar(self):
         model = FunctionalBayesianNetwork([("x1", "x2")])
@@ -750,10 +747,10 @@ class TestFBNSimulation(unittest.TestCase):
         cpd_x2 = FunctionalCPD("x2", fn=lambda p: dist.Delta(2.0 * p["x1"] + 1.0), parents=["x1"])
         model.add_cpds(cpd_x1, cpd_x2)
 
-        df = model.simulate(n_samples=10, seed=42, do={"x1": 3.0})
+        df = model.simulate(n_samples=10, rng=42, do={"x1": 3.0})
 
-        self.assertTrue(np.allclose(df["x1"].values, 3.0))
-        self.assertTrue(np.allclose(df["x2"].values, 7.0))
+        assert np.allclose(df["x1"].values, 3.0)
+        assert np.allclose(df["x2"].values, 7.0)
 
     def test_simulate_with_do_scalar_validation(self):
         model = FunctionalBayesianNetwork([("x1", "x2")])
@@ -762,8 +759,8 @@ class TestFBNSimulation(unittest.TestCase):
             FunctionalCPD("x2", fn=lambda p: dist.Delta(2.0 * p["x1"] + 1.0), parents=["x1"]),
         )
 
-        with self.assertRaises(ValueError):
-            model.simulate(n_samples=5, seed=0, do={"not_a_node": 1.0})
+        with pytest.raises(ValueError):
+            model.simulate(n_samples=5, rng=0, do={"not_a_node": 1.0})
 
     def test_simulate_with_virtual_intervention(self):
         import torch
@@ -780,10 +777,10 @@ class TestFBNSimulation(unittest.TestCase):
         const = torch.tensor(4.2, dtype=config.get_dtype(), device=config.get_device())
         vi_x1 = FunctionalCPD("x1", fn=lambda _: dist.Delta(const))  # unconditional VI
 
-        df = model.simulate(n_samples=12, seed=13, virtual_intervention=[vi_x1])
+        df = model.simulate(n_samples=12, rng=13, virtual_intervention=[vi_x1])
 
-        self.assertTrue(np.allclose(df["x1"].values, 4.2))
-        self.assertTrue(np.allclose(df["x2"].values, 2.0 * 4.2 + 1.0))
+        assert np.allclose(df["x1"].values, 4.2)
+        assert np.allclose(df["x2"].values, 2.0 * 4.2 + 1.0)
 
     def test_simulate_virtual_intervention_validation(self):
         model = FunctionalBayesianNetwork([("x1", "x2")])
@@ -793,12 +790,12 @@ class TestFBNSimulation(unittest.TestCase):
         )
 
         bad_vi = FunctionalCPD("x2", fn=lambda p: dist.Normal(p["x1"], 1.0), parents=["x1"])
-        with self.assertRaises(ValueError):
-            model.simulate(n_samples=5, seed=0, virtual_intervention=[bad_vi])
+        with pytest.raises(ValueError):
+            model.simulate(n_samples=5, rng=0, virtual_intervention=[bad_vi])
 
         missing_vi = FunctionalCPD("does_not_exist", fn=lambda _: dist.Delta(0.0))
-        with self.assertRaises(ValueError):
-            model.simulate(n_samples=5, seed=0, virtual_intervention=[missing_vi])
+        with pytest.raises(ValueError):
+            model.simulate(n_samples=5, rng=0, virtual_intervention=[missing_vi])
 
     def test_simulate_do_and_virtual_intervention_conflict_raises(self):
         model = FunctionalBayesianNetwork([("x1", "x2")])
@@ -809,54 +806,52 @@ class TestFBNSimulation(unittest.TestCase):
 
         vi_x1 = FunctionalCPD("x1", fn=lambda _: dist.Delta(4.2))  # unconditional
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             model.simulate(
                 n_samples=5,
-                seed=0,
+                rng=0,
                 do={"x1": 3.0},
                 virtual_intervention=[vi_x1],
             )
 
 
-@unittest.skipUnless(
-    _check_soft_dependencies("pyro-ppl", severity="none"),
-    reason="execute only if required dependency present",
+@pytest.mark.skipif(
+    not _check_soft_dependencies("pyro-ppl", severity="none"), reason="execute only if required dependency present"
 )
-class TestFBNCreation(unittest.TestCase):
+class TestFBNCreation:
     def test_class_init_with_adj_matrix_dict_of_dict(self):
         adj = {"a": {"b": 4, "c": 3}, "b": {"c": 2}}
         self.graph = FunctionalBayesianNetwork(adj, latents={"a"})
-        self.assertEqual(self.graph.latents, set("a"))
-        self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c"])
-        self.assertEqual(self.graph.adj["a"]["c"]["weight"], 3)
+        assert self.graph.latents == set("a")
+        assert sorted(self.graph.nodes()) == ["a", "b", "c"]
+        assert self.graph.adj["a"]["c"]["weight"] == 3
 
     def test_class_init_with_adj_matrix_dict_of_list(self):
         adj = {"a": ["b", "c"], "b": ["c"]}
         self.graph = FunctionalBayesianNetwork(adj, latents={"a"})
-        self.assertEqual(self.graph.latents, set("a"))
-        self.assertListEqual(sorted(self.graph.nodes()), ["a", "b", "c"])
+        assert self.graph.latents == set("a")
+        assert sorted(self.graph.nodes()) == ["a", "b", "c"]
 
     def test_class_init_with_pd_adj_df(self):
         df = pd.DataFrame([[0, 3], [0, 0]])
         self.graph = FunctionalBayesianNetwork(df, latents={0})
-        self.assertEqual(self.graph.latents, {0})
-        self.assertListEqual(sorted(self.graph.nodes()), [0, 1])
-        self.assertEqual(self.graph.adj[0][1]["weight"], {"weight": 3})
+        assert self.graph.latents == {0}
+        assert sorted(self.graph.nodes()) == [0, 1]
+        assert self.graph.adj[0][1]["weight"] == {"weight": 3}
 
 
-@unittest.skipUnless(
-    _check_soft_dependencies("pyro-ppl", severity="none"),
-    reason="execute only if required dependency present",
+@pytest.mark.skipif(
+    not _check_soft_dependencies("pyro-ppl", severity="none"), reason="execute only if required dependency present"
 )
-class TestDAGParser(unittest.TestCase):
+class TestDAGParser:
     def test_from_lavaan(self):
         model_str = "ind60 =~ x1"
         model_from_str = FunctionalBayesianNetwork.from_lavaan(string=model_str)
         expected_edges = {("ind60", "x1")}
-        self.assertEqual(set(model_from_str.edges()), expected_edges)
+        assert set(model_from_str.edges()) == expected_edges
 
     def test_from_dagitty(self):
         model_str = """dag{X -> Y}"""
         model_from_str = FunctionalBayesianNetwork.from_dagitty(string=model_str)
         expected_edges = {("X", "Y")}
-        self.assertEqual(set(model_from_str.edges()), expected_edges)
+        assert set(model_from_str.edges()) == expected_edges

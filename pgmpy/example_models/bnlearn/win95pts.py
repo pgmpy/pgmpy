@@ -1,11 +1,11 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Win95pts(DiscreteMixin, _BaseExampleModel):
+class Win95pts(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`bnlearn_win95pts`
+    - :footcite:t:`bnlearn_win95pts`
     """
 
     _tags = {

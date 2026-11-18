@@ -1,11 +1,11 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class PimaDiabetes(_BaseDataset):
+class PimaDiabetes(BaseDataset):
     """
     References
     ----------
-    - :cite:p:`lella_2022`
+    - :footcite:t:`lella_2022`
     """
 
     _tags = {

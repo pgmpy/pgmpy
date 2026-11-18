@@ -1,5 +1,3 @@
-import logging
-
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -7,7 +5,7 @@ import pytest
 from sklearn.exceptions import NotFittedError
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
-from pgmpy.base import UndirectedGraph
+from pgmpy.base import PDAG, UndirectedGraph
 from pgmpy.causal_discovery import PC, ExpertKnowledge
 from pgmpy.example_models import load_model
 from pgmpy.independencies import Independencies
@@ -172,21 +170,21 @@ def test_skeleton_to_pdag():
     }
     pdag = pc._orient_colliders()
     pdag = pdag.apply_meeks_rules(apply_r4=False)
-    assert set(pdag.edges()) == {("B", "C"), ("A", "D"), ("A", "C"), ("D", "A")}
+    assert set(pdag.get_edges(data=True)) == {("A", "C", "->"), ("A", "D", "--"), ("B", "C", "->")}
 
     # C - A - B  ==> C -> A <- B
     pc.skeleton_ = nx.Graph([("A", "B"), ("A", "C")])
     pc.separating_sets_ = {frozenset({"B", "C"}): ()}
     pdag = pc._orient_colliders()
     pdag = pdag.apply_meeks_rules(apply_r4=False)
-    assert set(pdag.edges()) == {("B", "A"), ("C", "A")}
+    assert set(pdag.get_edges(data=True)) == {("B", "A", "->"), ("C", "A", "->")}
 
     # C - A - B ==> C - A - B
     pc.skeleton_ = nx.Graph([("A", "B"), ("A", "C")])
     pc.separating_sets_ = {frozenset({"B", "C"}): ("A",)}
     pdag = pc._orient_colliders()
     pdag = pdag.apply_meeks_rules(apply_r4=False)
-    assert set(pdag.edges()) == {("A", "B"), ("B", "A"), ("A", "C"), ("C", "A")}
+    assert set(pdag.get_edges(data=True)) == {("A", "B", "--"), ("A", "C", "--")}
 
     # {A, B} - C - D ==> {A, B} -> C -> D
     pc.skeleton_ = nx.Graph([("A", "C"), ("B", "C"), ("C", "D")])
@@ -197,28 +195,28 @@ def test_skeleton_to_pdag():
     }
     pdag = pc._orient_colliders()
     pdag = pdag.apply_meeks_rules(apply_r4=False)
-    assert set(pdag.edges()) == {("A", "C"), ("B", "C"), ("C", "D")}
+    assert set(pdag.get_edges(data=True)) == {("A", "C", "->"), ("B", "C", "->"), ("C", "D", "->")}
 
     # C - A - B - {C, D} ==> C <- A -> B <- D; B -> C
     pc.skeleton_ = nx.Graph([("A", "B"), ("A", "C"), ("B", "C"), ("B", "D")])
     pc.separating_sets_ = {frozenset({"A", "D"}): tuple(), frozenset({"C", "D"}): ("A", "B")}
     pdag = pc._orient_colliders()
     pdag = pdag.apply_meeks_rules(apply_r4=False)
-    assert set(pdag.edges()) == {("A", "B"), ("B", "C"), ("A", "C"), ("D", "B")}
+    assert set(pdag.get_edges(data=True)) == {("A", "B", "->"), ("A", "C", "->"), ("B", "C", "->"), ("D", "B", "->")}
 
     pc.skeleton_ = nx.Graph([("A", "B"), ("B", "C"), ("A", "D"), ("B", "D"), ("C", "D")])
     pc.separating_sets_ = {frozenset({"A", "C"}): ("B",)}
     pdag = pc._orient_colliders()
     pdag = pdag.apply_meeks_rules(apply_r4=False)
-    assert set(pdag.edges()) == {
-        ("A", "B"),
-        ("B", "A"),
-        ("B", "C"),
-        ("C", "B"),
-        ("A", "D"),
-        ("B", "D"),
-        ("C", "D"),
-    }
+    assert pdag == PDAG(
+        edge_list=[
+            ("A", "D", "->"),
+            ("B", "D", "->"),
+            ("C", "D", "->"),
+            ("A", "B", "--"),
+            ("B", "C", "--"),
+        ]
+    )
 
     # A - B - C - D: two conflicting colliders at B and C.
     # A->B<-C and B->C<-D conflict on the B-C edge. The second
@@ -230,7 +228,28 @@ def test_skeleton_to_pdag():
         frozenset({"B", "D"}): tuple(),
     }
     pdag = pc._orient_colliders()
-    assert set(pdag.edges()) == {("A", "B"), ("C", "B"), ("C", "D"), ("D", "C")}
+    assert set(pdag.get_edges(data=True)) == {("A", "B", "->"), ("C", "B", "->"), ("C", "D", "--")}
+
+    # Three colliders A->B<-E, B->C<-F, C->A<-G would orient A->B->C->A into a directed
+    # cycle. The third collider closes the cycle, so it is skipped entirely and both of
+    # its edges (C-A and G-A) are left undirected instead of crashing PDAG construction.
+    pc.skeleton_ = nx.Graph([("A", "B"), ("E", "B"), ("B", "C"), ("F", "C"), ("C", "A"), ("G", "A")])
+    pc.separating_sets_ = {
+        frozenset({"A", "E"}): tuple(),
+        frozenset({"B", "F"}): tuple(),
+        frozenset({"C", "G"}): tuple(),
+    }
+    pdag = pc._orient_colliders()
+    assert pdag == PDAG(
+        edge_list=[
+            ("A", "B", "->"),
+            ("E", "B", "->"),
+            ("B", "C", "->"),
+            ("F", "C", "->"),
+            ("C", "A", "--"),
+            ("G", "A", "--"),
+        ]
+    )
 
 
 @pytest.mark.parametrize("variant", ["orig", "stable", "parallel"])
@@ -388,18 +407,44 @@ def test_search_space():
         ("Age", "Income"),
     ]
 
+    allowed_adjacencies = {frozenset(edge) for edge in search_space}
+
     expert_knowledge = ExpertKnowledge(search_space=search_space)
 
     est = PC(
         expert_knowledge=expert_knowledge,
-        enforce_expert_knowledge=True,
         show_progress=False,
     )
 
     est.fit(X=adult_data)
-    # assert if dag is a subset of search_space
-    for edge in est.causal_graph_.edges():
-        assert edge in search_space
+    # The learned adjacencies are restricted to the search space (no flag needed).
+    for u, v in est.causal_graph_.edges():
+        assert frozenset((u, v)) in allowed_adjacencies
+
+
+@pytest.mark.parametrize("required_edge", [("A", "B"), ("B", "A")])
+@pytest.mark.parametrize("variant", ["orig", "stable", "parallel"])
+def test_required_edge_enforced_against_independent_data(variant, required_edge):
+    # A, B, C are mutually independent, so PC would normally drop every edge.
+    rng = np.random.default_rng(42)
+    data = pd.DataFrame(
+        {
+            "A": rng.integers(0, 2, size=2000),
+            "B": rng.integers(0, 2, size=2000),
+            "C": rng.integers(0, 2, size=2000),
+        }
+    )
+    expert = ExpertKnowledge(required_edges=[required_edge])
+    est = PC(
+        variant=variant,
+        ci_test="chi_square",
+        expert_knowledge=expert,
+        n_jobs=1,
+        show_progress=False,
+    )
+    est.fit(X=data)
+    pdag = est.causal_graph_
+    assert required_edge in pdag.directed_edges
 
 
 @pytest.mark.parametrize("ci_test", ["pearsonr", "pillai", "gcm"])
@@ -490,14 +535,14 @@ def test_build_dag_continuous(ci_test, variant):
 
 def test_pc_alarm():
     alarm_model = load_model("bnlearn/alarm")
-    data = BayesianModelSampling(alarm_model).forward_sample(size=int(1e4), seed=42)
+    data = BayesianModelSampling(alarm_model).forward_sample(size=int(1e4), rng=42)
     est = PC(variant="stable", max_cond_vars=5, n_jobs=1, show_progress=False)
     est.fit(X=data)
 
 
-def test_pc_asia(caplog):
+def test_pc_asia():
     asia_model = load_model("bnlearn/asia")
-    data = asia_model.simulate(n_samples=int(1e5), seed=42)
+    data = asia_model.simulate(n_samples=int(1e5), rng=42)
     req_edges = [("xray", "either")]
     background = ExpertKnowledge(required_edges=req_edges)
     est = PC(
@@ -508,23 +553,13 @@ def test_pc_asia(caplog):
         show_progress=False,
     )
 
-    pgmpy_logger = logging.getLogger("pgmpy")
-    pgmpy_logger.addHandler(caplog.handler)
-    try:
-        with caplog.at_level("WARNING", logger="pgmpy"):
-            est.fit(X=data)
-    finally:
-        pgmpy_logger.removeHandler(caplog.handler)
-    expected_warning = (
-        "Specified expert knowledge conflicts with learned structure. Ignoring edge xray->either from required edges"
-    )
-
-    assert any(expected_warning in message for message in caplog.messages)
+    with pytest.warns(UserWarning, match="Required edge xray->either is absent or oppositely oriented"):
+        est.fit(X=data)
 
 
 def test_pc_asia_expert():
     asia_model = load_model("bnlearn/asia")
-    data = asia_model.simulate(n_samples=int(1e5), seed=42)
+    data = asia_model.simulate(n_samples=int(1e5), rng=42)
     est = PC(
         variant="stable",
         max_cond_vars=2,
@@ -550,7 +585,7 @@ def test_pc_asia_expert():
 
 def test_temporal_pc_cancer():
     cancer_model = load_model("bnlearn/cancer")
-    data = cancer_model.simulate(n_samples=int(5e4), seed=42)
+    data = cancer_model.simulate(n_samples=int(5e4), rng=42)
 
     background = ExpertKnowledge(  # e.g. we know only "Pollution", "Smoker", "Cancer" can be the causes of others
         temporal_order=[["Pollution", "Smoker", "Cancer"], ["Dyspnoea", "Xray"]],
@@ -564,11 +599,11 @@ def test_temporal_pc_cancer():
     )
     est.fit(X=data)
     pdag = est.causal_graph_
-    assert set(pdag.edges()) == {
-        ("Cancer", "Xray"),
-        ("Cancer", "Dyspnoea"),
-        ("Smoker", "Cancer"),
-        ("Pollution", "Cancer"),
+    assert set(pdag.get_edges(data=True)) == {
+        ("Cancer", "Xray", "->"),
+        ("Cancer", "Dyspnoea", "->"),
+        ("Smoker", "Cancer", "->"),
+        ("Pollution", "Cancer", "->"),
     }
 
 
@@ -621,82 +656,52 @@ def test_temporal_pc_sachs():
 
     expert = ExpertKnowledge(temporal_order=temporal_order)
     pdag = PC(ci_test="chi_square", expert_knowledge=expert).fit(X=df).causal_graph_
-    assert temporal_forbidden_edges.isdisjoint(set(pdag.edges()))
+    learned_edges = set()
+    for u, v, edge_type in pdag.get_edges(data=True):
+        learned_edges.add((u, v))
+        if edge_type == "--":
+            learned_edges.add((v, u))
+    assert temporal_forbidden_edges.isdisjoint(learned_edges)
 
 
-def _fake_ci_temporal(X, Y, Z=[], **kwargs):
-    Z = list(Z)
-    pair = frozenset((X, Y))
-    if pair == frozenset(("A", "B")) and sorted(Z) == ["C"]:
-        return True
-    return False
+@pytest.mark.parametrize(("separator", "edge_removed"), [("C", True), ("E", False)])
+def test_temporal_ordering_sepsets_and_skeleton(separator, edge_removed):
+    graph = UndirectedGraph([("A", "B"), ("A", "C"), ("A", "D"), ("A", "E"), ("B", "C"), ("B", "D"), ("B", "E")])
+    temporal_ordering = {"D": 0, "B": 1, "C": 2, "A": 3, "E": 4}
 
-
-def test_temporal_ordering_sepsets_and_skeleton():
-    graph = UndirectedGraph([("A", "B"), ("A", "C"), ("A", "D"), ("B", "C"), ("B", "D")])
-    temporal_ordering = {"A": 3, "B": 1, "C": 2, "D": 0}
-
-    result_ab = sorted(
-        PC._get_potential_sepsets(
-            u="A",
-            v="B",
-            temporal_ordering=temporal_ordering,
-            graph=graph,
-            lim_neighbors=1,
-        )
+    sepsets_ab = sorted(
+        PC._get_potential_sepsets(u="A", v="B", temporal_ordering=temporal_ordering, graph=graph, lim_neighbors=1)
     )
-    assert result_ab == [("D",)]
-
-    # Symmetry: swapping u and v gives the same separating sets.
-    result_ba = sorted(
-        PC._get_potential_sepsets(
-            u="B",
-            v="A",
-            temporal_ordering=temporal_ordering,
-            graph=graph,
-            lim_neighbors=1,
-        )
+    assert sepsets_ab == [("C",), ("D",)]
+    assert sepsets_ab == sorted(
+        PC._get_potential_sepsets(u="B", v="A", temporal_ordering=temporal_ordering, graph=graph, lim_neighbors=1)
     )
-    assert result_ab == result_ba
+    assert sorted(PC._get_potential_sepsets(u="A", v="B", temporal_ordering={}, graph=graph, lim_neighbors=1)) == [
+        ("C",),
+        ("D",),
+        ("E",),
+    ]
 
-    # Without temporal ordering, all neighbors are candidates: C and D, deduplicated across u/v sides.
-    result_no_temporal = sorted(
-        PC._get_potential_sepsets(
-            u="A",
-            v="B",
-            temporal_ordering={},
-            graph=graph,
-            lim_neighbors=1,
-        )
-    )
-    assert result_no_temporal == [("C",), ("D",)]
+    def fake_ci_test(X, Y, Z=(), **kwargs):
+        return frozenset((X, Y)) == frozenset(("A", "B")) and list(Z) == [separator]
 
-    np.random.seed(42)
-    data = pd.DataFrame(np.random.randint(0, 2, size=(100, 4)), columns=["A", "B", "C", "D"])
-    expert = ExpertKnowledge(temporal_order=[["D"], ["B"], ["C"], ["A"]])
-
-    skel, _ = PC(
-        variant="stable",
-        ci_test=_fake_ci_temporal,
-        expert_knowledge=expert,
-        show_progress=False,
-    )._build_skeleton(
+    data = pd.DataFrame(np.random.default_rng(42).integers(0, 2, size=(100, 5)), columns=["A", "B", "C", "D", "E"])
+    expert = ExpertKnowledge(temporal_order=[["D"], ["B"], ["C"], ["A"], ["E"]])
+    expert.fit(data)
+    skel, _ = PC(variant="stable", ci_test=fake_ci_test, expert_knowledge=expert, show_progress=False)._build_skeleton(
         data,
-        ci_test=_fake_ci_temporal,
+        ci_test=fake_ci_test,
         expert_knowledge=expert,
         variant="stable",
         show_progress=False,
     )
 
-    assert skel.has_edge("A", "B"), (
-        "Edge A-B was incorrectly removed: temporal ordering should have "
-        "filtered C from candidate separators (bug: min(u,u) instead of min(u,v))"
-    )
+    assert skel.has_edge("A", "B") != edge_removed
 
 
 def test_score():
     asia_model = load_model("bnlearn/asia")
-    data = asia_model.simulate(n_samples=int(1e4), seed=42)
+    data = asia_model.simulate(n_samples=int(1e4), rng=42)
     est = PC(
         return_type="dag",
         variant="stable",
@@ -759,7 +764,7 @@ def test_stable_variant_order_independence():
 @pytest.mark.parametrize("orient_rule", ["pvalue", "effect"])
 def test_orient_rule(orient_rule):
     cancer_model = load_model("bnlearn/cancer")
-    data = cancer_model.simulate(n_samples=int(5e4), seed=42)
+    data = cancer_model.simulate(n_samples=int(5e4), rng=42)
 
     est = PC(
         variant="stable",

@@ -1,11 +1,11 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Child(DiscreteMixin, _BaseExampleModel):
+class Child(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`spiegelhalter_cowell_1992`
+    - :footcite:t:`spiegelhalter_cowell_1992`
     """
 
     _tags = {

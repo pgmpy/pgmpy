@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Grounding(BIFMixin, _BaseExampleModel):
+class Grounding(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/grounding",
         "n_nodes": 36,

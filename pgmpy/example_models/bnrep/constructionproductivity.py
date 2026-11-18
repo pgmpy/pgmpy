@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Constructionproductivity(BIFMixin, _BaseExampleModel):
+class Constructionproductivity(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/constructionproductivity",
         "n_nodes": 18,

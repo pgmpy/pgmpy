@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Wheat(BIFMixin, _BaseExampleModel):
+class Wheat(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/wheat",
         "n_nodes": 5,

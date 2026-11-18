@@ -1,11 +1,11 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Hailfinder(DiscreteMixin, _BaseExampleModel):
+class Hailfinder(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`abramson_1996`
+    - :footcite:t:`abramson_1996`
     """
 
     _tags = {

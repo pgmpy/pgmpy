@@ -1,11 +1,11 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Sachs(DiscreteMixin, _BaseExampleModel):
+class Sachs(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`sachs_2005`
+    - :footcite:t:`sachs_2005`
     """
 
     _tags = {

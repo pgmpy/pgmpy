@@ -5,10 +5,10 @@ from sklearn.cross_decomposition import CCA
 
 from pgmpy.utils import preprocess_data
 
-from ._base import _BaseCITest, _CITestResult, _ResidualMixin
+from ._base import BaseCITest, _CITestResult, _ResidualMixin
 
 
-class RoysLargestRoot(_ResidualMixin, _BaseCITest):
+class RoysLargestRoot(_ResidualMixin, BaseCITest):
     r"""
     Roy's largest root CI test for mixed data [1].
 
@@ -65,21 +65,20 @@ class RoysLargestRoot(_ResidualMixin, _BaseCITest):
 
     References
     ----------
-    .. [1] Muller, K. E. and Peterson B. L. (1984) Practical Methods for computing power in
-           testing the multivariate general linear hypothesis. Computational Statistics &
-           Data Analysis.
+    - :footcite:t:`muller_peterson_1984`
     """
 
     _tags = {
         "name": "roys_largest_root",
-        "data_types": ("discrete", "continuous", "mixed"),
+        "data_types": ["discrete", "continuous", "mixed"],
         "default_for": None,
         "requires_data": True,
         "is_symmetric": False,
+        "capability:conditioning": True,
     }
 
     def __init__(self, data: pd.DataFrame, estimator=None, use_cache: bool = True):
-        self.data, self.dtypes = preprocess_data(data)
+        self.data, self.dtypes = preprocess_data(data, data_types=self.get_class_tag("data_types"))
         self.estimator = estimator
         super().__init__(use_cache=use_cache)
 

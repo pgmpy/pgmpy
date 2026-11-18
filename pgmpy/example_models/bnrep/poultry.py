@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Poultry(BIFMixin, _BaseExampleModel):
+class Poultry(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/poultry",
         "n_nodes": 47,

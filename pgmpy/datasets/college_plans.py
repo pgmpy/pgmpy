@@ -1,7 +1,7 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class CollegePlans(_BaseDataset):
+class CollegePlans(BaseDataset):
     _tags = {
         "name": "college_plans",
         "n_variables": 5,

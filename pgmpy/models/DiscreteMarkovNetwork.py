@@ -315,7 +315,7 @@ class DiscreteMarkovNetwork(UndirectedGraph):
 
         return factor_graph
 
-    def triangulate(self, heuristic="H6", order=None, inplace=False):
+    def triangulate(self, heuristic="MinFill", order=None, inplace=False):
         """
         Triangulate the graph.
 
@@ -323,24 +323,35 @@ class DiscreteMarkovNetwork(UndirectedGraph):
 
         Parameters
         ----------
-        heuristic: H1 | H2 | H3 | H4 | H5 | H6
-            The heuristic algorithm to use to decide the deletion order of
-            the variables to compute the triangulated graph.
-            Let X be the set of variables and X(i) denotes the i-th variable.
+        heuristic: str (default: "MinFill")
+            The greedy heuristic used to decide the deletion (elimination) order of the
+            variables: at every step the variable with the smallest cost in the current,
+            partially eliminated graph is deleted, its neighbours are connected (fill-in
+            edges) and the costs are recomputed. Let X(i) denote a variable and, in the
+            current graph,
 
-            * S(i) - The size of the clique created by deleting the variable.
+            * S(i) - The size (product of the cardinalities) of the clique created by
+              deleting X(i), i.e. of its neighbours.
             * E(i) - Cardinality of variable X(i).
-            * M(i) - Maximum size of cliques given by X(i) and its adjacent nodes.
-            * C(i) - Sum of size of cliques given by X(i) and its adjacent nodes.
+            * M(i) - Maximum size of the cliques containing X(i).
+            * C(i) - Sum of the sizes of the cliques containing X(i).
 
-            The heuristic algorithm decide the deletion order if this way:
+            The available heuristics are:
 
+            * MinFill (default) - Delete the variable adding the fewest fill-in edges.
+            * WeightedMinFill - Delete the variable whose fill-in edges have the smallest
+              total weight, the weight of an edge being the product of the cardinalities
+              of its endpoints.
+            * MinNeighbors - Delete the variable with the fewest neighbours.
+            * MinWeight - Delete the variable with minimal S(i).
             * H1 - Delete the variable with minimal S(i).
             * H2 - Delete the variable with minimal S(i)/E(i).
             * H3 - Delete the variable with minimal S(i) - M(i).
             * H4 - Delete the variable with minimal S(i) - C(i).
             * H5 - Delete the variable with minimal S(i)/M(i).
             * H6 - Delete the variable with minimal S(i)/C(i).
+
+            Ties are broken by the order of the nodes in the graph.
 
         order: list, tuple (array-like)
             The order of deletion of the variables to compute the triagulated
@@ -378,6 +389,9 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         >>> G.add_factors(*phi)
         >>> G_chordal = G.triangulate()
         """
+        from pgmpy.inference.EliminationOrder import ELIMINATION_HEURISTICS
+
+        # Step 1: Check the model; a chordal graph needs no fill-in edges.
         self.check_model()
 
         if self.is_triangulated():
@@ -386,118 +400,27 @@ class DiscreteMarkovNetwork(UndirectedGraph):
             else:
                 return self
 
-        graph_copy = nx.Graph(self.edges())
+        # Step 2: Get the elimination order, either from the greedy heuristic or as given.
+        if order is None:
+            if heuristic.lower() not in ELIMINATION_HEURISTICS:
+                raise ValueError(f"heuristic must be one of {sorted(ELIMINATION_HEURISTICS)}; got {heuristic!r}")
+            order = ELIMINATION_HEURISTICS[heuristic.lower()](self).get_elimination_order(show_progress=False)
+        elif len(order) != len(set(order)) or set(order) != set(self.nodes()):
+            raise ValueError("order must contain every node of the model exactly once.")
+
+        # Step 3: Eliminate the nodes in that order on a working copy, collecting the fill-in edges.
+        graph_copy = nx.Graph()
+        graph_copy.add_nodes_from(self.nodes())
+        graph_copy.add_edges_from(self.edges())
         edge_set = set()
-
-        def _find_common_cliques(cliques_list):
-            """
-            Finds the common cliques among the given set of cliques for
-            corresponding node.
-            """
-            common = {tuple(x) for x in cliques_list[0]}
-            for i in range(1, len(cliques_list)):
-                common = common & {tuple(x) for x in cliques_list[i]}
-            return list(common)
-
-        def _find_size_of_clique(clique, cardinalities):
-            """
-            Computes the size of a clique.
-
-            Size of a clique is defined as product of cardinalities of all the
-            nodes present in the clique.
-            """
-            return list(map(lambda x: np.prod([cardinalities[node] for node in x]), clique))
-
-        def _get_cliques_dict(node):
-            """
-            Returns a dictionary in the form of {node: cliques_formed} of the
-            node along with its neighboring nodes.
-
-            clique_dict_removed would be containing the cliques created
-            after deletion of the node
-            clique_dict_node would be containing the cliques created before
-            deletion of the node
-            """
-            graph_working_copy = nx.Graph(graph_copy.edges())
-            neighbors = list(graph_working_copy.neighbors(node))
-            graph_working_copy.add_edges_from(itertools.combinations(neighbors, 2))
-
-            clique_dict = {var: [] for var in [node] + neighbors}
-            max_cliques = list(nx.find_cliques(graph_working_copy))
-            for var in [node] + neighbors:
-                for clique in max_cliques:
-                    if var in clique:
-                        clique_dict[var].append(clique)
-
-            graph_working_copy.remove_node(node)
-
-            clique_dict_removed = {var: [] for var in neighbors}
-            max_cliques = list(nx.find_cliques(graph_working_copy))
-            for var in neighbors:
-                for clique in max_cliques:
-                    if var in clique:
-                        clique_dict_removed[var].append(clique)
-
-            return clique_dict, clique_dict_removed
-
-        if not order:
-            order = []
-
-            cardinalities = self.get_cardinality()
-            for index in range(self.number_of_nodes()):
-                # S represents the size of clique created by deleting the
-                # node from the graph
-                S = {}
-                # M represents the size of maximum size of cliques given by
-                # the node and its adjacent node
-                M = {}
-                # C represents the sum of size of the cliques created by the
-                # node and its adjacent node
-                C = {}
-                for node in set(graph_copy.nodes()) - set(order):
-                    clique_dict, clique_dict_removed = _get_cliques_dict(node)
-                    S[node] = _find_size_of_clique(
-                        _find_common_cliques(list(clique_dict_removed.values())),
-                        cardinalities,
-                    )[0]
-                    common_clique_size = _find_size_of_clique(
-                        _find_common_cliques(list(clique_dict.values())), cardinalities
-                    )
-                    M[node] = np.max(common_clique_size)
-                    C[node] = np.sum(common_clique_size)
-
-                if heuristic == "H1":
-                    node_to_delete = min(S, key=S.get)
-
-                elif heuristic == "H2":
-                    S_by_E = {key: S[key] / cardinalities[key] for key in S}
-                    node_to_delete = min(S_by_E, key=S_by_E.get)
-
-                elif heuristic == "H3":
-                    S_minus_M = {key: S[key] - M[key] for key in S}
-                    node_to_delete = min(S_minus_M, key=S_minus_M.get)
-
-                elif heuristic == "H4":
-                    S_minus_C = {key: S[key] - C[key] for key in S}
-                    node_to_delete = min(S_minus_C, key=S_minus_C.get)
-
-                elif heuristic == "H5":
-                    S_by_M = {key: S[key] / M[key] for key in S}
-                    node_to_delete = min(S_by_M, key=S_by_M.get)
-
-                else:
-                    S_by_C = {key: S[key] / C[key] for key in S}
-                    node_to_delete = min(S_by_C, key=S_by_C.get)
-
-                order.append(node_to_delete)
-
-        graph_copy = nx.Graph(self.edges())
         for node in order:
-            for edge in itertools.combinations(graph_copy.neighbors(node), 2):
-                graph_copy.add_edge(edge[0], edge[1])
-                edge_set.add(edge)
+            for u, v in itertools.combinations(graph_copy.neighbors(node), 2):
+                if not graph_copy.has_edge(u, v):
+                    graph_copy.add_edge(u, v)
+                    edge_set.add((u, v))
             graph_copy.remove_node(node)
 
+        # Step 4: Add the fill-in edges to the model itself or to a new one.
         if inplace:
             for edge in edge_set:
                 self.add_edge(edge[0], edge[1])
@@ -505,11 +428,12 @@ class DiscreteMarkovNetwork(UndirectedGraph):
 
         else:
             graph_copy = DiscreteMarkovNetwork(self.edges())
+            graph_copy.add_nodes_from(self.nodes())
             for edge in edge_set:
                 graph_copy.add_edge(edge[0], edge[1])
             return graph_copy
 
-    def to_junction_tree(self):
+    def to_junction_tree(self, heuristic="MinFill", order=None):
         """
         Creates a junction tree (or clique tree) for a given markov model.
 
@@ -517,6 +441,15 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         1. where each node in G corresponds to a maximal clique in H
         2. each sepset in G separates the variables strictly on one side of the
         edge to other.
+
+        Parameters
+        ----------
+        heuristic: str (default: "MinFill")
+            The heuristic used to triangulate the model; see `triangulate`.
+
+        order: list, tuple (array-like) (default: None)
+            The elimination order used to triangulate the model; if given the
+            heuristic is not used. See `triangulate`.
 
         Examples
         --------
@@ -544,76 +477,58 @@ class DiscreteMarkovNetwork(UndirectedGraph):
         """
         from pgmpy.models import JunctionTree
 
-        # Get all the state names of the random variables
+        # Step 1: Check the model and collect the state names and cardinalities of the variables.
+        self.check_model()
         all_state_names = {}
         for factor in self.factors:
             all_state_names.update(factor.state_names)
+        cardinalities = self.get_cardinality()
 
-        # Check whether the model is valid or not
-        self.check_model()
-
-        # Triangulate the graph to make it chordal
-        triangulated_graph = self.triangulate()
-
-        # Find maximal cliques in the chordal graph
+        # Step 2: Triangulate the graph and find the maximal cliques of the chordal graph.
+        triangulated_graph = self.triangulate(heuristic=heuristic, order=order)
         cliques = list(map(tuple, nx.find_cliques(triangulated_graph)))
 
-        # If there is only 1 clique, then the junction tree formed is just a
-        # clique tree with that single clique as the node
+        # Step 3: Build the tree: a single clique is the whole tree; otherwise take a maximum spanning tree of
+        #         the clique graph (cliques sharing variables, weighted by the size of their sepset).
         if len(cliques) == 1:
             clique_trees = JunctionTree()
             clique_trees.add_node(cliques[0])
+        else:
+            clique_graph = nx.Graph()
+            clique_graph.add_nodes_from(cliques)
+            for clique1, clique2 in itertools.combinations(cliques, 2):
+                sepset_size = len(set(clique1).intersection(clique2))
+                if sepset_size:
+                    clique_graph.add_edge(clique1, clique2, weight=sepset_size)
+            if not nx.is_connected(clique_graph):
+                raise ValueError(
+                    "The model is not connected, so it has no junction tree. Build one for each connected component."
+                )
+            clique_trees = JunctionTree(nx.maximum_spanning_tree(clique_graph).edges())
 
-        # Else if the number of cliques is more than 1 then create a complete
-        # graph with all the cliques as nodes and weight of the edges being
-        # the length of sepset between two cliques
-        elif len(cliques) >= 2:
-            complete_graph = UndirectedGraph()
-            edges = list(itertools.combinations(cliques, 2))
-            weights = list(map(lambda x: len(set(x[0]).intersection(set(x[1]))), edges))
-            for edge, weight in zip(edges, weights):
-                complete_graph.add_edge(*edge, weight=-weight)
-
-            # Create clique trees by minimum (or maximum) spanning tree method
-            clique_trees = JunctionTree(nx.minimum_spanning_tree(complete_graph).edges())
-
-        # Check whether the factors are defined for all the random variables or not
-        all_vars = itertools.chain(*[factor.scope() for factor in self.factors])
-        if set(all_vars) != set(self.nodes()):
-            ValueError("DiscreteFactor for all the random variables not specified")
-
-        # Dictionary stating whether the factor is used to create clique
-        # potential or not
-        # If false, then it is not used to create any clique potential
-        is_used = dict.fromkeys(self.factors, False)
-
+        # Step 4: Assign the clique potentials: a unity factor over the clique multiplied by every factor whose
+        #         scope it contains and which has not been assigned to an earlier clique.
+        is_used = [False] * len(self.factors)
         for node in clique_trees.nodes():
             clique_factors = []
-            for factor in self.factors:
-                # If the factor is not used in creating any clique potential as
-                # well as has any variable of the given clique in its scope,
-                # then use it in creating clique potential
-                if not is_used[factor] and set(factor.scope()).issubset(node):
+            for index, factor in enumerate(self.factors):
+                if not is_used[index] and set(factor.scope()).issubset(node):
                     clique_factors.append(factor)
-                    is_used[factor] = True
+                    is_used[index] = True
 
-            # To compute clique potential, initially set it as unity factor
-            var_card = [self.get_cardinality()[x] for x in node]
+            var_card = [cardinalities[x] for x in node]
             clique_potential = DiscreteFactor(
                 node,
                 var_card,
                 np.ones(np.prod(var_card)),
-                state_names={var: all_state_names.get(var, list(range(self.get_cardinality()[var]))) for var in node},
+                state_names={var: all_state_names.get(var, list(range(cardinalities[var]))) for var in node},
             )
-            # multiply it with the factors associated with the variables present
-            # in the clique (or node)
-            # Checking if there's clique_factors, to handle the case when clique_factors
-            # is empty, otherwise factor_product with throw an error [ref #889]
             if clique_factors:
                 clique_potential *= factor_product(*clique_factors)
             clique_trees.add_factors(clique_potential)
 
-        if not all(is_used.values()):
+        # Step 5: Every factor must have been assigned to some clique.
+        if not all(is_used):
             raise ValueError("All the factors were not used to create Junction Tree.Extra factors are defined.")
 
         return clique_trees

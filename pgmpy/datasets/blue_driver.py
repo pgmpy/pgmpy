@@ -1,11 +1,11 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class BlueDriver(_BaseDataset):
+class BlueDriver(BaseDataset):
     """
     References
     ----------
-    - :cite:p:`uci_adult`
+    - :footcite:t:`uci_adult`
     """
 
     _tags = {

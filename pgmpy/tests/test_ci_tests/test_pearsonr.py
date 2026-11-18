@@ -80,7 +80,7 @@ def residual_data():
     cpd_x = LinearGaussianCPD("X", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
     cpd_y_indep = LinearGaussianCPD("Y", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
     model_indep.add_cpds(cpd_z1, cpd_z2, cpd_z3, cpd_x, cpd_y_indep)
-    df_indep = model_indep.simulate(n_samples=1000, seed=42)
+    df_indep = model_indep.simulate(n_samples=1000, rng=42)
 
     model_dep = LinearGaussianBayesianNetwork(
         [
@@ -95,7 +95,7 @@ def residual_data():
     )
     cpd_y_dep = LinearGaussianCPD("Y", [0, 0.5, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3", "X"])
     model_dep.add_cpds(cpd_z1, cpd_z2, cpd_z3, cpd_x, cpd_y_dep)
-    df_dep = model_dep.simulate(n_samples=1000, seed=42)
+    df_dep = model_dep.simulate(n_samples=1000, rng=42)
 
     return df_indep, df_dep
 
@@ -108,12 +108,12 @@ def test_pearsonr_residual(residual_data):
     df_indep, df_dep = residual_data
     test = Pearsonr(data=df_indep)
     test("X", "Y", ["Z1", "Z2", "Z3"])
-    assert round(test.statistic_, 3) == pytest.approx(-0.056, abs=1e-2)
-    assert round(test.p_value_, 3) == pytest.approx(0.044, abs=1e-2)
+    assert round(test.statistic_, 3) == pytest.approx(0.037, abs=1e-2)
+    assert round(test.p_value_, 3) == pytest.approx(0.238, abs=1e-2)
 
     test = Pearsonr(data=df_dep)
     test("X", "Y", ["Z1", "Z2", "Z3"])
-    assert round(test.statistic_, 3) == pytest.approx(0.406, abs=1e-2)
+    assert round(test.statistic_, 3) == pytest.approx(0.489, abs=1e-2)
     assert round(test.p_value_, 2) == pytest.approx(0.0, abs=1e-2)
 
 

@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Vessel1(BIFMixin, _BaseExampleModel):
+class Vessel1(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/vessel1",
         "n_nodes": 16,

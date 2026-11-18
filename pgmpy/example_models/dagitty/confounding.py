@@ -1,11 +1,11 @@
-from .._base import DAGMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DAGMixin
 
 
-class Confounding(DAGMixin, _BaseExampleModel):
+class Confounding(DAGMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`acid_decampos_1996`
+    - :footcite:t:`acid_decampos_1996`
     """
 
     _tags = {

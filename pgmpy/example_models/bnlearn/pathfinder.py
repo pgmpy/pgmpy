@@ -1,11 +1,11 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Pathfinder(DiscreteMixin, _BaseExampleModel):
+class Pathfinder(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`heckerman_1992`
+    - :footcite:t:`heckerman_1992`
     """
 
     _tags = {

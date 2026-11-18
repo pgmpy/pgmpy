@@ -1,7 +1,7 @@
-from .._base import BIFMixin, _BaseExampleModel
+from .._base import BaseExampleModel, BIFMixin
 
 
-class Catchment(BIFMixin, _BaseExampleModel):
+class Catchment(BIFMixin, BaseExampleModel):
     _tags = {
         "name": "bnrep/catchment",
         "n_nodes": 19,

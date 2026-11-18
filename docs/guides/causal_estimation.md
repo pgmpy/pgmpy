@@ -1,7 +1,8 @@
 # Causal Estimation
 
-```{meta}
-:description: Estimate causal effects from graphs and data using pgmpy's causal inference and prediction APIs.
+```{eval-rst}
+.. meta::
+   :description: Estimate causal effects from graphs and data using pgmpy's causal inference and prediction APIs.
 ```
 
 Causal estimation turns an identified causal query into a numerical effect. Once you know

@@ -1,11 +1,11 @@
-from .._base import DiscreteMixin, _BaseExampleModel
+from .._base import BaseExampleModel, DiscreteMixin
 
 
-class Pigs(DiscreteMixin, _BaseExampleModel):
+class Pigs(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`bnlearn_pigs`
+    - :footcite:t:`bnlearn_pigs`
     """
 
     _tags = {

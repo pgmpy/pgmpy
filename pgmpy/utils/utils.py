@@ -1,5 +1,4 @@
 import gzip
-import warnings
 
 import pandas as pd
 
@@ -9,7 +8,7 @@ except ImportError:
     # For python 3.8 and lower
     from importlib_resources import files
 
-from pgmpy import logger
+from pgmpy.utils._warnings import _warn_external
 
 
 def get_example_model(model: str):
@@ -39,8 +38,8 @@ def get_example_model(model: str):
     Example
     -------
     >>> from pgmpy.utils import get_example_model
-    >>> model = get_example_model(model="asia")
-    >>> model
+    >>> model = get_example_model(model="asia")  # doctest: +SKIP
+    >>> model  # doctest: +SKIP
 
     Returns
     -------
@@ -48,11 +47,10 @@ def get_example_model(model: str):
       one of the model classes in pgmpy.models
                            depending on the type of dataset.
     """
-    warnings.warn(
-        """`get_example_model` is deprecated and will be removed in v1.3.0. Please use `pgmpy.example_models.load_model`
-        instead.""",
+    _warn_external(
+        "`get_example_model` is deprecated since v1.1.0 and will be removed in v2.0. "
+        "Use `pgmpy.example_models.load_model` instead.",
         FutureWarning,
-        stacklevel=2,
     )
     cat_models = {
         "asia",
@@ -170,7 +168,7 @@ def get_example_model(model: str):
             with gzip.open(ref) as f:
                 content = f.read()
             reader = BIFReader(string=content.decode("utf-8"))
-            return reader.get_model()
+            return reader.read()
 
     elif model in cont_models:
         from pgmpy.models import LinearGaussianBayesianNetwork
@@ -232,7 +230,7 @@ def discretize(data, cardinality, labels=dict(), method="rounding"):
     ...     },
     ... )
     >>> df_disc.head()
-        X    Y    Z
+          X    Y    Z
     0   mid  mid  mid
     1   mid  mid  low
     2   mid  mid  mid
@@ -257,81 +255,6 @@ def discretize(data, cardinality, labels=dict(), method="rounding"):
             df_copy[column] = pd.qcut(df_copy[column], q=cardinality[column], labels=labels.get(column))
 
     return df_copy
-
-
-def llm_pairwise_orient(
-    x,
-    y,
-    descriptions,
-    system_prompt=None,
-    llm_model="gemini/gemini-1.5-flash",
-    **kwargs,
-):
-    """
-    Asks a Large Language Model (LLM) for the
-     orientation of an edge between `x` and `y`.
-
-    Parameters
-    ----------
-    x: str
-        The first variable's name
-
-    y: str
-        The second variable's name
-
-    descriptions: dict
-        A dict of the form {variable: description}
-          containing text description of the variables.
-
-    system_prompt: str
-        A system prompt to give the LLM.
-
-    llm_model: str (default: gemini/gemini-pro)
-        The LLM model to use. Please refer to litellm
-          documentation (https://docs.litellm.ai/docs/providers)
-        for available model options. Default is gemini-pro.
-
-    kwargs: kwargs
-        Any additional parameters to pass to litellm.completion method.
-
-    Returns
-    -------
-    tuple:
-        Returns a tuple (source, target) representing the edge direction.
-    """
-    try:
-        from litellm import completion
-    except ImportError as e:
-        raise ImportError(
-            f"{e}. litellm is required for using"
-            " LLM based pairwise orientation. "
-            "Please install using: pip install litellm"
-        ) from None
-
-    if system_prompt is None:
-        system_prompt = "You are an expert in Causal Inference"
-
-    prompt = f""" {system_prompt}. You are
-      given two variables with the following descriptions:
-        <A>: {descriptions[x]}
-        <B>: {descriptions[y]}
-
-        Which of the following two options is the most likely causal direction between them:
-        1. <A> causes <B>
-        2. <B> causes <A>
-
-        Return a single number (1 or 2) as your answer. I do not need the reasoning behind it.
-        Do not add any formatting in the answer.
-        """
-    response = completion(model=llm_model, messages=[{"role": "user", "content": prompt}])
-    response = response.choices[0].message.content
-    response_txt = response.strip().lower().replace("*", "")
-    if response_txt in ("a", "1"):
-        return (x, y)
-    elif response_txt in ("b", "2"):
-        return (y, x)
-    else:
-        raise ValueError("Results from the LLM are unclear. Try calling the function again.")
 
 
 def manual_pairwise_orient(x, y):
@@ -363,97 +286,6 @@ def manual_pairwise_orient(x, y):
         return (y, x)
     elif user_input == "3":
         return None
-
-
-def preprocess_data(df):
-    """
-    Tries to figure out the data type of each variable `df`.
-
-    Assigns one of (numerical, categorical unordered, categorical ordered) datatypes to each column in `df`. Also
-    changes any object datatypes to categorical.
-
-    Parameters
-    ----------
-    df: pd.DataFrame
-        A pandas dataframe.
-
-    Returns
-    -------
-    (pd.DataFrame, dtypes): tuple of transformed dataframe and a dictionary with inferred datatype of each column.
-    """
-    df = df.copy()
-    dtypes = {}
-    for col in df.columns:
-        if pd.api.types.is_integer_dtype(df[col]):
-            df[col] = df[col].astype("int")
-            dtypes[col] = "N"
-        elif pd.api.types.is_numeric_dtype(df[col]):
-            dtypes[col] = "N"
-        elif pd.api.types.is_object_dtype(df[col]) or pd.api.types.is_string_dtype(df[col]):
-            dtypes[col] = "C"
-            df[col] = df[col].astype("category")
-        elif isinstance(df[col].dtype, pd.CategoricalDtype):
-            if df[col].dtype.ordered:
-                dtypes[col] = "O"
-            else:
-                dtypes[col] = "C"
-        else:
-            raise ValueError(
-                f"Couldn't infer datatype of column: {col} from data. "
-                "Try specifying the appropriate datatype to the column."
-            )
-
-    logger.info(
-        f" Datatype (N=numerical, C=Categorical Unordered,O=Categorical Ordered)inferred from data: \n {dtypes}"
-    )
-    return (df, dtypes)
-
-
-def _heuristic_categorical_detection(df, dtypes):
-    """
-    Creates a warning if numerical values are detected for a categorical variable.
-    """
-    # credit: https://stackoverflow.com/a/35827646
-    potential_categorical = []
-    for var in df.columns:
-        if dtypes[var] == "N":
-            if 1.0 * df[var].nunique() / df[var].count() < 0.1:
-                potential_categorical.append(var)
-    if len(potential_categorical) > 0:
-        logger.warning(
-            f"Variables: {potential_categorical} are likely categorical, but using numerical values. Please set the"
-            " dtype as `categorical` in pandas dataframe if that's the case, otherwise ignore this warning."
-        )
-
-
-def get_dataset_type(data: pd.DataFrame) -> str:
-    """
-    Returns continuous, discrete or mixed depending on the type of variable
-    data in the given dataset.
-
-    Parameters
-    ----------
-    data : pd.DataFrame
-        DataFrame to analyze
-
-    Returns
-    -------
-    str
-        `continuous`, `discrete` or `mixed`.
-    """
-
-    df, dtypes = preprocess_data(data)
-    dtypes_set = set(dtypes.values())
-
-    if "N" in dtypes_set:
-        _heuristic_categorical_detection(df, dtypes)
-
-    if len(dtypes_set) == 1:
-        if "N" in dtypes_set:
-            return "continuous"
-        elif "C" in dtypes_set:
-            return "discrete"
-    return "mixed"
 
 
 def to_timeseries_format(df: pd.DataFrame, return_format: str = "pd-multiindex"):
@@ -515,11 +347,12 @@ def to_timeseries_format(df: pd.DataFrame, return_format: str = "pd-multiindex")
     array([[[1, 0, 0],
             [1, 0, 0],
             [0, 1, 0]],
-            [[0, 1, 1],
+    <BLANKLINE>
+           [[0, 1, 1],
             [2, 1, 1],
             [0, 1, 1]]])
 
-    >>> to_timeseries_format(df, return_format="pd-multiindex")
+    >>> to_timeseries_format(df, return_format="pd-multiindex")  # doctest: +NORMALIZE_WHITESPACE
     variable       D  G  I
     instance time
     0        0     1  1  0
@@ -529,7 +362,7 @@ def to_timeseries_format(df: pd.DataFrame, return_format: str = "pd-multiindex")
              1     1  1  1
              2     1  1  1
 
-    >>> to_timeseries_format(df, return_format="pd-list")
+    >>> to_timeseries_format(df, return_format="pd-list")  # doctest: +SKIP
     [variable  D  G  I
      time
      0         1  1  0
@@ -541,7 +374,7 @@ def to_timeseries_format(df: pd.DataFrame, return_format: str = "pd-multiindex")
      1         1  1  1
      2         1  1  1]
 
-    >>> to_timeseries_format(df, return_format="sorted")
+    >>> to_timeseries_format(df, return_format="sorted")  # doctest: +NORMALIZE_WHITESPACE
     variable D     G     I
     time     0 1 2 0 1 2 0 1 2
     0        1 0 0 1 0 0 0 1 0

@@ -1,11 +1,11 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class SouthGermanCredit(_BaseDataset):
+class SouthGermanCredit(BaseDataset):
     """
     References
     ----------
-    - :cite:p:`mendhe_2024`
+    - :footcite:t:`mendhe_2024`
     """
 
     _tags = {

@@ -1,10 +1,10 @@
-from pgmpy.datasets._base import _BaseDataset
+from pgmpy.datasets._base import BaseDataset
 
 
-class SachsMixed(_BaseDataset):
+class SachsMixed(BaseDataset):
     _tags = {
         "name": "sachs_mixed",
-        "n_variables": 20,
+        "n_variables": 11,
         "n_samples": 7466,
         "has_ground_truth": True,
         "has_expert_knowledge": True,
@@ -13,8 +13,8 @@ class SachsMixed(_BaseDataset):
         "is_simulated": False,
         "is_interventional": True,
         "is_discrete": False,
-        "is_continuous": False,
-        "is_mixed": True,
+        "is_continuous": True,
+        "is_mixed": False,
         "is_ordinal": False,
     }
 
@@ -24,6 +24,17 @@ class SachsMixed(_BaseDataset):
     ground_truth_url = "ground.truth/sachs.2005.ground.truth.graph.txt"
     expert_knowledge_url = "ground.truth/sachs.2005.knowledge.txt"
 
+    intervention_columns = [
+        "cd3_cd28",
+        "icam2",
+        "aktinhib",
+        "g0076",
+        "psitect",
+        "u0126",
+        "ly",
+        "pma",
+        "b2camp",
+    ]
     categorical_variables = [
         "cd3_cd28",
         "icam2",
@@ -38,7 +49,7 @@ class SachsMixed(_BaseDataset):
     ordinal_variables = dict()
 
 
-class SachsContinuous(_BaseDataset):
+class SachsContinuous(BaseDataset):
     _tags = {
         "name": "sachs_continuous",
         "n_variables": 11,
@@ -65,7 +76,7 @@ class SachsContinuous(_BaseDataset):
     ordinal_variables = dict()
 
 
-class SachsDiscrete(_BaseDataset):
+class SachsDiscrete(BaseDataset):
     _tags = {
         "name": "sachs_discrete",
         "n_variables": 11,
@@ -104,7 +115,7 @@ class SachsDiscrete(_BaseDataset):
     ordinal_variables = dict()
 
 
-class SachsContinuousLogScale(_BaseDataset):
+class SachsContinuousLogScale(BaseDataset):
     _tags = {
         "name": "sachs_continuous_logscale",
         "n_variables": 11,
@@ -131,10 +142,10 @@ class SachsContinuousLogScale(_BaseDataset):
     ordinal_variables = dict()
 
 
-class SachsContinuousJitteredLogScale(_BaseDataset):
+class SachsContinuousJitteredLogScale(BaseDataset):
     _tags = {
         "name": "sachs_continuous_jittered_logscale",
-        "n_variables": 20,
+        "n_variables": 11,
         "n_samples": 7466,
         "has_ground_truth": True,
         "has_expert_knowledge": True,
@@ -154,14 +165,25 @@ class SachsContinuousJitteredLogScale(_BaseDataset):
     ground_truth_url = "ground.truth/sachs.2005.ground.truth.graph.txt"
     expert_knowledge_url = "ground.truth/sachs.2005.knowledge.txt"
 
+    intervention_columns = [
+        "cd3_cd28",
+        "icam2",
+        "aktinhib",
+        "g0076",
+        "psitect",
+        "u0126",
+        "ly",
+        "pma",
+        "b2camp",
+    ]
     categorical_variables = []
     ordinal_variables = dict()
 
 
-class SachsContinuousJittered(_BaseDataset):
+class SachsContinuousJittered(BaseDataset):
     _tags = {
         "name": "sachs_continuous_jittered",
-        "n_variables": 20,
+        "n_variables": 11,
         "n_samples": 7466,
         "has_ground_truth": True,
         "has_expert_knowledge": True,
@@ -181,5 +203,16 @@ class SachsContinuousJittered(_BaseDataset):
     ground_truth_url = "ground.truth/sachs.2005.ground.truth.graph.txt"
     expert_knowledge_url = "ground.truth/sachs.2005.knowledge.txt"
 
+    intervention_columns = [
+        "cd3_cd28",
+        "icam2",
+        "aktinhib",
+        "g0076",
+        "psitect",
+        "u0126",
+        "ly",
+        "pma",
+        "b2camp",
+    ]
     categorical_variables = []
     ordinal_variables = dict()

@@ -111,7 +111,7 @@ def gaussian_data():
 def test_insert_orients_t_away_from_v():
     est = GES(pd.DataFrame({"A": [0, 1], "B": [0, 1], "C": [0, 1]}), use_cache=False)
 
-    pdag = PDAG(undirected_ebunch=[("B", "C")])
+    pdag = PDAG(edge_list=[("B", "C", "--")])
     pdag.add_nodes_from(["A", "B", "C"])
 
     new_model = est.insert("A", "B", {"C"}, pdag)
@@ -123,7 +123,7 @@ def test_insert_orients_t_away_from_v():
 def test_legal_edge_deletions_include_both_orders_for_undirected_edges():
     est = GES(pd.DataFrame({"A": [0, 1], "B": [0, 1]}), use_cache=False)
 
-    pdag = PDAG(undirected_ebunch=[("A", "B")])
+    pdag = PDAG(edge_list=[("A", "B", "--")])
     pdag.add_nodes_from(["A", "B"])
 
     assert set(est._legal_edge_deletions(pdag)) == {("A", "B"), ("B", "A")}
@@ -131,12 +131,19 @@ def test_legal_edge_deletions_include_both_orders_for_undirected_edges():
 
 def test_cancer_model():
     cancer_model = load_model("bnlearn/cancer")
-    data = cancer_model.simulate(3000, seed=0)
+    data = cancer_model.simulate(5000, rng=0)
 
     est = GES(data)
     dag = est.estimate()
 
-    assert set(cancer_model.edges) <= set(dag.edges)
+    # `estimate` returns a CPDAG; a true directed edge may be recovered as a directed or an
+    # undirected edge, so treat an undirected edge as present in both orders.
+    learned_edges = set()
+    for u, v, edge_type in dag.get_edges(data=True):
+        learned_edges.add((u, v))
+        if edge_type == "--":
+            learned_edges.add((v, u))
+    assert set(cancer_model.edges) <= learned_edges
 
 
 def test_estimate_gaussian(gaussian_data):

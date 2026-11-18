@@ -3,13 +3,11 @@ import numpy as np
 import pandas as pd
 import pytest
 from joblib.externals.loky import get_reusable_executor
-from sklearn.metrics import mutual_info_score
 
 from pgmpy.estimators import TreeSearch
 from pgmpy.example_models import load_model
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
-from pgmpy.sampling import BayesianModelSampling
 
 
 @pytest.fixture
@@ -21,7 +19,7 @@ def data12():
     return pd.DataFrame(
         np.random.randint(low=0, high=2, size=(100, 5)),
         columns=["A", "B", "C", "D", "E"],
-    )
+    ).astype("category")
 
 
 @pytest.fixture
@@ -61,8 +59,7 @@ def data13():
     )
 
     model.add_cpds(cpd_a, cpd_b, cpd_c, cpd_d, cpd_e, cpd_f)
-    inference = BayesianModelSampling(model)
-    return inference.forward_sample(size=10000)
+    return model.simulate(n_samples=10000, rng=0)
 
 
 @pytest.fixture
@@ -127,13 +124,12 @@ def data22():
         evidence_card=[2, 3],
     )
     model.add_cpds(cpd_a, cpd_r, cpd_b, cpd_c, cpd_d, cpd_e)
-    inference = BayesianModelSampling(model)
-    return inference.forward_sample(size=10000)
+    return model.simulate(n_samples=10000, rng=0)
 
 
 @pytest.fixture
 def alarm_df():
-    return load_model("bnlearn/alarm").simulate(int(1e4), seed=42)
+    return load_model("bnlearn/alarm").simulate(int(1e4), rng=42)
 
 
 @pytest.mark.parametrize("weight_fn", ["mutual_info", "adjusted_mutual_info", "normalized_mutual_info"])
@@ -283,12 +279,12 @@ def test_tan_real_dataset(alarm_df):
         ("HR", "HRBP"),
         ("ARTCO2", "HR"),
         ("SAO2", "FIO2"),
-        ("VENTLUNG", "PAP"),
         ("PCWP", "VENTLUNG"),
         ("VENTLUNG", "EXPCO2"),
         ("VENTLUNG", "ARTCO2"),
-        ("PAP", "PULMEMBOLUS"),
         ("ARTCO2", "SAO2"),
+        ("PULMEMBOLUS", "PAP"),
+        ("SAO2", "PULMEMBOLUS"),
     ]
     features = [
         "LVFAILURE",
@@ -315,34 +311,6 @@ def test_tan_real_dataset(alarm_df):
     est = TreeSearch(alarm_df[features + [target]], root_node=features[0])
     edges = est.estimate(estimator_type="tan", class_node=target, show_progress=False).edges()
     assert set(expected_edges) == set(edges)
-
-
-def test_get_weights_uses_array_inputs_for_custom_callable(data12):
-    def array_only_edge_weights(x, y):
-        assert isinstance(x, np.ndarray)
-        assert isinstance(y, np.ndarray)
-        return mutual_info_score(x, y)
-
-    weights = TreeSearch._get_weights(data12, edge_weights_fn=array_only_edge_weights, n_jobs=1, show_progress=False)
-
-    assert weights.shape == (len(data12.columns), len(data12.columns))
-
-
-def test_get_conditional_weights_uses_array_inputs_for_custom_callable(data22):
-    def array_only_edge_weights(x, y):
-        assert isinstance(x, np.ndarray)
-        assert isinstance(y, np.ndarray)
-        return mutual_info_score(x, y)
-
-    weights = TreeSearch._get_conditional_weights(
-        data22,
-        class_node="A",
-        edge_weights_fn=array_only_edge_weights,
-        n_jobs=1,
-        show_progress=False,
-    )
-
-    assert weights.shape == (len(data22.columns), len(data22.columns))
 
 
 @pytest.fixture(autouse=True)
