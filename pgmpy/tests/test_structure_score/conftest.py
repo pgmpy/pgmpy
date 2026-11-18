@@ -9,6 +9,7 @@ from pgmpy.structure_score import (
     BICGauss,
     LogLikelihoodCondGauss,
     LogLikelihoodGauss,
+    RKHSLikelihood,
 )
 
 
@@ -99,3 +100,9 @@ def gauss_models():
     m1 = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
     m2 = DiscreteBayesianNetwork([("A", "B"), ("B", "C")])
     return m1, m2
+
+
+@pytest.fixture
+def loglik_rkhs_score():
+    data = pd.read_csv("pgmpy/tests/test_estimators/testdata/gaussian_testdata.csv")
+    return RKHSLikelihood(data)
