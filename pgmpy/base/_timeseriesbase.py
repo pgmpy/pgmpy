@@ -330,3 +330,28 @@ class _TimeSeriesCoreGraph(_CoreGraph):
                 markers = self._to_markers(((u, 0), (v, 0), edge_type))
                 out[index[v], index[u], 0] = to_mark[self._to_edge_type((v, 0), (u, 0), markers)]
         return out
+
+    def get_subgraph(self, nodes: Iterable[Hashable] | None = None, edge_types: Iterable[str] | None = None):
+        nodes = set(super().nodes()) if nodes is None else {self._normalize_node(node) for node in nodes}
+        if missing := (nodes - set(super().nodes())):
+            raise ValueError(f"Nodes {sorted(missing)} not in graph.")
+
+        subgraph = self.__class__()
+        subgraph._set_tau_max(self.tau_max if self._tau_max_fixed else None)
+        for node in super().nodes():
+            if node in nodes:
+                _CoreGraph.add_node(subgraph, node)
+        for u, v, edge_type in super().get_edges(data=True, edge_types=edge_types):
+            if u in nodes and v in nodes:
+                subgraph.add_edge(u, v, edge_type=edge_type)
+
+        for role, variables in self.get_role_dict().items():
+            if retained := [node for node in variables if node in nodes]:
+                subgraph.with_role(role=role, variables=retained, inplace=True)
+        return subgraph
+
+    def __eq__(self, other) -> bool:
+        return super().__eq__(other) and self.tau_max == other.tau_max
+
+    def __hash__(self) -> int:
+        return hash((super().__hash__(), self.tau_max))
