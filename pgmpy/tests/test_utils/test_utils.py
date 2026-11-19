@@ -33,7 +33,7 @@ class TestDiscretization:
         assert df_disc["X"].nunique() == 5
         assert df_disc["Y"].nunique() == 4
         assert df_disc["Z"].nunique() == 3
-        
+
         with pytest.raises(ValueError):
             discretize(data=self.data, cardinality={"X": 5, "Y": 4, "Z": 3}, method="invalid")
 
