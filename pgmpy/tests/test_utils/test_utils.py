@@ -23,7 +23,7 @@ class TestDiscretization:
 
         self.data = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
 
-    def test_rounding_disc(self):
+    def test_disc_methods(self):
         df_disc = discretize(data=self.data, cardinality={"X": 5, "Y": 4, "Z": 3}, method="rounding")
         assert df_disc["X"].nunique() == 5
         assert df_disc["Y"].nunique() == 4
@@ -33,16 +33,13 @@ class TestDiscretization:
         assert df_disc["X"].nunique() == 5
         assert df_disc["Y"].nunique() == 4
         assert df_disc["Z"].nunique() == 3
-
-    def test_invalid_method(self):
-        """Test that invalid method raises ValueError."""
+        
         with pytest.raises(ValueError):
             discretize(data=self.data, cardinality={"X": 5, "Y": 4, "Z": 3}, method="invalid")
 
 
 class TestGetExampleModel:
     def test_get_categorical_models(self):
-        """Test loading of categorical Bayesian network models."""
         cat_models = {
             "asia",
             "cancer",
@@ -125,13 +122,10 @@ class TestGetExampleModel:
             del m
 
     def test_invalid_model_name(self):
-        """Test handling of invalid model names."""
         with pytest.raises(ValueError):
             get_example_model("nonexistent_model")
 
     def test_model_categorization(self):
-        """Test that all models are properly categorized."""
-        # Test a model from each category
         cat_model = get_example_model("asia")
         assert not isinstance(cat_model, LinearGaussianBayesianNetwork)
 
