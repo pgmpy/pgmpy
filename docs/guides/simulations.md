@@ -1,7 +1,8 @@
 # Simulations
 
-```{meta}
-:description: Generate synthetic data from fitted pgmpy models using the simulation APIs.
+```{eval-rst}
+.. meta::
+   :description: Generate synthetic data from fitted pgmpy models using the simulation APIs.
 ```
 
 Simulation generates synthetic samples from a graphical model by sampling from the
@@ -31,7 +32,7 @@ The primary entry point is `model.simulate(...)`:
 from pgmpy.example_models import load_model
 
 model = load_model("bnlearn/alarm")
-samples = model.simulate(n_samples=1000, seed=42, show_progress=False)
+samples = model.simulate(n_samples=1000, rng=42, show_progress=False)
 
 print(samples.head())
 ```
@@ -71,7 +72,7 @@ model = load_model("bnlearn/alarm")
 
 soft = TabularCPD("CVP", 3, [[0.7], [0.2], [0.1]])
 samples = model.simulate(
-    n_samples=100, virtual_evidence=[soft], seed=42, show_progress=False
+    n_samples=100, virtual_evidence=[soft], rng=42, show_progress=False
 )
 print(samples["CVP"].value_counts(normalize=True))
 ```
@@ -93,7 +94,7 @@ model = load_model("bnlearn/alarm")
 
 **Basic forward sampling:**
 ```python
-samples = model.simulate(n_samples=1000, seed=42, show_progress=False)
+samples = model.simulate(n_samples=1000, rng=42, show_progress=False)
 ```
 
 **Interventional data (do-operator):**

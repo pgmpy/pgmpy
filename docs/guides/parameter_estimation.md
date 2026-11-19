@@ -1,7 +1,8 @@
 # Parameter Estimation
 
-```{meta}
-:description: Estimate model parameters from data using pgmpy's unified parameter-estimation APIs.
+```{eval-rst}
+.. meta::
+   :description: Estimate model parameters from data using pgmpy's unified parameter-estimation APIs.
 ```
 
 Once the structure of a graphical model is known, the next step is estimating its
@@ -32,7 +33,7 @@ from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.parameter_estimator import DiscreteMLE
 
 reference = load_model("bnlearn/alarm")
-data = reference.simulate(n_samples=1000, seed=42, show_progress=False)
+data = reference.simulate(n_samples=1000, rng=42, show_progress=False)
 
 model = DiscreteBayesianNetwork(reference.edges())
 model.fit(data, estimator=DiscreteMLE())

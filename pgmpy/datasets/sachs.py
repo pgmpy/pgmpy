@@ -4,7 +4,7 @@ from pgmpy.datasets._base import BaseDataset
 class SachsMixed(BaseDataset):
     _tags = {
         "name": "sachs_mixed",
-        "n_variables": 20,
+        "n_variables": 11,
         "n_samples": 7466,
         "has_ground_truth": True,
         "has_expert_knowledge": True,
@@ -13,8 +13,8 @@ class SachsMixed(BaseDataset):
         "is_simulated": False,
         "is_interventional": True,
         "is_discrete": False,
-        "is_continuous": False,
-        "is_mixed": True,
+        "is_continuous": True,
+        "is_mixed": False,
         "is_ordinal": False,
     }
 
@@ -24,6 +24,17 @@ class SachsMixed(BaseDataset):
     ground_truth_url = "ground.truth/sachs.2005.ground.truth.graph.txt"
     expert_knowledge_url = "ground.truth/sachs.2005.knowledge.txt"
 
+    intervention_columns = [
+        "cd3_cd28",
+        "icam2",
+        "aktinhib",
+        "g0076",
+        "psitect",
+        "u0126",
+        "ly",
+        "pma",
+        "b2camp",
+    ]
     categorical_variables = [
         "cd3_cd28",
         "icam2",
@@ -134,7 +145,7 @@ class SachsContinuousLogScale(BaseDataset):
 class SachsContinuousJitteredLogScale(BaseDataset):
     _tags = {
         "name": "sachs_continuous_jittered_logscale",
-        "n_variables": 20,
+        "n_variables": 11,
         "n_samples": 7466,
         "has_ground_truth": True,
         "has_expert_knowledge": True,
@@ -154,6 +165,17 @@ class SachsContinuousJitteredLogScale(BaseDataset):
     ground_truth_url = "ground.truth/sachs.2005.ground.truth.graph.txt"
     expert_knowledge_url = "ground.truth/sachs.2005.knowledge.txt"
 
+    intervention_columns = [
+        "cd3_cd28",
+        "icam2",
+        "aktinhib",
+        "g0076",
+        "psitect",
+        "u0126",
+        "ly",
+        "pma",
+        "b2camp",
+    ]
     categorical_variables = []
     ordinal_variables = dict()
 
@@ -161,7 +183,7 @@ class SachsContinuousJitteredLogScale(BaseDataset):
 class SachsContinuousJittered(BaseDataset):
     _tags = {
         "name": "sachs_continuous_jittered",
-        "n_variables": 20,
+        "n_variables": 11,
         "n_samples": 7466,
         "has_ground_truth": True,
         "has_expert_knowledge": True,
@@ -181,5 +203,16 @@ class SachsContinuousJittered(BaseDataset):
     ground_truth_url = "ground.truth/sachs.2005.ground.truth.graph.txt"
     expert_knowledge_url = "ground.truth/sachs.2005.knowledge.txt"
 
+    intervention_columns = [
+        "cd3_cd28",
+        "icam2",
+        "aktinhib",
+        "g0076",
+        "psitect",
+        "u0126",
+        "ly",
+        "pma",
+        "b2camp",
+    ]
     categorical_variables = []
     ordinal_variables = dict()

@@ -119,7 +119,7 @@ class UndirectedGraph(nx.Graph):
         will be automatically added. Node names can be any hashable python
         object.
 
-        **The behavior of adding weights is different than networkx.
+        **The behavior of adding weights is different than networkx.**
 
         Parameters
         ----------

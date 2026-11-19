@@ -110,7 +110,7 @@ class MirrorDescentEstimator(MarginalEstimator):
             Whether to show a tqdm progress bar during during optimization.
 
         Notes
-        -------
+        -----
         Estimation occurs in log-space.
 
 

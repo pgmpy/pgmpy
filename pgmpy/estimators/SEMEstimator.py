@@ -1,10 +1,12 @@
 import numpy as np
 import pandas as pd
-import statsmodels.api as sm
+from skbase.utils.dependencies import _check_soft_dependencies, _safe_import
 
 from pgmpy import config
 from pgmpy.models import SEM, SEMAlg, SEMGraph
 from pgmpy.utils import compat_fns, optimize, pinverse
+
+OLS = _safe_import("statsmodels.api.OLS")
 
 
 class SEMEstimator:
@@ -88,7 +90,12 @@ class SEMEstimator:
         method after each iteration with updated params to compute the new loss.
 
         The fitting function for ML is:
-        .. math:: F_{ML} = \log |\Sigma(\theta)| + tr(S \Sigma^{-1}(\theta)) - \log S - (p+q)
+
+        .. math::
+
+            F_{ML} = \log \lvert\Sigma(\theta)\rvert
+            + \operatorname{tr}(S \Sigma^{-1}(\theta))
+            - \log \lvert S \rvert - (p + q)
 
         Parameters
         ----------
@@ -236,16 +243,15 @@ class SEMEstimator:
             dict: dictionary with keys `B` and `zeta`.
 
         **kwargs: dict
-            Extra parameters required in case of some estimators.
-            GLS:
-                W: np.array (n x n) where n is the number of observe variables.
-            2sls:
-                x:
-                y:
+            Extra parameters required by some estimators. For GLS, ``W`` is an
+            ``n x n`` array where ``n`` is the number of observed variables.
+            For 2SLS, specify ``x`` and ``y``.
 
         Returns
         -------
-            pgmpy.model.SEM instance: Instance of the model with estimated parameters
+        summary : dict
+            Goodness-of-fit statistics for the fitted model. The estimator updates
+            ``self.model`` with the learned parameters in place.
 
         References
         ----------
@@ -453,6 +459,7 @@ class IVEstimator:
         >>> estimator = IVEstimator(model)
         >>> param, results = estimator.fit(X="X", Y="Y", data=data)
         """
+        _check_soft_dependencies("statsmodels>=0.14.5", obj=self)
         from pgmpy.inference import CausalInference
 
         if (ivs is None) and (civs is None):
@@ -473,11 +480,11 @@ class IVEstimator:
             civ_conditionals.extend(civ[1])
 
         # First stage regression.
-        params = sm.OLS(data.loc[:, X], data.loc[:, reg_covars + civ_conditionals]).fit().params
+        params = OLS(data.loc[:, X], data.loc[:, reg_covars + civ_conditionals]).fit().params
 
         data["X_pred"] = np.zeros(data.shape[0])
         for var in reg_covars:
             data.X_pred += params[var] * data.loc[:, var]
 
-        summary = sm.OLS(data.loc[:, Y], data.loc[:, ["X_pred"] + civ_conditionals]).fit()
+        summary = OLS(data.loc[:, Y], data.loc[:, ["X_pred"] + civ_conditionals]).fit()
         return summary.params["X_pred"], summary

@@ -6,7 +6,9 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
-from sklearn.base import BaseEstimator
+from skbase.base import BaseObject
+from sklearn.base import BaseEstimator, clone
+from sklearn.linear_model import LassoLarsIC, LinearRegression
 from sklearn.metrics import (
     adjusted_mutual_info_score,
     mutual_info_score,
@@ -19,16 +21,40 @@ from pgmpy import config, logger
 from pgmpy.base import DAG, UndirectedGraph
 from pgmpy.ci_tests import IndependenceMatch, get_ci_test
 from pgmpy.independencies import Independencies
-from pgmpy.metrics import get_metrics
+from pgmpy.metrics import get_metric
 from pgmpy.structure_score import BaseStructureScore
+from pgmpy.utils import get_dataset_type, preprocess_data
 
 
-class BaseCausalDiscovery(BaseEstimator):
+class BaseCausalDiscovery(BaseEstimator, BaseObject):
     """
     Base class for all causal discovery estimators in pgmpy.
 
-    Sets the sklearn tags and defines a method to check the input data for fitting.
+    Sets the sklearn tags and defines methods common to all causal discovery methods, such as checks for input data.
+    Every causal discovery method in pgmpy inherits this class.
     """
+
+    _tags = {
+        "object_type": "causal_discovery",
+        "name": None,
+        "data_types": ["discrete", "continuous", "mixed"],
+        "identifiable_graph": None,
+        "requires_target": None,
+        "capability:multivariate": None,
+        "capability:expert_knowledge": None,
+        "assumption:causal_sufficiency": None,
+        "assumption:acyclicity": None,
+        "assumption:faithfulness": None,
+        "assumption:linearity": None,
+        "assumption:additive_noise": None,
+        "assumption:gaussian_noise": None,
+        "assumption:non_gaussian_noise": None,
+        "assumption:low_noise": None,
+    }
+
+    # Use sklearn's identity-based semantics instead for eq and hash.
+    __eq__ = BaseEstimator.__eq__
+    __hash__ = BaseEstimator.__hash__
 
     def __sklearn_tags__(self):
         tags = super().__sklearn_tags__()
@@ -70,16 +96,60 @@ class BaseCausalDiscovery(BaseEstimator):
         if not all([isinstance(x, Hashable) for x in X.values.flat]):
             raise TypeError("argument must be a string, number, or hashable object.")
 
+        supported_types = type(self).get_class_tag("data_types")
+        X, _ = preprocess_data(X, data_types=supported_types)
+        dataset_type = get_dataset_type(X)
+        if dataset_type not in supported_types:
+            raise ValueError(f"{type(self).__name__} supports {supported_types} data, but the data is {dataset_type}.")
+
+        for col in X.columns:
+            if X[col].nunique() == 1:
+                raise ValueError(
+                    f"Variable '{col}' is constant (zero variance). Remove it before fitting {type(self).__name__}."
+                )
+
         self.n_features_in_ = len(X.columns)
         return X
 
-    def fit(self, X: pd.DataFrame, y=None):
-        """Fit data (`X`) to a causal graph. The method
-        calls the `_fit` method, which must be implemented separately in any causal
-        discovery algorithm inheriting from `BaseCausalDiscovery`.
+    def fit(self, X: pd.DataFrame, y=None, **fit_params):
+        """Fit data (`X`) to a causal graph. The method calls the `_fit` method, which must be implemented separately in
+        any causal discovery algorithm inheriting from `BaseCausalDiscovery`. Additional keyword arguments are passed to
+        `_fit`.
+
+        After fitting, the tags are updated to the objects used for fitting. A wrapped causal discovery estimator,
+        stored by `_fit` as `estimator_`, determines every tag except `name`. A CI test (`ci_test_`), a structure or
+        bivariate score (`scoring_method_`), or a pairwise estimator (`pairwise_estimator_`) narrows `data_types` and
+        the `assumption:*` tags.
         """
+        # Step 1: Run checks on the dataset.
         X = self._check_fit_data(X)
-        return self._fit(X)
+
+        # Step 2: Run the fitting algorithm.
+        result = self._fit(X, **fit_params)
+
+        # Step 3: Take over the tags of a wrapped causal discovery estimator.
+        estimator = getattr(self, "estimator_", None)
+        if estimator is not None:
+            tags = type(self).get_class_tags()
+            tags.update(
+                {key: value for key, value in estimator.get_tags().items() if key != "name" and value is not None}
+            )
+            self.set_tags(**tags)
+
+        # Step 4: Narrow the data types and the assumptions to the components used for fitting.
+        components = [getattr(self, name, None) for name in ("ci_test_", "scoring_method_", "pairwise_estimator_")]
+        components = [component for component in components if component is not None]
+        if components:
+            base_tags = self.get_tags() if estimator is not None else type(self).get_class_tags()
+            data_types = base_tags["data_types"]
+            assumptions = {key: bool(value) for key, value in base_tags.items() if key.startswith("assumption:")}
+            for component in components:
+                component_tags = component.get_tags() if isinstance(component, BaseObject) else {}
+                component_types = component_tags.get("data_types", data_types)
+                data_types = [t for t in data_types if t in component_types]
+                assumptions = {key: value or bool(component_tags.get(key)) for key, value in assumptions.items()}
+            self.set_tags(data_types=data_types, **assumptions)
+        return result
 
     def score(
         self,
@@ -97,17 +167,16 @@ class BaseCausalDiscovery(BaseEstimator):
         Parameters
         ----------
         X : pandas.DataFrame, optional
-            Test data used for scoring the learned causal model. If provided, `metric` should be a metric that
-            can operate on data. You can find all such metrics using: `pgmpy.metrics.get_metrics(requires_data=True)`
+            Test data used for scoring the learned causal model. If provided, `metric` must be a metric that
+            compares against data, i.e. one with ``requires_true_graph=False``.
 
         true_graph : pgmpy.base.DAG, optional
-            The true model graph for scoring the learned causal model. If provided, `metric` should be a metric
-            that compares graphs. You can find all such metrics using:
-            `pgmpy.metrics.get_metrics(requires_true_graph=True)`
+            The true model graph for scoring the learned causal model. If provided, `metric` must be a metric
+            that compares graphs, i.e. one with ``requires_true_graph=True``.
 
         metric : str or pgmpy.metrics._Base.*Metric instance, optional
-            Method to be used for calculating the score. If ``None``, a default metric appropriate for the
-            provided argument (`X` or `true_graph`) will be selected internally.
+            Method to be used for calculating the score, resolved via :func:`pgmpy.metrics.get_metric`. If
+            ``None``, a default metric appropriate for the provided argument (`X` or `true_graph`) is used.
 
         Returns
         -------
@@ -119,7 +188,6 @@ class BaseCausalDiscovery(BaseEstimator):
         Examples
         --------
         >>> from pgmpy.causal_discovery import PC
-        >>> from pgmpy.metrics import get_metrics
         >>> from pgmpy.datasets import load_dataset
         >>> dataset = load_dataset("lead")
         >>> data = dataset.data
@@ -141,34 +209,97 @@ class BaseCausalDiscovery(BaseEstimator):
             if isinstance(X, np.ndarray):
                 X = pd.DataFrame(X, columns=[f"x{i}" for i in range(X.shape[1])])
 
-            if metric is None:
-                scoring_class = get_metrics(requires_data=True, is_default=True)[0]
-                metric = scoring_class()
-
-            elif isinstance(metric, str):
-                scoring_class = get_metrics(name=metric)
-                if len(scoring_class) == 0:
-                    raise ValueError(f"No scoring method found with name: {metric}")
-
-                metric = scoring_class[0]()
-
-            return metric.evaluate(X, self.causal_graph_)
+            return get_metric(metric, requires_true_graph=False).evaluate(X, self.causal_graph_)
 
         # Case 2: When true graph is provided.
         elif true_graph is not None:
-            if metric is None:
-                scoring_class = get_metrics(requires_true_graph=True, is_default=True)
-                metric = scoring_class[0]()
-            elif isinstance(metric, str):
-                scoring_class = get_metrics(name=metric)
-                if len(scoring_class) == 0:
-                    raise ValueError(f"No scoring method found with name: {metric}")
-
-                metric = scoring_class[0]()
-
-            return metric.evaluate(true_causal_graph=true_graph, est_causal_graph=self.causal_graph_)
+            return get_metric(metric, requires_true_graph=True).evaluate(
+                true_causal_graph=true_graph, est_causal_graph=self.causal_graph_
+            )
         else:
             raise ValueError("Either `X` or `true_graph` needs to be specified")
+
+
+class BaseOrderDiscovery(BaseCausalDiscovery):
+    """
+    Base class for causal discovery by estimating causal ordering.
+
+    This class provides shared functionality for causal ordering based discovery method. The standard pattern is: 1. Use
+    a method to estimate the causal ordering, 2. Use the causal ordering to estimate the DAG. This pattern is followed
+    by many causal discovery methods such as LinGAM class of methods, Var/R2-Sortability methods. This base class
+    provides the shared functionality for the second step. The first step is left to the subclasses to implement.
+    Currently only one approach is implemented, regress each variable on its predecessors and selects parents using
+    adaptive Lasso with a BIC-selected penalty :cite:p:`Reisach2021`.
+
+    Parameters
+    ----------
+    estimator : sklearn-style regression estimator, default=None
+        Regressor supplying the adaptive weights through its ``coef_`` attribute. If None, uses
+        :class:`sklearn.linear_model.LinearRegression`. The estimator is cloned before fitting. Subclasses may also use
+        it to estimate the causal order.
+
+    return_type : str, default="dag"
+        The graph type stored in ``causal_graph_``: ``"dag"`` or ``"pdag"``. The ``"pdag"`` option returns the completed
+        PDAG representing the learned DAG's Markov equivalence class, so some edges can become undirected.
+    """
+
+    def __init__(self, estimator: BaseEstimator | None = None, return_type: str = "dag") -> None:
+        """Configure the initial regressor and the learned graph representation."""
+        super().__init__()
+        self.estimator = estimator
+        self.return_type = return_type
+
+    def _estimate_dag_from_causal_order(
+        self, X: pd.DataFrame, causal_order: list[Hashable], *, regressor: BaseEstimator | None = None
+    ) -> DAG:
+        """Return a DAG by regressing each variable on its predecessors.
+
+        Parameters
+        ----------
+        X : pandas.DataFrame
+            Validated, original data used to learn the graph. Algorithms that
+            transform data while estimating a causal order should pass the original data here.
+
+        causal_order : list of hashable
+            Estimated causal order, containing each input column exactly once.
+            Parents are selected only from earlier variables, making this a valid
+            causal order of the learned DAG.
+
+        regressor : sklearn-style regression estimator, default=None
+            Working regressor already cloned by the ordering step. If supplied,
+            it is reused and fitted in place, preserving its state between steps.
+            Otherwise, clone ``self.estimator`` or use a default linear regressor.
+
+        Returns
+        -------
+        dag : pgmpy.base.DAG
+            Estimated graph, including variables with no selected edges. The caller
+            handles graph conversion and assignment of fitted attributes.
+        """
+        model_reg = regressor
+        if model_reg is None:
+            model_reg = clone(self.estimator) if self.estimator is not None else LinearRegression()
+        model = DAG()
+        model.add_nodes_from(causal_order)
+
+        for i in range(1, len(causal_order)):
+            target = causal_order[i]
+            potential_parents = causal_order[:i]
+            y = X[target].to_numpy().ravel()
+            predictors = X[potential_parents].to_numpy()
+
+            model_reg.fit(predictors, y)
+            weights = np.abs(model_reg.coef_)
+
+            sparse_reg = LassoLarsIC(criterion="bic")
+            sparse_reg.fit(predictors * weights, y)
+            coefs = sparse_reg.coef_ * weights
+
+            for idx, coef in enumerate(coefs):
+                if coef != 0:
+                    model.add_edge(potential_parents[idx], target)
+
+        return model
 
 
 class _ConstraintMixin:
@@ -186,8 +317,7 @@ class _ConstraintMixin:
         calls the `_fit` method, which must be implemented separately in any causal
         discovery algorithm inheriting from `BaseConstraintCausalDiscovery`.
         """
-        X = self._check_fit_data(X)
-        return self._fit(X, independencies)
+        return super().fit(X, y, independencies=independencies)
 
     def _build_skeleton(
         self,
@@ -309,6 +439,8 @@ class _ConstraintMixin:
             required_edges = expert_knowledge.required_edges_
             forbidden_edges = expert_knowledge.forbidden_edges_
 
+        required_pairs = {frozenset(edge) for edge in required_edges}
+
         # Remove edges that are forbidden in both directions. Directed forbidden are enforced as orientations after the
         # skeleton is learned.
         graph.remove_edges_from([(u, v) for (u, v) in forbidden_edges if (v, u) in forbidden_edges])
@@ -320,7 +452,7 @@ class _ConstraintMixin:
             # size `lim_neighbors` which makes u and v independent.
             if variant == "orig":
                 for u, v in graph.edges():
-                    if (u, v) not in required_edges:
+                    if frozenset((u, v)) not in required_pairs:
                         for separating_set in self._get_potential_sepsets(
                             u, v, temporal_ordering, graph, lim_neighbors
                         ):
@@ -341,11 +473,16 @@ class _ConstraintMixin:
                 edges_to_remove = []
                 # In case of stable, precompute neighbors as this is the stable algorithm.
                 for u, v in graph.edges():
-                    if (u, v) not in required_edges:
+                    if frozenset((u, v)) not in required_pairs:
                         sep_vars = set()
                         found_independence = False
                         for separating_set in self._get_potential_sepsets(
-                            u, v, temporal_ordering, graph, lim_neighbors, neighbors=neighbors
+                            u,
+                            v,
+                            temporal_ordering,
+                            graph,
+                            lim_neighbors,
+                            neighbors=neighbors,
                         ):
                             if ci_test(
                                 u,
@@ -378,7 +515,7 @@ class _ConstraintMixin:
                         return (u, v), tuple(sorted(sep_vars, key=repr))
 
                 results = parallel_pool(
-                    delayed(_parallel_fun)(u, v) for (u, v) in graph.edges() if (u, v) not in required_edges
+                    delayed(_parallel_fun)(u, v) for (u, v) in graph.edges() if frozenset((u, v)) not in required_pairs
                 )
                 for result in results:
                     if result is not None:
@@ -392,7 +529,7 @@ class _ConstraintMixin:
             # Step 3: After iterating over all the edges, expand the search space by increasing the size
             #         of conditioning set by 1.
             if lim_neighbors >= max_cond_vars:
-                logger.info("Reached maximum number of allowed conditional variables. Exiting")
+                logger.info(f"Reached the maximum number of conditional variables ({max_cond_vars}). Exiting.")
                 break
             lim_neighbors += 1
 
@@ -419,9 +556,11 @@ class _ConstraintMixin:
         Return the temporally consistent candidate separating sets of `u`, `v`.
 
         Each candidate is a sorted tuple of size ``lim_neighbors`` drawn from
-        the (temporally filtered) neighbors of ``u`` or ``v``. Sorting both
-        input sets makes ``combinations`` yield lex-sorted tuples, so the
-        union of the two halves deduplicates directly via set semantics.
+        the neighbors of ``u`` or ``v``. With a temporal ordering, the neighbors
+        of each endpoint that lie in a later tier than that endpoint are
+        excluded. Sorting both input sets makes ``combinations`` yield
+        lex-sorted tuples, so the union of the two halves deduplicates directly
+        via set semantics.
 
         Parameters
         ----------
@@ -456,14 +595,8 @@ class _ConstraintMixin:
         separating_set_v.discard(u)
 
         if temporal_ordering != dict():
-            max_order = min(temporal_ordering[u], temporal_ordering[v])
-            for neigh in list(separating_set_u):
-                if temporal_ordering[neigh] > max_order:
-                    separating_set_u.discard(neigh)
-
-            for neigh in list(separating_set_v):
-                if temporal_ordering[neigh] > max_order:
-                    separating_set_v.discard(neigh)
+            separating_set_u = {neigh for neigh in separating_set_u if temporal_ordering[neigh] <= temporal_ordering[u]}
+            separating_set_v = {neigh for neigh in separating_set_v if temporal_ordering[neigh] <= temporal_ordering[v]}
 
         sorted_u = sorted(separating_set_u, key=repr)
         sorted_v = sorted(separating_set_v, key=repr)
@@ -566,10 +699,9 @@ class _TreeSearchMixin:
     Mixin class providing shared functionality for tree-based causal discovery
     algorithms (Chow-Liu and TAN).
 
-    Provides static helpers for resolving the ``edge_weights_fn`` argument,
-    computing pairwise edge weights, and constructing a directed spanning tree
-    (DAG) from a weight matrix.  Both :class:`ChowLiu` and :class:`TAN` inherit
-    from this mixin so that the shared logic lives in exactly one place.
+    Provides static helpers for resolving the ``edge_weights_fn`` argument, reading the integer state codes of the data,
+    computing pairwise edge weights, and constructing a directed spanning tree (DAG) from a weight matrix.  Both
+    :class:`ChowLiu` and :class:`TAN` inherit from this mixin so that the shared logic lives in exactly one place.
     """
 
     _EDGE_WEIGHT_FNS = {
@@ -598,6 +730,24 @@ class _TreeSearchMixin:
             )
 
     @staticmethod
+    def _get_state_codes(data):
+        """
+        Read the integer state codes that pandas stores for the categorical columns of ``data``.
+
+        Parameters
+        ----------
+        data : pd.DataFrame
+            Dataframe of categorical columns, where each column represents one variable.
+
+        Returns
+        -------
+        codes : np.ndarray, shape (n_columns, n_samples)
+            ``codes[i]`` holds the state of variable *i* in every sample, as the position of that state among the
+            categories of its column.
+        """
+        return np.array([data[col].cat.codes for col in data.columns])
+
+    @staticmethod
     def _get_weights(data, edge_weights_fn="mutual_info", n_jobs=-1, show_progress=True):
         """
         Compute the pairwise edge weight matrix.
@@ -605,7 +755,7 @@ class _TreeSearchMixin:
         Parameters
         ----------
         data : pd.DataFrame
-            Dataframe where each column represents one variable.
+            Dataframe of categorical columns, where each column represents one variable.
 
         edge_weights_fn : str or callable, default="mutual_info"
             Method to use for computing edge weights. Options are:
@@ -613,7 +763,8 @@ class _TreeSearchMixin:
             - ``"mutual_info"``: Mutual Information Score.
             - ``"adjusted_mutual_info"``: Adjusted Mutual Information Score.
             - ``"normalized_mutual_info"``: Normalized Mutual Information Score.
-            - A callable of the form ``fn(array, array) -> float``.
+            - A callable of the form ``fn(array, array) -> float``, called with the integer state codes of two
+              variables as stored by pandas (``Series.cat.codes``, typically ``int8``).
 
         n_jobs : int, default=-1
             Number of jobs to run in parallel. ``-1`` means use all processors.
@@ -630,11 +781,12 @@ class _TreeSearchMixin:
         edge_weights_fn = _TreeSearchMixin._resolve_edge_weights_fn(edge_weights_fn)
 
         n_vars = len(data.columns)
-        pbar = combinations(data.columns, 2)
+        codes = _TreeSearchMixin._get_state_codes(data)
+        pbar = combinations(range(n_vars), 2)
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(pbar, total=(n_vars * (n_vars - 1) / 2), desc="Building tree")
 
-        vals = Parallel(n_jobs=n_jobs)(delayed(edge_weights_fn)(data.loc[:, u], data.loc[:, v]) for u, v in pbar)
+        vals = Parallel(n_jobs=n_jobs)(delayed(edge_weights_fn)(codes[u], codes[v]) for u, v in pbar)
         weights = np.zeros((n_vars, n_vars))
         indices = np.triu_indices(n_vars, k=1)
         weights[indices] = vals

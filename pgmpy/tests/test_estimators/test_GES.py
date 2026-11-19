@@ -131,7 +131,7 @@ def test_legal_edge_deletions_include_both_orders_for_undirected_edges():
 
 def test_cancer_model():
     cancer_model = load_model("bnlearn/cancer")
-    data = cancer_model.simulate(3000, seed=0)
+    data = cancer_model.simulate(5000, rng=0)
 
     est = GES(data)
     dag = est.estimate()

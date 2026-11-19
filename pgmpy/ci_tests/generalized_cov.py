@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 
 from pgmpy.utils import preprocess_data
+from pgmpy.utils._random import _rename_param_to_rng, _rename_to_rng
 
 from ._base import BaseCITest, _CITestResult, _ResidualMixin
 
@@ -35,6 +36,12 @@ class GeneralizedCov(_ResidualMixin, BaseCITest):
     permuted statistics that meet or exceed the observed value (with a +1 continuity
     correction following Phipson & Smyth [2]).
 
+    The effect size is the root mean square of the canonical correlations
+    :math:`\rho_1, \ldots, \rho_s` between :math:`R_X` and :math:`R_Y`, where :math:`s = \min(p, q)`:
+
+    .. math::
+        \sqrt{\frac{1}{s} \sum_{i=1}^{s} \rho_i^2}.
+
     Parameters
     ----------
     data : pandas.DataFrame
@@ -49,9 +56,12 @@ class GeneralizedCov(_ResidualMixin, BaseCITest):
     n_permutations : int, default 1000
         Number of permutations used to estimate the null distribution of :math:`T`.
 
-    random_state : int, RandomState instance, or None, optional
-        Seed or random state for the permutation sampling. Pass an integer for
-        reproducible results.
+    rng : int, numpy.random.Generator or None, optional
+        Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the operating
+        system, so results are not reproducible. When tests run in parallel, only an ``int`` gives reproducible results.
+
+        .. versionchanged:: 1.2.0
+            Replaces ``random_state``, which is deprecated and will be removed in v2.0.
 
     Attributes
     ----------
@@ -60,6 +70,8 @@ class GeneralizedCov(_ResidualMixin, BaseCITest):
         calling the test.
     p_value_ : float
         Permutation-based p-value. Set after calling the test.
+    effect_size_ : float
+        The root mean square canonical correlation between the residuals. Set after calling the test.
     estimator_x_ : sklearn-compatible estimator
         The fitted estimator used for predicting X.
     estimator_y_ : sklearn-compatible estimator
@@ -73,24 +85,31 @@ class GeneralizedCov(_ResidualMixin, BaseCITest):
 
     _tags = {
         "name": "generalized_cov",
-        "data_types": ("discrete", "continuous", "mixed"),
+        "data_types": ["discrete", "continuous", "mixed"],
         "default_for": None,
         "requires_data": True,
+        "capability:conditioning": True,
     }
 
+    @_rename_to_rng("random_state")
     def __init__(
         self,
         data: pd.DataFrame,
         estimator=None,
         n_permutations: int = 1000,
-        random_state=None,
+        rng: int | np.random.Generator | None = None,
         use_cache: bool = True,
     ):
-        self.data, self.dtypes = preprocess_data(data)
+        self.data, self.dtypes = preprocess_data(data, data_types=self.get_class_tag("data_types"))
         self.estimator = estimator
         self.n_permutations = n_permutations
-        self.random_state = random_state
+        self.rng = rng
         super().__init__(use_cache=use_cache)
+
+    def set_params(self, **params):
+        """Set the parameters of this estimator; the deprecated ``random_state`` is accepted as an alias of ``rng``."""
+        _rename_param_to_rng(params, "random_state", type(self).__qualname__)
+        return super().set_params(**params)
 
     @staticmethod
     def _cross_covariance_statistic(res_x: pd.DataFrame, res_y: pd.DataFrame) -> float:
@@ -113,9 +132,7 @@ class GeneralizedCov(_ResidualMixin, BaseCITest):
 
     def _compute_result(self, X: str, Y: str, Z: list):
         """
-        Compute the determinant-style cross-covariance statistic and its permutation p-value.
-
-        Returns the determinant-style cross-covariance statistic and p-value.
+        Compute the determinant-style cross-covariance statistic, its permutation p-value and the effect size.
 
         Parameters
         ----------
@@ -132,6 +149,8 @@ class GeneralizedCov(_ResidualMixin, BaseCITest):
             The determinant-style residual cross-covariance statistic.
         p_value : float
             Permutation-based p-value.
+        effect_size : float
+            The root mean square of the canonical correlations between the residuals.
         """
         # Step 1: Compute residuals of X and Y given Z.
         res_x, self.estimator_x_ = self.get_residuals(X, Z)
@@ -146,7 +165,7 @@ class GeneralizedCov(_ResidualMixin, BaseCITest):
         statistic = self._cross_covariance_statistic(res_x, res_y)
 
         # Step 3: Permutation test to obtain the null distribution of T.
-        rng = np.random.default_rng(self.random_state)
+        rng = np.random.default_rng(self.rng)
         perm_stats = np.empty(self.n_permutations)
         for t in range(self.n_permutations):
             idx = rng.permutation(res_x.shape[0])
@@ -156,4 +175,14 @@ class GeneralizedCov(_ResidualMixin, BaseCITest):
         # Phipson-Smyth +1 correction so that p-value is never exactly zero.
         p_value = (float(np.sum(perm_stats >= statistic)) + 1.0) / (self.n_permutations + 1.0)
 
-        return _CITestResult(statistic=statistic, p_value=p_value)
+        # Step 4: Compute the effect size, the root mean square of the canonical correlations between the residuals.
+        bases = []
+        for residuals in (res_x, res_y):
+            values = residuals.to_numpy(dtype=float)
+            left_vectors, singular_values, _ = np.linalg.svd(values - values.mean(axis=0), full_matrices=False)
+            tolerance = singular_values.max(initial=0.0) * max(values.shape) * np.finfo(float).eps
+            bases.append(left_vectors[:, singular_values > tolerance])
+        canonical_correlations = np.linalg.svd(bases[0].T @ bases[1], compute_uv=False)
+        effect_size = float(np.sqrt(np.sum(canonical_correlations**2) / min(res_x.shape[1], res_y.shape[1])))
+
+        return _CITestResult(statistic=statistic, p_value=p_value, effect_size=effect_size)

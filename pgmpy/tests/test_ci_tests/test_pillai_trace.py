@@ -12,7 +12,7 @@ skip_gh_actions = _multivariate_fixtures.skip_gh_actions
 
 @skip_gh_actions
 def test_pillai_no_cond(pillai_data):
-    expected_coefs = [0.1572, 0.1572, 0.1359, 0.1068, 0.1359]
+    expected_coefs = [0.2015, 0.1665, 0.1184, 0.1049, 0.1184]
     expected_pvalues = [0.0000, 0.0000, 0.0000, 0.0000, 0.0000]
 
     computed_coefs = []
@@ -29,8 +29,8 @@ def test_pillai_no_cond(pillai_data):
 
 @skip_gh_actions
 def test_pillai_indep(pillai_data):
-    expected_coefs = [0.0016, 0.0007, 0.0044, 0.0055, 0.0044]
-    expected_pvalues = [0.2125, 0.4154, 0.1118, 0.2406, 0.1118]
+    expected_coefs = [0.0019, 0.0007, 0.0011, 0.0043, 0.0011]
+    expected_pvalues = [0.1736, 0.3919, 0.5894, 0.3686, 0.5894]
 
     computed_coefs = []
     computed_pvalues = []
@@ -46,7 +46,7 @@ def test_pillai_indep(pillai_data):
 
 @skip_gh_actions
 def test_pillai_dependent(pillai_data):
-    expected_coefs = [0.1698, 0.2181, 0.1328, 0.1595, 0.1328]
+    expected_coefs = [0.2129, 0.2029, 0.0996, 0.1456, 0.0996]
     expected_pvalues = [0.0000, 0.0000, 0.0000, 0.0000, 0.0000]
 
     computed_coefs = []
@@ -98,8 +98,8 @@ def test_pillai_tests_approx(pillai_data):
 
 
 def test_effect_size(pillai_data):
-    expected_indep = [0.0026, 0.0004, 0.0003, 0.0013, 0.0003]
-    expected_dep = [0.1698, 0.2181, 0.1328, 0.0798, 0.1328]
+    expected_indep = [0.0019, 0.0007, 0.0011, 0.0021, 0.0011]
+    expected_dep = [0.2129, 0.2029, 0.0996, 0.0728, 0.0996]
 
     for df, expected in zip(pillai_data["indep"], expected_indep):
         test = PillaiTrace(data=df)
@@ -177,3 +177,15 @@ def test_pillai_linear_regression_no_predict_proba():
     test = PillaiTrace(data=df, estimator=LinearRegression())
     with pytest.raises(ValueError, match="predict_proba"):
         test("X", "Y", ["Z"])
+
+
+def test_pillai_bool_is_categorical_in_mixed_data():
+    rng = np.random.default_rng(seed=4)
+    data = pd.DataFrame({"A": rng.normal(size=80), "C": rng.normal(size=80), "G": rng.random(80) < 0.5})
+    data["A"] += data["G"]
+    data["H"] = rng.choice(["x", "y"], size=80)
+
+    bool_test, category_test = PillaiTrace(data=data), PillaiTrace(data=data.assign(G=data["G"].astype("category")))
+    bool_test("G", "A", ["C"])
+    category_test("G", "A", ["C"])
+    assert bool_test.p_value_ == pytest.approx(category_test.p_value_, rel=1e-9)

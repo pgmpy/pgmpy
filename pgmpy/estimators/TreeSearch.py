@@ -1,10 +1,9 @@
 """Deprecated compatibility shims for :class:`pgmpy.causal_discovery.ChowLiu` / :class:`pgmpy.causal_discovery.TAN`."""
 
-import warnings
-
 from pgmpy.causal_discovery import TAN as _TAN
 from pgmpy.causal_discovery import ChowLiu as _ChowLiu
 from pgmpy.estimators import StructureEstimator
+from pgmpy.utils._warnings import _warn_external
 
 
 class TreeSearch(StructureEstimator):
@@ -30,11 +29,11 @@ class TreeSearch(StructureEstimator):
     """
 
     def __init__(self, data, root_node=None, n_jobs=-1, **kwargs):
-        warnings.warn(
-            "TreeSearch is deprecated and will be removed in v2.0. Please use "
-            "pgmpy.causal_discovery.ChowLiu or pgmpy.causal_discovery.TAN instead.",
+        _warn_external(
+            "`pgmpy.estimators.TreeSearch` is deprecated and will be removed in v2.0. "
+            "Use `pgmpy.causal_discovery.ChowLiu` for estimator_type='chow-liu' or "
+            "`pgmpy.causal_discovery.TAN` for estimator_type='tan' instead.",
             FutureWarning,
-            stacklevel=2,
         )
         if root_node is not None and root_node not in data.columns:
             raise ValueError(f"Root node: {root_node} not found in data columns.")

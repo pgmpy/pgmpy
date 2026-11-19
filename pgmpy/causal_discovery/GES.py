@@ -55,6 +55,9 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
     adjacency_matrix_ : pd.DataFrame
         Adjacency matrix representation of the learned causal graph.
 
+    scoring_method_ : BaseStructureScore
+        The structure score used for learning, resolved from ``scoring_method``.
+
     n_features_in_ : int
         The number of features in the data used to learn the causal graph.
 
@@ -65,11 +68,9 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
     --------
     Simulate some data to use for causal discovery:
 
-    >>> import numpy as np
     >>> from pgmpy.example_models import load_model
-    >>> np.random.seed(42)
     >>> model = load_model("bnlearn/alarm")
-    >>> df = model.simulate(n_samples=1000, seed=42)
+    >>> df = model.simulate(n_samples=1000, rng=42)
 
     Use the GES algorithm to learn the causal structure from data:
 
@@ -87,6 +88,23 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
     - :footcite:t:`chickering_2002b`
     - https://github.com/juangamella/ges
     """
+
+    _tags = {
+        "name": "ges",
+        "data_types": ["discrete", "continuous", "mixed"],
+        "identifiable_graph": "cpdag",
+        "requires_target": False,
+        "capability:multivariate": True,
+        "capability:expert_knowledge": [],
+        "assumption:causal_sufficiency": True,
+        "assumption:acyclicity": True,
+        "assumption:faithfulness": True,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
+    }
 
     def __init__(
         self,
@@ -258,8 +276,8 @@ class GES(_ScoreMixin, BaseCausalDiscovery):
 
         # Step 1: Initial checks and setup for arguments
         # Step 1.1: Check score
-        score = get_scoring_method(self.scoring_method, X)
-        score_fn = score.local_score
+        self.scoring_method_ = get_scoring_method(self.scoring_method, X)
+        score_fn = self.scoring_method_.local_score
 
         # Step 1.2: Initialize the starting PDAG
         current_model = PDAG()

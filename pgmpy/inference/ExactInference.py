@@ -13,12 +13,7 @@ from pgmpy import config
 from pgmpy.factors import factor_product
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.inference import Inference
-from pgmpy.inference.EliminationOrder import (
-    MinFill,
-    MinNeighbors,
-    MinWeight,
-    WeightedMinFill,
-)
+from pgmpy.inference.EliminationOrder import ELIMINATION_HEURISTICS
 from pgmpy.models import (
     DiscreteBayesianNetwork,
     DynamicBayesianNetwork,
@@ -99,13 +94,7 @@ class VariableElimination(Inference):
 
         # Step 3: If elimination order is a str, compute the order using the specified heuristic.
         elif isinstance(elimination_order, str) and isinstance(self.model, DiscreteBayesianNetwork):
-            heuristic_dict = {
-                "weightedminfill": WeightedMinFill,
-                "minneighbors": MinNeighbors,
-                "minweight": MinWeight,
-                "minfill": MinFill,
-            }
-            elimination_order = heuristic_dict[elimination_order.lower()](self.model).get_elimination_order(
+            elimination_order = ELIMINATION_HEURISTICS[elimination_order.lower()](self.model).get_elimination_order(
                 nodes=to_eliminate, show_progress=show_progress
             )
             return elimination_order
@@ -239,8 +228,8 @@ class VariableElimination(Inference):
         elimination_order: str or list (default='greedy')
             Order in which to eliminate the variables in the algorithm. If list is provided,
             should contain all variables in the model except the ones in `variables`. str options
-            are: `greedy`, `WeightedMinFill`, `MinNeighbors`, `MinWeight`, `MinFill`. Please
-            refer https://pgmpy.org/exact_infer/ve.html#module-pgmpy.inference.EliminationOrder
+            are: `greedy`, `WeightedMinFill`, `MinNeighbors`, `MinWeight`, `MinFill`, `H1`-`H6`.
+            Please refer https://pgmpy.org/exact_infer/ve.html#module-pgmpy.inference.EliminationOrder
             for details.
 
         joint: boolean (default: True)
@@ -653,10 +642,16 @@ class BeliefPropagation(Inference):
     probabilistic graphical model and performs calibration of the junction tree
     so formed using belief propagation.
 
+    The junction tree is calibrated when the object is created and the calibrated
+    beliefs are reused by all queries; queries do not modify `model` or
+    `junction_tree`, so an instance can be shared between threads. If the factors
+    of `junction_tree` are modified, call `calibrate` again.
+
     Parameters
     ----------
     model: DiscreteBayesianNetwork, DiscreteMarkovNetwork, FactorGraph, JunctionTree
-        model for which inference is to performed
+        model for which inference is to performed. Use `model.to_junction_tree(heuristic=...)`
+        to control the triangulation heuristic.
     """
 
     def __init__(self, model):
@@ -667,8 +662,8 @@ class BeliefPropagation(Inference):
         else:
             self.junction_tree = copy.deepcopy(model)
 
-        self.clique_beliefs = {}
-        self.sepset_beliefs = {}
+        self.variables = set(itertools.chain(*self.junction_tree.nodes()))
+        self.calibrate()
 
     def get_cliques(self):
         """
@@ -711,18 +706,19 @@ class BeliefPropagation(Inference):
         sepset = frozenset(sending_clique).intersection(frozenset(receiving_clique))
         sepset_key = frozenset((sending_clique, receiving_clique))
 
-        # \sigma_{i \rightarrow j} = \sum_{C_i - S_{i, j}} \beta_i
-        # marginalize the clique over the sepset
+        # Step 1: Compute the message: project the sending clique's belief onto the sepset,
+        #         \sigma_{i \rightarrow j} = \sum_{C_i - S_{i, j}} \beta_i
         sigma = getattr(self.clique_beliefs[sending_clique], operation)(
             list(frozenset(sending_clique) - sepset), inplace=False
         )
 
-        # \beta_j = \beta_j * \frac{\sigma_{i \rightarrow j}}{\mu_{i, j}}
+        # Step 2: Absorb it into the receiving clique, dividing out the previous message on this sepset:
+        #         \beta_j = \beta_j * \frac{\sigma_{i \rightarrow j}}{\mu_{i, j}}
         self.clique_beliefs[receiving_clique] *= (
-            sigma / self.sepset_beliefs[sepset_key] if self.sepset_beliefs[sepset_key] else sigma
+            sigma / self.sepset_beliefs[sepset_key] if self.sepset_beliefs[sepset_key] is not None else sigma
         )
 
-        # \mu_{i, j} = \sigma_{i \rightarrow j}
+        # Step 3: Store the message as the new sepset belief, \mu_{i, j} = \sigma_{i \rightarrow j}
         self.sepset_beliefs[sepset_key] = sigma
 
     def _is_converged(self, operation):
@@ -745,10 +741,12 @@ class BeliefPropagation(Inference):
 
         .. math:: \max_{C_i - S_{i, j}} \beta_i = \max_{C_j - S_{i, j}} \beta_j = \mu_{i, j}
         """
-        # If no clique belief, then the clique tree is not calibrated
+        # Step 1: Without clique beliefs the tree is not calibrated.
         if not self.clique_beliefs:
             return False
 
+        # Step 2: For every edge, both cliques must project onto the sepset to the same
+        #         distribution, and it must equal the sepset belief.
         for edge in self.junction_tree.edges():
             sepset = frozenset(edge[0]).intersection(frozenset(edge[1]))
             sepset_key = frozenset(edge)
@@ -773,7 +771,8 @@ class BeliefPropagation(Inference):
         """
         Generalized calibration of junction tree or clique using belief propagation. This method can be used for both
         calibrating as well as max-calibrating.
-        Uses Lauritzen-Spiegelhalter algorithm or belief-update message passing.
+        Uses Lauritzen-Spiegelhalter algorithm or belief-update message passing: one collect pass (leaves to
+        an arbitrary root) followed by one distribute pass (root to leaves) calibrates a clique tree.
 
         Parameters
         ----------
@@ -784,24 +783,22 @@ class BeliefPropagation(Inference):
         ----------
         - :footcite:t:`koller_friedman_2009` (Algorithm 10.3, calibration via belief propagation in clique trees).
         """
-        # Initialize clique beliefs as well as sepset beliefs
+        # Step 1: Initialize the clique beliefs with the clique potentials and the sepset beliefs with 1.
         self.clique_beliefs = {clique: self.junction_tree.get_factors(clique) for clique in self.junction_tree.nodes()}
         self.sepset_beliefs = {frozenset(edge): None for edge in self.junction_tree.edges()}
 
-        for clique in self.junction_tree.nodes():
-            if not self._is_converged(operation=operation):
-                neighbors = self.junction_tree.neighbors(clique)
-                # update root's belief using neighbor clique's beliefs
-                # upward pass
-                for neighbor_clique in neighbors:
-                    self._update_beliefs(neighbor_clique, clique, operation=operation)
-                bfs_edges = nx.algorithms.breadth_first_search.bfs_edges(self.junction_tree, clique)
-                # update the beliefs of all the nodes starting from the root to leaves using root's belief
-                # downward pass
-                for edge in bfs_edges:
-                    self._update_beliefs(edge[0], edge[1], operation=operation)
-            else:
-                break
+        # Step 2: Pick a root and order the edges by BFS from it.
+        root = next(iter(self.junction_tree.nodes()))
+        bfs_edges = list(nx.bfs_edges(self.junction_tree, root))
+
+        # Step 3: Collect pass, leaves to root (reversed BFS sends every child's message before its parent's).
+        for parent, child in reversed(bfs_edges):
+            self._update_beliefs(child, parent, operation=operation)
+
+        # Step 4: Distribute pass, root to leaves.
+        for parent, child in bfs_edges:
+            self._update_beliefs(parent, child, operation=operation)
+        self._calibrated = operation
 
     def calibrate(self):
         """
@@ -903,7 +900,7 @@ class BeliefPropagation(Inference):
         """
         self._calibrate_junction_tree(operation="maximize")
 
-    def _query(self, variables, operation, evidence=None, joint=True, show_progress=True):
+    def _query(self, variables, operation, evidence=None, virtual_evidence=None, joint=True, show_progress=True):
         """
         This is a generalized query method that can be used for both query and map query.
 
@@ -916,6 +913,11 @@ class BeliefPropagation(Inference):
         evidence: dict
             a dict key, value pair as {var: state_of_var_observed}
             None if no evidence
+        virtual_evidence: list (default: None)
+            A list of single-variable TabularCPDs (or DiscreteFactors) giving the likelihood
+            of the virtual evidence for their variable. Each one is multiplied into a clique
+            potential of the subtree used for the query, which is equivalent to observing an
+            auxiliary child of the variable with that likelihood.
 
         Examples
         --------
@@ -940,70 +942,85 @@ class BeliefPropagation(Inference):
         Algorithm 10.4 Out-of-clique inference in clique tree
         Probabilistic Graphical Models: Principles and Techniques Daphne Koller and Nir Friedman.
         """
-
-        is_calibrated = self._is_converged(operation=operation)
-        # Calibrate the junction tree if not calibrated
-        if not is_calibrated:
+        # Step 1: Make sure the tree is sum-calibrated for a sum query (it is calibrated at construction, but
+        #         may have been max-calibrated in between). A max query on a sum-calibrated tree keeps the sum beliefs.
+        if operation == "marginalize" and self._calibrated != "marginalize":
             self.calibrate()
 
-        if not isinstance(variables, (list, tuple, set)):
-            query_variables = [variables]
-        else:
-            query_variables = list(variables)
+        # Step 2: Collect the variables that must be covered by the subtree: query, evidence and virtual
+        #         evidence variables. Each virtual evidence becomes a likelihood factor over its variable.
+        query_variables = list(variables)
         query_variables.extend(evidence.keys() if evidence else [])
 
-        # Find a tree T' such that query_variables are a subset of scope(T')
-        nodes_with_query_variables = set()
-        for var in query_variables:
-            nodes_with_query_variables.update(filter(lambda x: var in x, self.junction_tree.nodes()))
-        subtree_nodes = nodes_with_query_variables
-
-        # Conversion of set to tuple just for indexing
-        nodes_with_query_variables = tuple(nodes_with_query_variables)
-        # As junction tree is a tree, that means that there would be only path between any two nodes in the tree
-        # thus we can just take the path between any two nodes; no matter there order is
-        for i in range(len(nodes_with_query_variables) - 1):
-            subtree_nodes.update(
-                nx.shortest_path(
-                    self.junction_tree,
-                    nodes_with_query_variables[i],
-                    nodes_with_query_variables[i + 1],
+        likelihoods = []
+        for cpd in virtual_evidence or []:
+            if not isinstance(cpd, DiscreteFactor) or len(cpd.variables) != 1 or cpd.variables[0] not in self.variables:
+                raise ValueError(
+                    "Virtual evidence must be TabularCPDs or DiscreteFactors defined on a single variable of the "
+                    f"model; got {cpd}."
                 )
-            )
+            var = cpd.variables[0]
+            states = self.junction_tree.states[var]
+            if list(cpd.state_names[var]) != list(states):
+                raise ValueError(
+                    f"The virtual evidence for {var!r} has states {cpd.state_names[var]}, but the model has {states}."
+                )
+            likelihoods.append(DiscreteFactor([var], [len(states)], cpd.values.reshape(-1), state_names={var: states}))
+            query_variables.append(var)
+
+        # Step 3: Find a small subtree T' of the junction tree whose scope covers query_variables: for every
+        #         variable not covered yet the smallest clique containing it, plus the (unique) paths between
+        #         consecutive chosen cliques.
+        chosen_cliques = []
+        for var in query_variables:
+            if not any(var in clique for clique in chosen_cliques):
+                chosen_cliques.append(
+                    min(
+                        (clique for clique in self.junction_tree.nodes() if var in clique),
+                        key=lambda clique: np.prod(self.clique_beliefs[clique].cardinality),
+                    )
+                )
+        subtree_nodes = set(chosen_cliques)
+        for i in range(len(chosen_cliques) - 1):
+            subtree_nodes.update(nx.shortest_path(self.junction_tree, chosen_cliques[i], chosen_cliques[i + 1]))
         subtree_undirected_graph = self.junction_tree.subgraph(subtree_nodes)
-        # Converting subtree into a junction tree
         if len(subtree_nodes) == 1:
             subtree = JunctionTree()
             subtree.add_node(subtree_nodes.pop())
         else:
             subtree = JunctionTree(subtree_undirected_graph.edges())
 
-        # Selecting a node is root node. Root node would be having only one neighbor
+        # Step 4: Turn the calibrated beliefs into potentials of T' whose product is the marginal over its
+        #         scope: the belief of a leaf chosen as root, and belief / sepset belief for every other clique
+        #         (traversed from the root; `{root_node}` keeps the clique tuple as one set element).
         if len(subtree.nodes()) == 1:
             root_node = list(subtree.nodes())[0]
         else:
             root_node = tuple(filter(lambda x: len(list(subtree.neighbors(x))) == 1, subtree.nodes()))[0]
+        subtree_cliques = [root_node]
         clique_potential_list = [self.clique_beliefs[root_node]]
 
-        # For other nodes in the subtree compute the clique potentials as follows
-        # As all the nodes are nothing but tuples so simple set(root_node) won't work at it would update the set with
-        # all the elements of the tuple; instead use set([root_node]) as it would include only the tuple not the
-        # internal elements within it.
         parent_nodes = {root_node}
         nodes_traversed = set()
         while parent_nodes:
             parent_node = parent_nodes.pop()
             for child_node in set(subtree.neighbors(parent_node)) - nodes_traversed:
+                subtree_cliques.append(child_node)
                 clique_potential_list.append(
                     self.clique_beliefs[child_node] / self.sepset_beliefs[frozenset([parent_node, child_node])]
                 )
                 parent_nodes.update([child_node])
             nodes_traversed.update([parent_node])
 
-        # Add factors to the corresponding junction tree
+        # Step 5: Multiply each virtual-evidence likelihood into a potential of T' containing its variable
+        #         (not in place: the root potential is the shared calibrated belief).
+        for likelihood in likelihoods:
+            index = next(i for i, clique in enumerate(subtree_cliques) if likelihood.variables[0] in clique)
+            clique_potential_list[index] = clique_potential_list[index] * likelihood
         subtree.add_factors(*clique_potential_list)
 
-        # Sum product variable elimination on the subtree
+        # Step 6: Answer the query by variable elimination on T', applying the hard evidence; the MAP is the
+        #         most probable assignment of the joint marginal over `variables`.
         variable_elimination = VariableElimination(subtree)
         if operation == "marginalize":
             return variable_elimination.query(
@@ -1013,7 +1030,11 @@ class BeliefPropagation(Inference):
                 show_progress=show_progress,
             )
         elif operation == "maximize":
-            return variable_elimination.map_query(variables=variables, evidence=evidence, show_progress=show_progress)
+            joint_marginal = variable_elimination.query(
+                variables=variables, evidence=evidence, joint=True, show_progress=show_progress
+            )
+            assignment = joint_marginal.assignment([compat_fns.argmax(joint_marginal.values)])[0]
+            return dict(assignment)
 
     def query(
         self,
@@ -1037,7 +1058,8 @@ class BeliefPropagation(Inference):
 
         virtual_evidence: list (default:None)
             A list of pgmpy.factors.discrete.TabularCPD representing the virtual
-            evidences.
+            evidences. Each CPD must be defined on a single variable of the model
+            and use the model's state names.
 
         joint: boolean
             If True, returns a Joint Distribution over `variables`.
@@ -1075,43 +1097,28 @@ class BeliefPropagation(Inference):
         ... )  # doctest: +ELLIPSIS
         <DiscreteFactor representing phi(J:2, Q:2) at 0x...>
         """
+        # Step 1: Parameter checks.
+        variables = [variables] if isinstance(variables, str) else list(variables)
         evidence = evidence if evidence is not None else dict()
-        orig_model = self.model.copy()
-
-        # Step 1: Parameter Checks
-        common_vars = set(evidence if evidence is not None else []).intersection(set(variables))
+        common_vars = set(evidence).intersection(set(variables))
         if common_vars:
             raise ValueError(
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
+        if unknown := (set(variables) | set(evidence)) - self.variables:
+            raise ValueError(f"Variables not found in the model: {unknown}")
 
-        # Step 2: If virtual_evidence is provided, modify model and evidence.
-        if isinstance(self.model, DiscreteBayesianNetwork) and (virtual_evidence is not None):
-            self._virtual_evidence(virtual_evidence)
-            virt_evidence = {"__" + cpd.variables[0]: 0 for cpd in virtual_evidence}
-            return self.query(
-                variables=variables,
-                evidence={**evidence, **virt_evidence},
-                virtual_evidence=None,
-                joint=joint,
-                show_progress=show_progress,
-            )
-
-        # Step 3: Do network pruning.
-        if isinstance(self.model, DiscreteBayesianNetwork):
-            self.model, evidence = self._prune_bayesian_model(variables, evidence)
-        self._initialize_structures()
-
-        # Step 4: Run inference.
+        # Step 2: Sum-product inference on the calibrated tree.
         result = self._query(
             variables=variables,
             operation="marginalize",
             evidence=evidence,
+            virtual_evidence=virtual_evidence,
             joint=joint,
             show_progress=show_progress,
         )
-        self.__init__(orig_model)
 
+        # Step 3: Normalize the joint (the per-variable results are already normalized).
         if joint:
             return result.normalize(inplace=False)
         else:
@@ -1166,47 +1173,30 @@ class BeliefPropagation(Inference):
         ...     variables=["J", "Q"], evidence={"A": 0, "R": 0, "G": 0, "L": 1}
         ... )  # doctest: +SKIP
         """
-        variables = [] if variables is None else variables
+        # Step 1: Parameter checks; without `variables` the MAP is over all non-evidence variables.
         evidence = evidence if evidence is not None else dict()
-        common_vars = set(evidence if evidence is not None else []).intersection(variables)
+        if not variables:
+            variables = [var for var in self.variables if var not in evidence]
+        else:
+            variables = [variables] if isinstance(variables, str) else list(variables)
 
+        common_vars = set(evidence).intersection(variables)
         if common_vars:
             raise ValueError(
                 f"Can't have the same variables in both `variables` and `evidence`. Found in both: {common_vars}"
             )
+        if unknown := (set(variables) | set(evidence)) - self.variables:
+            raise ValueError(f"Variables not found in the model: {unknown}")
 
-        # TODO:Check the note in docstring. Change that behavior to return the joint MAP
-        if not variables:
-            variables = list(self.model.nodes())
-
-        # Make a copy of the original model and then replace self.model with it later.
-        orig_model = self.model.copy()
-
-        if isinstance(self.model, DiscreteBayesianNetwork) and (virtual_evidence is not None):
-            self._virtual_evidence(virtual_evidence)
-            virt_evidence = {"__" + cpd.variables[0]: 0 for cpd in virtual_evidence}
-            return self.map_query(
-                variables=variables,
-                evidence={**evidence, **virt_evidence},
-                virtual_evidence=None,
-                show_progress=show_progress,
-            )
-
-        if isinstance(self.model, DiscreteBayesianNetwork):
-            self.model, evidence = self._prune_bayesian_model(variables, evidence)
-        self._initialize_structures()
-
-        final_distribution = self._query(
+        # Step 2: MAP inference on the calibrated tree.
+        return self._query(
             variables=variables,
             operation="maximize",
             evidence=evidence,
+            virtual_evidence=virtual_evidence,
             joint=True,
             show_progress=show_progress,
         )
-
-        self.__init__(orig_model)
-
-        return final_distribution
 
 
 class BeliefPropagationWithMessagePassing(Inference):

@@ -58,12 +58,12 @@ class CorrelationScore(BaseUnsupervisedMetric):
     >>> from pgmpy.example_models import load_model
     >>> from pgmpy.metrics import CorrelationScore
     >>> alarm = load_model("bnlearn/alarm")
-    >>> data = alarm.simulate(int(1e4), seed=42)
+    >>> data = alarm.simulate(int(1e4), rng=42)
     >>> scorer = CorrelationScore(
     ...     ci_test="chi_square", significance_level=0.05, return_summary=False
     ... )
     >>> scorer(X=data, causal_graph=alarm)
-    0.910039113428944
+    0.9252948885976409
 
     >>> scorer = CorrelationScore(
     ...     ci_test="chi_square", significance_level=0.05, return_summary=True
@@ -79,11 +79,10 @@ class CorrelationScore(BaseUnsupervisedMetric):
 
     _tags = {
         "name": "correlation_score",
-        "requires_true_graph": False,
-        "requires_data": True,
+        "default_for": "unsupervised",
+        "supported_graph_types": [DAG],
+        "output_type": "scalar",
         "lower_is_better": False,
-        "supported_graph_types": (DAG,),
-        "is_default": True,
     }
 
     def __init__(
@@ -97,6 +96,9 @@ class CorrelationScore(BaseUnsupervisedMetric):
         self.score = score
         self.significance_level = significance_level
         self.return_summary = return_summary
+        super().__init__()
+        if return_summary:
+            self.set_tags(output_type="dataframe")
 
     def _evaluate(self, X, causal_graph):
         # Step 1: Validate inputs

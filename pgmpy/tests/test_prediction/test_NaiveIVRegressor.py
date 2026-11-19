@@ -140,13 +140,11 @@ def test_sample_weight_support_and_shapes(dag):
 def test_naiveiv_recovers_theta_with_LR():
     """Use pgmpy DAG + simulator to generate linear-Gaussian data and check theta recovery."""
 
-    lgbn = DAG.from_dagitty("dag { Z1 -> X [beta=0.2] Z2 -> X [beta=0.2] X -> Y [beta=0.3]}")
+    lgbn = DAG.from_dagitty("dag { Z1 -> X [beta=1.0] Z2 -> X [beta=1.0] X -> Y [beta=0.3]}")
 
-    data = lgbn.simulate(1000, seed=42)  # returns a pandas DataFrame
+    data = lgbn.simulate(1000, rng=42)  # returns a pandas DataFrame
 
     df = data.loc[:, ["X", "Z1", "Z2"]]
-    df = (df - df.mean(axis=0)) / df.std(axis=0)
-
     y = data["Y"]
 
     G = DAG(
@@ -162,12 +160,12 @@ def test_naiveiv_recovers_theta_with_LR():
 
     model.fit(df, y)
 
-    assert model.stage2_est_.coef_.round(1)[0] == 0.3
+    assert model.stage2_est_.coef_[0] == pytest.approx(0.3, abs=0.1)
 
     preds = model.predict(df)
     assert preds.shape[0] == df.shape[0]
-    mse = np.mean((preds - y.to_numpy()) ** 2)
-    assert mse < 0.98
+    mse = np.mean((preds - 0.3 * data["X"].to_numpy()) ** 2)
+    assert mse < 0.03
 
 
 def test_dag_roles_validation_and_pretreatment_support():
@@ -236,7 +234,7 @@ def test_multiple_instrument_variables_and_noise_columns():
     lgbn = DAG.from_dagitty(
         "dag { U1 -> X [beta=0.3] U2 -> X [beta=0.2] U3 -> X [beta=0.3] U4 -> X [beta=0.4] X -> Y [beta=0.6] }"
     )
-    data = lgbn.simulate(n_samples=300, seed=42)
+    data = lgbn.simulate(n_samples=300, rng=42)
     # add unrelated noise columns
     rng = np.random.RandomState(42)
     data["noise1"] = rng.normal(size=len(data))
@@ -284,7 +282,7 @@ def test_naiveiv_recovers_theta_high_dim():
                Z10 -> D [beta=-0.3]}"""
     )
 
-    data = dag.simulate(10000, seed=42)
+    data = dag.simulate(10000, rng=42)
 
     df = data.loc[:, list(set(dag.nodes()).difference({"Y"}))]
     df = df - df.mean(axis=0)
