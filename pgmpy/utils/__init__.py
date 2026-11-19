@@ -1,12 +1,16 @@
 from ._warnings import ExperimentalWarning
 from .check_functions import _check_1d_array_object, _check_length_equal
+from .covariance_regression import CovarianceRegression
 from .data_types import (
     get_dataset_type,
     is_discrete_type,
     preprocess_data,
     split_by_type,
 )
-from .mathext import cartesian, sample_discrete
+from .mathext import (
+    cartesian,
+    sample_discrete,
+)
 from .optimizer import optimize, pinverse
 from .state_name import StateNameMixin
 from .tabular import (
@@ -28,6 +32,7 @@ __all__ = [
     "ExperimentalWarning",
     "_validate_dataframe",
     "cartesian",
+    "CovarianceRegression",
     "sample_discrete",
     "StateNameMixin",
     "_check_1d_array_object",

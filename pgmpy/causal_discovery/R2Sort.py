@@ -4,6 +4,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 
 from pgmpy.causal_discovery._base import BaseOrderDiscovery
+from pgmpy.utils import CovarianceRegression
 
 
 class R2Sort(BaseOrderDiscovery):
@@ -90,25 +91,37 @@ class R2Sort(BaseOrderDiscovery):
     }
 
     def _fit(self, X: pd.DataFrame) -> "R2Sort":
+        # Step 1: Validate the return type.
         return_type = self.return_type.lower()
         if return_type not in ("dag", "pdag"):
             raise ValueError(f"return_type must be one of: dag, pdag. Got: {self.return_type}")
 
-        model_reg = clone(self.estimator) if self.estimator is not None else LinearRegression()
-        all_nodes_set = set(self.feature_names_in_)
+        # Step 2: Compute the R^2 of each variable regressed on all the others: from the covariance matrix for the
+        # default linear regression, otherwise by fitting the given estimator.
         r2_values = {}
-        for target in self.feature_names_in_:
-            other_nodes = list(all_nodes_set - {target})
-            y = X[target]
-            predictors = X[other_nodes]
+        if self.estimator is None:
+            model_reg = LinearRegression()
+            regression = CovarianceRegression().fit(X=X)
+            for target_index, target in enumerate(self.feature_names_in_):
+                others = [variable for variable in self.feature_names_in_ if variable != target]
+                residual_variance = regression.residual_covariance(X=others, y=[target])[0, 0]
+                r2_values[target] = 1.0 - residual_variance / regression.covariance_[target_index, target_index]
+        else:
+            model_reg = clone(estimator=self.estimator)
+            for target_index, target in enumerate(self.feature_names_in_):
+                other_indices = [index for index in range(len(self.feature_names_in_)) if index != target_index]
+                model_reg.fit(X=X.iloc[:, other_indices], y=X.iloc[:, target_index])
+                r2_values[target] = r2_score(
+                    y_true=X.iloc[:, target_index], y_pred=model_reg.predict(X=X.iloc[:, other_indices])
+                )
 
-            model_reg.fit(predictors, y)
-            predictions = model_reg.predict(predictors)
-            r2_values[target] = r2_score(y, predictions)
-
+        # Step 3: Order the variables by increasing R^2.
         causal_order = sorted(r2_values, key=r2_values.get)
+
+        # Step 4: Estimate the DAG from the causal order.
         model = self._estimate_dag_from_causal_order(X, causal_order, regressor=model_reg)
 
+        # Step 5: Store the fitted attributes.
         self.causal_order_ = list(causal_order)
         self.causal_graph_ = model if return_type == "dag" else model.to_pdag()
         self.adjacency_matrix_ = self.causal_graph_.to_adjacency(

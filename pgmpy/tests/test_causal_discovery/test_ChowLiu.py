@@ -1,8 +1,11 @@
+from itertools import combinations
+
 import networkx as nx
 import numpy as np
 import pandas as pd
 import pytest
 from joblib.externals.loky import get_reusable_executor
+from sklearn.metrics import mutual_info_score
 
 from pgmpy.causal_discovery import ChowLiu
 from pgmpy.factors.discrete import TabularCPD
@@ -227,6 +230,27 @@ def test_chow_liu_categorical_backends(backend):
 
     assert set(est_actual.causal_graph_.nodes()) == set(est_expected.causal_graph_.nodes())
     assert set(est_actual.causal_graph_.edges()) == set(est_expected.causal_graph_.edges())
+
+
+def test_get_weights_custom_callable(data13):
+    calls = []
+
+    def edge_weights_fn(x, y):
+        calls.append((x, y))
+        return mutual_info_score(x, y)
+
+    data = data13.astype(str).astype(pd.CategoricalDtype(["2", "1", "0"]))
+    weights = ChowLiu._get_weights(data, edge_weights_fn=edge_weights_fn, n_jobs=1, show_progress=False)
+
+    # Each pair of variables is scored on the state codes stored in their columns, which follow the category order.
+    columns = data.columns
+    assert all(isinstance(codes, np.ndarray) and codes.dtype.kind == "i" for call in calls for codes in call)
+    for (x, y), (u, v) in zip(calls, combinations(columns, 2), strict=True):
+        np.testing.assert_array_equal(x, data[u].cat.codes)
+        np.testing.assert_array_equal(y, data[v].cat.codes)
+
+    expected = [[0 if u == v else mutual_info_score(data[u], data[v]) for v in columns] for u in columns]
+    np.testing.assert_allclose(weights, expected, atol=1e-12)
 
 
 @pytest.fixture(autouse=True)

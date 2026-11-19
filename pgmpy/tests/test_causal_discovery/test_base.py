@@ -52,8 +52,8 @@ from pgmpy.structure_score import get_scoring_method
     ],
     ids=["continuous", "discrete"],
 )
-def test_fit_warns_on_constant_column(data, estimator):
-    with pytest.warns(UserWarning, match="constant"):
+def test_fit_rejects_constant_column(data, estimator):
+    with pytest.raises(ValueError, match="Variable 'const' is constant"):
         estimator.fit(data)
 
 
@@ -139,7 +139,7 @@ def test_fit_narrowing_handles_untagged_and_wider_objects():
 
     class UntaggedCITest(BaseCITest):
         def _compute_result(self, X, Y, Z):
-            return _CITestResult(statistic=0.0, p_value=1.0)
+            return _CITestResult(statistic=0.0, p_value=1.0, effect_size=0.0)
 
     pc = PC(ci_test=UntaggedCITest()).fit(data)
     assert pc.get_tag("data_types") == ["discrete", "continuous", "mixed"]
@@ -434,7 +434,7 @@ def test_tree_search_preserve_zero_weight_edges():
     assert set(dag.nodes()) == set(columns)
     assert len(dag.edges()) == len(columns) - 1
 
-    df = pd.DataFrame({"A": ["0", "1", "0", "1"], "B": ["1", "1", "1", "1"], "C": ["0", "0", "1", "1"]})
+    df = pd.DataFrame({"A": ["0", "1", "0", "1"], "B": ["1", "0", "1", "0"], "C": ["0", "0", "1", "1"]})
     est = ChowLiu(edge_weights_fn=lambda x, y: 0.0, n_jobs=1).fit(df)
     assert set(est.causal_graph_.nodes()) == {"A", "B", "C"}
     assert est.adjacency_matrix_.shape == (3, 3)
