@@ -60,14 +60,9 @@ class CausalInfluenceDiagram(DAG):
     >>> cid.add_node("Age")
     >>> cid.chance_nodes
     ['Health', 'Age']
-
-    Notes
-    -----
-    Utility nodes are evaluated during :meth:`simulate`; the sum of their values in each row is the total utility for
-    that sample. Decision optimization and expected-utility inference are not implemented.
     """
 
-    _NODE_ROLES = frozenset({"chance", "decision", "utility", "latent"})
+    _ALLOWED_NODE_ROLES = frozenset({"chance", "decision", "utility", "latent"})
 
     def __init__(
         self,
@@ -131,8 +126,8 @@ class CausalInfluenceDiagram(DAG):
         else:
             role = new_role or "chance"
 
-        if not isinstance(role, str) or role not in self._NODE_ROLES:
-            raise ValueError(f"role must be one of {sorted(self._NODE_ROLES)}, but got {role!r}.")
+        if not isinstance(role, str) or role not in self._ALLOWED_NODE_ROLES:
+            raise ValueError(f"role must be one of {sorted(self._ALLOWED_NODE_ROLES)}, but got {role!r}.")
 
         super().add_node(node_for_adding, role=role, **attr)
 
@@ -146,8 +141,9 @@ class CausalInfluenceDiagram(DAG):
 
     def add_edge(self, u_of_edge: Hashable, v_of_edge: Hashable, **attr):
         super().add_edge(u_of_edge, v_of_edge, **attr)
-        self.add_node(u_of_edge, role="chance")
-        self.add_node(v_of_edge, role="chance")
+        for node in (u_of_edge, v_of_edge):
+            if not self.has_node(node) or "role" not in self.nodes[node]:
+                self.add_node(node, role="chance")
 
     def remove_node(self, n: Hashable):
         """Remove a node and any parameterization assigned to it."""
@@ -204,7 +200,7 @@ class CausalInfluenceDiagram(DAG):
 
         for node, attributes in self.nodes(data=True):
             role = attributes.get("role")
-            if role not in self._NODE_ROLES:
+            if role not in self._ALLOWED_NODE_ROLES:
                 raise ValueError(f"Node {node!r} has invalid role {role!r}.")
 
             if role == "utility":
@@ -347,7 +343,7 @@ class CausalInfluenceDiagram(DAG):
     def simulate(
         self,
         n_samples: int = 1000,
-        seed: int | np.random.Generator | None = None,
+        rng: int | np.random.Generator | None = None,
     ):
         """Generate samples from assigned chance distributions and decision policies.
 
@@ -358,8 +354,8 @@ class CausalInfluenceDiagram(DAG):
         ----------
         n_samples : int, default=1000
             Number of rows to sample.
-        seed : int or numpy.random.Generator, optional
-            Seed or random number generator used for all draws.
+        rng : int or numpy.random.Generator, optional
+            random number generator used for all draws.
 
         Returns
         -------
@@ -376,7 +372,7 @@ class CausalInfluenceDiagram(DAG):
             raise ValueError(f"n_samples must be a non-negative integer, but got {n_samples!r}.")
 
         self.check_model()
-        random_state = np.random.default_rng(seed)
+        random_state = np.random.default_rng(rng)
         samples = pd.DataFrame(index=pd.RangeIndex(n_samples))
         for node in nx.topological_sort(self):
             role = self.nodes[node]["role"]

@@ -116,12 +116,12 @@ def test_copy_retains_assignments_and_parent_changes_are_revalidated():
     cid.set_probabilities("Y", parameter("Y", [0, 1], {(0,): [0.5, 0.5], (1,): [0.5, 0.5]}, ["X"]))
 
     copied = cid.copy()
-    pd.testing.assert_frame_equal(cid.simulate(n_samples=5, seed=1), copied.simulate(n_samples=5, seed=1))
+    pd.testing.assert_frame_equal(cid.simulate(n_samples=5, rng=1), copied.simulate(n_samples=5, rng=1))
 
     cid.add_node("Z")
     cid.add_edge("Z", "Y")
     cid.set_probabilities("Z", parameter("Z", [0, 1], {(): [0.5, 0.5]}))
-    for validate in (cid.check_model, lambda: cid.simulate(n_samples=5, seed=1)):
+    for validate in (cid.check_model, lambda: cid.simulate(n_samples=5, rng=1)):
         with pytest.raises(ValueError, match="evidence .* does not match the parents of node 'Y'"):
             validate()
 
@@ -226,8 +226,8 @@ def test_simulate_samples_policies_and_additive_utility_with_seed():
     )
     cid.set_utility("TreatmentUtility", lambda values: -2.0 * (values["Treatment"] == "drug"))
 
-    samples = cid.simulate(n_samples=100, seed=12)
-    repeated = cid.simulate(n_samples=100, seed=12)
+    samples = cid.simulate(n_samples=100, rng=12)
+    repeated = cid.simulate(n_samples=100, rng=12)
 
     pd.testing.assert_frame_equal(samples, repeated)
     assert set(samples["Treatment"]) == {"control", "drug"}
@@ -259,4 +259,4 @@ def test_tabular_cpd_can_be_assigned_when_skpro_is_available():
     cid = CausalInfluenceDiagram(chance_nodes=["X"])
     cid.set_probabilities("X", TabularCPD.from_values("X", 2, [[0.5], [0.5]]))
 
-    assert len(cid.simulate(n_samples=5, seed=0)) == 5
+    assert len(cid.simulate(n_samples=5, rng=0)) == 5
