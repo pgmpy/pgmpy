@@ -36,6 +36,12 @@ class GeneralizedCov(_ResidualMixin, BaseCITest):
     permuted statistics that meet or exceed the observed value (with a +1 continuity
     correction following Phipson & Smyth [2]).
 
+    The effect size is the root mean square of the canonical correlations
+    :math:`\rho_1, \ldots, \rho_s` between :math:`R_X` and :math:`R_Y`, where :math:`s = \min(p, q)`:
+
+    .. math::
+        \sqrt{\frac{1}{s} \sum_{i=1}^{s} \rho_i^2}.
+
     Parameters
     ----------
     data : pandas.DataFrame
@@ -64,6 +70,8 @@ class GeneralizedCov(_ResidualMixin, BaseCITest):
         calling the test.
     p_value_ : float
         Permutation-based p-value. Set after calling the test.
+    effect_size_ : float
+        The root mean square canonical correlation between the residuals. Set after calling the test.
     estimator_x_ : sklearn-compatible estimator
         The fitted estimator used for predicting X.
     estimator_y_ : sklearn-compatible estimator
@@ -124,9 +132,7 @@ class GeneralizedCov(_ResidualMixin, BaseCITest):
 
     def _compute_result(self, X: str, Y: str, Z: list):
         """
-        Compute the determinant-style cross-covariance statistic and its permutation p-value.
-
-        Returns the determinant-style cross-covariance statistic and p-value.
+        Compute the determinant-style cross-covariance statistic, its permutation p-value and the effect size.
 
         Parameters
         ----------
@@ -143,6 +149,8 @@ class GeneralizedCov(_ResidualMixin, BaseCITest):
             The determinant-style residual cross-covariance statistic.
         p_value : float
             Permutation-based p-value.
+        effect_size : float
+            The root mean square of the canonical correlations between the residuals.
         """
         # Step 1: Compute residuals of X and Y given Z.
         res_x, self.estimator_x_ = self.get_residuals(X, Z)
@@ -167,4 +175,14 @@ class GeneralizedCov(_ResidualMixin, BaseCITest):
         # Phipson-Smyth +1 correction so that p-value is never exactly zero.
         p_value = (float(np.sum(perm_stats >= statistic)) + 1.0) / (self.n_permutations + 1.0)
 
-        return _CITestResult(statistic=statistic, p_value=p_value)
+        # Step 4: Compute the effect size, the root mean square of the canonical correlations between the residuals.
+        bases = []
+        for residuals in (res_x, res_y):
+            values = residuals.to_numpy(dtype=float)
+            left_vectors, singular_values, _ = np.linalg.svd(values - values.mean(axis=0), full_matrices=False)
+            tolerance = singular_values.max(initial=0.0) * max(values.shape) * np.finfo(float).eps
+            bases.append(left_vectors[:, singular_values > tolerance])
+        canonical_correlations = np.linalg.svd(bases[0].T @ bases[1], compute_uv=False)
+        effect_size = float(np.sqrt(np.sum(canonical_correlations**2) / min(res_x.shape[1], res_y.shape[1])))
+
+        return _CITestResult(statistic=statistic, p_value=p_value, effect_size=effect_size)
