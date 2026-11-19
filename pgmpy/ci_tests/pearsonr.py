@@ -81,12 +81,6 @@ class Pearsonr(BaseCITest):
         self._regression = CovarianceRegression().fit(X=data)
         super().__init__(use_cache=use_cache)
 
-    def _partial_correlation(self, X: str, Y: str, Z: list) -> tuple[float, int]:
-        """Partial correlation of `X` and `Y` given `Z`, and the degrees of freedom of the test."""
-        residual_cov = self._regression.residual_covariance(X=Z, y=[X, Y])
-        dof = self.data.shape[0] - len(Z) - 2
-        return residual_cov[0, 1] / np.sqrt(residual_cov[0, 0] * residual_cov[1, 1]), dof
-
     def _compute_result(
         self,
         X: str,
@@ -100,7 +94,8 @@ class Pearsonr(BaseCITest):
         (``n_samples <= len(Z) + 2``) the data carry no evidence against independence and the p-value is 1, as in
         :func:`scipy.stats.pearsonr` for two samples.
         """
-        coef, dof = self._partial_correlation(X=X, Y=Y, Z=Z)
+        coef = self._regression.partial_correlation(X=Z, y=[X, Y])[0, 1]
+        dof = self.data.shape[0] - len(Z) - 2
         attributes = {"dof_": dof} if len(Z) > 0 else {}
         if dof <= 0:
             return _CITestResult(statistic=coef, p_value=1.0, effect_size=abs(coef), attributes=attributes)

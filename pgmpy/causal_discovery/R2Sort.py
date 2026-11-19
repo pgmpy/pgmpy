@@ -98,18 +98,18 @@ class R2Sort(BaseOrderDiscovery):
 
         # Step 2: Compute the R^2 of each variable regressed on all the others: from the covariance matrix for the
         # default linear regression, otherwise by fitting the given estimator.
-        model_reg = clone(estimator=self.estimator) if self.estimator is not None else LinearRegression()
-        if self.estimator is None:
-            regression = CovarianceRegression().fit(X=X)
         r2_values = {}
-        for target_index, target in enumerate(self.feature_names_in_):
-            other_indices = [index for index in range(len(self.feature_names_in_)) if index != target_index]
-            if self.estimator is None:
-                residual_variance = regression.residual_covariance(
-                    X=list(X.columns[other_indices]), y=[X.columns[target_index]]
-                )[0, 0]
+        if self.estimator is None:
+            model_reg = LinearRegression()
+            regression = CovarianceRegression().fit(X=X)
+            for target_index, target in enumerate(self.feature_names_in_):
+                others = [variable for variable in self.feature_names_in_ if variable != target]
+                residual_variance = regression.residual_covariance(X=others, y=[target])[0, 0]
                 r2_values[target] = 1.0 - residual_variance / regression.covariance_[target_index, target_index]
-            else:
+        else:
+            model_reg = clone(estimator=self.estimator)
+            for target_index, target in enumerate(self.feature_names_in_):
+                other_indices = [index for index in range(len(self.feature_names_in_)) if index != target_index]
                 model_reg.fit(X=X.iloc[:, other_indices], y=X.iloc[:, target_index])
                 r2_values[target] = r2_score(
                     y_true=X.iloc[:, target_index], y_pred=model_reg.predict(X=X.iloc[:, other_indices])

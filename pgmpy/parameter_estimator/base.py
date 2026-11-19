@@ -6,7 +6,6 @@ from skbase.base import BaseEstimator
 from pgmpy.base import DAG
 from pgmpy.models import DiscreteBayesianNetwork, LinearGaussianBayesianNetwork
 from pgmpy.utils import build_state_names, preprocess_data
-from pgmpy.utils._warnings import _warn_external
 
 
 class BaseParameterEstimator(BaseEstimator):
@@ -213,8 +212,7 @@ class GaussianParameterEstimator(BaseParameterEstimator):
 
         data: pandas.DataFrame
             DataFrame object with column names identical to the variable names
-            of the network. Rows with missing values in any model variable are
-            dropped with a warning.
+            of the network.
 
         sample_weight: array-like of shape (n_samples,), optional
             Per-row weights for `data`. Only accepted by estimators whose
@@ -249,12 +247,5 @@ class GaussianParameterEstimator(BaseParameterEstimator):
         sample_weight=None,
     ) -> None:
         model, _ = self._validate_inputs(model, data, sample_weight=sample_weight)
-        complete_data = data.dropna(subset=list(model.nodes()))
-        dropped_rows_count = data.shape[0] - complete_data.shape[0]
-        if dropped_rows_count:
-            _warn_external(
-                f"{dropped_rows_count} rows with missing values were dropped from the dataset.",
-                UserWarning,
-            )
         self._model = model
-        self._data = complete_data
+        self._data = data

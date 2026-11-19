@@ -63,6 +63,8 @@ class CovarianceRegression(BaseEstimator):
     array([[ 2., -1.]])
     >>> regression.residual_covariance(X=["A", "B"], y=["C"]).round(2)
     array([[0.24]])
+    >>> float(regression.partial_correlation(X=["B"], y=["A", "C"])[0, 1].round(2))
+    0.97
 
     A shrinkage estimate of the covariance matrix:
 
@@ -169,3 +171,25 @@ class CovarianceRegression(BaseEstimator):
 
         x_positions = [self._positions[variable] for variable in X]
         return total - self.covariance_[np.ix_(y_positions, x_positions)] @ self.coefficients(X=X, y=y).T
+
+    def partial_correlation(self, X: Sequence[Hashable], y: Sequence[Hashable]) -> np.ndarray:
+        """
+        Partial correlation matrix of the variables `y` given the variables `X`.
+
+        Parameters
+        ----------
+        X : list
+            Labels of the conditioning variables. If empty, the correlation matrix of `y` is returned.
+
+        y : list
+            Labels of the correlated variables.
+
+        Returns
+        -------
+        numpy.ndarray
+            Matrix of shape ``(len(y), len(y))`` of the correlations between the residuals of the linear regression of
+            `y` on `X`.
+        """
+        residual_covariance = self.residual_covariance(X=X, y=y)
+        variances = np.diag(residual_covariance)
+        return residual_covariance / np.sqrt(np.outer(variances, variances))

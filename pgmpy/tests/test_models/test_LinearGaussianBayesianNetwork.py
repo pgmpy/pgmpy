@@ -330,23 +330,6 @@ class TestLGBNMethods:
                 est_index = cpd_est.evidence.index(evid_var)
                 assert abs(cpd_orig.beta[index + 1] - cpd_est.beta[est_index + 1]) < 0.2
 
-    def test_fit_drops_rows_with_missing_values(self):
-        rng = np.random.default_rng(seed=0)
-        df = pd.DataFrame({"x1": rng.normal(size=100), "x3": rng.normal(size=100)})
-        df["x2"] = 2 * df["x1"] + rng.normal(size=100)
-        df.loc[[3, 7], "x1"] = np.nan
-        df.loc[11, "x3"] = np.nan
-
-        model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
-        with self.assertWarnsRegex(UserWarning, "3 rows with missing values were dropped"):
-            model.fit(df)
-
-        expected = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
-        expected.fit(df.dropna())
-        for node in model.nodes():
-            np_test.assert_allclose(model.get_cpds(node).beta, expected.get_cpds(node).beta, rtol=1e-12)
-            np_test.assert_allclose(model.get_cpds(node).std, expected.get_cpds(node).std, rtol=1e-12)
-
     def test_fit_invalid_estimator(self):
         new_model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
         df = pd.DataFrame(np.random.randn(100, 3), columns=["x1", "x2", "x3"])

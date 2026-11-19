@@ -5,6 +5,7 @@ import numpy as np
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.models import LinearGaussianBayesianNetwork
 from pgmpy.utils import CovarianceRegression
+from pgmpy.utils._warnings import _warn_external
 
 from .base import GaussianParameterEstimator
 
@@ -96,6 +97,11 @@ class LinearGaussianMLE(GaussianParameterEstimator):
         self._initialize_fit(model, data, sample_weight=sample_weight)
 
         nodes = list(self._model.nodes())
+        complete_data = self._data.dropna(subset=nodes)
+        dropped_rows_count = self._data.shape[0] - complete_data.shape[0]
+        if dropped_rows_count:
+            _warn_external(f"{dropped_rows_count} rows with missing values were dropped from the dataset.", UserWarning)
+        self._data = complete_data
         regression = CovarianceRegression().fit(X=self._data.loc[:, nodes])
         col_index = {node: index for index, node in enumerate(nodes)}
         n_samples = self._data.shape[0]
