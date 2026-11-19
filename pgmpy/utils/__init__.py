@@ -1,5 +1,6 @@
 from ._warnings import ExperimentalWarning
 from .check_functions import _check_1d_array_object, _check_length_equal
+from .covariance_regression import CovarianceRegression
 from .data_types import (
     get_dataset_type,
     is_discrete_type,
@@ -8,8 +9,6 @@ from .data_types import (
 )
 from .mathext import (
     cartesian,
-    regression_coefficients,
-    regression_residual_covariance,
     sample_discrete,
 )
 from .optimizer import optimize, pinverse
@@ -31,8 +30,7 @@ from .utils import (
 __all__ = [
     "ExperimentalWarning",
     "cartesian",
-    "regression_coefficients",
-    "regression_residual_covariance",
+    "CovarianceRegression",
     "sample_discrete",
     "StateNameMixin",
     "_check_1d_array_object",

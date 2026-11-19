@@ -1,11 +1,10 @@
-import numpy as np
 import pandas as pd
 from sklearn.base import clone
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 
 from pgmpy.causal_discovery._base import BaseOrderDiscovery
-from pgmpy.utils import regression_residual_covariance
+from pgmpy.utils import CovarianceRegression
 
 
 class R2Sort(BaseOrderDiscovery):
@@ -97,19 +96,19 @@ class R2Sort(BaseOrderDiscovery):
         if return_type not in ("dag", "pdag"):
             raise ValueError(f"return_type must be one of: dag, pdag. Got: {self.return_type}")
 
-        # Step 2: Compute the R^2 of each variable regressed on all the others: from the correlation matrix for the
+        # Step 2: Compute the R^2 of each variable regressed on all the others: from the covariance matrix for the
         # default linear regression, otherwise by fitting the given estimator.
         model_reg = clone(estimator=self.estimator) if self.estimator is not None else LinearRegression()
         if self.estimator is None:
-            correlation_matrix = np.atleast_2d(np.corrcoef(X.to_numpy(dtype=float), rowvar=False))
+            regression = CovarianceRegression().fit(X=X)
         r2_values = {}
         for target_index, target in enumerate(self.feature_names_in_):
             other_indices = [index for index in range(len(self.feature_names_in_)) if index != target_index]
             if self.estimator is None:
-                residual_variance = regression_residual_covariance(
-                    cov=correlation_matrix, targets=[target_index], given=other_indices
+                residual_variance = regression.residual_covariance(
+                    X=list(X.columns[other_indices]), y=[X.columns[target_index]]
                 )[0, 0]
-                r2_values[target] = 1.0 - residual_variance
+                r2_values[target] = 1.0 - residual_variance / regression.covariance_[target_index, target_index]
             else:
                 model_reg.fit(X=X.iloc[:, other_indices], y=X.iloc[:, target_index])
                 r2_values[target] = r2_score(

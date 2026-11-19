@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from scipy import special
 
-from pgmpy.utils import regression_residual_covariance
+from pgmpy.utils import CovarianceRegression
 
 from ._base import BaseCITest, _CITestResult
 
@@ -78,17 +78,12 @@ class Pearsonr(BaseCITest):
 
     def __init__(self, data: pd.DataFrame, use_cache: bool = True):
         self.data = data
-        self._cov = np.atleast_2d(np.cov(data.to_numpy(dtype=float), rowvar=False, ddof=0))
-        self._col_index = {col: index for index, col in enumerate(data.columns)}
+        self._regression = CovarianceRegression().fit(X=data)
         super().__init__(use_cache=use_cache)
 
     def _partial_correlation(self, X: str, Y: str, Z: list) -> tuple[float, int]:
         """Partial correlation of `X` and `Y` given `Z`, and the degrees of freedom of the test."""
-        residual_cov = regression_residual_covariance(
-            cov=self._cov,
-            targets=[self._col_index[X], self._col_index[Y]],
-            given=[self._col_index[var] for var in Z],
-        )
+        residual_cov = self._regression.residual_covariance(X=Z, y=[X, Y])
         dof = self.data.shape[0] - len(Z) - 2
         return residual_cov[0, 1] / np.sqrt(residual_cov[0, 0] * residual_cov[1, 1]), dof
 

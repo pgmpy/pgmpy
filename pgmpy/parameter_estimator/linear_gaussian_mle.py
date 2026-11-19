@@ -4,7 +4,7 @@ import numpy as np
 
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.models import LinearGaussianBayesianNetwork
-from pgmpy.utils import regression_coefficients, regression_residual_covariance
+from pgmpy.utils import CovarianceRegression
 
 from .base import GaussianParameterEstimator
 
@@ -96,9 +96,7 @@ class LinearGaussianMLE(GaussianParameterEstimator):
         self._initialize_fit(model, data, sample_weight=sample_weight)
 
         nodes = list(self._model.nodes())
-        values = self._data.loc[:, nodes].to_numpy(dtype=float)
-        cov = np.atleast_2d(np.cov(values, rowvar=False, ddof=0))
-        means = values.mean(axis=0)
+        regression = CovarianceRegression().fit(X=self._data.loc[:, nodes])
         col_index = {node: index for index, node in enumerate(nodes)}
         n_samples = self._data.shape[0]
 
@@ -112,15 +110,15 @@ class LinearGaussianMLE(GaussianParameterEstimator):
                 cpds.append(
                     LinearGaussianCPD(
                         variable=node,
-                        beta=[means[node_col]],
-                        std=np.sqrt(n_samples * cov[node_col, node_col] / (n_samples - ddof)),
+                        beta=[regression.location_[node_col]],
+                        std=np.sqrt(n_samples * regression.covariance_[node_col, node_col] / (n_samples - ddof)),
                     )
                 )
             else:
                 parent_cols = [col_index[parent] for parent in parents]
-                coef = regression_coefficients(cov=cov, targets=[node_col], given=parent_cols)[:, 0]
-                intercept = means[node_col] - coef @ means[parent_cols]
-                residual_var = regression_residual_covariance(cov=cov, targets=[node_col], given=parent_cols)[0, 0]
+                coef = regression.coefficients(X=parents, y=[node])[0]
+                intercept = regression.location_[node_col] - coef @ regression.location_[parent_cols]
+                residual_var = regression.residual_covariance(X=parents, y=[node])[0, 0]
                 ddof = 0 if self.std_estimator == "mle" else 1 + len(parents)
                 cpds.append(
                     LinearGaussianCPD(

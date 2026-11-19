@@ -3,7 +3,7 @@ from collections.abc import Hashable
 import numpy as np
 
 from pgmpy.structure_score._base import BaseStructureScore
-from pgmpy.utils import is_discrete_type, regression_residual_covariance, split_by_type
+from pgmpy.utils import CovarianceRegression, is_discrete_type, split_by_type
 
 _SINGULAR_RCOND = 1e6 * np.finfo(float).eps
 
@@ -127,12 +127,10 @@ class LogLikelihoodCondGauss(BaseStructureScore):
                 n_rows = len(rows)
                 if n_rows <= len(continuous):
                     return -np.inf
-                stratum_cov = np.atleast_2d(np.cov(values[rows], rowvar=False, ddof=0))
-                if stratum_cov[0, 0] <= _SINGULAR_RCOND:
+                regression = CovarianceRegression().fit(X=values[rows])
+                if regression.covariance_[0, 0] <= _SINGULAR_RCOND:
                     return -np.inf
-                residual_var = regression_residual_covariance(
-                    cov=stratum_cov, targets=[0], given=list(range(1, len(continuous)))
-                )[0, 0]
+                residual_var = regression.residual_covariance(X=list(range(1, len(continuous))), y=[0])[0, 0]
                 log_like -= 0.5 * n_rows * (np.log(2.0 * np.pi * residual_var) + 1.0)
 
             # Step 3: Undo the standardization of the target.

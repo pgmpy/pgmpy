@@ -3,7 +3,7 @@ from collections.abc import Hashable
 import numpy as np
 
 from pgmpy.structure_score._base import BaseStructureScore
-from pgmpy.utils import regression_residual_covariance
+from pgmpy.utils import CovarianceRegression
 
 
 class LogLikelihoodGauss(BaseStructureScore):
@@ -66,15 +66,12 @@ class LogLikelihoodGauss(BaseStructureScore):
 
     def __init__(self, data, state_names=None, max_cache_size=10000):
         super().__init__(data, state_names=state_names, max_cache_size=max_cache_size)
-        self._cov = np.atleast_2d(np.cov(self.data.to_numpy(dtype=float), rowvar=False, ddof=0))
-        self._col_index = {col: index for index, col in enumerate(self.data.columns)}
+        self._regression = CovarianceRegression().fit(X=self.data)
         self._n_samples = self.data.shape[0]
         self._ll_const = -0.5 * self._n_samples * (np.log(2.0 * np.pi) + 1.0)
 
     def _log_likelihood(self, variable: Hashable, parents: tuple[Hashable, ...]) -> tuple[float, float]:
-        variable_col = self._col_index[variable]
-        parent_cols = [self._col_index[parent] for parent in parents]
-        residual_var = regression_residual_covariance(cov=self._cov, targets=[variable_col], given=parent_cols)[0, 0]
+        residual_var = self._regression.residual_covariance(X=parents, y=[variable])[0, 0]
         ll = self._ll_const - 0.5 * self._n_samples * np.log(residual_var)
         return (ll, len(parents))
 
