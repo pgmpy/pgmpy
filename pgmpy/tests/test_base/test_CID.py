@@ -52,21 +52,32 @@ def parameter(variable, states, probabilities, evidence=None):
 
 def test_roles_default_to_chance_and_can_be_declared():
     cid = CausalInfluenceDiagram(
-        ebunch=[("Treatment", "Health"), ("Treatment", "Utility"), ("Health", "Utility")],
+        ebunch=[("Treatment", "Health"), ("Treatment", "Utility"), ("Health", "Utility"), ("Latent", "Health")],
         decision_nodes=["Treatment"],
         utility_nodes=["Utility"],
         latents=["Latent"],
     )
 
-    assert cid.chance_nodes == ["Health"]
+    assert cid.chance_nodes == ["Health", "Latent"]
     assert cid.decision_nodes == ["Treatment"]
     assert cid.utility_nodes == ["Utility"]
+    assert cid.latents == {"Latent"}
+    assert cid.get_role("decision") == ["Treatment"]
 
     warnings.simplefilter("always")
 
     cid.add_node("Age")
     cid.add_node("Risk", role="chance")
-    assert cid.chance_nodes == ["Health", "Age", "Risk"]
+    assert cid.chance_nodes == ["Health", "Latent", "Age", "Risk"]
+
+    with pytest.warns(UserWarning, match="Overwriting role of node 'Age'"):
+        cid.add_node("Age", role="decision")
+    assert cid.chance_nodes == ["Health", "Latent", "Risk"]
+    assert cid.decision_nodes == ["Treatment", "Age"]
+
+    cid.with_role(role="utility", variables="Risk", inplace=True)
+    assert cid.chance_nodes == ["Health", "Latent"]
+    assert cid.utility_nodes == ["Utility", "Risk"]
 
     cid_b = CausalInfluenceDiagram()
     cid_b.add_edge("A", "B")
@@ -102,7 +113,12 @@ def test_role_validation_and_utility_leaf_invariant():
     with pytest.raises(ValueError, match="Utility nodes must be leaves"):
         cid.check_model()
 
-    cid = CausalInfluenceDiagram(chance_nodes=["X"])
+    cid = CausalInfluenceDiagram([("X", "Utility")], utility_nodes=["Utility"], latents=["Utility"])
+    with pytest.raises(ValueError, match="Utility nodes cannot be latent"):
+        cid.check_model()
+
+    with pytest.raises(ValueError, match="Variable 'X' not found in the graph"):
+        CausalInfluenceDiagram(chance_nodes=["X"])
 
 
 def test_acyclicity():
@@ -111,11 +127,12 @@ def test_acyclicity():
 
 
 def test_copy_retains_assignments_and_parent_changes_are_revalidated():
-    cid = CausalInfluenceDiagram([("X", "Y")])
+    cid = CausalInfluenceDiagram([("X", "Y")], decision_nodes=["Y"], latents=["X"])
     cid.set_probabilities("X", parameter("X", [0, 1], {(): [0.5, 0.5]}))
-    cid.set_probabilities("Y", parameter("Y", [0, 1], {(0,): [0.5, 0.5], (1,): [0.5, 0.5]}, ["X"]))
+    cid.set_policy("Y", parameter("Y", [0, 1], {(0,): [0.5, 0.5], (1,): [0.5, 0.5]}, ["X"]))
 
     copied = cid.copy()
+    assert copied.get_role_dict() == cid.get_role_dict()
     pd.testing.assert_frame_equal(cid.simulate(n_samples=5, rng=1), copied.simulate(n_samples=5, rng=1))
 
     cid.add_node("Z")
@@ -142,7 +159,7 @@ def test_parameter_assignments_validate_role_target_and_parents():
     with pytest.raises(TypeError, match="Expected pgmpy BaseParameter"):
         cid.set_probabilities("X", object())
     with pytest.raises(TypeError, match="Expected pgmpy BaseParameter"):
-        CausalInfluenceDiagram(decision_nodes=["Decision"]).set_policy("Decision", object())
+        CausalInfluenceDiagram([("X", "Decision")], decision_nodes=["Decision"]).set_policy("Decision", object())
     with pytest.raises(ValueError, match="targets node 'Y'"):
         cid.set_probabilities("X", child)
     with pytest.raises(ValueError, match="evidence .* does not match the parents of node 'Y'"):
@@ -153,7 +170,8 @@ def test_parameter_assignments_validate_role_target_and_parents():
 
 
 def test_simulate_distinguishes_missing_and_unfitted_parameterizations():
-    cid = CausalInfluenceDiagram(chance_nodes=["X"])
+    cid = CausalInfluenceDiagram()
+    cid.add_node("X")
 
     for validate in (cid.check_model, lambda: cid.simulate(n_samples=1)):
         with pytest.raises(ValueError, match="No probability parameterization assigned"):
@@ -176,8 +194,8 @@ def test_check_model_validates_roles_and_utility_assignments():
     cid.set_utility("Utility", lambda values: np.zeros(len(values)))
     assert cid.check_model() is True
 
-    cid.nodes["X"]["role"] = "invalid"
-    with pytest.raises(ValueError, match="invalid role"):
+    cid.without_role(role="chance", variables="X", inplace=True)
+    with pytest.raises(ValueError, match="Node 'X' must have exactly one of the roles"):
         cid.check_model()
 
 
@@ -245,7 +263,8 @@ def test_simulate_samples_policies_and_additive_utility_with_seed():
     ],
 )
 def test_simulate_validates_utility_outputs(utility, message):
-    cid = CausalInfluenceDiagram(utility_nodes=["Utility"])
+    cid = CausalInfluenceDiagram()
+    cid.add_node("Utility", role="utility")
     cid.set_utility("Utility", utility)
 
     with pytest.raises(ValueError, match=message):
@@ -256,7 +275,8 @@ def test_tabular_cpd_can_be_assigned_when_skpro_is_available():
     pytest.importorskip("skpro")
     from pgmpy.parameterization import TabularCPD
 
-    cid = CausalInfluenceDiagram(chance_nodes=["X"])
+    cid = CausalInfluenceDiagram()
+    cid.add_node("X")
     cid.set_probabilities("X", TabularCPD.from_values("X", 2, [[0.5], [0.5]]))
 
     assert len(cid.simulate(n_samples=5, rng=0)) == 5

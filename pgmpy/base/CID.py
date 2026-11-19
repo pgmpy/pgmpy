@@ -28,15 +28,17 @@ class CausalInfluenceDiagram(DAG):
     distribution.
 
     Unlike a plain ``DAG``, this class uses mutually exclusive node roles:
-    ``"chance"``, ``"decision"``, ``"utility"``, and ``"latent"``. These roles
+    ``"chance"``, ``"decision"``, and ``"utility"``. These roles
     determine which parameterization is required during validation and simulation.
     Chance nodes have conditional probability parameterizations, decision nodes have policies, and utility nodes have
-    functions of their parents. Nodes added without a role default to ``"chance"``.
+    functions of their parents. Nodes added without a role default to ``"chance"``, and assigning one of these roles
+    with :meth:`with_role` replaces the node's previous one.
 
     Parameters
     ----------
     ebunch : input graph, optional
-        Data used to initialize the graph, as accepted by :class:`pgmpy.base.DAG`.
+        Data used to initialize the graph, as accepted by :class:`pgmpy.base.DAG`. Nodes in the role
+        arguments below must be in ``ebunch``.
     chance_nodes : iterable of hashable, optional
         Nodes to assign the ``"chance"`` role.
     decision_nodes : iterable of hashable, optional
@@ -44,7 +46,7 @@ class CausalInfluenceDiagram(DAG):
     utility_nodes : iterable of hashable, optional
         Nodes to assign the ``"utility"`` role. Utility nodes must be leaves.
     latents : iterable of hashable, optional
-        Nodes to assign the ``"latent"`` role. Latent nodes can only be either chance or decision nodes.
+        Nodes to assign the ``"latents"`` role. Latent nodes can only be either chance or decision nodes.
         They cannot be utility nodes.
 
     Examples
@@ -62,7 +64,7 @@ class CausalInfluenceDiagram(DAG):
     ['Health', 'Age']
     """
 
-    _ALLOWED_NODE_ROLES = frozenset({"chance", "decision", "utility", "latent"})
+    _ALLOWED_NODE_ROLES = ("chance", "decision", "utility")
 
     def __init__(
         self,
@@ -76,31 +78,21 @@ class CausalInfluenceDiagram(DAG):
         self._policies: dict[Hashable, BaseParameter] = {}
         self._utilities: dict[Hashable, Callable[[pd.DataFrame], object]] = {}
 
-        declared_roles = {
+        roles = {
             "chance": self._as_node_list(chance_nodes),
             "decision": self._as_node_list(decision_nodes),
             "utility": self._as_node_list(utility_nodes),
-            "latent": self._as_node_list(latents),
+            "latents": self._as_node_list(latents),
         }
-        # if delcared_roles["chance"].intersection(declared_roles["decision"]).intersection(declared_roles["utility"]):
-        #     raise ValueError("A node cannot be both a chance and decision node.")
-        # chance_nodes = self.nodes() - declared_roles["decision"].union(declared_roles["utility"])
 
-        assigned_roles = {}
-        for role, nodes in declared_roles.items():
-            for node in nodes:
-                if node in assigned_roles:
-                    raise ValueError(f"Cannot assign more than one role to node {node!r}.")
-                assigned_roles[node] = role
+        chance, decision, utility = (set(roles[role]) for role in self._ALLOWED_NODE_ROLES)
+        overlap = (chance & decision) | (chance & utility) | (decision & utility)
+        if overlap:
+            raise ValueError(
+                f"Cannot assign more than one role among 'chance', 'decision', and 'utility' to nodes {overlap}."
+            )
 
-        super().__init__(ebunch=ebunch, roles=declared_roles)
-
-        # for node in self.nodes:
-        #     self.nodes[node].setdefault("role", "chance")
-
-        # for role, nodes in declared_roles.items():
-        #     for node in nodes:
-        #         self.add_node(node, role=role)
+        super().__init__(ebunch=ebunch, roles=roles)
 
     @staticmethod
     def _as_node_list(nodes: Iterable[Hashable] | None):
@@ -110,26 +102,32 @@ class CausalInfluenceDiagram(DAG):
             return [nodes]
         return list(nodes)
 
-    def add_node(self, node_for_adding: Hashable, **attr):
-        has_role = self.has_node(node_for_adding) and "role" in self.nodes[node_for_adding]
-        new_role = attr.pop("role", None)
+    def _node_roles(self, node: Hashable) -> list[str]:
+        """Get the chance, decision, and utility roles of ``node``."""
+        return [role for role in self._ALLOWED_NODE_ROLES if node in self.get_role(role)]
 
-        if has_role:
-            role = self.nodes[node_for_adding]["role"]
+    def add_node(self, node_for_adding: Hashable, role: str | None = None, **attr):
+        """Add a node with a role; new nodes default to ``"chance"``."""
+        if role is not None and role not in self._ALLOWED_NODE_ROLES:
+            raise ValueError(f"role must be one of {list(self._ALLOWED_NODE_ROLES)}, but got {role!r}.")
 
-            if new_role is not None and new_role != role:
-                warnings.warn(
-                    f"Overwriting role of node {node_for_adding!r} from {role!r} to {new_role!r}.",
-                    UserWarning,
-                )
-                role = new_role
-        else:
-            role = new_role or "chance"
+        previous_roles = self._node_roles(node_for_adding)
+        super().add_node(node_for_adding, **attr)
+        current_roles = self._node_roles(node_for_adding)
 
-        if not isinstance(role, str) or role not in self._ALLOWED_NODE_ROLES:
-            raise ValueError(f"role must be one of {sorted(self._ALLOWED_NODE_ROLES)}, but got {role!r}.")
+        if role is None:
+            role = ([r for r in current_roles if r not in previous_roles] or current_roles or ["chance"])[0]
+        elif previous_roles and previous_roles != [role]:
+            warnings.warn(
+                f"Overwriting role of node {node_for_adding!r} from {previous_roles} to {role!r}.",
+                UserWarning,
+            )
 
-        super().add_node(node_for_adding, role=role, **attr)
+        for current_role in current_roles:
+            if current_role != role:
+                self.without_role(role=current_role, variables=[node_for_adding], inplace=True)
+        if role not in current_roles:
+            self.with_role(role=role, variables=[node_for_adding], inplace=True)
 
     def add_nodes_from(self, nodes_for_adding, **attr):
         for item in nodes_for_adding:
@@ -140,10 +138,8 @@ class CausalInfluenceDiagram(DAG):
                 self.add_node(item, **attr)
 
     def add_edge(self, u_of_edge: Hashable, v_of_edge: Hashable, **attr):
+        self.add_nodes_from(node for node in (u_of_edge, v_of_edge) if node not in self)
         super().add_edge(u_of_edge, v_of_edge, **attr)
-        for node in (u_of_edge, v_of_edge):
-            if not self.has_node(node) or "role" not in self.nodes[node]:
-                self.add_node(node, role="chance")
 
     def remove_node(self, n: Hashable):
         """Remove a node and any parameterization assigned to it."""
@@ -165,6 +161,7 @@ class CausalInfluenceDiagram(DAG):
         self._utilities.clear()
 
     def copy(self):
+        """Copy the diagram, its roles, and assigned parameterizations."""
         copied = super().copy()
         copied._probabilities = self._probabilities.copy()
         copied._policies = self._policies.copy()
@@ -174,66 +171,68 @@ class CausalInfluenceDiagram(DAG):
     @property
     def chance_nodes(self):
         """Get the nodes with the chance role, in graph order."""
-        return [node for node, data in self.nodes(data=True) if data.get("role") == "chance"]
+        return self.get_role("chance")
 
     @property
     def decision_nodes(self):
         """Get the nodes with the decision role, in graph order."""
-        return [node for node, data in self.nodes(data=True) if data.get("role") == "decision"]
+        return self.get_role("decision")
 
     @property
     def utility_nodes(self):
         """Get the nodes with the utility role, in graph order."""
-        return [node for node, data in self.nodes(data=True) if data.get("role") == "utility"]
+        return self.get_role("utility")
 
     def check_model(self):
         """
-        Validate graph roles, utility assignments, and conditional  parameterizations.
+        Validate graph roles, utility assignments, and conditional parameterizations.
 
-        * Checks for acyclicity and every node has a valid role
+        * Checks for acyclicity and every node has exactly one valid role.
+        * Every utility node is a non-latent leaf.
         * Every decision node has a fitted policy.
-        * Every latent node has a fitted parameterization.
         * checks that each parameterization targets the correct node and has evidence
           matching the node's graph parents.
         """
         self._check_cycles()
 
-        for node, attributes in self.nodes(data=True):
-            role = attributes.get("role")
-            if role not in self._ALLOWED_NODE_ROLES:
-                raise ValueError(f"Node {node!r} has invalid role {role!r}.")
-
-            if role == "utility":
-                if self.out_degree(node):
-                    raise ValueError(f"Utility nodes must be leaves, but {node!r} has outgoing edges.")
+        for node in self.nodes():
+            node_roles = self._node_roles(node)
+            if len(node_roles) != 1:
+                raise ValueError(
+                    f"Node {node!r} must have exactly one of the roles {list(self._ALLOWED_NODE_ROLES)}, "
+                    f"but has {node_roles}."
+                )
 
         for node, utility in self._utilities.items():
-            if not self.has_node(node) or self.nodes[node].get("role") != "utility":
+            if node not in self.utility_nodes:
                 raise ValueError(f"Utility assignment target {node!r} is not an existing utility node.")
             if not callable(utility):
                 raise TypeError(f"Utility assigned to node {node!r} must be callable.")
 
-        for node, attributes in self.nodes(data=True):
-            role = attributes["role"]
-            if role == "utility":
-                if node not in self._utilities:
-                    raise ValueError(f"No utility function assigned to utility node {node!r}.")
-                continue
+        for node in self.utility_nodes:
+            if self.out_degree(node):
+                raise ValueError(f"Utility nodes must be leaves, but {node!r} has outgoing edges.")
+            if node in self.latents:
+                raise ValueError(f"Utility nodes cannot be latent, but {node!r} has the 'latents' role.")
+            if node not in self._utilities:
+                raise ValueError(f"No utility function assigned to utility node {node!r}.")
 
-            assignments = self._probabilities if role == "chance" else self._policies
-            assignment_kind = "probability parameterization" if role == "chance" else "policy"
+        for role, assignments, assignment_kind in (
+            ("chance", self._probabilities, "probability parameterization"),
+            ("decision", self._policies, "policy"),
+        ):
+            for node in self.get_role(role):
+                parameterization = assignments.get(node)
+                if parameterization is None:
+                    raise ValueError(f"No {assignment_kind} assigned to {role} node {node!r}.")
 
-            parameterization = assignments.get(node)
-            if parameterization is None:
-                raise ValueError(f"No {assignment_kind} assigned to {role} node {node!r}.")
+                if not isinstance(parameterization, BaseParameter):
+                    raise TypeError(f"Expected pgmpy BaseParameter, got {type(parameterization).__name__}.")
 
-            if not isinstance(parameterization, BaseParameter):
-                raise TypeError(f"Expected pgmpy BaseParameter, got {type(parameterization).__name__}.")
+                if not parameterization.is_fitted:
+                    raise ValueError(f"The {assignment_kind} assigned to node {node!r} is not fitted.")
 
-            if not parameterization.is_fitted:
-                raise ValueError(f"The {assignment_kind} assigned to node {node!r} is not fitted.")
-
-            self._check_parameterization(node, parameterization)
+                self._check_parameterization(node, parameterization)
 
         return True
 
@@ -280,10 +279,10 @@ class CausalInfluenceDiagram(DAG):
         """
         if not self.has_node(node):
             raise ValueError(f"Chance node {node!r} is not in the diagram.")
-        if self.nodes[node].get("role") != "chance":
+        node_roles = self._node_roles(node)
+        if node_roles != ["chance"]:
             raise ValueError(
-                f"Cannot assign probabilities to {node!r}: "
-                f"node role is {self.nodes[node].get('role')!r}, expected 'chance'."
+                f"Cannot assign probabilities to {node!r}: node roles are {node_roles}, expected 'chance'."
             )
         self._check_parameterization(node, parameterization)
         self._probabilities[node] = parameterization
@@ -304,11 +303,9 @@ class CausalInfluenceDiagram(DAG):
         """
         if not self.has_node(node):
             raise ValueError(f"Decision node {node!r} is not in the diagram.")
-        if self.nodes[node].get("role") != "decision":
-            raise ValueError(
-                f"Cannot assign a policy to {node!r}: "
-                f"node role is {self.nodes[node].get('role')!r}, expected 'decision'."
-            )
+        node_roles = self._node_roles(node)
+        if node_roles != ["decision"]:
+            raise ValueError(f"Cannot assign a policy to {node!r}: node roles are {node_roles}, expected 'decision'.")
         self._check_parameterization(node, policy)
         self._policies[node] = policy
 
@@ -329,10 +326,10 @@ class CausalInfluenceDiagram(DAG):
 
         if not self.has_node(node):
             raise ValueError(f"Utility node {node!r} is not in the diagram.")
-        if self.nodes[node].get("role") != "utility":
+        node_roles = self._node_roles(node)
+        if node_roles != ["utility"]:
             raise ValueError(
-                f"Cannot assign a utility function to {node!r}: "
-                f"node role is {self.nodes[node].get('role')!r}, expected 'utility'."
+                f"Cannot assign a utility function to {node!r}: node roles are {node_roles}, expected 'utility'."
             )
 
         if not callable(utility):
@@ -374,12 +371,13 @@ class CausalInfluenceDiagram(DAG):
         self.check_model()
         random_state = np.random.default_rng(rng)
         samples = pd.DataFrame(index=pd.RangeIndex(n_samples))
+        decision_nodes = set(self.decision_nodes)
+        utility_nodes = set(self.utility_nodes)
         for node in nx.topological_sort(self):
-            role = self.nodes[node]["role"]
-            if role == "utility":
+            if node in utility_nodes:
                 continue
 
-            assignments = self._probabilities if role == "chance" else self._policies
+            assignments = self._policies if node in decision_nodes else self._probabilities
             parameterization = assignments[node]
 
             parent_samples = None
