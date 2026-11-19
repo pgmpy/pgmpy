@@ -1,4 +1,3 @@
-import warnings
 from collections import deque
 from collections.abc import Callable, Generator, Hashable
 from itertools import combinations, permutations
@@ -105,10 +104,8 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
 
         for col in X.columns:
             if X[col].nunique() == 1:
-                warnings.warn(
-                    f"Variable '{col}' is constant (zero variance), which can lead to unreliable results for"
-                    f"{type(self).__name__}. Consider removing it before fitting.",
-                    UserWarning,
+                raise ValueError(
+                    f"Variable '{col}' is constant (zero variance). Remove it before fitting {type(self).__name__}."
                 )
 
         self.n_features_in_ = len(X.columns)

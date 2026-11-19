@@ -39,8 +39,8 @@ from pgmpy.structure_score import get_scoring_method
     ],
     ids=["continuous", "discrete"],
 )
-def test_fit_warns_on_constant_column(data, estimator):
-    with pytest.warns(UserWarning, match="constant"):
+def test_fit_rejects_constant_column(data, estimator):
+    with pytest.raises(ValueError, match="Variable 'const' is constant"):
         estimator.fit(data)
 
 
