@@ -9,7 +9,7 @@ from pgmpy.causal_discovery._base import BaseCausalDiscovery
 
 
 @parametrize_with_checks(
-    [BootstrapEstimator(estimator=HillClimbSearch(return_type="dag"), n_bootstraps=2, n_jobs=1)],
+    [BootstrapEstimator(estimator=HillClimbSearch(return_type="dag"), n_bootstraps=2, n_jobs=1, rng=0)],
     expected_failed_checks=lambda estimator: {
         "check_fit_score_takes_y": "Causal discovery estimators do not take y parameter in score method.",
         "check_n_features_in_after_fitting": "Failing for score method (not for fit) for unknown reason.",

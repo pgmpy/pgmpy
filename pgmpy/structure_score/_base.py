@@ -7,7 +7,7 @@ import pandas as pd
 from skbase.base import BaseObject
 from skbase.lookup import all_objects
 
-from pgmpy.utils import build_state_names, get_dataset_type, preprocess_data
+from pgmpy.utils import build_state_names, get_dataset_type, is_discrete_type, preprocess_data
 
 
 class BaseStructureScore(BaseObject):
@@ -35,7 +35,7 @@ class BaseStructureScore(BaseObject):
     _tags = {
         "object_type": "structure_score",
         "name": None,
-        "data_types": [],
+        "data_types": ["discrete", "continuous", "mixed"],
         "default_for": None,
         "assumption:linearity": None,
         "assumption:additive_noise": None,
@@ -43,14 +43,17 @@ class BaseStructureScore(BaseObject):
     }
 
     def __init__(self, data, state_names=None, max_cache_size=10000):
-        self.data, self.dtypes = preprocess_data(data)
+        self.data, self.dtypes = preprocess_data(data, data_types=self.get_class_tag("data_types"))
         self.max_cache_size = max_cache_size
         if max_cache_size is not None and max_cache_size <= 0:
             raise ValueError(f"max_cache_size must be a positive integer or None. Got: {max_cache_size}")
 
         if self.data is not None:
             self.variables = list(self.data.columns.values)
-            self.state_names = build_state_names(self.data, state_names=state_names)
+            columns = self.variables
+            if self.get_class_tag("data_types") != ["discrete"]:
+                columns = [col for col in self.variables if is_discrete_type(code=self.dtypes[col])]
+            self.state_names = build_state_names(data=self.data.loc[:, columns], state_names=state_names)
 
         self._cache = OrderedDict()
 

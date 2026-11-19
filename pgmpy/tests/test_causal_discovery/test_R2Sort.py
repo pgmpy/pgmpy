@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import pytest
+from sklearn.linear_model import Ridge
 
 from pgmpy.base import DAG, PDAG
 from pgmpy.causal_discovery import R2Sort
@@ -65,3 +66,13 @@ def test_scale_invariance(causal_chain_data):
 
     assert raw.causal_order_ == rescaled.causal_order_
     assert set(raw.causal_graph_.edges()) == set(rescaled.causal_graph_.edges())
+
+    root = raw.causal_order_[0]
+    assert (
+        R2Sort().fit(causal_chain_data.assign(**{root: causal_chain_data[root] * 1e-9})).causal_order_
+        == raw.causal_order_
+    )
+
+
+def test_custom_estimator_drives_causal_order(causal_chain_data):
+    assert R2Sort(estimator=Ridge(alpha=1e6)).fit(causal_chain_data).causal_order_ == ["Z", "X", "Y"]

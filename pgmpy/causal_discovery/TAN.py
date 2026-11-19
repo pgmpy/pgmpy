@@ -41,7 +41,8 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
         - ``"mutual_info"``: Mutual Information Score.
         - ``"adjusted_mutual_info"``: Adjusted Mutual Information Score.
         - ``"normalized_mutual_info"``: Normalized Mutual Information Score.
-        - A callable of the form ``fn(array, array) -> float``.
+        - A callable of the form ``fn(array, array) -> float``, called with the integer state codes of two variables
+          as stored by pandas (``Series.cat.codes``, typically ``int8``).
 
     n_jobs : int, default=-1
         Number of jobs to run in parallel. ``-1`` means use all processors.
@@ -77,7 +78,7 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
     >>> values = pd.DataFrame(
     ...     np.random.randint(low=0, high=2, size=(1000, 5)),
     ...     columns=["A", "B", "C", "D", "E"],
-    ... )
+    ... ).astype("category")
 
     With a fixed root node and class node:
 
@@ -204,7 +205,7 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
         Parameters
         ----------
         data : pd.DataFrame
-            Dataframe where each column represents one variable.
+            Dataframe of categorical columns, where each column represents one variable.
 
         class_node : str
             The class variable to condition on.
@@ -215,7 +216,8 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
             - ``"mutual_info"``: Mutual Information Score.
             - ``"adjusted_mutual_info"``: Adjusted Mutual Information Score.
             - ``"normalized_mutual_info"``: Normalized Mutual Information Score.
-            - A callable of the form ``fn(array, array) -> float``.
+            - A callable of the form ``fn(array, array) -> float``, called with the integer state codes of two
+              variables as stored by pandas (``Series.cat.codes``, typically ``int8``).
 
         n_jobs : int, default=-1
             Number of jobs to run in parallel. ``-1`` means use all processors.
@@ -232,9 +234,17 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
         # Step 0: Resolve the edge weight computation function.
         edge_weights_fn = _TreeSearchMixin._resolve_edge_weights_fn(edge_weights_fn)
 
-        # Step 1: Compute conditional edge weights for a fully connected graph.
+        # Step 1: Split the state codes of all variables by the state of the class node.
         n_vars = len(data.columns)
-        pbar = combinations(data.columns, 2)
+        codes = _TreeSearchMixin._get_state_codes(data)
+        class_codes = codes[data.columns.get_loc(class_node)]
+        conditional_subsets = [
+            (count / data.shape[0], codes[:, class_codes == class_code])
+            for class_code, count in zip(*np.unique(class_codes, return_counts=True))
+        ]
+
+        # Step 2: Compute conditional edge weights for a fully connected graph.
+        pbar = combinations(range(n_vars), 2)
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(pbar, total=(n_vars * (n_vars - 1) / 2), desc="Building tree")
 
@@ -242,11 +252,9 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
             """
             Computes I(u; v | class_node) as a weighted sum over class values.
             """
-            cond_marginal = data.loc[:, class_node].value_counts() / data.shape[0]
             cond_edge_weight = 0.0
-            for index, marg_prob in cond_marginal.items():
-                df_cond_subset = data[data.loc[:, class_node] == index]
-                cond_edge_weight += marg_prob * edge_weights_fn(df_cond_subset.loc[:, u], df_cond_subset.loc[:, v])
+            for marg_prob, conditional_codes in conditional_subsets:
+                cond_edge_weight += marg_prob * edge_weights_fn(conditional_codes[u], conditional_codes[v])
             return cond_edge_weight
 
         vals = Parallel(n_jobs=n_jobs)(delayed(_conditional_edge_weights_fn)(u, v) for u, v in pbar)
