@@ -1,3 +1,5 @@
+from itertools import combinations, product
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -181,20 +183,28 @@ def test_tan_auto_class_node(data22):
 
 
 def test_get_conditional_weights_custom_callable(data22):
+    calls = []
+
     def edge_weights_fn(x, y):
-        assert all(isinstance(states, np.ndarray) and states.dtype.kind == "i" for states in (x, y))
+        calls.append((x, y))
         return mutual_info_score(x, y)
 
-    data = data22.astype(str)
-    data["A"] = data["A"].astype("category").cat.add_categories("unobserved")
+    data = data22.astype(str).astype(pd.CategoricalDtype(["unobserved", "2", "1", "0"]))
     weights = TAN._get_conditional_weights(
         data, class_node="A", edge_weights_fn=edge_weights_fn, n_jobs=1, show_progress=False
     )
 
-    # I(u; v | A) = sum_a P(A=a) * I(u; v | A=a), with each term computed on the samples where A=a.
+    # Each pair of variables is scored once per observed state of A, on the stored state codes of its samples.
     columns = data.columns
+    subsets = [subset for _, subset in data.groupby("A", observed=True)]
+    assert all(isinstance(codes, np.ndarray) and codes.dtype.kind == "i" for call in calls for codes in call)
+    for (x, y), ((u, v), subset) in zip(calls, product(combinations(columns, 2), subsets), strict=True):
+        np.testing.assert_array_equal(x, subset[u].cat.codes)
+        np.testing.assert_array_equal(y, subset[v].cat.codes)
+
+    # I(u; v | A) = sum_a P(A=a) * I(u; v | A=a), with each term computed on the samples where A=a.
     expected = np.zeros((len(columns), len(columns)))
-    for _, subset in data.groupby("A", observed=True):
+    for subset in subsets:
         expected += (len(subset) / len(data)) * np.array(
             [[0 if u == v else mutual_info_score(subset[u], subset[v]) for v in columns] for u in columns]
         )
