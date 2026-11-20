@@ -1,5 +1,6 @@
 from collections.abc import Hashable
-from math import lgamma
+from math import inf, lgamma
+from numbers import Real
 
 import numpy as np
 from scipy.special import gammaln
@@ -34,8 +35,8 @@ class BDeu(BaseStructureScore):
     data : pandas.DataFrame
         DataFrame where each column represents a discrete variable. Missing values should be
         set to `numpy.nan`.
-    equivalent_sample_size : int, optional
-        Equivalent sample size used to define the Dirichlet hyperparameters.
+    equivalent_sample_size : float, default=10
+        Equivalent sample size used to define the Dirichlet hyperparameters. Must be a positive finite number.
     state_names : dict, optional
         Dictionary mapping each variable to its discrete states. If not specified, the unique
         values observed in the data are used.
@@ -60,8 +61,8 @@ class BDeu(BaseStructureScore):
     Raises
     ------
     ValueError
-        If the data contains non-discrete variables, or if the model variables are not present
-        in the data.
+        If `equivalent_sample_size` is not a positive finite number, if the data contains non-discrete variables, or if
+        the model variables are not present in the data.
 
     References
     ----------
@@ -79,6 +80,10 @@ class BDeu(BaseStructureScore):
     }
 
     def __init__(self, data, equivalent_sample_size=10, state_names=None, max_cache_size=10000):
+        if not isinstance(equivalent_sample_size, Real) or not 0 < equivalent_sample_size < inf:
+            raise ValueError(
+                f"equivalent_sample_size must be a positive finite number. Got: {equivalent_sample_size!r}"
+            )
         self.equivalent_sample_size = equivalent_sample_size
         super().__init__(data, state_names=state_names, max_cache_size=max_cache_size)
         self._codes, self._cardinalities = encode_columns(self.data, self.state_names)

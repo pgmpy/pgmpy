@@ -38,8 +38,8 @@ class BDs(BDeu):
     ----------
     data : pandas.DataFrame
         DataFrame where each column represents a discrete variable. Missing values should be set to `numpy.nan`.
-    equivalent_sample_size : int, optional
-        Equivalent sample size used to define the Dirichlet hyperparameters.
+    equivalent_sample_size : float, default=10
+        Equivalent sample size used to define the Dirichlet hyperparameters. Must be a positive finite number.
     state_names : dict, optional
         Dictionary mapping each variable to its discrete states. If not specified, the unique values observed in the
         data are used.
@@ -64,8 +64,8 @@ class BDs(BDeu):
     Raises
     ------
     ValueError
-        If the data contains non-discrete variables, or if the model variables are not present
-        in the data.
+        If `equivalent_sample_size` is not a positive finite number, if the data contains non-discrete variables, or if
+        the model variables are not present in the data.
 
     References
     ----------
