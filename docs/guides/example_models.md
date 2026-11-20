@@ -2,31 +2,65 @@
 
 ```{eval-rst}
 .. meta::
-   :description: Discover and load built-in example models using pgmpy's example-model helpers.
+   :description: Find and load the example models in pgmpy.
 ```
 
-pgmpy ships a registry of ready-made Bayesian network models from standard repositories.
-These range from structure-only causal graphs to fully parameterized networks that can be
-queried and simulated immediately — useful for benchmarking, demonstrations, and exploring
+pgmpy has a collection of Bayesian network models from standard repositories. Some models
+contain only the graph structure. Other models also contain all parameters, so you can query
+them and draw samples from them. Use the models for benchmarks, demonstrations, and to learn
 the API.
 
 :::{tip}
-**When to use this vs. Example Datasets:** *Example Models* provide pre-built graph
-structures (and optionally parameters) ready for inference and simulation.
-{doc}`Example Datasets <datasets>` provide data tables for learning structures and
-parameters from scratch.
+**When to use this vs. Example Datasets:** *Example Models* contain graph structures, and
+some also contain parameters. Use them for inference and simulation.
+{doc}`Example Datasets <datasets>` contain data tables. Use them to learn structures and
+parameters from data.
 :::
 
 ## At a Glance
 
-- **[Unified API](#api)**: Discover models with `list_models(...)` and load them with `load_model(...)`.
-- **[Rich Filtering](#filtering)**: Filter models by type, parameterization, and size before loading.
-- **[Multiple Model Families](#model-families)**: Discrete, continuous, and structure-only models from bnlearn, bnrep, and dagitty repositories.
-- **[Available Models](#available-models)**: Every model with its size and type.
+::::{grid} 1 1 2 2
+:gutter: 3
+:class-container: pgmpy-card-grid pgmpy-glance-grid
+
+:::{grid-item-card} Unified API
+:link: "#api"
+:link-type: url
+:class-card: sd-card-hover
+
+Find models with `list_models(...)` and load them with `load_model(...)`.
+:::
+
+:::{grid-item-card} Filtering
+:link: "#filtering"
+:link-type: url
+:class-card: sd-card-hover
+
+Filter the models by type, parameters, and size before you load them.
+:::
+
+:::{grid-item-card} Model Families
+:link: "#model-families"
+:link-type: url
+:class-card: sd-card-hover
+
+Discrete, continuous, and structure-only models from the bnlearn, bnRep, and DAGitty
+repositories.
+:::
+
+:::{grid-item-card} Available Models
+:link: "#available-models"
+:link-type: url
+:class-card: sd-card-hover
+
+A table of all models with their size and type.
+:::
+::::
 
 ## API
 
-The example-model API mirrors the dataset API — discover, then load:
+The example-model API is the same as the dataset API. One function finds models, and the
+other loads them:
 
 ```python
 from pgmpy.example_models import list_models, load_model
@@ -38,31 +72,33 @@ print(model)
 print(len(model.nodes()), len(model.edges()))
 ```
 
-The returned object type depends on the model family (e.g., `DiscreteBayesianNetwork`,
-`LinearGaussianBayesianNetwork`, or `DAG`).
+The type of the returned object depends on the model family, for example
+`DiscreteBayesianNetwork`, `LinearGaussianBayesianNetwork`, or `DAG`.
 
 ## Filtering
 
-`list_models(**filters)` narrows the registry before loading. Supported filters include
+`list_models(**filters)` returns only the models that match the filters. You can filter on
 `is_parameterized`, `is_discrete`, `is_continuous`, `is_hybrid`, `n_nodes`, and `n_edges`.
 
 ## Model Families
 
-- **Discrete parameterized**: Classic networks with full CPD tables, ready for inference
-  and simulation.
+- **Discrete parameterized**: Networks with all CPD tables. Use them for inference and
+  simulation.
 - **Continuous**: Networks with linear Gaussian parameters.
-- **Structure-only**: Causal graphs without parameters, useful for identification and
-  causal reasoning tasks.
+- **Structure-only**: Causal graphs without parameters. Use them for identification and
+  causal reasoning.
 
-Loaded models integrate directly with the rest of the pgmpy stack — inference, simulation,
-parameter estimation, and plotting all work out of the box.
+You can use a loaded model with all other parts of pgmpy, for example inference,
+simulation, parameter estimation, and plots.
 
 ## Available Models
 
-All models returned by `list_models()`. The prefix of each name is the repository the model
-comes from: `bnlearn/` for the [bnlearn Bayesian network repository](https://www.bnlearn.com/bnrepository/),
-`bnrep/` for [bnRep](https://github.com/manueleleonelli/bnRep), and `dagitty/` for the example
-DAGs of [DAGitty](https://dagitty.net).
+This table shows all models that `list_models()` returns. The prefix of each name shows the
+source repository:
+
+- `bnlearn/`: the [bnlearn Bayesian network repository](https://www.bnlearn.com/bnrepository/).
+- `bnrep/`: [bnRep](https://github.com/manueleleonelli/bnRep).
+- `dagitty/`: the example DAGs of [DAGitty](https://dagitty.net).
 
 ```{eval-rst}
 .. pgmpy-catalog:: example_models
@@ -72,8 +108,8 @@ DAGs of [DAGitty](https://dagitty.net).
 
 :::{seealso}
 - {doc}`Probabilistic Inference <probabilistic_inference>` — Query loaded parameterized models.
-- {doc}`Simulations <simulations>` — Sample data from loaded parameterized models.
-- {doc}`Example Datasets <datasets>` — Companion data tables for benchmarking.
+- {doc}`Simulations <simulations>` — Draw samples from loaded parameterized models.
+- {doc}`Example Datasets <datasets>` — Data tables for benchmarks.
 :::
 
 ## API Reference
