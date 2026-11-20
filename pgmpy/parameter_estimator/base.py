@@ -59,6 +59,8 @@ class BaseParameterEstimator(BaseEstimator):
                 raise ValueError(
                     f"sample_weight has length {sample_weight.shape[0]} but data has {data.shape[0]} rows."
                 )
+            if np.any(sample_weight < 0):
+                raise ValueError("sample_weight must be non-negative.")
         return model, sample_weight
 
     def _sort_parameters(self, parameters: list) -> list:
@@ -166,6 +168,15 @@ class DiscreteParameterEstimator(BaseParameterEstimator):
             for var in model.nodes():
                 if (var not in state_names) and (var in supplied_state_names):
                     state_names[var] = supplied_state_names[var]
+
+        # Ensure all observed model nodes have state names
+        observed_nodes = set(model.nodes()) - set(model.latents)
+        missing_state_names = observed_nodes - set(state_names.keys())
+        if missing_state_names:
+            raise ValueError(
+                f"Missing state names for observed model variables: {missing_state_names}. "
+                f"Provide `state_names` for these variables."
+            )
 
         return {var: list(states) for var, states in state_names.items()}
 
