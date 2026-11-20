@@ -1,9 +1,8 @@
 Quickstart
 ==========
 
-Task-oriented examples to help you get started with pgmpy.
-
-The sections below provide a minimal example for various supported tasks and a link to the corresponding User Guide page for the full workflow.
+This page gives a short example for each task in pgmpy. Each section also links to the User
+Guide page for that task.
 
 
 .. _quickstart-causal-discovery:
@@ -13,7 +12,7 @@ Causal Discovery / Structure Learning
 
 **User Guide:** :doc:`Causal Discovery and Structure Learning <../guides/causal_discovery>`
 
-Learn a graph structure directly from data.
+Learn a graph structure from data.
 
 .. code-block:: python
 
@@ -33,7 +32,7 @@ Parameter Estimation
 
 **User Guide:** :doc:`Parameter Estimation <../guides/parameter_estimation>`
 
-Fit conditional distributions for a known graph structure.
+Fit the conditional distributions of a known graph structure.
 
 .. code-block:: python
 
@@ -58,7 +57,7 @@ Probabilistic Inference
 
 **User Guide:** :doc:`Probabilistic Inference <../guides/probabilistic_inference>`
 
-Query posterior distributions from a Bayesian Network.
+Query posterior distributions from a Bayesian network.
 
 .. code-block:: python
 
@@ -82,7 +81,7 @@ Causal Identification
 
 **User Guide:** :doc:`Causal Identification <../guides/causal_identification>`
 
-Check whether a causal effect is identifiable from the graph alone.
+Check if a causal effect is identifiable from the graph only.
 
 .. code-block:: python
 
@@ -94,7 +93,7 @@ Check whether a causal effect is identifiable from the graph alone.
         roles={"exposures": "X", "outcomes": "Y"},
     )
     identified_graph, is_identified = Adjustment(variant="minimal").identify(dag)
-    identified.get_role("adjustment")
+    identified_graph.get_role("adjustment")
 
 
 .. _quickstart-causal-inference:
@@ -104,7 +103,7 @@ Causal Inference
 
 **User Guide:** :doc:`Causal Estimation <../guides/causal_estimation>`
 
-Estimate a causal effect from data once you have a causal graph.
+Calculate an interventional distribution from a fitted causal model.
 
 .. code-block:: python
 
@@ -123,7 +122,7 @@ Example Datasets and Models
 
 **User Guides:** :doc:`Example Datasets <../guides/datasets>` | :doc:`Example Models <../guides/example_models>`
 
-Discover built-in datasets and example models.
+Find and load the datasets and example models.
 
 .. code-block:: python
 
@@ -146,7 +145,7 @@ Simulations
 
 **User Guide:** :doc:`Simulations <../guides/simulations>`
 
-Generate synthetic data from a model for testing and experimentation.
+Generate synthetic data from a model for tests and experiments.
 
 .. code-block:: python
 
@@ -164,13 +163,13 @@ Extend pgmpy
 
 **User Guide:** :doc:`Extensibility <../guides/extensibility>`
 
-Implement new datasets, models, metrics, or algorithms from the repository templates. pgmpy provides extension templates
-for each class of method. To add a new method, you can just follow the TODOs listed in the extension template for that
-method. All of our extension templates can be found at: https://github.com/pgmpy/pgmpy/tree/dev/devtools/extension_templates
+Use the repository templates to add new datasets, models, metrics, or algorithms. pgmpy has an
+extension template for each type of method. To add a new method, complete the TODO items in its
+template. The templates are in https://github.com/pgmpy/pgmpy/tree/dev/devtools/extension_templates
 
 Next Steps
 ----------
 
-* :doc:`User Guide <../documentation>` -- Workflow-oriented documentation for each task area
-* :doc:`Examples <../examples>` -- Jupyter notebooks with longer walkthroughs
-* :doc:`API Reference <../reference>` -- Full public API documentation
+* :doc:`User Guide <../documentation>` -- A guide for each task
+* :doc:`Examples <../examples>` -- Jupyter notebooks with longer examples
+* :doc:`API Reference <../reference>` -- The documentation of all public classes and functions
