@@ -1885,7 +1885,7 @@ class TestSimulation:
         self._test_con_marginals_equal(con_model_samples, con_inference_marginals)
 
     def test_stimulate_missing_mcar(self):
-        samples = self.con_model.simulate(n_samples=3000)
+        samples = self.con_model.simulate(n_samples=3000, rng=42)
         assert not samples.isnull().values.any()
 
         cpd = TabularCPD(
@@ -1893,7 +1893,7 @@ class TestSimulation:
             2,
             [[0.2], [0.8]],
         )
-        samples = self.con_model.simulate(n_samples=3000, missing_prob=cpd)
+        samples = self.con_model.simulate(n_samples=3000, missing_prob=cpd, rng=42)
         missing_fraction = samples["Z"].isnull().mean()
         assert missing_fraction >= 0.75
         assert missing_fraction <= 0.85
@@ -1933,7 +1933,7 @@ class TestSimulation:
 
     def test_stimulate_missing_mnar(self):
         cpd = TabularCPD("Z*", 2, [[0.6, 0.3], [0.4, 0.7]], ["Z"], [2])
-        samples = self.con_model.simulate(n_samples=3000, missing_prob=cpd, return_full=True)
+        samples = self.con_model.simulate(n_samples=3000, missing_prob=cpd, return_full=True, rng=42)
         missing_fraction_z0 = samples[samples["Z_full"] == 0]["Z"].isnull().mean()
         missing_fraction_z1 = samples[samples["Z_full"] == 1]["Z"].isnull().mean()
 
@@ -1945,7 +1945,7 @@ class TestSimulation:
 
     def test_stimulate_missing_mar(self):
         cpd = TabularCPD("Z*", 2, [[0.3, 0.3, 0.4, 0.2], [0.7, 0.7, 0.6, 0.8]], ["X", "Y"], [2, 2])
-        samples = self.con_model.simulate(n_samples=3000, missing_prob=cpd)
+        samples = self.con_model.simulate(n_samples=3000, missing_prob=cpd, rng=42)
         grouped = samples.groupby(["X", "Y"], observed=False)["Z"]
         for (x, y), group in grouped:
             missing_fraction = group.isnull().mean()
@@ -1957,7 +1957,7 @@ class TestSimulation:
         cpd_1 = TabularCPD("Z*", 2, [[0.3, 0.3, 0.4, 0.2], [0.7, 0.7, 0.6, 0.8]], ["X", "Y"], [2, 2])
         cpd_2 = TabularCPD("Y*", 2, [[0.6, 0.4], [0.4, 0.6]], ["Y"], [2])
         cpd_3 = TabularCPD("U*", 2, [[0.2], [0.8]])
-        samples = self.con_model.simulate(n_samples=3000, missing_prob=[cpd_1, cpd_2, cpd_3], return_full=True)
+        samples = self.con_model.simulate(n_samples=3000, missing_prob=[cpd_1, cpd_2, cpd_3], return_full=True, rng=42)
         # MAR
         grouped = samples.groupby(["X", "Y"], observed=False)["Z"]
         for (x, z), group in grouped:
