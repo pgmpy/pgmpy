@@ -29,3 +29,7 @@ class TeacherBurnout(BaseDataset):
     data_url = "data/teacher_burnout_data.csv"
 
     sep = ","
+
+    categorical_variables = []
+
+    ordinal_variables = dict()
