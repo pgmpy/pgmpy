@@ -1,5 +1,5 @@
-from collections.abc import Hashable
 import gzip
+from collections.abc import Hashable
 
 import narwhals.stable.v2 as nw
 import numpy as np
@@ -451,9 +451,6 @@ def _validate_dataframe(X):
 
     if isinstance(X, pd.DataFrame) and any(np.iscomplexobj(X[c].values) for c in X.columns):
         raise ValueError("Complex data not supported")
-
-    if isinstance(X, (list, tuple)):
-        X = np.asarray(X)
 
     if isinstance(X, np.ndarray):
         if X.ndim != 2:
