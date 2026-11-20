@@ -74,8 +74,10 @@ body {
     font-size: 0.85rem;
     font-weight: 600;
     min-height: calc(1.5em + 0.55rem + 2px);
-    padding-left: 0.85rem;
+    padding-left: 2rem;
     padding-right: 2rem;
+    text-align: center;
+    text-align-last: center;
 }
 
 .pgmpy-version-switcher .form-select:focus {
@@ -377,6 +379,41 @@ body {
     gap: 0.72rem;
     height: 100%;
     min-height: 11.5rem;
+}
+
+/* "At a Glance" summaries at the top of guide pages */
+
+.pgmpy-card-grid.pgmpy-glance-grid .sd-card .sd-card-body {
+    gap: 0.35rem;
+    min-height: 0;
+    padding: 0.95rem 1.1rem;
+}
+
+.pgmpy-glance-grid .sd-card .sd-card-title {
+    font-size: 1rem;
+    margin-bottom: 0;
+}
+
+.pgmpy-glance-grid .sd-card p:last-child {
+    font-size: 0.92rem;
+    line-height: 1.5;
+}
+
+/* Funder logos on the "Supported By" page */
+
+img.pgmpy-funder-logo {
+    display: block;
+    height: 3rem;
+    margin: 0.25rem 0 1rem;
+    max-width: 20rem;
+    object-fit: contain;
+    width: auto;
+}
+
+html[data-theme="dark"] img.pgmpy-funder-logo {
+    background: #fff;
+    border-radius: 8px;
+    padding: 0.35rem 0.6rem;
 }
 
 /* ---- Code blocks ---- */

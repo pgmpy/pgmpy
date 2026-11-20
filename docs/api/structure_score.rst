@@ -1,7 +1,7 @@
 Structure Scoring
 =================
 
-Structure score classes used by score-based discovery workflows.
+Structure score classes for score-based discovery.
 
 Base Class and Utilities
 ------------------------
@@ -9,6 +9,7 @@ Base Class and Utilities
 .. autosummary::
    :toctree: generated/structure_score
    :template: autosummary/class.rst
+   :nosignatures:
 
    ~pgmpy.structure_score.BaseStructureScore
 
@@ -24,6 +25,7 @@ Discrete Scores
 .. autosummary::
    :toctree: generated/structure_score
    :template: autosummary/class.rst
+   :nosignatures:
 
    ~pgmpy.structure_score.K2
    ~pgmpy.structure_score.BDeu
@@ -38,6 +40,7 @@ Gaussian Scores
 .. autosummary::
    :toctree: generated/structure_score
    :template: autosummary/class.rst
+   :nosignatures:
 
    ~pgmpy.structure_score.LogLikelihoodGauss
    ~pgmpy.structure_score.AICGauss
@@ -49,6 +52,7 @@ Conditional-Gaussian Scores
 .. autosummary::
    :toctree: generated/structure_score
    :template: autosummary/class.rst
+   :nosignatures:
 
    ~pgmpy.structure_score.LogLikelihoodCondGauss
    ~pgmpy.structure_score.AICCondGauss

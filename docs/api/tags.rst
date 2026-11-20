@@ -1,9 +1,9 @@
 Tags
 ====
 
-pgmpy objects describe themselves with `skbase <https://skbase.readthedocs.io>`_ tags, for example the data types a
-causal discovery algorithm can handle, or the assumptions its guarantees rely on. Tags can be read with
-``get_tag`` / ``get_class_tag`` and used to find objects with :func:`skbase.lookup.all_objects`:
+pgmpy objects describe themselves with `skbase <https://skbase.readthedocs.io>`_ tags. For example, tags give the
+data types that a causal discovery algorithm accepts, or the assumptions of its guarantees. Read tags with
+``get_tag`` or ``get_class_tag``. Use :func:`skbase.lookup.all_objects` to find objects by their tags:
 
 .. code-block:: python
 
@@ -17,7 +17,7 @@ causal discovery algorithm can handle, or the assumptions its guarantees rely on
         filter_tags={"data_types": "continuous", "assumption:linearity": False},
     )
 
-All tags are registered in :mod:`pgmpy.registry`.
+:mod:`pgmpy.registry` registers all tags.
 
 .. autosummary::
    :toctree: generated/registry
