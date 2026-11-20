@@ -48,6 +48,20 @@ FLOSS/fund
 :Funder: `FLOSS/fund <https://floss.fund/>`_
 :Year: 2025
 
+Netherlands eScience Center
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. image:: _static/images/funders/escience_center.svg
+   :alt: Netherlands eScience Center
+   :target: https://www.esciencecenter.nl/
+   :class: pgmpy-funder-logo
+
+:Project: `Enhancing and Promoting Data Simulation Capabilities of pgmpy
+   <https://www.esciencecenter.nl/fellowship-programme/ankur-ankan/>`_
+:Funder: `Netherlands eScience Center <https://www.esciencecenter.nl/>`_, through the
+   `Fellowship Programme <https://www.esciencecenter.nl/fellowship-programme/>`_
+:Year: 2024-2025
+
 Google
 ^^^^^^
 
