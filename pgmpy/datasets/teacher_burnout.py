@@ -1,5 +1,6 @@
 from pgmpy.datasets._base import BaseDataset
 
+
 class TeacherBurnout(BaseDataset):
     """
     Teacher Burnout dataset from Byrne (2010) [1]_, sourced via [2]_.
@@ -11,6 +12,7 @@ class TeacherBurnout(BaseDataset):
            https://doi.org/10.4324/9780203805534
     ..[2] https://github.com/kurowasan/cd_datasets/blob/main/data/teacher_burnout_data.csv
     """
+
     _tags = {
         "name": "teacher_burnout",
         "n_variables": 32,
