@@ -12,6 +12,7 @@ Supervised Metrics
    :nosignatures:
 
    ~pgmpy.metrics.SHD
+   ~pgmpy.metrics.SID
    ~pgmpy.metrics.AdjacencyConfusionMatrix
    ~pgmpy.metrics.OrientationConfusionMatrix
 
