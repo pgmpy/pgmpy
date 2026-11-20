@@ -54,6 +54,37 @@ class _GraphRolesMixin:
                 r_dict[role].append(n)
         return r_dict
 
+    def get_node_roles(self, node: Hashable) -> set[str]:
+        """Return the roles assigned to a node.
+
+        Parameters
+        ----------
+        node : Hashable
+            The node whose roles to return.
+
+        Returns
+        -------
+        set of str
+            The roles of ``node``. Empty if the node has no roles.
+
+        Raises
+        ------
+        ValueError
+            If ``node`` is not in the graph.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> G = DAG(ebunch=[("X", "Y")], exposures={"X"}, roles={"adjustment": "X"})
+        >>> sorted(G.get_node_roles("X"))
+        ['adjustment', 'exposures']
+        >>> G.get_node_roles("Y")
+        set()
+        """
+        if node not in self:
+            raise ValueError(f"Node '{node}' not found in the graph.")
+        return set(self.nodes[node].get("roles", ()))
+
     def has_role(self, role: str) -> bool:
         """Check if a role is defined and non-empty.
 
@@ -68,6 +99,38 @@ class _GraphRolesMixin:
             True if the role exists and has variables assigned, False otherwise.
         """
         return role in self.get_roles()
+
+    def has_node_role(self, node: Hashable, role: str) -> bool:
+        """Check if a node has a specific role.
+
+        Parameters
+        ----------
+        node : Hashable
+            The node to check.
+
+        role : str
+            The name of the role to check.
+
+        Returns
+        -------
+        bool
+            True if ``node`` has ``role``, False otherwise.
+
+        Raises
+        ------
+        ValueError
+            If ``node`` is not in the graph.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> G = DAG(ebunch=[("X", "Y")], exposures={"X"})
+        >>> G.has_node_role("X", "exposures")
+        True
+        >>> G.has_node_role("Y", "exposures")
+        False
+        """
+        return role in self.get_node_roles(node)
 
     def with_role(self, role: str, variables: str | Iterable[Hashable], inplace: bool = False) -> Self | None:
         """Return a new graph with the specified role assignment.
@@ -106,15 +169,59 @@ class _GraphRolesMixin:
                 if var not in new_graph:
                     raise ValueError(f"Variable '{var}' not found in the graph.")
                 else:
-                    existing_role = new_graph.nodes[var].get("roles", set())
+                    existing_role = new_graph.get_node_roles(var)
                     new_graph.add_node(var, roles=existing_role | {role})
         else:
             for var in variables:
                 if var not in new_graph.graph:
                     raise ValueError(f"Variable '{var}' not found in the graph.")
                 else:
-                    existing_role = new_graph.nodes[var].get("roles", set())
+                    existing_role = new_graph.get_node_roles(var)
                     new_graph.add_node(var, roles=existing_role | {role})
+        if not inplace:
+            return new_graph
+
+    def with_roles(self, roles: dict[str, str | Iterable[Hashable]], inplace: bool = False) -> Self | None:
+        """Return a new graph with multiple roles assigned.
+
+        Each role is added to its variables with ``with_role``, which does not remove the roles they already have. If
+        ``inplace=False``, the roles are assigned to the graph returned by ``self.copy()``.
+
+        Parameters
+        ----------
+        roles : dict
+            Keys are role names and values are the variables to assign that role to, as a str or any iterable.
+
+        inplace : bool, default=False
+            If True, modifies the current graph in place.
+
+        Returns
+        -------
+        graph or None
+            The graph returned by ``self.copy()`` with the roles assigned, or None if ``inplace=True``.
+
+        Raises
+        ------
+        ValueError
+            If a variable is not in the graph, or variables are assigned the "latents" role in a graph class with
+            ``SUPPORTS_LATENTS = False``.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> G = DAG(ebunch=[("X", "Y"), ("Z", "Y")])
+        >>> G = G.with_roles({"exposures": "X", "outcomes": ["Y"]})
+        >>> dict(sorted(G.get_role_dict().items()))
+        {'exposures': ['X'], 'outcomes': ['Y']}
+        >>> H = DAG(ebunch=[("X", "Y"), ("Z", "Y")])
+        >>> H.with_roles(G.get_role_dict(), inplace=True)
+        >>> H == G
+        True
+        """
+        new_graph = self if inplace else self.copy()
+        for role, variables in roles.items():
+            new_graph.with_role(role=role, variables=variables, inplace=True)
+
         if not inplace:
             return new_graph
 

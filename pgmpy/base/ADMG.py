@@ -100,6 +100,5 @@ class ADMG(_CoreGraph):
             dag.add_edges_from([(latent, u), (latent, v)])
             dag.with_role(role="latents", variables=latent, inplace=True)
 
-        for role, variables in self.get_role_dict().items():
-            dag.with_role(role=role, variables=variables, inplace=True)
+        dag.with_roles(self.get_role_dict(), inplace=True)
         return dag

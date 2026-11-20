@@ -1,7 +1,7 @@
 # pgmpy/tests/test_base/test_mixin_roles.py
 import pytest
 
-from pgmpy.base import DAG
+from pgmpy.base import ADMG, DAG
 
 
 @pytest.fixture
@@ -92,6 +92,54 @@ def test_get_roles_and_get_role_dict(basic_dag):
     assert set(role_dict["exposures"]) == {"X"}
     assert set(role_dict["outcomes"]) == {"Y", "Z"}
     assert set(role_dict["latents"]) == {"U"}
+
+
+def test_get_node_roles_and_has_node_role(basic_dag):
+    basic_dag.with_role(role="exposures", variables="X", inplace=True)
+    basic_dag.with_role(role="outcomes", variables={"X", "Y"}, inplace=True)
+
+    assert basic_dag.get_node_roles("X") == {"exposures", "outcomes"}
+    assert basic_dag.get_node_roles("Y") == {"outcomes"}
+    assert basic_dag.get_node_roles("U") == set()
+
+    assert basic_dag.has_node_role("X", "exposures") is True
+    assert basic_dag.has_node_role("Y", "exposures") is False
+    assert basic_dag.has_node_role("U", "exposures") is False
+
+    basic_dag.get_node_roles("X").add("latents")
+    assert basic_dag.get_node_roles("X") == {"exposures", "outcomes"}
+
+    with pytest.raises(ValueError, match="MISSING"):
+        basic_dag.get_node_roles("MISSING")
+    with pytest.raises(ValueError, match="MISSING"):
+        basic_dag.has_node_role("MISSING", "exposures")
+
+
+def test_with_roles(basic_dag):
+    new_graph = basic_dag.with_roles({"exposures": "X", "outcomes": ["Y", "Z"], "latents": {"U"}})
+    assert new_graph is not basic_dag
+    assert basic_dag.get_role_dict() == {}
+    assert {role: set(nodes) for role, nodes in new_graph.get_role_dict().items()} == {
+        "exposures": {"X"},
+        "outcomes": {"Y", "Z"},
+        "latents": {"U"},
+    }
+
+    assert basic_dag.with_roles(new_graph.get_role_dict(), inplace=True) is None
+    assert basic_dag == new_graph
+
+    basic_dag.with_roles({"outcomes": "X"}, inplace=True)
+    assert basic_dag.get_node_roles("X") == {"exposures", "outcomes"}
+
+    with pytest.raises(ValueError, match="MISSING"):
+        basic_dag.with_roles({"exposures": ["X", "MISSING"]})
+
+    admg = ADMG(edge_list=[("X", "Y", "->"), ("Y", "Z", "<>")])
+    admg_with_roles = admg.with_roles({"exposures": "X", "outcomes": {"Z"}})
+    assert admg.get_role_dict() == {}
+    assert admg_with_roles.get_role_dict() == {"exposures": ["X"], "outcomes": ["Z"]}
+    with pytest.raises(ValueError, match="Latent variables are not supported"):
+        admg.with_roles({"latents": "Y"})
 
 
 def test_without_role_specific_variables(basic_dag):
