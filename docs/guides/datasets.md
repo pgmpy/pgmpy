@@ -22,6 +22,7 @@ benchmarking.
 - **[Unified API](#api)**: Discover datasets with `list_datasets(...)` and load them with `load_dataset(...)`.
 - **[Rich Filtering](#filtering)**: Filter datasets by type, size, and available metadata before loading.
 - **[Bundled Metadata](#bundled-metadata)**: Each dataset carries its ground-truth graph, expert knowledge, and tags alongside the data.
+- **[Available Datasets](#available-datasets)**: Every dataset with its size, data type, and available metadata.
 
 ## API
 
@@ -57,6 +58,16 @@ Each loaded dataset provides structured access to:
 - **`expert_knowledge`**: Domain constraints (when available), for use with discovery algorithms.
 - **`tags`**: Dictionary of dataset properties and characteristics.
 
+## Available Datasets
+
+All datasets returned by `list_datasets()`, with the tags you can filter on. `tubingen` is a
+collection of 108 cause-effect pairs; load a single pair with `load_dataset("tubingen/<pair_id>")`,
+where `<pair_id>` is between 1 and 108. Simulated datasets generate as many samples as you request.
+
+```{eval-rst}
+.. pgmpy-catalog:: datasets
+```
+
 ## See Also
 
 :::{seealso}
@@ -65,7 +76,5 @@ Each loaded dataset provides structured access to:
 :::
 
 ## API Reference
-
-For the full list of available datasets:
 
 - {doc}`Datasets and Example Models API <../api/data>`

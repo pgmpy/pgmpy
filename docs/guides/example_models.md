@@ -22,6 +22,7 @@ parameters from scratch.
 - **[Unified API](#api)**: Discover models with `list_models(...)` and load them with `load_model(...)`.
 - **[Rich Filtering](#filtering)**: Filter models by type, parameterization, and size before loading.
 - **[Multiple Model Families](#model-families)**: Discrete, continuous, and structure-only models from bnlearn, bnrep, and dagitty repositories.
+- **[Available Models](#available-models)**: Every model with its size and type.
 
 ## API
 
@@ -56,6 +57,17 @@ The returned object type depends on the model family (e.g., `DiscreteBayesianNet
 Loaded models integrate directly with the rest of the pgmpy stack — inference, simulation,
 parameter estimation, and plotting all work out of the box.
 
+## Available Models
+
+All models returned by `list_models()`. The prefix of each name is the repository the model
+comes from: `bnlearn/` for the [bnlearn Bayesian network repository](https://www.bnlearn.com/bnrepository/),
+`bnrep/` for [bnRep](https://github.com/manueleleonelli/bnRep), and `dagitty/` for the example
+DAGs of [DAGitty](https://dagitty.net).
+
+```{eval-rst}
+.. pgmpy-catalog:: example_models
+```
+
 ## See Also
 
 :::{seealso}
@@ -65,8 +77,6 @@ parameter estimation, and plotting all work out of the box.
 :::
 
 ## API Reference
-
-For the full list of available models:
 
 - {doc}`Datasets and Example Models API <../api/data>`
 - {doc}`Models API <../api/models>`
