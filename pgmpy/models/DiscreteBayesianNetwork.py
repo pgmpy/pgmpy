@@ -749,7 +749,7 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
         >>> model = load_model("bnlearn/alarm")
         >>> # Generate some new data.
         >>> data = BayesianModelSampling(model).forward_sample(int(1e3))
-        >>> model.fit(data, warm_start=True)
+        >>> model.fit_update(data)
         """
         _warn_external(
             "`DiscreteBayesianNetwork.fit_update` is deprecated since v1.2.0 and will be removed in v2.0. "
