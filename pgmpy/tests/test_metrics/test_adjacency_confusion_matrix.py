@@ -1,3 +1,4 @@
+import networkx as nx
 import pandas as pd
 import pytest
 
@@ -78,8 +79,17 @@ def test_selective_metrics(true_dag, est_dag):
     assert set(result) == {"precision", "recall"}
 
 
-def test_confusion_matrix_values(true_dag, est_dag):
+@pytest.mark.parametrize("mixed_labels", [False, True])
+def test_confusion_matrix_values(true_dag, est_dag, mixed_labels):
     """TP=6, FP=1, FN=2, TN=1; checks all cm entries and derived scalar metrics."""
+    if mixed_labels:
+        mapping = {"x1": 1, "x2": "1", "x3": ("x", 3), "x4": 4, "x5": "x5"}
+        true_dag = nx.relabel_nodes(true_dag, mapping)
+        est_edges = [(mapping[u], mapping[v]) for u, v in est_dag.edges()]
+        est_dag = DAG()
+        est_dag.add_nodes_from(reversed(list(true_dag.nodes())))
+        est_dag.add_edges_from(est_edges)
+
     result = AdjacencyConfusionMatrix().evaluate(true_dag, est_dag)
     cm = result["cm"]
 
@@ -112,8 +122,20 @@ def test_empty_graphs(true_dag, empty_dag):
     assert est_empty["recall"] == 0.0
 
 
-def test_pdag_support(true_pdag, est_pdag):
+@pytest.mark.parametrize("mixed_labels", [False, True])
+def test_pdag_support(true_pdag, est_pdag, mixed_labels):
     # TP=2 (x1-x2, x2-x3), FP=1 (x1-x3), FN=2 (x3-x4, x4-x5), TN=5
+    if mixed_labels:
+        mapping = {"x1": 1, "x2": "1", "x3": ("x", 3), "x4": 4, "x5": "x5"}
+        true_edges = [(mapping[u], mapping[v], kind) for u, v, kind in true_pdag.get_edges()]
+        est_edges = [(mapping[u], mapping[v], kind) for u, v, kind in est_pdag.get_edges()]
+        true_pdag = PDAG()
+        true_pdag.add_nodes_from(mapping.values())
+        true_pdag.add_edges_from(true_edges)
+        est_pdag = PDAG()
+        est_pdag.add_nodes_from(reversed(list(true_pdag.nodes())))
+        est_pdag.add_edges_from(est_edges)
+
     result = AdjacencyConfusionMatrix().evaluate(true_pdag, est_pdag)
     cm = result["cm"]
 

@@ -1,3 +1,4 @@
+import networkx as nx
 import pandas as pd
 import pytest
 
@@ -67,8 +68,17 @@ def test_selective_metrics(true_dag, est_dag):
     assert set(result) == {"precision", "recall"}
 
 
-def test_confusion_matrix_values(true_dag, est_dag):
+@pytest.mark.parametrize("mixed_labels", [False, True])
+def test_confusion_matrix_values(true_dag, est_dag, mixed_labels):
     """TP=4, FP=2, FN=2, TN=4; checks all cm entries and derived scalar metrics."""
+    if mixed_labels:
+        mapping = {"x1": 1, "x2": "1", "x3": ("x", 3), "x4": 4, "x5": "x5"}
+        true_dag = nx.relabel_nodes(true_dag, mapping)
+        est_edges = [(mapping[u], mapping[v]) for u, v in est_dag.edges()]
+        est_dag = DAG()
+        est_dag.add_nodes_from(reversed(list(true_dag.nodes())))
+        est_dag.add_edges_from(est_edges)
+
     result = OrientationConfusionMatrix().evaluate(true_dag, est_dag)
     cm = result["cm"]
 
