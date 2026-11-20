@@ -58,6 +58,7 @@ class ModifiedLogLikelihood(PowerDivergence):
         "default_for": None,
         "requires_data": True,
         "capability:conditioning": True,
+        "capability:missing_values": False,
     }
 
     def __init__(self, data: pd.DataFrame, use_cache: bool = True):

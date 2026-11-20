@@ -152,6 +152,7 @@ class BaseCITest(BaseObject):
         "requires_data": True,
         "is_symmetric": True,
         "capability:conditioning": None,
+        "capability:missing_values": None,
         "assumption:linearity": None,
         "assumption:additive_noise": None,
         "assumption:gaussian_noise": None,

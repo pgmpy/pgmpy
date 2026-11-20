@@ -99,6 +99,7 @@ class LLMPairwise(BaseCausalDiscovery):
         "requires_target": False,
         "capability:multivariate": False,
         "capability:expert_knowledge": [],
+        "capability:missing_values": False,
         "assumption:causal_sufficiency": False,
         "assumption:acyclicity": False,
         "assumption:faithfulness": False,

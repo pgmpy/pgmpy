@@ -108,6 +108,7 @@ class KCI(HSIC):
         "requires_data": True,
         "is_symmetric": False,
         "capability:conditioning": True,
+        "capability:missing_values": False,
     }
 
     def __init__(

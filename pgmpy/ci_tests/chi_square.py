@@ -61,6 +61,7 @@ class ChiSquare(PowerDivergence):
         "default_for": "discrete",
         "requires_data": True,
         "capability:conditioning": True,
+        "capability:missing_values": False,
     }
 
     def __init__(self, data: pd.DataFrame, use_cache: bool = True):

@@ -37,6 +37,7 @@ class BaseStructureScore(BaseObject):
         "name": None,
         "data_types": ["discrete", "continuous", "mixed"],
         "default_for": None,
+        "capability:missing_values": None,
         "assumption:linearity": None,
         "assumption:additive_noise": None,
         "assumption:gaussian_noise": None,

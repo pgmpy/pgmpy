@@ -75,6 +75,7 @@ class RoysLargestRoot(_ResidualMixin, BaseCITest):
         "requires_data": True,
         "is_symmetric": False,
         "capability:conditioning": True,
+        "capability:missing_values": False,
     }
 
     def __init__(self, data: pd.DataFrame, estimator=None, use_cache: bool = True):

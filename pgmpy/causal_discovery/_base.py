@@ -42,6 +42,7 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
         "requires_target": None,
         "capability:multivariate": None,
         "capability:expert_knowledge": None,
+        "capability:missing_values": None,
         "assumption:causal_sufficiency": None,
         "assumption:acyclicity": None,
         "assumption:faithfulness": None,

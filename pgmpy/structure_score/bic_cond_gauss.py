@@ -58,6 +58,7 @@ class BICCondGauss(LogLikelihoodCondGauss):
         "name": "bic-cg",
         "data_types": ["discrete", "continuous", "mixed"],
         "default_for": "mixed",
+        "capability:missing_values": False,
     }
 
     def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:

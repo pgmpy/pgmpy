@@ -59,6 +59,7 @@ class LogLikelihoodGauss(BaseStructureScore):
         "name": "ll-g",
         "data_types": ["continuous"],
         "default_for": None,
+        "capability:missing_values": False,
         "assumption:linearity": True,
         "assumption:additive_noise": True,
         "assumption:gaussian_noise": True,

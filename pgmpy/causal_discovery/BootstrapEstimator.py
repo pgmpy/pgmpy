@@ -182,6 +182,7 @@ class BootstrapEstimator(BaseCausalDiscovery):
         "requires_target": False,
         "capability:multivariate": True,
         "capability:expert_knowledge": ["forbidden_edges", "required_edges", "search_space", "temporal_order"],
+        "capability:missing_values": False,
         "assumption:causal_sufficiency": False,
         "assumption:acyclicity": False,
         "assumption:faithfulness": False,

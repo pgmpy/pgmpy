@@ -110,6 +110,7 @@ class ANM(BaseCausalDiscovery):
         "requires_target": False,
         "capability:multivariate": False,
         "capability:expert_knowledge": [],
+        "capability:missing_values": False,
         "assumption:causal_sufficiency": True,
         "assumption:acyclicity": True,
         "assumption:faithfulness": False,

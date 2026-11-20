@@ -40,6 +40,10 @@ def test_object_tags_are_registered_and_valid(cls):
     for tag_name, tag_value in tags.items():
         check_tag_is_valid(tag_name, tag_value)
 
+    # Verify the tag missing_values isset to False for all subclasses of the mentioned classes
+    if tags["object_type"] in ("causal_discovery", "ci_test", "structure_score"):
+        assert tags["capability:missing_values"] is False
+
 
 @pytest.mark.parametrize("object_type", OBJECT_TYPES)
 def test_object_names_are_unique(object_type):
@@ -49,9 +53,12 @@ def test_object_names_are_unique(object_type):
 
 def test_check_tag_is_valid():
     check_tag_is_valid("assumption:linearity", False)
+    check_tag_is_valid("capability:missing_values", False)
     check_tag_is_valid("default_for", None)
     with pytest.raises(KeyError):
         check_tag_is_valid("not_a_tag", True)
+    with pytest.raises(ValueError, match="must be a bool"):
+        check_tag_is_valid("capability:missing_values", "invalid_str")
     with pytest.raises(ValueError, match="must be a bool"):
         check_tag_is_valid("assumption:linearity", None)
     with pytest.raises(ValueError, match="must be one of"):
@@ -64,3 +71,7 @@ def test_all_tags():
     df = all_tags("causal_discovery", as_dataframe=True)
     assert list(df.columns) == ["name", "object_type", "type", "description"]
     assert "capability:multivariate" in df["name"].values
+
+    # Verify capability:missing_values is registered for all 3 object types
+    for obj_type in ["causal_discovery", "ci_test", "structure_score"]:
+        assert "capability:missing_values" in all_tags(obj_type, as_dataframe=True)["name"].values

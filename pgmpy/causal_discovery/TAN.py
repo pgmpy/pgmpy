@@ -112,6 +112,7 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
         "requires_target": True,
         "capability:multivariate": True,
         "capability:expert_knowledge": [],
+        "capability:missing_values": False,
         "assumption:causal_sufficiency": True,
         "assumption:acyclicity": True,
         "assumption:faithfulness": False,

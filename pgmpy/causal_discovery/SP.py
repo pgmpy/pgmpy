@@ -99,6 +99,7 @@ class SP(BaseCausalDiscovery):
         "requires_target": False,
         "capability:multivariate": True,
         "capability:expert_knowledge": [],
+        "capability:missing_values": False,
         "assumption:causal_sufficiency": True,
         "assumption:acyclicity": True,
         "assumption:faithfulness": False,

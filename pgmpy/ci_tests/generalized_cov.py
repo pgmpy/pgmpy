@@ -89,6 +89,7 @@ class GeneralizedCov(_ResidualMixin, BaseCITest):
         "default_for": None,
         "requires_data": True,
         "capability:conditioning": True,
+        "capability:missing_values": False,
     }
 
     @_rename_to_rng("random_state")
