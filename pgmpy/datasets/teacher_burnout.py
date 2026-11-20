@@ -3,14 +3,9 @@ from pgmpy.datasets._base import BaseDataset
 
 class TeacherBurnout(BaseDataset):
     """
-    Teacher Burnout dataset from Byrne (2010) [1]_, sourced via [2]_.
-
     References
     ----------
-    ..[1] Byrne, B. M. (2010). Structural Equation Modeling with AMOS:
-           Basic Concepts, Applications, and Programming (2nd ed.). Routledge.
-           https://doi.org/10.4324/9780203805534
-    ..[2] https://github.com/kurowasan/cd_datasets/blob/main/data/teacher_burnout_data.csv
+    - :footcite:t:`byrne_2010`
     """
 
     _tags = {
@@ -33,16 +28,4 @@ class TeacherBurnout(BaseDataset):
 
     data_url = "data/teacher_burnout_data.csv"
 
-    ground_truth_url = None
-
-    expert_knowledge_url = None
-
-    missing_values_marker = None
-
     sep = ","
-
-    intervention_columns = None
-
-    categorical_variables = []
-
-    ordinal_variables = dict()
