@@ -673,33 +673,12 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
         5
         """
         if warm_start and len(self.cpds) > 0:
-            from pgmpy.parameter_estimator import DiscreteBayesianEstimator
-
-            if n_prev_samples is None:
-                n_prev_samples = data.shape[0]
-
-            # Step 1: Compute the pseudo_counts for the dirichlet prior.
-            pseudo_counts = {
-                var: compat_fns.to_numpy(self.get_cpds(var).get_values()) * n_prev_samples for var in data.columns
-            }
-
-            # Step 2: Get the current order of state names for aligning pseudo counts.
-            state_names = {}
-            for var in data.columns:
-                state_names.update(self.get_cpds(var).state_names)
-
-            # Step 3: Estimate the new CPDs.
-            _est = DiscreteBayesianEstimator(
-                state_names=state_names,
-                prior_type="dirichlet",
-                pseudo_counts=pseudo_counts,
+            return self._warm_start_fit(
+                data=data,
+                sample_weight=sample_weight,
+                n_prev_samples=n_prev_samples,
                 n_jobs=n_jobs,
             )
-            _est.fit(self, data)
-            cpds = _est.parameters_
-
-            self.add_cpds(*cpds)
-            return self
 
         from pgmpy.parameter_estimator import DiscreteMLE
         from pgmpy.parameter_estimator.base import DiscreteParameterEstimator
@@ -714,6 +693,41 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
 
         estimator.fit(self, data, sample_weight=sample_weight)
         self.add_cpds(*estimator.parameters_)
+        return self
+
+    def _warm_start_fit(
+        self,
+        data: pd.DataFrame,
+        sample_weight=None,
+        n_prev_samples: int | None = None,
+        n_jobs: int = 1,
+    ) -> DiscreteBayesianNetwork:
+        from pgmpy.parameter_estimator import DiscreteBayesianEstimator
+
+        if n_prev_samples is None:
+            n_prev_samples = data.shape[0]
+
+        # Step 1: Compute the pseudo_counts for the dirichlet prior over model nodes.
+        pseudo_counts = {
+            var: compat_fns.to_numpy(self.get_cpds(var).get_values()) * n_prev_samples for var in self.nodes()
+        }
+
+        # Step 2: Get the current order of state names for aligning pseudo counts.
+        state_names = {}
+        for var in self.nodes():
+            state_names.update(self.get_cpds(var).state_names)
+
+        # Step 3: Estimate the new CPDs.
+        _est = DiscreteBayesianEstimator(
+            state_names=state_names,
+            prior_type="dirichlet",
+            pseudo_counts=pseudo_counts,
+            n_jobs=n_jobs,
+        )
+        _est.fit(self, data, sample_weight=sample_weight)
+        cpds = _est.parameters_
+
+        self.add_cpds(*cpds)
         return self
 
     def fit_update(self, data: pd.DataFrame, n_prev_samples: int | None = None, n_jobs: int = 1) -> None:
@@ -756,7 +770,7 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
             "Use `DiscreteBayesianNetwork.fit(data, warm_start=True)` instead.",
             FutureWarning,
         )
-        self.fit(data, warm_start=True, n_prev_samples=n_prev_samples, n_jobs=n_jobs)
+        self._warm_start_fit(data=data, n_prev_samples=n_prev_samples, n_jobs=n_jobs)
 
     @_rename_to_rng("seed")
     def predict(

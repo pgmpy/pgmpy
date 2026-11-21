@@ -5,6 +5,7 @@ import unittest
 import numpy as np
 import numpy.testing as np_test
 import pandas as pd
+import pytest
 
 from pgmpy.example_models import load_model
 from pgmpy.factors.continuous import LinearGaussianCPD
@@ -333,8 +334,8 @@ class TestLGBNMethods(unittest.TestCase):
 
     def test_fit_warm_start_not_implemented(self):
         new_model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
-        df = pd.DataFrame(np.random.randn(100, 3), columns=["x1", "x2", "x3"])
-        with self.assertRaises(NotImplementedError):
+        df = pd.DataFrame(np.zeros((100, 3)), columns=["x1", "x2", "x3"])
+        with pytest.raises(NotImplementedError):
             new_model.fit(df, warm_start=True)
 
     def test_predict_simple(self):
