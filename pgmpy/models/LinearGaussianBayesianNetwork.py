@@ -704,6 +704,7 @@ class LinearGaussianBayesianNetwork(_FileIOMixin, DAG):
         self,
         data: pd.DataFrame,
         estimator=None,
+        warm_start: bool = False,
     ) -> LinearGaussianBayesianNetwork:
         """
         Estimates (fits) the Linear Gaussian CPDs from data.
@@ -717,6 +718,10 @@ class LinearGaussianBayesianNetwork(_FileIOMixin, DAG):
             An initialized Gaussian parameter estimator from
             `pgmpy.parameter_estimator`. If not specified, defaults to
             ``LinearGaussianMLE()``.
+
+        warm_start : bool, default=False
+            Whether to reuse the solution of previous fit. Currently not supported
+            for LinearGaussianBayesianNetwork.
 
         Returns
         -------
@@ -742,6 +747,9 @@ class LinearGaussianBayesianNetwork(_FileIOMixin, DAG):
         <LinearGaussianCPD: P(x2 | x1) = N(0.046*x1 + -0.012; 0.981) at 0x...,
         <LinearGaussianCPD: P(x3 | x2) = N(0.172*x2 + -0.078; 0.908) at 0x...]
         """
+        if warm_start:
+            raise NotImplementedError("warm_start is not currently supported for LinearGaussianBayesianNetwork.")
+
         from pgmpy.parameter_estimator import LinearGaussianMLE
         from pgmpy.parameter_estimator.base import GaussianParameterEstimator
 
