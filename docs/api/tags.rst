@@ -55,3 +55,13 @@ Unsupervised Metrics
 --------------------
 
 .. pgmpy-tags:: unsupervised_metric
+
+Parameterizations
+-----------------
+
+.. pgmpy-tags:: parameterization
+
+Local Estimators
+----------------
+
+.. pgmpy-tags:: local_estimator
