@@ -1,7 +1,7 @@
 Datasets and Example Models
 ===========================
 
-Built-in data and example-model discovery helpers.
+The functions that find and load datasets and example models.
 
 Datasets
 --------

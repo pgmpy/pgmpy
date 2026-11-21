@@ -1,12 +1,12 @@
 .. meta::
-   :description: Long-form pgmpy tutorial notebooks covering probabilistic graphical models, Bayesian networks, inference, learning, and case studies.
+   :description: pgmpy tutorial notebooks about probabilistic graphical models, Bayesian networks, inference, learning, and case studies.
 
 Tutorial Notebooks
 ==================
 
-These notebooks are maintained in the separate
-`pgmpy_tutorials <https://github.com/pgmpy/pgmpy_tutorials>`_ repository and
-are copied into the docs build during CI and release publishing.
+These notebooks are in the separate
+`pgmpy_tutorials <https://github.com/pgmpy/pgmpy_tutorials>`_ repository. The documentation
+build copies them from that repository.
 
 .. toctree::
    :maxdepth: 1
