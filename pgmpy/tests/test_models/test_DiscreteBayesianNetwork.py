@@ -1131,20 +1131,20 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
 
         # 4. Warm start on unfitted model fits from scratch
         fresh_model = DiscreteBayesianNetwork([("A", "B")])
-        self.assertEqual(len(fresh_model.cpds), 0)
+        assert len(fresh_model.cpds) == 0
         fresh_data = pd.DataFrame({"A": [0, 1, 0], "B": [1, 0, 1]})
         fresh_model.fit(fresh_data, warm_start=True)
-        self.assertEqual(len(fresh_model.cpds), 2)
+        assert len(fresh_model.cpds) == 2
 
         # 5. NaiveBayes.fit_update() test and extra columns in data
         nb = NaiveBayes(feature_vars=["B"], dependent_var="A")
         df_nb = pd.DataFrame({"A": [0, 0, 1, 1], "B": [0, 1, 0, 1]})
         nb.fit(df_nb)
-        self.assertEqual(len(nb.cpds), 2)
+        assert len(nb.cpds) == 2
         df_update = pd.DataFrame({"A": [0, 0, 1, 1], "B": [0, 1, 0, 1], "Extra": [9, 9, 9, 9]})
         with pytest.warns(FutureWarning, match="`DiscreteBayesianNetwork.fit_update` is deprecated"):
             nb.fit_update(df_update, n_prev_samples=4)
-        self.assertEqual(len(nb.cpds), 2)
+        assert len(nb.cpds) == 2
 
     def test_dag_with_independent_node_fit(self):
         edge_list = [("A", "C"), ("B", "C")]
