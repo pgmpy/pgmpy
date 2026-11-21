@@ -175,18 +175,18 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
     def __init__(
         self,
         ebunch: Iterable[tuple[Hashable, Hashable]] | None = None,
-        latents: set[Hashable] | None = None,
-        exposures: set[Hashable] | None = None,
-        outcomes: set[Hashable] | None = None,
-        roles: dict[str, Iterable] | None = None,
+        latents: str | Iterable[Hashable] | None = None,
+        exposures: str | Iterable[Hashable] | None = None,
+        outcomes: str | Iterable[Hashable] | None = None,
+        roles: dict[str, str | Iterable[Hashable]] | None = None,
     ) -> None:
         super().__init__(ebunch)
 
         self._check_cycles()
 
-        self.latents = set(latents) if latents is not None else set()
-        self.exposures = set(exposures) if exposures is not None else set()
-        self.outcomes = set(outcomes) if outcomes is not None else set()
+        self.latents = latents if latents is not None else set()
+        self.exposures = exposures if exposures is not None else set()
+        self.outcomes = outcomes if outcomes is not None else set()
 
         if roles is None:
             roles = {}

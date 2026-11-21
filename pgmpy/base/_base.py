@@ -158,9 +158,9 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
     def __init__(
         self,
         edge_list: Iterable[tuple[Hashable, Hashable, str]] | None = None,
-        exposures: set[Hashable] | None = None,
-        outcomes: set[Hashable] | None = None,
-        latents: set[Hashable] | None = None,
+        exposures: str | Iterable[Hashable] | None = None,
+        outcomes: str | Iterable[Hashable] | None = None,
+        latents: str | Iterable[Hashable] | None = None,
         roles: dict[str, str | Iterable[Hashable]] | None = None,
     ):
         super().__init__()
@@ -170,9 +170,9 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
             for u, v, edge_type in edge_list:
                 self.add_edge(u, v, edge_type=edge_type)
 
-        self.exposures = set() if exposures is None else set(exposures)
-        self.outcomes = set() if outcomes is None else set(outcomes)
-        self.latents = set() if latents is None else set(latents)
+        self.exposures = set() if exposures is None else exposures
+        self.outcomes = set() if outcomes is None else outcomes
+        self.latents = set() if latents is None else latents
 
         if roles is None:
             roles = {}
