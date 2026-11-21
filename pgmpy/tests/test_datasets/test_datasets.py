@@ -28,6 +28,7 @@ ALL_DATASETS = [
     "dropouts",
     "dry_bean",
     "galton_stature",
+    "general_social_survey",
     "goldberg",
     "hitters",
     "htru2",
