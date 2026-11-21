@@ -472,24 +472,20 @@ class UAIWriter(BaseWriter):
             cpds.sort(key=lambda x: x.variable)
             tables = []
             for cpd in cpds:
-                values = list(
-                    map(
-                        str,
-                        compat_fns.to_numpy(cpd.values.ravel(), decimals=self.round_values),
-                    )
-                )
+                values = [
+                    np.format_float_positional(value, trim="0")
+                    for value in compat_fns.to_numpy(cpd.values.ravel(), decimals=self.round_values)
+                ]
                 tables.append(values)
             return tables
         elif isinstance(self.model, DiscreteMarkovNetwork):
             factors = self.model.get_factors()
             tables = []
             for factor in factors:
-                values = list(
-                    map(
-                        str,
-                        compat_fns.to_numpy(factor.values.ravel(), decimals=self.round_values),
-                    )
-                )
+                values = [
+                    np.format_float_positional(value, trim="0")
+                    for value in compat_fns.to_numpy(factor.values.ravel(), decimals=self.round_values)
+                ]
                 tables.append(values)
             return tables
         else:
