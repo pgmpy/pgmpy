@@ -20,6 +20,7 @@ from .tabular import (
     get_state_counts,
     get_state_counts_array,
 )
+from .timeseries import from_dbn_to_sktime, from_sktime_to_dbn
 from .utils import (
     discretize,
     get_example_model,
@@ -50,4 +51,6 @@ __all__ = [
     "preprocess_data",
     "split_by_type",
     "to_timeseries_format",
+    "from_sktime_to_dbn",
+    "from_dbn_to_sktime",
 ]
