@@ -17,22 +17,20 @@ class BDs(BDeu):
     unobserved parent configurations. The local score computed as:
 
     .. math::
-        \operatorname{BDs}(X_i, \Pi_i) =
-        \left[
-            \sum_{j \in \mathcal{O}_i} \sum_{k=1}^{r_i} \log \Gamma(N_{ijk} + \beta)
-            + (q_i - \tilde{q}_i) r_i \log \Gamma(\beta)
-        \right]
-        - \left[
-            \sum_{j \in \mathcal{O}_i} \log \Gamma(N_{ij} + \alpha)
-            + (q_i - \tilde{q}_i) \log \Gamma(\alpha)
-        \right]
-        + \tilde{q}_i \log \Gamma(\alpha)
-        - q_i r_i \log \Gamma(\beta),
+        \operatorname{BDs}(X_i, \Pi_i) = \sum_{j \in \mathcal{O}_i} \left[
+            \log \Gamma(\alpha)
+            - \log \Gamma(N_{ij} + \alpha)
+            + \sum_{k=1}^{r_i} \left(
+                \log \Gamma(N_{ijk} + \beta)
+                - \log \Gamma(\beta)
+            \right)
+        \right],
 
-    where :math:`\mathcal{O}_i` is the set of observed parent configurations, :math:`\tilde{q}_i = |\mathcal{O}_i|`,
-    :math:`q_i` is the total number of parent configurations, :math:`r_i` is the cardinality of :math:`X_i`,
+    where :math:`\mathcal{O}_i` is the set of observed parent configurations (those with :math:`N_{ij} > 0`),
+    :math:`\tilde{q}_i = |\mathcal{O}_i|`, :math:`r_i` is the cardinality of :math:`X_i`,
     :math:`\alpha = \text{equivalent_sample_size} / \tilde{q}_i`, :math:`\beta = \text{equivalent_sample_size} / (r_i
-    q_i)`, and :math:`N_{ij} = \sum_{k=1}^{r_i} N_{ijk}`.
+    \tilde{q}_i)`, :math:`N_{ijk}` is the count of :math:`X_i = k` in parent configuration :math:`j`, and
+    :math:`N_{ij} = \sum_{k=1}^{r_i} N_{ijk}`.
 
     Parameters
     ----------
@@ -96,24 +94,23 @@ class BDs(BDeu):
 
     def _local_score(self, variable: Hashable, parents: tuple[Hashable, ...]) -> float:
         counts = get_state_counts_array(self._codes, self._cardinalities, variable, parents)
-        num_parents_states = counts.shape[1]
         var_cardinality = self._cardinalities[variable]
-        counts_size = num_parents_states * var_cardinality
 
         # BDs reallocates the equivalent sample size over only the observed parent configs.
         col_sums = np.sum(counts, axis=0, dtype=float)
-        n_observed = int(np.count_nonzero(col_sums))
+        observed = col_sums > 0
+        n_observed = int(np.count_nonzero(observed))
 
         alpha = self.equivalent_sample_size / n_observed
-        beta = self.equivalent_sample_size / counts_size
+        beta = self.equivalent_sample_size / (n_observed * var_cardinality)
 
-        log_gamma_counts = np.zeros_like(counts)
-        gammaln(counts + beta, out=log_gamma_counts)
-
-        log_gamma_conds = col_sums
-        gammaln(log_gamma_conds + alpha, out=log_gamma_conds)
+        log_gamma_counts = gammaln(counts[:, observed] + beta)
+        log_gamma_conds = gammaln(col_sums[observed] + alpha)
 
         score = (
-            np.sum(log_gamma_counts) - np.sum(log_gamma_conds) + n_observed * lgamma(alpha) - counts_size * lgamma(beta)
+            np.sum(log_gamma_counts)
+            - np.sum(log_gamma_conds)
+            + n_observed * lgamma(alpha)
+            - n_observed * var_cardinality * lgamma(beta)
         )
         return score

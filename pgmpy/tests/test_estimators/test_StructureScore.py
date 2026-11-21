@@ -131,7 +131,7 @@ class TestBDs:
         m1, m2 = bds_models
         scorer = BDs(bds_df, equivalent_sample_size=1)
         assert scorer.score(m1) == pytest.approx(-36.82311976667139)
-        assert scorer.score(m2) == pytest.approx(-45.788991276221964)
+        assert scorer.score(m2) == pytest.approx(-37.51626694723133)
 
 
 class TestBIC:
