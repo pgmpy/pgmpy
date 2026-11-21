@@ -1,7 +1,8 @@
+import numpy as np
 import pytest
 
 from pgmpy.models import DiscreteBayesianNetwork
-from pgmpy.structure_score import BDeu
+from pgmpy.structure_score import BDeu, BDs
 
 # Score values in the tests are compared to R package bnlearn
 
@@ -22,3 +23,14 @@ class TestBDeu:
         titanic2 = DiscreteBayesianNetwork([("Pclass", "Sex")])
         titanic2.add_nodes_from(["Sex", "Survived", "Pclass"])
         assert scorer.score(titanic2) < scorer.score(titanic)
+
+    @pytest.mark.parametrize("scorer_class", [BDeu, BDs])
+    @pytest.mark.parametrize("equivalent_sample_size", [0, -1, -0.5, None, "10", np.nan, np.inf])
+    def test_invalid_equivalent_sample_size(self, small_df, scorer_class, equivalent_sample_size):
+        with pytest.raises(ValueError, match="equivalent_sample_size must be a positive finite number"):
+            scorer_class(small_df, equivalent_sample_size=equivalent_sample_size)
+
+    @pytest.mark.parametrize("scorer_class", [BDeu, BDs])
+    def test_fractional_equivalent_sample_size(self, small_df, small_df_models, scorer_class):
+        scorer = scorer_class(small_df, equivalent_sample_size=0.5)
+        assert np.isfinite(scorer.score(small_df_models[0]))
