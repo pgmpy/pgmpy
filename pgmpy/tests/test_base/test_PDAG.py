@@ -4,6 +4,46 @@ from pgmpy.base import DAG, PDAG
 
 
 class TestPDAG:
+    @pytest.mark.parametrize("inplace", [False, True])
+    def test_edges_follow_orientation(self, inplace):
+        pdag = PDAG([(0, 1, "--"), (0, 2, "--")])
+        original_edges = pdag.edges
+        oriented = pdag.orient_undirected_edge(1, 0, inplace=inplace)
+        graph = pdag if inplace else oriented
+
+        assert set(graph.edges) == {(1, 0, 0), (0, 2, 0)}
+        assert set(graph.edges()) == set(graph.get_edges(data=False))
+        assert set(graph.edges(keys=True)) == set(graph.edges)
+        assert set(graph.edges(0)) == {(1, 0), (0, 2)}
+        assert graph.edges[1, 0, 0] == {0: ">", 1: "-"}
+        assert (1, 0, 0) in graph.edges
+        assert set(original_edges) == ({(1, 0, 0), (0, 2, 0)} if inplace else {(0, 1, 0), (0, 2, 0)})
+        for u, v, key, markers in graph.edges(data=True, keys=True):
+            assert markers is graph.edges[u, v, key]
+            assert graph.has_edge(u, v, "->" if markers[v] == ">" else "--")
+
+        live_edges = graph.edges
+        live_data = graph.edges(data=True)
+        graph.orient_undirected_edge(2, 0, inplace=True)
+        assert set(live_edges) == {(1, 0, 0), (2, 0, 0)}
+        assert {(u, v) for u, v, _ in live_data} == {(1, 0), (2, 0)}
+
+    def test_edges_networkx_options(self):
+        pdag = PDAG()
+        assert pdag.get_edges() == []
+        edges = pdag.edges
+        pdag.add_edges_from([(0, 1, "<-"), (0, 1, "--")])
+        assert set(edges) == {(1, 0, 0), (0, 1, 1)}
+        assert set(edges.data(False, keys=True)) == set(edges)
+        assert set(edges([0], keys=True)) == set(edges)
+        assert set(edges([1], keys=True)) == {(1, 0, 0), (1, 0, 1)}
+        assert list(edges([])) == []
+        edges[1, 0, 0]["weight"] = 2
+        assert set(edges(data="weight", default=1, keys=True)) == {(1, 0, 0, 2), (0, 1, 1, 1)}
+        assert set(pdag.copy().edges()) == {(1, 0), (0, 1)}
+        assert set(pdag.get_directed_graph().edges()) == {(1, 0)}
+        assert pdag.get_skeleton().has_edge(0, 1)
+
     def test_init_normal(self):
         # Mix directed and undirected
         ebunch_mix = [("A", "C", "->"), ("D", "C", "->"), ("B", "A", "--"), ("B", "D", "--")]
