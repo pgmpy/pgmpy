@@ -796,6 +796,12 @@ class TestBayesianNetworkCPD:
 
         assert self.G.check_model()
 
+    def test_check_model_cyclic(self):
+        # add_edge refuses cycles, so add the edge to the underlying graph directly.
+        nx.DiGraph.add_edge(self.G, "l", "d")
+        with self.assertRaisesRegex(ValueError, "Cycles are not allowed"):
+            self.G.check_model()
+
     def test_check_model1(self):
         cpd_g = TabularCPD(
             "g",

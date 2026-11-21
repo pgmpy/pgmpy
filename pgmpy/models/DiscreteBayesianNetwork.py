@@ -460,6 +460,7 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
         Check the model for various errors. This method checks for the following
         errors.
 
+        * Checks that the model is acyclic.
         * Checks if the sum of the probabilities for each state is equal to 1 (tol=0.01).
         * Checks if the CPDs associated with nodes are consistent with their parents.
 
@@ -468,6 +469,8 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
         check: boolean
             True if all the checks pass otherwise should throw an error.
         """
+        super().check_model()
+
         for node in self.nodes():
             cpd = self.get_cpds(node=node)
 

@@ -182,7 +182,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
     ) -> None:
         super().__init__(ebunch)
 
-        self._check_cycles()
+        DAG.check_model(self)
 
         self.latents = set(latents) if latents is not None else set()
         self.exposures = set(exposures) if exposures is not None else set()
@@ -197,24 +197,36 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         for role, vars in roles.items():
             self.with_role(role=role, variables=vars, inplace=True)
 
-    def _check_cycles(self):
-        """Checks if the graph has cycles.
+    def check_model(self) -> bool:
+        """
+        Checks that the model is acyclic.
+
+        Returns
+        -------
+        bool
+            True if the model has no cycles, otherwise raises an error.
 
         Raises
         ------
         ValueError
-            If the graph has cycles.
+            If the graph has cycles. The error message lists the edges forming one cycle.
+
+        Examples
+        --------
+        >>> from pgmpy.base import DAG
+        >>> dag = DAG([("A", "B"), ("B", "C")])
+        >>> dag.check_model()
+        True
         """
-        cycles = []
         try:
-            cycles = list(nx.find_cycle(self))
+            cycle = nx.find_cycle(self)
         except nx.NetworkXNoCycle:
-            pass
-        else:
-            out_str = "Cycles are not allowed in a DAG."
-            out_str += "\nEdges indicating the path taken for a loop: "
-            out_str += "".join([f"({u},{v}) " for (u, v) in cycles])
-            raise ValueError(out_str)
+            return True
+
+        raise ValueError(
+            "Cycles are not allowed in a DAG.\nEdges indicating the path taken for a loop: "
+            + "".join(f"({u},{v}) " for u, v in cycle)
+        )
 
     @classmethod
     def from_lavaan(
