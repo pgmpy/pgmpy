@@ -34,20 +34,12 @@ def loss_fn(params, loss_params):
     return (A - B).pow(2).sum()
 
 
-@pytest.fixture
-def A():
-    return torch.randn(5, 5, device=config.DEVICE, dtype=config.DTYPE, requires_grad=True)
-
-
-@pytest.fixture
-def B():
-    return torch.ones(5, 5, device=config.DEVICE, dtype=config.DTYPE, requires_grad=False)
-
-
 @requires_torch
-def test_optimize(A, B):
+def test_optimize():
     # TODO: Add tests for other optimizers
     for opt in ["adadelta", "adam", "adamax", "asgd", "lbfgs", "rmsprop", "rprop"]:
+        A = torch.randn(5, 5, device=config.DEVICE, dtype=config.DTYPE, requires_grad=True)
+        B = torch.ones(5, 5, device=config.DEVICE, dtype=config.DTYPE, requires_grad=False)
         params = optimize(
             loss_fn,
             params={"A": A},
