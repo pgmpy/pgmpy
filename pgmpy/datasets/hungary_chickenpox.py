@@ -15,6 +15,7 @@ class HungaryChickenpox(BaseDataset):
         "n_samples": 522,
         "has_ground_truth": True,
         "has_expert_knowledge": False,
+        "has_missing_data": False,
         "has_index_col": False,
         "is_simulated": False,
         "is_interventional": False,
