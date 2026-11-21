@@ -8,6 +8,7 @@ import pandas as pd
 from joblib import Parallel, delayed
 from skbase.base import BaseObject
 from sklearn.base import BaseEstimator, clone
+from sklearn.feature_selection import mutual_info_regression
 from sklearn.linear_model import LassoLarsIC, LinearRegression
 from sklearn.metrics import (
     adjusted_mutual_info_score,
@@ -694,6 +695,34 @@ class _ScoreMixin:
                     yield (operation, score_delta)
 
 
+def gaussian_mutual_info(x, y):
+    r"""
+    Mutual information between two jointly Gaussian variables.
+
+    Computed as :math:`-\frac{1}{2} \ln(1 - \rho^2)`, where :math:`\rho` is the Pearson correlation between ``x`` and
+    ``y``. :math:`1 - \rho^2` is clipped away from 0 so that perfectly collinear variables get a large finite score,
+    and a constant variable (undefined correlation) gets a score of 0.
+
+    Parameters
+    ----------
+    x, y : array-like of shape (n_samples,)
+        The two continuous variables.
+
+    Returns
+    -------
+    float
+        The mutual information in nats.
+    """
+    with np.errstate(invalid="ignore"):
+        rho = np.nan_to_num(np.corrcoef(x, y)[0, 1])
+    return -0.5 * np.log(np.clip(1 - rho**2, 1e-15, 1.0))
+
+
+def _mutual_info_regression(x, y):
+    """Pairwise adapter of sklearn's ``mutual_info_regression`` to the ``fn(array, array) -> float`` form."""
+    return mutual_info_regression(np.asarray(x).reshape(-1, 1), np.asarray(y), random_state=0)[0]
+
+
 class _TreeSearchMixin:
     """
     Mixin class providing shared functionality for tree-based causal discovery
@@ -708,17 +737,35 @@ class _TreeSearchMixin:
         "mutual_info": mutual_info_score,
         "adjusted_mutual_info": adjusted_mutual_info_score,
         "normalized_mutual_info": normalized_mutual_info_score,
+        "gaussian_mutual_info": gaussian_mutual_info,
+        "mutual_info_regression": _mutual_info_regression,
+    }
+
+    _DEFAULT_EDGE_WEIGHT_FNS = {
+        "discrete": "mutual_info",
+        "continuous": "gaussian_mutual_info",
     }
 
     @staticmethod
-    def _resolve_edge_weights_fn(edge_weights_fn):
+    def _resolve_edge_weights_fn(edge_weights_fn, data=None):
         """
         Resolve ``edge_weights_fn`` to a callable of the form ``fn(array, array)``.
 
         Accepts either one of the string shorthands in
-        :attr:`_EDGE_WEIGHT_FNS` or a callable (returned unchanged). Anything
-        else raises ``ValueError``.
+        :attr:`_EDGE_WEIGHT_FNS` or a callable (returned unchanged). If ``None``,
+        the default for the type of ``data`` (see :func:`~pgmpy.utils.get_dataset_type`)
+        is used. Anything else raises ``ValueError``.
         """
+        if edge_weights_fn is None:
+            dataset_type = get_dataset_type(data)
+            if dataset_type == "mixed":
+                raise ValueError(
+                    "Cannot determine a suitable edge_weights_fn for mixed data. Please specify edge_weights_fn."
+                )
+            edge_weights_fn = _TreeSearchMixin._DEFAULT_EDGE_WEIGHT_FNS[dataset_type]
+
+        if edge_weights_fn is mutual_info_regression:
+            return _mutual_info_regression
         if callable(edge_weights_fn):
             return edge_weights_fn
         try:
@@ -732,20 +779,23 @@ class _TreeSearchMixin:
     @staticmethod
     def _get_state_codes(data):
         """
-        Read the integer state codes that pandas stores for the categorical columns of ``data``.
+        Read the values that edge weight functions are called with for each column of ``data``.
 
         Parameters
         ----------
         data : pd.DataFrame
-            Dataframe of categorical columns, where each column represents one variable.
+            Dataframe where each column represents one variable.
 
         Returns
         -------
-        codes : np.ndarray, shape (n_columns, n_samples)
-            ``codes[i]`` holds the state of variable *i* in every sample, as the position of that state among the
-            categories of its column.
+        codes : list of np.ndarray
+            ``codes[i]`` holds, for every sample, the position of the state among the categories of column *i* if it
+            is categorical, or its numeric value otherwise.
         """
-        return np.array([data[col].cat.codes for col in data.columns])
+        return [
+            data[col].cat.codes.to_numpy() if isinstance(data[col].dtype, pd.CategoricalDtype) else data[col].to_numpy()
+            for col in data.columns
+        ]
 
     @staticmethod
     def _get_weights(data, edge_weights_fn="mutual_info", n_jobs=-1, show_progress=True):
@@ -755,7 +805,7 @@ class _TreeSearchMixin:
         Parameters
         ----------
         data : pd.DataFrame
-            Dataframe of categorical columns, where each column represents one variable.
+            Dataframe where each column represents one variable.
 
         edge_weights_fn : str or callable, default="mutual_info"
             Method to use for computing edge weights. Options are:
@@ -763,8 +813,11 @@ class _TreeSearchMixin:
             - ``"mutual_info"``: Mutual Information Score.
             - ``"adjusted_mutual_info"``: Adjusted Mutual Information Score.
             - ``"normalized_mutual_info"``: Normalized Mutual Information Score.
+            - ``"gaussian_mutual_info"``: Mutual information of jointly Gaussian variables.
+            - ``"mutual_info_regression"``: scikit-learn's mutual information estimate for continuous variables.
             - A callable of the form ``fn(array, array) -> float``, called with the integer state codes of two
-              variables as stored by pandas (``Series.cat.codes``, typically ``int8``).
+              variables as stored by pandas (``Series.cat.codes``, typically ``int8``) for categorical variables, or
+              with the numeric values for continuous variables.
 
         n_jobs : int, default=-1
             Number of jobs to run in parallel. ``-1`` means use all processors.

@@ -7,6 +7,7 @@ from joblib.externals.loky import get_reusable_executor
 from sklearn.metrics import mutual_info_score
 
 from pgmpy.causal_discovery import TAN
+from pgmpy.causal_discovery._base import gaussian_mutual_info
 from pgmpy.example_models import load_model
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
@@ -194,11 +195,12 @@ def test_get_conditional_weights_custom_callable(data22):
         data, class_node="A", edge_weights_fn=edge_weights_fn, n_jobs=1, show_progress=False
     )
 
-    # Each pair of variables is scored once per observed state of A, on the stored state codes of its samples.
+    # Each pair of feature variables is scored once per observed state of A, on the stored state codes of its samples.
     columns = data.columns
+    features = [col for col in columns if col != "A"]
     subsets = [subset for _, subset in data.groupby("A", observed=True)]
     assert all(isinstance(codes, np.ndarray) and codes.dtype.kind == "i" for call in calls for codes in call)
-    for (x, y), ((u, v), subset) in zip(calls, product(combinations(columns, 2), subsets), strict=True):
+    for (x, y), ((u, v), subset) in zip(calls, product(combinations(features, 2), subsets), strict=True):
         np.testing.assert_array_equal(x, subset[u].cat.codes)
         np.testing.assert_array_equal(y, subset[v].cat.codes)
 
@@ -282,6 +284,65 @@ def test_tan_real_dataset(alarm_df):
     edges = est.causal_graph_.edges()
 
     assert set(expected_edges) == set(edges)
+
+
+@pytest.fixture
+def gaussian_tan_data():
+    rng = np.random.default_rng(0)
+    label = rng.integers(0, 2, size=1000)
+    x = label + rng.normal(size=1000)
+    y = x + rng.normal(size=1000)
+    z = y + rng.normal(size=1000)
+    return pd.DataFrame({"label": pd.Categorical(label), "x": x, "y": y, "z": z})
+
+
+@pytest.mark.parametrize("weight_fn", [None, "gaussian_mutual_info", "mutual_info_regression"])
+def test_tan_continuous(gaussian_tan_data, weight_fn):
+    est = TAN(class_node="label", root_node="x", edge_weights_fn=weight_fn, n_jobs=1, show_progress=False).fit(
+        gaussian_tan_data
+    )
+
+    assert set(est.causal_graph_.edges()) == {
+        ("label", "x"),
+        ("label", "y"),
+        ("label", "z"),
+        ("x", "y"),
+        ("y", "z"),
+    }
+
+
+def test_tan_continuous_features_string_class_labels(gaussian_tan_data):
+    data = gaussian_tan_data.assign(label=gaussian_tan_data["label"].map({0: "a", 1: "b"}).astype("category"))
+
+    weights = TAN._get_conditional_weights(
+        data, class_node="label", edge_weights_fn="gaussian_mutual_info", n_jobs=1, show_progress=False
+    )
+    class_idx = data.columns.get_loc("label")
+    assert weights.shape == (4, 4)
+    assert not weights[class_idx].any() and not weights[:, class_idx].any()
+    assert (weights[1:, 1:][np.triu_indices(3, k=1)] > 0).all()
+
+    est = TAN(class_node="label", root_node="x", n_jobs=1, show_progress=False).fit(data)
+    assert est.edge_weights_fn_ is gaussian_mutual_info
+    assert set(est.causal_graph_.edges()) == {
+        ("label", "x"),
+        ("label", "y"),
+        ("label", "z"),
+        ("x", "y"),
+        ("y", "z"),
+    }
+
+
+def test_tan_default_edge_weights_fn(data22, gaussian_tan_data):
+    est = TAN(class_node="A", n_jobs=1, show_progress=False)
+    assert est.fit(data22).edge_weights_fn_ is mutual_info_score
+
+    est = TAN(class_node="label", n_jobs=1, show_progress=False)
+    assert est.fit(gaussian_tan_data).edge_weights_fn_ is gaussian_mutual_info
+
+    mixed = gaussian_tan_data.assign(w=pd.Categorical(gaussian_tan_data["label"]))
+    with pytest.raises(ValueError, match="mixed"):
+        est.fit(mixed)
 
 
 @pytest.fixture(autouse=True)
