@@ -76,56 +76,56 @@ Key Features
       :link-type: ref
       :class-card: sd-card-hover
 
-      Learn causal graphs from data using scikit-learn compatible implementations.
+      Learn causal graphs from data with algorithms that are compatible with scikit-learn.
 
    .. grid-item-card:: Parameter Estimation
       :link: quickstart-parameter-estimation
       :link-type: ref
       :class-card: sd-card-hover
 
-      Estimate conditional distributions for nodes in the model.
+      Estimate the conditional distribution of each node in the model.
 
    .. grid-item-card:: Probabilistic Inference
       :link: quickstart-probabilistic-inference
       :link-type: ref
       :class-card: sd-card-hover
 
-      Compute posterior distributions from the learned model using exact or approximate inference.
+      Calculate posterior distributions from a model with exact or approximate inference.
 
    .. grid-item-card:: Causal Identification
       :link: quickstart-causal-identification
       :link-type: ref
       :class-card: sd-card-hover
 
-      Given a causal graph determine how to estimate the a causal query.
+      Use a causal graph to find how to estimate a causal effect.
 
    .. grid-item-card:: Causal Inference
       :link: quickstart-causal-inference
       :link-type: ref
       :class-card: sd-card-hover
 
-      Compute interventional and counterfactual distributions from models.
+      Calculate interventional and counterfactual distributions from models.
 
    .. grid-item-card:: Example Datasets and Models
       :link: quickstart-example-data-models
       :link-type: ref
       :class-card: sd-card-hover
 
-      Built-in collection of example Bayesian Networks and datasets from different sources.
+      Use example Bayesian networks and datasets from different sources.
 
    .. grid-item-card:: Simulations
       :link: quickstart-simulations
       :link-type: ref
       :class-card: sd-card-hover
 
-      Simulate data from models under various scenarios.
+      Simulate data from models, with interventions, evidence, and missing values.
 
    .. grid-item-card:: Extend pgmpy
       :link: quickstart-extensibility
       :link-type: ref
       :class-card: sd-card-hover
 
-      Write your own custom pgmpy plugable methods using our extension templates.
+      Use the extension templates to add your own methods to pgmpy.
 
 
 .. toctree::
@@ -136,5 +136,6 @@ Key Features
    Examples <examples>
    API Reference <reference>
    Citation <citation>
+   Supported By <supported_by>
    Getting Involved <development>
    References <references>

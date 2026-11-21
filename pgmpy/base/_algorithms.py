@@ -160,14 +160,13 @@ class _GraphAlgorithms:
         --------
         A latent chain cannot be blocked by conditioning on observed variables:
 
-        >>> from pgmpy.base import MAG
-        >>> mag = MAG(edge_list=[("X", "L", "->"), ("L", "Y", "->")], latents={"L"})
-        >>> mag.has_inducing_path("X", "Y")
+        >>> from pgmpy.base._base import _CoreGraph
+        >>> graph = _CoreGraph(edge_list=[("X", "L", "->"), ("L", "Y", "->")], latents={"L"})
+        >>> graph.has_inducing_path("X", "Y")
         True
 
         A collider path is inducing only if the colliders are ancestors of the endpoints:
 
-        >>> from pgmpy.base._base import _CoreGraph
         >>> edges = [
         ...     ("A", "B", "<>"),
         ...     ("A", "C", "<>"),

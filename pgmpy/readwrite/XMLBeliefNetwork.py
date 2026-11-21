@@ -5,10 +5,12 @@ import numpy as np
 
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
+from pgmpy.readwrite._base import BaseReader, BaseWriter
+from pgmpy.utils import compat_fns
 from pgmpy.utils._warnings import _warn_external
 
 
-class XBNReader:
+class XBNReader(BaseReader):
     """
     Initializer for XBNReader class.
 
@@ -34,13 +36,15 @@ class XBNReader:
     - :footcite:t:`msr_xmlbn`
     """
 
+    format_name = "xbn"
+    file_extensions = ["xbn"]
+
     def __init__(self, path=None, string=None):
-        if path:
+        super().__init__(path=path, string=string)
+        if path is not None:
             self.network = etree.parse(path).getroot()
-        elif string:
-            self.network = etree.fromstring(string)
         else:
-            raise ValueError("Must specify either path or string")
+            self.network = etree.fromstring(string)
 
         self.bnmodel = self.network.find("BNMODEL")
         self.analysisnotebook = self.get_analysisnotebook_values()
@@ -219,7 +223,7 @@ class XBNReader:
 
         return distribution
 
-    def get_model(self):
+    def read(self):
         """
         Returns an instance of Bayesian Model.
         """
@@ -244,7 +248,7 @@ class XBNReader:
         return model
 
 
-class XBNWriter:
+class XBNWriter(BaseWriter):
     """
     Initializer for XBNWriter class
 
@@ -269,10 +273,12 @@ class XBNWriter:
     >>> writer = XBNWriter(asia)
     """
 
+    format_name = "xbn"
+    file_extensions = ["xbn"]
+    supported_models = (DiscreteBayesianNetwork,)
+
     def __init__(self, model, encoding="utf-8", prettyprint=True):
-        if not isinstance(model, DiscreteBayesianNetwork):
-            raise TypeError("Model must be an instance of Bayesian Model.")
-        self.model = model
+        super().__init__(model)
 
         self.encoding = encoding
         self.prettyprint = prettyprint
@@ -290,6 +296,9 @@ class XBNWriter:
         """
         Return the XML as string.
         """
+        return self._to_bytes().decode(self.encoding)
+
+    def _to_bytes(self):
         if self.prettyprint:
             self.indent(self.network)
         return etree.tostring(self.network, encoding=self.encoding)
@@ -468,7 +477,7 @@ class XBNWriter:
         cpds = self.model.get_cpds()
         cpds.sort(key=lambda x: x.variable)
         for cpd in cpds:
-            cpd_values = cpd.get_values().transpose()
+            cpd_values = compat_fns.to_numpy(cpd.get_values()).transpose()
             var = cpd.variable
             dist = etree.SubElement(
                 distributions,
@@ -508,9 +517,8 @@ class XBNWriter:
         >>> writer = XBNWriter(asia)
         >>> writer.write(filename="asia.xbn")
         """
-        writer = self.__str__()
         with open(filename, "wb") as fout:
-            fout.write(writer)
+            fout.write(self._to_bytes())
 
     def write_xbn(self, filename):
         _warn_external(

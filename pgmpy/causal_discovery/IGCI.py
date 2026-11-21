@@ -7,7 +7,6 @@ import pandas as pd
 from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
 from pgmpy.causal_discovery.bivariate_scores import BaseBivariateScore, get_bivariate_score
-from pgmpy.utils import get_dataset_type
 
 
 class IGCI(BaseCausalDiscovery):
@@ -29,7 +28,7 @@ class IGCI(BaseCausalDiscovery):
     Parameters
     ----------
     scoring_method : str, BaseBivariateScore instance, or callable, default="slope"
-        Score used to compare the two directions. Use ``"slope"``, ``"entropy"``, a configured
+        Score used to compare the two directions. Use ``"slope"``, ``"entropy_difference"``, a configured
         score object, or a callable of the form ``score(x, y) -> float``.
 
     ref_measure : {"uniform", "gaussian"}, default="uniform"
@@ -49,6 +48,9 @@ class IGCI(BaseCausalDiscovery):
 
     backward_score_ : float
         Score when the second column is treated as cause. Lower is better.
+
+    scoring_method_ : BaseBivariateScore or callable
+        The direction score used for learning, resolved from ``scoring_method``.
 
     n_features_in_ : int
         The number of features in the data used to learn the causal graph.
@@ -71,7 +73,7 @@ class IGCI(BaseCausalDiscovery):
     0.22245
     >>> round(float(igci.backward_score_), 5)
     1.66886
-    >>> round(float(IGCI(scoring_method="entropy").fit(df).forward_score_), 5)
+    >>> round(float(IGCI(scoring_method="entropy_difference").fit(df).forward_score_), 5)
     -0.70337
 
     References
@@ -80,6 +82,23 @@ class IGCI(BaseCausalDiscovery):
     - :cite:p:`janzing_2012`
 
     """
+
+    _tags = {
+        "name": "igci",
+        "data_types": ["continuous"],
+        "identifiable_graph": "dag",
+        "requires_target": False,
+        "capability:multivariate": False,
+        "capability:expert_knowledge": [],
+        "assumption:causal_sufficiency": True,
+        "assumption:acyclicity": True,
+        "assumption:faithfulness": False,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": True,
+    }
 
     def __init__(
         self,
@@ -114,13 +133,11 @@ class IGCI(BaseCausalDiscovery):
         # Step 1: Validate hyperparameters and resolve the score function.
         if self.ref_measure not in ("uniform", "gaussian"):
             raise ValueError(f"ref_measure must be one of ('uniform', 'gaussian'). Got: {self.ref_measure!r}")
-        score = get_bivariate_score(self.scoring_method, algorithm="igci")
+        self.scoring_method_ = get_bivariate_score(self.scoring_method, input_type="cause_effect")
 
         # Step 2: Validate the input data.
         if X.shape[1] != 2:
             raise ValueError(f"IGCI requires exactly two variables, got {X.shape[1]}.")
-        if get_dataset_type(X) != "continuous":
-            raise ValueError("IGCI requires continuous (numeric) variables; got non-continuous data.")
 
         x, y = self.feature_names_in_
 
@@ -135,8 +152,8 @@ class IGCI(BaseCausalDiscovery):
             y_norm = (y_vals - y_vals.mean()) / y_vals.std()
 
         # Step 4: Score both directions.
-        forward_score = score(x_norm, y_norm)
-        backward_score = score(y_norm, x_norm)
+        forward_score = self.scoring_method_(x_norm, y_norm)
+        backward_score = self.scoring_method_(y_norm, x_norm)
 
         if np.isnan(forward_score) or np.isnan(backward_score):
             raise ValueError("IGCI scoring_method returned NaN; cannot determine a causal direction.")

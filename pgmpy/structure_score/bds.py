@@ -74,9 +74,8 @@ class BDs(BDeu):
 
     _tags = {
         "name": "bds",
-        "supported_datatype": "discrete",
+        "data_types": ["discrete"],
         "default_for": None,
-        "is_parameteric": True,
     }
 
     def structure_prior_ratio(self, operation) -> float:

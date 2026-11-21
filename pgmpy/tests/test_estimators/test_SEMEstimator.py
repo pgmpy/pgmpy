@@ -11,6 +11,10 @@ requires_torch = pytest.mark.skipif(
     not _check_soft_dependencies("torch", severity="none"),
     reason="execute only if required dependency present",
 )
+requires_statsmodels = pytest.mark.skipif(
+    not _check_soft_dependencies("statsmodels>=0.14.5", severity="none"),
+    reason="statsmodels is required for this test",
+)
 
 
 @pytest.fixture
@@ -177,6 +181,7 @@ def test_custom_estimator_std_init(sem_models):
     )
 
 
+@requires_statsmodels
 def test_iv_fit(iv_models):
     estimator = IVEstimator(iv_models["model"])
     param, summary = estimator.fit(X="X", Y="Y", data=iv_models["generated_data"])

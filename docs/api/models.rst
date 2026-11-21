@@ -10,6 +10,7 @@ Directed Probabilistic Models
 .. autosummary::
    :toctree: generated/models
    :template: autosummary/class.rst
+   :nosignatures:
 
    ~pgmpy.models.DiscreteBayesianNetwork
    ~pgmpy.models.LinearGaussianBayesianNetwork
@@ -23,6 +24,7 @@ Structural Equation Models
 .. autosummary::
    :toctree: generated/models
    :template: autosummary/class.rst
+   :nosignatures:
 
    ~pgmpy.models.SEMGraph
    ~pgmpy.models.SEMAlg
@@ -34,6 +36,7 @@ Undirected and Derived Models
 .. autosummary::
    :toctree: generated/models
    :template: autosummary/class.rst
+   :nosignatures:
 
    ~pgmpy.models.DiscreteMarkovNetwork
    ~pgmpy.models.MarkovChain
@@ -43,6 +46,5 @@ Undirected and Derived Models
 
 .. note::
 
-   Deprecated compatibility aliases such as ``BayesianNetwork`` and
-   ``MarkovNetwork`` are omitted here. Use
-   ``DiscreteBayesianNetwork`` and ``DiscreteMarkovNetwork`` instead.
+   This page does not show the removed classes ``BayesianNetwork`` and
+   ``MarkovNetwork``. Use ``DiscreteBayesianNetwork`` and ``DiscreteMarkovNetwork``.

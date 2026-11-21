@@ -4,13 +4,10 @@
 API Reference
 =============
 
-Public API reference for pgmpy.
+This is the reference for the public API of pgmpy. Each page lists the public classes and
+functions of one part of the library.
 
-Browse by workflow or object family to find the public classes and helper
-functions for that part of the library.
-
-Deprecated compatibility aliases are intentionally omitted from the main API
-listings in favor of the current class names.
+These pages do not show deprecated aliases. Use the current class names.
 
 .. grid:: 1 1 2 3
    :gutter: 3
@@ -42,7 +39,7 @@ listings in favor of the current class names.
       :link-type: doc
       :class-card: sd-card-hover
 
-      Exact inference, approximate inference, sampling, and elimination-order helpers.
+      Exact inference, approximate inference, sampling, and elimination-order functions.
 
    .. grid-item-card:: Causal Inference
       :link: api/causal_inference
@@ -70,21 +67,28 @@ listings in favor of the current class names.
       :link-type: doc
       :class-card: sd-card-hover
 
-      Built-in CI test selectors and test implementations.
+      CI tests and the functions that select them.
 
    .. grid-item-card:: Structure Scores
       :link: api/structure_score
       :link-type: doc
       :class-card: sd-card-hover
 
-      Discrete, Gaussian, and conditional-Gaussian structure scoring classes.
+      Discrete, Gaussian, and conditional Gaussian structure scores.
+
+   .. grid-item-card:: Tags
+      :link: api/tags
+      :link-type: doc
+      :class-card: sd-card-hover
+
+      Tags that describe the data types, capabilities, and assumptions of pgmpy objects.
 
    .. grid-item-card:: Metrics
       :link: api/metrics
       :link-type: doc
       :class-card: sd-card-hover
 
-      Supervised and unsupervised metrics for evaluating learned graphs and fitted models.
+      Supervised and unsupervised metrics that evaluate learned graphs and fitted models.
 
    .. grid-item-card:: Reading/Writing
       :link: api/readwrite
@@ -98,14 +102,14 @@ listings in favor of the current class names.
       :link-type: doc
       :class-card: sd-card-hover
 
-      Built-in dataset loaders and example-model discovery helpers.
+      Functions that find and load datasets and example models.
 
    .. grid-item-card:: Independencies
       :link: api/independencies
       :link-type: doc
       :class-card: sd-card-hover
 
-      Independence assertions and collections used across discovery and testing workflows.
+      Independence assertions and the collections that discovery algorithms and tests use.
 
 .. toctree::
    :hidden:
@@ -120,6 +124,7 @@ listings in favor of the current class names.
    api/structure_learning
    api/ci_test
    api/structure_score
+   api/tags
    api/metrics
    api/readwrite
    api/data

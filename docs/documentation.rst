@@ -1,14 +1,13 @@
 :hide-toc:
 
 .. meta::
-   :description: Task-oriented pgmpy guides for causal discovery, parameter estimation, probabilistic inference, simulations, and model building.
+   :description: pgmpy guides for causal discovery, parameter estimation, probabilistic inference, simulations, and custom models.
 
 User Guide
 ==========
 
-Use these guides when you want workflow-oriented documentation before diving into
-the API reference. Each page focuses on a concrete task and links to the
-relevant examples and public APIs.
+Each guide shows how to do one task with pgmpy. Read the guides before the API reference.
+Each guide also links to the related examples and API pages.
 
 Core Workflow
 -------------
@@ -29,21 +28,21 @@ Core Workflow
       :link-type: doc
       :class-card: sd-card-hover
 
-      Learn CPDs from data using MLE, Bayesian priors, or EM for missing data.
+      Learn CPDs from data with MLE, Bayesian priors, or EM for missing data.
 
    .. grid-item-card:: Probabilistic Inference
       :link: guides/probabilistic_inference
       :link-type: doc
       :class-card: sd-card-hover
 
-      Compute posteriors, marginals, and MAP assignments with exact or approximate methods.
+      Calculate posteriors, marginals, and MAP states with exact or approximate methods.
 
    .. grid-item-card:: Simulations
       :link: guides/simulations
       :link-type: doc
       :class-card: sd-card-hover
 
-      Sample observational, interventional, and conditional data from fitted models.
+      Draw observational, interventional, and conditional samples from fitted models.
 
 Causal Inference
 ----------------
@@ -57,7 +56,7 @@ Causal Inference
       :link-type: doc
       :class-card: sd-card-hover
 
-      Determine identifiability using backdoor adjustment and frontdoor criteria.
+      Check identifiability with the backdoor and frontdoor criteria.
 
    .. grid-item-card:: Causal Estimation
       :link: guides/causal_estimation
@@ -85,14 +84,14 @@ Evaluation & Data
       :link-type: doc
       :class-card: sd-card-hover
 
-      Curated benchmark datasets with ground-truth graphs and expert knowledge.
+      Benchmark datasets with ground-truth graphs and expert knowledge.
 
    .. grid-item-card:: Example Models
       :link: guides/example_models
       :link-type: doc
       :class-card: sd-card-hover
 
-      Ready-made networks from bnlearn, bnrep, and dagitty for benchmarking and exploration.
+      Networks from bnlearn, bnRep, and DAGitty for benchmarks and examples.
 
 Utilities
 ---------
@@ -113,14 +112,14 @@ Utilities
       :link-type: doc
       :class-card: sd-card-hover
 
-      Define graphs and CPDs directly for discrete, continuous, or dynamic models.
+      Define the graphs and CPDs of discrete, continuous, or dynamic models yourself.
 
    .. grid-item-card:: Plotting Models
       :link: guides/plotting
       :link-type: doc
       :class-card: sd-card-hover
 
-      Visualize model structure with Graphviz, daft, and networkx backends.
+      Draw the model structure with Graphviz, daft, or networkx.
 
 Contributing
 ------------
@@ -134,7 +133,7 @@ Contributing
       :link-type: doc
       :class-card: sd-card-hover
 
-      Add new algorithms, datasets, and metrics using the built-in extension templates.
+      Use the extension templates to add new algorithms, datasets, and metrics.
 
 .. toctree::
    :hidden:
