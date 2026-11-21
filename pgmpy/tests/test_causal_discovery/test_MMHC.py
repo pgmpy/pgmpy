@@ -84,17 +84,17 @@ def test_dag_is_acyclic_and_scorable_after_fit(cancer_data):
     assert isinstance(estimator.score(X=cancer_data), float)
 
 
-def test_refit_on_numpy_input_with_constant_column(cancer_data):
+def test_refit_numpy(cancer_data):
     estimator = MMHC(show_progress=False, max_iter=100).fit(cancer_data)
-    with pytest.warns(UserWarning, match="constant"):
+    with pytest.raises(ValueError, match="Variable 'x2' is constant"):
         estimator.fit(cancer_data.iloc[:, :2].assign(constant="c").to_numpy())
 
+    estimator.fit(cancer_data.iloc[:, :3].to_numpy())
     names = ["x0", "x1", "x2"]
     assert estimator.n_features_in_ == 3
     assert list(estimator.feature_names_in_) == names
     assert set(estimator.causal_graph_.nodes()) == set(names)
     assert estimator.adjacency_matrix_.shape == (3, 3)
-    assert estimator.causal_graph_.degree("x2") == 0
 
     with pytest.raises((AttributeError, TypeError, ValueError)):
         estimator.fit([[0, 1], [1, 0]])

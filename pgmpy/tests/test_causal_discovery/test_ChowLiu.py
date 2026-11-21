@@ -1,3 +1,5 @@
+from itertools import combinations
+
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -212,6 +214,27 @@ def test_gaussian_mutual_info(gaussian_chain):
     est = ChowLiu(n_jobs=1, show_progress=False).fit(collinear)
     assert nx.is_tree(est.causal_graph_)
     assert set(est.causal_graph_.nodes()) == set(collinear.columns)
+
+
+def test_get_weights_custom_callable(data13):
+    calls = []
+
+    def edge_weights_fn(x, y):
+        calls.append((x, y))
+        return mutual_info_score(x, y)
+
+    data = data13.astype(str).astype(pd.CategoricalDtype(["2", "1", "0"]))
+    weights = ChowLiu._get_weights(data, edge_weights_fn=edge_weights_fn, n_jobs=1, show_progress=False)
+
+    # Each pair of variables is scored on the state codes stored in their columns, which follow the category order.
+    columns = data.columns
+    assert all(isinstance(codes, np.ndarray) and codes.dtype.kind == "i" for call in calls for codes in call)
+    for (x, y), (u, v) in zip(calls, combinations(columns, 2), strict=True):
+        np.testing.assert_array_equal(x, data[u].cat.codes)
+        np.testing.assert_array_equal(y, data[v].cat.codes)
+
+    expected = [[0 if u == v else mutual_info_score(data[u], data[v]) for v in columns] for u in columns]
+    np.testing.assert_allclose(weights, expected, atol=1e-12)
 
 
 @pytest.fixture(autouse=True)

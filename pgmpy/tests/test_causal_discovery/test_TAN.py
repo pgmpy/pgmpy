@@ -1,3 +1,5 @@
+from itertools import combinations, product
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -181,6 +183,36 @@ def test_tan_auto_class_node(data22):
     assert sorted(nodes) == sorted(["C", "R", "A", "D", "E", "B"])
 
 
+def test_get_conditional_weights_custom_callable(data22):
+    calls = []
+
+    def edge_weights_fn(x, y):
+        calls.append((x, y))
+        return mutual_info_score(x, y)
+
+    data = data22.astype(str).astype(pd.CategoricalDtype(["unobserved", "2", "1", "0"]))
+    weights = TAN._get_conditional_weights(
+        data, class_node="A", edge_weights_fn=edge_weights_fn, n_jobs=1, show_progress=False
+    )
+
+    # Each pair of feature variables is scored once per observed state of A, on the stored state codes of its samples.
+    columns = data.columns
+    features = [col for col in columns if col != "A"]
+    subsets = [subset for _, subset in data.groupby("A", observed=True)]
+    assert all(isinstance(codes, np.ndarray) and codes.dtype.kind == "i" for call in calls for codes in call)
+    for (x, y), ((u, v), subset) in zip(calls, product(combinations(features, 2), subsets), strict=True):
+        np.testing.assert_array_equal(x, subset[u].cat.codes)
+        np.testing.assert_array_equal(y, subset[v].cat.codes)
+
+    # I(u; v | A) = sum_a P(A=a) * I(u; v | A=a), with each term computed on the samples where A=a.
+    expected = np.zeros((len(columns), len(columns)))
+    for subset in subsets:
+        expected += (len(subset) / len(data)) * np.array(
+            [[0 if u == v else mutual_info_score(subset[u], subset[v]) for v in columns] for u in columns]
+        )
+    np.testing.assert_allclose(weights, expected, atol=1e-12)
+
+
 def test_tan_real_dataset(alarm_df):
     expected_edges = [
         ("CVP", "LVFAILURE"),
@@ -270,6 +302,28 @@ def test_tan_continuous(gaussian_tan_data, weight_fn):
         gaussian_tan_data
     )
 
+    assert set(est.causal_graph_.edges()) == {
+        ("label", "x"),
+        ("label", "y"),
+        ("label", "z"),
+        ("x", "y"),
+        ("y", "z"),
+    }
+
+
+def test_tan_continuous_features_string_class_labels(gaussian_tan_data):
+    data = gaussian_tan_data.assign(label=gaussian_tan_data["label"].map({0: "a", 1: "b"}).astype("category"))
+
+    weights = TAN._get_conditional_weights(
+        data, class_node="label", edge_weights_fn="gaussian_mutual_info", n_jobs=1, show_progress=False
+    )
+    class_idx = data.columns.get_loc("label")
+    assert weights.shape == (4, 4)
+    assert not weights[class_idx].any() and not weights[:, class_idx].any()
+    assert (weights[1:, 1:][np.triu_indices(3, k=1)] > 0).all()
+
+    est = TAN(class_node="label", root_node="x", n_jobs=1, show_progress=False).fit(data)
+    assert est.edge_weights_fn_ is gaussian_mutual_info
     assert set(est.causal_graph_.edges()) == {
         ("label", "x"),
         ("label", "y"),

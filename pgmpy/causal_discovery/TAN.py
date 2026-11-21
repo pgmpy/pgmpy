@@ -50,7 +50,9 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
           :math:`-\\frac{1}{2} \\ln(1 - \\rho^2)`, for continuous features.
         - ``"mutual_info_regression"``: scikit-learn's mutual information estimate for
           continuous features. Passing ``sklearn.feature_selection.mutual_info_regression`` itself also works.
-        - A callable of the form ``fn(array, array) -> float``.
+        - A callable of the form ``fn(array, array) -> float``, called with the integer state codes of two variables
+          as stored by pandas (``Series.cat.codes``, typically ``int8``) for categorical variables, or with the
+          numeric values for continuous variables.
 
     n_jobs : int, default=-1
         Number of jobs to run in parallel. ``-1`` means use all processors.
@@ -228,7 +230,7 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
         Parameters
         ----------
         data : pd.DataFrame
-            Dataframe where each column represents one variable.
+            Dataframe of categorical columns, where each column represents one variable.
 
         class_node : str
             The class variable to condition on.
@@ -241,7 +243,9 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
             - ``"normalized_mutual_info"``: Normalized Mutual Information Score.
             - ``"gaussian_mutual_info"``: Mutual information of jointly Gaussian variables.
             - ``"mutual_info_regression"``: scikit-learn's mutual information estimate for continuous variables.
-            - A callable of the form ``fn(array, array) -> float``.
+            - A callable of the form ``fn(array, array) -> float``, called with the integer state codes of two
+              variables as stored by pandas (``Series.cat.codes``, typically ``int8``) for categorical variables, or
+              with the numeric values for continuous variables.
 
         n_jobs : int, default=-1
             Number of jobs to run in parallel. ``-1`` means use all processors.
@@ -258,27 +262,37 @@ class TAN(_TreeSearchMixin, BaseCausalDiscovery):
         # Step 0: Resolve the edge weight computation function.
         edge_weights_fn = _TreeSearchMixin._resolve_edge_weights_fn(edge_weights_fn)
 
-        # Step 1: Compute conditional edge weights for a fully connected graph.
+        # Step 1: Split the feature values by the state of the class node.
         n_vars = len(data.columns)
-        pbar = combinations(data.columns, 2)
+        class_idx = data.columns.get_loc(class_node)
+        feature_idx = [i for i in range(n_vars) if i != class_idx]
+        codes = _TreeSearchMixin._get_state_codes(data)
+        class_values = codes[class_idx]
+        conditional_subsets = [
+            (count / data.shape[0], [c[class_values == class_value] for c in codes])
+            for class_value, count in zip(*np.unique(class_values, return_counts=True))
+        ]
+
+        # Step 2: Compute conditional edge weights for feature pairs only.
+        pbar = combinations(feature_idx, 2)
+        n_pairs = len(feature_idx) * (len(feature_idx) - 1) / 2
         if show_progress and config.SHOW_PROGRESS:
-            pbar = tqdm(pbar, total=(n_vars * (n_vars - 1) / 2), desc="Building tree")
+            pbar = tqdm(pbar, total=n_pairs, desc="Building tree")
 
         def _conditional_edge_weights_fn(u, v):
             """
             Computes I(u; v | class_node) as a weighted sum over class values.
             """
-            cond_marginal = data.loc[:, class_node].value_counts() / data.shape[0]
             cond_edge_weight = 0.0
-            for index, marg_prob in cond_marginal.items():
-                df_cond_subset = data[data.loc[:, class_node] == index]
-                cond_edge_weight += marg_prob * edge_weights_fn(df_cond_subset.loc[:, u], df_cond_subset.loc[:, v])
+            for marg_prob, conditional_codes in conditional_subsets:
+                cond_edge_weight += marg_prob * edge_weights_fn(conditional_codes[u], conditional_codes[v])
             return cond_edge_weight
 
-        vals = Parallel(n_jobs=n_jobs)(delayed(_conditional_edge_weights_fn)(u, v) for u, v in pbar)
+        # Step 3: Fill the symmetric matrix, leaving the class node's row and column as zeros.
+        pairs = list(pbar)
+        vals = Parallel(n_jobs=n_jobs)(delayed(_conditional_edge_weights_fn)(u, v) for u, v in pairs)
         weights = np.zeros((n_vars, n_vars))
-        indices = np.triu_indices(n_vars, k=1)
-        weights[indices] = vals
-        weights.T[indices] = vals
+        for (u, v), val in zip(pairs, vals):
+            weights[u, v] = weights[v, u] = val
 
         return weights

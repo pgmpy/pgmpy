@@ -36,7 +36,9 @@ class ChowLiu(_TreeSearchMixin, BaseCausalDiscovery):
           :math:`-\\frac{1}{2} \\ln(1 - \\rho^2)`, for continuous data.
         - ``"mutual_info_regression"``: scikit-learn's mutual information estimate for
           continuous data. Passing ``sklearn.feature_selection.mutual_info_regression`` itself also works.
-        - A callable of the form ``fn(array, array) -> float``.
+        - A callable of the form ``fn(array, array) -> float``, called with the integer state codes of two variables
+          as stored by pandas (``Series.cat.codes``, typically ``int8``) for categorical variables, or with the
+          numeric values for continuous variables.
 
     n_jobs : int, default=-1
         Number of jobs to run in parallel. ``-1`` means use all processors.

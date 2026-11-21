@@ -1,4 +1,3 @@
-import warnings
 from collections import deque
 from collections.abc import Callable, Generator, Hashable
 from itertools import combinations, permutations
@@ -106,10 +105,8 @@ class BaseCausalDiscovery(BaseEstimator, BaseObject):
 
         for col in X.columns:
             if X[col].nunique() == 1:
-                warnings.warn(
-                    f"Variable '{col}' is constant (zero variance), which can lead to unreliable results for"
-                    f"{type(self).__name__}. Consider removing it before fitting.",
-                    UserWarning,
+                raise ValueError(
+                    f"Variable '{col}' is constant (zero variance). Remove it before fitting {type(self).__name__}."
                 )
 
         self.n_features_in_ = len(X.columns)
@@ -731,10 +728,9 @@ class _TreeSearchMixin:
     Mixin class providing shared functionality for tree-based causal discovery
     algorithms (Chow-Liu and TAN).
 
-    Provides static helpers for resolving the ``edge_weights_fn`` argument,
-    computing pairwise edge weights, and constructing a directed spanning tree
-    (DAG) from a weight matrix.  Both :class:`ChowLiu` and :class:`TAN` inherit
-    from this mixin so that the shared logic lives in exactly one place.
+    Provides static helpers for resolving the ``edge_weights_fn`` argument, reading the integer state codes of the data,
+    computing pairwise edge weights, and constructing a directed spanning tree (DAG) from a weight matrix.  Both
+    :class:`ChowLiu` and :class:`TAN` inherit from this mixin so that the shared logic lives in exactly one place.
     """
 
     _EDGE_WEIGHT_FNS = {
@@ -781,6 +777,27 @@ class _TreeSearchMixin:
             )
 
     @staticmethod
+    def _get_state_codes(data):
+        """
+        Read the values that edge weight functions are called with for each column of ``data``.
+
+        Parameters
+        ----------
+        data : pd.DataFrame
+            Dataframe where each column represents one variable.
+
+        Returns
+        -------
+        codes : list of np.ndarray
+            ``codes[i]`` holds, for every sample, the position of the state among the categories of column *i* if it
+            is categorical, or its numeric value otherwise.
+        """
+        return [
+            data[col].cat.codes.to_numpy() if isinstance(data[col].dtype, pd.CategoricalDtype) else data[col].to_numpy()
+            for col in data.columns
+        ]
+
+    @staticmethod
     def _get_weights(data, edge_weights_fn="mutual_info", n_jobs=-1, show_progress=True):
         """
         Compute the pairwise edge weight matrix.
@@ -798,7 +815,9 @@ class _TreeSearchMixin:
             - ``"normalized_mutual_info"``: Normalized Mutual Information Score.
             - ``"gaussian_mutual_info"``: Mutual information of jointly Gaussian variables.
             - ``"mutual_info_regression"``: scikit-learn's mutual information estimate for continuous variables.
-            - A callable of the form ``fn(array, array) -> float``.
+            - A callable of the form ``fn(array, array) -> float``, called with the integer state codes of two
+              variables as stored by pandas (``Series.cat.codes``, typically ``int8``) for categorical variables, or
+              with the numeric values for continuous variables.
 
         n_jobs : int, default=-1
             Number of jobs to run in parallel. ``-1`` means use all processors.
@@ -815,11 +834,12 @@ class _TreeSearchMixin:
         edge_weights_fn = _TreeSearchMixin._resolve_edge_weights_fn(edge_weights_fn)
 
         n_vars = len(data.columns)
-        pbar = combinations(data.columns, 2)
+        codes = _TreeSearchMixin._get_state_codes(data)
+        pbar = combinations(range(n_vars), 2)
         if show_progress and config.SHOW_PROGRESS:
             pbar = tqdm(pbar, total=(n_vars * (n_vars - 1) / 2), desc="Building tree")
 
-        vals = Parallel(n_jobs=n_jobs)(delayed(edge_weights_fn)(data.loc[:, u], data.loc[:, v]) for u, v in pbar)
+        vals = Parallel(n_jobs=n_jobs)(delayed(edge_weights_fn)(codes[u], codes[v]) for u, v in pbar)
         weights = np.zeros((n_vars, n_vars))
         indices = np.triu_indices(n_vars, k=1)
         weights[indices] = vals
