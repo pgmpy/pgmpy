@@ -1,5 +1,8 @@
 import gzip
+from collections.abc import Hashable
 
+import narwhals.stable.v2 as nw
+import numpy as np
 import pandas as pd
 
 try:
@@ -431,3 +434,60 @@ def to_timeseries_format(df: pd.DataFrame, return_format: str = "pd-multiindex")
         )
 
     return panel
+
+
+def _validate_dataframe(X):
+    """Validates input data for causal discovery and tabular models."""
+    try:
+        import scipy.sparse as sp
+
+        if sp.issparse(X):
+            raise TypeError("A sparse matrix was passed, but dense data is required.")
+    except ImportError:
+        pass
+
+    if hasattr(X, "dtype") and np.iscomplexobj(X):
+        raise ValueError("Complex data not supported")
+
+    if isinstance(X, pd.DataFrame) and any(np.iscomplexobj(X[c].values) for c in X.columns):
+        raise ValueError("Complex data not supported")
+
+    if isinstance(X, np.ndarray):
+        if X.ndim != 2:
+            raise ValueError(f"Expected 2D array, got {X.ndim}D array instead")
+        cols = [f"x{i}" for i in range(X.shape[1])]
+        X = pd.DataFrame(X, columns=cols)
+
+    nw_df = X if isinstance(X, nw.DataFrame) else nw.from_native(X, eager_only=True)
+
+    n_samples, n_features = nw_df.shape
+    if n_features == 0:
+        raise ValueError(f"0 feature(s) (shape={nw_df.shape}) while a minimum of 1 is required.")
+    if n_samples < 2:
+        raise ValueError(f"n_samples = {n_samples}, at least 2 are required.")
+
+    types = {isinstance(c, str) for c in nw_df.columns}
+    if len(types) > 1:
+        col_types = sorted({type(c).__name__ for c in nw_df.columns})
+        raise TypeError(
+            f"Feature names are only supported if all input features have string names, "
+            f"but your input has {col_types} as feature name / column name types."
+        )
+
+    for col in nw_df.columns:
+        s = nw_df.get_column(col)
+        null_count = s.is_null().sum()
+        nan_count = s.is_nan().sum() if s.dtype.is_float() else 0
+        if (null_count + nan_count) > 0:
+            raise ValueError(f"Input contains NaN/null values in column '{col}'.")
+        if s.dtype.is_float() and (~s.is_finite()).sum() > 0:
+            raise ValueError(f"Input contains infinite values in column '{col}'.")
+        if isinstance(s.dtype, (nw.dtypes.List, nw.dtypes.Array, nw.dtypes.Struct)):
+            raise TypeError("argument must be a string, number, or hashable object.")
+        if isinstance(s.dtype, (nw.dtypes.Object, nw.dtypes.Unknown)):
+            if not all(isinstance(x, Hashable) for x in s):
+                raise TypeError("argument must be a string, number, or hashable object.")
+            if any(isinstance(x, (float, np.floating)) and np.isinf(x) for x in s):
+                raise ValueError(f"Input contains infinite values in column '{col}'.")
+
+    return X, nw_df

@@ -21,6 +21,7 @@ from .tabular import (
     get_state_counts_array,
 )
 from .utils import (
+    _validate_dataframe,
     discretize,
     get_example_model,
     manual_pairwise_orient,
@@ -29,6 +30,7 @@ from .utils import (
 
 __all__ = [
     "ExperimentalWarning",
+    "_validate_dataframe",
     "cartesian",
     "CovarianceRegression",
     "sample_discrete",
