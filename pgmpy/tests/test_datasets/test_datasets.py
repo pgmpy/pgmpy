@@ -34,6 +34,7 @@ ALL_DATASETS = [
     "iq_brain_size",
     "lead",
     "myocardial_infarction",
+    "nslm",
     "pima_diabetes",
     "pittsburgh_bridges",
     "population_threshold_rdd_italy",
