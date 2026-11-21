@@ -32,6 +32,8 @@ ALL_DATASETS = [
     "hitters",
     "htru2",
     "iq_brain_size",
+    "jobs_psid",
+    "jobs_lalonde",
     "lead",
     "myocardial_infarction",
     "pima_diabetes",
