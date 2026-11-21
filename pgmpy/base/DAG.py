@@ -194,8 +194,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             raise TypeError("Roles must be provided as a dictionary.")
 
         # set the roles to the vertices as networkx attributes
-        for role, vars in roles.items():
-            self.with_role(role=role, variables=vars, inplace=True)
+        self.with_roles(roles, inplace=True)
 
     def _check_cycles(self):
         """Checks if the graph has cycles.
@@ -837,7 +836,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
             while separator.intersection(self.latents):
                 separator_copy = separator.copy()
                 for u in separator:
-                    if u in self.latents:
+                    if self.has_node_role(u, "latents"):
                         separator_copy.remove(u)
                         separator_copy.update(set(self.predecessors(u)))
                 separator = separator_copy
@@ -1182,8 +1181,10 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
                 admg.add_edges_from([(source, v, "->") for v in reached])
 
         # Roles on latent nodes, including the latents role itself, are dropped.
-        for role, variables in self.get_role_dict().items():
-            admg.with_role(role=role, variables=[node for node in variables if node not in latents], inplace=True)
+        admg.with_roles(
+            {role: [node for node in nodes if node not in latents] for role, nodes in self.get_role_dict().items()},
+            inplace=True,
+        )
         return admg
 
     def to_adjacency(self, encoding: str = "edge_type", nodelist: list | None = None) -> pd.DataFrame:
@@ -1759,8 +1760,7 @@ class DAG(_GraphRolesMixin, nx.DiGraph):
         dag = DAG(ebunch=self.edges())
         dag.add_nodes_from(self.nodes())
 
-        for role, vars in self.get_role_dict().items():
-            dag.with_role(role=role, variables=vars, inplace=True)
+        dag.with_roles(self.get_role_dict(), inplace=True)
 
         return dag
 

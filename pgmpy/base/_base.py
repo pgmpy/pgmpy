@@ -179,8 +179,7 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
         elif not isinstance(roles, dict):
             raise TypeError("Roles must be provided as a dictionary.")
 
-        for role, vars in roles.items():
-            self.with_role(role=role, variables=vars, inplace=True)
+        self.with_roles(roles, inplace=True)
 
     def add_node(self, node_for_adding: Hashable, **attr: Any) -> None:
         """
@@ -835,10 +834,10 @@ class _CoreGraph(nx.MultiGraph, _GraphAlgorithms, _GraphRolesMixin, _GraphPlotti
                 key = nx.MultiGraph.add_edge(subgraph, u, v)
                 subgraph.edges[u, v, key].update(self._to_markers(edge=(u, v, edge_type)))
 
-        for role, variables in self.get_role_dict().items():
-            retained = [node for node in variables if node in nodes]
-            if retained:
-                subgraph.with_role(role=role, variables=retained, inplace=True)
+        subgraph.with_roles(
+            {role: [node for node in variables if node in nodes] for role, variables in self.get_role_dict().items()},
+            inplace=True,
+        )
         return subgraph
 
     def get_skeleton(self) -> nx.Graph:

@@ -126,12 +126,13 @@ class TestPDAG:
             PDAG(directed_cycle)
 
     def test_to_cpdag(self):
-        pdag = PDAG([("A", "B", "->"), ("B", "C", "--")])
+        pdag = PDAG([("A", "B", "->"), ("B", "C", "--")], exposures={"A"}, roles={"custom": "C"})
 
         cpdag = pdag.to_cpdag()
 
         assert cpdag.directed_edges == set()
         assert cpdag.undirected_edges == {("A", "B"), ("B", "C")}
+        assert cpdag.get_role_dict() == {"exposures": ["A"], "custom": ["C"]}
 
     def test_orient_undirected_edge(self):
         pdag = PDAG(edge_list=[("A", "C", "->"), ("D", "C", "->"), ("B", "A", "--"), ("B", "D", "--")])

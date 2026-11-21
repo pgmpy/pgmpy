@@ -236,8 +236,7 @@ class PDAG(_CoreGraph):
             dag.latents = self.latents
 
         cpdag = dag.to_pdag()
-        for role, variables in self.get_role_dict().items():
-            cpdag.with_role(role=role, variables=variables, inplace=True)
+        cpdag.with_roles(self.get_role_dict(), inplace=True)
         return cpdag
 
     def to_dag(self) -> "DAG":
