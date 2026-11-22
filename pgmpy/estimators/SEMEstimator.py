@@ -470,7 +470,7 @@ class IVEstimator:
         civs = [civ for civ in civs if civ[0] not in ivs]
 
         reg_covars = []
-        for var in self.model.graph.predecessors(X):
+        for var in self.model.predecessors(X):
             if var in self.model.observed:
                 reg_covars.append(var)
 
