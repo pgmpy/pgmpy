@@ -165,7 +165,6 @@ class TestTimeseriesCoreGraph:
         assert len(graph.get_edges(lag_relative=True)) == 1
 
     def test_add_node(self):
-        """Test that `add_node` collapses any time onto the present slice."""
         graph = sample_graph1()
         graph.add_node(("C", 7))
 
@@ -173,8 +172,19 @@ class TestTimeseriesCoreGraph:
         assert graph.variables == ["A", "B", "C"]
 
     def test_remove_edge(self):
-        """Test that `remove_edge` locates the link from any time frame."""
         graph = sample_graph1()
         graph.remove_edge(("A", 3), ("B", 5), "->")
 
         assert sorted(graph.get_edges(lag_relative=True)) == [("A", "A", 1, "->"), ("A", "B", 0, "->")]
+
+    def test_has_edge(self):
+        graph = sample_graph1()
+
+        assert graph.has_edge(("A", 10), ("B", 12))
+
+        assert graph.has_edge(("B", 0), ("A", 0))
+
+        assert graph.has_edge(("A", 0), ("B", 0), "->")
+        assert not graph.has_edge(("B", 0), ("A", 0), "->")
+
+        assert not graph.has_edge(("A", 0), ("C", 0))
