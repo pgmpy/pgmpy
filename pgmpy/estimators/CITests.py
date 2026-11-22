@@ -257,9 +257,11 @@ def pillai_trace(X, Y, Z, data, boolean=True, **kwargs):
 
     Pillai's trace based residualization CI test for mixed data.
 
-    Note: the canonical implementation residualizes with a RandomForest
-    estimator by default (the legacy function used XGBoost); pass
-    ``estimator=`` for a custom sklearn-compatible estimator.
+    Note: the canonical implementation residualizes with
+    :class:`~pgmpy.utils.CovarianceRegression` for continuous targets and
+    :class:`~sklearn.linear_model.LogisticRegression` for categorical targets
+    by default (the legacy function used XGBoost); pass ``estimator=``
+    for a custom sklearn-compatible estimator.
 
     Returns
     -------
@@ -282,9 +284,11 @@ def gcm(X, Y, Z, data, boolean=True, **kwargs):
 
     Generalised Covariance Measure CI test.
 
-    Note: the canonical implementation residualizes with a RandomForest
-    estimator by default (the legacy function used XGBoost); pass
-    ``estimator=`` for a custom sklearn-compatible estimator.
+    Note: the canonical implementation residualizes with
+    :class:`~pgmpy.utils.CovarianceRegression` for continuous targets and
+    :class:`~sklearn.linear_model.LogisticRegression` for categorical targets
+    by default (the legacy function used XGBoost); pass ``estimator=``
+    for a custom sklearn-compatible estimator.
 
     Returns
     -------

@@ -1,10 +1,18 @@
 import numpy as np
 import pandas as pd
 import pytest
-from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.linear_model import LinearRegression, LogisticRegression
 
-from pgmpy.ci_tests import PillaiTrace
+from pgmpy.ci_tests import (
+    GeneralizedCov,
+    HotellingLawley,
+    PillaiTrace,
+    RoysLargestRoot,
+    WilksLambda,
+)
 from pgmpy.tests.test_ci_tests import _multivariate_fixtures
+from pgmpy.utils import CovarianceRegression
 
 pillai_data = _multivariate_fixtures.pillai_data
 skip_gh_actions = _multivariate_fixtures.skip_gh_actions
@@ -29,8 +37,8 @@ def test_pillai_no_cond(pillai_data):
 
 @skip_gh_actions
 def test_pillai_indep(pillai_data):
-    expected_coefs = [0.0019, 0.0007, 0.0011, 0.0043, 0.0011]
-    expected_pvalues = [0.1736, 0.3919, 0.5894, 0.3686, 0.5894]
+    expected_coefs = [0.0, 0.0, 0.0002, 0.0006, 0.0002]
+    expected_pvalues = [0.9155, 0.9246, 0.8909, 0.9594, 0.8909]
 
     computed_coefs = []
     computed_pvalues = []
@@ -46,7 +54,7 @@ def test_pillai_indep(pillai_data):
 
 @skip_gh_actions
 def test_pillai_dependent(pillai_data):
-    expected_coefs = [0.2129, 0.2029, 0.0996, 0.1456, 0.0996]
+    expected_coefs = [0.1950, 0.1948, 0.1077, 0.1373, 0.1077]
     expected_pvalues = [0.0000, 0.0000, 0.0000, 0.0000, 0.0000]
 
     computed_coefs = []
@@ -98,8 +106,8 @@ def test_pillai_tests_approx(pillai_data):
 
 
 def test_effect_size(pillai_data):
-    expected_indep = [0.0019, 0.0007, 0.0011, 0.0021, 0.0011]
-    expected_dep = [0.2129, 0.2029, 0.0996, 0.0728, 0.0996]
+    expected_indep = [0.0, 0.0, 0.0002, 0.0003, 0.0002]
+    expected_dep = [0.1950, 0.1948, 0.1077, 0.0686, 0.1077]
 
     for df, expected in zip(pillai_data["indep"], expected_indep):
         test = PillaiTrace(data=df)
@@ -189,3 +197,87 @@ def test_pillai_bool_is_categorical_in_mixed_data():
     bool_test("G", "A", ["C"])
     category_test("G", "A", ["C"])
     assert bool_test.p_value_ == pytest.approx(category_test.p_value_, rel=1e-9)
+
+
+def test_default_estimator_types():
+    rng = np.random.default_rng(0)
+    n = 1000
+    Z = rng.normal(size=n)
+    X_cont = Z * 0.5 + rng.normal(size=n)
+    Y_cont = Z * 0.5 + rng.normal(size=n)
+    X_cat = pd.cut(X_cont, bins=4, labels=["a", "b", "c", "d"])
+
+    # Continuous variables: estimator should be CovarianceRegression.
+    test = PillaiTrace(data=pd.DataFrame({"X": X_cont, "Y": Y_cont, "Z": Z}))
+    test("X", "Y", ["Z"])
+    assert isinstance(test.estimator_x_, CovarianceRegression)
+    assert isinstance(test.estimator_y_, CovarianceRegression)
+
+    # Categorical X: estimator_x_ should be LogisticRegression, estimator_y_ CovarianceRegression.
+    test = PillaiTrace(data=pd.DataFrame({"X": X_cat, "Y": Y_cont, "Z": Z}))
+    test("X", "Y", ["Z"])
+    assert isinstance(test.estimator_x_, LogisticRegression)
+    assert isinstance(test.estimator_y_, CovarianceRegression)
+
+
+def test_linearity_tag():
+    rng = np.random.default_rng(0)
+    n = 200
+    data = pd.DataFrame({"X": rng.normal(size=n), "Y": rng.normal(size=n), "Z": rng.normal(size=n)})
+
+    assert PillaiTrace.get_class_tag("assumption:linearity") is False
+    assert PillaiTrace(data=data).get_tag("assumption:linearity") is True
+    assert (
+        PillaiTrace(data=data, estimator=RandomForestRegressor(random_state=0)).get_tag("assumption:linearity") is False
+    )
+
+
+def test_custom_discrete_estimator():
+    rng = np.random.default_rng(0)
+    n = 200
+    Z = rng.normal(size=n)
+    X = pd.cut(Z * 0.5 + rng.normal(size=n), bins=3, labels=["a", "b", "c"])
+    Y = pd.cut(Z * 0.5 + rng.normal(size=n), bins=3, labels=["x", "y", "z"])
+    df = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
+
+    test = PillaiTrace(data=df, estimator=RandomForestClassifier(random_state=0))
+    test("X", "Y", ["Z"])
+    assert isinstance(test.estimator_x_, RandomForestClassifier)
+    assert isinstance(test.estimator_y_, RandomForestClassifier)
+
+
+@pytest.mark.parametrize(
+    "ci_test_cls",
+    [PillaiTrace, HotellingLawley, RoysLargestRoot, WilksLambda, GeneralizedCov],
+)
+def test_constant_categorical_target(ci_test_cls):
+    rng = np.random.default_rng(0)
+    n = 100
+    data = pd.DataFrame(
+        {
+            "X": pd.Categorical(["only_category"] * n),
+            "Y": rng.normal(size=n),
+            "Z": rng.normal(size=n),
+        }
+    )
+    test = ci_test_cls(data=data)
+    # Categorical variable with single unique category should not raise ValueError and return independent
+    assert test.is_independent("X", "Y", ["Z"]) is True
+    assert test.p_value_ == 1.0
+    assert test.estimator_x_ is None
+
+
+def test_conditioning_dummy_column_name_matches_target():
+    rng = np.random.default_rng(0)
+    n = 100
+    # Conditioning variable A has category '1', so get_dummies produces dummy column 'A_1'
+    a_cat = pd.Categorical(["1" if i % 2 == 0 else "2" for i in range(n)])
+    x_cont = rng.normal(size=n)
+    a_1_cont = rng.normal(size=n)
+    data = pd.DataFrame({"X": x_cont, "A_1": a_1_cont, "A": a_cat})
+
+    test = PillaiTrace(data=data)
+    # Target 'A_1' name collides with dummy column 'A_1' generated from conditioning variable 'A'
+    result = test("X", "A_1", ["A"])
+    assert isinstance(result, (bool, np.bool_))
+    assert isinstance(test.estimator_y_, CovarianceRegression)

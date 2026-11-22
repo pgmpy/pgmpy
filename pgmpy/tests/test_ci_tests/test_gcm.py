@@ -6,6 +6,7 @@ from sklearn.ensemble import RandomForestRegressor
 from pgmpy.ci_tests import GCM
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.models import LinearGaussianBayesianNetwork
+from pgmpy.utils import CovarianceRegression
 
 
 @pytest.fixture
@@ -82,6 +83,32 @@ def test_gcm_exact(df_dep, df_indep):
     assert isinstance(test.p_value_, float)
     assert test.p_value_ >= 0.0
     assert test.p_value_ <= 1.0
+
+
+def test_default_estimator_type(df_indep):
+    test = GCM(data=df_indep)
+    # Conditional test
+    test("X", "Y", ["Z1", "Z2", "Z3"])
+    assert isinstance(test.estimator_x_, CovarianceRegression)
+    assert isinstance(test.estimator_y_, CovarianceRegression)
+
+    # Unconditional test (Z=[], testing len(z_cols) == 0 branch)
+    test("X", "Y", [])
+    assert isinstance(test.estimator_x_, CovarianceRegression)
+    assert isinstance(test.estimator_y_, CovarianceRegression)
+
+
+def test_linearity_tag(df_indep):
+    # Class-level tag is False.
+    assert GCM.get_class_tag("assumption:linearity") is False
+
+    # Instance with estimator=None gets linearity=True.
+    test = GCM(data=df_indep)
+    assert test.get_tag("assumption:linearity") is True
+
+    # Instance with non-linear estimator gets linearity=False.
+    test_rf = GCM(data=df_indep, estimator=RandomForestRegressor(random_state=42))
+    assert test_rf.get_tag("assumption:linearity") is False
 
 
 def test_effect_size(df_dep, df_indep):

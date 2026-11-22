@@ -1,9 +1,12 @@
 import numpy as np
 import pandas as pd
 import pytest
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import LogisticRegression
 
 from pgmpy.ci_tests import GeneralizedCov, PillaiTrace
 from pgmpy.tests.test_ci_tests import _multivariate_fixtures
+from pgmpy.utils import CovarianceRegression
 
 pillai_data = _multivariate_fixtures.pillai_data
 
@@ -72,3 +75,37 @@ def test_generalized_cov_approx(pillai_data):
         test = GeneralizedCov(data=df, n_permutations=500, rng=0)
         test("X", "Y", ["Z1", "Z2", "Z3"])
         assert test.p_value_ <= 0.05
+
+
+def test_default_estimator_types():
+    rng = np.random.default_rng(0)
+    n = 1000
+    Z = rng.normal(size=n)
+    X_cont = Z * 0.5 + rng.normal(size=n)
+    Y_cont = Z * 0.5 + rng.normal(size=n)
+    X_cat = pd.cut(X_cont, bins=4, labels=["a", "b", "c", "d"])
+
+    # Continuous variables: estimator should be CovarianceRegression.
+    test = GeneralizedCov(data=pd.DataFrame({"X": X_cont, "Y": Y_cont, "Z": Z}), n_permutations=10, rng=0)
+    test("X", "Y", ["Z"])
+    assert isinstance(test.estimator_x_, CovarianceRegression)
+    assert isinstance(test.estimator_y_, CovarianceRegression)
+
+    # Categorical X: estimator_x_ should be LogisticRegression, estimator_y_ CovarianceRegression.
+    test = GeneralizedCov(data=pd.DataFrame({"X": X_cat, "Y": Y_cont, "Z": Z}), n_permutations=10, rng=0)
+    test("X", "Y", ["Z"])
+    assert isinstance(test.estimator_x_, LogisticRegression)
+    assert isinstance(test.estimator_y_, CovarianceRegression)
+
+
+def test_linearity_tag():
+    rng = np.random.default_rng(0)
+    n = 200
+    data = pd.DataFrame({"X": rng.normal(size=n), "Y": rng.normal(size=n), "Z": rng.normal(size=n)})
+
+    assert GeneralizedCov.get_class_tag("assumption:linearity") is False
+    assert GeneralizedCov(data=data).get_tag("assumption:linearity") is True
+    assert (
+        GeneralizedCov(data=data, estimator=RandomForestRegressor(random_state=0)).get_tag("assumption:linearity")
+        is False
+    )

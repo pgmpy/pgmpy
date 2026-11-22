@@ -12,8 +12,9 @@ class PillaiTrace(_ResidualMixin, BaseCITest):
     r"""
     Pillai's trace test for conditional independence with mixed data [1].
 
-    This test first residualizes :math:`X` and :math:`Y` with respect to :math:`[1, Z]` using an estimator (a
-    RandomForest estimator by default, but any sklearn-compatible estimator can be provided). For a continuous target
+    This test first residualizes :math:`X` and :math:`Y` with respect to :math:`[1, Z]` using an estimator
+    (``CovarianceRegression`` for continuous variables and ``LogisticRegression`` for categorical variables by
+    default, though any sklearn-compatible estimator can be provided). For a continuous target
     :math:`T`, the residual is
 
     .. math::
@@ -53,8 +54,9 @@ class PillaiTrace(_ResidualMixin, BaseCITest):
     estimator : estimator instance, optional
         Any sklearn-compatible estimator with ``fit``, ``predict``, and ``predict_proba``
         (if testing discrete variables) methods. If ``None`` (default), uses
-        ``RandomForestClassifier`` for categorical targets and ``RandomForestRegressor``
-        for continuous targets. Conditioning variables are one-hot encoded before fitting.
+        :class:`~pgmpy.utils.CovarianceRegression` for continuous targets and
+        :class:`~sklearn.linear_model.LogisticRegression` for categorical targets.
+        Conditioning variables are one-hot encoded before fitting.
 
     Attributes
     ----------
@@ -88,6 +90,7 @@ class PillaiTrace(_ResidualMixin, BaseCITest):
         self.data, self.dtypes = preprocess_data(data, data_types=self.get_class_tag("data_types"))
         self.estimator = estimator
         super().__init__(use_cache=use_cache)
+        self._set_linearity_tag()
 
     def _compute_result(
         self,
@@ -124,6 +127,9 @@ class PillaiTrace(_ResidualMixin, BaseCITest):
             res_x = res_x.to_frame()
         if isinstance(res_y, pd.Series):
             res_y = res_y.to_frame()
+
+        if res_x.shape[1] == 0 or res_y.shape[1] == 0:
+            return _CITestResult(statistic=0.0, p_value=1.0, effect_size=0.0)
 
         # Step 2: Compute Pillai's trace test statistic via CCA.
         n_components = min(res_x.shape[1], res_y.shape[1])

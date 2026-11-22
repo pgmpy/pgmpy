@@ -53,8 +53,8 @@ class WilksLambda(_ResidualMixin, BaseCITest):
     estimator : estimator instance, optional
         Any sklearn-compatible estimator with ``fit``, ``predict``, and ``predict_proba``
         (if testing discrete variables) methods. If ``None`` (default), uses
-        ``RandomForestClassifier`` for categorical targets and ``RandomForestRegressor``
-        for continuous targets.
+        :class:`~pgmpy.utils.CovarianceRegression` for continuous targets and
+        :class:`~sklearn.linear_model.LogisticRegression` for categorical targets.
 
     Attributes
     ----------
@@ -88,6 +88,7 @@ class WilksLambda(_ResidualMixin, BaseCITest):
         self.data, self.dtypes = preprocess_data(data, data_types=self.get_class_tag("data_types"))
         self.estimator = estimator
         super().__init__(use_cache=use_cache)
+        self._set_linearity_tag()
 
     def _compute_result(self, X: str, Y: str, Z: list):
         """
@@ -119,6 +120,9 @@ class WilksLambda(_ResidualMixin, BaseCITest):
             res_x = res_x.to_frame()
         if isinstance(res_y, pd.Series):
             res_y = res_y.to_frame()
+
+        if res_x.shape[1] == 0 or res_y.shape[1] == 0:
+            return _CITestResult(statistic=1.0, p_value=1.0, effect_size=0.0)
 
         # Step 2: Compute Wilks' Lambda via CCA.
         p, q = res_x.shape[1], res_y.shape[1]

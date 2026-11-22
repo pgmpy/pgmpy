@@ -50,8 +50,8 @@ class GeneralizedCov(_ResidualMixin, BaseCITest):
     estimator : estimator instance, optional
         Any sklearn-compatible estimator with ``fit``, ``predict``, and ``predict_proba``
         (if testing discrete variables) methods. If ``None`` (default), uses
-        ``RandomForestClassifier`` for categorical targets and ``RandomForestRegressor``
-        for continuous targets.
+        :class:`~pgmpy.utils.CovarianceRegression` for continuous targets and
+        :class:`~sklearn.linear_model.LogisticRegression` for categorical targets.
 
     n_permutations : int, default 1000
         Number of permutations used to estimate the null distribution of :math:`T`.
@@ -105,6 +105,7 @@ class GeneralizedCov(_ResidualMixin, BaseCITest):
         self.n_permutations = n_permutations
         self.rng = rng
         super().__init__(use_cache=use_cache)
+        self._set_linearity_tag()
 
     def set_params(self, **params):
         """Set the parameters of this estimator; the deprecated ``random_state`` is accepted as an alias of ``rng``."""
@@ -160,6 +161,9 @@ class GeneralizedCov(_ResidualMixin, BaseCITest):
             res_x = res_x.to_frame()
         if isinstance(res_y, pd.Series):
             res_y = res_y.to_frame()
+
+        if res_x.shape[1] == 0 or res_y.shape[1] == 0:
+            return _CITestResult(statistic=0.0, p_value=1.0, effect_size=0.0)
 
         # Step 2: Compute the determinant-style statistic from the residual cross-covariance.
         statistic = self._cross_covariance_statistic(res_x, res_y)
