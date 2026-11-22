@@ -58,7 +58,7 @@ def test_linear_gaussian():
     lgbn = LinearGaussianBayesianNetwork([("x1", "x3"), ("x2", "x3")])
     lgbn.add_cpds(x1_cpd, x2_cpd, x3_cpd)
 
-    linear_gaussian_samples = lgbn.simulate(num_samples, seed=42)
+    linear_gaussian_samples = lgbn.simulate(num_samples, rng=42)
 
     functional_cpd = FunctionalCPD(
         variable="x3",

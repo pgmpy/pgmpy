@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+from collections.abc import Hashable, Iterable
+
+from pgmpy.utils.types import Self
+
 __all__ = ["_GraphRolesMixin"]
 
 
@@ -65,7 +69,7 @@ class _GraphRolesMixin:
         """
         return role in self.get_roles()
 
-    def with_role(self, role: str, variables, inplace=False):
+    def with_role(self, role: str, variables: str | Iterable[Hashable], inplace: bool = False) -> Self | None:
         """Return a new graph with the specified role assignment.
 
         Parameters
@@ -81,6 +85,12 @@ class _GraphRolesMixin:
         -------
         graph of same type as self
             A new instance with the specified role assigned, to the variables provided.
+
+        Raises
+        ------
+        ValueError
+            If a variable is not in the graph, or variables are assigned the "latents" role in a graph class with
+            ``SUPPORTS_LATENTS = False``.
         """
         if isinstance(variables, str):
             variables = {variables}
@@ -97,18 +107,14 @@ class _GraphRolesMixin:
                     raise ValueError(f"Variable '{var}' not found in the graph.")
                 else:
                     existing_role = new_graph.nodes[var].get("roles", set())
-
-                    existing_role.add(role)
-                    new_graph.add_node(var, roles=existing_role)
+                    new_graph.add_node(var, roles=existing_role | {role})
         else:
             for var in variables:
                 if var not in new_graph.graph:
                     raise ValueError(f"Variable '{var}' not found in the graph.")
                 else:
                     existing_role = new_graph.nodes[var].get("roles", set())
-
-                    existing_role.add(role)
-                    new_graph.add_node(var, roles=existing_role)
+                    new_graph.add_node(var, roles=existing_role | {role})
         if not inplace:
             return new_graph
 

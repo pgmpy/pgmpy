@@ -1,5 +1,3 @@
-import logging
-
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -348,36 +346,28 @@ def test_build_dag_continuous(ci_test, variant):
 
 def test_pc_alarm():
     alarm_model = load_model("bnlearn/alarm")
-    data = BayesianModelSampling(alarm_model).forward_sample(size=int(1e4), seed=42)
+    data = BayesianModelSampling(alarm_model).forward_sample(size=int(1e4), rng=42)
     est = PC(data)
     est.estimate(variant="stable", max_cond_vars=5, n_jobs=1, show_progress=False)
 
 
-def test_pc_asia(caplog):
+def test_pc_asia():
     asia_model = load_model("bnlearn/asia")
-    data = asia_model.simulate(n_samples=int(1e5), seed=42)
+    data = asia_model.simulate(n_samples=int(1e5), rng=42)
     est = PC(data)
-    pgmpy_logger = logging.getLogger("pgmpy")
-    pgmpy_logger.addHandler(caplog.handler)
-    try:
-        with caplog.at_level(logging.WARNING, logger="pgmpy"):
-            est.estimate(
-                variant="stable",
-                max_cond_vars=4,
-                expert_knowledge=ExpertKnowledge(required_edges=[("xray", "either")]),
-                n_jobs=1,
-                show_progress=False,
-            )
-    finally:
-        pgmpy_logger.removeHandler(caplog.handler)
-    assert (
-        "Specified expert knowledge conflicts with learned structure. Ignoring edge xray->either from required edges"
-    ) in caplog.text
+    with pytest.warns(UserWarning, match="Required edge xray->either is absent or oppositely oriented"):
+        est.estimate(
+            variant="stable",
+            max_cond_vars=4,
+            expert_knowledge=ExpertKnowledge(required_edges=[("xray", "either")]),
+            n_jobs=1,
+            show_progress=False,
+        )
 
 
 def test_pc_asia_expert():
     asia_model = load_model("bnlearn/asia")
-    data = asia_model.simulate(n_samples=int(1e5), seed=42)
+    data = asia_model.simulate(n_samples=int(1e5), rng=42)
     est = PC(data)
     pdag = est.estimate(
         variant="stable",
@@ -404,7 +394,7 @@ def test_pc_asia_expert():
 
 def test_temporal_pc_cancer():
     cancer_model = load_model("bnlearn/cancer")
-    data = cancer_model.simulate(n_samples=int(5e4), seed=42)
+    data = cancer_model.simulate(n_samples=int(5e4), rng=42)
     est = PC(data)
     background = ExpertKnowledge(
         temporal_order=[["Pollution", "Smoker", "Cancer"], ["Dyspnoea", "Xray"]],

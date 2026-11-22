@@ -1,8 +1,7 @@
 Metrics
 =======
 
-Metrics for evaluating learned structures, implied independencies, and fitted
-models.
+Metrics that evaluate learned structures, implied independencies, and fitted models.
 
 Supervised Metrics
 ------------------
@@ -10,6 +9,7 @@ Supervised Metrics
 .. autosummary::
    :toctree: generated/metrics
    :template: autosummary/class.rst
+   :nosignatures:
 
    ~pgmpy.metrics.SHD
    ~pgmpy.metrics.AdjacencyConfusionMatrix
@@ -21,6 +21,7 @@ Unsupervised Metrics
 .. autosummary::
    :toctree: generated/metrics
    :template: autosummary/class.rst
+   :nosignatures:
 
    ~pgmpy.metrics.CorrelationScore
    ~pgmpy.metrics.ImpliedCIs
@@ -34,4 +35,4 @@ Utilities
    :toctree: generated/metrics
    :template: autosummary/function.rst
 
-   ~pgmpy.metrics.get_metrics
+   ~pgmpy.metrics.get_metric

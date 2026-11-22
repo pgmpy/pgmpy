@@ -29,7 +29,7 @@ def pearson_equivalence_data():
     cpd_x = LinearGaussianCPD("X", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
     cpd_y_dep = LinearGaussianCPD("Y", [0, 0.5, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3", "X"])
     model_dep.add_cpds(cpd_z1, cpd_z2, cpd_z3, cpd_x, cpd_y_dep)
-    df_dep = model_dep.simulate(n_samples=1000, seed=42)
+    df_dep = model_dep.simulate(n_samples=1000, rng=42)
 
     return df_dep
 
@@ -44,14 +44,14 @@ def test_pearsonr_equivalence(pearson_equivalence_data):
     assert not test("X", "Y", ["Z1", "Z2", "Z3"], significance_level=0.05)
 
     test("X", "Y", ["Z1", "Z2", "Z3"])
-    assert round(test.statistic_, 2) == pytest.approx(0.43, abs=1e-2)
+    assert round(test.statistic_, 2) == pytest.approx(0.53, abs=1e-2)
     assert round(test.p_value_, 2) == pytest.approx(1.0, abs=1e-2)
 
 
 def test_effect_size(pearson_equivalence_data):
     test = PearsonrEquivalence(data=pearson_equivalence_data, delta_threshold=0.1)
     test("X", "Y", ["Z1", "Z2", "Z3"])
-    assert test.effect_size_ == pytest.approx(0.4056, abs=1e-2)
+    assert test.effect_size_ == pytest.approx(0.4891, abs=1e-2)
 
 
 def test_pearsonr_equivalence_approx(pearson_equivalence_data):

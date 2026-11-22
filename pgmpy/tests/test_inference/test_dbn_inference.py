@@ -112,6 +112,18 @@ class TestDBNInference:
                 query_result[var].values, exact.query([var], evidence=evidence, show_progress=False).values
             )
 
+    def test_backward_inf_interface_evidence_without_current_evidence(self):
+        dbn = DynamicBayesianNetwork()
+        dbn.add_edges_from([(("A", 0), ("A", 1)), (("A", 0), ("B", 0)), (("A", 1), ("B", 1)), (("B", 0), ("B", 1))])
+        cpd_a0 = TabularCPD(("A", 0), 2, [[0.5], [0.5]])
+        cpd_b0 = TabularCPD(("B", 0), 2, [[0.25, 0.75], [0.75, 0.25]], [("A", 0)], [2])
+        cpd_a1 = TabularCPD(("A", 1), 2, [[0.8, 0.1], [0.2, 0.9]], [("A", 0)], [2])
+        cpd_b1 = TabularCPD(("B", 1), 2, [[0.5, 0.6, 0.2, 0.4], [0.5, 0.4, 0.8, 0.6]], [("A", 1), ("B", 0)], [2, 2])
+        dbn.add_cpds(cpd_a0, cpd_b0, cpd_a1, cpd_b1)
+        dbn.initialize_initial_state()
+        query_result = DBNInference(dbn).query([("B", 1)], {("B", 0): 0})
+        np_test.assert_array_almost_equal(query_result[("B", 1)].values, np.array([0.2825, 0.7175]))
+
     def test_forward_inf_multiple_time_slices_with_evidence(self, dbn_inference_instances):
         _, dbn_inference_2 = dbn_inference_instances
         evidence = {("Y", 0): 1, ("Y", 1): 0, ("Y", 2): 1}

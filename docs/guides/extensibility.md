@@ -2,28 +2,54 @@
 
 ```{eval-rst}
 .. meta::
-   :description: Extend pgmpy using the repository templates for new datasets, models, metrics, and discovery algorithms.
+   :description: Use the repository templates to add datasets, models, metrics, and discovery algorithms to pgmpy.
 ```
 
-pgmpy is designed to be extensible. When you want to add a new algorithm, dataset,
-metric, or model, repository templates ensure that new contributions integrate seamlessly
-with the existing API — discoverable through the same listing and filtering functions.
+You can add new algorithms, datasets, metrics, and models to pgmpy. Start from a template in
+the repository. The template makes sure that the new object uses the same API as the
+existing objects.
 
 ## At a Glance
 
-- **[Unified API](#api)**: A template-driven workflow that is the same across all extension types.
-- **[Extension Templates](#extension-templates)**: Ready-made scaffolds for discovery algorithms, datasets, example models, and metrics.
-- **[Automatic Registration](#automatic-registration)**: New extensions become part of the public API once exported from the package.
+::::{grid} 1 1 3 3
+:gutter: 3
+:class-container: pgmpy-card-grid pgmpy-glance-grid
+
+:::{grid-item-card} Unified API
+:link: "#api"
+:link-type: url
+:class-card: sd-card-hover
+
+The steps are the same for all types of extension.
+:::
+
+:::{grid-item-card} Extension Templates
+:link: "#extension-templates"
+:link-type: url
+:class-card: sd-card-hover
+
+Templates for discovery algorithms, CI tests, structure scores, datasets, example models, and
+metrics.
+:::
+
+:::{grid-item-card} Automatic Registration
+:link: "#automatic-registration"
+:link-type: url
+:class-card: sd-card-hover
+
+pgmpy finds new datasets, example models, metrics, and structure scores from their files.
+:::
+::::
 
 ## API
 
-The extension workflow follows a consistent pattern:
+To add an extension, do these steps:
 
-1. Pick a template from `devtools/extension_templates/`.
-2. Copy it into the correct package directory.
-3. Fill in the TODO markers and implementation details.
-4. Export the new object from the package `__init__.py`.
-5. Add the matching tests and docs.
+1. Select a template from `devtools/extension_templates/`.
+2. Copy it to the correct package directory.
+3. Complete the TODO items and write the implementation.
+4. If the template tells you to, import the new object in the `__init__.py` of the package.
+5. Add tests and documentation for the new object.
 
 ```bash
 ls devtools/extension_templates
@@ -32,23 +58,26 @@ cp devtools/extension_templates/_metrics.py pgmpy/metrics/my_metric.py
 
 ## Extension Templates
 
-Templates are available for the most common extension types:
+The repository has templates for these types of extension:
 
-- **Discovery algorithms**: New estimators follow the unified `fit` / `causal_graph_` /
-  `score` API.
-- **Datasets**: New datasets become discoverable via `list_datasets()`.
-- **Example models**: New models become discoverable via `list_models()`.
-- **Metrics**: New metrics become discoverable via `get_metrics()`.
+- **Discovery algorithms**: New estimators use the same `fit`, `causal_graph_`, and `score`
+  API.
+- **CI tests** and **structure scores**: New tests and scores become available to the
+  discovery algorithms.
+- **Datasets**: `list_datasets()` finds new datasets.
+- **Example models**: `list_models()` finds new models.
+- **Metrics**: `get_metric()` can select new metrics by name.
 
 ## Automatic Registration
 
-Each extension needs an entry in its package's `__init__.py` to become part of the public
-API. Once registered, the new object is automatically discoverable through the listing
-and filtering functions used by the rest of the library.
+pgmpy finds datasets, example models, metrics, and structure scores from their files. Do not
+start the file name with an underscore, because pgmpy does not find these files. For
+discovery algorithms, CI tests, and metrics, also add an import to the `__init__.py` of the
+package. Each template gives the exact steps.
 
 ## API Reference
 
-For existing components that serve as reference implementations:
+Use the existing objects on these pages as reference implementations:
 
 - {doc}`Causal Discovery API <../api/structure_learning>`
 - {doc}`Datasets and Example Models API <../api/data>`

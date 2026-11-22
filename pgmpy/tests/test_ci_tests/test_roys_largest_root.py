@@ -13,7 +13,7 @@ skip_gh_actions = _multivariate_fixtures.skip_gh_actions
 
 @skip_gh_actions
 def test_roys_no_cond(pillai_data):
-    expected_stats = [0.1572, 0.1572, 0.1359, 0.1000, 0.1359]
+    expected_stats = [0.2015, 0.1665, 0.1184, 0.0925, 0.1184]
     expected_pvalues = [0.0000, 0.0000, 0.0000, 0.0000, 0.0000]
 
     computed_stats, computed_pvalues = [], []
@@ -29,8 +29,8 @@ def test_roys_no_cond(pillai_data):
 
 @skip_gh_actions
 def test_roys_indep(pillai_data):
-    expected_stats = [0.0016, 0.0007, 0.0044, 0.0053, 0.0044]
-    expected_pvalues = [0.2125, 0.4154, 0.1118, 0.0715, 0.1118]
+    expected_stats = [0.0019, 0.0007, 0.0011, 0.0043, 0.0011]
+    expected_pvalues = [0.1736, 0.3919, 0.5894, 0.1179, 0.5894]
 
     computed_stats, computed_pvalues = [], []
     for df in pillai_data["indep"]:
@@ -45,7 +45,7 @@ def test_roys_indep(pillai_data):
 
 @skip_gh_actions
 def test_roys_dependent(pillai_data):
-    expected_stats = [0.1700, 0.2159, 0.1336, 0.1008, 0.1336]
+    expected_stats = [0.2129, 0.2029, 0.0996, 0.0950, 0.0996]
     expected_pvalues = [0.0000, 0.0000, 0.0000, 0.0000, 0.0000]
 
     computed_stats, computed_pvalues = [], []
@@ -60,8 +60,8 @@ def test_roys_dependent(pillai_data):
 
 
 def test_effect_size(pillai_data):
-    expected_indep = [0.0026, 0.0004, 0.0003, 0.0023, 0.0003]
-    expected_dep = [0.1698, 0.2181, 0.1328, 0.1008, 0.1328]
+    expected_indep = [0.0019, 0.0007, 0.0011, 0.0043, 0.0011]
+    expected_dep = [0.2129, 0.2029, 0.0996, 0.0950, 0.0996]
 
     for df, expected in zip(pillai_data["indep"], expected_indep):
         test = RoysLargestRoot(data=df)

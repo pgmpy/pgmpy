@@ -7,10 +7,13 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
+from sklearn.exceptions import ConvergenceWarning
 from tqdm.auto import tqdm
 
-from pgmpy import config, logger
+from pgmpy import config
 from pgmpy.factors.discrete import TabularCPD
+from pgmpy.utils._random import _rename_param_to_rng, _rename_to_rng
+from pgmpy.utils._warnings import _warn_external
 
 from .base import DiscreteParameterEstimator
 from .discrete_mle import DiscreteMLE
@@ -51,8 +54,12 @@ class DiscreteEM(DiscreteParameterEstimator):
     batch_size: int, default=1000
         Number of data points used to compute weights in a batch.
 
-    seed: int, optional
-        Random seed to use for generating initial CPDs.
+    rng: int, np.random.Generator, optional
+        Source of randomness for the initial CPDs, passed to ``numpy.random.default_rng``. If None, fresh entropy is
+        drawn from the operating system, so results are not reproducible.
+
+        .. versionchanged:: 1.2.0
+            Replaces ``seed``, which is deprecated and will be removed in v2.0.
 
     init_cpds: dict or {"uniform", "random"}, optional
         Initial CPDs for the optimizer. If not specified, CPDs involving latent variables are initialized randomly and
@@ -99,6 +106,7 @@ class DiscreteEM(DiscreteParameterEstimator):
         "supports_weighted_data": False,
     }
 
+    @_rename_to_rng("seed")
     def __init__(
         self,
         state_names: dict | None = None,
@@ -108,7 +116,7 @@ class DiscreteEM(DiscreteParameterEstimator):
         atol: float = 1e-08,
         n_jobs: int = 1,
         batch_size: int = 1000,
-        seed: int | None = None,
+        rng: int | np.random.Generator | None = None,
         init_cpds: dict[str, TabularCPD] | str | None = None,
         show_progress: bool = True,
     ) -> None:
@@ -118,10 +126,15 @@ class DiscreteEM(DiscreteParameterEstimator):
         self.atol = atol
         self.n_jobs = n_jobs
         self.batch_size = batch_size
-        self.seed = seed
+        self.rng = rng
         self.init_cpds = init_cpds
         self.show_progress = show_progress
         super().__init__(state_names=state_names)
+
+    def set_params(self, **params):
+        """Set the parameters of this estimator; the deprecated ``seed`` is accepted as an alias of ``rng``."""
+        _rename_param_to_rng(params, "seed", type(self).__qualname__)
+        return super().set_params(**params)
 
     def _get_log_likelihood(self, datapoint: dict[str, Any]) -> float:
         likelihood = 0.0
@@ -190,6 +203,14 @@ class DiscreteEM(DiscreteParameterEstimator):
             DataFrame object with column names identical to the observed variable names of the network. Fully missing
             columns are treated as latent variables if they are not already marked as latent.
 
+        Warns
+        -----
+        UserWarning
+            If fully missing columns are promoted to latent variables or rows with partial missingness are dropped.
+
+        sklearn.exceptions.ConvergenceWarning
+            If the estimator does not converge within `max_iter` iterations.
+
         Returns
         -------
         self: DiscreteEM
@@ -225,9 +246,10 @@ class DiscreteEM(DiscreteParameterEstimator):
         dropped_cols = original_cols - set(data.columns)
         new_latents = [col for col in dropped_cols if col in model.nodes() and col not in model.latents]
         if new_latents:
-            logger.warning(
+            _warn_external(
                 f"Columns {new_latents} have all missing values and are not marked as latent. "
-                "Treating them as latent variables."
+                "Treating them as latent variables.",
+                UserWarning,
             )
             model.latents = set(model.latents) | set(new_latents)
 
@@ -235,9 +257,10 @@ class DiscreteEM(DiscreteParameterEstimator):
         data = data.dropna()
         dropped_rows_count = original_rows_count - data.shape[0]
         if dropped_rows_count:
-            logger.warning(
+            _warn_external(
                 f"{dropped_rows_count} rows with missing values in partially "
-                "missing columns were dropped from the dataset."
+                "missing columns were dropped from the dataset.",
+                UserWarning,
             )
 
         self._initialize_fit(model, data, sample_weight=sample_weight)
@@ -271,6 +294,7 @@ class DiscreteEM(DiscreteParameterEstimator):
         init_cpds = {} if self.init_cpds is None else self.init_cpds
 
         # Step 3: Initialize CPDs.
+        rng = np.random.default_rng(self.rng)
         # Step 3.0: If `init_cpds` is a string, expand it into a dict of random or uniform CPDs for every node.
         if isinstance(init_cpds, str):
             parents_dict = {var: self._model.get_parents(var) for var in self._model.nodes()}
@@ -281,7 +305,7 @@ class DiscreteEM(DiscreteParameterEstimator):
                         evidence=parents_dict[var],
                         cardinality={v: n_states_dict[v] for v in ([var] + parents_dict[var])},
                         state_names={v: self.state_names_[v] for v in ([var] + parents_dict[var])},
-                        seed=self.seed,
+                        rng=rng,
                     )
                     for var in self._model.nodes()
                 }
@@ -292,7 +316,6 @@ class DiscreteEM(DiscreteParameterEstimator):
                         evidence=parents_dict[var],
                         cardinality={v: n_states_dict[v] for v in ([var] + parents_dict[var])},
                         state_names={v: self.state_names_[v] for v in ([var] + parents_dict[var])},
-                        seed=self.seed,
                     )
                     for var in self._model.nodes()
                 }
@@ -331,7 +354,7 @@ class DiscreteEM(DiscreteParameterEstimator):
                     evidence=parents,
                     cardinality={var: n_states_dict[var] for var in chain([node], parents)},
                     state_names={var: self.state_names_[var] for var in chain([node], parents)},
-                    seed=self.seed,
+                    rng=rng,
                 )
             )
 
@@ -370,5 +393,9 @@ class DiscreteEM(DiscreteParameterEstimator):
 
             self._model_copy.cpds = new_cpds
 
+        _warn_external(
+            f"EM did not converge after reaching max_iter={self.max_iter}. Increase max_iter or relax atol.",
+            ConvergenceWarning,
+        )
         self.parameters_ = new_cpds
         return self

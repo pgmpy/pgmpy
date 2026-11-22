@@ -26,7 +26,7 @@ def df_indep():
     cpd_x = LinearGaussianCPD("X", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
     cpd_y_indep = LinearGaussianCPD("Y", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
     model_indep.add_cpds(cpd_z1, cpd_z2, cpd_z3, cpd_x, cpd_y_indep)
-    df_indep = model_indep.simulate(n_samples=10000, seed=42)
+    df_indep = model_indep.simulate(n_samples=10000, rng=42)
 
     return df_indep
 
@@ -50,7 +50,7 @@ def df_dep():
     cpd_x = LinearGaussianCPD("X", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
     cpd_y_dep = LinearGaussianCPD("Y", [0, 0.5, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3", "X"])
     model_dep.add_cpds(cpd_z1, cpd_z2, cpd_z3, cpd_x, cpd_y_dep)
-    df_dep = model_dep.simulate(n_samples=10000, seed=42)
+    df_dep = model_dep.simulate(n_samples=10000, rng=42)
 
     return df_dep
 
@@ -61,18 +61,18 @@ def test_gcm_exact(df_dep, df_indep):
 
     # Non-conditional test
     test("X", "Y", [])
-    assert round(test.statistic_, 3) == pytest.approx(38.858, abs=1e-2)
+    assert round(test.statistic_, 3) == pytest.approx(39.056, abs=1e-2)
     assert test.p_value_ == pytest.approx(0.0, abs=1e-2)
 
     # Conditional test (independent)
     test("X", "Y", ["Z1", "Z2", "Z3"])
-    assert round(test.statistic_, 3) == pytest.approx(-0.357, abs=1e-2)
-    assert round(test.p_value_, 4) == pytest.approx(0.7207, abs=1e-2)
+    assert round(test.statistic_, 3) == pytest.approx(-0.349, abs=1e-2)
+    assert round(test.p_value_, 4) == pytest.approx(0.7272, abs=1e-2)
 
     # Conditional test (dependent)
     test = GCM(data=df_dep)
     test("X", "Y", ["Z1", "Z2", "Z3"])
-    assert round(test.statistic_, 3) == pytest.approx(39.798, abs=1e-2)
+    assert round(test.statistic_, 3) == pytest.approx(40.967, abs=1e-2)
     assert test.p_value_ == pytest.approx(0.0, abs=1e-2)
 
     # Test with custom sklearn estimator
@@ -87,11 +87,11 @@ def test_gcm_exact(df_dep, df_indep):
 def test_effect_size(df_dep, df_indep):
     test = GCM(data=df_indep)
     test("X", "Y", ["Z1", "Z2", "Z3"])
-    assert test.effect_size_ == pytest.approx(0.0031, abs=1e-2)
+    assert test.effect_size_ == pytest.approx(0.0035, abs=1e-2)
 
     test = GCM(data=df_dep)
     test("X", "Y", ["Z1", "Z2", "Z3"])
-    assert test.effect_size_ == pytest.approx(0.4371, abs=1e-2)
+    assert test.effect_size_ == pytest.approx(0.4487, abs=1e-2)
 
 
 def test_gcm_approx(df_dep, df_indep):

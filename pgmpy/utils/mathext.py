@@ -4,8 +4,9 @@ from typing import Any
 
 import numpy as np
 
-from pgmpy import logger
 from pgmpy.utils import compat_fns
+from pgmpy.utils._random import _rename_to_rng
+from pgmpy.utils._warnings import _warn_external
 
 State = namedtuple("State", ["var", "state"])
 
@@ -65,14 +66,21 @@ def cartesian(arrays: list[Any], out: np.ndarray | None = None) -> np.ndarray:
 
 def _adjusted_weights(weights: np.ndarray):
     """
-    Adjusts the weights such that it sums to 1. When the total weights is less
-    than or greater than 1 by 1e-3, add/subtracts the difference from the last
-    element of weights. If the difference is greater than 1e-3, throws an error.
+    Adjust the largest weight so that the weights sum to 1.
+
+    Corrections within the dtype- and length-dependent roundoff tolerance are
+    silent. Larger corrections up to 1e-3 emit a warning, and discrepancies
+    greater than 1e-3 raise an error.
 
     Parameters
     ----------
     weights: 1-D numpy array
         The array for which to do the adjustment.
+
+    Warns
+    -----
+    UserWarning
+        If the accepted correction is larger than floating-point roundoff for the weight dtype and array length.
 
     Example
     -------
@@ -83,17 +91,28 @@ def _adjusted_weights(weights: np.ndarray):
     >>> int(np.sum(result != 0.1111111))  # Exactly one element was adjusted
     1
     """
-    error = 1 - weights.sum()
+    weight_sum = weights.sum()
+    error = 1 - weight_sum
     if abs(error) > 1e-3:
         raise ValueError("The probability values do not sum to 1.")
     elif error != 0:
-        logger.warning(f"Probability values don't exactly sum to 1. Differ by: {error}. Adjusting values.")
+        roundoff_tolerance = (
+            len(weights) * np.finfo(weights.dtype).eps if np.issubdtype(weights.dtype, np.inexact) else 0
+        )
+        if abs(error) > roundoff_tolerance:
+            _warn_external(
+                f"Probability values sum to {weight_sum}, not 1; adjusting the largest probability by {error}.",
+                UserWarning,
+            )
         weights[compat_fns.argmax(weights)] += error
 
     return weights
 
 
-def sample_discrete(values, weights: np.ndarray | list[np.ndarray], size=1, seed: int | None = None):
+@_rename_to_rng("seed")
+def sample_discrete(
+    values, weights: np.ndarray | list[np.ndarray], size=1, rng: int | np.random.Generator | None = None
+):
     """
     Generate a sample of given size, given a probability mass function.
 
@@ -108,8 +127,13 @@ def sample_discrete(values, weights: np.ndarray | list[np.ndarray], size=1, seed
     size: int
         Size of the sample to be generated.
 
-    seed: int (default: None)
-        If a value is provided, sets the seed for the random number generator.
+    rng: int | np.random.Generator | None (default: None)
+        Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the operating
+        system, so results are not reproducible.
+
+        .. versionchanged:: 1.2.0
+            Replaces ``seed``, which is deprecated and will be removed in v2.0. None no longer follows
+            ``np.random.seed``.
 
     Returns
     -------
@@ -122,10 +146,10 @@ def sample_discrete(values, weights: np.ndarray | list[np.ndarray], size=1, seed
     >>> from pgmpy.utils.mathext import sample_discrete
     >>> values = np.array(["v_0", "v_1", "v_2"])
     >>> probabilities = np.array([0.2, 0.5, 0.3])
-    >>> sample_discrete(values, probabilities, 10, seed=0).tolist()
+    >>> sample_discrete(values, probabilities, 10, rng=0).tolist()
     ['v_1', 'v_1', 'v_0', 'v_0', 'v_2', 'v_2', 'v_1', 'v_2', 'v_1', 'v_2']
     """
-    rng = np.random.default_rng(seed) if seed is not None else np.random
+    rng = np.random.default_rng(rng)
     weights = compat_fns.to_numpy(weights)
     if weights.ndim == 1:
         return rng.choice(compat_fns.to_numpy(values), size=size, p=_adjusted_weights(weights))
@@ -141,12 +165,13 @@ def sample_discrete(values, weights: np.ndarray | list[np.ndarray], size=1, seed
         return samples
 
 
+@_rename_to_rng("seed")
 def sample_discrete_maps(
     states: np.ndarray,
     weight_indices: np.ndarray,
     index_to_weight: np.ndarray,
     size=1,
-    seed: int | None = None,
+    rng: int | np.random.Generator | None = None,
 ):
     """
     Generate a sample of given size, given a probability mass function.
@@ -165,8 +190,13 @@ def sample_discrete_maps(
     size: int
         Size of the sample to be generated.
 
-    seed: int (default: None)
-        If a value is provided, sets the seed for the random number generator.
+    rng: int | np.random.Generator | None (default: None)
+        Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the operating
+        system, so results are not reproducible.
+
+        .. versionchanged:: 1.2.0
+            Replaces ``seed``, which is deprecated and will be removed in v2.0. None no longer follows
+            ``np.random.seed``.
 
     Returns
     -------
@@ -179,10 +209,10 @@ def sample_discrete_maps(
     >>> from pgmpy.utils.mathext import sample_discrete
     >>> values = np.array(["v_0", "v_1", "v_2"])
     >>> probabilities = np.array([0.2, 0.5, 0.3])
-    >>> sample_discrete(values, probabilities, 10, seed=0).tolist()
+    >>> sample_discrete(values, probabilities, 10, rng=0).tolist()
     ['v_1', 'v_1', 'v_0', 'v_0', 'v_2', 'v_2', 'v_1', 'v_2', 'v_1', 'v_2']
     """
-    rng = np.random.default_rng(seed) if seed is not None else np.random
+    rng = np.random.default_rng(rng)
 
     # TODO: Remove this conversion and find a way to do this natively in torch.
     states = np.array(states)
@@ -200,14 +230,25 @@ def sample_discrete_maps(
     return samples
 
 
-def powerset(l_input: list):
+def powerset(l_input: list, max_size: int | None = None):
     """
-    Generates all subsets of list `l_input` (as tuples).
+    Generates all subsets of list `l_input` (as tuples), in order of increasing size.
+
+    Parameters
+    ----------
+    l_input : list
+        The elements to generate subsets of.
+
+    max_size : int or None, default=None
+        If given, only subsets with at most ``max_size`` elements are generated.
 
     Example
     -------
     >>> from pgmpy.utils.mathext import powerset
     >>> list(powerset([1, 2, 3]))
     [(), (1,), (2,), (3,), (1, 2), (1, 3), (2, 3), (1, 2, 3)]
+    >>> list(powerset([1, 2, 3], max_size=1))
+    [(), (1,), (2,), (3,)]
     """
-    return chain.from_iterable(combinations(l_input, r) for r in range(len(l_input) + 1))
+    largest = len(l_input) if max_size is None else min(max_size, len(l_input))
+    return chain.from_iterable(combinations(l_input, r) for r in range(largest + 1))
