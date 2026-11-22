@@ -45,6 +45,7 @@ Gaussian Scores
    ~pgmpy.structure_score.LogLikelihoodGauss
    ~pgmpy.structure_score.AICGauss
    ~pgmpy.structure_score.BICGauss
+   ~pgmpy.structure_score.GeneralizedStructureScore
 
 Conditional-Gaussian Scores
 ---------------------------
