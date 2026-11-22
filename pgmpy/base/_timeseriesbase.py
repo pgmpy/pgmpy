@@ -29,12 +29,20 @@ class _TimeSeriesCoreGraph(_CoreGraph):
         self,
         edge_list: Iterable[tuple] | None = None,
         tau_max: int | None = None,
+        exposures: set[Hashable] | None = None,
+        outcomes: set[Hashable] | None = None,
+        latents: set[Hashable] | None = None,
+        roles: dict[str, str | Iterable[Hashable]] | None = None,
     ):
         # Must precede the super().__init__(): the inherited consturctor adds the edges by calling self.add_edge(),
         # which is overridden below and reads this state.
         self._set_tau_max(tau_max)
         super().__init__(
             edge_list=edge_list,
+            exposures=exposures,
+            outcomes=outcomes,
+            latents=latents,
+            roles=roles,
         )
 
     def _set_tau_max(self, tau_max: int | None) -> None:
