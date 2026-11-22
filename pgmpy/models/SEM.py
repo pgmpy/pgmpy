@@ -172,7 +172,11 @@ class SEMGraph:
         ...     latents=[],
         ...     err_corr=[("yrsmill", "age")],
         ... )
-        >>> sem._get_full_graph_struct()
+        >>> full_graph = sem._get_full_graph_struct()
+        >>> sorted(full_graph.nodes())  # doctest: +ELLIPSIS
+        ['..ageyrsmill', '.age', '.deferenc', '.laboract', '.unionsen', '.yrsmill', 'age', 'deferenc', ...]
+        >>> sorted(full_graph.edges())  # doctest: +ELLIPSIS
+        [('..ageyrsmill', '.age'), ('..ageyrsmill', '.yrsmill'), ('.age', 'age'), ...]
         """
         full_graph = self.graph.copy()
 
@@ -203,8 +207,8 @@ class SEMGraph:
         ...     ],
         ...     latents=["xi1", "eta1"],
         ... )
-        >>> model.get_scaling_indicators()
-        {'xi1': 'x1', 'eta1': 'y1'}
+        >>> sorted(model.get_scaling_indicators().items())
+        [('eta1', 'y1'), ('xi1', 'x1')]
 
         Returns
         -------
@@ -256,7 +260,8 @@ class SEMGraph:
         ...     latents=[],
         ...     err_corr=[("yrsmill", "age")],
         ... )
-        >>> model.active_trail_nodes("age")
+        >>> {var: sorted(nodes) for var, nodes in model.active_trail_nodes("age").items()}
+        {'age': ['age', 'deferenc', 'laboract', 'unionsen', 'yrsmill']}
 
         Returns
         -------
@@ -429,8 +434,13 @@ class SEMGraph:
         ...     err_corr=[("yrsmill", "age")],
         ...     err_var={},
         ... )
-        >>> sem.to_lisrel()
-        # TODO: Complete this.
+        >>> alg = sem.to_lisrel()
+        >>> sorted(alg.eta)
+        ['age', 'deferenc', 'laboract', 'unionsen', 'yrsmill']
+        >>> alg.B.shape
+        (5, 5)
+        >>> sorted(alg.y)
+        ['age', 'deferenc', 'laboract', 'unionsen', 'yrsmill']
 
         See Also
         --------
@@ -696,7 +706,18 @@ class SEMAlg:
         Examples
         --------
         >>> from pgmpy.models import SEMAlg
-        # TODO: Finish this example
+        >>> import numpy as np
+        >>> alg = SEMAlg(
+        ...     eta=["x1", "x2"],
+        ...     B=np.array([[0, 0], [1, 0]]),
+        ...     zeta=np.eye(2),
+        ...     wedge_y=np.eye(2),
+        ... )
+        >>> alg.y
+        ['x1', 'x2']
+        >>> alg.B_mask
+        array([[0., 0.],
+               [1., 0.]])
         """
         self.eta = eta
         self.B = np.array(B)
@@ -732,8 +753,18 @@ class SEMAlg:
         Examples
         --------
         >>> from pgmpy.models import SEMAlg
-        >>> model = SEMAlg()
-        # TODO: Finish this example
+        >>> import numpy as np
+        >>> alg = SEMAlg(
+        ...     eta=["x1", "x2"],
+        ...     B=np.array([[0, 0], [1, 0]]),
+        ...     zeta=np.array([[1, 1], [1, 1]]),
+        ...     wedge_y=np.eye(2),
+        ... )
+        >>> graph = alg.to_SEMGraph()
+        >>> sorted(graph.graph.edges())
+        [('x1', 'x2')]
+        >>> sorted(graph.err_graph.edges())
+        [('x1', 'x2')]
         """
 
         err_var = {var: np.diag(self.zeta)[i] for i, var in enumerate(self.eta)}
@@ -1045,8 +1076,21 @@ class SEM(SEMGraph):
 
         Examples
         --------
-        >>> from pgmpy.models import SEMAlg
-        # TODO: Finish this example
+        >>> from pgmpy.models import SEM
+        >>> import numpy as np
+        >>> var_names = {"y": ["y1"], "x": ["x1"], "eta": ["e1"], "xi": ["k1"]}
+        >>> params = {
+        ...     "wedge_y": np.array([[1]]),
+        ...     "wedge_x": np.array([[1]]),
+        ...     "B": np.array([[0]]),
+        ...     "gamma": np.array([[0]]),
+        ...     "theta_e": np.array([[1.0]]),
+        ...     "theta_del": np.array([[1.0]]),
+        ...     "psi": np.array([[1.0]]),
+        ...     "phi": np.array([[1.0]]),
+        ... }
+        >>> fixed_masks = {key: np.zeros_like(value) for key, value in params.items()}
+        >>> sem = SEM.from_lisrel(var_names=var_names, params=params, fixed_masks=fixed_masks)
         """
         eta = var_names["y"] + var_names["x"] + var_names["eta"] + var_names["xi"]
         m, n, p, q = (
@@ -1145,7 +1189,13 @@ class SEM(SEMGraph):
         Examples
         --------
         >>> from pgmpy.models import SEM
-        >>> SEM.from_RAM  # TODO: Finish this
+        >>> import numpy as np
+        >>> sem = SEM.from_RAM(
+        ...     variables=["x1", "x2"],
+        ...     B=np.array([[0, 0], [1, 0]]),
+        ...     zeta=np.eye(2),
+        ...     observed=["x1", "x2"],
+        ... )
         """
         if observed:
             wedge_y = np.zeros((len(variables), len(observed)))
