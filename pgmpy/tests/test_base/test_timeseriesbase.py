@@ -259,3 +259,30 @@ class TestTimeseriesCoreGraph:
             graph.get_parents(("A", 0))
         with pytest.raises(ValueError, match="Variable 'Z' not found in the graph"):
             graph.get_children("Z")
+
+    def test_get_ancestors(self):
+        assert sample_graph1().get_ancestors(("B", 0)) == {("A", 0), ("A", -1), ("A", -2), ("B", 0)}
+
+    def test_get_topological_order(self):
+        graph = sample_graph1()
+        order = graph.get_topological_order()
+        position = {node: i for i, node in enumerate(order)}
+
+        for u, v in graph.get_edges(data=False):
+            assert position[u] < position[v]
+
+    def test_get_ancestral_graph(self):
+
+        graph = sample_graph1()
+        ancestral = graph.get_ancestral_graph([("B", 0)])
+
+        assert isinstance(ancestral, _TimeSeriesCoreGraph)
+        assert sorted(ancestral.get_edges(lag_relative=True)) == sorted(graph.get_edges(lag_relative=True))
+
+    def test_get_skeleton(self):
+        graph = sample_graph1()
+
+        assert set(graph.get_skeleton().nodes()) == set(graph.nodes())
+
+    def test_is_collider(self):
+        assert sample_graph1().is_collider(("A", 0), ("B", 0), ("A", -2))
