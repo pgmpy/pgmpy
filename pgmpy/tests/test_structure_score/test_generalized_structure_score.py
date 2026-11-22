@@ -92,8 +92,8 @@ class TestNParams:
 
     def test_tags_exist(self, linear_gaussian_data):
         s = GeneralizedStructureScore(linear_gaussian_data, LinearRegression())
-        assert "name" in s._tags
-        assert s._tags["supported_datatype"] == "continuous"
+        assert s._tags["name"] == "generalized"
+        assert s._tags["data_types"] == ["continuous"]
 
 
 class TestLocalScore:

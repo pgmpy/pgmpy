@@ -118,10 +118,12 @@ class GeneralizedStructureScore(BaseStructureScore):
     """
 
     _tags = {
-        "name": "flexible",
-        "supported_datatype": "continuous",
+        "name": "generalized",
+        "data_types": ["continuous"],
         "default_for": None,
-        "is_parameteric": False,
+        "assumption:linearity": False,
+        "assumption:additive_noise": True,
+        "assumption:gaussian_noise": False,
     }
 
     def __init__(
