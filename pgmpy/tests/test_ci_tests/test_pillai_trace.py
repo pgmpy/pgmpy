@@ -1,10 +1,16 @@
 import numpy as np
 import pandas as pd
 import pytest
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.linear_model import LinearRegression, LogisticRegression
 
-from pgmpy.ci_tests import PillaiTrace
+from pgmpy.ci_tests import (
+    GeneralizedCov,
+    HotellingLawley,
+    PillaiTrace,
+    RoysLargestRoot,
+    WilksLambda,
+)
 from pgmpy.tests.test_ci_tests import _multivariate_fixtures
 from pgmpy.utils import CovarianceRegression
 
@@ -224,3 +230,54 @@ def test_linearity_tag():
     assert (
         PillaiTrace(data=data, estimator=RandomForestRegressor(random_state=0)).get_tag("assumption:linearity") is False
     )
+
+
+def test_custom_discrete_estimator():
+    rng = np.random.default_rng(0)
+    n = 200
+    Z = rng.normal(size=n)
+    X = pd.cut(Z * 0.5 + rng.normal(size=n), bins=3, labels=["a", "b", "c"])
+    Y = pd.cut(Z * 0.5 + rng.normal(size=n), bins=3, labels=["x", "y", "z"])
+    df = pd.DataFrame({"X": X, "Y": Y, "Z": Z})
+
+    test = PillaiTrace(data=df, estimator=RandomForestClassifier(random_state=0))
+    test("X", "Y", ["Z"])
+    assert isinstance(test.estimator_x_, RandomForestClassifier)
+    assert isinstance(test.estimator_y_, RandomForestClassifier)
+
+
+@pytest.mark.parametrize(
+    "ci_test_cls",
+    [PillaiTrace, HotellingLawley, RoysLargestRoot, WilksLambda, GeneralizedCov],
+)
+def test_constant_categorical_target(ci_test_cls):
+    rng = np.random.default_rng(0)
+    n = 100
+    data = pd.DataFrame(
+        {
+            "X": pd.Categorical(["only_category"] * n),
+            "Y": rng.normal(size=n),
+            "Z": rng.normal(size=n),
+        }
+    )
+    test = ci_test_cls(data=data)
+    # Categorical variable with single unique category should not raise ValueError and return independent
+    assert test.is_independent("X", "Y", ["Z"]) is True
+    assert test.p_value_ == 1.0
+    assert test.estimator_x_ is None
+
+
+def test_conditioning_dummy_column_name_matches_target():
+    rng = np.random.default_rng(0)
+    n = 100
+    # Conditioning variable A has category '1', so get_dummies produces dummy column 'A_1'
+    a_cat = pd.Categorical(["1" if i % 2 == 0 else "2" for i in range(n)])
+    x_cont = rng.normal(size=n)
+    a_1_cont = rng.normal(size=n)
+    data = pd.DataFrame({"X": x_cont, "A_1": a_1_cont, "A": a_cat})
+
+    test = PillaiTrace(data=data)
+    # Target 'A_1' name collides with dummy column 'A_1' generated from conditioning variable 'A'
+    result = test("X", "A_1", ["A"])
+    assert isinstance(result, (bool, np.bool_))
+    assert isinstance(test.estimator_y_, CovarianceRegression)

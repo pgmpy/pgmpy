@@ -93,22 +93,27 @@ class _ResidualMixin:
         # Step 1: Default estimator when estimator is None.
         if is_cat:
             # Step 1a: Categorical target — use LogisticRegression.
-            model = LogisticRegression()
             y_encoded, cat_index = pd.factorize(target_data)
+            if len(cat_index) == 1:
+                return np.ones((len(target_data), 1), dtype=float), cat_index, None
+
+            model = LogisticRegression()
             model.fit(Z_data, y_encoded)
             pred = model.predict_proba(Z_data)
             return pred, cat_index, model
 
         # Step 1b: Continuous target — use CovarianceRegression.
         z_cols = [c for c in Z_data.columns if c != "_intercept_Z"]
-        reg_df = pd.concat([Z_data.loc[:, z_cols], self.data.loc[:, [target_col]]], axis=1)
-        model = CovarianceRegression().fit(X=reg_df)
+        x_vals = Z_data.loc[:, z_cols].to_numpy(dtype=float)
+        y_vals = target_data.to_numpy(dtype=float)
 
         if len(z_cols) == 0:
+            model = CovarianceRegression().fit(X=y_vals.reshape(-1, 1))
             pred = np.full(len(target_data), model.location_[-1])
         else:
-            coef = model.coefficients(X=z_cols, y=[target_col])[0]
-            x_vals = reg_df.loc[:, z_cols].to_numpy(dtype=float)
+            fit_data = np.column_stack([x_vals, y_vals])
+            model = CovarianceRegression().fit(X=fit_data)
+            coef = model.coefficients(X=list(range(len(z_cols))), y=[len(z_cols)])[0]
             x_mean = model.location_[: len(z_cols)]
             y_mean = model.location_[-1]
             pred = y_mean + (x_vals - x_mean) @ coef

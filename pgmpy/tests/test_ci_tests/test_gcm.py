@@ -85,10 +85,15 @@ def test_gcm_exact(df_dep, df_indep):
     assert test.p_value_ <= 1.0
 
 
-@pytest.mark.skipif(os.getenv("GITHUB_ACTIONS") == "true", reason="Skipping exact residual tests on GitHub Actions.")
 def test_default_estimator_type(df_indep):
     test = GCM(data=df_indep)
+    # Conditional test
     test("X", "Y", ["Z1", "Z2", "Z3"])
+    assert isinstance(test.estimator_x_, CovarianceRegression)
+    assert isinstance(test.estimator_y_, CovarianceRegression)
+
+    # Unconditional test (Z=[], testing len(z_cols) == 0 branch)
+    test("X", "Y", [])
     assert isinstance(test.estimator_x_, CovarianceRegression)
     assert isinstance(test.estimator_y_, CovarianceRegression)
 
