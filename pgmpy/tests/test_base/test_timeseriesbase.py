@@ -188,3 +188,24 @@ class TestTimeseriesCoreGraph:
         assert not graph.has_edge(("B", 0), ("A", 0), "->")
 
         assert not graph.has_edge(("A", 0), ("C", 0))
+
+    def test_get_lag(self):
+
+        graph = sample_graph1()
+
+        assert graph.get_lag(("A", -2), ("B", 0)) == 2
+        assert graph.get_lag(("A", 5), ("B", 7)) == 2
+
+        # fails: no such link at that lag
+        with pytest.raises(ValueError, match="No such edge"):
+            graph.get_lag(("B", 0), ("B", -1))
+
+    def test_get_edges(self):
+
+        graph = sample_graph1()
+
+        assert graph.get_edges(lag=0, lag_relative=True) == [("A", "B", 0, "->")]
+
+        # lagged only
+        lagged = graph.get_edges(lag=range(1, graph.tau_max + 1), lag_relative=True)
+        assert sorted(lagged) == [("A", "A", 1, "->"), ("A", "B", 2, "->")]
