@@ -72,7 +72,13 @@ class DiscreteMLE(DiscreteParameterEstimator):
             parents=parents,
             sample_weight=sample_weight,
         )
-        state_counts.iloc[:, (state_counts.values == 0).all(axis=0)] = 1.0
+        # Use tolerance-based check for numerical stability with tiny sample weights.
+        # A parent configuration is considered "zero" if its total count (sum over child states)
+        # is effectively zero, meaning no data was observed for that configuration.
+        # Use a more generous tolerance (1e-8) to catch cases where tiny weights sum to near-zero.
+        col_sums = state_counts.values.sum(axis=0)
+        zero_cols = np.isclose(col_sums, 0.0, atol=1e-8)
+        state_counts.iloc[:, zero_cols] = 1.0
 
         parents_cardinalities = [len(state_names[parent]) for parent in parents]
         node_cardinality = len(state_names[node])
