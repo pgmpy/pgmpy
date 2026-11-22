@@ -80,3 +80,18 @@ class TestConfig:
 
         assert config.SHOW_PROGRESS is False
         assert config.get_show_progress() is False
+
+    def test_yes_progress(self):
+        config.set_show_progress(show_progress=True)
+
+        assert config.BACKEND == "numpy"
+        assert config.get_backend() == "numpy"
+
+        assert config.DTYPE == "float64"
+        assert config.get_dtype() == "float64"
+
+        assert config.DEVICE is None
+        assert config.get_device() is None
+
+        assert config.SHOW_PROGRESS is True
+        assert config.get_show_progress() is True
