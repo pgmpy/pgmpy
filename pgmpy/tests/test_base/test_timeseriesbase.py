@@ -163,3 +163,18 @@ class TestTimeseriesCoreGraph:
         with pytest.raises(ValueError, match="already exists"):
             graph.add_edge(("A", 4), ("B", 5), "->")
         assert len(graph.get_edges(lag_relative=True)) == 1
+
+    def test_add_node(self):
+        """Test that `add_node` collapses any time onto the present slice."""
+        graph = sample_graph1()
+        graph.add_node(("C", 7))
+
+        assert ("C", 0) in set(graph.nodes())
+        assert graph.variables == ["A", "B", "C"]
+
+    def test_remove_edge(self):
+        """Test that `remove_edge` locates the link from any time frame."""
+        graph = sample_graph1()
+        graph.remove_edge(("A", 3), ("B", 5), "->")
+
+        assert sorted(graph.get_edges(lag_relative=True)) == [("A", "A", 1, "->"), ("A", "B", 0, "->")]
