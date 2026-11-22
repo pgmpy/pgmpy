@@ -1205,6 +1205,56 @@ class TestSEMGraph:
         assert self.custom.latents == custom_graph.latents
         assert self.custom.observed == custom_graph.observed
 
+    def test_graph_methods(self):
+        model = SEMGraph(
+            ebunch=[
+                ("xi1", "x1"),
+                ("xi1", "x2"),
+                ("xi1", "eta1"),
+                ("eta1", "y1"),
+                ("eta1", "y2"),
+                ("x1", "y1"),
+                ("y2", "y3"),
+            ],
+            latents=["xi1", "eta1"],
+            err_corr=[("y1", "y3")],
+        )
+        assert sorted(map(sorted, model.moralize(graph="non_error").edges())) == [
+            ["eta1", "x1"],
+            ["eta1", "xi1"],
+            ["eta1", "y1"],
+            ["eta1", "y2"],
+            ["x1", "xi1"],
+            ["x1", "y1"],
+            ["x2", "xi1"],
+            ["y2", "y3"],
+        ]
+        assert model.active_trail_nodes("x1", struct="non_error") == {"x1": {"x1", "x2", "y1", "y2", "y3"}}
+        assert model._nearest_separator(model.full_graph_struct, "x2", "y3") == {"y2"}
+
+        measurement = SEMGraph(
+            ebunch=[("xi1", "x1"), ("xi1", "x2"), ("xi1", "eta1"), ("eta1", "y1"), ("eta1", "y2")],
+            latents=["xi1", "eta1"],
+            err_corr=[("y1", "y2")],
+        )
+        var_names, edges_masks, _ = measurement.to_standard_lisrel()
+        assert {k: sorted(v) for k, v in var_names.items()} == {
+            "eta": ["eta1"],
+            "xi": ["xi1"],
+            "y": ["y1", "y2"],
+            "x": ["x1", "x2"],
+        }
+        assert {k: int(v.sum()) for k, v in edges_masks.items()} == {
+            "B": 0,
+            "gamma": 1,
+            "wedge_y": 2,
+            "wedge_x": 2,
+            "phi": 1,
+            "theta_e": 4,
+            "theta_del": 2,
+            "psi": 1,
+        }
+
 
 class TestSEMAlg:
     @pytest.fixture(autouse=True)
