@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import copy
 import itertools
+import math
 from collections.abc import Hashable
 from functools import reduce
 
@@ -189,6 +190,26 @@ class VariableElimination(Inference):
             else:
                 return factor_product(*final_distribution)
         else:
+            # The product of final_distribution is the joint over `variables`, whose size is exponential in their
+            # number. If it is larger than the largest factor of the model, contract to each query variable separately.
+            var_int_map = {var: i for i, var in enumerate(variables)}
+            einsum_expr = []
+            state_names = {}
+            for phi in final_distribution:
+                einsum_expr.extend([phi.values, [var_int_map[var] for var in phi.variables]])
+                state_names.update(phi.state_names)
+            largest_factor = max(math.prod(phi.values.shape) for factors in self.factors.values() for phi in factors)
+            if math.prod(len(state_names[var]) for var in variables) > largest_factor:
+                query_var_factor = {}
+                for query_var in variables:
+                    values = contract(*einsum_expr, [var_int_map[query_var]], optimize="greedy")
+                    query_var_factor[query_var] = DiscreteFactor(
+                        [query_var], values.shape, values, state_names={query_var: state_names[query_var]}
+                    )
+                    if isinstance(self.model, DiscreteBayesianNetwork):
+                        query_var_factor[query_var].normalize()
+                return query_var_factor
+
             query_var_factor = {}
             if isinstance(self.model, DiscreteBayesianNetwork):
                 for query_var in variables:
@@ -330,9 +351,26 @@ class VariableElimination(Inference):
                     einsum_expr.append(phi.values[reduce_indexes[index]])
                     einsum_expr.append([var_int_map[var] for var in phi.variables if var not in evidence.keys()])
 
+            # Step 5.3: With joint=False, if the joint over `variables` (exponential in their number) is larger than the
+            #           largest factor of the model, contract to each variable separately instead of building it.
+            largest_factor = max(math.prod(phi.values.shape) for phi in factors)
+            if not joint and math.prod(len(model_reduced.states[var]) for var in variables) > largest_factor:
+                result_dict = {}
+                for var in variables:
+                    result_values = contract(*einsum_expr, [var_int_map[var]], optimize="greedy")
+                    result_dict[var] = DiscreteFactor(
+                        [var], result_values.shape, result_values, state_names={var: model_reduced.states[var]}
+                    )
+                    if isinstance(
+                        self.model,
+                        (DiscreteBayesianNetwork, JunctionTree, DynamicBayesianNetwork),
+                    ):
+                        result_dict[var].normalize()
+                return result_dict
+
             result_values = contract(*einsum_expr, [var_int_map[var] for var in variables], optimize="greedy")
 
-            # Step 5.3: Prepare return values.
+            # Step 5.4: Prepare return values.
             result = DiscreteFactor(
                 variables,
                 result_values.shape,
