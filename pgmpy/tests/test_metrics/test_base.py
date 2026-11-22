@@ -5,6 +5,11 @@ from pgmpy.base import DAG, PDAG
 from pgmpy.metrics import (
     SHD,
     AdjacencyConfusionMatrix,
+    AdjacencyF1Score,
+    AdjacencyNPV,
+    AdjacencyPrecision,
+    AdjacencyRecall,
+    AdjacencySpecificity,
     BaseSupervisedMetric,
     BaseUnsupervisedMetric,
     CorrelationScore,
@@ -29,7 +34,15 @@ def test_filter_metrics_by_tags():
         return_names=False,
         filter_tags={"supported_graph_types": PDAG},
     )
-    assert set(metrics) == {SHD, AdjacencyConfusionMatrix}
+    assert set(metrics) == {
+        SHD,
+        AdjacencyConfusionMatrix,
+        AdjacencyRecall,
+        AdjacencyPrecision,
+        AdjacencyF1Score,
+        AdjacencyNPV,
+        AdjacencySpecificity,
+    }
 
 
 def test_get_metric():
