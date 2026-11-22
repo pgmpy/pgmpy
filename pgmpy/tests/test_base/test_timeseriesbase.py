@@ -224,3 +224,38 @@ class TestTimeseriesCoreGraph:
         # fails: a variable that is not in the graph
         with pytest.raises(ValueError, match="not in the graph"):
             graph.get_parents_by_lag("Z")
+
+    def test_variables(self):
+
+        assert sample_graph1().variables == ["A", "B"]
+
+    def test_get_parents_and_get_children(self):
+
+        graph = sample_graph1()
+
+        # one node
+        assert graph.get_parents(("B", 0)) == {("A", 0), ("A", -2)}
+        assert graph.get_children(("A", -1)) == {("A", 0)}
+
+        # several nodes
+        assert graph.get_parents([("B", 0), ("A", 0)]) == {("A", 0), ("A", -2), ("A", -1)}
+        assert graph.get_children([("A", -1), ("A", -2)]) == {("A", 0), ("B", 0)}
+        assert graph.get_parents(["B", "A"]) == {("A", 0), ("A", -2), ("A", -1)}
+
+        assert graph.get_parents(nodes=("B", 0)) == {("A", 0), ("A", -2)}
+        assert graph.get_children(nodes=[("A", -1)]) == {("A", 0)}
+
+        # a bare name is the variable at every time it is stored: same-time and lagged children together
+        assert graph.get_children("A") == {("A", 0), ("B", 0)}
+        assert graph.get_children(("A", 0)) == {("B", 0)}
+
+        # a variable stored only as a lagged parent has no parents, and its children are those of its lagged node
+        graph = _TimeSeriesCoreGraph(edge_list=[(("A", -1), ("B", 0), "->")])
+        assert graph.get_parents("A") == set()
+        assert graph.get_children("A") == {("B", 0)}
+
+        # fails: a node that is not in the graph, and a variable that is not in the graph
+        with pytest.raises(ValueError, match="not in graph"):
+            graph.get_parents(("A", 0))
+        with pytest.raises(ValueError, match="Variable 'Z' not found in the graph"):
+            graph.get_children("Z")
