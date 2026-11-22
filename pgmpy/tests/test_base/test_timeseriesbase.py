@@ -111,7 +111,7 @@ class TestTimeseriesCoreGraph:
         assert graph.to_adjacency(encoding="tigramite").shape == (2, 2, 5)
 
         # declared: an edge beyond it is an error, not a silent widening
-        with pytest.raises(ValueError, match="exceeds tau_max"):
+        with pytest.raises(ValueError, match=r"exceeds the maximum lag \(tau_max\)"):
             _TimeSeriesCoreGraph(edge_list=[(("A", -5), ("B", 0), "->")], tau_max=2)
 
         # fails: not a non-negative integer
@@ -286,3 +286,12 @@ class TestTimeseriesCoreGraph:
 
     def test_is_collider(self):
         assert sample_graph1().is_collider(("A", 0), ("B", 0), ("A", -2))
+
+    def test_get_subgraph(self):
+        graph = _TimeSeriesCoreGraph(
+            edge_list=[(("A", -2), ("B", 0), "->"), (("A", 0), ("B", 0), "->"), (("B", 0), ("C", 0), "->")]
+        )
+        subgraph = graph.get_subgraph([("A", 0), ("B", 0)])
+
+        assert set(subgraph.nodes()) == {("A", 0), ("B", 0)}
+        assert subgraph.get_edges(lag_relative=True) == [("A", "B", 0, "->")]

@@ -79,7 +79,7 @@ class _TimeSeriesCoreGraph(_CoreGraph):
             node = node.to_tuple()
         if isinstance(node, (tuple, list)):
             if len(node) != 2:
-                raise ValueError(f"Node must be (variable, lag) pair. Got : {tuple(node)}")
+                raise ValueError(f"Node must be (variable, time) pair. Got : {tuple(node)}")
             var, offset = node
             if isinstance(offset, bool) or not isinstance(offset, (int, np.integer)):
                 raise TypeError(f"The time of node {(var, offset)} must be an integer, got {type(offset)}")
@@ -87,7 +87,7 @@ class _TimeSeriesCoreGraph(_CoreGraph):
                 raise TypeError(f"Variable names must be hashable and not None. Got {var} of type {type(var)}")
             return var, offset
         if node is None:
-            raise TypeError("Variabe names must be hashable and not None. Got None")
+            raise TypeError("Variable names must be hashable and not None. Got None")
         return (node, 0)
 
     def _normalize_edge(self, u, v, edge_type: str | None) -> tuple:
@@ -121,7 +121,7 @@ class _TimeSeriesCoreGraph(_CoreGraph):
                 continue
             stored = [other for other in self.nodes() if other[0] == node[0]]
             if not stored:
-                raise ValueError(f"Variable {node[0]} not found in the graph.")
+                raise ValueError(f"Variable '{node[0]}' not found in the graph.")
             resolved.extend(stored)
         return resolved
 
@@ -163,6 +163,7 @@ class _TimeSeriesCoreGraph(_CoreGraph):
             return super().without_role(role=role, variables=None, inplace=inplace)
         return super().without_role(role=role, variables=self._to_nodes(variables), inplace=inplace)
 
+    @property
     def variables(self) -> list:
         """
         Returns the list of distinct variable names, with times dropped and duplicates removed.
@@ -175,11 +176,11 @@ class _TimeSeriesCoreGraph(_CoreGraph):
         """
         return sorted({var for var, _ in super().nodes()}, key=str)
 
-    def get_parents(self, node: Hashable) -> set:
-        return super().get_parents(self._normalize_node(node))
+    def get_parents(self, nodes: Hashable) -> set:
+        return super().get_parents(self._to_nodes(nodes))
 
-    def get_children(self, node: Hashable) -> set:
-        return super().get_children(self._normalize_node(node))
+    def get_children(self, nodes: Hashable) -> set:
+        return super().get_children(self._to_nodes(nodes))
 
     def get_edges(
         self,
@@ -216,13 +217,16 @@ class _TimeSeriesCoreGraph(_CoreGraph):
 
     def get_parents_by_lag(self, variable: Hashable) -> dict[int, list]:
         variable = self._normalize_node(variable)[0]
-        if not super().has_node((variable, 0)):
+        if variable not in self.variables:
             raise ValueError(f"Variable not in the graph: {variable}.")
+        if not super().has_node((variable, 0)):
+            return {}
         parents: dict[int, list] = {}
         for parent in _CoreGraph.get_parents(self, (variable, 0)):
             parents.setdefault(-parent[1], []).append(parent[0])
         return {lag: sorted(variables, key=str) for lag, variables in sorted(parents.items())}
 
+    @classmethod
     def from_adjacency(cls, adj, encoding: str = "tigramite", variables: Iterable[Hashable] | None = None):
         if encoding != "tigramite":
             raise ValueError(
@@ -325,8 +329,8 @@ class _TimeSeriesCoreGraph(_CoreGraph):
             "<o": "<-o",
         }
 
-        variables = list(self.variables()) if variables is None else list(variables)
-        if missing := (set(self.variables()) - set(variables)):
+        variables = list(self.variables) if variables is None else list(variables)
+        if missing := (set(self.variables) - set(variables)):
             raise ValueError(f"Variables missing from the requested order: {sorted(missing, key=str)}")
         index = {var: i for i, var in enumerate(variables)}
         out = np.full((len(variables), len(variables), self.tau_max + 1), "", dtype="<U3")
