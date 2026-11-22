@@ -209,3 +209,18 @@ class TestTimeseriesCoreGraph:
         # lagged only
         lagged = graph.get_edges(lag=range(1, graph.tau_max + 1), lag_relative=True)
         assert sorted(lagged) == [("A", "A", 1, "->"), ("A", "B", 2, "->")]
+
+    def test_get_parents_by_lag(self):
+        graph = sample_graph1()
+
+        assert graph.get_parents_by_lag("B") == {0: ["A"], 2: ["A"]}
+        assert graph.get_parents_by_lag("A") == {1: ["A"]}
+
+        # a variable stored only as a lagged parent is in the graph, with no parents of its own
+        graph = _TimeSeriesCoreGraph(edge_list=[(("A", -1), ("B", 0), "->")])
+        assert graph.variables == ["A", "B"]
+        assert graph.get_parents_by_lag("A") == {}
+
+        # fails: a variable that is not in the graph
+        with pytest.raises(ValueError, match="not in the graph"):
+            graph.get_parents_by_lag("Z")
