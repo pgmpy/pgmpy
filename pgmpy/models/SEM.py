@@ -653,7 +653,7 @@ class SEMGraph(_GraphRolesMixin, nx.DiGraph):
             elif (u not in latents) and (v not in latents):
                 mapping[u] = "_l_" + u
         lisrel_latents.update(mapping.values())
-        lisrel_graph = nx.relabel_nodes(nx.DiGraph(self.edges(data=True)), mapping, copy=True)
+        lisrel_graph = nx.relabel_nodes(nx.DiGraph(self), mapping, copy=True)
         for u, v in mapping.items():
             lisrel_graph.add_edge(v, u, weight=1.0)
 

@@ -1255,6 +1255,12 @@ class TestSEMGraph:
             "psi": 1,
         }
 
+        isolated = SEMGraph(ebunch=[("l", "x"), ("h", "x"), ("h", "y")], latents=["l", "h"])
+        isolated.remove_edge("l", "x")
+        var_names, edges_masks, _ = isolated.to_standard_lisrel()
+        assert sorted(var_names["xi"]) == ["h", "l"]
+        assert edges_masks["phi"].shape == (2, 2)
+
 
 class TestSEMAlg:
     @pytest.fixture(autouse=True)
