@@ -108,3 +108,58 @@ class TestTimeseriesCoreGraph:
         assert _TimeSeriesCoreGraph(edge_list=[(("A", -3), ("B", 0), "->")])._tau_max == 3
         graph = _TimeSeriesCoreGraph(edge_list=[(("A", -1), ("B", 0), "->")], tau_max=4)
         assert graph.tau_max == 4
+        assert graph.to_adjacency(encoding="tigramite").shape == (2, 2, 5)
+
+        # declared: an edge beyond it is an error, not a silent widening
+        with pytest.raises(ValueError, match="exceeds tau_max"):
+            _TimeSeriesCoreGraph(edge_list=[(("A", -5), ("B", 0), "->")], tau_max=2)
+
+        # fails: not a non-negative integer
+        with pytest.raises(TypeError, match="must be an integer"):
+            _TimeSeriesCoreGraph(tau_max=1.5)
+        with pytest.raises(TypeError, match="must be an integer"):
+            _TimeSeriesCoreGraph(tau_max=True)
+        with pytest.raises(ValueError, match="non-negative"):
+            _TimeSeriesCoreGraph(tau_max=-1)
+
+    @pytest.mark.parametrize(("u", "v"), EQUIVALENT_FRAMES)
+    def test_add_edge_is_frame_independent(self, u, v):
+        graph = _TimeSeriesCoreGraph(edge_list=[(u, v, "->")])
+
+        assert set(graph.nodes()) == {("A", -1), ("B", 0)}
+        check_graph_status(graph, 2, ["A", "B"], 1, [("A", "B", 1, "->")], {})
+
+    def test_add_edge(self):
+        # an edge written backwards is canonicalized, not rejected
+        graph = _TimeSeriesCoreGraph(edge_list=[(("B", 0), ("A", -1), "<-")])
+        check_graph_status(graph, 2, ["A", "B"], 1, [("A", "B", 1, "->")], {})
+
+        # a backwards undirected link keeps its marks on the endpoints it was given
+        graph = _TimeSeriesCoreGraph(edge_list=[(("B", 0), ("A", 0), "--")])
+        assert graph.get_edges(lag_relative=True) in ([("B", "A", 0, "--")], [("A", "B", 0, "--")])
+
+        # at lag 0 "<-" is just "->" written the other way round
+        graph = _TimeSeriesCoreGraph(edge_list=[(("A", 0), ("B", 0), "<-")])
+        check_graph_status(graph, 2, ["A", "B"], 0, [("B", "A", 0, "->")], {})
+
+        # a lagged "<>" marks latent confounding, not backwards causation, so it is allowed
+        graph = _TimeSeriesCoreGraph(edge_list=[(("A", -1), ("B", 0), "<>")])
+        check_graph_status(graph, 2, ["A", "B"], 1, [("A", "B", 1, "<>")], {})
+
+        # fails: a lagged link with an arrowhead on the earlier endpoint alone makes the present cause the past
+        for edge_type in ["<-", "<o"]:
+            with pytest.raises(ValueError, match="points backwards in time"):
+                _TimeSeriesCoreGraph(edge_list=[(("A", -1), ("B", 0), edge_type)])
+
+        # a self-link across lags is legal; within one slice it is not
+        graph = _TimeSeriesCoreGraph(edge_list=[(("A", -1), ("A", 0), "->")])
+        check_graph_status(graph, 2, ["A"], 1, [("A", "A", 1, "->")], {})
+        with pytest.raises(ValueError, match="Nodes cannot be the same"):
+            _TimeSeriesCoreGraph(edge_list=[(("A", 0), ("A", 0), "->")])
+
+        # fails: the same link written in a shifted frame is the link that already exists
+        graph = _TimeSeriesCoreGraph(tau_max=1)
+        graph.add_edge(("A", -1), ("B", 0), "->")
+        with pytest.raises(ValueError, match="already exists"):
+            graph.add_edge(("A", 4), ("B", 5), "->")
+        assert len(graph.get_edges(lag_relative=True)) == 1
