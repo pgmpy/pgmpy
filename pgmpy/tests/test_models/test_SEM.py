@@ -40,7 +40,7 @@ class TestSEM:
 
         assert self.demo.latents == {"xi1", "eta1", "eta2"}
         assert self.demo.observed == {"x1", "x2", "x3", "y1", "y2", "y3", "y4", "y5", "y6", "y7", "y8"}
-        assert sorted(self.demo.graph.nodes()) == [
+        assert sorted(self.demo.nodes()) == [
             "eta1",
             "eta2",
             "x1",
@@ -56,7 +56,7 @@ class TestSEM:
             "y7",
             "y8",
         ]
-        assert sorted(self.demo.graph.edges()) == sorted(
+        assert sorted(self.demo.edges()) == sorted(
             [
                 ("eta1", "eta2"),
                 ("eta1", "y1"),
@@ -75,20 +75,20 @@ class TestSEM:
             ]
         )
 
-        assert self.demo.graph.edges[("xi1", "x1")] == {"weight": np.nan}
-        assert self.demo.graph.edges[("xi1", "x2")] == {"weight": np.nan}
-        assert self.demo.graph.edges[("xi1", "x3")] == {"weight": np.nan}
-        assert self.demo.graph.edges[("xi1", "eta1")] == {"weight": np.nan}
-        assert self.demo.graph.edges[("eta1", "y1")] == {"weight": np.nan}
-        assert self.demo.graph.edges[("eta1", "y2")] == {"weight": np.nan}
-        assert self.demo.graph.edges[("eta1", "y3")] == {"weight": np.nan}
-        assert self.demo.graph.edges[("eta1", "y4")] == {"weight": np.nan}
-        assert self.demo.graph.edges[("eta1", "eta2")] == {"weight": np.nan}
-        assert self.demo.graph.edges[("xi1", "eta2")] == {"weight": np.nan}
-        assert self.demo.graph.edges[("eta2", "y5")] == {"weight": np.nan}
-        assert self.demo.graph.edges[("eta2", "y6")] == {"weight": np.nan}
-        assert self.demo.graph.edges[("eta2", "y7")] == {"weight": np.nan}
-        assert self.demo.graph.edges[("eta2", "y8")] == {"weight": np.nan}
+        assert self.demo.edges[("xi1", "x1")] == {"weight": np.nan}
+        assert self.demo.edges[("xi1", "x2")] == {"weight": np.nan}
+        assert self.demo.edges[("xi1", "x3")] == {"weight": np.nan}
+        assert self.demo.edges[("xi1", "eta1")] == {"weight": np.nan}
+        assert self.demo.edges[("eta1", "y1")] == {"weight": np.nan}
+        assert self.demo.edges[("eta1", "y2")] == {"weight": np.nan}
+        assert self.demo.edges[("eta1", "y3")] == {"weight": np.nan}
+        assert self.demo.edges[("eta1", "y4")] == {"weight": np.nan}
+        assert self.demo.edges[("eta1", "eta2")] == {"weight": np.nan}
+        assert self.demo.edges[("xi1", "eta2")] == {"weight": np.nan}
+        assert self.demo.edges[("eta2", "y5")] == {"weight": np.nan}
+        assert self.demo.edges[("eta2", "y6")] == {"weight": np.nan}
+        assert self.demo.edges[("eta2", "y7")] == {"weight": np.nan}
+        assert self.demo.edges[("eta2", "y8")] == {"weight": np.nan}
 
         npt.assert_equal(
             nx.to_numpy_array(
@@ -388,8 +388,8 @@ class TestSEM:
         }
 
         expected_latents = {"dem60", "dem65", "ind60"}
-        assert set(model_from_str.graph.edges()) == expected_edges
-        assert set(model_from_file.graph.edges()) == expected_edges
+        assert set(model_from_str.edges()) == expected_edges
+        assert set(model_from_file.edges()) == expected_edges
         assert not set(model_from_str.err_graph.edges()) - expected_err_edges
         assert not set(model_from_file.err_graph.edges()) - expected_err_edges
         assert set(model_from_str.latents) == expected_latents
@@ -512,7 +512,7 @@ class TestSEMGraph:
     def test_demo_init(self):
         assert self.demo.latents == {"xi1", "eta1", "eta2"}
         assert self.demo.observed == {"x1", "x2", "x3", "y1", "y2", "y3", "y4", "y5", "y6", "y7", "y8"}
-        assert sorted(self.demo.graph.nodes()) == [
+        assert sorted(self.demo.nodes()) == [
             "eta1",
             "eta2",
             "x1",
@@ -528,7 +528,7 @@ class TestSEMGraph:
             "y7",
             "y8",
         ]
-        assert sorted(self.demo.graph.edges()) == sorted(
+        assert sorted(self.demo.edges()) == sorted(
             [
                 ("eta1", "eta2"),
                 ("eta1", "y1"),
@@ -547,20 +547,20 @@ class TestSEMGraph:
             ]
         )
 
-        assert self.demo.graph.edges[("xi1", "x1")] == {"weight": np.nan}
-        assert self.demo.graph.edges[("xi1", "x2")] == {"weight": np.nan}
-        assert self.demo.graph.edges[("xi1", "x3")] == {"weight": np.nan}
-        assert self.demo.graph.edges[("xi1", "eta1")] == {"weight": np.nan}
-        assert self.demo.graph.edges[("eta1", "y1")] == {"weight": np.nan}
-        assert self.demo.graph.edges[("eta1", "y2")] == {"weight": np.nan}
-        assert self.demo.graph.edges[("eta1", "y3")] == {"weight": np.nan}
-        assert self.demo.graph.edges[("eta1", "y4")] == {"weight": np.nan}
-        assert self.demo.graph.edges[("eta1", "eta2")] == {"weight": np.nan}
-        assert self.demo.graph.edges[("xi1", "eta2")] == {"weight": np.nan}
-        assert self.demo.graph.edges[("eta2", "y5")] == {"weight": np.nan}
-        assert self.demo.graph.edges[("eta2", "y6")] == {"weight": np.nan}
-        assert self.demo.graph.edges[("eta2", "y7")] == {"weight": np.nan}
-        assert self.demo.graph.edges[("eta2", "y8")] == {"weight": np.nan}
+        assert self.demo.edges[("xi1", "x1")] == {"weight": np.nan}
+        assert self.demo.edges[("xi1", "x2")] == {"weight": np.nan}
+        assert self.demo.edges[("xi1", "x3")] == {"weight": np.nan}
+        assert self.demo.edges[("xi1", "eta1")] == {"weight": np.nan}
+        assert self.demo.edges[("eta1", "y1")] == {"weight": np.nan}
+        assert self.demo.edges[("eta1", "y2")] == {"weight": np.nan}
+        assert self.demo.edges[("eta1", "y3")] == {"weight": np.nan}
+        assert self.demo.edges[("eta1", "y4")] == {"weight": np.nan}
+        assert self.demo.edges[("eta1", "eta2")] == {"weight": np.nan}
+        assert self.demo.edges[("xi1", "eta2")] == {"weight": np.nan}
+        assert self.demo.edges[("eta2", "y5")] == {"weight": np.nan}
+        assert self.demo.edges[("eta2", "y6")] == {"weight": np.nan}
+        assert self.demo.edges[("eta2", "y7")] == {"weight": np.nan}
+        assert self.demo.edges[("eta2", "y8")] == {"weight": np.nan}
 
         npt.assert_equal(
             nx.to_numpy_array(
@@ -807,8 +807,8 @@ class TestSEMGraph:
         assert self.union.latents == set()
         assert self.union.observed == {"yrsmill", "unionsen", "age", "laboract", "deferenc"}
 
-        assert sorted(self.union.graph.nodes()) == sorted(["yrsmill", "unionsen", "age", "laboract", "deferenc"])
-        assert sorted(self.union.graph.edges()) == sorted(
+        assert sorted(self.union.nodes()) == sorted(["yrsmill", "unionsen", "age", "laboract", "deferenc"])
+        assert sorted(self.union.edges()) == sorted(
             [
                 ("yrsmill", "unionsen"),
                 ("age", "laboract"),
@@ -819,12 +819,12 @@ class TestSEMGraph:
             ]
         )
 
-        assert self.union.graph.edges[("yrsmill", "unionsen")] == {"weight": np.nan}
-        assert self.union.graph.edges[("age", "laboract")] == {"weight": np.nan}
-        assert self.union.graph.edges[("age", "deferenc")] == {"weight": np.nan}
-        assert self.union.graph.edges[("deferenc", "laboract")] == {"weight": np.nan}
-        assert self.union.graph.edges[("deferenc", "unionsen")] == {"weight": np.nan}
-        assert self.union.graph.edges[("laboract", "unionsen")] == {"weight": np.nan}
+        assert self.union.edges[("yrsmill", "unionsen")] == {"weight": np.nan}
+        assert self.union.edges[("age", "laboract")] == {"weight": np.nan}
+        assert self.union.edges[("age", "deferenc")] == {"weight": np.nan}
+        assert self.union.edges[("deferenc", "laboract")] == {"weight": np.nan}
+        assert self.union.edges[("deferenc", "unionsen")] == {"weight": np.nan}
+        assert self.union.edges[("laboract", "unionsen")] == {"weight": np.nan}
 
         npt.assert_equal(
             nx.to_numpy_array(
@@ -849,20 +849,20 @@ class TestSEMGraph:
             assert self.union.err_graph.nodes[node] == {"weight": np.nan}
 
     def test_demo_param_init(self):
-        assert self.demo_params.graph.edges[("xi1", "x1")] == {"weight": 0.4}
-        assert self.demo_params.graph.edges[("xi1", "x2")] == {"weight": 0.5}
-        assert self.demo_params.graph.edges[("xi1", "x3")] == {"weight": 0.6}
-        assert self.demo_params.graph.edges[("xi1", "eta1")] == {"weight": 0.3}
-        assert self.demo_params.graph.edges[("eta1", "y1")] == {"weight": 1.1}
-        assert self.demo_params.graph.edges[("eta1", "y2")] == {"weight": 1.2}
-        assert self.demo_params.graph.edges[("eta1", "y3")] == {"weight": 1.3}
-        assert self.demo_params.graph.edges[("eta1", "y4")] == {"weight": 1.4}
-        assert self.demo_params.graph.edges[("eta1", "eta2")] == {"weight": 0.1}
-        assert self.demo_params.graph.edges[("xi1", "eta2")] == {"weight": 0.2}
-        assert self.demo_params.graph.edges[("eta2", "y5")] == {"weight": 0.7}
-        assert self.demo_params.graph.edges[("eta2", "y6")] == {"weight": 0.8}
-        assert self.demo_params.graph.edges[("eta2", "y7")] == {"weight": 0.9}
-        assert self.demo_params.graph.edges[("eta2", "y8")] == {"weight": 1.0}
+        assert self.demo_params.edges[("xi1", "x1")] == {"weight": 0.4}
+        assert self.demo_params.edges[("xi1", "x2")] == {"weight": 0.5}
+        assert self.demo_params.edges[("xi1", "x3")] == {"weight": 0.6}
+        assert self.demo_params.edges[("xi1", "eta1")] == {"weight": 0.3}
+        assert self.demo_params.edges[("eta1", "y1")] == {"weight": 1.1}
+        assert self.demo_params.edges[("eta1", "y2")] == {"weight": 1.2}
+        assert self.demo_params.edges[("eta1", "y3")] == {"weight": 1.3}
+        assert self.demo_params.edges[("eta1", "y4")] == {"weight": 1.4}
+        assert self.demo_params.edges[("eta1", "eta2")] == {"weight": 0.1}
+        assert self.demo_params.edges[("xi1", "eta2")] == {"weight": 0.2}
+        assert self.demo_params.edges[("eta2", "y5")] == {"weight": 0.7}
+        assert self.demo_params.edges[("eta2", "y6")] == {"weight": 0.8}
+        assert self.demo_params.edges[("eta2", "y7")] == {"weight": 0.9}
+        assert self.demo_params.edges[("eta2", "y8")] == {"weight": 1.0}
 
         assert self.demo_params.err_graph.edges[("y1", "y5")] == {"weight": 1.5}
         assert self.demo_params.err_graph.edges[("y2", "y6")] == {"weight": 1.6}
@@ -930,7 +930,7 @@ class TestSEMGraph:
         for node in demo_nodes:
             assert self.demo.active_trail_nodes(node, struct="full")[node] == set(demo_nodes)
 
-        union_nodes = self.union.graph.nodes()
+        union_nodes = self.union.nodes()
         active_trails = self.union.active_trail_nodes(list(union_nodes), struct="full")
         for node in union_nodes:
             assert active_trails[node] == set(union_nodes)
@@ -1134,8 +1134,8 @@ class TestSEMGraph:
         custom_graph = custom_lisrel.to_SEMGraph()
 
         # Test demo
-        assert set(self.demo.graph.nodes()) == set(demo_graph.graph.nodes())
-        assert set(self.demo.graph.edges()) == set(demo_graph.graph.edges())
+        assert set(self.demo.nodes()) == set(demo_graph.nodes())
+        assert set(self.demo.edges()) == set(demo_graph.edges())
 
         assert set(self.demo.err_graph.nodes()) == set(demo_graph.err_graph.nodes())
         npt.assert_array_equal(
@@ -1150,8 +1150,8 @@ class TestSEMGraph:
         assert self.demo.observed == demo_graph.observed
 
         # Test union
-        assert set(self.union.graph.nodes()) == set(union_graph.graph.nodes())
-        assert set(self.union.graph.edges()) == set(union_graph.graph.edges())
+        assert set(self.union.nodes()) == set(union_graph.nodes())
+        assert set(self.union.edges()) == set(union_graph.edges())
 
         assert set(self.union.err_graph.nodes()) == set(union_graph.err_graph.nodes())
         npt.assert_array_equal(
@@ -1166,8 +1166,8 @@ class TestSEMGraph:
         assert self.union.observed == union_graph.observed
 
         # Test demo_params
-        assert set(self.demo_params.graph.nodes()) == set(demo_params_graph.graph.nodes())
-        assert set(self.demo_params.graph.edges()) == set(demo_params_graph.graph.edges())
+        assert set(self.demo_params.nodes()) == set(demo_params_graph.nodes())
+        assert set(self.demo_params.edges()) == set(demo_params_graph.edges())
 
         assert set(self.demo_params.err_graph.nodes()) == set(demo_params_graph.err_graph.nodes())
         npt.assert_array_equal(
@@ -1190,8 +1190,8 @@ class TestSEMGraph:
         assert self.demo_params.observed == demo_params_graph.observed
 
         # Test demo
-        assert set(self.custom.graph.nodes()) == set(custom_graph.graph.nodes())
-        assert set(self.custom.graph.edges()) == set(custom_graph.graph.edges())
+        assert set(self.custom.nodes()) == set(custom_graph.nodes())
+        assert set(self.custom.edges()) == set(custom_graph.edges())
 
         assert set(self.custom.err_graph.nodes()) == set(custom_graph.err_graph.nodes())
         npt.assert_array_equal(
@@ -1260,3 +1260,44 @@ class TestSEMAlg:
     def test_generate_samples(self):
         self.small_model_lisrel.generate_samples(n_samples=100)
         self.demo_lisrel.generate_samples(n_samples=100)
+
+
+class TestSEMGraphRoles:
+    ebunch = [("z", "x"), ("x", "y", 0.5), ("l", "y")]
+
+    def test_roles_init(self):
+        model = SEMGraph(
+            ebunch=self.ebunch,
+            latents=["l"],
+            exposures={"x"},
+            outcomes={"y"},
+            roles={"adjustment": "z"},
+        )
+        assert model.latents == {"l"}
+        assert model.observed == {"x", "y", "z"}
+        assert model.exposures == {"x"}
+        assert model.outcomes == {"y"}
+        assert model.get_role("adjustment") == ["z"]
+        assert model.nodes["x"]["roles"] == {"exposures"}
+
+        with pytest.raises(ValueError):
+            SEMGraph(ebunch=self.ebunch, exposures={"missing"})
+        with pytest.raises(TypeError):
+            SEMGraph(ebunch=self.ebunch, roles=["z"])
+
+    @pytest.mark.parametrize("cls", [SEMGraph, SEM.from_graph])
+    def test_with_role_not_inplace(self, cls):
+        model = cls(ebunch=self.ebunch, latents=["l"], err_corr=[("x", "y", 0.2)], err_var={"x": 1.0})
+        new_model = model.with_role("exposures", "x", inplace=False)
+
+        assert type(new_model) is type(model)
+        assert new_model.exposures == {"x"}
+        assert model.exposures == set()
+        assert new_model.latents == {"l"}
+        assert new_model.edges[("x", "y")] == {"weight": 0.5}
+        assert new_model.err_graph.edges[("x", "y")] == {"weight": 0.2}
+        assert new_model.err_graph.nodes["x"] == {"weight": 1.0}
+        assert set(new_model.full_graph_struct.edges()) == set(model.full_graph_struct.edges())
+
+        new_model.without_role("exposures", "x", inplace=True)
+        assert new_model.exposures == set()

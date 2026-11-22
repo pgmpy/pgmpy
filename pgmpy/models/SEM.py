@@ -1,18 +1,25 @@
+import copy
 import itertools
+from collections.abc import Hashable, Iterable
 
 import networkx as nx
 import numpy as np
 import pandas as pd
 
+from pgmpy.base._mixin_roles import _GraphRolesMixin
 from pgmpy.utils.parser import parse_lavaan
 
 
-class SEMGraph:
+class SEMGraph(_GraphRolesMixin, nx.DiGraph):
     """
     Base class for graphical representation of Structural Equation Models(SEMs).
 
     All variables are by default assumed to have an associated error latent variable, therefore
     doesn't need to be specified.
+
+    The model itself is a ``nx.DiGraph`` over the latent and observed variables (excluding the
+    error terms). The parameters are stored in the `weight` attribute of each edge. Variable
+    roles (latents, exposures, outcomes, etc.) are stored as node attributes.
 
     Parameters
     ----------
@@ -35,6 +42,16 @@ class SEMGraph:
 
     err_var: dict (variable: variance)
         Sets variance for the error terms in the model.
+
+    exposures: set, default=set()
+        Set of exposure variables in the model.
+
+    outcomes: set, default=set()
+        Set of outcome variables in the model.
+
+    roles: dict, optional (default: None)
+        A dictionary mapping roles to node names. Passing a key-value pair via ``roles`` is
+        equivalent to calling ``with_role(role, variables, inplace=True)``.
 
     Examples
     --------
@@ -74,6 +91,14 @@ class SEMGraph:
     ...     err_var={"intelligence": 1},
     ... )
 
+    Variable roles can be set at initialization or later using `with_role`:
+
+    >>> sem_roles = SEMGraph(ebunch=[("x", "y"), ("z", "x"), ("z", "y")], exposures={"x"}, outcomes={"y"})
+    >>> sem_roles.exposures
+    {'x'}
+    >>> sem_roles.with_role("adjustment", "z", inplace=False).get_role("adjustment")
+    ['z']
+
     References
     ----------
     - :footcite:t:`mcdonald_clelland_1984`
@@ -81,15 +106,11 @@ class SEMGraph:
 
     Attributes
     ----------
-    latents: list
-        List of all the latent variables in the model except the error terms.
+    latents: set
+        Set of all the latent variables in the model except the error terms.
 
-    observed: list
-        List of all the observed variables in the model.
-
-    graph: nx.DirectedGraph
-        The graphical structure of the latent and observed variables except the error terms.
-        The parameters are stored in the `weight` attribute of each edge.
+    observed: set
+        Set of all the observed variables in the model.
 
     err_graph: nx.Graph
         An undirected graph representing the relations between the error terms of the model.
@@ -103,25 +124,44 @@ class SEMGraph:
 
     """
 
-    def __init__(self, ebunch=[], latents=[], err_corr=[], err_var={}):
+    SUPPORTS_LATENTS = True
+
+    def __init__(
+        self,
+        ebunch=[],
+        latents=[],
+        err_corr=[],
+        err_var={},
+        exposures: set[Hashable] | None = None,
+        outcomes: set[Hashable] | None = None,
+        roles: dict[str, Iterable] | None = None,
+    ) -> None:
         super().__init__()
 
         # Construct the graph and set the parameters.
-        self.graph = nx.DiGraph()
         for t in ebunch:
             if len(t) == 3:
-                self.graph.add_edge(t[0], t[1], weight=t[2])
+                self.add_edge(t[0], t[1], weight=t[2])
             elif len(t) == 2:
-                self.graph.add_edge(t[0], t[1], weight=np.nan)
+                self.add_edge(t[0], t[1], weight=np.nan)
             else:
                 raise ValueError(f"Expected tuple length: 2 or 3. Got {t} of len {len(t)}")
 
         self.latents = set(latents)
-        self.observed = set(self.graph.nodes()) - self.latents
+        self.exposures = set(exposures) if exposures is not None else set()
+        self.outcomes = set(outcomes) if outcomes is not None else set()
+
+        if roles is None:
+            roles = {}
+        elif not isinstance(roles, dict):
+            raise TypeError("Roles must be provided as a dictionary.")
+
+        for role, vars in roles.items():
+            self.with_role(role=role, variables=vars, inplace=True)
 
         # Construct the error graph and set the parameters.
         self.err_graph = nx.Graph()
-        self.err_graph.add_nodes_from(self.graph.nodes())
+        self.err_graph.add_nodes_from(self.nodes())
         for t in err_corr:
             if len(t) == 2:
                 self.err_graph.add_edge(t[0], t[1], weight=np.nan)
@@ -136,18 +176,28 @@ class SEMGraph:
 
         self.full_graph_struct = self._get_full_graph_struct()
 
+    def copy(self):
+        """
+        Returns a deep copy of the model, including the error graph and the variable roles.
+
+        Returns
+        -------
+        SEMGraph (or subclass) instance: A copy of the model.
+        """
+        return copy.deepcopy(self)
+
     def _variable_name_contains_non_string(self):
         """
         Checks if the variable names contain any non-string values. Used only for CausalInference class.
         """
-        for node in list(self.graph.nodes()):
+        for node in list(self.nodes()):
             if not isinstance(node, str):
                 return (node, type(node))
         return False
 
     def _get_full_graph_struct(self):
         """
-        Creates a directed graph by joining `self.graph` and `self.err_graph`.
+        Creates a directed graph by joining the model's graph and `self.err_graph`.
         Adds new nodes to replace undirected edges (u <--> v) with two directed
         edges (u <-- ..uv) and (..uv --> v).
 
@@ -174,7 +224,9 @@ class SEMGraph:
         ... )
         >>> sem._get_full_graph_struct()
         """
-        full_graph = self.graph.copy()
+        full_graph = nx.DiGraph()
+        full_graph.add_nodes_from(self.nodes())
+        full_graph.add_edges_from(self.edges(data=True))
 
         mapping_dict = {"." + node: node for node in self.err_graph.nodes}
         full_graph.add_edges_from([(u, v) for u, v in mapping_dict.items()])
@@ -212,9 +264,10 @@ class SEMGraph:
                 scaling indicator.
         """
         scaling_indicators = {}
+        observed = self.observed
         for node in self.latents:
-            for neighbor in self.graph.neighbors(node):
-                if neighbor in self.observed:
+            for neighbor in self.neighbors(node):
+                if neighbor in observed:
                     scaling_indicators[node] = neighbor
                     break
         return scaling_indicators
@@ -273,7 +326,7 @@ class SEMGraph:
         if struct == "full":
             graph_struct = self.full_graph_struct
         elif struct == "non_error":
-            graph_struct = self.graph
+            graph_struct = self
         elif isinstance(struct, nx.DiGraph):
             graph_struct = struct
         else:
@@ -287,6 +340,7 @@ class SEMGraph:
         # up ->  from parent to child
         # down -> from child to parent
 
+        latents = self.latents
         active_trails = {}
         for start in variables if isinstance(variables, (list, tuple)) else [variables]:
             visit_list = set()
@@ -298,7 +352,7 @@ class SEMGraph:
                 if node in avoid_nodes:
                     continue
                 if (node, direction) not in traversed_list:
-                    if (node not in observed) and (not node.startswith(".")) and (node not in self.latents):
+                    if (node not in observed) and (not node.startswith(".")) and (node not in latents):
                         active_nodes.add(node)
                     traversed_list.add((node, direction))
                     if direction == "up" and node not in observed:
@@ -337,7 +391,7 @@ class SEMGraph:
         elif isinstance(graph, nx.DiGraph):
             graph = graph
         else:
-            graph = self.graph
+            graph = self
 
         moral_graph = graph.to_undirected()
 
@@ -376,6 +430,7 @@ class SEMGraph:
         ancestral_G.remove_nodes_from(["." + node for node in err_nodes_to_remove])
 
         M = self.moralize(graph=ancestral_G)
+        observed = self.observed
         visited = {Y}
         to_visit = list(M.neighbors(Y))
 
@@ -387,7 +442,7 @@ class SEMGraph:
             if node == Z:
                 return None
             visited.add(node)
-            if node in self.observed:
+            if node in observed:
                 W.add(node)
             else:
                 to_visit.extend([node for node in M.neighbors(node) if node not in visited])
@@ -436,9 +491,10 @@ class SEMGraph:
         --------
         to_standard_lisrel: Converts to the standard lisrel format and returns the parameters.
         """
-        nodelist = list(self.observed) + list(self.latents)
-        graph_adj = nx.to_numpy_array(self.graph, nodelist=nodelist, weight=None)
-        graph_fixed = np.nan_to_num(nx.to_numpy_array(self.graph, nodelist=nodelist, weight="weight"))
+        observed = list(self.observed)
+        nodelist = observed + list(self.latents)
+        graph_adj = nx.to_numpy_array(self, nodelist=nodelist, weight=None)
+        graph_fixed = np.nan_to_num(nx.to_numpy_array(self, nodelist=nodelist, weight="weight"))
 
         err_adj = nx.to_numpy_array(self.err_graph, nodelist=nodelist, weight=None)
         np.fill_diagonal(err_adj, 1.0)  # Variance exists for each error term.
@@ -449,8 +505,8 @@ class SEMGraph:
             weight = self.err_graph.nodes[node]["weight"]
             err_fixed[index, index] = 0.0 if np.isnan(weight) else weight
 
-        wedge_y = np.zeros((len(self.observed), len(nodelist)), dtype=int)
-        for index, obs_var in enumerate(self.observed):
+        wedge_y = np.zeros((len(observed), len(nodelist)), dtype=int)
+        for index, obs_var in enumerate(observed):
             wedge_y[index][nodelist.index(obs_var)] = 1.0
 
         from pgmpy.models import SEMAlg
@@ -586,17 +642,18 @@ class SEMGraph:
         TODO: Finish this.
         """
         lisrel_err_graph = self.err_graph.copy()
-        lisrel_latents = self.latents.copy()
+        latents = self.latents
+        lisrel_latents = latents.copy()
 
         # Add new latent nodes to convert it to LISREL format.
         mapping = {}
-        for u, v in self.graph.edges:
-            if (u not in self.latents) and (v in self.latents):
+        for u, v in self.edges:
+            if (u not in latents) and (v in latents):
                 mapping[u] = "_l_" + u
-            elif (u not in self.latents) and (v not in self.latents):
+            elif (u not in latents) and (v not in latents):
                 mapping[u] = "_l_" + u
         lisrel_latents.update(mapping.values())
-        lisrel_graph = nx.relabel_nodes(self.graph, mapping, copy=True)
+        lisrel_graph = nx.relabel_nodes(nx.DiGraph(self.edges(data=True)), mapping, copy=True)
         for u, v in mapping.items():
             lisrel_graph.add_edge(v, u, weight=1.0)
 
@@ -867,6 +924,9 @@ class SEM(SEMGraph):
                 latents=kwargs["latents"],
                 err_corr=kwargs["err_corr"],
                 err_var=kwargs["err_var"],
+                exposures=kwargs.get("exposures"),
+                outcomes=kwargs.get("outcomes"),
+                roles=kwargs.get("roles"),
             )
 
         elif syntax.lower() == "lisrel":
@@ -875,14 +935,12 @@ class SEM(SEMGraph):
                 params=kwargs["params"],
                 fixed_masks=kwargs.get("fixed_masks"),
             ).to_SEMGraph()
-            # Initialize an empty SEMGraph instance and set the properties.
-            # TODO: Boilerplate code, find a better way to do this.
-            super().__init__(ebunch=[], latents=[], err_corr=[], err_var={})
-            self.graph = model.graph
-            self.latents = model.latents
-            self.obseved = model.observed
-            self.err_graph = model.err_graph
-            self.full_graph_struct = model.full_graph_struct
+            super().__init__(
+                ebunch=model.edges(data="weight"),
+                latents=model.latents,
+                err_corr=model.err_graph.edges(data="weight"),
+                err_var=dict(model.err_graph.nodes(data="weight")),
+            )
 
         elif syntax.lower() == "ram":
             model = SEMAlg(
@@ -921,7 +979,16 @@ class SEM(SEMGraph):
         return cls(syntax="lavaan", lavaan_str=lavaan_str)
 
     @classmethod
-    def from_graph(cls, ebunch, latents=[], err_corr=[], err_var={}):
+    def from_graph(
+        cls,
+        ebunch,
+        latents=[],
+        err_corr=[],
+        err_var={},
+        exposures: set[Hashable] | None = None,
+        outcomes: set[Hashable] | None = None,
+        roles: dict[str, Iterable] | None = None,
+    ):
         """
         Initializes a `SEM` instance using graphical structure.
 
@@ -946,6 +1013,15 @@ class SEM(SEMGraph):
 
         err_var: dict
             Dict of the form (var: variance).
+
+        exposures: set, default=set()
+            Set of exposure variables in the model.
+
+        outcomes: set, default=set()
+            Set of outcome variables in the model.
+
+        roles: dict, optional (default: None)
+            A dictionary mapping roles to node names.
 
         Examples
         --------
@@ -996,6 +1072,9 @@ class SEM(SEMGraph):
             latents=latents,
             err_corr=err_corr,
             err_var=err_var,
+            exposures=exposures,
+            outcomes=outcomes,
+            roles=roles,
         )
 
     @classmethod

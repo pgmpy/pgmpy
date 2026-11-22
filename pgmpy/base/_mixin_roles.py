@@ -100,21 +100,12 @@ class _GraphRolesMixin:
         else:
             new_graph = self
 
-        is_sem_graph = new_graph.__module__ == "pgmpy.models.SEM"
-        if not is_sem_graph:
-            for var in variables:
-                if var not in new_graph:
-                    raise ValueError(f"Variable '{var}' not found in the graph.")
-                else:
-                    existing_role = new_graph.nodes[var].get("roles", set())
-                    new_graph.add_node(var, roles=existing_role | {role})
-        else:
-            for var in variables:
-                if var not in new_graph.graph:
-                    raise ValueError(f"Variable '{var}' not found in the graph.")
-                else:
-                    existing_role = new_graph.nodes[var].get("roles", set())
-                    new_graph.add_node(var, roles=existing_role | {role})
+        for var in variables:
+            if var not in new_graph:
+                raise ValueError(f"Variable '{var}' not found in the graph.")
+            else:
+                existing_role = new_graph.nodes[var].get("roles", set())
+                new_graph.add_node(var, roles=existing_role | {role})
         if not inplace:
             return new_graph
 
