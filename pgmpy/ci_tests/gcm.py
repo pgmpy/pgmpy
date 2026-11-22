@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 from scipy import stats
-from sklearn.linear_model import LinearRegression
 
 from pgmpy.utils import preprocess_data
 
@@ -28,8 +27,9 @@ class GCM(_ResidualMixin, BaseCITest):
     data : pandas.DataFrame
         The dataset in which to test the independence condition.
     estimator: optional (default=None)
-        Any regressor with fit and predict methods to compute residuals. If None, LinearRegression() is used
-        as default.
+        Any regressor with fit and predict methods to compute residuals. If ``None``,
+        :class:`~pgmpy.utils.CovarianceRegression` is used for continuous targets and
+        :class:`~sklearn.linear_model.LogisticRegression` for categorical targets.
 
     Attributes
     ----------
@@ -59,11 +59,10 @@ class GCM(_ResidualMixin, BaseCITest):
 
     def __init__(self, data: pd.DataFrame, estimator=None, use_cache: bool = True):
         self.data, self.dtypes = preprocess_data(data, data_types=self.get_class_tag("data_types"))
-        self.estimator = LinearRegression() if estimator is None else estimator
+        self.estimator = estimator
 
         super().__init__(use_cache=use_cache)
-        if isinstance(self.estimator, LinearRegression):
-            self.set_tags(**{"assumption:linearity": True})
+        self._set_linearity_tag()
 
     def _compute_result(
         self,

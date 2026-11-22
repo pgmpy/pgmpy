@@ -3,9 +3,12 @@ import pandas as pd
 import pytest
 from scipy import stats
 from sklearn.cross_decomposition import CCA
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import LogisticRegression
 
 from pgmpy.ci_tests import RoysLargestRoot
 from pgmpy.tests.test_ci_tests import _multivariate_fixtures
+from pgmpy.utils import CovarianceRegression
 
 pillai_data = _multivariate_fixtures.pillai_data
 skip_gh_actions = _multivariate_fixtures.skip_gh_actions
@@ -29,8 +32,8 @@ def test_roys_no_cond(pillai_data):
 
 @skip_gh_actions
 def test_roys_indep(pillai_data):
-    expected_stats = [0.0019, 0.0007, 0.0011, 0.0043, 0.0011]
-    expected_pvalues = [0.1736, 0.3919, 0.5894, 0.1179, 0.5894]
+    expected_stats = [0.0, 0.0, 0.0002, 0.0006, 0.0002]
+    expected_pvalues = [0.9155, 0.9246, 0.8909, 0.7356, 0.8909]
 
     computed_stats, computed_pvalues = [], []
     for df in pillai_data["indep"]:
@@ -45,7 +48,7 @@ def test_roys_indep(pillai_data):
 
 @skip_gh_actions
 def test_roys_dependent(pillai_data):
-    expected_stats = [0.2129, 0.2029, 0.0996, 0.0950, 0.0996]
+    expected_stats = [0.1950, 0.1948, 0.1077, 0.0888, 0.1077]
     expected_pvalues = [0.0000, 0.0000, 0.0000, 0.0000, 0.0000]
 
     computed_stats, computed_pvalues = [], []
@@ -60,8 +63,8 @@ def test_roys_dependent(pillai_data):
 
 
 def test_effect_size(pillai_data):
-    expected_indep = [0.0019, 0.0007, 0.0011, 0.0043, 0.0011]
-    expected_dep = [0.2129, 0.2029, 0.0996, 0.0950, 0.0996]
+    expected_indep = [0.0, 0.0, 0.0002, 0.0006, 0.0002]
+    expected_dep = [0.1950, 0.1948, 0.1077, 0.0888, 0.1077]
 
     for df, expected in zip(pillai_data["indep"], expected_indep):
         test = RoysLargestRoot(data=df)
@@ -137,3 +140,37 @@ def test_roys_matches_muller_peterson_eq_28_for_p_not_equal_q():
 
     assert test.statistic_ == pytest.approx(expected_statistic, abs=1e-2)
     assert test.p_value_ == pytest.approx(expected_pvalue, abs=1e-2)
+
+
+def test_default_estimator_types():
+    rng = np.random.default_rng(0)
+    n = 1000
+    Z = rng.normal(size=n)
+    X_cont = Z * 0.5 + rng.normal(size=n)
+    Y_cont = Z * 0.5 + rng.normal(size=n)
+    X_cat = pd.cut(X_cont, bins=4, labels=["a", "b", "c", "d"])
+
+    # Continuous variables: estimator should be CovarianceRegression.
+    test = RoysLargestRoot(data=pd.DataFrame({"X": X_cont, "Y": Y_cont, "Z": Z}))
+    test("X", "Y", ["Z"])
+    assert isinstance(test.estimator_x_, CovarianceRegression)
+    assert isinstance(test.estimator_y_, CovarianceRegression)
+
+    # Categorical X: estimator_x_ should be LogisticRegression, estimator_y_ CovarianceRegression.
+    test = RoysLargestRoot(data=pd.DataFrame({"X": X_cat, "Y": Y_cont, "Z": Z}))
+    test("X", "Y", ["Z"])
+    assert isinstance(test.estimator_x_, LogisticRegression)
+    assert isinstance(test.estimator_y_, CovarianceRegression)
+
+
+def test_linearity_tag():
+    rng = np.random.default_rng(0)
+    n = 200
+    data = pd.DataFrame({"X": rng.normal(size=n), "Y": rng.normal(size=n), "Z": rng.normal(size=n)})
+
+    assert RoysLargestRoot.get_class_tag("assumption:linearity") is False
+    assert RoysLargestRoot(data=data).get_tag("assumption:linearity") is True
+    assert (
+        RoysLargestRoot(data=data, estimator=RandomForestRegressor(random_state=0)).get_tag("assumption:linearity")
+        is False
+    )

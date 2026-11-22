@@ -6,9 +6,9 @@ import pandas as pd
 from skbase.base import BaseObject
 from skbase.lookup import all_objects
 from sklearn.base import clone
-from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.linear_model import LinearRegression, LogisticRegression
 
-from pgmpy.utils import is_discrete_type
+from pgmpy.utils import CovarianceRegression, is_discrete_type
 
 
 class _ResidualMixin:
@@ -30,9 +30,9 @@ class _ResidualMixin:
         Estimator used to predict each variable from the conditioning set.
         Must support ``fit`` / ``predict``, and ``predict_proba`` for
         categorical targets. When ``None``, defaults to
-        :class:`~sklearn.ensemble.RandomForestClassifier` for categorical /
-        ordinal variables and :class:`~sklearn.ensemble.RandomForestRegressor`
-        for numerical variables.
+        :class:`~pgmpy.utils.CovarianceRegression` for numerical variables
+        and :class:`~sklearn.linear_model.LogisticRegression` for
+        categorical / ordinal variables.
     """
 
     _tags = {
@@ -40,6 +40,13 @@ class _ResidualMixin:
         "assumption:additive_noise": False,
         "assumption:gaussian_noise": False,
     }
+
+    def _set_linearity_tag(self):
+        """Set ``assumption:linearity`` to ``True`` when the estimator implies linearity."""
+        if self.estimator is None or isinstance(
+            self.estimator, (CovarianceRegression, LinearRegression, LogisticRegression)
+        ):
+            self.set_tags(**{"assumption:linearity": True})
 
     def _fit_predict(self, target_col: str, Z_data: pd.DataFrame):
         """
@@ -72,19 +79,41 @@ class _ResidualMixin:
                     f"The provided estimator ({type(model).__name__}) must have a "
                     f"`predict_proba` method for discrete variable '{target_col}'."
                 )
-        else:
-            model_cls = RandomForestClassifier if is_cat else RandomForestRegressor
-            model = model_cls(random_state=0)
 
+            if is_cat:
+                y_encoded, cat_index = pd.factorize(target_data)
+                model.fit(Z_data, y_encoded)
+                pred = model.predict_proba(Z_data)
+            else:
+                model.fit(Z_data, target_data)
+                pred = model.predict(Z_data)
+
+            return pred, cat_index, model
+
+        # Step 1: Default estimator when estimator is None.
         if is_cat:
+            # Step 1a: Categorical target — use LogisticRegression.
+            model = LogisticRegression()
             y_encoded, cat_index = pd.factorize(target_data)
             model.fit(Z_data, y_encoded)
             pred = model.predict_proba(Z_data)
-        else:
-            model.fit(Z_data, target_data)
-            pred = model.predict(Z_data)
+            return pred, cat_index, model
 
-        return pred, cat_index, model
+        # Step 1b: Continuous target — use CovarianceRegression.
+        z_cols = [c for c in Z_data.columns if c != "_intercept_Z"]
+        reg_df = pd.concat([Z_data.loc[:, z_cols], self.data.loc[:, [target_col]]], axis=1)
+        model = CovarianceRegression().fit(X=reg_df)
+
+        if len(z_cols) == 0:
+            pred = np.full(len(target_data), model.location_[-1])
+        else:
+            coef = model.coefficients(X=z_cols, y=[target_col])[0]
+            x_vals = reg_df.loc[:, z_cols].to_numpy(dtype=float)
+            x_mean = model.location_[: len(z_cols)]
+            y_mean = model.location_[-1]
+            pred = y_mean + (x_vals - x_mean) @ coef
+
+        return pred, None, model
 
     def get_residuals(self, X: str, Z: list) -> pd.DataFrame | pd.Series:
         """
