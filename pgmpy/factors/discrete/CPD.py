@@ -165,7 +165,7 @@ class TabularCPD(DiscreteFactor):
         else:
             expected_cpd_shape = (variable_card, np.prod(evidence_card))
         if values_casted.shape != expected_cpd_shape:
-            raise ValueError(f"values must be of shape {expected_cpd_shape}. Got shape: {values.shape}")
+            raise ValueError(f"values must be of shape {expected_cpd_shape}. Got shape: {values_casted.shape}")
 
         if (values_casted < 0).any():
             raise ValueError("CPD values must be non-negative.")
@@ -216,7 +216,7 @@ class TabularCPD(DiscreteFactor):
         return self._make_table_str(tablefmt="grid")
 
     def _str(self, phi_or_p="p", tablefmt="fancy_grid"):
-        return super(self, TabularCPD)._str(phi_or_p, tablefmt)
+        return super()._str(phi_or_p, tablefmt)
 
     def _make_table_str(self, tablefmt="fancy_grid", print_state_names=True, return_list=False) -> str | list[str]:
         headers_list = []

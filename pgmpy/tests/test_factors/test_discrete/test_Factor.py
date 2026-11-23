@@ -1155,6 +1155,10 @@ class TestTabularCPDInit:
                 [[-0.5], [1.5]],
             )
 
+    def test_cpd_init_wrong_shape_list(self):
+        with pytest.raises(ValueError, match="values must be of shape"):
+            TabularCPD("grade", 2, [[0.5], [0.5], [0.1]])
+
     def test_too_wide_cpd_table(self):
         terminal_width, terminal_height = get_terminal_size()
 
@@ -3187,6 +3191,12 @@ class TestTabularCPDMethods:
         lines = table_str.split("\n")
         assert len(lines) == 7
         assert not any(all(c == "." for c in line) for line in lines)
+
+    def test_str_method(self):
+        result = self.cpd._str(phi_or_p="p", tablefmt="grid")
+        assert "grade" in result
+        assert "intel" in result
+        assert "diff" in result
 
     def teardown_method(self):
         del self.cpd
