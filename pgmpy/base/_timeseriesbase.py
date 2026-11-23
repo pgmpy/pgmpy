@@ -329,6 +329,8 @@ class _TimeSeriesCoreGraph(_CoreGraph):
         }
 
         variables = list(self.variables) if variables is None else list(variables)
+        if len(set(variables)) != len(variables):
+            raise ValueError(f"Variable names must be unique. Got: {variables}")
         if missing := (set(self.variables) - set(variables)):
             raise ValueError(f"Variables missing from the requested order: {sorted(missing, key=str)}")
         index = {var: i for i, var in enumerate(variables)}
@@ -343,7 +345,7 @@ class _TimeSeriesCoreGraph(_CoreGraph):
         return out
 
     def get_subgraph(self, nodes: Iterable[Hashable] | None = None, edge_types: Iterable[str] | None = None):
-        nodes = set(super().nodes()) if nodes is None else {self._normalize_node(node) for node in nodes}
+        nodes = set(super().nodes()) if nodes is None else set(self._to_nodes(nodes))
         if missing := (nodes - set(super().nodes())):
             raise ValueError(f"Nodes {sorted(missing)} not in graph.")
 
