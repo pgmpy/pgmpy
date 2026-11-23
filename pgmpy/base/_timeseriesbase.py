@@ -61,17 +61,16 @@ class _TimeSeriesCoreGraph(_CoreGraph):
         Returns the maximum lag (tau_max) for the time series graph.
 
         """
-        return self._tau_max
-
-    def _check_lag(self, lag: int) -> None:
         if self._tau_max_fixed:
-            if lag > self._tau_max:
-                raise ValueError(
-                    f"Lag {lag} exceeds the maximum lag (tau_max) of {self._tau_max}. "
-                    "Please set tau_max to a higher value if you want to allow this lag."
-                )
-        else:
-            self._tau_max = max(self._tau_max, lag)
+            return self._tau_max
+        return max((-time for _, time in super().nodes()), default=0)
+
+    def _validate_lag(self, lag: int) -> None:
+        if self._tau_max_fixed and lag > self._tau_max:
+            raise ValueError(
+                f"Lag {lag} exceeds the maximum lag (tau_max) of {self._tau_max}. "
+                "Please set tau_max to a higher value if you want to allow this lag."
+            )
 
     @staticmethod
     def _normalize_node(node) -> tuple:
@@ -137,7 +136,7 @@ class _TimeSeriesCoreGraph(_CoreGraph):
 
     def add_edge(self, u: Hashable, v: Hashable, edge_type: str) -> None:
         u, v, edge_type = self._normalize_edge(u, v, edge_type)
-        self._check_lag(-u[1])
+        self._validate_lag(-u[1])
         if u[1] != 0:
             markers = self._to_markers((u, v, edge_type))
             if markers[u] == ">" and markers[v] != ">":
