@@ -2,23 +2,55 @@
 
 ```{eval-rst}
 .. meta::
-   :description: Visualize pgmpy graphs with Graphviz, daft, or networkx drawing tools.
+   :description: Draw pgmpy graphs with Graphviz, daft, or networkx.
 ```
 
-pgmpy provides built-in plotting helpers for visualizing graph structures. These work
-on all DAG-based models (since model classes inherit from `DAG`) and support multiple
-backends for different use cases — quick inspection, publication figures, or file output.
+pgmpy has methods that draw graph structures. They work on all models that are subclasses
+of `DAG`. Select a backend for your task: a quick check, a publication figure, or an output
+file.
 
 ## At a Glance
 
-- **[Unified API](#api)**: Plotting methods are available directly on model objects.
-- **[Graphviz Output](#graphviz)**: High-quality file output in PNG, PDF, SVG with automatic layout.
-- **[Publication Figures](#publication-figures)**: Clean, paper-ready diagrams via daft.
-- **[NetworkX Drawing](#networkx-drawing)**: Lightweight interactive plotting using the networkx ecosystem.
+::::{grid} 1 1 2 2
+:gutter: 3
+:class-container: pgmpy-card-grid pgmpy-glance-grid
+
+:::{grid-item-card} Unified API
+:link: "#api"
+:link-type: url
+:class-card: sd-card-hover
+
+Call the plot methods directly on the model object.
+:::
+
+:::{grid-item-card} Graphviz Output
+:link: "#graphviz"
+:link-type: url
+:class-card: sd-card-hover
+
+Write PNG, PDF, or SVG files with automatic layout.
+:::
+
+:::{grid-item-card} Publication Figures
+:link: "#publication-figures"
+:link-type: url
+:class-card: sd-card-hover
+
+Make diagrams for papers with daft.
+:::
+
+:::{grid-item-card} NetworkX Drawing
+:link: "#networkx-drawing"
+:link-type: url
+:class-card: sd-card-hover
+
+Draw interactive plots with networkx and matplotlib.
+:::
+::::
 
 ## API
 
-Plotting helpers are called directly on the graph or model object:
+Call the plot methods on the graph or model object:
 
 ```python
 from pgmpy.example_models import load_model
@@ -34,15 +66,14 @@ daft_graph.render()
 
 ## Graphviz
 
-`to_graphviz()` converts the model to a PyGraphviz object with support for multiple
-layout algorithms (`dot`, `neato`, `circo`, etc.) and output formats. Best for generating
-high-quality file output for documentation and reports. Also works on `PDAG` objects for
-visualizing partially directed graphs from discovery workflows.
+`to_graphviz()` converts the model to a PyGraphviz object. PyGraphviz supports many layout
+algorithms (for example `dot`, `neato`, and `circo`) and output formats. Use it to make files
+for documentation and reports. It also works on `PDAG` objects, for example the partially
+directed graphs from causal discovery.
 
 ## Publication Figures
 
-`to_daft()` produces clean, publication-ready probabilistic graphical model diagrams
-suitable for academic papers:
+`to_daft()` makes probabilistic graphical model diagrams for academic papers:
 
 ```python
 from pgmpy.example_models import load_model
@@ -54,9 +85,8 @@ daft_graph.render()
 
 ## NetworkX Drawing
 
-Since pgmpy models are built on networkx, you can use `networkx.draw()` and related
-functions directly for lightweight interactive plotting or integration with existing
-networkx visualization pipelines:
+pgmpy models are networkx graphs. Thus, you can use `networkx.draw()` and the other networkx
+draw functions directly. Use them for interactive plots or with your existing networkx code:
 
 ```python
 import matplotlib.pyplot as plt
@@ -72,13 +102,13 @@ plt.show()
 ## See Also
 
 :::{seealso}
-- {doc}`Defining a Custom Model <custom_model>` — Build the models you want to visualize.
+- {doc}`Defining a Custom Model <custom_model>` — Make the models that you want to draw.
 - {doc}`Causal Discovery <causal_discovery>` — Learn graphs from data, then plot them.
 :::
 
 ## API Reference
 
-For the full list of graph and model classes with plotting support:
+These pages list all graph and model classes that you can plot:
 
 - {doc}`Graph Classes API <../api/base>`
 - {doc}`Models API <../api/models>`
