@@ -164,6 +164,12 @@ class TestTimeseriesCoreGraph:
             graph.add_edge(("A", 4), ("B", 5), "->")
         assert len(graph.get_edges(lag_relative=True)) == 1
 
+        # a refused edge leaves the graph as it was, an inferred tau_max included
+        graph = _TimeSeriesCoreGraph()
+        with pytest.raises(ValueError, match="points backwards in time"):
+            graph.add_edge(("A", -1), ("B", 0), "<-")
+        check_graph_status(graph, 0, [], 0, [], {})
+
     def test_add_node(self):
         graph = sample_graph1()
         graph.add_node(("C", 7))
