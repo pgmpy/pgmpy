@@ -1,5 +1,5 @@
 from collections.abc import Callable, Hashable, Iterable
-from itertools import chain, combinations
+from itertools import combinations
 from typing import Any
 
 import networkx as nx
@@ -194,7 +194,7 @@ class LatentPC(BaseCausalDiscovery):
                 UserWarning,
             )
 
-        # CI test
+        # CI test for testing non-latent node independencies
         if independencies is not None:
             self.ci_test_ = IndependenceMatch(independencies=independencies)
         else:
@@ -268,7 +268,7 @@ class LatentPC(BaseCausalDiscovery):
                 if u in f_nodes and v in f_nodes:
                     sep_flag, sep_set = True, tuple()
 
-                elif (u, v) not in required_edges:
+                elif (u, v) not in required_edges and (u, v) not in required_edges:
                     sep_flag, sep_set = self.latent_separating_set(
                         datasets,
                         u,
@@ -300,20 +300,28 @@ class LatentPC(BaseCausalDiscovery):
             pbar.update(self.max_cond_vars - lim_neighbors)
             pbar.close()
 
-        # Step 3: Use separating sets to orient colliders
+        # Step 3: Use expert knowledge and separating sets to orient colliders
         self.skeleton_, self.separating_sets_ = graph, separating_sets
         pdag = self._orient_colliders(temporal_ordering=temporal_ordering, latent_nodes=self.latent_nodes_)
 
-        # Step 4: Apply orientation rules and expert knowledge as hard directional constraints.
+        # Step 4: Apply orientation rules  as hard directional constraints.
+        pdag = expert_knowledge.apply_to(pdag)
         curr_edges = list(pdag.edges)
         for u, v, _ in curr_edges:
             if u in f_nodes:
-                pdag.orient_undirected_edge(u, v, inplace=True)
+                if (v, u) in pdag.edges:
+                    pdag.orient_undirected_edge(u, v, inplace=True)
+                else:
+                    continue
 
             elif v in f_nodes:
-                pdag.orient_undirected_edge(v, u, inplace=True)
+                if (u, v) in pdag.edges:
+                    pdag.orient_undirected_edge(v, u, inplace=True)
 
-        pdag = expert_knowledge.apply_to(pdag)
+                else:
+                    pdag.remove_edge(u, v, edge_type="->")
+                    pdag.add_edge(v, u, "->")
+
         pdag = pdag.apply_meeks_rules(apply_r4=False)
         pdag.add_nodes_from(set(X.columns) - set(pdag.nodes()))
 
@@ -345,9 +353,7 @@ class LatentPC(BaseCausalDiscovery):
                 ci_test = get_ci_test(test=self.ci_test, data=datasets[0])
 
             conditioning_set = list(graph_nodes - {u, v})
-            conditioning_set = list(
-                chain.from_iterable(combinations(conditioning_set, r) for r in range(limit_neighbors + 1))
-            )
+            conditioning_set = list(combinations(conditioning_set, limit_neighbors))
             for nodes in conditioning_set:
                 if ci_test(u, v, nodes, significance_level=self.significance_level):
                     return True, set(nodes) | latent_nodes
@@ -355,9 +361,7 @@ class LatentPC(BaseCausalDiscovery):
         else:
             i, j = distribution_map[u]
             conditioning_set = list(graph_nodes - {v})
-            conditioning_set = list(
-                chain.from_iterable(combinations(conditioning_set, r) for r in range(limit_neighbors + 1))
-            )
+            conditioning_set = list(combinations(conditioning_set, limit_neighbors))
 
             if u not in self._ci_test_mechanisms:
                 d_i = datasets[i - 1].copy()
@@ -376,6 +380,8 @@ class LatentPC(BaseCausalDiscovery):
                     self.ci_test,
                     data=data,
                 )
+                # Ensure that CI tests use the correct dataset
+                ci_test.data = data
                 self._ci_test_mechanisms[u] = ci_test
             else:
                 ci_test = self._ci_test_mechanisms[u]
@@ -421,6 +427,9 @@ class LatentPC(BaseCausalDiscovery):
         temporal_ordering : dict, optional
             Temporal ordering of variables for filtering collider candidates.
 
+        latent_nodes : set, optional
+            Latent nodes (if present) that should be excluded from collider orientation.
+
         Returns
         -------
         pgmpy.base.PDAG
@@ -438,14 +447,14 @@ class LatentPC(BaseCausalDiscovery):
 
         colliders = []
         if orient_rule is None:
-            for X, Y in combinations(sorted(skeleton.nodes()), 2):
+            for X, Y in combinations(sorted(skeleton.nodes(), key=lambda x: str(x)), 2):
                 if skeleton.has_edge(X, Y) or X in latent_nodes or Y in latent_nodes:
                     continue
                 sepset = separating_sets.get(frozenset((X, Y)))
                 if sepset is None:
                     # This edge was removed by expert knowledge. Ignore.
                     continue
-                for Z in sorted(set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y))):
+                for Z in sorted(set(skeleton.neighbors(X)) & set(skeleton.neighbors(Y)), key=lambda x: str(x)):
                     if Z not in sepset:
                         colliders.append((X, Y, Z))
         else:
@@ -454,8 +463,8 @@ class LatentPC(BaseCausalDiscovery):
             max_cond_vars = self.max_cond_vars
 
             candidates = []
-            for X, Y in combinations(sorted(skeleton.nodes()), 2):
-                if skeleton.has_edge(X, Y) or X in latent_nodes or Y in latent_nodes:
+            for X, Y in combinations(sorted(skeleton.nodes(), key=lambda x: str(x)), 2):
+                if skeleton.has_edge(X, Y):
                     continue
                 if frozenset((X, Y)) not in separating_sets:
                     # This edge was removed by expert knowledge. Ignore.
@@ -504,10 +513,11 @@ class LatentPC(BaseCausalDiscovery):
         # v-structure that conflicts with these, so temporal order needs no separate check.
         if temporal_ordering:
             for u, v in skeleton.edges():
-                if temporal_ordering[u] < temporal_ordering[v]:
-                    pdag.orient_undirected_edge(u, v, inplace=True)
-                elif temporal_ordering[v] < temporal_ordering[u]:
-                    pdag.orient_undirected_edge(v, u, inplace=True)
+                if not (u in latent_nodes or v in latent_nodes):
+                    if temporal_ordering[u] < temporal_ordering[v]:
+                        pdag.orient_undirected_edge(u, v, inplace=True)
+                    elif temporal_ordering[v] < temporal_ordering[u]:
+                        pdag.orient_undirected_edge(v, u, inplace=True)
 
         for X, Y, Z in colliders:
             # If Z already reaches X or Y through directed edges, orienting X -> Z <- Y would
