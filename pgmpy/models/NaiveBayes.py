@@ -221,7 +221,14 @@ class NaiveBayes(DiscreteBayesianNetwork):
                 parent_node = self.dependent
         if parent_node not in data.columns:
             raise ValueError(f"Dependent variable: {parent_node} is not present in the data")
-        if not warm_start or len(self.edges()) == 0:
+        is_fitted = len(self.nodes()) > 0 and all(self.get_cpds(var) is not None for var in self.nodes())
+        if warm_start and is_fitted and self.dependent is not None and parent_node != self.dependent:
+            raise ValueError(
+                f"parent_node={parent_node!r} conflicts with existing dependent variable {self.dependent!r}."
+            )
+        if not (warm_start and is_fitted):
+            if parent_node not in self.nodes():
+                self.add_node(parent_node)
             for child_node in data.columns:
                 if child_node != parent_node:
                     self.add_edge(parent_node, child_node)

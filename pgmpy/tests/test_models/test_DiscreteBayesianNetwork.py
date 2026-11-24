@@ -1177,6 +1177,35 @@ class TestBayesianNetworkFitPredict:
         assert len(nb2.edges()) == 1
         np_test.assert_allclose(nb2.get_cpds("A").values, [0.75, 0.25])
 
+        # Unfitted NaiveBayes called with warm_start=True adds new features matching cold fit
+        nb_unfitted = NaiveBayes(feature_vars=["B"], dependent_var="A")
+        df_abc = pd.DataFrame({"A": [0, 1], "B": [0, 1], "C": [1, 0]})
+        nb_unfitted.fit(df_abc, warm_start=True)
+        assert len(nb_unfitted.cpds) == 3
+        assert "C" in nb_unfitted.nodes()
+        assert ("A", "C") in nb_unfitted.edges()
+
+        # Fitted NaiveBayes called with conflicting parent_node raises ValueError
+        with pytest.raises(ValueError, match="conflicts with existing dependent variable"):
+            nb2.fit(df_update2, parent_node="B", warm_start=True)
+
+        # Fitted root-only NaiveBayes (single node, 0 edges, 1 CPD) updates without adding extra columns
+        nb_root = NaiveBayes(dependent_var="A")
+        df_root = pd.DataFrame({"A": [0, 1]})
+        nb_root.fit(df_root)
+        assert len(nb_root.nodes()) == 1
+        assert len(nb_root.edges()) == 0
+        assert len(nb_root.cpds) == 1
+        np_test.assert_allclose(nb_root.get_cpds("A").values, [0.5, 0.5])
+
+        df_root_update = pd.DataFrame({"A": [0, 0], "Extra": [1, 2]})
+        nb_root.fit(df_root_update, warm_start=True, n_prev_samples=2)
+        assert len(nb_root.nodes()) == 1
+        assert len(nb_root.edges()) == 0
+        assert len(nb_root.cpds) == 1
+        assert "Extra" not in nb_root.nodes()
+        np_test.assert_allclose(nb_root.get_cpds("A").values, [0.75, 0.25])
+
         # 9. Validation: warm_start with custom estimator raises ValueError
         cold_model = DiscreteBayesianNetwork([("A", "B")])
         with pytest.raises(
