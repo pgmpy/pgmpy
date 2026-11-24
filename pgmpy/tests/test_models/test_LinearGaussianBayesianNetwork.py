@@ -336,6 +336,12 @@ class TestLGBNMethods:
         with pytest.raises(TypeError):
             new_model.fit(df, estimator="unbiased")
 
+    def test_fit_warm_start_not_implemented(self):
+        new_model = LinearGaussianBayesianNetwork([("x1", "x2"), ("x2", "x3")])
+        df = pd.DataFrame(np.zeros((100, 3)), columns=["x1", "x2", "x3"])
+        with pytest.raises(NotImplementedError):
+            new_model.fit(df, warm_start=True)
+
     def test_predict_simple(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
         df = self.model.simulate(n_samples=10, rng=42)
