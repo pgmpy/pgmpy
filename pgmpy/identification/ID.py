@@ -1,3 +1,5 @@
+from itertools import combinations
+
 from pgmpy.base import ADMG, DAG
 from pgmpy.identification import BaseFormulaIdentification
 from pgmpy.identification.probability_expression import (
@@ -233,3 +235,172 @@ class ID(BaseFormulaIdentification):
             self._district_product(estimand, S_prime, ordered),
             ordering,
         )
+
+
+class IDC(BaseFormulaIdentification):
+    """
+    Given a causal graph, identifies the conditional causal effect using the IDC algorithm.
+
+    The class implements the identification procedure of :footcite:t:`shpitser_2006a` (Fig. 3) for P(Y|do(X), Z),
+    where Z is the set of variables with the ``conditioning`` role. Step 1 rewrites as much of Z as possible as
+    interventions using rule 2 of do-calculus, and Step 2 identifies the remaining joint effect with ``ID`` and
+    divides.
+
+    Parameters
+    ----------
+    causal_graph: ADMG | DAG
+        An ADMG or DAG with exposures, outcomes and conditioning roles assigned. The three roles must be pairwise
+        disjoint. Use ``ID`` when there is nothing to condition on.
+
+    Returns
+    -------
+    expression: ProbabilityExpressionTree | False
+        The symbolic formula for P(Y|do(X), Z), or False if the effect is not identifiable. When False, the hedge
+        thrown by the ``ID`` subcall is stored in ``self.hedge_``.
+
+    Examples
+    --------
+    >>> from pgmpy.base import ADMG
+    >>> from pgmpy.identification import IDC
+    >>> admg = ADMG(
+    ...     edge_list=[("X", "Z", "->"), ("Z", "Y", "->"), ("X", "Z", "<>")],
+    ...     exposures={"X"},
+    ...     outcomes={"Y"},
+    ...     roles={"conditioning": {"Z"}},
+    ... )
+    >>> IDC().identify(admg).to_latex()
+    'P(Y \\\\mid X, Z)'
+
+    References
+    ----------
+    - :footcite:t:`shpitser_2006a`
+    """
+
+    supported_graph_types = (ADMG, DAG)
+    required_roles = ("exposures", "outcomes", "conditioning")
+
+    def _identify(self, causal_graph):
+        """Run the IDC algorithm.
+
+        Parameters
+        ----------
+        causal_graph: ADMG | DAG
+            The causal graph with exposures, outcomes and conditioning roles assigned.
+
+        Returns
+        -------
+        expression: ProbabilityExpressionTree | False
+            The identified formula, or False if the effect is not identifiable.
+        """
+        # As for ``ID``, a DAG is first replaced by its latent projection. ``IDC`` checks ``conditioning`` alongside
+        # the two roles ``ID`` validates, since P_x(y|z) is no more defined over an unobserved Z than over an
+        # unobserved X or Y.
+        if isinstance(causal_graph, DAG):
+            for role in self.required_roles:
+                if latent_roles := (set(causal_graph.latents) & set(causal_graph.get_role(role))):
+                    raise ValueError(f"{sorted(latent_roles)} cannot be both latent and in '{role}'.")
+            causal_graph = causal_graph.to_admg()
+
+        roles = {
+            "exposures": frozenset(causal_graph.get_role("exposures")),
+            "outcomes": frozenset(causal_graph.get_role("outcomes")),
+            "conditioning": frozenset(causal_graph.get_role("conditioning")),
+        }
+
+        # Definition 2 of the paper defines P_x(y|z) only when X, Y and Z are disjoint.
+        for (first, first_variables), (second, second_variables) in combinations(roles.items(), 2):
+            if overlap := (first_variables & second_variables):
+                raise ValueError(f"'{first}' and '{second}' must be disjoint, but {sorted(overlap)} is in both.")
+
+        exposures, outcomes, conditioning = roles["exposures"], roles["outcomes"], roles["conditioning"]
+        result = self._identify_conditional(outcomes, exposures, conditioning, causal_graph)
+        if result is False:
+            return False
+        return ProbabilityExpressionTree(root=result)
+
+    def _is_rule_2_applicable(self, node, outcomes, exposures, conditioning, causal_graph):
+        """Check whether rule 2 of do-calculus rewrites the conditioning on ``node`` as an intervention.
+
+        The rule applies to a single Z in the conditioning set when (Y indep. Z | X, Z \\ {Z}) holds in G with the
+        incoming edges of X and the outgoing edges of Z removed, that is, when Z has no back-door path to Y in the
+        context of the effect.
+
+        Parameters
+        ----------
+        node: hashable
+            The conditioning variable Z being tested.
+        outcomes: frozenset
+            ``y``, the outcome variables.
+        exposures: frozenset
+            ``x``, the variables being intervened on.
+        conditioning: frozenset
+            ``z``, the remaining conditioning set, including ``node``.
+        causal_graph: ADMG
+            ``G``, the causal graph.
+
+        Returns
+        -------
+        applicable: bool
+            True if rule 2 applies to ``node``.
+        """
+        # G with the incoming edges of X removed ...
+        graph = causal_graph.do(exposures)
+        # ... and the outgoing edges of `node` removed. Only directed edges leave a node, so a bidirected edge at
+        # `node` survives, which is what keeps a confounded conditioning variable behind the bar.
+        for child in graph.get_children(node):
+            graph.remove_edge(node, child, "->")
+
+        connected = graph.get_mconnected_nodes(node, conditioning_set=exposures | (conditioning - {node}))
+        return outcomes.isdisjoint(connected)
+
+    def _identify_conditional(self, outcomes, exposures, conditioning, causal_graph):
+        """Recursive implementation of the IDC algorithm, following Fig. 3 of the paper.
+
+        Each call tries to shrink ``conditioning``: whenever rule 2 of do-calculus applies to one of its variables,
+        that variable moves into ``exposures`` and the call repeats on the smaller conditioning set. Once
+        nothing can be moved, the joint effect P_x(y, z) over what is left is identified with ``ID`` and the
+        conditional is recovered by dividing by its marginal over y (Step 2). The recursion is therefore on the three
+        variable sets alone; the graph is the same in every call.
+
+        Parameters
+        ----------
+        outcomes: frozenset
+            ``y``, the outcome variables.
+        exposures: frozenset
+            ``x``, the variables being intervened on.
+        conditioning: frozenset
+            ``z``, the context the effect is conditioned on.
+        causal_graph: ADMG
+            ``G``, the causal graph. Unlike ID, IDC never recurses into a subgraph.
+
+        Returns
+        -------
+        expression: _TreeNode | False
+            The expression for ``P_x(y|z)``, or False if the ID subcall found a hedge.
+        """
+        # Step 1: rule 2 reads some Z in z as an intervention. Move it and start over. The topological order only
+        # fixes which variable moves first when several qualify; by Corollary 1 the set left at Step 2 is the same
+        # either way.
+        for node in causal_graph.get_topological_order():
+            if node in conditioning and self._is_rule_2_applicable(
+                node, outcomes, exposures, conditioning, causal_graph
+            ):
+                return self._identify_conditional(outcomes, exposures | {node}, conditioning - {node}, causal_graph)
+
+        # Step 2: nothing else can be moved. Identify the joint effect P_x(y, z) with ID and condition by dividing.
+        # By Theorem 6 the conditional effect is identifiable exactly when that joint one is, so a hedge thrown by ID
+        # is the witness for this effect too. Step 1 has moved part of z into x, so the roles are restated on a copy
+        # of the graph rather than read off the original.
+        joint_graph = causal_graph.with_role("exposures", exposures).with_role("outcomes", outcomes | conditioning)
+
+        id_algorithm = ID()
+        result = id_algorithm.identify(joint_graph)
+        if result is False:
+            self.hedge_ = id_algorithm.hedge_
+            return False
+        expression = result.root
+
+        # P_x(y) already sums to one over y, so the division only bites when a conditioning set survives Step 1.
+        if not conditioning:
+            return expression
+        return DivisionNode(expression, expression.marginalize(outcomes))
