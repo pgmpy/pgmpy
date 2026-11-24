@@ -1089,7 +1089,7 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
         # Test DiscreteBayesianNetwork.fit(..., warm_start=True)
         model.fit(data, warm_start=True, n_prev_samples=int(1e3))
         for var in model.nodes():
-            self.assertTrue(model_copy.get_cpds(var).__eq__(model.get_cpds(var), atol=0.1))
+            assert model_copy.get_cpds(var).__eq__(model.get_cpds(var), atol=0.1)
 
         # Test deprecated fit_update method with warning
         model = model_copy.copy()
@@ -1099,7 +1099,7 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
         ):
             model.fit_update(data, n_prev_samples=int(1e3))
         for var in model.nodes():
-            self.assertTrue(model_copy.get_cpds(var).__eq__(model.get_cpds(var), atol=0.1))
+            assert model_copy.get_cpds(var).__eq__(model.get_cpds(var), atol=0.1)
 
         model = model_copy.copy()
         with pytest.warns(
@@ -1108,7 +1108,7 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
         ):
             model.fit_update(data)
         for var in model.nodes():
-            self.assertTrue(model_copy.get_cpds(var).__eq__(model.get_cpds(var), atol=0.1))
+            assert model_copy.get_cpds(var).__eq__(model.get_cpds(var), atol=0.1)
 
         # 1. Deterministic binary node: prior [0.5, 0.5], two 0 observations, n_prev_samples=2 -> exact [0.75, 0.25]
         # Data with 2 zero observations and an extra column "D" that should be ignored
