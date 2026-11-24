@@ -3,7 +3,8 @@ import pandas as pd
 import pytest
 from skbase.lookup import all_objects
 
-from pgmpy.causal_discovery import ANM, GES, IGCI, PC, ChowLiu, ExpertInLoop
+from pgmpy.base import DAG
+from pgmpy.causal_discovery import ANM, GES, IGCI, PC, BootstrapEstimator, ChowLiu, ExpertInLoop, R2Sort
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
 from pgmpy.causal_discovery.bivariate_scores import BaseBivariateScore
 from pgmpy.ci_tests import GCM, BaseCITest, IndependenceMatch, get_ci_test
@@ -13,28 +14,60 @@ from pgmpy.structure_score import get_scoring_method
 
 
 @pytest.mark.parametrize(
-    "data",
+    ("data", "estimator"),
     [
-        pd.DataFrame(
-            {
-                "const": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
-                "x": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
-                "y": [2.0, 1.0, 3.0, 2.0, 1.0, 3.0],
-            }
+        (
+            pd.DataFrame(
+                {
+                    "const": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+                    "x": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+                    "y": [2.0, 1.0, 3.0, 2.0, 1.0, 3.0],
+                }
+            ),
+            R2Sort(),
         ),
-        pd.DataFrame(
-            {
-                "const": ["a", "a", "a", "a", "a", "a"],
-                "x": ["p", "q", "p", "q", "q", "p"],
-                "y": ["m", "n", "n", "m", "n", "m"],
-            }
+        (
+            pd.DataFrame(
+                {
+                    "const": ["a", "a", "a", "a", "a", "a"],
+                    "x": ["p", "q", "p", "q", "q", "p"],
+                    "y": ["m", "n", "n", "m", "n", "m"],
+                }
+            ),
+            ChowLiu(),
         ),
     ],
     ids=["continuous", "discrete"],
 )
-def test_fit_warns_on_constant_column(data):
-    with pytest.warns(UserWarning, match="constant"):
-        ChowLiu().fit(data)
+def test_fit_rejects_constant_column(data, estimator):
+    with pytest.raises(ValueError, match="Variable 'const' is constant"):
+        estimator.fit(data)
+
+
+def test_fit_rejects_incompatible_data_types():
+    rng = np.random.default_rng(0)
+    integers = pd.DataFrame(rng.integers(0, 2, size=(50, 2)), columns=["A", "B"])
+    discrete = pd.DataFrame({"A": rng.choice(["a", "b"], 50), "B": rng.choice(["x", "y"], 50)})
+    booleans = integers.astype(bool)
+
+    with pytest.raises(ValueError, match=r"R2Sort supports \['continuous'\] data, but the data is discrete"):
+        R2Sort().fit(discrete)
+    for data, dataset_type in [
+        (integers, "continuous"),
+        (booleans.assign(C=rng.normal(size=50)), "continuous"),
+        (integers.assign(C=discrete["A"]), "mixed"),
+    ]:
+        with pytest.raises(ValueError, match=rf"ChowLiu supports \['discrete'\] data, but the data is {dataset_type}"):
+            ChowLiu().fit(data)
+
+    class RecordingChowLiu(ChowLiu):
+        def _fit(self, X):
+            self.fit_dtypes_ = X.dtypes.astype(str).to_dict()
+            return super()._fit(X)
+
+    for data in [discrete, booleans, integers.astype("category")]:
+        assert RecordingChowLiu().fit(data).fit_dtypes_ == {"A": "category", "B": "category"}
+    assert set(R2Sort().fit(booleans).causal_graph_.nodes()) == {"A", "B"}
 
 
 def test_estimators_use_identity_equality_and_hash():
@@ -93,7 +126,7 @@ def test_fit_narrowing_handles_untagged_and_wider_objects():
 
     class UntaggedCITest(BaseCITest):
         def _compute_result(self, X, Y, Z):
-            return _CITestResult(statistic=0.0, p_value=1.0)
+            return _CITestResult(statistic=0.0, p_value=1.0, effect_size=0.0)
 
     pc = PC(ci_test=UntaggedCITest()).fit(data)
     assert pc.get_tag("data_types") == ["discrete", "continuous", "mixed"]
@@ -112,9 +145,18 @@ def test_fit_narrowing_handles_untagged_and_wider_objects():
     class UntaggedAlgorithm(BaseCausalDiscovery):
         def _fit(self, X):
             self.ci_test_ = get_ci_test(test="pearsonr", data=X)
+            self.causal_graph_ = DAG()
+            self.causal_graph_.add_nodes_from(X.columns)
             return self
 
     assert UntaggedAlgorithm().fit(data).get_tag("data_types") == ["continuous"]
+
+    # Tags that the wrapped estimator leaves unset go back to the class-level value on refit.
+    bootstrap = BootstrapEstimator(PC(show_progress=False), n_bootstraps=2, n_jobs=1, show_progress=False).fit(data)
+    assert bootstrap.get_tag("identifiable_graph") == "cpdag"
+    bootstrap.set_params(estimator=UntaggedAlgorithm()).fit(data)
+    assert bootstrap.get_tag("data_types") == ["continuous"]
+    assert bootstrap.get_tag("identifiable_graph") == BootstrapEstimator.get_class_tag("identifiable_graph")
 
 
 def test_fit_narrows_tags_to_components_used():
@@ -130,6 +172,26 @@ def test_fit_narrows_tags_to_components_used():
     expert_in_loop = ExpertInLoop(pairwise_estimator=IGCI(), show_progress=False).fit(data)
     assert expert_in_loop.get_tag("assumption:low_noise") is True
     assert expert_in_loop.get_tag("data_types") == ["continuous"]
+    assert expert_in_loop.get_tag("capability:multivariate") is True
+
+    # A wrapped estimator determines every tag except the name.
+    pc = PC(ci_test="pearsonr", show_progress=False)
+    bootstrap = BootstrapEstimator(pc, n_bootstraps=2, n_jobs=1, show_progress=False).fit(data)
+    assert bootstrap.get_tags() == {**pc.fit(data).get_tags(), "name": "bootstrap_estimator"}
+    assert bootstrap.get_tag("identifiable_graph") == "cpdag"
+
+    # Components narrow the tags taken over from a wrapped estimator.
+    class BootstrapWithCITest(BootstrapEstimator):
+        def _fit(self, X):
+            self.ci_test_ = get_ci_test(test="pearsonr", data=X)
+            return super()._fit(X)
+
+    pc = PC(ci_test=lambda X, Y, Z, **kwargs: True, show_progress=False)
+    wrapper = BootstrapWithCITest(pc, n_bootstraps=2, n_jobs=1, show_progress=False).fit(data)
+    assert wrapper.get_tag("identifiable_graph") == "cpdag"
+    assert wrapper.get_tag("assumption:faithfulness") is True
+    assert wrapper.get_tag("assumption:linearity") is True
+    assert wrapper.get_tag("data_types") == ["continuous"]
 
 
 def test_filter_algorithms_by_tags():
@@ -154,4 +216,4 @@ def test_filter_algorithms_by_tags():
             filter_tags={"identifiable_graph": "dag", "capability:multivariate": True},
         )
     }
-    assert dag_learners == {"ExpertInLoop", "VarSort", "R2Sort"}
+    assert dag_learners == {"BootstrapEstimator", "ExpertInLoop", "VarSort", "R2Sort"}

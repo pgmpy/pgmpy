@@ -1,8 +1,11 @@
 import itertools
 
+import numpy as np
+
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.models import DiscreteBayesianNetwork, DynamicBayesianNetwork
 from pgmpy.utils import compat_fns
+from pgmpy.utils._random import _rename_to_rng
 
 
 class ApproxInference:
@@ -85,6 +88,7 @@ class ApproxInference:
                 for var in variables
             }
 
+    @_rename_to_rng("seed")
     def query(
         self,
         variables,
@@ -95,7 +99,7 @@ class ApproxInference:
         joint=True,
         state_names=None,
         show_progress=True,
-        seed=None,
+        rng: int | np.random.Generator | None = None,
     ):
         """
         Method for doing approximate inference based on sampling in Bayesian
@@ -129,8 +133,13 @@ class ApproxInference:
         show_progress: boolean (default: True)
             If True, shows a progress bar when generating samples.
 
-        seed: int (default: None)
-            Sets the seed for the random generators.
+        rng: int | numpy.random.Generator | None (default: None)
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
+
+            .. versionchanged:: 1.2.0
+                Replaces ``seed``, which is deprecated and will be removed in v2.0. None no longer follows
+                ``np.random.seed``.
 
         Returns
         -------
@@ -160,7 +169,7 @@ class ApproxInference:
                     n_samples=n_samples,
                     evidence=evidence,
                     virtual_evidence=virtual_evidence,
-                    seed=seed,
+                    rng=rng,
                     show_progress=show_progress,
                 )
             elif isinstance(self.model, DynamicBayesianNetwork):
@@ -185,7 +194,7 @@ class ApproxInference:
                     evidence=evidence,
                     virtual_evidence=virtual_evidence,
                     show_progress=show_progress,
-                    seed=seed,
+                    rng=rng,
                 )
 
         # Step 2: If state_names is None, infer it from samples.
@@ -198,6 +207,7 @@ class ApproxInference:
         # Step 3: Compute the distributions and return it.
         return self.get_distribution(samples, variables=variables, state_names=state_names, joint=joint)
 
+    @_rename_to_rng("seed")
     def map_query(
         self,
         variables,
@@ -207,7 +217,7 @@ class ApproxInference:
         virtual_evidence=None,
         state_names=None,
         show_progress=True,
-        seed=None,
+        rng: int | np.random.Generator | None = None,
     ):
         """
         Finds the most probable state in the joint distribution of variables. Calculates the
@@ -241,8 +251,13 @@ class ApproxInference:
         show_progress: boolean (default: True)
             If True, shows a progress bar when generating samples.
 
-        seed: int (default: None)
-            Sets the seed for the random generators.
+        rng: int | numpy.random.Generator | None (default: None)
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
+
+            .. versionchanged:: 1.2.0
+                Replaces ``seed``, which is deprecated and will be removed in v2.0. None no longer follows
+                ``np.random.seed``.
 
         Returns
         -------
@@ -283,7 +298,7 @@ class ApproxInference:
             joint=True,
             state_names=state_names,
             show_progress=show_progress,
-            seed=seed,
+            rng=rng,
         )
 
         argmax = compat_fns.argmax(final_distribution.values)

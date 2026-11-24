@@ -10,10 +10,13 @@ Graphical Identification and Inference
 .. autosummary::
    :toctree: generated/causal_inference
    :template: autosummary/class.rst
+   :nosignatures:
 
    ~pgmpy.inference.CausalInference.CausalInference
    ~pgmpy.identification.adjustment.Adjustment
    ~pgmpy.identification.frontdoor.Frontdoor
+   ~pgmpy.identification.ID.ID
+   ~pgmpy.identification.probability_expression.ProbabilityExpressionTree
 
 Estimators
 ----------
@@ -21,6 +24,7 @@ Estimators
 .. autosummary::
    :toctree: generated/causal_inference
    :template: autosummary/class.rst
+   :nosignatures:
 
    ~pgmpy.prediction.NaiveAdjustmentRegressor.NaiveAdjustmentRegressor
    ~pgmpy.prediction.NaiveIVRegressor.NaiveIVRegressor

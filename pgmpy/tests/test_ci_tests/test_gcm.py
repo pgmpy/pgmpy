@@ -26,7 +26,7 @@ def df_indep():
     cpd_x = LinearGaussianCPD("X", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
     cpd_y_indep = LinearGaussianCPD("Y", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
     model_indep.add_cpds(cpd_z1, cpd_z2, cpd_z3, cpd_x, cpd_y_indep)
-    df_indep = model_indep.simulate(n_samples=10000, seed=42)
+    df_indep = model_indep.simulate(n_samples=10000, rng=42)
 
     return df_indep
 
@@ -50,7 +50,7 @@ def df_dep():
     cpd_x = LinearGaussianCPD("X", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
     cpd_y_dep = LinearGaussianCPD("Y", [0, 0.5, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3", "X"])
     model_dep.add_cpds(cpd_z1, cpd_z2, cpd_z3, cpd_x, cpd_y_dep)
-    df_dep = model_dep.simulate(n_samples=10000, seed=42)
+    df_dep = model_dep.simulate(n_samples=10000, rng=42)
 
     return df_dep
 

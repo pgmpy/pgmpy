@@ -1,5 +1,5 @@
 .. meta::
-   :description: Start using pgmpy with installation instructions, a quickstart workflow with minimal examples for each task, and pgmpy's license.
+   :description: Install pgmpy, try a short example for each task, and read the pgmpy license.
 
 Getting Started
 ===============
@@ -13,21 +13,21 @@ Getting Started
       :link-type: doc
       :class-card: sd-card-hover
 
-      Install pgmpy via pip, conda, or from source.
+      Install pgmpy with pip, with conda, or from the source code.
 
    .. grid-item-card:: Quickstart
       :link: quickstart
       :link-type: doc
       :class-card: sd-card-hover
 
-      Task-oriented minimal code examples to get started.
+      A short code example for each task.
 
    .. grid-item-card:: License
       :link: license
       :link-type: doc
       :class-card: sd-card-hover
 
-      pgmpy is released under the MIT License.
+      pgmpy uses the MIT License.
 
 .. toctree::
    :hidden:

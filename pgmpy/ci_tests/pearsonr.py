@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
-from scipy import stats
+from scipy import special
+
+from pgmpy.utils import CovarianceRegression
 
 from ._base import BaseCITest, _CITestResult
 
@@ -27,7 +29,8 @@ class Pearsonr(BaseCITest):
     Parameters
     ----------
     data : pandas.DataFrame
-        The dataset in which to test the independence condition.
+        The dataset in which to test the independence condition. All columns must be numeric and without missing
+        values.
 
     Examples
     --------
@@ -67,6 +70,7 @@ class Pearsonr(BaseCITest):
         "data_types": ["continuous"],
         "default_for": "continuous",
         "requires_data": True,
+        "capability:conditioning": True,
         "assumption:linearity": True,
         "assumption:additive_noise": True,
         "assumption:gaussian_noise": True,
@@ -74,6 +78,7 @@ class Pearsonr(BaseCITest):
 
     def __init__(self, data: pd.DataFrame, use_cache: bool = True):
         self.data = data
+        self._regression = CovarianceRegression().fit(X=data)
         super().__init__(use_cache=use_cache)
 
     def _compute_result(
@@ -85,29 +90,17 @@ class Pearsonr(BaseCITest):
         """
         Compute Pearson correlation coefficient and p-value.
 
-        Returns Pearson's r, p-value, and optional degrees of freedom metadata.
+        Returns Pearson's r, p-value, and optional degrees of freedom metadata. Without residual degrees of freedom
+        (``n_samples <= len(Z) + 2``) the data carry no evidence against independence and the p-value is 1, as in
+        :func:`scipy.stats.pearsonr` for two samples.
         """
-        data = self.data
-        n_samples = data.shape[0]
+        coef = self._regression.partial_correlation(X=Z, y=[X, Y])[0, 1]
+        dof = self.data.shape[0] - len(Z) - 2
+        attributes = {"dof_": dof} if len(Z) > 0 else {}
+        if dof <= 0:
+            return _CITestResult(statistic=coef, p_value=1.0, effect_size=abs(coef), attributes=attributes)
 
-        # Step 1: If Z is empty compute a non-conditional test.
-        attributes = {}
-        if len(Z) == 0:
-            coef, p_value = stats.pearsonr(data.loc[:, X], data.loc[:, Y])
-
-        # Step 2: If Z is non-empty, use linear regression to compute residuals and test independence on it.
-        else:
-            design_matrix = np.column_stack([np.ones(n_samples), data.loc[:, Z].to_numpy()])
-            X_coef = np.linalg.lstsq(design_matrix, data.loc[:, X], rcond=None)[0]
-            Y_coef = np.linalg.lstsq(design_matrix, data.loc[:, Y], rcond=None)[0]
-
-            residual_X = data.loc[:, X] - design_matrix @ X_coef
-            residual_Y = data.loc[:, Y] - design_matrix @ Y_coef
-
-            coef = np.corrcoef(residual_X, residual_Y)[0, 1]
-            dof = n_samples - len(Z) - 2
-            t_statistic = coef * np.sqrt(dof / (1 - coef**2))
-            p_value = 2 * stats.t.sf(np.abs(t_statistic), df=dof)
-            attributes["dof_"] = dof
+        t_statistic = coef * np.sqrt(dof / (1 - coef**2))
+        p_value = 2 * special.stdtr(dof, -abs(t_statistic))
 
         return _CITestResult(statistic=coef, p_value=p_value, effect_size=abs(coef), attributes=attributes)

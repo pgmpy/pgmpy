@@ -1,4 +1,7 @@
 from collections import Counter
+from collections.abc import Hashable, Iterable
+
+from pgmpy.utils.sets import _variable_or_iterable_to_set
 
 
 class _TreeNode:
@@ -9,7 +12,7 @@ class _TreeNode:
     possible: every node exposes ``children`` (list of _TreeNode), ``to_latex()`` (str), and
     ``__repr__()`` (str).
 
-    Concrete subclasses: ProbabilityNode, MarginalNode, ProductNode, DivisionNode.
+    Concrete subclasses: ProbabilityNode, MarginalNode, ProductNode, DivisionNode, OneNode.
 
     Do not instantiate directly.
     """
@@ -19,17 +22,17 @@ class _TreeNode:
         """Sort and join variable names for deterministic LaTeX output."""
         return ", ".join(sorted((str(v) for v in var_set), key=str))
 
-    def marginalize(self, sumset):
-        r"""Return :math:`\sum_{sumset} self`.
+    def marginalize(self, sumset: str | Iterable[Hashable]) -> "_TreeNode":
+        r"""Return :math:`\sum_{sumset} self` as a new expression, simplified where exact.
 
-        Returns a new expression; nodes are immutable. Summing over nothing is the identity, and a sum that is exactly
-        a smaller node is returned as one rather than wrapped: a plain joint ``P(A)`` shrinks to ``P(A \ sumset)``, and
-        nested sums collapse into one.
+        Summing over nothing returns ``self``, a probability term summed over exactly its variables gives
+        :class:`OneNode`, a plain joint ``P(A)`` summed over part of ``A`` shrinks to ``P(A \ sumset)``, and nested sums
+        are merged.
 
         Parameters
         ----------
-        sumset: iterable of hashable
-            The variables being summed out. Assumed to be a subset of the variables this expression ranges over.
+        sumset: str or iterable of hashable
+            The variables to sum out. A string is one variable.
 
         Returns
         -------
@@ -39,10 +42,12 @@ class _TreeNode:
         Examples
         --------
         >>> from pgmpy.identification.probability_expression import ProbabilityNode
-        >>> ProbabilityNode(frozenset({"X"}), cond=frozenset({"Z"})).marginalize({"X"}).to_latex()
-        '\\sum_{X} P(X \\mid Z)'
+        >>> ProbabilityNode(frozenset({"X", "Y"}), cond=frozenset({"Z"})).marginalize("X").to_latex()
+        '\\sum_{X} P(X, Y \\mid Z)'
+        >>> ProbabilityNode(frozenset({"X"}), cond=frozenset({"Z"})).marginalize("X").to_latex()
+        '1'
         """
-        sumset = frozenset(sumset)
+        sumset = _variable_or_iterable_to_set(sumset)
         if not sumset:
             return self
         return self._marginalize(sumset)
@@ -85,16 +90,16 @@ class ProbabilityNode(_TreeNode):
 
     Parameters
     ----------
-    variables : frozenset of hashable
-        The random variables in the probability term.
+    variables : str or iterable of hashable
+        The random variables in the probability term. A string is one variable.
         Example: ``frozenset({"Y"})`` renders as ``P(Y | ...)``.
 
-    do : frozenset of hashable, optional
+    do : str or iterable of hashable, optional
         Variables being intervened on via the do-operator.
         Example: ``frozenset({"X"})`` renders as ``do(X)`` inside the conditioning bar.
         Default: ``frozenset()``.
 
-    cond : frozenset of hashable, optional
+    cond : str or iterable of hashable, optional
         Variables being passively conditioned on.
         Example: ``frozenset({"Z"})`` renders after the conditioning bar.
         Default: ``frozenset()``.
@@ -120,21 +125,24 @@ class ProbabilityNode(_TreeNode):
     'P(Y \\mid do(X))'
     """
 
-    def __init__(self, variables, do=frozenset(), cond=frozenset()):
-        self.variables = frozenset(variables)
+    def __init__(
+        self,
+        variables: str | Iterable[Hashable],
+        do: str | Iterable[Hashable] = frozenset(),
+        cond: str | Iterable[Hashable] = frozenset(),
+    ) -> None:
+        self.variables = _variable_or_iterable_to_set(variables)
         if not self.variables:
             raise ValueError("A probability term must have at least one variable.")
-        self.do = frozenset(do)
-        self.cond = frozenset(cond)
+        self.do = _variable_or_iterable_to_set(do)
+        self.cond = _variable_or_iterable_to_set(cond)
         self.children = []
 
     def _marginalize(self, sumset):
-        r"""Shrink a plain joint :math:`P(A)` to :math:`P(A \setminus sumset)`.
-
-        Only a plain joint simplifies this way; summing out of a conditional or interventional term cannot be written
-        as a single atomic term.
-        """
-        if self.do or self.cond:
+        """Sum over exactly ``variables`` gives 1; a plain joint over part of them shrinks; otherwise wrap in a sum."""
+        if sumset == self.variables:
+            return OneNode()
+        if self.do or self.cond or not sumset < self.variables:
             return super()._marginalize(sumset)
         return ProbabilityNode(self.variables - sumset)
 
@@ -205,8 +213,8 @@ class MarginalNode(_TreeNode):
     child : _TreeNode
         The expression being summed over. Stored as ``children[0]``.
 
-    sumset : frozenset of hashable
-        The variables being summed out.
+    sumset : str or iterable of hashable
+        The variables being summed out. A string is one variable.
 
     Raises
     ------
@@ -229,15 +237,15 @@ class MarginalNode(_TreeNode):
     '\\sum_{X} P(Y \\mid X)'
     """
 
-    def __init__(self, child, sumset):
-        self.sumset = frozenset(sumset)
+    def __init__(self, child: _TreeNode, sumset: str | Iterable[Hashable]) -> None:
+        self.sumset = _variable_or_iterable_to_set(sumset)
         if not self.sumset:
             raise ValueError("MarginalNode requires at least one variable to sum over.")
         self.children = [child]
 
     def _marginalize(self, sumset):
-        """Collapse nested sums into a single sum over the union of the two sumsets."""
-        return MarginalNode(self.children[0], sumset=self.sumset | sumset)
+        """Merge nested sums into a single sum over the child."""
+        return self.children[0].marginalize(self.sumset | sumset)
 
     def to_latex(self):
         r"""
@@ -409,6 +417,43 @@ class DivisionNode(_TreeNode):
         return hash(tuple(self.children))
 
 
+class OneNode(_TreeNode):
+    r"""
+    Leaf node for the constant 1, e.g. :math:`\sum_x P(x \mid z)`.
+
+    Attributes
+    ----------
+    children : list
+        Always ``[]``.
+
+    Examples
+    --------
+    >>> from pgmpy.identification.probability_expression import OneNode, ProbabilityNode
+    >>> ProbabilityNode(frozenset({"X"}), cond=frozenset({"Z"})).marginalize({"X"}) == OneNode()
+    True
+    >>> OneNode().to_latex()
+    '1'
+    """
+
+    def __init__(self) -> None:
+        self.children = []
+
+    def to_latex(self) -> str:
+        """Return ``"1"``."""
+        return "1"
+
+    def __repr__(self) -> str:
+        return "OneNode()"
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, OneNode):
+            return NotImplemented
+        return True
+
+    def __hash__(self) -> int:
+        return hash(OneNode)
+
+
 class ProbabilityExpressionTree:
     r"""
     Container for expression trees produced by identification algorithms.
@@ -418,7 +463,7 @@ class ProbabilityExpressionTree:
     routines and is not itself a tree node.
 
     The expression tree is composed of ``ProbabilityNode``, ``MarginalNode``, ``ProductNode``,
-    and ``DivisionNode`` nodes (all subclasses of ``_TreeNode``). Inspect or traverse the tree
+    ``DivisionNode``, and ``OneNode`` nodes (all subclasses of ``_TreeNode``). Inspect or traverse the tree
     via the ``root`` attribute and the ``children`` lists on nodes.
 
     Parameters
@@ -465,7 +510,7 @@ class ProbabilityExpressionTree:
         if not isinstance(root, _TreeNode):
             raise TypeError(
                 f"root must be a _TreeNode instance (one of ProbabilityNode, "
-                f"MarginalNode, ProductNode, DivisionNode); got {type(root).__name__}."
+                f"MarginalNode, ProductNode, DivisionNode, OneNode); got {type(root).__name__}."
             )
         self.root = root
 

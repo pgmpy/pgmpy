@@ -216,14 +216,14 @@ class TestGraphAlgorithmMixin:
         assert MaximalAncestralGraph.has_inducing_path("C", "D") is True
 
         # a latent chain X -> L -> Y is unblockable (L cannot be conditioned on) ...
-        g = MAG(edge_list=[("X", "L", "->"), ("L", "Y", "->")], latents={"L"})
+        g = _CoreGraph(edge_list=[("X", "L", "->"), ("L", "Y", "->")], latents={"L"})
         assert g.has_inducing_path("X", "Y") is True
         # ... but allowing L into the conditioning pool makes the path blockable
         assert g.has_inducing_path("X", "Y", w={"L"}) is False
 
         # a latent collider X -> L <- Y is NOT inducing: conditioning on nothing blocks it, since
         # L is neither conditionable-irrelevant (it is a collider) nor an ancestor of an endpoint
-        g = MAG(edge_list=[("X", "L", "->"), ("Y", "L", "->")], latents={"L"})
+        g = _CoreGraph(edge_list=[("X", "L", "->"), ("Y", "L", "->")], latents={"L"})
         assert g.has_inducing_path("X", "Y") is False
 
         # an observed chain is blocked by conditioning on the middle node
