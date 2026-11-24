@@ -253,6 +253,8 @@ def discretize(data, cardinality, labels=dict(), method="rounding"):
     elif method == "quantile":
         for column in data.columns:
             df_copy[column] = pd.qcut(df_copy[column], q=cardinality[column], labels=labels.get(column))
+    else:
+        raise ValueError(f"Unknown method: {method}. Supported methods are 'rounding' and 'quantile'.")
 
     return df_copy
 
@@ -420,7 +422,7 @@ def to_timeseries_format(df: pd.DataFrame, return_format: str = "pd-multiindex")
         panel = [pd.DataFrame(panel.loc[i]) for i in range(df.shape[0])]
 
     elif return_format == "sorted":
-        panel.sort_index(inplace=True, axis=1)
+        panel = panel.sort_index(axis=1)
 
     else:
         raise ValueError(

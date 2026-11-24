@@ -1,8 +1,8 @@
 Parameter Estimation
 ====================
 
-Estimator classes for fitting model parameters and related marginal
-representations from data.
+Estimator classes that fit model parameters and related marginal representations to
+data.
 
 Estimator Base Classes
 ----------------------
@@ -10,6 +10,7 @@ Estimator Base Classes
 .. autosummary::
    :toctree: generated/parameter_estimation
    :template: autosummary/class.rst
+   :nosignatures:
 
    ~pgmpy.parameter_estimator.BaseParameterEstimator
    ~pgmpy.parameter_estimator.DiscreteParameterEstimator
@@ -23,6 +24,7 @@ Estimators for :class:`~pgmpy.models.DiscreteBayesianNetwork` models.
 .. autosummary::
    :toctree: generated/parameter_estimation
    :template: autosummary/class.rst
+   :nosignatures:
 
    ~pgmpy.parameter_estimator.DiscreteMLE
    ~pgmpy.parameter_estimator.DiscreteBayesianEstimator
@@ -36,6 +38,7 @@ Estimators for :class:`~pgmpy.models.LinearGaussianBayesianNetwork` models.
 .. autosummary::
    :toctree: generated/parameter_estimation
    :template: autosummary/class.rst
+   :nosignatures:
 
    ~pgmpy.parameter_estimator.LinearGaussianMLE
 
@@ -45,6 +48,7 @@ Structural Equation Model Estimators
 .. autosummary::
    :toctree: generated/parameter_estimation
    :template: autosummary/class.rst
+   :nosignatures:
 
    ~pgmpy.estimators.SEMEstimator
    ~pgmpy.estimators.IVEstimator
@@ -55,5 +59,6 @@ Marginal and Graphical Model Fitting
 .. autosummary::
    :toctree: generated/parameter_estimation
    :template: autosummary/class.rst
+   :nosignatures:
 
    ~pgmpy.estimators.MirrorDescentEstimator

@@ -7,7 +7,7 @@ import pandas as pd
 from skbase.base import BaseObject
 from skbase.lookup import all_objects
 
-from pgmpy.utils import build_state_names, get_dataset_type, preprocess_data
+from pgmpy.utils import build_state_names, get_dataset_type, is_discrete_type, preprocess_data
 
 
 class BaseStructureScore(BaseObject):
@@ -50,7 +50,10 @@ class BaseStructureScore(BaseObject):
 
         if self.data is not None:
             self.variables = list(self.data.columns.values)
-            self.state_names = build_state_names(self.data, state_names=state_names)
+            columns = self.variables
+            if self.get_class_tag("data_types") != ["discrete"]:
+                columns = [col for col in self.variables if is_discrete_type(code=self.dtypes[col])]
+            self.state_names = build_state_names(data=self.data.loc[:, columns], state_names=state_names)
 
         self._cache = OrderedDict()
 
