@@ -307,15 +307,15 @@ class TestMarkovChain:
         df3 = model.sample(size=10, rng=99)
 
         # Same rng -> identical results
-        self.assertTrue(df1.equals(df2))
+        assert df1.equals(df2)
         # Different rng -> different results
-        self.assertFalse(df1.equals(df3))
+        assert not df1.equals(df3)
 
         # Test deprecated `seed` argument compatibility
         model.set_start_state([State("a", 0), State("b", 0)])
         with pytest.deprecated_call():
             df_seed = model.sample(size=10, seed=42)
-        self.assertTrue(df1.equals(df_seed))
+        assert df1.equals(df_seed)
 
     def test_generate_sample_rng_reproducibility(self):
         """Test reproducibility of MarkovChain.generate_sample across same and different rng seeds."""
@@ -333,15 +333,15 @@ class TestMarkovChain:
         samples3 = [s[0].state for s in gen3]
 
         # Same rng -> identical results
-        self.assertEqual(samples1, samples2)
+        assert samples1 == samples2
         # Different rng -> different results
-        self.assertNotEqual(samples1, samples3)
+        assert samples1 != samples3
 
         # Test deprecated `seed` argument compatibility
         model.set_start_state([State("a", 0)])
         with pytest.deprecated_call():
             gen_seed = list(model.generate_sample(size=50, seed=42))
-        self.assertEqual(samples1, [s[0].state for s in gen_seed])
+        assert samples1 == [s[0].state for s in gen_seed]
 
     def test_random_state(self):
         model = MC(["a", "b"], [2, 3])
@@ -359,8 +359,8 @@ class TestMarkovChain:
         state1 = model._random_state(np.random.default_rng(42))
         state2 = model._random_state(np.random.default_rng(42))
         state3 = model._random_state(np.random.default_rng(99))
-        self.assertEqual(state1, state2)
-        self.assertNotEqual(state1, state3)
+        assert state1 == state2
+        assert state1 != state3
 
     def test_sample_rng_no_start_state(self):
         """Test sampling from MarkovChain with rng when no start state is predefined."""
@@ -372,14 +372,14 @@ class TestMarkovChain:
         df1 = model.sample(size=10, rng=42)
         model.state = None  # Reset state
         df2 = model.sample(size=10, rng=42)
-        self.assertTrue(df1.equals(df2))
+        assert df1.equals(df2)
 
         # Test generate_sample without setting start_state beforehand
         model.state = None
         gen1 = list(model.generate_sample(size=5, rng=42))
         model.state = None
         gen2 = list(model.generate_sample(size=5, rng=42))
-        self.assertEqual(gen1, gen2)
+        assert gen1 == gen2
 
     def test_add_transition_model_invalid_variable(self):
         model = MC()

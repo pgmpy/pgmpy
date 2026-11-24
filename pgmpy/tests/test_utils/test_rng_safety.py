@@ -1,7 +1,5 @@
 """Tests ensuring sampling operations maintain global RNG isolation."""
 
-import unittest
-
 import numpy as np
 import pytest
 
@@ -10,7 +8,7 @@ from pgmpy.models import MarkovChain
 from pgmpy.utils import sample_discrete
 
 
-class TestRNGSafety(unittest.TestCase):
+class TestRNGSafety:
     """Test suite ensuring RNG operations do not pollute global numpy RNG state."""
 
     def test_sample_discrete_safety(self):
@@ -31,7 +29,7 @@ class TestRNGSafety(unittest.TestCase):
         _ = np.random.random()  # noqa: S311
         expected_v2 = np.random.random()  # noqa: S311
 
-        self.assertEqual(v2, expected_v2, "Global RNG state was polluted by sample_discrete!")
+        assert v2 == expected_v2, "Global RNG state was polluted by sample_discrete!"
 
     def test_sample_discrete_seed_deprecated_safety(self):
         """Ensure sample_discrete with deprecated seed does not mutate global numpy RNG state."""
@@ -49,7 +47,7 @@ class TestRNGSafety(unittest.TestCase):
         _ = np.random.random()  # noqa: S311
         expected_v2 = np.random.random()  # noqa: S311
 
-        self.assertEqual(v2, expected_v2, "Global RNG state was polluted by sample_discrete with seed!")
+        assert v2 == expected_v2, "Global RNG state was polluted by sample_discrete with seed!"
 
     def test_markov_chain_safety(self):
         """Ensure MarkovChain sampling methods do not mutate global numpy RNG state."""
@@ -81,4 +79,4 @@ class TestRNGSafety(unittest.TestCase):
         _ = np.random.random()  # noqa: S311
         expected_v2 = np.random.random()  # noqa: S311
 
-        self.assertEqual(v2, expected_v2, "Global RNG state was polluted by MarkovChain.sample!")
+        assert v2 == expected_v2, "Global RNG state was polluted by MarkovChain.sample!"
