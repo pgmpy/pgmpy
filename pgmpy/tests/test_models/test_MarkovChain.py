@@ -220,6 +220,21 @@ class TestMarkovChain:
         assert list(sample.loc[0]) in [[0, 0], [0, 1], [1, 0], [1, 1]]
         assert list(sample.loc[1]) in [[0, 0], [0, 1], [1, 0], [1, 1]]
 
+        # Test reproducibility with rng and deprecated seed argument
+        model.set_start_state([State("a", 0), State("b", 0)])
+        s1 = model.sample(size=10, rng=42)
+        model.set_start_state([State("a", 0), State("b", 0)])
+        s2 = model.sample(size=10, rng=42)
+        model.set_start_state([State("a", 0), State("b", 0)])
+        s3 = model.sample(size=10, rng=99)
+        assert s1.equals(s2)
+        assert not s1.equals(s3)
+
+        model.set_start_state([State("a", 0), State("b", 0)])
+        with pytest.deprecated_call():
+            s_seed = model.sample(size=10, seed=42)
+        assert s1.equals(s_seed)
+
     @patch("pgmpy.models.MarkovChain._random_state", autospec=True)
     def test_sample_less_arg(self, random_state):
         model = MC(["a", "b"], [2, 2])
