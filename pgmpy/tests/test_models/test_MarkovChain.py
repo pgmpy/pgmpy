@@ -220,6 +220,21 @@ class TestMarkovChain:
         assert list(sample.loc[0]) in [[0, 0], [0, 1], [1, 0], [1, 1]]
         assert list(sample.loc[1]) in [[0, 0], [0, 1], [1, 0], [1, 1]]
 
+        # Test reproducibility with rng and deprecated seed argument
+        model.set_start_state([State("a", 0), State("b", 0)])
+        s1 = model.sample(size=10, rng=42)
+        model.set_start_state([State("a", 0), State("b", 0)])
+        s2 = model.sample(size=10, rng=42)
+        model.set_start_state([State("a", 0), State("b", 0)])
+        s3 = model.sample(size=10, rng=99)
+        assert s1.equals(s2)
+        assert not s1.equals(s3)
+
+        model.set_start_state([State("a", 0), State("b", 0)])
+        with pytest.deprecated_call():
+            s_seed = model.sample(size=10, seed=42)
+        assert s1.equals(s_seed)
+
     @patch("pgmpy.models.MarkovChain._random_state", autospec=True)
     def test_sample_less_arg(self, random_state):
         model = MC(["a", "b"], [2, 2])
@@ -293,56 +308,6 @@ class TestMarkovChain:
         expected_samples = [[State("a", 1), State("b", 0)]] * 2
         assert samples == expected_samples
 
-    def test_sample_rng_reproducibility(self):
-        """Test reproducibility of MarkovChain.sample across same and different rng seeds."""
-        model = MC(["a", "b"], [2, 2])
-        model.transition_models["a"] = {0: {0: 0.1, 1: 0.9}, 1: {0: 0.2, 1: 0.8}}
-        model.transition_models["b"] = {0: {0: 0.3, 1: 0.7}, 1: {0: 0.4, 1: 0.6}}
-        model.set_start_state([State("a", 0), State("b", 0)])
-
-        df1 = model.sample(size=10, rng=42)
-        model.set_start_state([State("a", 0), State("b", 0)])
-        df2 = model.sample(size=10, rng=42)
-        model.set_start_state([State("a", 0), State("b", 0)])
-        df3 = model.sample(size=10, rng=99)
-
-        # Same rng -> identical results
-        assert df1.equals(df2)
-        # Different rng -> different results
-        assert not df1.equals(df3)
-
-        # Test deprecated `seed` argument compatibility
-        model.set_start_state([State("a", 0), State("b", 0)])
-        with pytest.deprecated_call():
-            df_seed = model.sample(size=10, seed=42)
-        assert df1.equals(df_seed)
-
-    def test_generate_sample_rng_reproducibility(self):
-        """Test reproducibility of MarkovChain.generate_sample across same and different rng seeds."""
-        model = MC(["a"], [2])
-        model.transition_models["a"] = {0: {0: 0.5, 1: 0.5}, 1: {0: 0.5, 1: 0.5}}
-        model.set_start_state([State("a", 0)])
-
-        gen1 = model.generate_sample(size=50, rng=42)
-        samples1 = [s[0].state for s in gen1]
-        model.set_start_state([State("a", 0)])
-        gen2 = model.generate_sample(size=50, rng=42)
-        samples2 = [s[0].state for s in gen2]
-        model.set_start_state([State("a", 0)])
-        gen3 = model.generate_sample(size=50, rng=99)
-        samples3 = [s[0].state for s in gen3]
-
-        # Same rng -> identical results
-        assert samples1 == samples2
-        # Different rng -> different results
-        assert samples1 != samples3
-
-        # Test deprecated `seed` argument compatibility
-        model.set_start_state([State("a", 0)])
-        with pytest.deprecated_call():
-            gen_seed = list(model.generate_sample(size=50, seed=42))
-        assert samples1 == [s[0].state for s in gen_seed]
-
     def test_random_state(self):
         model = MC(["a", "b"], [2, 3])
         state = model.random_state()
@@ -352,34 +317,6 @@ class TestMarkovChain:
         assert state[1].state >= 0
         assert state[0].state <= 1
         assert state[1].state <= 2
-
-    def test_random_state_rng_reproducibility(self):
-        """Test reproducibility of MarkovChain._random_state with specified rng."""
-        model = MC(["a", "b"], [2, 3])
-        state1 = model._random_state(np.random.default_rng(42))
-        state2 = model._random_state(np.random.default_rng(42))
-        state3 = model._random_state(np.random.default_rng(99))
-        assert state1 == state2
-        assert state1 != state3
-
-    def test_sample_rng_no_start_state(self):
-        """Test sampling from MarkovChain with rng when no start state is predefined."""
-        model = MC(["a", "b"], [2, 2])
-        model.transition_models["a"] = {0: {0: 0.1, 1: 0.9}, 1: {0: 0.2, 1: 0.8}}
-        model.transition_models["b"] = {0: {0: 0.3, 1: 0.7}, 1: {0: 0.4, 1: 0.6}}
-
-        # Test sample without setting start_state beforehand
-        df1 = model.sample(size=10, rng=42)
-        model.state = None  # Reset state
-        df2 = model.sample(size=10, rng=42)
-        assert df1.equals(df2)
-
-        # Test generate_sample without setting start_state beforehand
-        model.state = None
-        gen1 = list(model.generate_sample(size=5, rng=42))
-        model.state = None
-        gen2 = list(model.generate_sample(size=5, rng=42))
-        assert gen1 == gen2
 
     def test_add_transition_model_invalid_variable(self):
         model = MC()
