@@ -1085,6 +1085,14 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
         model = load_model("bnlearn/asia")
         model_copy = model.copy()
         data = BayesianModelSampling(model).forward_sample(int(1e3))
+
+        # Test DiscreteBayesianNetwork.fit(..., warm_start=True)
+        model.fit(data, warm_start=True, n_prev_samples=int(1e3))
+        for var in model.nodes():
+            self.assertTrue(model_copy.get_cpds(var).__eq__(model.get_cpds(var), atol=0.1))
+
+        # Test deprecated fit_update method with warning
+        model = model_copy.copy()
         with pytest.warns(
             FutureWarning,
             match="`DiscreteBayesianNetwork.fit_update` is deprecated since v1.2.0 and will be removed in v2.0.",
@@ -1102,16 +1110,14 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
         for var in model.nodes():
             self.assertTrue(model_copy.get_cpds(var).__eq__(model.get_cpds(var), atol=0.1))
 
-    def test_fit_warm_start(self):
         # 1. Deterministic binary node: prior [0.5, 0.5], two 0 observations, n_prev_samples=2 -> exact [0.75, 0.25]
-        model = DiscreteBayesianNetwork()
-        model.add_node("A")
-        model.add_cpds(TabularCPD("A", 2, [[0.5], [0.5]]))
-
         # Data with 2 zero observations and an extra column "D" that should be ignored
-        data = pd.DataFrame({"A": [0, 0], "D": [1, 2]})
-        model.fit(data, warm_start=True, n_prev_samples=2)
-        np_test.assert_allclose(model.get_cpds("A").values, [0.75, 0.25])
+        model_det = DiscreteBayesianNetwork()
+        model_det.add_node("A")
+        model_det.add_cpds(TabularCPD("A", 2, [[0.5], [0.5]]))
+        data_det = pd.DataFrame({"A": [0, 0], "D": [1, 2]})
+        model_det.fit(data_det, warm_start=True, n_prev_samples=2)
+        np_test.assert_allclose(model_det.get_cpds("A").values, [0.75, 0.25])
 
         # 2. Case where explicit n_prev_samples differs from len(data)
         # Prior [0.5, 0.5], n_prev_samples=6 -> prior counts 3 and 3.
@@ -1119,24 +1125,69 @@ class TestBayesianNetworkFitPredict(unittest.TestCase):
         model2 = DiscreteBayesianNetwork()
         model2.add_node("A")
         model2.add_cpds(TabularCPD("A", 2, [[0.5], [0.5]]))
-        model2.fit(data, warm_start=True, n_prev_samples=6)
+        model2.fit(data_det, warm_start=True, n_prev_samples=6)
         np_test.assert_allclose(model2.get_cpds("A").values, [0.625, 0.375])
 
         # 3. Default n_prev_samples (defaults to len(data) == 2)
         model3 = DiscreteBayesianNetwork()
         model3.add_node("A")
         model3.add_cpds(TabularCPD("A", 2, [[0.5], [0.5]]))
-        model3.fit(data, warm_start=True)
+        model3.fit(data_det, warm_start=True)
         np_test.assert_allclose(model3.get_cpds("A").values, [0.75, 0.25])
 
-        # 4. Warm start on unfitted model fits from scratch
+        # 4. Sample weight support
+        # Prior [0.5, 0.5], n_prev_samples=2 -> prior counts (1, 1).
+        # Row 1: A=0 with weight 3.0; Row 2: A=1 with weight 1.0.
+        # Posterior: state 0 = 1 + 3 = 4, state 1 = 1 + 1 = 2 -> [4/6, 2/6] = [2/3, 1/3]
+        model_w = DiscreteBayesianNetwork()
+        model_w.add_node("A")
+        model_w.add_cpds(TabularCPD("A", 2, [[0.5], [0.5]]))
+        data_w = pd.DataFrame({"A": [0, 1]})
+        model_w.fit(data_w, warm_start=True, n_prev_samples=2, sample_weight=np.array([3.0, 1.0]))
+        np_test.assert_allclose(model_w.get_cpds("A").values, [2.0 / 3, 1.0 / 3])
+
+        # 5. Warm start on unfitted model fits from scratch
         fresh_model = DiscreteBayesianNetwork([("A", "B")])
         assert len(fresh_model.cpds) == 0
         fresh_data = pd.DataFrame({"A": [0, 1, 0], "B": [1, 0, 1]})
         fresh_model.fit(fresh_data, warm_start=True)
         assert len(fresh_model.cpds) == 2
 
-        # 5. NaiveBayes.fit_update() test and extra columns in data
+        # 6. Warm start on partially fitted model falls back to cold fit
+        partial_model = DiscreteBayesianNetwork([("A", "B")])
+        partial_model.add_cpds(TabularCPD("A", 2, [[0.5], [0.5]]))
+        assert partial_model.get_cpds("B") is None
+        partial_model.fit(fresh_data, warm_start=True)
+        assert len(partial_model.cpds) == 2
+        assert all(partial_model.get_cpds(var) is not None for var in partial_model.nodes())
+        np_test.assert_allclose(partial_model.get_cpds("A").values, [2.0 / 3, 1.0 / 3])
+
+        # 7. Unsorted parent order alignment
+        model_order = DiscreteBayesianNetwork([("A", "C"), ("B", "C")])
+        model_order.add_cpds(
+            TabularCPD("A", 2, [[0.5], [0.5]]),
+            TabularCPD("B", 2, [[0.5], [0.5]]),
+            TabularCPD(
+                "C",
+                2,
+                [[0.1, 0.2, 0.3, 0.4], [0.9, 0.8, 0.7, 0.6]],
+                evidence=["B", "A"],
+                evidence_card=[2, 2],
+            ),
+        )
+        orig_c_cpd = model_order.get_cpds("C")
+        data_order = pd.DataFrame({"A": [0, 0, 1, 1], "B": [0, 1, 0, 1], "C": [0, 1, 0, 1]})
+        model_order.fit(data_order, warm_start=True, n_prev_samples=4)
+        assert len(model_order.cpds) == 3
+        assert model_order.check_model()
+        assert list(orig_c_cpd.variables[1:]) == ["B", "A"]
+        assert list(model_order.get_cpds("C").variables[1:]) == ["A", "B"]
+        np_test.assert_allclose(
+            model_order.get_cpds("C").get_values(),
+            [[0.28, 0.24, 0.36, 0.32], [0.72, 0.76, 0.64, 0.68]],
+        )
+
+        # 8. NaiveBayes.fit_update() test and extra columns in data
         nb = NaiveBayes(feature_vars=["B"], dependent_var="A")
         df_nb = pd.DataFrame({"A": [0, 0, 1, 1], "B": [0, 1, 0, 1]})
         nb.fit(df_nb)
