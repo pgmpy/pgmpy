@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pgmpy.independencies import Independencies
 from pgmpy.models import DiscreteBayesianNetwork
 
@@ -153,7 +155,15 @@ class NaiveBayes(DiscreteBayesianNetwork):
                 independencies.add_assertions([variable, list(set(self.features) - set(variable)), self.dependent])
         return independencies
 
-    def fit(self, data, parent_node=None, estimator=None):
+    def fit(
+        self,
+        data,
+        parent_node=None,
+        estimator=None,
+        warm_start: bool = False,
+        n_prev_samples: int | None = None,
+        n_jobs: int = 1,
+    ):
         """
         Computes the CPD for each node from a given data in the form of a pandas dataframe.
         If a variable from the data is not present in the model, it adds that node into the model.
@@ -170,6 +180,19 @@ class NaiveBayes(DiscreteBayesianNetwork):
         estimator: discrete parameter estimator, optional
             An initialized estimator instance from `pgmpy.parameter_estimator`.
             If not specified, defaults to ``DiscreteMLE()``.
+
+        warm_start: bool, default=False
+            When set to True, reuse the solution of the previous call to fit
+            and update the model parameters with the new data using a Dirichlet
+            prior. If False (default), previous parameters are overwritten.
+
+        n_prev_samples: int, optional
+            The number of samples/datapoints on which the model was trained before.
+            Used when `warm_start=True` to determine how much weight should be
+            given to the previous parameters. If None, defaults to `data.shape[0]`.
+
+        n_jobs: int, default=1
+            Number of threads/processes to use for estimation when `warm_start=True`.
 
         Examples
         --------
@@ -198,7 +221,14 @@ class NaiveBayes(DiscreteBayesianNetwork):
                 parent_node = self.dependent
         if parent_node not in data.columns:
             raise ValueError(f"Dependent variable: {parent_node} is not present in the data")
-        for child_node in data.columns:
-            if child_node != parent_node:
-                self.add_edge(parent_node, child_node)
-        super().fit(data, estimator)
+        if not warm_start or len(self.edges()) == 0:
+            for child_node in data.columns:
+                if child_node != parent_node:
+                    self.add_edge(parent_node, child_node)
+        super().fit(
+            data,
+            estimator=estimator,
+            warm_start=warm_start,
+            n_prev_samples=n_prev_samples,
+            n_jobs=n_jobs,
+        )

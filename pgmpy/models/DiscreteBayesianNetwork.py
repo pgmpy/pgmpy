@@ -633,6 +633,8 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
             When set to True, reuse the solution of the previous call to fit
             and update the model parameters with the new data using a Dirichlet
             prior. If False (default), previous parameters are overwritten.
+            warm_start=True requires estimator=None and is not supported for models
+            with latent variables.
 
         n_prev_samples: int, optional
             The number of samples/datapoints on which the model was trained before.
@@ -672,6 +674,15 @@ class DiscreteBayesianNetwork(_FileIOMixin, DAG):
         >>> len(fitted_model.get_cpds())
         5
         """
+        if warm_start:
+            if estimator is not None:
+                raise ValueError(
+                    "warm_start=True is not supported with a custom `estimator`; "
+                    "use the default estimator (estimator=None)."
+                )
+            if len(self.latents) > 0:
+                raise NotImplementedError("warm_start=True is not supported for models with latent variables.")
+
         if warm_start and len(self.nodes()) > 0 and all(self.get_cpds(var) is not None for var in self.nodes()):
             from pgmpy.parameter_estimator import DiscreteBayesianEstimator
 
