@@ -112,6 +112,8 @@ class RoysLargestRoot(_ResidualMixin, BaseCITest):
             res_x = res_x.to_frame()
         if isinstance(res_y, pd.Series):
             res_y = res_y.to_frame()
+        if res_x.shape[1] == 0 or res_y.shape[1] == 0 or np.allclose(res_x, 0.0) or np.allclose(res_y, 0.0):
+            return _CITestResult(statistic=0.0, p_value=1.0, effect_size=0.0)
 
         # Step 2: Compute the largest squared canonical correlation via CCA.
         p, q = res_x.shape[1], res_y.shape[1]
