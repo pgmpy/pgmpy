@@ -271,10 +271,14 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
         if self.return_type.lower() == "dag":
             self.causal_graph_ = current_model
         elif self.return_type.lower() in ("pdag", "cpdag"):
-            # Step 3.1: `to_pdag` can leave edges with an expert knowledge direction undirected, so orient them
-            # and apply Meek's rules to the rest.
-            pdag = expert_knowledge.apply_to(current_model.to_pdag())
-            self.causal_graph_ = pdag.apply_meeks_rules(apply_r4=True)
+            # Step 3.1: `to_pdag` can leave edges with an expert knowledge direction undirected, so orient them.
+            # Meek's rules are only needed to propagate new orientations; `to_pdag` is already closed under them.
+            pdag = current_model.to_pdag()
+            n_directed = len(pdag.directed_edges)
+            expert_knowledge.apply_to(pdag)
+            if len(pdag.directed_edges) > n_directed:
+                pdag = pdag.apply_meeks_rules(apply_r4=True)
+            self.causal_graph_ = pdag
         else:
             raise ValueError(f"return_type must be one of: dag, pdag, or cpdag. Got: {self.return_type}")
 
