@@ -6,9 +6,9 @@ import pandas as pd
 from skbase.base import BaseObject
 from skbase.lookup import all_objects
 from sklearn.base import clone
-from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.linear_model import LogisticRegression
 
-from pgmpy.utils import is_discrete_type
+from pgmpy.utils import CovarianceRegression, is_discrete_type
 
 
 class _ResidualMixin:
@@ -30,8 +30,8 @@ class _ResidualMixin:
         Estimator used to predict each variable from the conditioning set.
         Must support ``fit`` / ``predict``, and ``predict_proba`` for
         categorical targets. When ``None``, defaults to
-        :class:`~sklearn.ensemble.RandomForestClassifier` for categorical /
-        ordinal variables and :class:`~sklearn.ensemble.RandomForestRegressor`
+        :class:`~sklearn.linear_model.LogisticRegression` for categorical /
+        ordinal variables and :class:`~pgmpy.utils.CovarianceRegression`
         for numerical variables.
     """
 
@@ -60,6 +60,8 @@ class _ResidualMixin:
         cat_index : pd.CategoricalIndex or None
             Category index returned by :func:`pandas.factorize`; ``None`` for
             numerical targets.
+        model : estimator
+            Fitted estimator instance.
         """
         is_cat = is_discrete_type(self.dtypes[target_col])
         target_data = self.data.loc[:, target_col]
@@ -72,17 +74,36 @@ class _ResidualMixin:
                     f"The provided estimator ({type(model).__name__}) must have a "
                     f"`predict_proba` method for discrete variable '{target_col}'."
                 )
-        else:
-            model_cls = RandomForestClassifier if is_cat else RandomForestRegressor
-            model = model_cls(random_state=0)
-
-        if is_cat:
+            if is_cat:
+                y_encoded, cat_index = pd.factorize(target_data)
+                model.fit(Z_data, y_encoded)
+                pred = model.predict_proba(Z_data)
+            else:
+                model.fit(Z_data, target_data)
+                pred = model.predict(Z_data)
+        elif is_cat:
+            model = LogisticRegression()
             y_encoded, cat_index = pd.factorize(target_data)
-            model.fit(Z_data, y_encoded)
-            pred = model.predict_proba(Z_data)
+            if len(cat_index) < 2:
+                pred = np.ones((target_data.shape[0], max(len(cat_index), 1)), dtype=float)
+            else:
+                model.fit(Z_data, y_encoded)
+                pred = model.predict_proba(Z_data)
         else:
-            model.fit(Z_data, target_data)
-            pred = model.predict(Z_data)
+            feature_cols = [col for col in Z_data.columns if col != "_intercept_Z"]
+            target_alias = "__target__"
+            while target_alias in feature_cols:
+                target_alias += "_"
+            joint_data = (
+                Z_data.loc[:, feature_cols].astype(float).assign(**{target_alias: target_data.to_numpy(dtype=float)})
+            )
+            model = CovarianceRegression().fit(joint_data)
+            if feature_cols:
+                coef = model.coefficients(X=feature_cols, y=[target_alias])[0]
+                intercept = model.location_[-1] - coef @ model.location_[:-1]
+                pred = Z_data.loc[:, feature_cols].to_numpy(dtype=float) @ coef + intercept
+            else:
+                pred = np.full(shape=target_data.shape[0], fill_value=model.location_[-1], dtype=float)
 
         return pred, cat_index, model
 
@@ -161,6 +182,29 @@ class BaseCITest(BaseObject):
         self.use_cache = use_cache
         self._result_cache = {}
         super().__init__()
+        self._set_linearity_assumption_tag()
+
+    def _set_linearity_assumption_tag(self):
+        """Set the 'assumption:linearity' tag based on the estimator type."""
+        if not hasattr(self, "estimator"):
+            return
+
+        est = self.estimator
+        if est is None:
+            self.set_tags(**{"assumption:linearity": True})
+            return
+
+        is_linear = any(cls.__module__.startswith("sklearn.linear_model") for cls in type(est).__mro__)
+        if is_linear:
+            self.set_tags(**{"assumption:linearity": True})
+            return
+
+        is_sklearn = type(est).__module__.startswith("sklearn.")
+        if is_sklearn:
+            self.set_tags(**{"assumption:linearity": False})
+            return
+
+        self.set_tags(**{"assumption:linearity": None})
 
     @cached_property
     def _is_symmetric(self) -> bool:
@@ -392,7 +436,8 @@ def get_ci_test(test=None, data=None, use_cache=True):
 
     if tests:
         cls = tests[0]
-        if cls.get_class_tag("requires_data", tag_value_default=True):
+        requires_data = cls.get_class_tag("requires_data", tag_value_default=True)
+        if requires_data is True or requires_data is None:
             if data is None:
                 raise ValueError(f"CI test '{cls.__name__}' requires data, but data is None.")
             return cls(data=data, use_cache=use_cache)

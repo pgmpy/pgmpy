@@ -53,8 +53,8 @@ class WilksLambda(_ResidualMixin, BaseCITest):
     estimator : estimator instance, optional
         Any sklearn-compatible estimator with ``fit``, ``predict``, and ``predict_proba``
         (if testing discrete variables) methods. If ``None`` (default), uses
-        ``RandomForestClassifier`` for categorical targets and ``RandomForestRegressor``
-        for continuous targets.
+        :class:`~sklearn.linear_model.LogisticRegression` for categorical targets and
+        :class:`~pgmpy.utils.CovarianceRegression` for continuous targets.
 
     Attributes
     ----------
@@ -119,7 +119,18 @@ class WilksLambda(_ResidualMixin, BaseCITest):
             res_x = res_x.to_frame()
         if isinstance(res_y, pd.Series):
             res_y = res_y.to_frame()
-
+        scale_x = 1.0 if self.dtypes[X] in ("C", "O") else float(np.std(self.data[X].to_numpy(dtype=float)))
+        scale_y = 1.0 if self.dtypes[Y] in ("C", "O") else float(np.std(self.data[Y].to_numpy(dtype=float)))
+        tol = np.sqrt(np.finfo(float).eps)
+        if (
+            res_x.shape[1] == 0
+            or res_y.shape[1] == 0
+            or scale_x == 0.0
+            or scale_y == 0.0
+            or np.any(np.std(res_x.to_numpy(dtype=float), axis=0) <= tol * scale_x)
+            or np.any(np.std(res_y.to_numpy(dtype=float), axis=0) <= tol * scale_y)
+        ):
+            return _CITestResult(statistic=1.0, p_value=1.0, effect_size=0.0)
         # Step 2: Compute Wilks' Lambda via CCA.
         p, q = res_x.shape[1], res_y.shape[1]
         s = min(p, q)

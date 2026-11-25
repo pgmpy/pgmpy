@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 from scipy import stats
-from sklearn.linear_model import LinearRegression
 
 from pgmpy.utils import preprocess_data
 
@@ -10,42 +9,42 @@ from ._base import BaseCITest, _CITestResult, _ResidualMixin
 
 class GCM(_ResidualMixin, BaseCITest):
     r"""
-    Generalized Covariance Measure (GCM) [1] test for conditional independence.
+        Generalized Covariance Measure (GCM) [1] test for conditional independence.
 
-    Fit an estimator on :math:`X` and :math:`Y` on :math:`[1, Z]`, let :math:`r_X` and :math:`r_Y` denote the
-    resulting residuals, and define :math:`U_i = r_{X, i} r_{Y, i}`. The resulting test statistic is
+        Fit an estimator on :math:`X` and :math:`Y` on :math:`[1, Z]`, let :math:`r_X` and :math:`r_Y` denote the
+        resulting residuals, and define :math:`U_i = r_{X, i} r_{Y, i}`. The resulting test statistic is
 
-    .. math::
-        T = \frac{1}{\sqrt{n}} \frac{\sum_{i=1}^n U_i}{\operatorname{std}(U_1, \ldots, U_n)},
+        .. math::
+            T = \frac{1}{\sqrt{n}} \frac{\sum_{i=1}^n U_i}{\operatorname{std}(U_1, \ldots, U_n)},
 
-    where :math:`n` is the sample size. Under the null hypothesis :math:`X \perp Y \mid Z`, this statistic is
-    asymptotically standard normal.
+        where :math:`n` is the sample size. Under the null hypothesis :math:`X \perp Y \mid Z`, this statistic is
+        asymptotically standard normal.
 
-    The effect size is correlation coefficient between the residuals: :math:`\textit{cor}(r_X, r_Y)`.
+        The effect size is correlation coefficient between the residuals: :math:`\textit{cor}(r_X, r_Y)`.
 
-    Parameters
-    ----------
-    data : pandas.DataFrame
-        The dataset in which to test the independence condition.
-    estimator: optional (default=None)
-        Any regressor with fit and predict methods to compute residuals. If None, LinearRegression() is used
-        as default.
+        Parameters
+        ----------
+        data : pandas.DataFrame
+            The dataset in which to test the independence condition.
+        estimator: optional (default=None)
+            Any regressor with fit and predict methods to compute residuals. If None, CovarianceRegression() is used
+            as default.
 
-    Attributes
-    ----------
-    statistic_ : float
-        The GCM test statistic. Set after calling the test.
-    p_value_ : float
-        The p-value for the test. Set after calling the test.
-    effect_size_ : float
-        Cohen's d. Set after calling the test.
-    estimator_x_ : sklearn-compatible estimator
-        The fitted estimator used for predicting X.
-    estimator_y_ : sklearn-compatible estimator
-        The fitted estimator used for predicting Y.
+        Attributes
+        ----------
+        statistic_ : float
+            The GCM test statistic. Set after calling the test.
+        p_value_ : float
+            The p-value for the test. Set after calling the test.
+        effect_size_ : float
+            Cohen's d. Set after calling the test.
+        estimator_x_ : sklearn-compatible estimator
+            The fitted estimator used for predicting X.
+        estimator_y_ : sklearn-compatible estimator
+            The fitted estimator used for predicting Y.
 
-    References
-    ----------
+        References
+        ----------
     - :footcite:t:`shah_peters_2020`
     """
 
@@ -59,11 +58,8 @@ class GCM(_ResidualMixin, BaseCITest):
 
     def __init__(self, data: pd.DataFrame, estimator=None, use_cache: bool = True):
         self.data, self.dtypes = preprocess_data(data, data_types=self.get_class_tag("data_types"))
-        self.estimator = LinearRegression() if estimator is None else estimator
-
+        self.estimator = estimator
         super().__init__(use_cache=use_cache)
-        if isinstance(self.estimator, LinearRegression):
-            self.set_tags(**{"assumption:linearity": True})
 
     def _compute_result(
         self,

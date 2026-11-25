@@ -2,8 +2,23 @@ import numpy as np
 import pandas as pd
 import pytest
 from skbase.lookup import all_objects
+from sklearn.linear_model import LogisticRegression
 
-from pgmpy.ci_tests import BaseCITest, ChiSquare, FisherZ, IndependenceMatch, Pearsonr, get_ci_test
+from pgmpy.ci_tests import (
+    GCM,
+    BaseCITest,
+    ChiSquare,
+    FisherZ,
+    GeneralizedCov,
+    HotellingLawley,
+    IndependenceMatch,
+    Pearsonr,
+    PillaiTrace,
+    RoysLargestRoot,
+    WilksLambda,
+    get_ci_test,
+)
+from pgmpy.utils import CovarianceRegression
 
 
 def test_ci_registry():
@@ -110,3 +125,74 @@ def test_unknown_name(disc_data):
 def test_invalid_type():
     with pytest.raises(ValueError):
         get_ci_test(test=123)
+
+
+@pytest.mark.parametrize(
+    "cls",
+    [GCM, PillaiTrace, GeneralizedCov, WilksLambda, HotellingLawley, RoysLargestRoot],
+)
+def test_residual_ci_tests_default_continuous_estimator(cls, cont_data):
+    test = cls(data=cont_data)
+    test("X", "Y", ["Z"])
+    assert isinstance(test.estimator_x_, CovarianceRegression)
+    assert isinstance(test.estimator_y_, CovarianceRegression)
+
+
+@pytest.mark.parametrize(
+    "cls",
+    [PillaiTrace, GeneralizedCov, WilksLambda, HotellingLawley, RoysLargestRoot],
+)
+def test_residual_ci_tests_default_discrete_estimator(cls):
+    rng = np.random.default_rng(seed=42)
+    disc_data = pd.DataFrame(
+        {
+            "X": rng.choice(["a", "b"], 100),
+            "Y": rng.choice(["c", "d"], 100),
+            "Z": rng.choice(["e", "f"], 100),
+        }
+    )
+    test = cls(data=disc_data)
+    test("X", "Y", ["Z"])
+    assert isinstance(test.estimator_x_, LogisticRegression)
+    assert isinstance(test.estimator_y_, LogisticRegression)
+
+
+def test_residual_ci_tests_degenerate_and_name_collision():
+    rng = np.random.default_rng(seed=42)
+    n = 60
+
+    # Constant categorical target returns independence without raising
+    df_const_cat = pd.DataFrame({"X": ["only"] * n, "Y": rng.choice(["a", "b"], n)})
+    for cls in (PillaiTrace, GeneralizedCov):
+        test = cls(data=df_const_cat, rng=42) if cls is GeneralizedCov else cls(data=df_const_cat)
+        assert test("X", "Y", [])
+        assert test.p_value_ == 1.0
+
+    # Deterministic continuous target (zero residual variance) returns independence
+    z = rng.normal(size=n)
+    df_det = pd.DataFrame({"X": 2.0 * z + 1.0, "Y": rng.normal(size=n), "Z": z})
+    for cls in (PillaiTrace, HotellingLawley, RoysLargestRoot, WilksLambda):
+        test = cls(data=df_det)
+        assert test("X", "Y", ["Z"])
+        assert test.p_value_ == 1.0
+
+    # Target named 'Z_a' does not collide with dummy column 'Z_a' from categorical Z
+    df_collision = pd.DataFrame(
+        {
+            "Z_a": rng.normal(size=n),
+            "Y": rng.normal(size=n),
+            "Z": rng.choice(["a", "b"], size=n),
+        }
+    )
+    test = PillaiTrace(data=df_collision)
+    test("Z_a", "Y", ["Z"])
+    assert 0.0 <= test.p_value_ <= 1.0
+    u = np.tile([-1.0, 1.0], 50)
+    v = np.tile([1.0, 1.0, -1.0, -1.0], 25)
+    df_unit = pd.DataFrame({"X": u, "Y": u + 0.1 * v})
+    df_scaled = pd.DataFrame({"X": 1e-10 * u, "Y": u + 0.1 * v})
+    for cls in (PillaiTrace, HotellingLawley, RoysLargestRoot, WilksLambda):
+        t_orig = cls(data=df_unit)
+        t_scaled = cls(data=df_scaled)
+        assert t_orig("X", "Y", []) == t_scaled("X", "Y", [])
+        assert t_scaled.p_value_ < 0.05

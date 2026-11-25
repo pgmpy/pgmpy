@@ -1,11 +1,29 @@
 import numpy as np
 import pytest
+from sklearn.base import BaseEstimator
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.utils.multiclass import type_of_target
 
 from pgmpy.ci_tests import WilksLambda
 from pgmpy.tests.test_ci_tests import _multivariate_fixtures
 
 pillai_data = _multivariate_fixtures.pillai_data
 skip_gh_actions = _multivariate_fixtures.skip_gh_actions
+
+
+class _LegacyRFEstimator(BaseEstimator):
+    def fit(self, X, y):
+        if type_of_target(y) in ("binary", "multiclass", "multiclass-multioutput", "multilabel-indicator"):
+            self._model = RandomForestClassifier(random_state=0).fit(X, y)
+        else:
+            self._model = RandomForestRegressor(random_state=0).fit(X, y)
+        return self
+
+    def predict(self, X):
+        return self._model.predict(X)
+
+    def predict_proba(self, X):
+        return self._model.predict_proba(X)
 
 
 @skip_gh_actions
@@ -15,7 +33,7 @@ def test_wilks_no_cond(pillai_data):
 
     computed_stats, computed_pvalues = [], []
     for df in pillai_data["indep"]:
-        test = WilksLambda(data=df)
+        test = WilksLambda(data=df, estimator=_LegacyRFEstimator())
         test("X", "Y", [])
         computed_stats.append(test.statistic_)
         computed_pvalues.append(test.p_value_)
@@ -31,7 +49,7 @@ def test_wilks_indep(pillai_data):
 
     computed_stats, computed_pvalues = [], []
     for df in pillai_data["indep"]:
-        test = WilksLambda(data=df)
+        test = WilksLambda(data=df, estimator=_LegacyRFEstimator())
         test("X", "Y", ["Z1", "Z2", "Z3"])
         computed_stats.append(test.statistic_)
         computed_pvalues.append(test.p_value_)
@@ -47,7 +65,7 @@ def test_wilks_dependent(pillai_data):
 
     computed_stats, computed_pvalues = [], []
     for df in pillai_data["dep"]:
-        test = WilksLambda(data=df)
+        test = WilksLambda(data=df, estimator=_LegacyRFEstimator())
         test("X", "Y", ["Z1", "Z2", "Z3"])
         computed_stats.append(test.statistic_)
         computed_pvalues.append(test.p_value_)
@@ -61,12 +79,12 @@ def test_effect_size(pillai_data):
     expected_dep = [0.2129, 0.2029, 0.0996, 0.0731, 0.0996]
 
     for df, expected in zip(pillai_data["indep"], expected_indep):
-        test = WilksLambda(data=df)
+        test = WilksLambda(data=df, estimator=_LegacyRFEstimator())
         test("X", "Y", ["Z1", "Z2", "Z3"])
         assert test.effect_size_ == pytest.approx(expected, abs=1e-2)
 
     for df, expected in zip(pillai_data["dep"], expected_dep):
-        test = WilksLambda(data=df)
+        test = WilksLambda(data=df, estimator=_LegacyRFEstimator())
         test("X", "Y", ["Z1", "Z2", "Z3"])
         assert test.effect_size_ == pytest.approx(expected, abs=1e-2)
 

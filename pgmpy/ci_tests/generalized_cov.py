@@ -50,8 +50,8 @@ class GeneralizedCov(_ResidualMixin, BaseCITest):
     estimator : estimator instance, optional
         Any sklearn-compatible estimator with ``fit``, ``predict``, and ``predict_proba``
         (if testing discrete variables) methods. If ``None`` (default), uses
-        ``RandomForestClassifier`` for categorical targets and ``RandomForestRegressor``
-        for continuous targets.
+        :class:`~sklearn.linear_model.LogisticRegression` for categorical targets and
+        :class:`~pgmpy.utils.CovarianceRegression` for continuous targets.
 
     n_permutations : int, default 1000
         Number of permutations used to estimate the null distribution of :math:`T`.
