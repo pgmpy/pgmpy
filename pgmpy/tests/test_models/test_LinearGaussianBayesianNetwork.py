@@ -114,6 +114,34 @@ class TestLGBNMethods:
         assert len(model.get_cpds()) == 2
         assert len(copy_model.get_cpds()) == 3
 
+        # Test copying variable roles and latents
+        model_with_roles = LinearGaussianBayesianNetwork(
+            [("U", "X"), ("X", "Y")],
+            latents={"U"},
+            exposures={"X"},
+            outcomes={"Y"},
+        )
+        copied_with_roles = model_with_roles.copy()
+        assert copied_with_roles.get_role_dict() == model_with_roles.get_role_dict()
+        assert copied_with_roles.latents == {"U"}
+        assert copied_with_roles.exposures == {"X"}
+        assert copied_with_roles.outcomes == {"Y"}
+
+        # Verify copy is independent from original
+        copied_with_roles.with_role(role="outcomes", variables="X", inplace=True)
+        assert "X" in copied_with_roles.outcomes
+        assert "X" not in model_with_roles.outcomes
+
+        copied_with_roles.latents.add("Z")
+        assert "Z" not in model_with_roles.latents
+
+        # Test operations that internally copy
+        assert model_with_roles.do(["X"]).get_role_dict() == model_with_roles.do(["X"]).get_role_dict()
+        assert model_with_roles.without_role("exposures").get_role_dict() == {
+            "latents": ["U"],
+            "outcomes": ["Y"],
+        }
+
     def test_to_joint_gaussian(self):
         self.model.add_cpds(self.cpd1, self.cpd2, self.cpd3)
         mean, cov = self.model.to_joint_gaussian()
