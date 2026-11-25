@@ -67,11 +67,14 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
         - Forbidden edges that cannot be present in the final graph
         - Temporal ordering of nodes
 
+        The returned PDAG keeps the directions given by the required edges, the forbidden edges, and the
+        temporal order.
+
     return_type : str, default='pdag'
         The type of graph to return. Options are:
 
         - 'dag': Returns a directed acyclic graph (DAG).
-        - 'pdag': Returns a partially directed acyclic graph (PDAG) where edges that
+        - 'pdag' or 'cpdag': Returns a partially directed acyclic graph (PDAG) where edges that
           could not be oriented are left undirected.
 
     epsilon : float, default=1e-4
@@ -267,8 +270,11 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
         # Step 3: Store results
         if self.return_type.lower() == "dag":
             self.causal_graph_ = current_model
-        elif self.return_type.lower() == "pdag":
-            self.causal_graph_ = current_model.to_pdag()
+        elif self.return_type.lower() in ("pdag", "cpdag"):
+            # Step 3.1: `to_pdag` can leave edges with an expert knowledge direction undirected, so orient them
+            # and apply Meek's rules to the rest.
+            pdag = expert_knowledge.apply_to(current_model.to_pdag())
+            self.causal_graph_ = pdag.apply_meeks_rules(apply_r4=True)
         else:
             raise ValueError(f"return_type must be one of: dag, pdag, or cpdag. Got: {self.return_type}")
 

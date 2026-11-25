@@ -2,13 +2,15 @@
 Tests for the sklearn-compatible HillClimbSearch class in pgmpy.causal_discovery.
 """
 
+import warnings
+
 import numpy as np
 import pandas as pd
 import pytest
 from sklearn.exceptions import NotFittedError
 from sklearn.utils.estimator_checks import parametrize_with_checks
 
-from pgmpy.causal_discovery import ExpertKnowledge, HillClimbSearch
+from pgmpy.causal_discovery import MMHC, ExpertKnowledge, HillClimbSearch
 from pgmpy.example_models import load_model
 from pgmpy.metrics import SHD, CorrelationScore
 from pgmpy.models import DiscreteBayesianNetwork
@@ -338,6 +340,31 @@ def test_search_space():
     # assert if dag is a subset of search_space
     for edge in est.causal_graph_.edges():
         assert edge in search_space
+
+
+@pytest.mark.parametrize("estimator", [HillClimbSearch, MMHC])
+@pytest.mark.parametrize("return_type", ["pdag", "cpdag"])
+def test_pdag_keeps_expert_knowledge_directions(estimator, return_type):
+    data = load_model("bnlearn/asia").simulate(n_samples=5000, rng=0, show_progress=False)
+    tiers = [["asia", "smoke"], ["tub", "lung", "bronc"], ["either"], ["xray", "dysp"]]
+    tier_of = {node: i for i, tier in enumerate(tiers) for node in tier}
+
+    graphs = []
+    for expert_knowledge in [
+        ExpertKnowledge(required_edges=[("lung", "smoke")], forbidden_edges=[("bronc", "smoke")]),
+        ExpertKnowledge(temporal_order=tiers),
+    ]:
+        # `apply_to` warns when the knowledge conflicts with the learned structure, which never happens here.
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", UserWarning)
+            est = estimator(expert_knowledge=expert_knowledge, return_type=return_type, show_progress=False)
+            graphs.append(est.fit(data).causal_graph_)
+    edge_knowledge_pdag, temporal_pdag = graphs
+
+    assert ("lung", "smoke") in edge_knowledge_pdag.directed_edges
+    assert ("smoke", "bronc") in edge_knowledge_pdag.directed_edges
+    assert not temporal_pdag.undirected_edges
+    assert all(tier_of[u] < tier_of[v] for u, v in temporal_pdag.directed_edges)
 
 
 @pytest.mark.parametrize("scoring_method", ["aic-g", "bic-g"])

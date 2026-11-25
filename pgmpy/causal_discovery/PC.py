@@ -27,7 +27,8 @@ class PC(_ConstraintMixin, BaseCausalDiscovery):
     and oriented as specified, and ``search_space`` (if given) restricts which adjacencies
     may appear. A pair forbidden in both directions (e.g. the complement of a given
     ``search_space``) becomes a non-adjacency, while a single-direction forbidden edge that
-    still appears inside a learned collider is left in place with a warning.
+    still appears inside a learned collider is left in place with a warning. Likewise, a
+    required edge that the data orients the other way is left as learned, with a warning.
 
     Parameters
     ----------
