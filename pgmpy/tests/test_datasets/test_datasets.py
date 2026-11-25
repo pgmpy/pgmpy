@@ -34,6 +34,7 @@ ALL_DATASETS = [
     "iq_brain_size",
     "lead",
     "myocardial_infarction",
+    "netsim_sim1",
     "pima_diabetes",
     "pittsburgh_bridges",
     "population_threshold_rdd_italy",
@@ -73,7 +74,7 @@ def test_list_datasets():
 
 
 def test_load_dataset():
-    for dataset_name in ["sachs_discrete"]:
+    for dataset_name in ["sachs_discrete", "netsim_sim1"]:
         dataset = load_dataset(dataset_name)
         assert dataset.name == dataset_name
         assert dataset.data.shape == (
@@ -95,6 +96,18 @@ def test_load_dataset():
 
         if dataset.tags["has_missing_data"]:
             assert dataset.data.isna().any().any()
+
+
+def test_netsim_sim1():
+    dataset = load_dataset("netsim_sim1")
+    assert dataset.name == "netsim_sim1"
+    assert dataset.data.shape == (10000, 5)
+    assert list(dataset.data.columns) == ["X1", "X2", "X3", "X4", "X5"]
+    assert dataset.tags["is_simulated"] is True
+    assert dataset.tags["is_continuous"] is True
+    assert dataset.tags["has_ground_truth"] is True
+    expected_edges = {("X1", "X2"), ("X1", "X5"), ("X2", "X3"), ("X3", "X4"), ("X4", "X5")}
+    assert set(dataset.ground_truth.edges()) == expected_edges
 
 
 def test_load_covariance_dataset():
