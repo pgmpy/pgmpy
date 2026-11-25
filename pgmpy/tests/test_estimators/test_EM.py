@@ -1,8 +1,8 @@
-import unittest
 import warnings
 
 import numpy as np
 import pandas as pd
+import pytest
 from joblib.externals.loky import get_reusable_executor
 from skbase.utils.dependencies import _check_soft_dependencies
 
@@ -14,14 +14,17 @@ from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.utils import compat_fns
 
 
-class TestEM(unittest.TestCase):
-    def setUp(self):
+class TestEM:
+    @pytest.fixture(autouse=True)
+    def setup(self):
         self.model1 = load_model("bnlearn/cancer")
         self.data1 = self.model1.simulate(int(1e4), rng=42)
 
         self.model2 = DiscreteBayesianNetwork(self.model1.edges(), latents={"Smoker"})
         self.model2.add_cpds(*self.model1.cpds)
         self.data2 = self.model2.simulate(int(1e4), rng=42)
+        yield
+        get_reusable_executor().shutdown(wait=True)
 
     def test_get_parameters(self):
         # All observed
@@ -30,7 +33,7 @@ class TestEM(unittest.TestCase):
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
-            self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
+            assert orig_cpd.__eq__(est_cpd, atol=0.1)
 
         # Latent variables
         est = EM(self.model2, self.data2)
@@ -41,7 +44,7 @@ class TestEM(unittest.TestCase):
 
             if "Smoker" in orig_cpd.variables:
                 orig_cpd.state_names["Smoker"] = [1, 0]
-            self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
+            assert orig_cpd.__eq__(est_cpd, atol=0.1)
 
     def test_get_parameters_smoothing_k2(self):
         # All observed
@@ -56,7 +59,7 @@ class TestEM(unittest.TestCase):
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
-            self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
+            assert orig_cpd.__eq__(est_cpd, atol=0.1)
 
         # Latent variables
         est = EM(self.model2, self.data2)
@@ -73,7 +76,7 @@ class TestEM(unittest.TestCase):
 
             if "Smoker" in orig_cpd.variables:
                 orig_cpd.state_names["Smoker"] = [1, 0]
-            self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
+            assert orig_cpd.__eq__(est_cpd, atol=0.1)
 
     def test_get_parameters_smoothing_bdeu(self):
         # All observed
@@ -89,7 +92,7 @@ class TestEM(unittest.TestCase):
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
-            self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
+            assert orig_cpd.__eq__(est_cpd, atol=0.1)
 
         # Latent variables
         est = EM(self.model2, self.data2)
@@ -107,7 +110,7 @@ class TestEM(unittest.TestCase):
 
             if "Smoker" in orig_cpd.variables:
                 orig_cpd.state_names["Smoker"] = [1, 0]
-            self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
+            assert orig_cpd.__eq__(est_cpd, atol=0.1)
 
     def test_get_parameters_initial_cpds(self):
         # All observed. Specify initial CPDs.
@@ -117,7 +120,7 @@ class TestEM(unittest.TestCase):
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
-            self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
+            assert orig_cpd.__eq__(est_cpd, atol=0.1)
 
         # With latents. Specify initial CPDs only for latent.
         est = EM(self.model2, self.data2)
@@ -131,9 +134,9 @@ class TestEM(unittest.TestCase):
             # The latent variable doesn't converge to the true value when
             # the initial CPD is specified.
             if orig_cpd.variables[0] == "Smoker":
-                self.assertTrue(np.allclose(est_cpd.values, np.array([0.123, 0.877]), atol=0.01))
+                assert np.allclose(est_cpd.values, np.array([0.123, 0.877]), atol=0.01)
             else:
-                self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
+                assert orig_cpd.__eq__(est_cpd, atol=0.1)
 
         # With latents. Specify initial CPDs for both latents and observed.
         est = EM(self.model2, self.data2)
@@ -161,17 +164,15 @@ class TestEM(unittest.TestCase):
             # The latent variable doesn't converge to the true value when
             # the initial CPD is specified.
             if orig_cpd.variables[0] == "Smoker":
-                self.assertTrue(np.allclose(est_cpd.values, np.array([0.123, 0.877]), atol=0.01))
+                assert np.allclose(est_cpd.values, np.array([0.123, 0.877]), atol=0.01)
             elif orig_cpd.variables[0] == "Xray":
-                self.assertTrue(
-                    np.allclose(
-                        est_cpd.values,
-                        np.array([[0.799, 0.123], [0.201, 0.877]]),
-                        atol=0.01,
-                    )
+                assert np.allclose(
+                    est_cpd.values,
+                    np.array([[0.799, 0.123], [0.201, 0.877]]),
+                    atol=0.01,
                 )
             else:
-                self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
+                assert orig_cpd.__eq__(est_cpd, atol=0.1)
 
     def test_em_init_missing_data_handling(self):
         df = pd.DataFrame({"A": [1, 2, 3], "B": [None, None, None], "C": [1, None, 3], "D": [4, 5, 6]})
@@ -181,8 +182,8 @@ class TestEM(unittest.TestCase):
             est = EM(self.model1, df)
 
         # Data shape and column removal
-        self.assertEqual(est.data.shape, (2, 3))
-        self.assertNotIn("B", est.data.columns)
+        assert est.data.shape == (2, 3)
+        assert "B" not in est.data.columns
 
     def test_get_parameters_random_init_cpds(self):
         est = EM(self.model1, self.data1)
@@ -190,7 +191,7 @@ class TestEM(unittest.TestCase):
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
-            self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
+            assert orig_cpd.__eq__(est_cpd, atol=0.1)
 
     def test_get_parameters_uniform_init_cpds(self):
         est = EM(self.model1, self.data1)
@@ -198,7 +199,7 @@ class TestEM(unittest.TestCase):
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
-            self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
+            assert orig_cpd.__eq__(est_cpd, atol=0.1)
 
     def test_get_parameters_node_specific_ess_bdeu(self):
         """Test EM with node-specific equivalent_sample_size dict for BDeu."""
@@ -216,7 +217,7 @@ class TestEM(unittest.TestCase):
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
-            self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
+            assert orig_cpd.__eq__(est_cpd, atol=0.1)
 
         # With latent variables
         est = EM(self.model2, self.data2)
@@ -234,7 +235,7 @@ class TestEM(unittest.TestCase):
 
             if "Smoker" in orig_cpd.variables:
                 orig_cpd.state_names["Smoker"] = [1, 0]
-            self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
+            assert orig_cpd.__eq__(est_cpd, atol=0.1)
 
     def test_get_parameters_ess_dict_vs_scalar(self):
         """Test that uniform ESS dict matches scalar ESS."""
@@ -270,23 +271,15 @@ class TestEM(unittest.TestCase):
             sorted(cpds_scalar, key=lambda x: x.variables[0]),
             sorted(cpds_dict, key=lambda x: x.variables[0]),
         ):
-            self.assertTrue(cpd_scalar.__eq__(cpd_dict, atol=1e-6))
-
-    def tearDown(self):
-        del self.model1
-        del self.model2
-        del self.data1
-        del self.data2
-
-        get_reusable_executor().shutdown(wait=True)
+            assert cpd_scalar.__eq__(cpd_dict, atol=1e-6)
 
 
-@unittest.skipUnless(
-    _check_soft_dependencies("torch", severity="none"),
-    reason="execute only if required dependency present",
+@pytest.mark.skipif(
+    not _check_soft_dependencies("torch", severity="none"), reason="execute only if required dependency present"
 )
 class TestEMTorch(TestEM):
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def setup(self):
         config.set_backend("torch")
 
         self.model1 = load_model("bnlearn/cancer")
@@ -295,6 +288,10 @@ class TestEMTorch(TestEM):
         self.model2 = DiscreteBayesianNetwork(self.model1.edges(), latents={"Smoker"})
         self.model2.add_cpds(*self.model1.cpds)
         self.data2 = self.model2.simulate(int(1e4), rng=42)
+        yield
+        get_reusable_executor().shutdown(wait=True)
+
+        config.set_backend("numpy")
 
     def test_get_parameters(self):
         est = EM(self.model1, self.data1)
@@ -302,7 +299,7 @@ class TestEMTorch(TestEM):
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
-            self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
+            assert orig_cpd.__eq__(est_cpd, atol=0.1)
 
         est = EM(self.model2, self.data2)
         cpds = est.get_parameters(seed=0, n_jobs=1, show_progress=False)
@@ -313,7 +310,7 @@ class TestEMTorch(TestEM):
             if "Smoker" in orig_cpd.variables:
                 orig_cpd.state_names["Smoker"] = [1, 0]
 
-            self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
+            assert orig_cpd.__eq__(est_cpd, atol=0.1)
 
     def test_get_parameters_initial_cpds(self):
         # All observed. Specify initial CPDs.
@@ -323,7 +320,7 @@ class TestEMTorch(TestEM):
         for est_cpd in cpds:
             var = est_cpd.variables[0]
             orig_cpd = self.model1.get_cpds(var)
-            self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
+            assert orig_cpd.__eq__(est_cpd, atol=0.1)
 
         # With latents. Specify initial CPDs only for latent.
         est = EM(self.model2, self.data2)
@@ -337,15 +334,13 @@ class TestEMTorch(TestEM):
             # The latent variable doesn't converge to the true value when
             # the initial CPD is specified.
             if orig_cpd.variables[0] == "Smoker":
-                self.assertTrue(
-                    np.allclose(
-                        compat_fns.to_numpy(est_cpd.values),
-                        np.array([0.123, 0.877]),
-                        atol=0.01,
-                    )
+                assert np.allclose(
+                    compat_fns.to_numpy(est_cpd.values),
+                    np.array([0.123, 0.877]),
+                    atol=0.01,
                 )
             else:
-                self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
+                assert orig_cpd.__eq__(est_cpd, atol=0.1)
 
         # With latents. Specify initial CPDs for both latents and observed.
         est = EM(self.model2, self.data2)
@@ -373,30 +368,16 @@ class TestEMTorch(TestEM):
             # The latent variable doesn't converge to the true value when
             # the initial CPD is specified.
             if orig_cpd.variables[0] == "Smoker":
-                self.assertTrue(
-                    np.allclose(
-                        compat_fns.to_numpy(est_cpd.values),
-                        np.array([0.123, 0.877]),
-                        atol=0.01,
-                    )
+                assert np.allclose(
+                    compat_fns.to_numpy(est_cpd.values),
+                    np.array([0.123, 0.877]),
+                    atol=0.01,
                 )
             elif orig_cpd.variables[0] == "Xray":
-                self.assertTrue(
-                    np.allclose(
-                        compat_fns.to_numpy(est_cpd.values),
-                        np.array([[0.799, 0.123], [0.201, 0.877]]),
-                        atol=0.01,
-                    )
+                assert np.allclose(
+                    compat_fns.to_numpy(est_cpd.values),
+                    np.array([[0.799, 0.123], [0.201, 0.877]]),
+                    atol=0.01,
                 )
             else:
-                self.assertTrue(orig_cpd.__eq__(est_cpd, atol=0.1))
-
-    def tearDown(self):
-        del self.model1
-        del self.model2
-        del self.data1
-        del self.data2
-
-        get_reusable_executor().shutdown(wait=True)
-
-        config.set_backend("numpy")
+                assert orig_cpd.__eq__(est_cpd, atol=0.1)

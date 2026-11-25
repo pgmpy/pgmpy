@@ -1,7 +1,10 @@
+from itertools import combinations, product
+
 import numpy as np
 import pandas as pd
 import pytest
 from joblib.externals.loky import get_reusable_executor
+from sklearn.metrics import mutual_info_score
 
 from pgmpy.causal_discovery import TAN
 from pgmpy.example_models import load_model
@@ -177,6 +180,35 @@ def test_tan_auto_class_node(data22):
     assert nodes[0] == root_node
     assert nodes[-1] == class_node
     assert sorted(nodes) == sorted(["C", "R", "A", "D", "E", "B"])
+
+
+def test_get_conditional_weights_custom_callable(data22):
+    calls = []
+
+    def edge_weights_fn(x, y):
+        calls.append((x, y))
+        return mutual_info_score(x, y)
+
+    data = data22.astype(str).astype(pd.CategoricalDtype(["unobserved", "2", "1", "0"]))
+    weights = TAN._get_conditional_weights(
+        data, class_node="A", edge_weights_fn=edge_weights_fn, n_jobs=1, show_progress=False
+    )
+
+    # Each pair of variables is scored once per observed state of A, on the stored state codes of its samples.
+    columns = data.columns
+    subsets = [subset for _, subset in data.groupby("A", observed=True)]
+    assert all(isinstance(codes, np.ndarray) and codes.dtype.kind == "i" for call in calls for codes in call)
+    for (x, y), ((u, v), subset) in zip(calls, product(combinations(columns, 2), subsets), strict=True):
+        np.testing.assert_array_equal(x, subset[u].cat.codes)
+        np.testing.assert_array_equal(y, subset[v].cat.codes)
+
+    # I(u; v | A) = sum_a P(A=a) * I(u; v | A=a), with each term computed on the samples where A=a.
+    expected = np.zeros((len(columns), len(columns)))
+    for subset in subsets:
+        expected += (len(subset) / len(data)) * np.array(
+            [[0 if u == v else mutual_info_score(subset[u], subset[v]) for v in columns] for u in columns]
+        )
+    np.testing.assert_allclose(weights, expected, atol=1e-12)
 
 
 def test_tan_real_dataset(alarm_df):

@@ -49,6 +49,7 @@ ALL_DATASETS = [
     "spartina",
     "student_performance",
     "superconductivity",
+    "teacher_burnout",
     "uscrime",
     "wine_quality_red",
     "wine_quality_red_white_mixed",

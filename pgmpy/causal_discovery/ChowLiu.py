@@ -27,7 +27,8 @@ class ChowLiu(_TreeSearchMixin, BaseCausalDiscovery):
         - ``"mutual_info"``: Mutual Information Score.
         - ``"adjusted_mutual_info"``: Adjusted Mutual Information Score.
         - ``"normalized_mutual_info"``: Normalized Mutual Information Score.
-        - A callable of the form ``fn(array, array) -> float``.
+        - A callable of the form ``fn(array, array) -> float``, called with the integer state codes of two variables
+          as stored by pandas (``Series.cat.codes``, typically ``int8``).
 
     n_jobs : int, default=-1
         Number of jobs to run in parallel. ``-1`` means use all processors.

@@ -7,6 +7,7 @@ Core Inference Classes
 .. autosummary::
    :toctree: generated/inference
    :template: autosummary/class.rst
+   :nosignatures:
 
    ~pgmpy.inference.Inference
    ~pgmpy.inference.VariableElimination
@@ -21,6 +22,7 @@ Approximate Inference and Sampling
 .. autosummary::
    :toctree: generated/inference
    :template: autosummary/class.rst
+   :nosignatures:
 
    ~pgmpy.inference.ApproxInference
    ~pgmpy.sampling.BayesianModelInference
@@ -33,6 +35,7 @@ Elimination-Order Heuristics
 .. autosummary::
    :toctree: generated/inference
    :template: autosummary/class.rst
+   :nosignatures:
 
    ~pgmpy.inference.EliminationOrder.BaseEliminationOrder
    ~pgmpy.inference.EliminationOrder.WeightedMinFill

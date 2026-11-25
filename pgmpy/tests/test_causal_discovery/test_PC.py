@@ -93,7 +93,7 @@ def test_build_skeleton_from_ind(variant):
     ind = ind.closure()
 
     cols_ = ["A", "B", "C", "D"]
-    rows = [[0, 0, 0, 0], [0, 0, 0, 0]]
+    rows = [[0, 0, 0, 0], [1, 1, 1, 1]]
     data = pd.DataFrame(data=rows, columns=cols_)
     estimator = PC(
         variant=variant,
@@ -128,7 +128,7 @@ def test_build_skeleton_from_ind(variant):
     )
 
     cols_ = ["A", "B", "C", "D", "E"]
-    rows = [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]
+    rows = [[0, 0, 0, 0, 0], [1, 1, 1, 1, 1]]
     data = pd.DataFrame(data=rows, columns=cols_)
     estimator.fit(
         X=data,
@@ -258,7 +258,7 @@ def test_estimate_dag(variant):
     ind = ind.closure()
 
     cols_ = ["A", "B", "C", "D"]
-    rows = [[0, 0, 0, 0], [0, 0, 0, 0]]
+    rows = [[0, 0, 0, 0], [1, 1, 1, 1]]
     data = pd.DataFrame(data=rows, columns=cols_)
 
     estimator = PC(
@@ -274,7 +274,7 @@ def test_estimate_dag(variant):
 
     model = DiscreteBayesianNetwork([("A", "C"), ("B", "C"), ("B", "D"), ("C", "E")])
     cols_ = ["A", "B", "C", "D", "E"]
-    rows = [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]
+    rows = [[0, 0, 0, 0, 0], [1, 1, 1, 1, 1]]
     data = pd.DataFrame(data=rows, columns=cols_)
 
     estimator = PC(
