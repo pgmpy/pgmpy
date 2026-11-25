@@ -38,21 +38,28 @@ class VariableElimination(Inference):
 
         Returns
         -------
-        dict: Modified working factors.
+        tuple: (working_factors, scalar_factors) where `working_factors` maps each
+            remaining variable to its set of `(factor, origin)` pairs and
+            `scalar_factors` is a list of 0-scope scalar factors reduced solely
+            over evidence variables.
         """
 
         working_factors = {node: {(factor, None) for factor in self.factors[node]} for node in self.factors}
+        scalar_factors = []
 
         # Dealing with evidence. Reducing factors over it before VE is run.
         if evidence:
             for evidence_var in evidence:
                 for factor, origin in working_factors[evidence_var]:
                     factor_reduced = factor.reduce([(evidence_var, evidence[evidence_var])], inplace=False)
-                    for var in factor_reduced.scope():
-                        working_factors[var].remove((factor, origin))
-                        working_factors[var].add((factor_reduced, evidence_var))
+                    if factor_reduced.scope():
+                        for var in factor_reduced.scope():
+                            working_factors[var].remove((factor, origin))
+                            working_factors[var].add((factor_reduced, evidence_var))
+                    else:
+                        scalar_factors.append(factor_reduced)
                 del working_factors[evidence_var]
-        return working_factors
+        return working_factors, scalar_factors
 
     def _get_elimination_order(self, variables, evidence, elimination_order, show_progress=True):
         """
@@ -149,7 +156,7 @@ class VariableElimination(Inference):
         # Step 2: Prepare data structures to run the algorithm.
         eliminated_variables = set()
         # Get working factors and elimination order
-        working_factors = self._get_working_factors(evidence)
+        working_factors, scalar_factors = self._get_working_factors(evidence)
         elimination_order = self._get_elimination_order(
             variables, evidence, elimination_order, show_progress=show_progress
         )
@@ -173,8 +180,11 @@ class VariableElimination(Inference):
             phi = factor_product(*factors)
             phi = getattr(phi, operation)([var], inplace=False)
             del working_factors[var]
-            for variable in phi.variables:
-                working_factors[variable].add((phi, var))
+            if phi.variables:
+                for variable in phi.variables:
+                    working_factors[variable].add((phi, var))
+            else:
+                scalar_factors.append(phi)
             eliminated_variables.add(var)
 
         # Step 4: Prepare variables to be returned.
@@ -184,6 +194,8 @@ class VariableElimination(Inference):
                 if not set(factor.variables).intersection(eliminated_variables):
                     final_distribution.add((factor, origin))
         final_distribution = [factor for factor, _ in final_distribution]
+        if not isinstance(self.model, DiscreteBayesianNetwork):
+            final_distribution.extend(scalar_factors)
 
         if joint:
             if isinstance(self.model, DiscreteBayesianNetwork):

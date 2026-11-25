@@ -669,6 +669,38 @@ class TestVariableEliminationMarkov:
         map_query = infer.map_query(["A", "R", "L"], {"J": 0, "Q": 1, "G": 0}, show_progress=False)
         assert map_query == {"A": 1, "R": 0, "L": 0}
 
+    def test_markov_omitted_variables_and_scalar_evidence(self, markov_ve, backend):
+        _, infer = markov_ve
+        evidence = {"A": 0, "R": 0, "G": 0}
+        non_evidence_vars = [var for var in infer.variables if var not in evidence]
+        np_test.assert_almost_equal(
+            infer.max_marginal(evidence=evidence, show_progress=False),
+            infer.max_marginal(variables=non_evidence_vars, evidence=evidence, show_progress=False),
+        )
+        assert infer.map_query(evidence=evidence, show_progress=False) == infer.map_query(
+            variables=non_evidence_vars, evidence=evidence, show_progress=False
+        )
+
+    def test_markov_scalar_evidence_factor_preserved(self, backend):
+        model = DiscreteMarkovNetwork([("A", "B")])
+        f_a = DiscreteFactor(["A"], [2], [2, 3])
+        g_ab = DiscreteFactor(["A", "B"], [2, 2], [1, 2, 4, 5])
+        model.add_factors(f_a, g_ab)
+        ve = VariableElimination(model)
+
+        np_test.assert_almost_equal(ve.max_marginal(evidence={"A": 1}, show_progress=False), 15.0)
+        np_test.assert_almost_equal(ve.max_marginal(["B"], evidence={"A": 1}, show_progress=False), 15.0)
+        assert ve.map_query(evidence={"A": 1}, show_progress=False) == {"B": 1}
+        assert ve.map_query(["B"], evidence={"A": 1}, show_progress=False) == {"B": 1}
+        for order in ELIMINATION_ORDERS:
+            assert ve.query(["B"], evidence={"A": 1}, elimination_order=order, show_progress=False) == DiscreteFactor(
+                ["B"], [2], [12, 15]
+            )
+        with pytest.raises(ValueError, match="at least one variable"):
+            ve.max_marginal(evidence={"A": 1, "B": 1}, show_progress=False)
+        with pytest.raises(ValueError, match="at least one variable"):
+            ve.map_query(evidence={"A": 1, "B": 1}, show_progress=False)
+
     def test_induced_graph(self, markov_ve, backend):
         _, infer = markov_ve
         induced_graph = infer.induced_graph(["G", "Q", "A", "J", "L", "R"])
