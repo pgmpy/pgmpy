@@ -28,8 +28,8 @@ class DummyTimeSeriesEstimator(BaseTimeSeriesCausalDiscovery):
 
         return {
             "graph": "synthetic-link",
-            "p_matrix": np.zeros((2, 2, self.tau_max + 1)),
-            "val_matrix": np.zeros((2, 2, self.tau_max + 1)),
+            "p_matrix": np.zeros((self.n_variables_, self.n_variables_, self.tau_max + 1)),
+            "val_matrix": np.zeros((self.n_variables_, self.n_variables_, self.tau_max + 1)),
         }
 
     def _process_discovery_results(self, results):
@@ -41,7 +41,7 @@ class DummyTimeSeriesEstimator(BaseTimeSeriesCausalDiscovery):
 
 
 def make_data(values=None, series_ids=("series_1",), times=range(10)):
-    """Create a DataFrame with the required two-level time-series index."""
+    """Create a DataFrame with a two-level time-series index."""
     index = pd.MultiIndex.from_product(
         [series_ids, times],
         names=["series_id", "time"],
@@ -81,6 +81,12 @@ def data():
 
 
 class TestBaseTimeSeriesCausalDiscovery:
+    """Tests for BaseTimeSeriesCausalDiscovery."""
+
+    # ------------------------------------------------------------------
+    # Fit lifecycle
+    # ------------------------------------------------------------------
+
     def test_fit_runs_discovery_pipeline(self, estimator, data):
         result = estimator.fit(data)
 
@@ -116,6 +122,10 @@ class TestBaseTimeSeriesCausalDiscovery:
 
         with pytest.raises((TypeError, ValueError)):
             estimator.fit(values)
+
+    # ------------------------------------------------------------------
+    # Input and index validation
+    # ------------------------------------------------------------------
 
     @pytest.mark.parametrize(
         "index",
@@ -156,10 +166,19 @@ class TestBaseTimeSeriesCausalDiscovery:
             estimator.fit(data)
 
     def test_fit_rejects_non_string_variable_names(self, estimator):
-        data = make_data(values={"X": np.arange(10), 1: np.arange(10)})
+        data = make_data(
+            values={
+                "X": np.arange(10),
+                1: np.arange(10),
+            }
+        )
 
         with pytest.raises((TypeError, ValueError)):
             estimator.fit(data)
+
+    # ------------------------------------------------------------------
+    # Data validation
+    # ------------------------------------------------------------------
 
     @pytest.mark.parametrize(
         "values",
@@ -208,6 +227,7 @@ class TestBaseTimeSeriesCausalDiscovery:
 
     def test_fit_rejects_series_shorter_than_max_lag(self, estimator):
         estimator.tau_max = 3
+
         data = make_data(
             values={
                 "X": [1.0, 2.0, 3.0],
@@ -219,6 +239,10 @@ class TestBaseTimeSeriesCausalDiscovery:
         with pytest.raises(ValueError):
             estimator.fit(data)
 
+    # ------------------------------------------------------------------
+    # Time ordering and multiple realizations
+    # ------------------------------------------------------------------
+
     def test_fit_sorts_unsorted_time_index(self, estimator):
         index = pd.MultiIndex.from_tuples(
             [
@@ -229,6 +253,7 @@ class TestBaseTimeSeriesCausalDiscovery:
             ],
             names=["series_id", "time"],
         )
+
         data = pd.DataFrame(
             {
                 "X": [2.0, 0.0, 1.0, 3.0],
@@ -243,7 +268,10 @@ class TestBaseTimeSeriesCausalDiscovery:
         series = estimator.series_data_["series_1"]
 
         assert series.index.is_monotonic_increasing
-        np.testing.assert_array_equal(series["X"], [0.0, 1.0, 2.0, 3.0])
+        np.testing.assert_array_equal(
+            series["X"].to_numpy(),
+            [0.0, 1.0, 2.0, 3.0],
+        )
 
     def test_fit_supports_multiple_series(self, estimator):
         data = make_data(
@@ -259,6 +287,10 @@ class TestBaseTimeSeriesCausalDiscovery:
             "series_1": 10,
             "series_2": 10,
         }
+
+    # ------------------------------------------------------------------
+    # Link mark validation and normalization
+    # ------------------------------------------------------------------
 
     @pytest.mark.parametrize(
         ("alias", "expected"),
@@ -284,12 +316,20 @@ class TestBaseTimeSeriesCausalDiscovery:
 
     def test_link_assumptions_are_normalized(self, estimator):
         estimator.n_variables_ = 2
-        estimator.link_assumptions = {1: {(0, -1): "->"}}
+        estimator.link_assumptions = {
+            1: {(0, -1): "->"},
+        }
 
         estimator._validate_link_assumptions()
 
-        assert estimator.link_assumptions_ == {1: {(0, -1): "-->"}}
-        assert estimator.link_assumptions == {1: {(0, -1): "->"}}
+        assert estimator.link_assumptions_ == {
+            1: {(0, -1): "-->"},
+        }
+
+        # Normalization should not mutate the user's original parameter.
+        assert estimator.link_assumptions == {
+            1: {(0, -1): "->"},
+        }
 
     @pytest.mark.parametrize(
         "link_assumptions",
@@ -319,6 +359,10 @@ class TestBaseTimeSeriesCausalDiscovery:
         with pytest.raises((TypeError, ValueError)):
             estimator._validate_link_assumptions()
 
+    # ------------------------------------------------------------------
+    # Parameter validation
+    # ------------------------------------------------------------------
+
     @pytest.mark.parametrize(
         ("tau_min", "tau_max"),
         [
@@ -345,11 +389,16 @@ class TestBaseTimeSeriesCausalDiscovery:
         with pytest.raises((TypeError, ValueError)):
             estimator._validate_parameters()
 
-    def test_fit_requires_conditional_independence_test(self, estimator):
+    def test_conditional_independence_test_is_optional(self):
+        estimator = DummyTimeSeriesEstimator()
         estimator.cond_ind_test = None
 
-        with pytest.raises((TypeError, ValueError)):
-            estimator._validate_parameters()
+        # The base class does not require a CI test.
+        estimator._validate_parameters()
+
+    # ------------------------------------------------------------------
+    # Fitted-state reset
+    # ------------------------------------------------------------------
 
     def test_reset_clears_fitted_state(self, estimator, data):
         estimator.fit(data)
@@ -357,7 +406,14 @@ class TestBaseTimeSeriesCausalDiscovery:
 
         assert estimator.series_ids_ is None
         assert estimator.variable_names_ is None
+        assert estimator.n_variables_ is None
+        assert estimator.n_observations_ is None
+        assert estimator.n_series_ is None
+        assert estimator.series_data_ is None
+        assert estimator.series_lengths_ is None
+        assert estimator.X_ is None
         assert estimator.results_ is None
         assert estimator.graph_ is None
         assert estimator.p_matrix_ is None
         assert estimator.val_matrix_ is None
+        assert estimator.link_assumptions_ is None

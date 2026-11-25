@@ -196,9 +196,6 @@ class BaseTimeSeriesCausalDiscovery(BaseCausalDiscovery, ABC):
         if self.tau_min > self.tau_max:
             raise ValueError("tau_min cannot be greater than tau_max.")
 
-        if self.cond_ind_test is None:
-            raise ValueError("cond_ind_test must be provided.")
-
     def _check_fit_data(self, X):
         """Validate input and preserve its time-series index structure.
 
