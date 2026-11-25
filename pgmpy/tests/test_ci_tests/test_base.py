@@ -187,3 +187,12 @@ def test_residual_ci_tests_degenerate_and_name_collision():
     test = PillaiTrace(data=df_collision)
     test("Z_a", "Y", ["Z"])
     assert 0.0 <= test.p_value_ <= 1.0
+    u = np.tile([-1.0, 1.0], 50)
+    v = np.tile([1.0, 1.0, -1.0, -1.0], 25)
+    df_unit = pd.DataFrame({"X": u, "Y": u + 0.1 * v})
+    df_scaled = pd.DataFrame({"X": 1e-10 * u, "Y": u + 0.1 * v})
+    for cls in (PillaiTrace, HotellingLawley, RoysLargestRoot, WilksLambda):
+        t_orig = cls(data=df_unit)
+        t_scaled = cls(data=df_scaled)
+        assert t_orig("X", "Y", []) == t_scaled("X", "Y", [])
+        assert t_scaled.p_value_ < 0.05
