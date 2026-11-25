@@ -6,9 +6,9 @@ import pandas as pd
 from skbase.base import BaseObject
 from skbase.lookup import all_objects
 from sklearn.base import clone
-from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.linear_model import LogisticRegression
 
-from pgmpy.utils import is_discrete_type
+from pgmpy.utils import CovarianceRegression, is_discrete_type
 
 
 class _ResidualMixin:
@@ -30,13 +30,13 @@ class _ResidualMixin:
         Estimator used to predict each variable from the conditioning set.
         Must support ``fit`` / ``predict``, and ``predict_proba`` for
         categorical targets. When ``None``, defaults to
-        :class:`~sklearn.ensemble.RandomForestClassifier` for categorical /
-        ordinal variables and :class:`~sklearn.ensemble.RandomForestRegressor`
+        :class:`~sklearn.linear_model.LogisticRegression` for categorical /
+        ordinal variables and :class:`~pgmpy.utils.CovarianceRegression`
         for numerical variables.
     """
 
     _tags = {
-        "assumption:linearity": False,
+        "assumption:linearity": True,
         "assumption:additive_noise": False,
         "assumption:gaussian_noise": False,
     }
@@ -72,18 +72,30 @@ class _ResidualMixin:
                     f"The provided estimator ({type(model).__name__}) must have a "
                     f"`predict_proba` method for discrete variable '{target_col}'."
                 )
-        else:
-            model_cls = RandomForestClassifier if is_cat else RandomForestRegressor
-            model = model_cls(random_state=0)
-
-        if is_cat:
+            if is_cat:
+                y_encoded, cat_index = pd.factorize(target_data)
+                model.fit(Z_data, y_encoded)
+                pred = model.predict_proba(Z_data)
+            else:
+                model.fit(Z_data, target_data)
+                pred = model.predict(Z_data)
+        elif is_cat:
+            model = LogisticRegression()
             y_encoded, cat_index = pd.factorize(target_data)
             model.fit(Z_data, y_encoded)
             pred = model.predict_proba(Z_data)
         else:
-            model.fit(Z_data, target_data)
-            pred = model.predict(Z_data)
-
+            feature_cols = [col for col in Z_data.columns if col != "_intercept_Z"]
+            joint_data = (
+                Z_data.loc[:, feature_cols].astype(float).assign(**{target_col: target_data.to_numpy(dtype=float)})
+            )
+            model = CovarianceRegression().fit(joint_data)
+            if feature_cols:
+                coef = model.coefficients(X=feature_cols, y=[target_col])[0]
+                intercept = model.location_[-1] - coef @ model.location_[:-1]
+                pred = Z_data.loc[:, feature_cols].to_numpy(dtype=float) @ coef + intercept
+            else:
+                pred = np.full(shape=target_data.shape[0], fill_value=model.location_[-1], dtype=float)
         return pred, cat_index, model
 
     def get_residuals(self, X: str, Z: list) -> pd.DataFrame | pd.Series:

@@ -110,3 +110,46 @@ def test_unknown_name(disc_data):
 def test_invalid_type():
     with pytest.raises(ValueError):
         get_ci_test(test=123)
+
+
+from sklearn.linear_model import LogisticRegression
+
+from pgmpy.ci_tests import (
+    GCM,
+    GeneralizedCov,
+    HotellingLawley,
+    PillaiTrace,
+    RoysLargestRoot,
+    WilksLambda,
+)
+from pgmpy.utils import CovarianceRegression
+
+
+@pytest.mark.parametrize(
+    "cls",
+    [GCM, PillaiTrace, GeneralizedCov, WilksLambda, HotellingLawley, RoysLargestRoot],
+)
+def test_residual_ci_tests_default_continuous_estimator(cls, cont_data):
+    test = cls(data=cont_data)
+    test("X", "Y", ["Z"])
+    assert isinstance(test.estimator_x_, CovarianceRegression)
+    assert isinstance(test.estimator_y_, CovarianceRegression)
+
+
+@pytest.mark.parametrize(
+    "cls",
+    [PillaiTrace, GeneralizedCov, WilksLambda, HotellingLawley, RoysLargestRoot],
+)
+def test_residual_ci_tests_default_discrete_estimator(cls):
+    rng = np.random.default_rng(seed=42)
+    disc_data = pd.DataFrame(
+        {
+            "X": rng.choice(["a", "b"], 100),
+            "Y": rng.choice(["c", "d"], 100),
+            "Z": rng.choice(["e", "f"], 100),
+        }
+    )
+    test = cls(data=disc_data)
+    test("X", "Y", ["Z"])
+    assert isinstance(test.estimator_x_, LogisticRegression)
+    assert isinstance(test.estimator_y_, LogisticRegression)

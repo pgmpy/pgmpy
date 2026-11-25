@@ -12,8 +12,10 @@ class PillaiTrace(_ResidualMixin, BaseCITest):
     r"""
     Pillai's trace test for conditional independence with mixed data [1].
 
-    This test first residualizes :math:`X` and :math:`Y` with respect to :math:`[1, Z]` using an estimator (a
-    RandomForest estimator by default, but any sklearn-compatible estimator can be provided). For a continuous target
+    This test first residualizes :math:`X` and :math:`Y` with respect to :math:`[1, Z]` using an estimator
+    (:class:`~pgmpy.utils.CovarianceRegression` for continuous targets and
+    :class:`~sklearn.linear_model.LogisticRegression` for categorical targets by default, or any
+    sklearn-compatible estimator). For a continuous target
     :math:`T`, the residual is
 
     .. math::
@@ -53,8 +55,8 @@ class PillaiTrace(_ResidualMixin, BaseCITest):
     estimator : estimator instance, optional
         Any sklearn-compatible estimator with ``fit``, ``predict``, and ``predict_proba``
         (if testing discrete variables) methods. If ``None`` (default), uses
-        ``RandomForestClassifier`` for categorical targets and ``RandomForestRegressor``
-        for continuous targets. Conditioning variables are one-hot encoded before fitting.
+        :class:`~sklearn.linear_model.LogisticRegression` for categorical targets and
+        :class:`~pgmpy.utils.CovarianceRegression` for continuous targets.
 
     Attributes
     ----------
