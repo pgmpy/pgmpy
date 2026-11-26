@@ -76,8 +76,8 @@ class SEMGraph:
 
     References
     ----------
-    - :cite:p:`mcdonald_clelland_1984`
-    - :cite:p:`wikipedia_sem`
+    - :footcite:t:`mcdonald_clelland_1984`
+    - :footcite:t:`wikipedia_sem`
 
     Attributes
     ----------
@@ -807,7 +807,7 @@ class SEMAlg:
         observed = [self.eta[i] for i in y_index]
 
         # Generate samples and return a dataframe.
-        samples = np.random.multivariate_normal(
+        samples = np.random.multivariate_normal(  # noqa: NPY002
             mean=[0 for i in range(implied_cov.shape[0])],
             cov=implied_cov,
             size=n_samples,
@@ -987,8 +987,8 @@ class SEM(SEMGraph):
 
         References
         ----------
-        - :cite:p:`mcdonald_clelland_1984`
-        - :cite:p:`wikipedia_sem`
+        - :footcite:t:`mcdonald_clelland_1984`
+        - :footcite:t:`wikipedia_sem`
         """
         return cls(
             syntax="graph",

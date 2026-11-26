@@ -1,38 +1,71 @@
 # Causal Estimation
 
-```{meta}
-:description: Estimate causal effects from graphs and data using pgmpy's causal inference and prediction APIs.
+```{eval-rst}
+.. meta::
+   :description: Estimate causal effects from a graph and data with pgmpy.
 ```
 
-Causal estimation turns an identified causal query into a numerical effect. Once you know
-that a causal effect is identifiable (see {doc}`Causal Identification <causal_identification>`),
-this step combines the graph and observed data to compute quantities like the average
-treatment effect or an interventional distribution.
+Causal estimation calculates the numerical value of an identified causal effect. It uses
+the graph and the observed data. Examples are the average treatment effect and an
+interventional distribution.
 
 :::{note}
-**Prerequisite:** This guide assumes a causal effect has been identified. See
-{doc}`Causal Identification <causal_identification>` to determine identifiability first.
+**Prerequisite:** The causal effect must be identifiable. Use
+{doc}`Causal Identification <causal_identification>` to check this first.
 :::
 
 :::{tip}
-**When to use this vs. Probabilistic Inference:** Use *Causal Estimation* when you need
-interventional answers (do-calculus, "what if I set X to x?"). Use
-{doc}`Probabilistic Inference <probabilistic_inference>` for observational queries
-(conditioning on evidence, "what is P(Y | X=x)?").
+**When to use this vs. Probabilistic Inference:** Use *Causal Estimation* for
+interventional questions (do-calculus, "what if I set X to x?"). Use
+{doc}`Probabilistic Inference <probabilistic_inference>` for observational questions that
+condition on evidence ("what is P(Y | X=x)?").
 :::
 
 ## At a Glance
 
-- **[Unified API](#api)**: Two entry points — `CausalInference` for graph-based queries, and `pgmpy.prediction` for sklearn-style regression.
-- **[Interventional Queries](#interventional-queries)**: Compute distributions under do-interventions on fitted discrete models.
-- **[Average Treatment Effect](#average-treatment-effect)**: Estimate ATE from data using identified adjustment sets.
-- **[Regression-Based Estimators](#regression-based-estimators)**: Sklearn-compatible regressors for adjustment, instrumental variable, and double ML workflows.
+::::{grid} 1 1 2 2
+:gutter: 3
+:class-container: pgmpy-card-grid pgmpy-glance-grid
+
+:::{grid-item-card} Unified API
+:link: "#api"
+:link-type: url
+:class-card: sd-card-hover
+
+Use `CausalInference` for graph-based queries and `pgmpy.prediction` for scikit-learn
+regression.
+:::
+
+:::{grid-item-card} Interventional Queries
+:link: "#interventional-queries"
+:link-type: url
+:class-card: sd-card-hover
+
+Calculate distributions under do-interventions for fitted discrete models.
+:::
+
+:::{grid-item-card} Average Treatment Effect
+:link: "#average-treatment-effect"
+:link-type: url
+:class-card: sd-card-hover
+
+Estimate the average treatment effect from data with an identified adjustment set.
+:::
+
+:::{grid-item-card} Regression-Based Estimators
+:link: "#regression-based-estimators"
+:link-type: url
+:class-card: sd-card-hover
+
+Scikit-learn regressors for adjustment, instrumental variables, and double machine learning.
+:::
+::::
 
 ## API
 
-pgmpy provides two consistent entry points:
+pgmpy has two entry points:
 
-**Graph-based queries** using `CausalInference`:
+**Graph-based queries** with `CausalInference`:
 
 ```python
 import numpy as np
@@ -56,14 +89,14 @@ ate = ci.estimate_ate("X", "Y", data=data, estimator_type="linear")
 print(round(float(ate), 4))
 ```
 
-**Sklearn-style regressors** using `pgmpy.prediction` estimators that use causal graph
-role annotations (exposures, outcomes, adjustment sets) to drive the estimation.
+**Scikit-learn regressors** in `pgmpy.prediction`. These estimators use the roles in the
+causal graph (exposures, outcomes, adjustment sets) for the estimation.
 
 ## Interventional Queries
 
-For fitted discrete models, `CausalInference.query(..., do=..., evidence=...)` computes
-interventional distributions such as P(Y | do(X), Z), letting you answer "what if"
-questions directly from the model:
+For fitted discrete models, `CausalInference.query(..., do=..., evidence=...)` calculates
+interventional distributions such as P(Y | do(X), Z). Use it to answer "what if" questions
+from the model:
 
 ```python
 from pgmpy.example_models import load_model
@@ -84,14 +117,19 @@ print(result)
 ## Average Treatment Effect
 
 `CausalInference.estimate_ate(...)` estimates the average treatment effect of an exposure
-on an outcome, automatically using identified adjustment sets from the causal graph.
+on an outcome. It finds an adjustment set in the causal graph automatically.
 
 ## Regression-Based Estimators
 
-pgmpy provides sklearn-compatible regressors that use causal graph roles to determine
-which variables play which role in the estimation. These include adjustment-based
-regression, instrumental variable regression, and cross-fitted double machine learning
-for flexible nuisance models:
+The regressors in `pgmpy.prediction` are compatible with scikit-learn. They use the roles in
+the causal graph to find the exposure, the outcome, and the other variables. The regressors
+include:
+
+- adjustment-based regression.
+- instrumental variable regression.
+- cross-fitted double machine learning.
+
+This example uses adjustment-based regression:
 
 ```python
 import numpy as np
@@ -118,12 +156,12 @@ print(reg.predict(data[["X", "Z"]])[:5])
 ## See Also
 
 :::{seealso}
-- {doc}`Causal Identification <causal_identification>` — Verify identifiability before estimation.
+- {doc}`Causal Identification <causal_identification>` — Make sure that the effect is identifiable before the estimation.
 :::
 
 ## API Reference
 
-For the full list of estimation methods:
+These pages list all estimation methods:
 
 - {doc}`Causal Inference API <../api/causal_inference>`
 - {doc}`Graph Classes API <../api/base>`

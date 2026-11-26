@@ -5,7 +5,7 @@ class Water(DiscreteMixin, BaseExampleModel):
     """
     References
     ----------
-    - :cite:p:`jensen_water_1989`
+    - :footcite:t:`jensen_water_1989`
     """
 
     _tags = {

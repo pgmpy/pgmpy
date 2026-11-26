@@ -27,7 +27,8 @@ class ChowLiu(_TreeSearchMixin, BaseCausalDiscovery):
         - ``"mutual_info"``: Mutual Information Score.
         - ``"adjusted_mutual_info"``: Adjusted Mutual Information Score.
         - ``"normalized_mutual_info"``: Normalized Mutual Information Score.
-        - A callable of the form ``fn(array, array) -> float``.
+        - A callable of the form ``fn(array, array) -> float``, called with the integer state codes of two variables
+          as stored by pandas (``Series.cat.codes``, typically ``int8``).
 
     n_jobs : int, default=-1
         Number of jobs to run in parallel. ``-1`` means use all processors.
@@ -51,9 +52,7 @@ class ChowLiu(_TreeSearchMixin, BaseCausalDiscovery):
 
     References
     ----------
-    .. [1] Chow, C. K.; Liu, C.N. (1968), "Approximating discrete probability
-       distributions with dependence trees", IEEE Transactions on Information
-       Theory, IT-14 (3): 462–467
+    - :footcite:t:`chow_liu_1968`
 
     Examples
     --------
@@ -65,7 +64,7 @@ class ChowLiu(_TreeSearchMixin, BaseCausalDiscovery):
     >>> values = pd.DataFrame(
     ...     np.random.randint(low=0, high=2, size=(1000, 5)),
     ...     columns=["A", "B", "C", "D", "E"],
-    ... )
+    ... ).astype("category")
 
     With a fixed root node:
 
@@ -91,6 +90,23 @@ class ChowLiu(_TreeSearchMixin, BaseCausalDiscovery):
     ... )
     >>> plt.show()
     """
+
+    _tags = {
+        "name": "chow_liu",
+        "data_types": ["discrete"],
+        "identifiable_graph": "cpdag",
+        "requires_target": False,
+        "capability:multivariate": True,
+        "capability:expert_knowledge": [],
+        "assumption:causal_sufficiency": True,
+        "assumption:acyclicity": True,
+        "assumption:faithfulness": False,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
+    }
 
     def __init__(
         self,

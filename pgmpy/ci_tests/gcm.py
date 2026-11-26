@@ -46,21 +46,24 @@ class GCM(_ResidualMixin, BaseCITest):
 
     References
     ----------
-    - :cite:p:`shah_peters_2020`
+    - :footcite:t:`shah_peters_2020`
     """
 
     _tags = {
         "name": "gcm",
-        "data_types": ("continuous",),
+        "data_types": ["continuous"],
         "default_for": None,
         "requires_data": True,
+        "capability:conditioning": True,
     }
 
     def __init__(self, data: pd.DataFrame, estimator=None, use_cache: bool = True):
-        self.data, self.dtypes = preprocess_data(data)
+        self.data, self.dtypes = preprocess_data(data, data_types=self.get_class_tag("data_types"))
         self.estimator = LinearRegression() if estimator is None else estimator
 
         super().__init__(use_cache=use_cache)
+        if isinstance(self.estimator, LinearRegression):
+            self.set_tags(**{"assumption:linearity": True})
 
     def _compute_result(
         self,

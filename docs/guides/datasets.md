@@ -1,30 +1,63 @@
 # Example Datasets
 
-```{meta}
-:description: Discover and load built-in benchmark datasets using pgmpy's dataset helpers.
+```{eval-rst}
+.. meta::
+   :description: Find and load the benchmark datasets in pgmpy.
 ```
 
-pgmpy ships a curated collection of benchmark datasets for causal discovery and graphical
-modeling. Each dataset includes not only the data table, but also metadata such as
-ground-truth graphs, expert knowledge, and dataset characteristics — ready to use
-without any manual download or preparation.
+pgmpy has a collection of benchmark datasets for causal discovery and graphical models.
+Each dataset contains the data table and its metadata, for example the ground-truth graph,
+expert knowledge, and tags. pgmpy downloads the data when you load a dataset.
 
 :::{tip}
-**When to use this vs. Example Models:** *Example Datasets* provide data tables for
-learning graph structures and parameters. {doc}`Example Models <example_models>` provide
-pre-built graph structures (and optionally parameters) for inference, simulation, and
-benchmarking.
+**When to use this vs. Example Models:** *Example Datasets* contain data tables. Use them
+to learn graph structures and parameters. {doc}`Example Models <example_models>` contain
+graph structures, and some also contain parameters. Use them for inference, simulation, and
+benchmarks.
 :::
 
 ## At a Glance
 
-- **[Unified API](#api)**: Discover datasets with `list_datasets(...)` and load them with `load_dataset(...)`.
-- **[Rich Filtering](#filtering)**: Filter datasets by type, size, and available metadata before loading.
-- **[Bundled Metadata](#bundled-metadata)**: Each dataset carries its ground-truth graph, expert knowledge, and tags alongside the data.
+::::{grid} 1 1 2 2
+:gutter: 3
+:class-container: pgmpy-card-grid pgmpy-glance-grid
+
+:::{grid-item-card} Unified API
+:link: "#api"
+:link-type: url
+:class-card: sd-card-hover
+
+Find datasets with `list_datasets(...)` and load them with `load_dataset(...)`.
+:::
+
+:::{grid-item-card} Filtering
+:link: "#filtering"
+:link-type: url
+:class-card: sd-card-hover
+
+Filter the datasets by data type, size, and metadata before you load them.
+:::
+
+:::{grid-item-card} Bundled Metadata
+:link: "#bundled-metadata"
+:link-type: url
+:class-card: sd-card-hover
+
+Each dataset contains its ground-truth graph, expert knowledge, and tags together with the data.
+:::
+
+:::{grid-item-card} Available Datasets
+:link: "#available-datasets"
+:link-type: url
+:class-card: sd-card-hover
+
+A table of all datasets with their size, data type, and metadata.
+:::
+::::
 
 ## API
 
-The dataset API has two entry points — discover, then load:
+The dataset API has two functions. One function finds datasets, and the other loads them:
 
 ```python
 from pgmpy.datasets import list_datasets, load_dataset
@@ -37,34 +70,47 @@ print(dataset.data.shape)
 print(dataset.tags)
 ```
 
-The loaded object exposes the data as a `pandas.DataFrame` and keeps all metadata on
-the same object for downstream workflows.
+The loaded object contains the data as a `pandas.DataFrame` and all the metadata of the
+dataset.
 
 ## Filtering
 
-`list_datasets(**filters)` narrows the catalog before loading. Supported filters include
-data type (`is_discrete`, `is_continuous`, `is_mixed`), available metadata
-(`has_ground_truth`, `has_expert_knowledge`), size (`n_variables`, `n_samples`), and
-data origin (`is_simulated`, `is_interventional`).
+`list_datasets(**filters)` returns only the datasets that match the filters. You can
+filter on:
+
+- data type: `is_discrete`, `is_continuous`, `is_mixed`.
+- metadata: `has_ground_truth`, `has_expert_knowledge`.
+- size: `n_variables`, `n_samples`.
+- data origin: `is_simulated`, `is_interventional`.
 
 ## Bundled Metadata
 
-Each loaded dataset provides structured access to:
+Each loaded dataset has these attributes:
 
-- **`data`**: The tabular data as a `pandas.DataFrame`, ready for `estimator.fit(data)`.
-- **`ground_truth`**: The true causal graph (when available), for use with supervised metrics.
-- **`expert_knowledge`**: Domain constraints (when available), for use with discovery algorithms.
-- **`tags`**: Dictionary of dataset properties and characteristics.
+- **`data`**: The data table as a `pandas.DataFrame`. Give it directly to `estimator.fit(data)`.
+- **`ground_truth`**: The true causal graph, if the dataset has one. Use it with supervised metrics.
+- **`expert_knowledge`**: Domain constraints, if the dataset has them. Use them with discovery
+  algorithms.
+- **`tags`**: A dictionary with the properties of the dataset.
+
+## Available Datasets
+
+This table shows all datasets that `list_datasets()` returns, with the tags that you can
+filter on. `tubingen` is a collection of 108 cause-effect pairs. To load one pair, use
+`load_dataset("tubingen/<pair_id>")`, with a `<pair_id>` from 1 to 108. A simulated dataset
+gives the number of samples that you request.
+
+```{eval-rst}
+.. pgmpy-catalog:: datasets
+```
 
 ## See Also
 
 :::{seealso}
 - {doc}`Causal Discovery <causal_discovery>` — Use loaded datasets to learn causal graphs.
-- {doc}`Example Models <example_models>` — Pre-built graph structures to pair with these datasets.
+- {doc}`Example Models <example_models>` — Graph structures to use with these datasets.
 :::
 
 ## API Reference
-
-For the full list of available datasets:
 
 - {doc}`Datasets and Example Models API <../api/data>`

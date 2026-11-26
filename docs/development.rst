@@ -1,5 +1,5 @@
 .. meta::
-   :description: Contributing, issue reporting, pull requests, and community channels for the pgmpy project.
+   :description: How to contribute to pgmpy, report issues, open pull requests, and contact the community.
 
 Getting Involved
 ================
@@ -8,37 +8,28 @@ Getting Involved
    :hidden:
 
    started/contributing
-   roadmap
 
 Contributing
 ------------
 
-We welcome contributions! Please see our :doc:`Contributing Guide <started/contributing>` for details on:
+We accept contributions from everyone. The :doc:`Contributing Guide <started/contributing>` gives
+details about:
 
-- Development workflow (fork, branch, PR)
-- Code style and quality standards
-- Testing requirements
-- Commit and PR etiquette
-
-Roadmap
--------
-
-For a high-level view of the project direction and the areas where
-contributions are especially useful, see the :doc:`Roadmap <roadmap>`.
-
-The roadmap is intentionally theme-based rather than milestone-based, so it can
-evolve with community feedback and active development work.
+- The development workflow (fork, branch, pull request)
+- The code style and quality rules
+- The test requirements
+- The rules for commits and pull requests
 
 Quick Links
-^^^^^^^^^^^
+-----------
 
 - `Report a bug <https://github.com/pgmpy/pgmpy/issues/new>`_
 - `Propose a feature <https://github.com/pgmpy/pgmpy/issues/new>`_
 - `Open a pull request <https://github.com/pgmpy/pgmpy/compare/>`_
 
 Communication
-^^^^^^^^^^^^^
+-------------
 
-- **GitHub Issues & PRs** -- primary place for technical discussion
-- **Discord** -- quick questions and chat: https://discord.gg/DRkdKaumBs
-- **Mailing list** -- pgmpy@googlegroups.com (long-form design topics)
+- **GitHub Issues & PRs** -- the main place for technical discussions
+- **Discord** -- short questions and chat: https://discord.gg/DRkdKaumBs
+- **Mailing list** -- pgmpy@googlegroups.com, for long design discussions

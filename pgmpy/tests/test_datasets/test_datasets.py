@@ -2,8 +2,8 @@ import pandas as pd
 import pytest
 
 from pgmpy.base import DAG
+from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.datasets import list_datasets, load_dataset
-from pgmpy.estimators import ExpertKnowledge
 
 ALL_DATASETS = [
     "abalone_continuous",
@@ -16,6 +16,8 @@ ALL_DATASETS = [
     "auto_mpg",
     "blue_driver",
     "boston_housing",
+    "causalbench_k562",
+    "causalbench_rpe1",
     "cities",
     "college_plans",
     "contraceptive_method",
@@ -34,6 +36,7 @@ ALL_DATASETS = [
     "myocardial_infarction",
     "pima_diabetes",
     "pittsburgh_bridges",
+    "population_threshold_rdd_italy",
     "residential_building",
     "sachs_continuous",
     "sachs_continuous_jittered",
@@ -46,6 +49,7 @@ ALL_DATASETS = [
     "spartina",
     "student_performance",
     "superconductivity",
+    "teacher_burnout",
     "uscrime",
     "wine_quality_red",
     "wine_quality_red_white_mixed",
@@ -105,12 +109,12 @@ def test_load_covariance_dataset():
         assert isinstance(dataset.tags, dict)
 
     # n_samples controls generated covariance dataset size.
-    dataset = load_dataset("goldberg", n_samples=25, seed=42)
+    dataset = load_dataset("goldberg", n_samples=25, rng=42)
     assert dataset.data.shape[0] == 25
 
     # The same seed produces identical generated data.
-    ds1 = load_dataset("goldberg", seed=42)
-    ds2 = load_dataset("goldberg", seed=42)
+    ds1 = load_dataset("goldberg", rng=42)
+    ds2 = load_dataset("goldberg", rng=42)
     pd.testing.assert_frame_equal(ds1.data, ds2.data)
 
 
@@ -126,7 +130,7 @@ def test_load_tubingen_dataset():
 
     # Tubingen supports n_samples by subsampling the selected pair.
     expected = load_dataset("tubingen/1")
-    dataset = load_dataset("tubingen/1", n_samples=10, seed=42)
+    dataset = load_dataset("tubingen/1", n_samples=10, rng=42)
     assert dataset.data.shape == (10, expected.data.shape[1])
     assert list(dataset.data.columns) == list(expected.data.columns)
     assert set(dataset.ground_truth.edges()) == set(expected.ground_truth.edges())
@@ -159,6 +163,25 @@ def test_tubingen_invalid_format():
         load_dataset("tubingen/999")
 
 
+def test_population_threshold_rdd_italy_tags():
+    from pgmpy.datasets.population_threshold_rdd import PopulationThresholdRDDItaly
+
+    assert "population_threshold_rdd_italy" in list_datasets()
+    assert "population_threshold_rdd_italy" in list_datasets(is_mixed=True)
+    assert "population_threshold_rdd_italy" not in list_datasets(is_continuous=True)
+
+    tags = PopulationThresholdRDDItaly.get_class_tags()
+    assert tags["name"] == "population_threshold_rdd_italy"
+    assert tags["n_samples"] == 10409
+    assert tags["n_variables"] == 19
+    assert tags["has_missing_data"] is True
+    assert tags["is_mixed"] is True
+    assert tags["has_ground_truth"] is False
+    assert tags["is_simulated"] is False
+    assert PopulationThresholdRDDItaly.categorical_variables == ["macro_area"]
+    assert PopulationThresholdRDDItaly.missing_values_marker == "NA"
+
+
 def test_invalid_input():
     with pytest.raises(ValueError):
         load_dataset("non_existent_dataset")
@@ -176,7 +199,7 @@ def test_static_dataset_n_samples():
     full = load_dataset("sachs_discrete")
 
     # n_samples controls the number of returned rows.
-    sampled = load_dataset("sachs_discrete", n_samples=100, seed=42)
+    sampled = load_dataset("sachs_discrete", n_samples=100, rng=42)
     assert sampled.data.shape == (100, full.data.shape[1])
     assert list(sampled.data.columns) == list(full.data.columns)
 
@@ -186,6 +209,6 @@ def test_static_dataset_n_samples():
     assert oversized.data.shape[0] == full.data.shape[0]
 
     # The same seed gives the same subsample.
-    ds1 = load_dataset("sachs_discrete", n_samples=50, seed=42)
-    ds2 = load_dataset("sachs_discrete", n_samples=50, seed=42)
+    ds1 = load_dataset("sachs_discrete", n_samples=50, rng=42)
+    ds2 = load_dataset("sachs_discrete", n_samples=50, rng=42)
     pd.testing.assert_frame_equal(ds1.data, ds2.data)

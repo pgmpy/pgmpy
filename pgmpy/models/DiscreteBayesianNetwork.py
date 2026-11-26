@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import itertools
-import logging
 from collections import defaultdict
 from collections.abc import Hashable, Iterable
 from functools import reduce
@@ -24,11 +23,13 @@ from pgmpy.factors.discrete import (
     JointProbabilityDistribution,
     TabularCPD,
 )
+from pgmpy.models._file_io import _FileIOMixin
 from pgmpy.models.DiscreteMarkovNetwork import DiscreteMarkovNetwork
 from pgmpy.utils import compat_fns
+from pgmpy.utils._random import _rename_to_rng
 
 
-class DiscreteBayesianNetwork(DAG):
+class DiscreteBayesianNetwork(_FileIOMixin, DAG):
     """
     Initializes a Discrete Bayesian Network.
 
@@ -306,7 +307,7 @@ class DiscreteBayesianNetwork(DAG):
 
             for prev_cpd_index in range(len(self.cpds)):
                 if self.cpds[prev_cpd_index].variable == cpd.variable:
-                    logger.warning(f"Replacing existing CPD for {cpd.variable}")
+                    logger.debug(f"Replacing existing CPD for {cpd.variable}")
                     self.cpds[prev_cpd_index] = cpd
                     break
             else:
@@ -532,7 +533,7 @@ class DiscreteBayesianNetwork(DAG):
 
         return mm
 
-    def to_junction_tree(self) -> Any:
+    def to_junction_tree(self, heuristic: str = "MinFill", order: list[Hashable] | None = None) -> Any:
         """
         Creates a junction tree (or clique tree) for a given Bayesian Network.
 
@@ -543,6 +544,16 @@ class DiscreteBayesianNetwork(DAG):
         1. where each node in G corresponds to a maximal clique in H
         2. each sepset in G separates the variables strictly on one side of the
         edge to other.
+
+        Parameters
+        ----------
+        heuristic: str (default: "MinFill")
+            The heuristic used to triangulate the moral graph; see
+            `DiscreteMarkovNetwork.triangulate`.
+
+        order: list, tuple (array-like) (default: None)
+            The elimination order used to triangulate the moral graph; if given
+            the heuristic is not used.
 
         Examples
         --------
@@ -587,7 +598,7 @@ class DiscreteBayesianNetwork(DAG):
         >>> jt = G.to_junction_tree()
         """
         mm = self.to_markov_model()
-        return mm.to_junction_tree()
+        return mm.to_junction_tree(heuristic=heuristic, order=order)
 
     def fit(self, data, estimator=None, sample_weight=None) -> DAG:
         """
@@ -709,21 +720,16 @@ class DiscreteBayesianNetwork(DAG):
         _est.fit(self, data)
         cpds = _est.parameters_
 
-        # Temporarily suppress logger to stop giving warning about replacing CPDs.
-        _prev_level = logger.level
-        logger.setLevel(logging.CRITICAL)
-        try:
-            self.add_cpds(*cpds)
-        finally:
-            logger.setLevel(_prev_level)
+        self.add_cpds(*cpds)
 
+    @_rename_to_rng("seed")
     def predict(
         self,
         data: pd.DataFrame,
         algo: type | None = None,
         stochastic: bool = False,
         n_jobs: int = -1,
-        seed: int | None = None,
+        rng: int | np.random.Generator | None = None,
         **kwargs: Any,
     ) -> pd.DataFrame:
         """
@@ -731,68 +737,56 @@ class DiscreteBayesianNetwork(DAG):
 
         Parameters
         ----------
-        data: pandas DataFrame object
+        data : pandas.DataFrame
             A DataFrame object with column names same as the variables in the model.
 
-        algo: a subclass of pgmpy.inference.Inference or pgmpy.inference.ApproxInference
+        algo : type, optional
             An algorithm class from pgmpy Inference algorithms. Default is Variable Elimination.
 
-        stochastic: boolean
+        stochastic : bool
             If True, does prediction by sampling from the distribution of predicted variable(s).
             If False, returns the states with the highest probability value (i.e. MAP) for the
-                predicted variable(s).
+            predicted variable(s).
 
-        n_jobs: int (default: -1)
+        n_jobs : int, default=-1
             The number of CPU cores to use. If -1, uses all available cores.
 
-        seed: int (default: None)
-            When `stochastic=True`, the seed value to use for random number generators.
+        rng : int, numpy.random.Generator or None, default=None
+            Source of randomness for stochastic prediction and for ``ApproxInference``, passed to
+            ``numpy.random.default_rng``. If None, fresh entropy is drawn from the operating system, so results are not
+            reproducible.
 
-        **kwargs
-            Optional keyword arguments specific to the selected algorithm.
-            - Variable Elimination:
-            - elimination_order: str or list (default='greedy')
-                Order in which to eliminate the variables in the algorithm. If list is provided,
-                should contain all variables in the model except the ones in `variables`. str options
-                are: `greedy`, `WeightedMinFill`, `MinNeighbors`, `MinWeight`, `MinFill`. Please
-                refer https://pgmpy.org/exact_infer/ve.html#module-pgmpy.inference.EliminationOrder
-                for details.
+            .. versionchanged:: 1.2.0
+                Replaces ``seed``, which is deprecated and will be removed in v2.0. None no longer follows
+                ``np.random.seed``.
 
-            - joint: boolean (should only be used with stochastic=True i.e. when not calculating MAP)
-                If True, returns a Joint Distribution over `variables`.
-                If False, returns a dict of distributions over each of the `variables`.
+        **kwargs : dict
+            Optional keyword arguments for the selected inference algorithm.
 
-            - Belief Propagation:
-                - joint: boolean (should only be used with stochastic=True i.e. when not calculating MAP)
-                If True, returns a Joint Distribution over `variables`.
-                If False, returns a dict of distributions over each of the `variables`.
-
-            - Approx Inference:
-                - n_samples: int
-                    The number of samples to generate for computing the distributions. Higher `n_samples`
-                    results in more accurate results at the cost of more computation time.
-
-                - samples: pd.DataFrame (default: None)
-                    If provided, uses these samples to compute the distribution instead
-                    of generating samples. `samples` **must** conform with the
-                    `evidence` and `virtual_evidence`.
-
-                - state_names: dict (default: None)
-                    A dict of state names for each variable in `variables` in the form {variable_name: list of states}.
-                    If None, inferred from the data but is possible that the final distribution misses some states.
-
-                - seed: int (default: None)
-                    Sets the seed for the random generators.
-
-                - joint: boolean (should only be used with stochastic=True i.e. when not calculating MAP)
-                    If True, returns a Joint Distribution over `variables`.
-                    If False, returns a dict of distributions over each of the `variables`.
+            - ``elimination_order`` (str or list, default ``"greedy"``): Variable
+              elimination order. A list must contain all model variables except
+              those being predicted. String options are ``"greedy"``,
+              ``"WeightedMinFill"``, ``"MinNeighbors"``, ``"MinWeight"``, and
+              ``"MinFill"``.
+            - ``n_samples`` (int): Number of samples used by approximate
+              inference. Larger values improve accuracy at additional cost.
+            - ``samples`` (pandas.DataFrame, default ``None``): Existing samples
+              for approximate inference. They must conform to the evidence and
+              virtual evidence.
+            - ``state_names`` (dict, default ``None``): Possible states for each
+              variable. When inferred from samples, unobserved states can be
+              absent from the resulting distribution.
+            - ``joint`` (bool): Used only for stochastic prediction. If true,
+              return a joint distribution; otherwise, return one distribution
+              per variable. This option is supported by variable elimination,
+              belief propagation, and approximate inference.
 
         Returns
         -------
-        Inference results: Pandas DataFrame
-            If `stochastic` is True, returns state(s) by sampling from the distribution of predicted variables.
-            If `stochastic` is False, returns state(s) with the highest probability value.
+        results : pandas.DataFrame
+            If ``stochastic`` is True, returns states sampled from the
+            distribution of predicted variables. Otherwise, returns states
+            with the highest probability values.
 
         Examples
         --------
@@ -812,8 +806,8 @@ class DiscreteBayesianNetwork(DAG):
         >>> model.fit(train_data)  # doctest: +ELLIPSIS
         <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork object at 0x...>
         >>> predict_data = predict_data.copy()
-        >>> predict_data.drop("E", axis=1, inplace=True)
-        >>> approx_inf_parameters = {"n_samples": int(1e3), "seed": 42}
+        >>> predict_data = predict_data.drop("E", axis=1)
+        >>> approx_inf_parameters = {"n_samples": int(1e3), "rng": 42}
         >>> y_pred = model.predict(
         ...     predict_data, algo=ApproxInference, **approx_inf_parameters
         ... )
@@ -843,14 +837,21 @@ class DiscreteBayesianNetwork(DAG):
         model_inference = algo(self)
         data_unique_indexes = data.groupby(list(data.columns), dropna=False).apply(lambda t: t.index.tolist())
         data_unique = data_unique_indexes.index.to_frame()
+        rng = np.random.default_rng(rng)
+        if issubclass(algo, ApproxInference):
+            inference_kwargs = [{**kwargs, "rng": child} for child in rng.spawn(data_unique.shape[0])]
+        else:
+            inference_kwargs = [kwargs] * data_unique.shape[0]
         pred_values = Parallel(n_jobs=n_jobs, require="sharedmem")(
             delayed(model_inference.query if stochastic else model_inference.map_query)(
                 variables=missing_variables.union(set(data_point.index[data_point.isna()])),
                 evidence=data_point[~data_point.isna()].to_dict(),
                 show_progress=False,
-                **kwargs,
+                **point_kwargs,
             )
-            for index, data_point in tqdm(data_unique.iterrows(), total=data_unique.shape[0])
+            for (index, data_point), point_kwargs in zip(
+                tqdm(data_unique.iterrows(), total=data_unique.shape[0]), inference_kwargs
+            )
         )
 
         all_columns = data.columns.tolist() + [col for col in missing_variables]
@@ -858,7 +859,7 @@ class DiscreteBayesianNetwork(DAG):
 
         for i, row in enumerate(data_unique_indexes):
             if stochastic:
-                predicted_df = pred_values[i].sample(n=len(row), seed=seed).reset_index(drop=True)
+                predicted_df = pred_values[i].sample(n=len(row), rng=rng).reset_index(drop=True)
             else:
                 predicted = pd.DataFrame(pred_values[i], index=[0])
                 predicted_df = predicted.loc[predicted.index.repeat(len(row))].reset_index(drop=True)
@@ -900,7 +901,7 @@ class DiscreteBayesianNetwork(DAG):
         >>> model.fit(values)  # doctest: +ELLIPSIS
         <pgmpy.models.DiscreteBayesianNetwork.DiscreteBayesianNetwork object at 0x...>
         >>> predict_data = predict_data.copy()
-        >>> predict_data.drop("B", axis=1, inplace=True)
+        >>> predict_data = predict_data.drop("B", axis=1)
         >>> y_prob = model.predict_probability(predict_data)
         >>> y_prob.shape
         (20, 2)
@@ -929,7 +930,7 @@ class DiscreteBayesianNetwork(DAG):
             for k, v in states_dict.items():
                 for index in range(len(v.values)):
                     state = self.get_cpds(k).state_names[k][index]
-                    pred_values[k + "_" + str(state)].append(v.values[index])
+                    pred_values[f"{k}_{state}"].append(v.values[index])
         return pd.DataFrame(pred_values, index=data.index)
 
     def get_state_probability(self, states: dict[Hashable, Hashable]) -> float:
@@ -1094,7 +1095,10 @@ class DiscreteBayesianNetwork(DAG):
         model_copy.add_edges_from(self.edges())
         if self.cpds:
             model_copy.add_cpds(*[cpd.copy() for cpd in self.cpds])
-        model_copy.latents = self.latents
+
+        for role, var in self.get_role_dict().copy().items():
+            model_copy.with_role(role=role, variables=var, inplace=True)
+
         return model_copy
 
     def get_markov_blanket(self, node: Hashable) -> list[Hashable]:
@@ -1144,6 +1148,7 @@ class DiscreteBayesianNetwork(DAG):
         return list(blanket_nodes)
 
     @staticmethod
+    @_rename_to_rng("seed")
     def get_random(
         n_nodes: int = 5,
         n_edges: int | None = None,
@@ -1151,7 +1156,7 @@ class DiscreteBayesianNetwork(DAG):
         node_names: list[Hashable] | None = None,
         n_states: int | dict[Hashable, int] | None = None,
         latents: bool = False,
-        seed: int | None = None,
+        rng: int | np.random.Generator | None = None,
     ) -> DiscreteBayesianNetwork:
         """
         Returns a randomly generated Bayesian Network on `n_nodes` variables
@@ -1182,8 +1187,12 @@ class DiscreteBayesianNetwork(DAG):
         latents: bool (default: False)
             If True, also creates latent variables.
 
-        seed: int (default: None)
-            The seed value for random number generators.
+        rng: int, numpy.random.Generator or None (default: None)
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
+
+            .. versionchanged:: 1.2.0
+                Replaces ``seed``, which is deprecated and will be removed in v2.0.
 
         Returns
         -------
@@ -1202,12 +1211,13 @@ class DiscreteBayesianNetwork(DAG):
         5
 
         """
+        rng = np.random.default_rng(rng)
+
         if node_names is None:
             node_names = [f"X_{i}" for i in range(n_nodes)]
 
         if n_states is None:
-            gen = np.random.default_rng(seed=seed)
-            n_states = gen.integers(low=1, high=5, size=n_nodes)
+            n_states = rng.integers(low=1, high=5, size=n_nodes)
             n_states_dict = {node_names[i]: n_states[i] for i in range(n_nodes)}
 
         elif isinstance(n_states, int):
@@ -1223,7 +1233,7 @@ class DiscreteBayesianNetwork(DAG):
             edge_prob=edge_prob,
             node_names=node_names,
             latents=latents,
-            seed=seed,
+            rng=rng,
         )
         # Initialize with full DAG to preserve isolated nodes
         bn_model = DiscreteBayesianNetwork(dag)
@@ -1237,18 +1247,19 @@ class DiscreteBayesianNetwork(DAG):
                     variable=node,
                     evidence=parents,
                     cardinality=n_states_dict,
-                    seed=seed,
+                    rng=rng,
                 )
             )
 
         bn_model.add_cpds(*cpds)
         return bn_model
 
+    @_rename_to_rng("seed")
     def get_random_cpds(
         self,
         n_states: int | dict[Hashable, int] | None = None,
         inplace: bool = False,
-        seed: int | None = None,
+        rng: int | np.random.Generator | None = None,
     ) -> list[TabularCPD] | DiscreteBayesianNetwork | None:
         """
         Given a `model`, generates and adds random `TabularCPD`
@@ -1264,39 +1275,60 @@ class DiscreteBayesianNetwork(DAG):
             If inplace=True, adds the generated TabularCPDs to `model` itself, else creates
             a copy of the model.
 
-        seed: int (default: None)
-            The seed value for random number generators.
+        rng: int, numpy.random.Generator or None (default: None)
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
+
+            .. versionchanged:: 1.2.0
+                Replaces ``seed``, which is deprecated and will be removed in v2.0.
 
         """
+        rng = np.random.default_rng(rng)
+
         if isinstance(n_states, int):
             n_states = dict.fromkeys(self.nodes(), n_states)
         elif isinstance(n_states, dict):
             if set(n_states.keys()) != set(self.nodes()):
                 raise ValueError("Number of states not specified for each variable")
         elif n_states is None:
-            gen = np.random.default_rng(seed=seed)
-            n_states = {var: gen.integers(low=1, high=5, size=1)[0] for var in self.nodes()}
+            n_states = {var: rng.integers(low=1, high=5, size=1)[0] for var in self.nodes()}
 
         cpds = []
         for node in self.nodes():
             parents = list(self.predecessors(node))
-            cpds.append(TabularCPD.get_random(variable=node, evidence=parents, cardinality=n_states, seed=seed))
+            cpds.append(TabularCPD.get_random(variable=node, evidence=parents, cardinality=n_states, rng=rng))
 
         if inplace:
             self.add_cpds(*cpds)
         else:
             return cpds
 
-    def do(self, nodes: Hashable | list[Hashable], inplace: bool = False) -> DiscreteBayesianNetwork | None:
+    def do(
+        self,
+        nodes: Hashable | Iterable[Hashable] | dict[Hashable, Hashable | TabularCPD | None],
+        inplace: bool = False,
+    ) -> DiscreteBayesianNetwork:
         """
-        Applies the do operation. The do operation removes all incoming edges
-        to variables in `nodes` and marginalizes their CPDs to only contain the
-        variable itself.
+        Applies the do-operator: removes all incoming edges of the intervened
+        variables and replaces their CPDs with the intervention distribution.
+
+        Three kinds of interventions are supported, and can be mixed in one call:
+
+        - ``do("X")`` / ``do(["X", "Y"])`` / ``do({"X": None})``: the intervention
+          distribution is left unspecified and the CPD of ``X`` is set to the uniform
+          distribution over its states.
+        - ``do({"X": x})``: atomic (hard) intervention do(X = x). The CPD of ``X``
+          becomes a point mass at state ``x``.
+        - ``do({"X": cpd})`` with a ``TabularCPD`` defined on ``X`` alone: soft
+          (stochastic) intervention. The CPD of ``X`` is replaced by ``cpd``.
 
         Parameters
         ----------
-        nodes : list, array-like
-            The names of the nodes to apply the do-operator for.
+        nodes : Hashable, iterable of Hashable, or dict
+            The variable(s) to intervene on; all must be present in the model. A ``str``, ``int``
+            or ``tuple`` is one node; a list, set or frozenset is a collection. A dict maps each
+            variable to its intervention: a state, a ``TabularCPD`` over the variable alone (using
+            the model's state names), or None.
 
         inplace: boolean (default: False)
             If inplace=True, makes the changes to the current object,
@@ -1304,36 +1336,83 @@ class DiscreteBayesianNetwork(DAG):
 
         Returns
         -------
-        Modified network: pgmpy.models.DiscreteBayesianNetwork or None
-            If inplace=True, modifies the object itself else returns an instance of
-            DiscreteBayesianNetwork modified by the do operation.
+        Modified network: pgmpy.models.DiscreteBayesianNetwork
+            The post-intervention model: `self` if `inplace=True`, otherwise a modified copy.
+
+        Raises
+        ------
+        ValueError
+            If a variable is not present in the model, has no CPD to intervene on, the state is not
+            a state of the variable, or the intervention CPD is not over the variable alone with the
+            model's state names.
 
         Examples
         --------
         >>> from pgmpy.example_models import load_model
+        >>> from pgmpy.factors.discrete import TabularCPD
         >>> asia = load_model("bnlearn/asia")
         >>> asia.edges()  # doctest: +NORMALIZE_WHITESPACE
         OutEdgeView([('asia', 'tub'), ('tub', 'either'), ('smoke', 'lung'), ('smoke', 'bronc'),
                      ('lung', 'either'), ('bronc', 'dysp'), ('either', 'xray'), ('either', 'dysp')])
-        >>> do_bronc = asia.do(["bronc"])
+        >>> do_bronc = asia.do({"bronc": "yes"})
+        >>> do_bronc.get_parents("bronc")
+        []
+        >>> do_bronc.get_cpds("bronc").values
+        array([1., 0.])
+        >>> soft = asia.do({"bronc": TabularCPD("bronc", 2, [[0.3], [0.7]], state_names={"bronc": ["yes", "no"]})})
+        >>> soft.get_cpds("bronc").values
+        array([0.3, 0.7])
+        >>> asia.do(["bronc", "smoke"]).get_cpds("bronc").values
+        array([0.5, 0.5])
+
+        References
+        ----------
+        - :footcite:t:`pearl_2009` (page 70).
         """
-        if isinstance(nodes, (str, int)):
-            nodes = [nodes]
+        if isinstance(nodes, dict):
+            interventions = nodes
         else:
-            nodes = list(nodes)
+            interventions = dict.fromkeys(nodes if isinstance(nodes, (list, set, frozenset)) else [nodes])
 
-        if not set(nodes).issubset(set(self.nodes())):
-            raise ValueError(f"Nodes not found in the model: {set(nodes) - set(self.nodes)}")
+        adj_model = super().do(list(interventions), inplace=inplace)
 
-        model = self if inplace else self.copy()
-        adj_model = DAG.do(model, nodes, inplace=inplace)
+        for node, intervention in interventions.items():
+            old_cpd = adj_model.get_cpds(node)
+            if old_cpd is None:
+                if intervention is None:
+                    continue
+                raise ValueError(f"No CPD associated with {node!r}; add one before intervening on it.")
+            states = old_cpd.state_names[node]
 
-        if adj_model.cpds:
-            for node in nodes:
-                cpd = adj_model.get_cpds(node=node)
-                cpd.marginalize(cpd.variables[1:], inplace=True)
+            if isinstance(intervention, TabularCPD):
+                if intervention.variables != [node]:
+                    raise ValueError(
+                        f"The intervention CPD for {node!r} must be defined on {node!r} alone; "
+                        f"got scope {intervention.variables}."
+                    )
+                if intervention.state_names[node] != states:
+                    raise ValueError(
+                        f"The intervention CPD for {node!r} has states {intervention.state_names[node]}, "
+                        f"but the model has states {states}."
+                    )
+                new_cpd = intervention
+            elif intervention is None:
+                new_cpd = TabularCPD(node, len(states), [[1 / len(states)]] * len(states), state_names={node: states})
+            else:
+                if intervention not in states:
+                    raise ValueError(f"State {intervention!r} is not a state of {node!r}; valid states: {states}.")
+                new_cpd = TabularCPD(
+                    node,
+                    len(states),
+                    [[1.0 if state == intervention else 0.0] for state in states],
+                    state_names={node: states},
+                )
+
+            adj_model.remove_cpds(old_cpd)
+            adj_model.add_cpds(new_cpd)
         return adj_model
 
+    @_rename_to_rng("seed")
     def simulate(
         self,
         n_samples: int = 10,
@@ -1344,7 +1423,7 @@ class DiscreteBayesianNetwork(DAG):
         missing_prob: TabularCPD | list[TabularCPD] | None = None,
         include_latents: bool = False,
         partial_samples: pd.DataFrame | None = None,
-        seed: int | None = None,
+        rng: int | np.random.Generator | None = None,
         show_progress: bool = True,
         return_full: bool = False,
     ) -> pd.DataFrame:
@@ -1396,8 +1475,13 @@ class DiscreteBayesianNetwork(DAG):
             specified, the sampling procedure uses these sample values, instead of generating them.
             partial_samples.shape[0] must be equal to `n_samples`.
 
-        seed: int (default: None)
-            If a value is provided, sets the seed for numpy.random.
+        rng: int | numpy.random.Generator | None (default: None)
+            Source of randomness, passed to ``numpy.random.default_rng``. If None, fresh entropy is drawn from the
+            operating system, so results are not reproducible.
+
+            .. versionchanged:: 1.2.0
+                Replaces ``seed``, which is deprecated and will be removed in v2.0. None no longer follows
+                ``np.random.seed``.
 
         show_progress: bool
             If True, shows a progress bar when generating samples.
@@ -1459,7 +1543,7 @@ class DiscreteBayesianNetwork(DAG):
         ...     )
         ... ]
         >>> model.simulate(n_samples=10, virtual_intervention=virt_intervention).shape
-        (10, 38)
+        (10, 37)
 
 
         Simulation with missing values:
@@ -1511,15 +1595,15 @@ class DiscreteBayesianNetwork(DAG):
         virtual_intervention = [] if virtual_intervention is None else virtual_intervention
         virtual_evidence = [] if virtual_evidence is None else virtual_evidence
 
+        virt_nodes = [cpd.variables[0] for cpd in virtual_intervention]
         if set(do.keys()).intersection(set(evidence.keys())):
             raise ValueError("Variable can't be in both do and evidence")
+        if set(do.keys()).intersection(virt_nodes):
+            raise ValueError("Variable can't be in both do and virtual_intervention")
 
-        # Step 1: If do or virtual_intervention is specified, modify the network structure.
-        if (do != {}) or (virtual_intervention != []):
-            virt_nodes = [cpd.variables[0] for cpd in virtual_intervention]
-            model = model.do(list(do.keys()) + virt_nodes)
-            evidence = {**evidence, **do}
-            virtual_evidence = [*virtual_evidence, *virtual_intervention]
+        # Step 1: If do or virtual_intervention is specified, apply the interventions to the model.
+        if do or virtual_intervention:
+            model.do({**do, **dict(zip(virt_nodes, virtual_intervention))}, inplace=True)
 
         # Step 2: If virtual_evidence; modify the network structure
         if virtual_evidence != []:
@@ -1601,7 +1685,7 @@ class DiscreteBayesianNetwork(DAG):
             samples = BayesianModelSampling(model).forward_sample(
                 size=n_samples,
                 include_latents=include_latents,
-                seed=seed,
+                rng=rng,
                 show_progress=show_progress,
                 partial_samples=partial_samples,
             )
@@ -1612,7 +1696,7 @@ class DiscreteBayesianNetwork(DAG):
                 size=n_samples,
                 evidence=[(k, v) for k, v in evidence.items()],
                 include_latents=include_latents,
-                seed=seed,
+                rng=rng,
                 show_progress=show_progress,
                 partial_samples=partial_samples,
             )
@@ -1625,114 +1709,10 @@ class DiscreteBayesianNetwork(DAG):
                     samples[variable.split("*")[0] + "_full"] = samples.loc[:, variable.split("*")[0]]
 
                 samples.loc[samples[variable] == 1, variable.split("*")[0]] = np.nan
-                samples.drop(columns=[variable], inplace=True)
+                samples = samples.drop(columns=[variable])
 
         # Step 7: Postprocess and return
         if include_latents:
             return samples.astype("category")
         else:
             return (samples.loc[:, list(set(samples.columns) - self.latents)]).astype("category")
-
-    def save(self, filename: str, filetype: str = "bif") -> None:
-        """
-        Writes the model to a file. Please avoid using any special characters or
-        spaces in variable names or state names in the model.
-
-        Parameters
-        ----------
-        filename: str
-            The path along with the filename where to write the file.
-
-        filetype: str (default: bif)
-            The format in which to write the model to file. Can be one of
-            the following: bif, uai, xmlbif, xdsl, net.
-
-        Examples
-        --------
-        >>> from pgmpy.example_models import load_model
-        >>> alarm = load_model("bnlearn/alarm")
-        >>> alarm.save("alarm.bif", filetype="bif")
-        """
-        from pgmpy.readwrite import (
-            BIFWriter,
-            NETWriter,
-            UAIWriter,
-            XDSLWriter,
-            XMLBIFWriter,
-        )
-
-        supported_formats_writer_map = {
-            "bif": BIFWriter,
-            "uai": UAIWriter,
-            "xmlbif": XMLBIFWriter,
-            "xdsl": XDSLWriter,
-            "net": NETWriter,
-        }
-        if filetype not in supported_formats_writer_map.keys():
-            raise ValueError(f"Unsupported file format: {filetype}")
-
-        parsed_filetype = filename.split(".")[-1].lower()
-        if parsed_filetype in supported_formats_writer_map.keys():
-            filetype = parsed_filetype
-
-        writer_class = supported_formats_writer_map[filetype]
-        writer_class(self).write(filename=filename)
-
-    @staticmethod
-    def load(filename: str, filetype: str = "bif", **kwargs: Any) -> DiscreteBayesianNetwork:
-        """
-        Read the model from a file.
-
-        Parameters
-        ----------
-        filename: str
-            The path along with the filename where to read the file.
-
-        filetype: str (default: bif)
-            The format of the model file. Can be one of
-            the following: bif, uai, xmlbif, xdsl, net.
-
-        kwargs: kwargs
-            Any additional arguments for the reader class or get_model method.
-            Please refer the file format class for details.
-
-        Examples
-        --------
-        >>> from pgmpy.example_models import load_model
-        >>> alarm = load_model("bnlearn/alarm")
-        >>> alarm.save("alarm.bif", filetype="bif")
-        >>> alarm_model = DiscreteBayesianNetwork.load("alarm.bif", filetype="bif")
-        """
-        from pgmpy.readwrite import (
-            BIFReader,
-            NETReader,
-            UAIReader,
-            XDSLReader,
-            XMLBIFReader,
-        )
-
-        supported_formats_reader_map = {
-            "bif": BIFReader,
-            "uai": UAIReader,
-            "xmlbif": XMLBIFReader,
-            "xdsl": XDSLReader,
-            "net": NETReader,
-        }
-
-        if filetype not in supported_formats_reader_map.keys():
-            raise ValueError(f"Unsupported file format: {filetype}")
-
-        parsed_filetype = filename.split(".")[-1].lower()
-        if parsed_filetype in supported_formats_reader_map.keys():
-            filetype = parsed_filetype
-
-        reader_class = supported_formats_reader_map[filetype]
-
-        if filetype == "bif":
-            state_name_type = kwargs.get("state_name_type", str)
-            reader = reader_class(path=filename)
-            return reader.get_model(state_name_type=state_name_type)
-
-        else:
-            reader = reader_class(path=filename)
-            return reader.get_model()

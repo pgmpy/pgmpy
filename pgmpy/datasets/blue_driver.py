@@ -5,7 +5,7 @@ class BlueDriver(BaseDataset):
     """
     References
     ----------
-    - :cite:p:`uci_adult`
+    - :footcite:t:`uci_adult`
     """
 
     _tags = {

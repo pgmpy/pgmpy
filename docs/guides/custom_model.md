@@ -1,22 +1,49 @@
 # Defining a Custom Model
 
-```{meta}
-:description: Build custom pgmpy models and attach the right CPD or factor types for your workflow.
+```{eval-rst}
+.. meta::
+   :description: Make custom pgmpy models and add the correct CPD or factor types.
 ```
 
-When you already know the structure of a model, you can define the graph and its
-parameters directly in pgmpy. This workflow gives you full control over nodes, edges,
-and CPDs, and supports several model families beyond standard discrete Bayesian networks.
+If you know the structure of a model, you can define the graph and its parameters in pgmpy
+yourself. You then have full control of the nodes, edges, and CPDs. This works for discrete
+Bayesian networks and for other model families.
 
 ## At a Glance
 
-- **[Unified API](#api)**: Create a model, add CPDs, and validate — the same pattern across all model families.
-- **[Multiple Model Families](#model-families)**: Discrete, continuous, functional, dynamic, and undirected models.
-- **[Model Validation](#model-validation)**: Verify consistency of structure and parameters before downstream use.
+::::{grid} 1 1 3 3
+:gutter: 3
+:class-container: pgmpy-card-grid pgmpy-glance-grid
+
+:::{grid-item-card} Unified API
+:link: "#api"
+:link-type: url
+:class-card: sd-card-hover
+
+Create a model, add the CPDs, and validate it. The steps are the same for all model families.
+:::
+
+:::{grid-item-card} Model Families
+:link: "#model-families"
+:link-type: url
+:class-card: sd-card-hover
+
+Discrete, continuous, functional, dynamic, and undirected models.
+:::
+
+:::{grid-item-card} Model Validation
+:link: "#model-validation"
+:link-type: url
+:class-card: sd-card-hover
+
+Make sure that the structure and the parameters agree before you use the model.
+:::
+::::
 
 ## API
 
-The common pattern is: choose a model class, define the structure, add CPDs, and validate:
+The steps are: select a model class, define the structure, add the CPDs, and validate the
+model:
 
 ```python
 from pgmpy.models import DiscreteBayesianNetwork
@@ -32,17 +59,21 @@ model.add_cpds(cpd_a, cpd_b, cpd_c)
 print(model.check_model())
 ```
 
-Once valid, the model works with inference, simulation, and the rest of the pgmpy stack.
+You can then use the model with inference, simulation, and all other parts of pgmpy.
 
 ## Model Families
 
-pgmpy supports several model families, each paired with a matching CPD or factor type.
-These include discrete Bayesian networks with tabular CPDs, continuous networks with
-linear Gaussian CPDs, functional models with arbitrary CPDs, dynamic Bayesian networks
-for temporal processes, undirected Markov networks, and structural equation models.
+pgmpy has these model families. Each family uses its own CPD or factor type:
 
-Each family uses the same create → add CPDs → validate pattern shown above. For example,
-a continuous model:
+- discrete Bayesian networks with tabular CPDs.
+- continuous networks with linear Gaussian CPDs.
+- functional models with arbitrary CPDs.
+- dynamic Bayesian networks for temporal processes.
+- undirected Markov networks.
+- structural equation models.
+
+All families use the same steps as the example above: create the model, add the CPDs, and
+validate it. This example makes a continuous model:
 
 ```python
 from pgmpy.models import LinearGaussianBayesianNetwork
@@ -60,20 +91,20 @@ print(model.check_model())
 
 ## Model Validation
 
-`model.check_model()` verifies that the graph structure and attached CPDs are consistent
-— correct parent sets, probability tables that sum to 1, matching cardinalities, etc.
-Always validate before using a model downstream.
+`model.check_model()` makes sure that the graph structure and the CPDs agree. For example,
+it checks the parent sets, the cardinalities, and that each probability table sums to 1.
+Always validate a model before you use it.
 
 ## See Also
 
 :::{seealso}
-- {doc}`Parameter Estimation <parameter_estimation>` — Learn CPDs from data instead of defining them manually.
-- {doc}`Probabilistic Inference <probabilistic_inference>` — Query the model once it is built and validated.
+- {doc}`Parameter Estimation <parameter_estimation>` — Learn the CPDs from data.
+- {doc}`Probabilistic Inference <probabilistic_inference>` — Query the model after you create and validate it.
 :::
 
 ## API Reference
 
-For the full list of model classes and factor types:
+These pages list all model classes and factor types:
 
 - {doc}`Models API <../api/models>`
 - {doc}`Factors and CPDs API <../api/factors>`

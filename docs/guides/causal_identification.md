@@ -1,26 +1,58 @@
 # Causal Identification
 
-```{meta}
-:description: Identify adjustment and frontdoor strategies from causal graphs using pgmpy's identification APIs.
+```{eval-rst}
+.. meta::
+   :description: Find adjustment sets and frontdoor sets in causal graphs with pgmpy.
 ```
 
-Before estimating a causal effect from data, you need to determine whether the effect
-is even identifiable from observational data given the causal graph. Causal identification
-answers: "Can the causal effect of X on Y be expressed purely in terms of the observed
-data distribution?" The answer depends on the graph structure — if there are unobserved
-confounders, certain effects may not be identifiable.
+Before you estimate a causal effect from data, make sure that the effect is identifiable.
+Causal identification answers this question: is it possible to calculate the causal effect
+of X on Y from the distribution of the observed data only? The answer depends on the graph
+structure. Unobserved confounders can make an effect not identifiable.
 
 ## At a Glance
 
-- **[Unified API](#api)**: All identification methods share an `identify(graph)` / `validate(graph)` interface.
-- **[Backdoor Adjustment](#backdoor-adjustment)**: Find minimal, variance-optimal, or all valid adjustment sets.
-- **[Frontdoor Identification](#frontdoor-identification)**: Identify effects when backdoor adjustment is blocked by unobserved confounders.
-- **[Validation](#validation)**: Verify whether a candidate adjustment or frontdoor set is valid.
+::::{grid} 1 1 2 2
+:gutter: 3
+:class-container: pgmpy-card-grid pgmpy-glance-grid
+
+:::{grid-item-card} Unified API
+:link: "#api"
+:link-type: url
+:class-card: sd-card-hover
+
+All identification methods use the same `identify(graph)` and `validate(graph)` methods.
+:::
+
+:::{grid-item-card} Backdoor Adjustment
+:link: "#backdoor-adjustment"
+:link-type: url
+:class-card: sd-card-hover
+
+Find minimal, variance-optimal, or all valid adjustment sets.
+:::
+
+:::{grid-item-card} Frontdoor Identification
+:link: "#frontdoor-identification"
+:link-type: url
+:class-card: sd-card-hover
+
+Identify effects when unobserved confounders prevent backdoor adjustment.
+:::
+
+:::{grid-item-card} Validation
+:link: "#validation"
+:link-type: url
+:class-card: sd-card-hover
+
+Check if a candidate adjustment set or frontdoor set is valid.
+:::
+::::
 
 ## API
 
-Identification methods follow a consistent pattern — create the identifier, call
-`identify(...)`, and inspect the result:
+All identification methods use the same steps: create the identifier, call
+`identify(...)`, and examine the result:
 
 ```python
 from pgmpy.base import DAG
@@ -39,9 +71,9 @@ print(identified_graph.get_role("adjustment"))
 
 ## Backdoor Adjustment
 
-The backdoor criterion finds sets of variables to condition on that block all spurious
-paths between exposure and outcome. pgmpy supports finding minimal adjustment sets,
-variance-optimal sets, or enumerating all valid sets:
+The backdoor criterion finds sets of variables that block all non-causal paths between the
+exposure and the outcome. You condition on these variables. pgmpy can find a minimal
+adjustment set, a variance-optimal set, or all valid sets:
 
 ```python
 from pgmpy.base import DAG
@@ -63,13 +95,14 @@ print("All:", identified_all.get_role("adjustment"), ok_all)
 
 ## Frontdoor Identification
 
-When unobserved confounders block the backdoor criterion, the frontdoor criterion provides
-an alternative by identifying mediating variables through which the causal effect flows.
+If unobserved confounders prevent backdoor adjustment, use the frontdoor criterion. It
+identifies the effect through mediator variables that carry the effect from the exposure to
+the outcome.
 
 ## Validation
 
-If you already have a candidate adjustment or frontdoor set, use `validate(...)` to check
-whether it satisfies the graphical criterion before proceeding to estimation:
+If you have a candidate adjustment set or frontdoor set, use `validate(...)`. It checks if
+the set satisfies the graphical criterion. Do this before the estimation:
 
 ```python
 from pgmpy.base import DAG
@@ -92,7 +125,7 @@ print(is_valid)  # True
 
 ## API Reference
 
-For the full list of identification methods:
+These pages list all identification methods:
 
 - {doc}`Causal Inference API <../api/causal_inference>`
 - {doc}`Graph Classes API <../api/base>`

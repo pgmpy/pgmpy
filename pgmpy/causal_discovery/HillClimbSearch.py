@@ -3,6 +3,7 @@ from collections.abc import Hashable
 
 import networkx as nx
 import pandas as pd
+from sklearn.base import clone
 from tqdm.auto import trange
 
 from pgmpy import config
@@ -16,7 +17,7 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
     """
     Score-based causal discovery using hill climbing optimization.
 
-    This class implements the HillClimbSearch algorithm [1]_ for causal discovery.
+    This class implements the HillClimbSearch algorithm [1] for causal discovery.
     Given a tabular dataset, the algorithm estimates the causal structure among
     the variables in the data as a Directed Acyclic Graph (DAG). The algorithm
     works by iteratively making local modifications to the graph structure
@@ -24,6 +25,7 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
     the score until a local maximum is reached.
 
     The algorithm is a greedy local search method that:
+
     1. Starts from an initial graph (empty by default or based on provided expert knowledge).
     2. Evaluates all possible single-edge modifications (add, delete, reverse).
     3. Applies the modification with the highest score improvement.
@@ -54,7 +56,7 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
 
     max_indegree : int or None, default=None
         If provided, the procedure only searches among models where all nodes
-        have at most `max_indegree` parents. This can significantly reduce
+        have at most ``max_indegree`` parents. This can significantly reduce
         the search space and computation time for large graphs.
 
     expert_knowledge : ExpertKnowledge instance, default=None
@@ -67,18 +69,19 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
 
     return_type : str, default='pdag'
         The type of graph to return. Options are:
+
         - 'dag': Returns a directed acyclic graph (DAG).
         - 'pdag': Returns a partially directed acyclic graph (PDAG) where edges that
           could not be oriented are left undirected.
 
     epsilon : float, default=1e-4
         Defines the exit condition. If the improvement in score is less
-        than `epsilon`, the algorithm terminates and returns the learned model.
+        than ``epsilon``, the algorithm terminates and returns the learned model.
 
     max_iter : int, default=1e6
         The maximum number of iterations allowed. The algorithm terminates
         and returns the learned model when the number of iterations exceeds
-        `max_iter`.
+        ``max_iter``.
 
     show_progress : bool, default=True
         If True, shows a progress bar while learning the causal structure.
@@ -90,6 +93,9 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
 
     adjacency_matrix_ : pd.DataFrame
         Adjacency matrix representation of the learned causal graph.
+
+    scoring_method_ : BaseStructureScore
+        The structure score used for learning, resolved from ``scoring_method``.
 
     n_features_in_ : int
         The number of features in the data used to learn the causal graph.
@@ -103,7 +109,7 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
 
     >>> from pgmpy.example_models import load_model
     >>> model = load_model("bnlearn/alarm")
-    >>> df = model.simulate(n_samples=1000, seed=42)
+    >>> df = model.simulate(n_samples=1000, rng=42)
 
     Use the HillClimbSearch algorithm to learn the causal structure from data:
 
@@ -119,13 +125,30 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
     >>> expert = ExpertKnowledge(forbidden_edges=[("HISTORY", "CVP")])
     >>> hc = HillClimbSearch(scoring_method="bic-d", expert_knowledge=expert)
     >>> hc.fit(df)  # doctest: +ELLIPSIS
-    HillClimbSearch(expert_knowledge=Expert Knowledge: ...,
+    HillClimbSearch(expert_knowledge=ExpertKnowledge(...),
                     scoring_method='bic-d')
 
     References
     ----------
-    - :cite:p:`koller_friedman_2009`
+    - :footcite:t:`koller_friedman_2009`
     """
+
+    _tags = {
+        "name": "hill_climb_search",
+        "data_types": ["discrete", "continuous", "mixed"],
+        "identifiable_graph": "cpdag",
+        "requires_target": False,
+        "capability:multivariate": True,
+        "capability:expert_knowledge": ["forbidden_edges", "required_edges", "search_space", "temporal_order"],
+        "assumption:causal_sufficiency": True,
+        "assumption:acyclicity": True,
+        "assumption:faithfulness": True,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
+    }
 
     def __init__(
         self,
@@ -168,7 +191,7 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
 
         # Step 1: Initial checks and setup for arguments
         # Step 1.1: Check score
-        score = get_scoring_method(self.scoring_method, X)
+        self.scoring_method_ = get_scoring_method(self.scoring_method, X)
 
         # Step 1.2: Check the start_dag
         if self.start_dag is None:
@@ -183,20 +206,19 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
         if self.expert_knowledge is None:
             expert_knowledge = ExpertKnowledge()
         else:
-            expert_knowledge = self.expert_knowledge
+            # Clone so the fitted (`*_`) attributes land on a fresh copy, not the user's object.
+            expert_knowledge = clone(self.expert_knowledge)
 
-        # Step 1.3.1: If search_space in expert_knowledge is not None, limit the search space
-        if expert_knowledge.search_space:
-            expert_knowledge.limit_search_space(X.columns)
+        # Step 1.3.1: Resolve the expert knowledge into its fitted (`*_`) attributes.
+        expert_knowledge.fit(X)
 
         # Step 1.4: Check if required edges cause a cycle
-        start_dag.add_edges_from(expert_knowledge.required_edges)
+        start_dag.add_edges_from(expert_knowledge.required_edges_)
         if not nx.is_directed_acyclic_graph(start_dag):
             raise ValueError(
                 "required_edges create a cycle in start_dag. Please modify either required_edges or start_dag."
             )
-        expert_knowledge._orient_temporal_forbidden_edges(start_dag, only_edges=False)
-        start_dag.remove_edges_from(expert_knowledge.forbidden_edges)
+        start_dag.remove_edges_from(expert_knowledge.forbidden_edges_)
 
         # Step 1.5: Initialize max_indegree, tabu_list, and progress bar
         max_indegree = self.max_indegree
@@ -218,11 +240,11 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
             best_operation, best_score_delta = max(
                 self._legal_operations_dag(
                     model=current_model,
-                    scoring_method=score,
+                    scoring_method=self.scoring_method_,
                     tabu_list=tabu_list,
                     max_indegree=max_indegree,
-                    forbidden_edges=expert_knowledge.forbidden_edges,
-                    required_edges=expert_knowledge.required_edges,
+                    forbidden_edges=expert_knowledge.forbidden_edges_,
+                    required_edges=expert_knowledge.required_edges_,
                 ),
                 key=lambda t: t[1],
                 default=(None, None),
@@ -250,6 +272,8 @@ class HillClimbSearch(_ScoreMixin, BaseCausalDiscovery):
         else:
             raise ValueError(f"return_type must be one of: dag, pdag, or cpdag. Got: {self.return_type}")
 
-        self.adjacency_matrix_ = nx.to_pandas_adjacency(self.causal_graph_, weight=1, dtype="int")
+        self.adjacency_matrix_ = self.causal_graph_.to_adjacency(
+            encoding="binary", nodelist=list(self.causal_graph_.nodes())
+        )
 
         return self

@@ -1,24 +1,61 @@
 # Metrics
 
-```{meta}
-:description: Evaluate learned graphs and fitted models using pgmpy's metric APIs.
+```{eval-rst}
+.. meta::
+   :description: Evaluate learned graphs and fitted models with the metrics in pgmpy.
 ```
 
-After learning a graph or fitting a model, you need to evaluate how good the result is.
-pgmpy provides metrics for two settings: **supervised evaluation** compares a learned
-graph against a known ground-truth graph, and **unsupervised evaluation** scores a graph
-against the observed data when no ground truth is available.
+After you learn a graph or fit a model, evaluate the result. pgmpy has metrics for two
+cases:
+
+- **Supervised evaluation** compares a learned graph with a known ground-truth graph.
+- **Unsupervised evaluation** compares a graph with the observed data. Use it when you do not
+  have a ground truth.
 
 ## At a Glance
 
-- **[Unified API](#api)**: All metrics share a consistent callable interface.
-- **[Supervised Metrics](#supervised-metrics)**: Compare learned graphs against ground truth using structural distance and confusion matrices.
-- **[Unsupervised Metrics](#unsupervised-metrics)**: Score graphs against data using correlation residuals, implied conditional independencies, and structure scores.
-- **[Metric Discovery](#metric-discovery)**: Programmatically find available metrics by their requirements.
+::::{grid} 1 1 2 2
+:gutter: 3
+:class-container: pgmpy-card-grid pgmpy-glance-grid
+
+:::{grid-item-card} Unified API
+:link: "#api"
+:link-type: url
+:class-card: sd-card-hover
+
+You call all metrics in the same way.
+:::
+
+:::{grid-item-card} Supervised Metrics
+:link: "#supervised-metrics"
+:link-type: url
+:class-card: sd-card-hover
+
+Compare a learned graph with the ground truth. Use structural distances and confusion
+matrices.
+:::
+
+:::{grid-item-card} Unsupervised Metrics
+:link: "#unsupervised-metrics"
+:link-type: url
+:class-card: sd-card-hover
+
+Compare a graph with the data. Use correlation residuals, implied conditional
+independencies, and structure scores.
+:::
+
+:::{grid-item-card} Metric Discovery
+:link: "#metric-discovery"
+:link-type: url
+:class-card: sd-card-hover
+
+Find the available metrics in code by their requirements.
+:::
+::::
 
 ## API
 
-All metrics follow the same pattern — instantiate and call:
+All metrics use the same steps: create the metric, then call it:
 
 ```python
 from pgmpy.base import DAG
@@ -33,38 +70,48 @@ print(metric(true_causal_graph=true_graph, est_causal_graph=estimated_graph))
 
 ## Supervised Metrics
 
-When a ground-truth graph is available, supervised metrics measure the structural
-distance between the estimated and true graphs — counting edge additions, deletions,
-and reversals, or computing confusion matrices for adjacency and orientation accuracy.
+If you have a ground-truth graph, use a supervised metric. Some supervised metrics measure
+the structural distance between the estimated graph and the true graph. They count the
+added, removed, and reversed edges. Other supervised metrics calculate confusion matrices
+for the adjacencies and the edge orientations.
 
 ## Unsupervised Metrics
 
-When no ground truth is available, unsupervised metrics score how well a graph explains
-the observed data. These check whether the conditional independencies implied by the
-graph hold in the data, or evaluate the graph under a configurable structure scoring
-method.
+If you do not have a ground truth, use an unsupervised metric. It measures how well a graph
+explains the observed data. Some unsupervised metrics check if the conditional
+independencies of the graph are true in the data. Other metrics evaluate the graph with a
+structure score that you select.
 
 ## Metric Discovery
 
-`get_metrics(...)` lets you discover available metrics by their requirements instead of
-hard-coding class names:
+`get_metric(...)` returns a metric by name, or the default metric for a type of comparison:
 
 ```python
-from pgmpy.metrics import get_metrics
+from pgmpy.metrics import get_metric
 
-supervised = get_metrics(requires_true_graph=True)
-unsupervised = get_metrics(requires_data=True)
+shd = get_metric("shd")
+default_unsupervised = get_metric(requires_true_graph=False)
+```
+
+To list metrics by their tags, use `skbase.lookup.all_objects`:
+
+```python
+from skbase.lookup import all_objects
+from pgmpy.metrics import BaseSupervisedMetric, BaseUnsupervisedMetric
+
+supervised = all_objects(object_types=BaseSupervisedMetric, package_name="pgmpy.metrics", return_names=False)
+unsupervised = all_objects(object_types=BaseUnsupervisedMetric, package_name="pgmpy.metrics", return_names=False)
 ```
 
 ## See Also
 
 :::{seealso}
-- {doc}`Causal Discovery <causal_discovery>` — The primary workflow that produces graphs for evaluation.
+- {doc}`Causal Discovery <causal_discovery>` — Learn the graphs that you evaluate.
 :::
 
 ## API Reference
 
-For the full list of supported metrics:
+These pages list all metrics:
 
 - {doc}`Metrics API <../api/metrics>`
 - {doc}`Graph Classes API <../api/base>`

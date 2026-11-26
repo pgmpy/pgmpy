@@ -4,7 +4,7 @@
 Citation
 ========
 
-If you use pgmpy in your scientific work, please consider citing us:
+If you use pgmpy in your scientific work, cite this paper:
 
 .. code-block:: text
 

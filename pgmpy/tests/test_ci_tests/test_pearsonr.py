@@ -3,6 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 import pytest
+from scipy import stats
 
 from pgmpy.ci_tests import Pearsonr
 from pgmpy.factors.continuous import LinearGaussianCPD
@@ -80,7 +81,7 @@ def residual_data():
     cpd_x = LinearGaussianCPD("X", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
     cpd_y_indep = LinearGaussianCPD("Y", [0, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3"])
     model_indep.add_cpds(cpd_z1, cpd_z2, cpd_z3, cpd_x, cpd_y_indep)
-    df_indep = model_indep.simulate(n_samples=1000, seed=42)
+    df_indep = model_indep.simulate(n_samples=1000, rng=42)
 
     model_dep = LinearGaussianBayesianNetwork(
         [
@@ -95,7 +96,7 @@ def residual_data():
     )
     cpd_y_dep = LinearGaussianCPD("Y", [0, 0.5, 0.5, 0.5, 0.5], 1, ["Z1", "Z2", "Z3", "X"])
     model_dep.add_cpds(cpd_z1, cpd_z2, cpd_z3, cpd_x, cpd_y_dep)
-    df_dep = model_dep.simulate(n_samples=1000, seed=42)
+    df_dep = model_dep.simulate(n_samples=1000, rng=42)
 
     return df_indep, df_dep
 
@@ -108,12 +109,12 @@ def test_pearsonr_residual(residual_data):
     df_indep, df_dep = residual_data
     test = Pearsonr(data=df_indep)
     test("X", "Y", ["Z1", "Z2", "Z3"])
-    assert round(test.statistic_, 3) == pytest.approx(-0.056, abs=1e-2)
-    assert round(test.p_value_, 3) == pytest.approx(0.044, abs=1e-2)
+    assert round(test.statistic_, 3) == pytest.approx(0.037, abs=1e-2)
+    assert round(test.p_value_, 3) == pytest.approx(0.238, abs=1e-2)
 
     test = Pearsonr(data=df_dep)
     test("X", "Y", ["Z1", "Z2", "Z3"])
-    assert round(test.statistic_, 3) == pytest.approx(0.406, abs=1e-2)
+    assert round(test.statistic_, 3) == pytest.approx(0.489, abs=1e-2)
     assert round(test.p_value_, 2) == pytest.approx(0.0, abs=1e-2)
 
 
@@ -142,3 +143,32 @@ def test_pearsonr_residual_approx(residual_data):
     test("X", "Y", ["Z1", "Z2", "Z3"])
     assert test.statistic_ >= 0.1
     assert test.p_value_ <= 0.05
+
+
+def test_no_degrees_of_freedom():
+    rng = np.random.default_rng(seed=16)
+    test = Pearsonr(data=pd.DataFrame(rng.standard_normal((3, 3)), columns=["A", "B", "D"]))
+
+    assert test(X="A", Y="B", Z=["D"]) is True
+    assert test.p_value_ == 1.0
+    assert test.dof_ == 0
+
+
+@pytest.mark.filterwarnings("ignore::scipy.stats.ConstantInputWarning")
+def test_unconditional_matches_scipy():
+    rng = np.random.default_rng(seed=0)
+    for a, b in [rng.standard_normal((2, 200)), ([1.0, 1.0, 1.0], [3.0, 7.0, 2.0]), ([0.0, 1.0], [5.0, 2.0])]:
+        expected = stats.pearsonr(a, b)
+        result = Pearsonr(data=pd.DataFrame({"A": a, "B": b}))._compute_result(X="A", Y="B", Z=[])
+        assert result.statistic == pytest.approx(expected.statistic, rel=1e-12, nan_ok=True)
+        assert result.p_value == pytest.approx(expected.pvalue, rel=1e-9, nan_ok=True)
+        assert result.attributes == {}
+
+
+def test_non_numeric_column_raises():
+    rng = np.random.default_rng(seed=0)
+    data = pd.DataFrame(rng.standard_normal((50, 3)), columns=["X", "Y", "Z"])
+    data["site"] = rng.choice(["a", "b"], size=50)
+
+    with pytest.raises(ValueError, match="could not convert string to float"):
+        Pearsonr(data=data)

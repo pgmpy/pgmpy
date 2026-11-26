@@ -1,12 +1,12 @@
-Undirected and Derived Models
-=============================
+Undirected Model Index
+======================
 
-Convenience index for the undirected-model subset of the full
+This page lists only the undirected models. The full list is in the
 :doc:`Models </api/models>` reference.
 
 .. autosummary::
-   :toctree: generated/undirected
    :template: autosummary/class.rst
+   :nosignatures:
 
    ~pgmpy.models.DiscreteMarkovNetwork
    ~pgmpy.models.JunctionTree

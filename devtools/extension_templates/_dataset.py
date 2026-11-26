@@ -19,6 +19,11 @@ from pgmpy.estimators import ExpertKnowledge
 # `BaseTubingenDataset` for cause-effect pair benchmarks, or `BaseSimulatedDataset` for programmatically generated
 # data. Those base classes already set the relevant tags (e.g. `is_simulated`), so a subclass only needs its non-default
 # tags.
+#
+# Note: `BaseSimulatedDataset` does not load files from the Hub. Build the model once in `__init__`, then implement
+# `load_dataframe(self, n_samples=None)` and `load_ground_truth(self)` as INSTANCE methods (not classmethods) that read
+# that single stored model, so one model backs both the data and the graph. See
+# `pgmpy/datasets/linear_gaussian_scm.py` for a complete example; the Hub-loading classmethods below do not apply to it.
 class YourDatasetClass(BaseDataset):
     # TODO: Fill in the tags for your dataset.
     # Note: 'name' is mandatory and must match the string used in load_dataset().
@@ -60,7 +65,14 @@ class YourDatasetClass(BaseDataset):
     # TODO: If the delimiter of the dataset is not tab ("\t"), set the correct delimiter.
     # sep = "\t"
 
-    # TODO: If the dataset has categorical variables, list them here.
+    # TODO: If the data file is compressed, set its compression format.
+    # compression = "gzip"
+
+    # TODO: If the tag `is_interventional=True`, list the columns that record the interventions. `load_interventions`
+    # returns these columns and `load_dataframe` excludes them. Leave None for observational datasets.
+    intervention_columns = None
+
+    # TODO: If the dataset has categorical variables (data or intervention columns), list them here.
     categorical_variables = []
 
     # TODO: If the dataset has ordinal variables, define the category orderings (lower to higher) for each of them here.

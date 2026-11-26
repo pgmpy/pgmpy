@@ -1,13 +1,15 @@
+from itertools import combinations, product
+
 import numpy as np
 import pandas as pd
 import pytest
 from joblib.externals.loky import get_reusable_executor
+from sklearn.metrics import mutual_info_score
 
 from pgmpy.causal_discovery import TAN
 from pgmpy.example_models import load_model
 from pgmpy.factors.discrete import TabularCPD
 from pgmpy.models import DiscreteBayesianNetwork
-from pgmpy.sampling import BayesianModelSampling
 
 
 @pytest.fixture
@@ -16,7 +18,7 @@ def data12():
     return pd.DataFrame(
         np.random.randint(low=0, high=2, size=(100, 5)),
         columns=["A", "B", "C", "D", "E"],
-    )
+    ).astype("category")
 
 
 @pytest.fixture
@@ -54,8 +56,7 @@ def data13():
         evidence_card=[2],
     )
     model.add_cpds(cpd_a, cpd_b, cpd_c, cpd_d, cpd_e, cpd_f)
-    inference = BayesianModelSampling(model)
-    return inference.forward_sample(size=10000)
+    return model.simulate(n_samples=10000, rng=0)
 
 
 @pytest.fixture
@@ -119,13 +120,12 @@ def data22():
         evidence_card=[2, 3],
     )
     model.add_cpds(cpd_a, cpd_r, cpd_b, cpd_c, cpd_d, cpd_e)
-    inference = BayesianModelSampling(model)
-    return inference.forward_sample(size=10000)
+    return model.simulate(n_samples=10000, rng=0)
 
 
 @pytest.fixture
 def alarm_df():
-    return load_model("bnlearn/alarm").simulate(int(1e4), seed=42)
+    return load_model("bnlearn/alarm").simulate(int(1e4), rng=42)
 
 
 @pytest.mark.parametrize("weight_fn", ["mutual_info", "adjusted_mutual_info", "normalized_mutual_info"])
@@ -182,6 +182,35 @@ def test_tan_auto_class_node(data22):
     assert sorted(nodes) == sorted(["C", "R", "A", "D", "E", "B"])
 
 
+def test_get_conditional_weights_custom_callable(data22):
+    calls = []
+
+    def edge_weights_fn(x, y):
+        calls.append((x, y))
+        return mutual_info_score(x, y)
+
+    data = data22.astype(str).astype(pd.CategoricalDtype(["unobserved", "2", "1", "0"]))
+    weights = TAN._get_conditional_weights(
+        data, class_node="A", edge_weights_fn=edge_weights_fn, n_jobs=1, show_progress=False
+    )
+
+    # Each pair of variables is scored once per observed state of A, on the stored state codes of its samples.
+    columns = data.columns
+    subsets = [subset for _, subset in data.groupby("A", observed=True)]
+    assert all(isinstance(codes, np.ndarray) and codes.dtype.kind == "i" for call in calls for codes in call)
+    for (x, y), ((u, v), subset) in zip(calls, product(combinations(columns, 2), subsets), strict=True):
+        np.testing.assert_array_equal(x, subset[u].cat.codes)
+        np.testing.assert_array_equal(y, subset[v].cat.codes)
+
+    # I(u; v | A) = sum_a P(A=a) * I(u; v | A=a), with each term computed on the samples where A=a.
+    expected = np.zeros((len(columns), len(columns)))
+    for subset in subsets:
+        expected += (len(subset) / len(data)) * np.array(
+            [[0 if u == v else mutual_info_score(subset[u], subset[v]) for v in columns] for u in columns]
+        )
+    np.testing.assert_allclose(weights, expected, atol=1e-12)
+
+
 def test_tan_real_dataset(alarm_df):
     expected_edges = [
         ("CVP", "LVFAILURE"),
@@ -215,12 +244,12 @@ def test_tan_real_dataset(alarm_df):
         ("HR", "HRBP"),
         ("ARTCO2", "HR"),
         ("SAO2", "FIO2"),
-        ("VENTLUNG", "PAP"),
         ("PCWP", "VENTLUNG"),
         ("VENTLUNG", "EXPCO2"),
         ("VENTLUNG", "ARTCO2"),
-        ("PAP", "PULMEMBOLUS"),
         ("ARTCO2", "SAO2"),
+        ("PULMEMBOLUS", "PAP"),
+        ("SAO2", "PULMEMBOLUS"),
     ]
     features = [
         "LVFAILURE",

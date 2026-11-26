@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import numpy as np
-from sklearn.linear_model import LinearRegression
 
 from pgmpy.factors.continuous import LinearGaussianCPD
 from pgmpy.models import LinearGaussianBayesianNetwork
+from pgmpy.utils import CovarianceRegression
+from pgmpy.utils._warnings import _warn_external
 
 from .base import GaussianParameterEstimator
 
@@ -19,18 +20,18 @@ class LinearGaussianMLE(GaussianParameterEstimator):
 
     Parameters
     ----------
-    std_estimator: {"unbiased", "mle"}, default="unbiased"
+    std_estimator : {"unbiased", "mle"}, default="unbiased"
         Method used to estimate the noise standard deviation.
-        - ``"unbiased"``: uses ``ddof = 1`` for root nodes and ``ddof = 1 + n_parents``
-          for non-root nodes.
-        - ``"mle"``: uses ``ddof = 0`` (biased, maximum likelihood estimate).
+        ``"unbiased"`` uses ``ddof = 1`` for root nodes and
+        ``ddof = 1 + n_parents`` for non-root nodes. ``"mle"`` uses
+        ``ddof = 0`` (biased, maximum likelihood estimate).
 
     Attributes
     ----------
     parameters_ : list of LinearGaussianCPD
         Learned Gaussian conditional probability distributions, one per
-        variable in the model, ordered by `self._model.nodes()`. Populated by
-        `fit`.
+        variable in the model, ordered by ``self._model.nodes()``. Populated by
+        ``fit``.
 
     Examples
     --------
@@ -67,7 +68,8 @@ class LinearGaussianMLE(GaussianParameterEstimator):
             The model structure for which to estimate CPDs.
 
         data: pandas.DataFrame
-            DataFrame with column names identical to the variable names of the network.
+            DataFrame with column names identical to the variable names of the network. Rows with missing values in
+            any model variable are dropped with a warning.
 
         Returns
         -------
@@ -94,28 +96,41 @@ class LinearGaussianMLE(GaussianParameterEstimator):
 
         self._initialize_fit(model, data, sample_weight=sample_weight)
 
+        nodes = list(self._model.nodes())
+        complete_data = self._data.dropna(subset=nodes)
+        dropped_rows_count = self._data.shape[0] - complete_data.shape[0]
+        if dropped_rows_count:
+            _warn_external(f"{dropped_rows_count} rows with missing values were dropped from the dataset.", UserWarning)
+        self._data = complete_data
+        regression = CovarianceRegression().fit(X=self._data.loc[:, nodes])
+        col_index = {node: index for index, node in enumerate(nodes)}
+        n_samples = self._data.shape[0]
+
         cpds = []
-        for node in self._model.nodes():
+        for node in nodes:
             parents = self._model.get_parents(node)
+            node_col = col_index[node]
 
             if len(parents) == 0:
                 ddof = 0 if self.std_estimator == "mle" else 1
                 cpds.append(
                     LinearGaussianCPD(
                         variable=node,
-                        beta=[self._data.loc[:, node].mean()],
-                        std=self._data.loc[:, node].std(ddof=ddof),
+                        beta=[regression.location_[node_col]],
+                        std=np.sqrt(n_samples * regression.covariance_[node_col, node_col] / (n_samples - ddof)),
                     )
                 )
             else:
-                lm = LinearRegression().fit(self._data.loc[:, parents], self._data.loc[:, node])
-                residuals = self._data.loc[:, node] - lm.predict(self._data.loc[:, parents])
+                parent_cols = [col_index[parent] for parent in parents]
+                coef = regression.coefficients(X=parents, y=[node])[0]
+                intercept = regression.location_[node_col] - coef @ regression.location_[parent_cols]
+                residual_var = regression.residual_covariance(X=parents, y=[node])[0, 0]
                 ddof = 0 if self.std_estimator == "mle" else 1 + len(parents)
                 cpds.append(
                     LinearGaussianCPD(
                         variable=node,
-                        beta=np.append([lm.intercept_], lm.coef_),
-                        std=residuals.std(ddof=ddof),
+                        beta=np.append([intercept], coef),
+                        std=np.sqrt(n_samples * residual_var / (n_samples - ddof)),
                         evidence=parents,
                     )
                 )

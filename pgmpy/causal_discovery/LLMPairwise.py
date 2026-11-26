@@ -4,12 +4,9 @@ import re
 
 import networkx as nx
 import pandas as pd
-from skbase.utils.dependencies import _safe_import
 
 from pgmpy.base import DAG
 from pgmpy.causal_discovery._base import BaseCausalDiscovery
-
-litellm = _safe_import("litellm")
 
 
 class LLMPairwise(BaseCausalDiscovery):
@@ -28,12 +25,16 @@ class LLMPairwise(BaseCausalDiscovery):
     system_prompt : str, default=None
         A system prompt to give the LLM. If ``None``, defaults to ``"You are an expert in Causal Inference"``.
 
-    llm_model : str, default="gemini/gemini-1.5-flash"
+    llm_model : str, default="gemini/gemini-2.5-flash"
         The LLM model to use. This can be any model supported by LiteLLM. Please refer to the LiteLLM documentation
         (https://docs.litellm.ai/docs/providers) for the full list.
 
     llm_kwargs : dict, default=None
         Additional keyword arguments passed to ``litellm.completion``, for example ``{"temperature": 0}``.
+
+    use_cache : bool, default=True
+        If ``True``, cache the oriented edge per variable pair and reuse it on later ``fit`` calls instead of
+        re-querying the LLM.
 
     Attributes
     ----------
@@ -91,17 +92,36 @@ class LLMPairwise(BaseCausalDiscovery):
     ... ).fit(df)  # doctest: +SKIP
     """
 
+    _tags = {
+        "name": "llm_pairwise",
+        "data_types": ["discrete", "continuous", "mixed"],
+        "identifiable_graph": "dag",
+        "requires_target": False,
+        "capability:multivariate": False,
+        "capability:expert_knowledge": [],
+        "assumption:causal_sufficiency": False,
+        "assumption:acyclicity": False,
+        "assumption:faithfulness": False,
+        "assumption:linearity": False,
+        "assumption:additive_noise": False,
+        "assumption:gaussian_noise": False,
+        "assumption:non_gaussian_noise": False,
+        "assumption:low_noise": False,
+    }
+
     def __init__(
         self,
         descriptions: dict | None = None,
         system_prompt: str | None = None,
-        llm_model: str = "gemini/gemini-1.5-flash",
+        llm_model: str = "gemini/gemini-2.5-flash",
         llm_kwargs: dict | None = None,
+        use_cache: bool = True,
     ):
         self.descriptions = descriptions
         self.system_prompt = system_prompt
         self.llm_model = llm_model
         self.llm_kwargs = llm_kwargs
+        self.use_cache = use_cache
 
     def _fit(self, X: pd.DataFrame):
         """
@@ -122,19 +142,35 @@ class LLMPairwise(BaseCausalDiscovery):
         if X.shape[1] != 2:
             raise ValueError(f"LLMPairwise requires exactly two variables, got {X.shape[1]}.")
 
-        # Step 2: Build the prompt from the variable names and descriptions.
         x, y = self.feature_names_in_
-        self.llm_model_ = self.llm_model
-        self.llm_prompt_ = self._build_prompt(x, y)
+        cache_key = frozenset((x, y))
+        cache = self.__dict__.setdefault("_orientation_cache", {})
 
-        # Step 3: Query the LLM and parse the chosen direction.
-        self.llm_response_ = self._query_llm(self.llm_prompt_)
-        source, target = self._parse_response(self.llm_response_, x, y)
+        # Step 2: Query the LLM for the causal direction.
+        # Step 2.1: Check if the edge has already been oriented and cached.
+        if self.use_cache and cache_key in cache:
+            cached = cache[cache_key]
+            self.llm_model_ = cached["llm_model"]
+            self.llm_prompt_ = cached["llm_prompt"]
+            self.llm_response_ = cached["llm_response"]
+            source, target = cached["edge"]
+        else:
+            # Step 2.2: Else, build the prompt, and query the LLM.
+            self.llm_model_ = self.llm_model
+            self.llm_prompt_ = self._build_prompt(x, y)
+            self.llm_response_ = self._query_llm(self.llm_prompt_)
+            source, target = self._parse_response(self.llm_response_, x, y)
+            if self.use_cache:
+                cache[cache_key] = {
+                    "llm_model": self.llm_model_,
+                    "llm_prompt": self.llm_prompt_,
+                    "llm_response": self.llm_response_,
+                    "edge": (source, target),
+                }
 
-        # Step 4: Build the causal graph and store the fitted attributes.
-        dag = DAG([(source, target)])
-        self.causal_graph_ = dag
-        self.adjacency_matrix_ = nx.to_pandas_adjacency(dag, nodelist=[x, y], weight=None, dtype="int")
+        # Step 3: Build the causal graph and store the fitted attributes.
+        self.causal_graph_ = DAG([(source, target)])
+        self.adjacency_matrix_ = nx.to_pandas_adjacency(self.causal_graph_, nodelist=[x, y], weight=None, dtype="int")
 
         return self
 
@@ -161,6 +197,8 @@ class LLMPairwise(BaseCausalDiscovery):
 
     def _query_llm(self, messages):
         """Send `messages` to the LLM and return its text response."""
+        import litellm
+
         llm_kwargs = self.llm_kwargs if self.llm_kwargs is not None else {}
         response = litellm.completion(model=self.llm_model, messages=messages, **llm_kwargs)
         return response.choices[0].message.content

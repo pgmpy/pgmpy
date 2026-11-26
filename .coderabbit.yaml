@@ -1,0 +1,90 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# Configuration for CodeRabbit AI code reviews. See https://docs.coderabbit.ai/reference/configuration
+language: "en-US"
+early_access: false
+
+reviews:
+  # "chill" keeps review comments focused on real issues rather than nitpicks.
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  high_level_summary_in_walkthrough: true
+  poem: false
+  review_status: false
+  collapse_walkthrough: true
+  sequence_diagrams: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - "dev"
+    ignore_usernames:
+      - "dependabot[bot]"
+      - "pre-commit-ci[bot]"
+  path_filters:
+    - "!pgmpy/extern/**"
+    - "!pgmpy/tests/test_data/**"
+    - "!pgmpy/tests/**/testdata/**"
+    - "!pgmpy/utils/example_models/**"
+    - "!examples/data/**"
+    - "!.test_durations"
+  path_instructions:
+    - path: "pgmpy/**/*.py"
+      instructions: |
+        Prioritize correctness of algorithms and results. Refer research papers for correct causal graph semantics 
+        algorithms. Also cross-check implementation againt other known packages for example bnlearn, pcalg, dagitty,
+        causal-learn or DoWhy where possible. Check edge cases such as empty, single-node or disconnected graphs.
+        Don't comment on formatting; ruff handles it. We aim for consistent interface for methods in the same module/
+        of the same type. Flag if you find an inconsistent interface.
+    - path: "pgmpy/base/**"
+      instructions: |
+        This provides the base representation layer for all causal graphs. The `_CoreGraph` class should own as much
+        functionality as possible and classes inheriting it should re-use it by limiting the edge types.
+    - path: "pgmpy/estimators/**"
+      instructions: |
+        Legacy compatibility layer: flag new functionality added here.
+    - path: "pgmpy/causal_discovery/**"
+      instructions: |
+        All causal discovery algorithms are scikit-learn compatible. Make sure that the unit tests compare the results
+        to other known implementations of the algorithm. All ExpertKnowledge attributes are directional, for example, 
+        forbidding u->v still allows v->u.
+    - path: "pgmpy/structure_score/**"
+      instructions: |
+        Provides a common interface to all structure scores in pgmpy. Verify the interface and check if it works correctly
+        with causal discovery methods.
+    - path: "pgmpy/ci_tests/**"
+      instructions: |
+        Provides a common interface to all conditional independence tests. Verify the interface and check if it works
+        correctly with causal discovery methods.
+    - path: "pgmpy/identification/**"
+      instructions: |
+        Provides implementations of causal identification methods. Important to check edge cases. Try to find edge 
+        cases specific to methods from literature and other packages.
+    - path: "pgmpy/readwrite/**"
+      instructions: |
+        Check that models round-trip without loss: state names, ordering, CPD values and precision.
+    - path: "pgmpy/tests/**"
+      instructions: |
+        Tests must be seeded, run offline, and assert on meaningful values, not just that code runs. `conftest.py`
+        serves Hub downloads from `pgmpy/tests/test_data/`, so new datasets or models need committed fixtures.
+    - path: "devtools/extension_templates/**"
+      instructions: |
+        Templates must match the current base-class APIs.
+    - path: "examples/**/*.ipynb"
+      instructions: |
+        Notebooks run in CI; check they use the current, non-deprecated API and seed randomness.
+    - path: "docs/**"
+      instructions: |
+        Check that code examples are accurate and match the current API; new public objects belong in `docs/api/`.
+    - path: "pyproject.toml"
+      instructions: |
+        Flag new core dependencies that could be optional; optional ones must be imported lazily.
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  code_guidelines:
+    filePatterns:
+      - "CONTRIBUTING.md"
+      - "AGENTS.md"

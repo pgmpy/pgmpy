@@ -1,16 +1,15 @@
 .. meta::
-   :description: Example notebooks for pgmpy covering Bayesian networks, structure learning, inference, simulations, and causal analysis.
+   :description: pgmpy example notebooks about Bayesian networks, structure learning, inference, simulations, and causal analysis.
 
 Example Notebooks
 =================
 
-A curated set of `Jupyter notebooks <https://github.com/pgmpy/pgmpy/tree/dev/examples>`_
-that demonstrate the most common tasks in pgmpy: building models, learning from
-data, running inference, and performing causal analysis. Use this page to find a
-notebook first, then jump to the matching guide or API section for details.
+These `Jupyter notebooks <https://github.com/pgmpy/pgmpy/tree/dev/examples>`_ show the most
+common tasks in pgmpy: model definition, learning from data, inference, and causal analysis.
+Find a notebook on this page. For more details, go to the related guide or API section.
 
 Defining Bayesian Networks
-""""""""""""""""""""""
+""""""""""""""""""""""""""
 
 See the :doc:`Defining a Custom Model <guides/custom_model>` guide for background.
 
@@ -23,14 +22,14 @@ See the :doc:`Defining a Custom Model <guides/custom_model>` guide for backgroun
       :link-type: doc
       :class-card: sd-card-hover
 
-      Build a discrete Bayesian Network from scratch.
+      Define a discrete Bayesian network.
 
    .. grid-item-card:: Creating Linear BN
       :link: examples/Creating_Linear_BN
       :link-type: doc
       :class-card: sd-card-hover
 
-      Define a linear Gaussian Bayesian Network.
+      Define a linear Gaussian Bayesian network.
 
    .. grid-item-card:: Dynamic BN
       :link: examples/Dynamic_BN
@@ -44,17 +43,17 @@ See the :doc:`Defining a Custom Model <guides/custom_model>` guide for backgroun
       :link-type: doc
       :class-card: sd-card-hover
 
-      Specify conditional probability distributions.
+      Define conditional probability distributions.
 
    .. grid-item-card:: Basic Operations on BN
       :link: examples/Basic_Operations_on_BN
       :link-type: doc
       :class-card: sd-card-hover
 
-      Inspect, modify, and validate a BN.
+      Examine, change, and validate a BN.
 
 Causal Discovery / Structure Learning
-""""""""""""""""""""""""""""""
+"""""""""""""""""""""""""""""""""""""
 
 See the :doc:`Causal Discovery <guides/causal_discovery>` guide for background.
 
@@ -74,7 +73,7 @@ See the :doc:`Causal Discovery <guides/causal_discovery>` guide for background.
       :link-type: doc
       :class-card: sd-card-hover
 
-      Learn tree-structured networks efficiently.
+      Learn networks with a tree structure.
 
    .. grid-item-card:: TAN
       :link: examples/Structure_Learning_TAN
@@ -88,10 +87,10 @@ See the :doc:`Causal Discovery <guides/causal_discovery>` guide for background.
       :link-type: doc
       :class-card: sd-card-hover
 
-      Incorporate domain constraints into learning.
+      Add domain constraints to structure learning.
 
 Parameter Estimation
-""""""""""""""""""
+""""""""""""""""""""
 
 See the :doc:`Parameter Estimation <guides/parameter_estimation>` guide for background.
 
@@ -104,17 +103,17 @@ See the :doc:`Parameter Estimation <guides/parameter_estimation>` guide for back
       :link-type: doc
       :class-card: sd-card-hover
 
-      Fit CPDs for a discrete BN.
+      Fit the CPDs of a discrete BN.
 
    .. grid-item-card:: Factor Graph Parameters
       :link: examples/Parameter_Learning_Factor_Graphs
       :link-type: doc
       :class-card: sd-card-hover
 
-      Estimate parameters for factor graphs.
+      Estimate the parameters of factor graphs.
 
 Probabilistic Inference
-"""""""""""""""""""""
+"""""""""""""""""""""""
 
 See the :doc:`Probabilistic Inference <guides/probabilistic_inference>` guide for background.
 
@@ -157,10 +156,10 @@ See the :doc:`Causal Identification <guides/causal_identification>` and :doc:`Ca
       :link-type: doc
       :class-card: sd-card-hover
 
-      Explore causal reasoning via games.
+      Learn causal reasoning with games.
 
 Simulations
-""""""""""
+"""""""""""
 
 See the :doc:`Simulations <guides/simulations>` guide for background.
 
@@ -194,101 +193,101 @@ Extending pgmpy
       :link-type: doc
       :class-card: sd-card-hover
 
-      Build functional CPDs for hybrid models.
+      Make functional CPDs for hybrid models.
 
    .. grid-item-card:: Junction Tree Inference
       :link: examples/Junction_Tree_Inference
       :link-type: doc
       :class-card: sd-card-hover
 
-      Perform inference using junction trees.
+      Do inference with junction trees.
 
 Tutorial Notebooks
 """"""""""""""""""
 
-A series of in-depth tutorial notebooks that walk through pgmpy's core concepts step by step — from
-probabilistic graphical model basics to real-world applications.
+These tutorial notebooks explain the core concepts of pgmpy step by step. They start with the
+basics of probabilistic graphical models and end with real-world applications.
 
 .. grid:: 1 1 2 3
    :gutter: 3
    :class-container: pgmpy-card-grid
 
    .. grid-item-card:: 1. Introduction to PGMs
-      :link: detailed_notebooks/1. Introduction to Probabilistic Graphical Models
+      :link: detailed_notebooks/1.\ Introduction\ to\ Probabilistic\ Graphical\ Models
       :link-type: doc
       :class-card: sd-card-hover
 
-      Foundations of probabilistic graphical models.
+      The basics of probabilistic graphical models.
 
    .. grid-item-card:: 2. Bayesian Networks
-      :link: detailed_notebooks/2. Bayesian Networks
+      :link: detailed_notebooks/2.\ Bayesian\ Networks
       :link-type: doc
       :class-card: sd-card-hover
 
-      Build and reason with Bayesian Networks.
+      Make Bayesian networks and use them for reasoning.
 
    .. grid-item-card:: 3. Causal Bayesian Networks
-      :link: detailed_notebooks/3. Causal Bayesian Networks
+      :link: detailed_notebooks/3.\ Causal\ Bayesian\ Networks
       :link-type: doc
       :class-card: sd-card-hover
 
-      Causal reasoning with Bayesian Networks.
+      Causal reasoning with Bayesian networks.
 
    .. grid-item-card:: 4. Markov Models
-      :link: detailed_notebooks/4. Markov Models
+      :link: detailed_notebooks/4.\ Markov\ Models
       :link-type: doc
       :class-card: sd-card-hover
 
-      Undirected graphical models and Markov Networks.
+      Undirected graphical models and Markov networks.
 
    .. grid-item-card:: 5. Exact Inference
-      :link: detailed_notebooks/5. Exact Inference in Graphical Models
+      :link: detailed_notebooks/5.\ Exact\ Inference\ in\ Graphical\ Models
       :link-type: doc
       :class-card: sd-card-hover
 
-      Variable Elimination, Belief Propagation, and more.
+      Variable Elimination, Belief Propagation, and other methods.
 
    .. grid-item-card:: 6. Approximate Inference
-      :link: detailed_notebooks/6. Approximate Inference in Graphical Models
+      :link: detailed_notebooks/6.\ Approximate\ Inference\ in\ Graphical\ Models
       :link-type: doc
       :class-card: sd-card-hover
 
       Sampling-based and variational methods.
 
    .. grid-item-card:: 7. Continuous Variables
-      :link: detailed_notebooks/7. Parameterizing with Continuous Variables
+      :link: detailed_notebooks/7.\ Parameterizing\ with\ Continuous\ Variables
       :link-type: doc
       :class-card: sd-card-hover
 
       Linear Gaussian and hybrid models.
 
    .. grid-item-card:: 8. Sampling Algorithms
-      :link: detailed_notebooks/8. Sampling Algorithms
+      :link: detailed_notebooks/8.\ Sampling\ Algorithms
       :link-type: doc
       :class-card: sd-card-hover
 
       Forward, rejection, and likelihood-weighted sampling.
 
    .. grid-item-card:: 9. Reading & Writing Models
-      :link: detailed_notebooks/9. Reading and Writing from pgmpy file formats
+      :link: detailed_notebooks/9.\ Reading\ and\ Writing\ from\ pgmpy\ file\ formats
       :link-type: doc
       :class-card: sd-card-hover
 
-      Import and export models in various formats.
+      Read and write models in different file formats.
 
    .. grid-item-card:: 10. Learning BNs from Data
-      :link: detailed_notebooks/10. Learning Bayesian Networks from Data
+      :link: detailed_notebooks/10.\ Learning\ Bayesian\ Networks\ from\ Data
       :link-type: doc
       :class-card: sd-card-hover
 
-      Structure and parameter learning end-to-end.
+      The full process of structure and parameter learning.
 
    .. grid-item-card:: 11. Energy & Greenhouse Gases
-      :link: detailed_notebooks/11. A Bayesian Network to model the influence of energy consumption on greenhouse gases in Italy
+      :link: detailed_notebooks/11.\ A\ Bayesian\ Network\ to\ model\ the\ influence\ of\ energy\ consumption\ on\ greenhouse\ gases\ in\ Italy
       :link-type: doc
       :class-card: sd-card-hover
 
-      Real-world case study with Italian energy data.
+      A real-world case study with Italian energy data.
 
 .. toctree::
    :hidden:
