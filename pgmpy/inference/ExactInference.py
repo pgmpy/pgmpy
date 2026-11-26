@@ -46,28 +46,38 @@ class VariableElimination(Inference):
 
         Returns
         -------
-        tuple: (working_factors, scalar_factors) where `working_factors` maps each
-            remaining variable to its set of `(factor, origin)` pairs and
-            `scalar_factors` is a list of 0-scope scalar factors reduced solely
-            over evidence variables.
+        tuple: (working_factors, scalar_factors, factor_id_counter) where
+            `working_factors` maps each remaining variable to its set of
+            `(fid, factor, origin)` tuples, `scalar_factors` is a list of 0-scope
+            scalar factors reduced solely over evidence variables, and
+            `factor_id_counter` yields unique IDs for subsequent factors.
         """
-
-        working_factors = {node: {(factor, None) for factor in self.factors[node]} for node in self.factors}
+        factor_id_counter = itertools.count()
+        factor_ids = {}
+        working_factors = {}
+        for node in self.factors:
+            node_factors = set()
+            for factor in self.factors[node]:
+                factor_key = id(factor)
+                if factor_key not in factor_ids:
+                    factor_ids[factor_key] = next(factor_id_counter)
+                node_factors.add((factor_ids[factor_key], factor, None))
+            working_factors[node] = node_factors
         scalar_factors = []
 
         # Dealing with evidence. Reducing factors over it before VE is run.
         if evidence:
             for evidence_var in evidence:
-                for factor, origin in working_factors[evidence_var]:
+                for fid, factor, origin in working_factors[evidence_var]:
                     factor_reduced = factor.reduce([(evidence_var, evidence[evidence_var])], inplace=False)
                     if factor_reduced.scope():
                         for var in factor_reduced.scope():
-                            working_factors[var].remove((factor, origin))
-                            working_factors[var].add((factor_reduced, evidence_var))
+                            working_factors[var].remove((fid, factor, origin))
+                            working_factors[var].add((fid, factor_reduced, evidence_var))
                     else:
                         scalar_factors.append(factor_reduced)
                 del working_factors[evidence_var]
-        return working_factors, scalar_factors
+        return working_factors, scalar_factors, factor_id_counter
 
     def _get_elimination_order(self, variables, evidence, elimination_order, show_progress=True):
         """
@@ -164,7 +174,7 @@ class VariableElimination(Inference):
         # Step 2: Prepare data structures to run the algorithm.
         eliminated_variables = set()
         # Get working factors and elimination order
-        working_factors, scalar_factors = self._get_working_factors(evidence)
+        working_factors, scalar_factors, factor_id_counter = self._get_working_factors(evidence)
         elimination_order = self._get_elimination_order(
             variables, evidence, elimination_order, show_progress=show_progress
         )
@@ -182,15 +192,16 @@ class VariableElimination(Inference):
             # eliminated (as all the factors should be considered only once)
             factors = [
                 factor
-                for factor, _ in working_factors[var]
+                for _, factor, _ in working_factors[var]
                 if not set(factor.variables).intersection(eliminated_variables)
             ]
             phi = factor_product(*factors)
             phi = getattr(phi, operation)([var], inplace=False)
             del working_factors[var]
             if phi.variables:
+                phi_id = next(factor_id_counter)
                 for variable in phi.variables:
-                    working_factors[variable].add((phi, var))
+                    working_factors[variable].add((phi_id, phi, var))
             else:
                 scalar_factors.append(phi)
             eliminated_variables.add(var)
@@ -198,10 +209,10 @@ class VariableElimination(Inference):
         # Step 4: Prepare variables to be returned.
         final_distribution = set()
         for node in working_factors:
-            for factor, origin in working_factors[node]:
+            for fid, factor, origin in working_factors[node]:
                 if not set(factor.variables).intersection(eliminated_variables):
-                    final_distribution.add((factor, origin))
-        final_distribution = [factor for factor, _ in final_distribution]
+                    final_distribution.add((fid, factor, origin))
+        final_distribution = [factor for _, factor, _ in final_distribution]
         if not isinstance(self.model, DiscreteBayesianNetwork):
             final_distribution.extend(scalar_factors)
 
@@ -632,7 +643,9 @@ class VariableElimination(Inference):
             eliminated_variables.add(var)
 
         edges_comb = [itertools.combinations(c, 2) for c in filter(lambda x: len(x) > 1, cliques)]
-        return nx.Graph(itertools.chain(*edges_comb))
+        induced_graph = nx.Graph(itertools.chain(*edges_comb))
+        induced_graph.add_nodes_from(self._get_model_variables())
+        return induced_graph
 
     def induced_width(self, elimination_order):
         """

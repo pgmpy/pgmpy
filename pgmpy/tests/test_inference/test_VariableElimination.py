@@ -701,6 +701,27 @@ class TestVariableEliminationMarkov:
         with pytest.raises(ValueError, match="at least one variable"):
             ve.map_query(evidence={"A": 1, "B": 1}, show_progress=False)
 
+    def test_markov_equal_reduced_factors_evidence_order_invariance(self, backend):
+        model = DiscreteMarkovNetwork([("A", "B")])
+        model.add_node("C")
+        f_ab = DiscreteFactor(["A", "B"], [2, 2], [1, 2, 3, 4])
+        g_ab = DiscreteFactor(["A", "B"], [2, 2], [1, 2, 5, 6])
+        h_c = DiscreteFactor(["C"], [2], [7, 8])
+        model.add_factors(f_ab, g_ab, h_c)
+        ve = VariableElimination(model)
+
+        for ev in ({"A": 0, "B": 1}, {"B": 1, "A": 0}):
+            for order in ELIMINATION_ORDERS:
+                assert ve.query(["C"], evidence=ev, elimination_order=order, show_progress=False) == DiscreteFactor(
+                    ["C"], [2], [28, 32]
+                )
+            np_test.assert_almost_equal(ve.max_marginal(evidence=ev, show_progress=False), 32.0)
+
+        for order in ELIMINATION_ORDERS:
+            assert ve.query(["C"], evidence={"A": 0}, elimination_order=order, show_progress=False) == DiscreteFactor(
+                ["C"], [2], [35, 40]
+            )
+
     def test_induced_graph(self, markov_ve, backend):
         _, infer = markov_ve
         induced_graph = infer.induced_graph(["G", "Q", "A", "J", "L", "R"])
@@ -765,6 +786,8 @@ class TestVariableEliminationFactorGraph:
             unary_ve.max_marginal(evidence={"A": 0}, show_progress=False)
         with pytest.raises(ValueError, match="at least one variable"):
             unary_ve.map_query(evidence={"A": 0}, show_progress=False)
+        assert set(unary_ve.induced_graph(["A"]).nodes()) == {"A"}
+        assert unary_ve.induced_width(["A"]) == 0
 
         fg = FactorGraph()
         fg.add_nodes_from(["A", "B"])
