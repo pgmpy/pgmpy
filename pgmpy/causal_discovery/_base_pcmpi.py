@@ -68,8 +68,26 @@ class _BasePCMCI(BaseTimeSeriesCausalDiscovery):
 
     Examples
     --------
+    >>> import numpy as np
+    >>> import pandas as pd
+    >>> index = pd.MultiIndex.from_tuples(
+    ...     [(series, time) for series in ["A", "B"] for time in range(10)],
+    ...     names=["series_id", "time"],
+    ... )
+    >>> data = pd.DataFrame(
+    ...     {
+    ...         "X": np.tile(np.arange(10, dtype=float), 2),
+    ...         "Y": np.tile(np.arange(10, dtype=float) * 0.5, 2),
+    ...     },
+    ...     index=index,
+    ... )
     >>> estimator = _BasePCMCI(tau_max=2)
-    >>> estimator.fit(data)
+    >>> estimator.fit(data) is estimator
+    True
+    >>> estimator.n_series_
+    2
+    >>> estimator.n_variables_
+    2
     """
 
     def __init__(
@@ -98,8 +116,13 @@ class _BasePCMCI(BaseTimeSeriesCausalDiscovery):
 
         Examples
         --------
+        >>> estimator = _BasePCMCI()
         >>> estimator._reset_fit_state()
         >>> estimator.pcmci_ is None
+        True
+        >>> estimator.tigramite_data_ is None
+        True
+        >>> estimator.graph_ is None
         True
         """
         super()._reset_fit_state()
@@ -153,7 +176,26 @@ class _BasePCMCI(BaseTimeSeriesCausalDiscovery):
 
         Examples
         --------
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> index = pd.MultiIndex.from_tuples(
+        ...     [(series, time) for series in ["A", "B"] for time in range(10)],
+        ...     names=["series_id", "time"],
+        ... )
+        >>> data = pd.DataFrame(
+        ...     {
+        ...         "X": np.tile(np.arange(10, dtype=float), 2),
+        ...         "Y": np.tile(np.arange(10, dtype=float) * 0.5, 2),
+        ...     },
+        ...     index=index,
+        ... )
+        >>> estimator = _BasePCMCI(tau_max=2)
+        >>> estimator._prepare_data(data)
         >>> estimator._initialize_algorithm()
+        >>> estimator.pcmci_ is not None
+        True
+        >>> estimator.tigramite_data_ is not None
+        True
         """
         from tigramite import data_processing as dp
         from tigramite.independence_tests.parcorr import ParCorr
@@ -178,6 +220,7 @@ class _BasePCMCI(BaseTimeSeriesCausalDiscovery):
         self.tigramite_data_ = dp.DataFrame(
             data=data,
             var_names=self.variable_names_,
+            analysis_mode="multiple",
         )
 
         self.pcmci_ = PCMCI(
@@ -201,7 +244,26 @@ class _BasePCMCI(BaseTimeSeriesCausalDiscovery):
 
         Examples
         --------
+        >>> import numpy as np
+        >>> import pandas as pd
+        >>> index = pd.MultiIndex.from_tuples(
+        ...     [(series, time) for series in ["A", "B"] for time in range(10)],
+        ...     names=["series_id", "time"],
+        ... )
+        >>> data = pd.DataFrame(
+        ...     {
+        ...         "X": np.tile(np.arange(10, dtype=float), 2),
+        ...         "Y": np.tile(np.arange(10, dtype=float) * 0.5, 2),
+        ...     },
+        ...     index=index,
+        ... )
+        >>> estimator = _BasePCMCI(tau_max=1)
+        >>> estimator._prepare_data(data)
+        >>> estimator._validate_link_assumptions()
+        >>> estimator._initialize_algorithm()
         >>> results = estimator._run_discovery()
+        >>> isinstance(results, dict)
+        True
         """
         run_kwargs = {
             **self.kwargs,
@@ -233,7 +295,19 @@ class _BasePCMCI(BaseTimeSeriesCausalDiscovery):
 
         Examples
         --------
+        >>> import numpy as np
+        >>> estimator = _BasePCMCI(tau_max=1)
+        >>> estimator.n_variables_ = 2
+        >>> results = {
+        ...     "graph": np.zeros((2, 2, 2), dtype="<U3"),
+        ...     "p_matrix": np.zeros((2, 2, 2)),
+        ...     "val_matrix": np.zeros((2, 2, 2)),
+        ... }
         >>> estimator._process_discovery_results(results)
+        >>> estimator.graph_.shape
+        (2, 2, 2)
+        >>> estimator.p_matrix_.shape
+        (2, 2, 2)
         """
         if not isinstance(results, dict):
             raise TypeError("PCMCI results must be returned as a dictionary.")
