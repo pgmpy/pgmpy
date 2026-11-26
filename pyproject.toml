@@ -44,6 +44,9 @@ torch = [
   "torch>=2.5",
   "pyro-ppl>=1.9.1",
 ]
+pcmci = [
+  "tigramite",
+]
 optional = [
   "pgmpy[torch]",
   "daft-pgm>=0.1.4",
@@ -52,7 +55,7 @@ optional = [
   "pygraphviz",
   "matplotlib",
   "skpro>=2.12.0",
-  "statsmodels>=0.14.5"
+  "statsmodels>=0.14.5",
 ]
 tests = [
   "xdoctest>=0.11.0",
