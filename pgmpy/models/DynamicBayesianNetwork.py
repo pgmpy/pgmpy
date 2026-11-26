@@ -383,12 +383,17 @@ class DynamicBayesianNetwork(DAG):
 
     def get_interface_nodes(self, time_slice=0):
         """
-        Returns the nodes in the first timeslice whose children are present in the first timeslice.
+        Returns the interface nodes of the 2-TBN shifted to ``time_slice``.
+
+        Each inter-slice edge contributes one node. Slice 0 returns the
+        slice-0 endpoint of every inter-slice edge. Every later slice returns
+        the slice-1 endpoint, with the time index set to ``time_slice``.
 
         Parameters
         ----------
-        time_slice:int
-                The timeslice should be a positive value greater than or equal to zero
+        time_slice: int
+            The time slice for which to get the interface nodes. The time
+            slice should be a positive value or zero.
 
         Examples
         --------
@@ -405,6 +410,8 @@ class DynamicBayesianNetwork(DAG):
         ... )
         >>> dbn.get_interface_nodes() # doctest: +ELLIPSIS
         [<DynamicNode(D, 0) at 0x...>]
+        >>> dbn.get_interface_nodes(2) # doctest: +ELLIPSIS
+        [<DynamicNode(D, 2) at 0x...>]
         """
         if not isinstance(time_slice, int) or time_slice < 0:
             raise ValueError(
@@ -412,7 +419,10 @@ class DynamicBayesianNetwork(DAG):
                 f" or equal to zero: ({type(time_slice)}, value: {time_slice})"
             )
 
-        return [DynamicNode(edge[time_slice][0], edge[time_slice][1]) for edge in self.get_inter_edges()]
+        # The 2-TBN stores each transition as slice 0 -> slice 1. Slice 0 is
+        # the outgoing interface; every later slice repeats the incoming one.
+        endpoint = 0 if time_slice == 0 else 1
+        return [DynamicNode(edge[endpoint][0], time_slice) for edge in self.get_inter_edges()]
 
     def get_slice_nodes(self, time_slice=0):
         """

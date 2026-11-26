@@ -183,11 +183,17 @@ class TestDynamicBayesianNetworkMethods:
             ]
         )
         assert sorted(self.network.get_interface_nodes()) == [("D", 0), ("I", 0)]
+        assert sorted(self.network.get_interface_nodes(2)) == [("D", 2), ("I", 2)]
 
         with pytest.raises(ValueError):
             self.network.get_interface_nodes(-1)
         with pytest.raises(ValueError):
             self.network.get_interface_nodes("-")
+
+        self_transition = DBN([(("A", 0), ("A", 1))])
+        assert self_transition.get_interface_nodes(0) == [("A", 0)]
+        assert self_transition.get_interface_nodes(1) == [("A", 1)]
+        assert self_transition.get_interface_nodes(2) == [("A", 2)]
 
     def test_get_interface_nodes_1node2edges_divergent_edges(self):
         # divergent interface edges from one node (a0->a1,b1). issue #1364
@@ -201,6 +207,7 @@ class TestDynamicBayesianNetworkMethods:
         )
         assert self.network.get_interface_nodes(0) == [("A", 0), ("A", 0)]
         assert self.network.get_interface_nodes(1) == [("A", 1), ("B", 1)]
+        assert self.network.get_interface_nodes(2) == [("A", 2), ("B", 2)]
 
     def test_get_interface_nodes_convergent_edges(self):
         # convergent interface edges to one node(a0,b0->b1). issue #1364
@@ -214,6 +221,7 @@ class TestDynamicBayesianNetworkMethods:
         )
         assert self.network.get_interface_nodes(0) == [("A", 0), ("B", 0)]
         assert self.network.get_interface_nodes(1) == [("B", 1), ("B", 1)]
+        assert self.network.get_interface_nodes(2) == [("B", 2), ("B", 2)]
 
     def test_get_slice_nodes(self):
         self.network.add_edges_from(
