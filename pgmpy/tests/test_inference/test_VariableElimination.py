@@ -7,7 +7,7 @@ from pgmpy import config
 from pgmpy.example_models import load_model
 from pgmpy.factors.discrete import DiscreteFactor, TabularCPD
 from pgmpy.inference import BeliefPropagation, VariableElimination
-from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork, FunctionalBayesianNetwork
+from pgmpy.models import DiscreteBayesianNetwork, DiscreteMarkovNetwork, FactorGraph, FunctionalBayesianNetwork
 from pgmpy.utils import compat_fns
 
 
@@ -749,6 +749,44 @@ class TestVariableEliminationMarkov:
             infer.query(["Y"], evidence={"X": 0}, show_progress=False).values,
             [0.35, 0.65],
         )
+
+
+class TestVariableEliminationFactorGraph:
+    def test_factor_graph_default_variables_exclude_factor_nodes(self, backend):
+        unary_fg = FactorGraph()
+        unary_fg.add_nodes_from(["A"])
+        phi_a = DiscreteFactor(["A"], [2], [2, 3])
+        unary_fg.add_factors(phi_a)
+        unary_fg.add_node(phi_a)
+        unary_fg.add_edge("A", phi_a)
+        unary_ve = VariableElimination(unary_fg)
+
+        with pytest.raises(ValueError, match="at least one variable"):
+            unary_ve.max_marginal(evidence={"A": 0}, show_progress=False)
+        with pytest.raises(ValueError, match="at least one variable"):
+            unary_ve.map_query(evidence={"A": 0}, show_progress=False)
+
+        fg = FactorGraph()
+        fg.add_nodes_from(["A", "B"])
+        phi_ab = DiscreteFactor(["A", "B"], [2, 2], [1, 2, 4, 5])
+        fg.add_factors(phi_ab)
+        fg.add_node(phi_ab)
+        fg.add_edges_from([("A", phi_ab), ("B", phi_ab)])
+        ve = VariableElimination(fg)
+
+        np_test.assert_almost_equal(
+            ve.max_marginal(evidence={"A": 0}, show_progress=False),
+            ve.max_marginal(["B"], evidence={"A": 0}, show_progress=False),
+        )
+        np_test.assert_almost_equal(ve.max_marginal(evidence={"A": 0}, show_progress=False), 2.0)
+
+        default_map = ve.map_query(evidence={"A": 0}, show_progress=False)
+        assert default_map == {"B": 1}
+        assert default_map == ve.map_query(["B"], evidence={"A": 0}, show_progress=False)
+        with pytest.raises(ValueError, match="at least one variable"):
+            ve.max_marginal(evidence={"A": 0, "B": 1}, show_progress=False)
+        with pytest.raises(ValueError, match="at least one variable"):
+            ve.map_query(evidence={"A": 0, "B": 1}, show_progress=False)
 
 
 @requires_torch

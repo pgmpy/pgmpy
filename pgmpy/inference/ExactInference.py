@@ -26,6 +26,14 @@ from pgmpy.utils import compat_fns
 
 
 class VariableElimination(Inference):
+    def _get_model_variables(self):
+        """
+        Returns random-variable nodes for the model, excluding factor nodes in a FactorGraph.
+        """
+        if isinstance(self.model, FactorGraph):
+            return self.model.get_variable_nodes()
+        return self.variables
+
     def _get_working_factors(self, evidence):
         """
         Uses the evidence given to the query methods to modify the factors before running
@@ -74,7 +82,7 @@ class VariableElimination(Inference):
         -------
         list: A list of variables names in the order they need to be eliminated.
         """
-        to_eliminate = set(self.variables) - set(variables) - set(evidence.keys() if evidence else [])
+        to_eliminate = set(self._get_model_variables()) - set(variables) - set(evidence.keys() if evidence else [])
         if not to_eliminate:
             return []
 
@@ -436,7 +444,7 @@ class VariableElimination(Inference):
         """
         evidence = evidence if evidence is not None else dict()
         if not variables:
-            variables = [var for var in self.variables if var not in evidence]
+            variables = [var for var in self._get_model_variables() if var not in evidence]
         else:
             variables = [variables] if isinstance(variables, str) else list(variables)
 
@@ -519,7 +527,7 @@ class VariableElimination(Inference):
         """
         evidence = evidence if evidence is not None else dict()
         if not variables:
-            variables = [var for var in self.variables if var not in evidence]
+            variables = [var for var in self._get_model_variables() if var not in evidence]
         else:
             variables = [variables] if isinstance(variables, str) else list(variables)
 
@@ -600,7 +608,7 @@ class VariableElimination(Inference):
         self._initialize_structures()
 
         # If the elimination order does not contain the same variables as the model
-        if set(elimination_order) != set(self.variables):
+        if set(elimination_order) != set(self._get_model_variables()):
             raise ValueError("Set of variables in elimination order different from variables in model")
 
         eliminated_variables = set()
