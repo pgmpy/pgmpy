@@ -5,6 +5,7 @@ from .ExhaustiveSearch import ExhaustiveSearch
 from .ExpertInLoop import ExpertInLoop
 from .ExpertKnowledge import ExpertKnowledge
 from .GES import GES
+from .gran_dag import GraNDAG
 from .HillClimbSearch import HillClimbSearch
 from .IGCI import IGCI
 from .LLMPairwise import LLMPairwise
@@ -24,6 +25,7 @@ __all__ = [
     "ExpertInLoop",
     "ExpertKnowledge",
     "GES",
+    "GraNDAG",
     "HillClimbSearch",
     "IGCI",
     "LLMPairwise",
