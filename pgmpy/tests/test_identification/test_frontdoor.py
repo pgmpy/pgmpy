@@ -53,3 +53,23 @@ def test_frontdoor_latent_noniden(frontdoor_model_noniden):
     assert identified_dag.get_role("exposures") == ["X"]
     assert identified_dag.get_role("outcomes") == ["Y"]
     assert identified_dag.latents == {"U"}
+
+
+def test_frontdoor_validate_all_exposure_outcome_pairs():
+    """Validation must consider every exposure-outcome pair, not only the first (#3754)."""
+    dag = DAG(
+        [
+            ("X1", "M"),
+            ("M", "Y1"),
+            ("U", "X1"),
+            ("U", "Y1"),
+            ("X2", "M"),
+            ("M", "Y2"),
+            ("X2", "Y2"),
+        ],
+        roles={"exposures": ["X1", "X2"], "outcomes": ["Y1", "Y2"]},
+        latents={"U"},
+    )
+    dag_with_frontdoor = dag.with_role("frontdoor", ["M"], inplace=False)
+
+    assert Frontdoor().validate(dag_with_frontdoor) is False
