@@ -111,9 +111,7 @@ class Frontdoor(BaseGraphicalIdentification):
         valid_backdoor_sets = []
 
         for zz in Z:
-            valid_backdoor_sets.append(
-                self._is_valid_adjustment_set(causal_graph, X=zz, Y=outcome, Z=exposure)
-            )
+            valid_backdoor_sets.append(self._is_valid_adjustment_set(causal_graph, X=zz, Y=outcome, Z=exposure))
         if not all(valid_backdoor_sets):
             return False
 
