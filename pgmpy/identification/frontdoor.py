@@ -76,11 +76,17 @@ class Frontdoor(BaseGraphicalIdentification):
         return Adjustment().validate(causal_graph_copy)
 
     def _validate(self, causal_graph):
-        """ """
-        exposure = causal_graph.get_role("exposures")[0]
-        outcome = causal_graph.get_role("outcomes")[0]
+        exposures = causal_graph.get_role("exposures")
+        outcomes = causal_graph.get_role("outcomes")
         Z = causal_graph.get_role("frontdoor")
 
+        for exposure in exposures:
+            for outcome in outcomes:
+                if not self._validate_exposure_outcome_pair(causal_graph, exposure, outcome, Z):
+                    return False
+        return True
+
+    def _validate_exposure_outcome_pair(self, causal_graph, exposure, outcome, Z):
         # 0. Get all directed paths from X to Y.  Don't check further if there aren't any.
         directed_paths = list(nx.all_simple_paths(causal_graph, exposure, outcome))
 
@@ -105,7 +111,9 @@ class Frontdoor(BaseGraphicalIdentification):
         valid_backdoor_sets = []
 
         for zz in Z:
-            valid_backdoor_sets.append(self._is_valid_adjustment_set(causal_graph, X=zz, Y=outcome, Z=exposure))
+            valid_backdoor_sets.append(
+                self._is_valid_adjustment_set(causal_graph, X=zz, Y=outcome, Z=exposure)
+            )
         if not all(valid_backdoor_sets):
             return False
 
