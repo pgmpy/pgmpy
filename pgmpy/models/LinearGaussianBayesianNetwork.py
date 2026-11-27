@@ -680,6 +680,7 @@ class LinearGaussianBayesianNetwork(_FileIOMixin, DAG):
 
         Currently checks:
         * Each CPD's listed parents match the graph's parents.
+        * Each LinearGaussian CPD has ``len(beta) == len(evidence) + 1``.
 
         Returns
         -------
@@ -692,6 +693,11 @@ class LinearGaussianBayesianNetwork(_FileIOMixin, DAG):
             if isinstance(cpd, LinearGaussianCPD):
                 if set(cpd.evidence) != set(self.get_parents(node)):
                     raise ValueError("CPD associated with %s doesn't have proper parents associated with it." % node)
+                if len(cpd.beta) != len(cpd.evidence) + 1:
+                    raise ValueError(
+                        f"CPD for {node} has {len(cpd.beta)} beta coefficients but "
+                        f"expected {len(cpd.evidence) + 1} (intercept plus one per parent)."
+                    )
         return True
 
     def get_cardinality(self, node: Any) -> None:

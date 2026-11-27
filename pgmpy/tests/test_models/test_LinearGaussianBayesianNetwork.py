@@ -135,6 +135,20 @@ class TestLGBNMethods:
         with pytest.raises(ValueError):
             self.model.check_model()
 
+    def test_check_model_beta_length(self):
+        """check_model rejects beta length mismatch (#3753)."""
+        model = LinearGaussianBayesianNetwork([("x1", "x2")])
+        cpd1 = LinearGaussianCPD("x1", [1], 4)
+        cpd2 = LinearGaussianCPD("x2", [-5, 0.5], 4, ["x1"])
+        model.add_cpds(cpd1, cpd2)
+        assert model.check_model() is True
+
+        bad_cpd = LinearGaussianCPD("x2", [0.5], 4, ["x1"])
+        model.remove_cpds("x2")
+        model.add_cpds(bad_cpd)
+        with pytest.raises(ValueError, match="beta coefficients"):
+            model.check_model()
+
     def test_not_implemented_methods(self):
         with pytest.raises(ValueError):
             self.model.get_cardinality("x1")
