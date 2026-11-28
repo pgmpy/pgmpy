@@ -13,8 +13,8 @@ class _TimeSeriesCoreGraph(_CoreGraph):
     Base class for all time-series graph types in pgmpy.
 
     This class generalizes over a *node* vocabulary: every endpoint is a ``(variable, time)`` pair, and the
-    invariants are stated in terms of lags rather than endpoint markers. Subclasses (e.g. ``TimeSeriesDAG``,
-    ``TimeSeriesPDAG``) are expected to declare their own ``SUPPORTED_EDGE_TYPES`` exactly as the static
+    invariants are stated in terms of lags rather than endpoint markers. Subclasses (e.g. ``TimeseriesDAG``,
+    ``TimeseriesPDAG``) are expected to declare their own ``SUPPORTED_EDGE_TYPES`` exactly as the static
     classes do.
 
     Parameters
