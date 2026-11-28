@@ -4,11 +4,11 @@ from itertools import chain, pairwise, product
 import networkx as nx
 import numpy as np
 from networkx.algorithms.dag import descendants
+from sklearn.linear_model import LinearRegression
 from tqdm.auto import tqdm
 
 from pgmpy import config
 from pgmpy.base import DAG
-from pgmpy.estimators.LinearModel import LinearEstimator
 from pgmpy.factors.discrete import DiscreteFactor
 from pgmpy.models import (
     DiscreteBayesianNetwork,
@@ -747,17 +747,13 @@ class CausalInference:
             estimand.
 
         estimator_type : str
-            The type of model to be used to estimate the ATE.
-            All linear regression classes in statsmodels are available,
-            including ``GLS`` for generalized least squares, ``OLS`` for
-            ordinary least squares, and ``WLS`` for weighted least squares.
-            Specify a class by its acronym or use ``"linear"`` as an alias
-            for ``OLS``.
+            The type of model to be used to estimate the ATE. Currently only
+            ``"linear"`` is supported, which fits an ordinary least squares
+            regression using :class:`sklearn.linear_model.LinearRegression`
+            and takes the coefficient of the exposure as the effect.
 
         **kwargs : dict
-            Keyword arguments specific to the selected estimator. For linear
-            estimators, ``missing`` can be ``"none"``, ``"drop"``, or
-            ``"raise"``.
+            Not supported. Passing any keyword argument raises a ``TypeError``.
 
         Returns
         -------
@@ -778,6 +774,8 @@ class CausalInference:
         0.001138244615115
 
         """
+        if kwargs:
+            raise TypeError(f"estimate_ate got unexpected keyword arguments: {sorted(kwargs)}")
         valid_estimators = ["linear"]
         if estimator_type not in valid_estimators:
             raise ValueError(f"{estimator_type} is not a valid estimator_type. Please select from {valid_estimators}")
@@ -794,10 +792,10 @@ class CausalInference:
                     if estimand_strategy == "smallest":
                         adjustment_sets = frozenset({self._simple_decision(adjustment_sets)})
 
-                if estimator_type == "linear":
-                    self.estimator = LinearEstimator(self.model)
-
-                ate = [self.estimator.fit(X=x1, Y=x2, Z=s, data=data, **kwargs)._get_ate() for s in adjustment_sets]
+                ate = []
+                for s in adjustment_sets:
+                    reg = LinearRegression().fit(data[[x1] + list(s)], data[x2])
+                    ate.append(reg.coef_[0])
                 causal_effect.append(np.mean(ate))
             all_path_effects.append(np.prod(causal_effect))
         return np.sum(all_path_effects)
