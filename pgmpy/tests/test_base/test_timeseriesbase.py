@@ -480,3 +480,32 @@ class TestTimeseriesCoreGraphAdjacency:
 
         with pytest.raises(ValueError, match="_TimeSeriesCoreGraph can hold"):
             _TimeSeriesCoreGraph.from_adjacency(array, variables=["A", "B"])
+
+    def test_from_adjacency_rejects_lagged_backwards_mark(self):
+        """
+        Test that a lagged link pointing backwards in time is refused.
+        """
+        array = np.full((2, 2, 2), "", dtype="<U3")
+        array[0, 1, 1] = "<--"
+
+        with pytest.raises(ValueError, match="backwards in time"):
+            _TimeSeriesCoreGraph.from_adjacency(array, variables=["A", "B"])
+
+    def test_adjacency_round_trip(self):
+        """
+        Test that a graph survives a round trip through its tigramite array.
+        """
+        # with the encoding named
+        graph = sample_graph1()
+        array = graph.to_adjacency(encoding="tigramite")
+        restored = _TimeSeriesCoreGraph.from_adjacency(array, encoding="tigramite", variables=graph.variables)
+        assert restored == graph
+
+        # a discovery algorithm's array goes straight in: tigramite is the default, not a detected format
+        graph = _TimeSeriesCoreGraph(edge_list=[(("A", -1), ("B", 0), "->")])
+        assert _TimeSeriesCoreGraph.from_adjacency(graph.to_adjacency(), variables=graph.variables) == graph
+
+        # the array carries no names, so without `variables` the graph comes back index-keyed
+        indexed = _TimeSeriesCoreGraph.from_adjacency(graph.to_adjacency())
+        assert indexed != graph
+        assert indexed.variables == [0, 1]
