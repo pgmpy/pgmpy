@@ -456,3 +456,27 @@ class TestTimeseriesCoreGraphAdjacency:
         array[0, 1, 1] = "-->"
         with pytest.raises(ValueError, match="mixes string marks and numbers"):
             _TimeSeriesCoreGraph.from_adjacency(array, variables=["A", "B"])
+
+    @pytest.mark.parametrize("encoding", TWO_D_ENCODINGS)
+    @pytest.mark.parametrize("direction", ["to", "from"])
+    def test_two_dimensional_encodings_are_refused(self, direction, encoding):
+        """
+        Test that both adjacency methods refuse every encoding without a lag axis.
+        """
+        graph = sample_graph2()
+
+        with pytest.raises(ValueError, match="only supports encoding='tigramite'"):
+            if direction == "to":
+                graph.to_adjacency(encoding=encoding)
+            else:
+                _TimeSeriesCoreGraph.from_adjacency(graph.to_adjacency(), encoding=encoding)
+
+    def test_from_adjacency_rejects_conflicting_mark(self):
+        """
+        Test that `x-x` is refused by every class, no pgmpy edge type expressing it.
+        """
+        array = np.full((2, 2, 1), "", dtype="<U3")
+        array[0, 1, 0] = array[1, 0, 0] = "x-x"
+
+        with pytest.raises(ValueError, match="_TimeSeriesCoreGraph can hold"):
+            _TimeSeriesCoreGraph.from_adjacency(array, variables=["A", "B"])
