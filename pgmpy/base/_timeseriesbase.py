@@ -59,6 +59,11 @@ class _TimeSeriesCoreGraph(_CoreGraph):
     def tau_max(self) -> int:
         """
         Returns the maximum lag (tau_max) for the time series graph.
+        Examples
+        --------
+        >>> from pgmpy.base import TimeseriesDAG
+        >>> TimeseriesDAG(edge_list=[(("A", -3), ("B", 0), "->")]).tau_max
+        3
 
         """
         if self._tau_max_fixed:
@@ -74,6 +79,17 @@ class _TimeSeriesCoreGraph(_CoreGraph):
 
     @staticmethod
     def _normalize_node(node) -> tuple:
+        """
+        Examples
+        --------
+        >>> from pgmpy.base import TimeseriesDAG
+        >>> G = TimeseriesDAG()
+        >>> G._normalize_node("A")
+        ('A', 0)
+        >>> G._normalize_node(("A", 7))
+        ('A', 7)
+        """
+
         if hasattr(node, "to_tuple"):
             node = node.to_tuple()
         if isinstance(node, (tuple, list)):
@@ -90,6 +106,14 @@ class _TimeSeriesCoreGraph(_CoreGraph):
         return (node, 0)
 
     def _normalize_edge(self, u, v, edge_type: str | None) -> tuple:
+        """
+        Examples
+        --------
+        >>> from pgmpy.base import TimeseriesDAG
+        >>> G = TimeseriesDAG()
+        >>> G._normalize_edge(("A", 41), ("B", 42), "->")[:2]
+        (('A', -1), ('B', 0))
+        """
 
         u, v = self._normalize_node(u), self._normalize_node(v)
         lag = v[1] - u[1]
@@ -102,6 +126,17 @@ class _TimeSeriesCoreGraph(_CoreGraph):
         return ((u[0], -lag), (v[0], 0), edge_type)
 
     def _to_nodes(self, nodes) -> list:
+        """
+        Examples
+        --------
+        >>> from pgmpy.base import TimeseriesDAG
+        >>> G = TimeseriesDAG(edge_list=[(("A", -1), ("A", 0), "->"), (("A", 0), ("B", 0), "->")])
+        >>> sorted(G._to_nodes("A"))
+        [('A', -1), ('A', 0)]
+        >>> G._to_nodes([("A", -1), "B"])
+        [('A', -1), ('B', 0)]
+        """
+
         def is_node(target) -> bool:
             return hasattr(target, "to_tuple") or (
                 isinstance(target, tuple)
@@ -125,6 +160,15 @@ class _TimeSeriesCoreGraph(_CoreGraph):
         return resolved
 
     def add_node(self, node: Hashable, **attr) -> None:
+        """
+        Examples
+        --------
+        >>> from pgmpy.base import TimeseriesDAG
+        >>> G = TimeseriesDAG()
+        >>> G.add_node(("A", -2))
+        >>> sorted(G.nodes())
+        [('A', 0)]
+        """
         node = self._normalize_node(node)
         if not super().has_node(node):
             node = (node[0], 0)
@@ -135,6 +179,15 @@ class _TimeSeriesCoreGraph(_CoreGraph):
             self.add_node(node, **attr)
 
     def add_edge(self, u: Hashable, v: Hashable, edge_type: str) -> None:
+        """
+        Examples
+        --------
+        >>> from pgmpy.base import TimeseriesDAG
+        >>> G = TimeseriesDAG(tau_max=2)
+        >>> G.add_edge(("A", 41), ("B", 42), "->")
+        >>> G.get_edges()
+        [(('A', -1), ('B', 0), '->')]
+        """
         u, v, edge_type = self._normalize_edge(u, v, edge_type)
         self._validate_lag(-u[1])
         if u[1] != 0:
@@ -147,14 +200,39 @@ class _TimeSeriesCoreGraph(_CoreGraph):
         super().add_edge(u, v, edge_type=edge_type)
 
     def remove_edge(self, u: Hashable, v: Hashable, edge_type: str) -> None:
+        """
+        Examples
+        --------
+        >>> from pgmpy.base import TimeseriesDAG
+        >>> G = TimeseriesDAG(edge_list=[(("A", -1), ("B", 0), "->")])
+        >>> G.remove_edge(("A", 4), ("B", 5), "->")
+        >>> G.get_edges()
+        []
+        """
         u, v, edge_type = self._normalize_edge(u, v, edge_type)
         super().remove_edge(u, v, edge_type=edge_type)
 
     def has_edge(self, u: Hashable, v: Hashable, edge_type: str | None = None) -> bool:
+        """
+        Examples
+        --------
+        >>> from pgmpy.base import TimeseriesDAG
+        >>> G = TimeseriesDAG(edge_list=[(("A", -1), ("B", 0), "->")])
+        >>> G.has_edge(("A", 10), ("B", 11))
+        True
+        """
         u, v, edge_type = self._normalize_edge(u, v, edge_type)
         return super().has_edge(u, v, edge_type)
 
     def with_role(self, role: str, variables, inplace: bool = False):
+        """
+        Examples
+        --------
+        >>> from pgmpy.base import TimeseriesDAG
+        >>> G = TimeseriesDAG(edge_list=[(("A", -1), ("A", 0), "->")], latents={"A"})
+        >>> sorted(G.latents)
+        [('A', -1), ('A', 0)]
+        """
         return super().with_role(role=role, variables=self._to_nodes(variables), inplace=inplace)
 
     def without_role(self, role: str, variables=None, inplace: bool = False):
@@ -172,13 +250,36 @@ class _TimeSeriesCoreGraph(_CoreGraph):
         list
             List of variables in the time series graph. Sorting by ``str`` rather than natural order keeps
             mixed types comparable.
+        Examples
+        --------
+        >>> from pgmpy.base import TimeseriesDAG
+        >>> TimeseriesDAG(edge_list=[(("B", -1), ("A", 0), "->")]).variables
+        ['A', 'B']
         """
         return sorted({var for var, _ in super().nodes()}, key=str)
 
     def get_parents(self, nodes: Hashable) -> set:
+        """
+        Examples
+        --------
+        >>> from pgmpy.base import TimeseriesDAG
+        >>> G = TimeseriesDAG(edge_list=[(("A", -1), ("B", 0), "->")])
+        >>> sorted(G.get_parents(("B", 0)))
+        [('A', -1)]
+        """
         return super().get_parents(self._to_nodes(nodes))
 
     def get_children(self, nodes: Hashable) -> set:
+        """
+        Examples
+        --------
+        >>> from pgmpy.base import TimeseriesDAG
+        >>> G = TimeseriesDAG(edge_list=[(("A", -1), ("B", 0), "->")])
+        >>> sorted(G.get_children(("A", -1)))
+        [('B', 0)]
+        >>> sorted(G.get_children("A"))
+        [('B', 0)]
+        """
         return super().get_children(self._to_nodes(nodes))
 
     def get_edges(
@@ -188,6 +289,16 @@ class _TimeSeriesCoreGraph(_CoreGraph):
         lag: int | Iterable[int] | None = None,
         lag_relative: bool = False,
     ) -> list[tuple]:
+        """
+        Examples
+        --------
+        >>> from pgmpy.base import TimeseriesDAG
+        >>> G = TimeseriesDAG(edge_list=[(("A", -1), ("B", 0), "->"), (("B", 0), ("C", 0), "->")])
+        >>> sorted(G.get_edges(lag_relative=True))
+        [('A', 'B', 1, '->'), ('B', 'C', 0, '->')]
+        >>> sorted(G.get_edges(lag=0, lag_relative=True))
+        [('B', 'C', 0, '->')]
+        """
         if lag is None:
             lags = None
         elif isinstance(lag, (int, np.integer)) and not isinstance(lag, bool):
@@ -209,12 +320,28 @@ class _TimeSeriesCoreGraph(_CoreGraph):
         return edges
 
     def get_lag(self, u: Hashable, v: Hashable) -> int:
+        """
+        Examples
+        --------
+        >>> from pgmpy.base import TimeseriesDAG
+        >>> G = TimeseriesDAG(edge_list=[(("A", -2), ("B", 0), "->")])
+        >>> G.get_lag(("A", 5), ("B", 7))
+        2
+        """
         u_stored, v_stored, _ = self._normalize_edge(u, v, None)
         if not super().has_edge(u_stored, v_stored):
             raise ValueError(f"No such edge: {u} -- {v}")
         return -u_stored[1]
 
     def get_parents_by_lag(self, variable: Hashable) -> dict[int, list]:
+        """
+        Examples
+        --------
+        >>> from pgmpy.base import TimeseriesDAG
+        >>> G = TimeseriesDAG(edge_list=[(("A", -1), ("B", 0), "->"), (("C", 0), ("B", 0), "->")])
+        >>> G.get_parents_by_lag("B")
+        {0: ['C'], 1: ['A']}
+        """
         variable = self._normalize_node(variable)[0]
         if variable not in self.variables:
             raise ValueError(f"Variable not in the graph: {variable}.")
@@ -227,6 +354,16 @@ class _TimeSeriesCoreGraph(_CoreGraph):
 
     @classmethod
     def from_adjacency(cls, adj, encoding: str = "tigramite", variables: Iterable[Hashable] | None = None):
+        """
+        Examples
+        --------
+        >>> import numpy as np
+        >>> from pgmpy.base import TimeseriesDAG
+        >>> arr = np.full((2, 2, 2), "", dtype="<U3")
+        >>> arr[0, 1, 1] = "-->"
+        >>> TimeseriesDAG.from_adjacency(arr, variables=["A", "B"]).get_edges(lag_relative=True)
+        [('A', 'B', 1, '->')]
+        """
         if encoding != "tigramite":
             raise ValueError(
                 f"{cls.__name__} only supports encoding='tigramite'; got encoding={encoding!r}. The "
@@ -313,6 +450,16 @@ class _TimeSeriesCoreGraph(_CoreGraph):
         encoding: str = "tigramite",
         variables: Iterable[Hashable] | None = None,
     ):
+        """
+        Examples
+        --------
+        >>> from pgmpy.base import TimeseriesDAG
+        >>> G = TimeseriesDAG(edge_list=[(("A", -1), ("B", 0), "->")])
+        >>> G.to_adjacency().shape
+        (2, 2, 2)
+        >>> TimeseriesDAG.from_adjacency(G.to_adjacency(), variables=G.variables) == G
+        True
+        """
         if encoding != "tigramite":
             raise ValueError(
                 f"{type(self).__name__} only supports encoding='tigramite'; got encoding={encoding!r}. The "
@@ -345,6 +492,14 @@ class _TimeSeriesCoreGraph(_CoreGraph):
         return out
 
     def get_subgraph(self, nodes: Iterable[Hashable] | None = None, edge_types: Iterable[str] | None = None):
+        """
+        Examples
+        --------
+        >>> from pgmpy.base import TimeseriesDAG
+        >>> G = TimeseriesDAG(edge_list=[(("A", -1), ("B", 0), "->")], tau_max=4)
+        >>> G.get_subgraph(nodes=[("A", -1), ("B", 0)]).tau_max
+        4
+        """
         nodes = set(super().nodes()) if nodes is None else set(self._to_nodes(nodes))
         if missing := (nodes - set(super().nodes())):
             raise ValueError(f"Nodes {sorted(missing)} not in graph.")
@@ -364,6 +519,14 @@ class _TimeSeriesCoreGraph(_CoreGraph):
         return subgraph
 
     def __eq__(self, other) -> bool:
+        """
+        Examples
+        --------
+        >>> from pgmpy.base import TimeseriesDAG
+        >>> edges = [(("A", -1), ("B", 0), "->")]
+        >>> TimeseriesDAG(edge_list=edges, tau_max=2) == TimeseriesDAG(edge_list=edges, tau_max=3)
+        False
+        """
         return super().__eq__(other) and self.tau_max == other.tau_max
 
     def __hash__(self) -> int:

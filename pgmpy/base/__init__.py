@@ -3,13 +3,8 @@ from .DAG import DAG
 from .MAG import MAG
 from .PDAG import PDAG
 from .SimpleCausalModel import SimpleCausalModel
+from .TimeseriesDAG import TimeseriesDAG
+from .TimeseriesPDAG import TimeseriesPDAG
 from .UndirectedGraph import UndirectedGraph
 
-__all__ = [
-    "ADMG",
-    "UndirectedGraph",
-    "DAG",
-    "PDAG",
-    "MAG",
-    "SimpleCausalModel",
-]
+__all__ = ["ADMG", "UndirectedGraph", "DAG", "PDAG", "MAG", "SimpleCausalModel", "TimeseriesDAG", "TimeseriesPDAG"]

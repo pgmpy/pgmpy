@@ -366,6 +366,13 @@ class TestTimeseriesCoreGraphRoles:
         ],
         ids=["node_pair", "bare_name"],
     )
+    def test_with_role_target_shape(self, target, expected):
+        """
+        Test that the shape of the target decides whether one node or a whole variable is marked.
+        """
+        graph = _TimeSeriesCoreGraph(edge_list=[(("A", -1), ("A", 0), "->")], tau_max=2, latents={target})
+        assert sorted(graph.latents) == expected
+
     def test_with_role(self):
         # a DynamicNode is a node, not a bare variable name, even though it is not a tuple
         from pgmpy.models.DynamicBayesianNetwork import DynamicNode
