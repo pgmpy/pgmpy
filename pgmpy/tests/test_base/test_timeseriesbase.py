@@ -1,5 +1,6 @@
 import pytest
 
+from pgmpy.base import TimeseriesDAG
 from pgmpy.base._timeseriesbase import _TimeSeriesCoreGraph
 
 
@@ -320,16 +321,36 @@ class TestTimeseriesCoreGraph:
         assert set(copied.nodes()) == set(graph.nodes())
         check_graph_status(copied, 2, ["A", "B"], 3, [("A", "B", 2, "->")], {"latents": [("A", -2)]})
 
-        # the copy is independent of the original
         copied.add_edge(("B", 0), ("C", 0), "->")
         assert not graph.has_edge(("B", 0), ("C", 0))
 
-        # an inferred tau_max is not frozen by the copy: it still widens with the edges
         inferred = _TimeSeriesCoreGraph(edge_list=[(("A", -2), ("B", 0), "->")]).copy()
         inferred.add_edge(("A", -4), ("B", 0), "->")
         assert inferred.tau_max == 4
 
-        # a copy still equals the original after the longest-lag edge is removed
         graph = _TimeSeriesCoreGraph(edge_list=[(("A", -3), ("B", 0), "->"), (("C", 0), ("B", 0), "->")])
         graph.remove_edge(("A", -3), ("B", 0), "->")
         assert graph.copy() == graph
+
+    def test_eq_and_hash(self):
+        edges = [(("A", -2), ("B", 0), "->")]
+        same = _TimeSeriesCoreGraph(edge_list=edges, tau_max=3)
+        also_same = _TimeSeriesCoreGraph(edge_list=edges, tau_max=3)
+        other_tau = _TimeSeriesCoreGraph(edge_list=edges, tau_max=2)
+        other_class = TimeseriesDAG(edge_list=edges, tau_max=3)
+
+        assert same == also_same
+        assert hash(same) == hash(also_same)
+
+        assert same != other_tau
+        assert hash(same) != hash(other_tau)
+        assert same != other_class
+
+    def test_normalize_edge_with_no_edge_type(self):
+        """Test that `None` means "any edge type", rather than standing in for a real one."""
+        graph = _TimeSeriesCoreGraph(edge_list=[(("A", -1), ("B", 0), "->")])
+
+        assert graph.has_edge(("A", -1), ("B", 0))
+        assert graph.has_edge(("B", 0), ("A", -1))
+        assert graph.get_lag(("B", 0), ("A", -1)) == 1
+        assert graph._normalize_edge(("B", 0), ("A", -1), None)[2] is None
