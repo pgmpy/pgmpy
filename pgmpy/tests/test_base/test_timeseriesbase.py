@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 from pgmpy.base import TimeseriesDAG
@@ -354,3 +355,36 @@ class TestTimeseriesCoreGraph:
         assert graph.has_edge(("B", 0), ("A", -1))
         assert graph.get_lag(("B", 0), ("A", -1)) == 1
         assert graph._normalize_edge(("B", 0), ("A", -1), None)[2] is None
+
+
+class TestTimeseriesCoreGraphAdjacency:
+    def test_to_adjacency(self):
+        graph = sample_graph2()
+
+        # tigramite is the default, and the array is (N, N, tau_max + 1)
+        array = graph.to_adjacency()
+        assert isinstance(array, np.ndarray)
+        assert array.shape == (2, 2, 2)
+
+        # a contemporaneous link is written from both sides; a lagged one only forwards in time
+        array = graph.to_adjacency(encoding="tigramite")
+        assert array[0, 1, 0] == "-->"
+        assert array[1, 0, 0] == "<--"
+        assert array[0, 1, 1] == "-->"
+        assert array[1, 0, 1] == ""
+
+        # `variables` orders the first two axes
+        reordered = graph.to_adjacency(encoding="tigramite", variables=["B", "A"])
+        assert reordered[1, 0, 0] == "-->"
+
+        # fails: an incomplete variable order
+        with pytest.raises(ValueError, match="missing from the requested order"):
+            graph.to_adjacency(encoding="tigramite", variables=["A"])
+
+        # fails: a variable named twice
+        with pytest.raises(ValueError, match="must be unique"):
+            graph.to_adjacency(encoding="tigramite", variables=["A", "A", "B"])
+
+        # fails: `nodelist` orders a 2-D matrix, so it is gone from the signature
+        with pytest.raises(TypeError, match="nodelist"):
+            graph.to_adjacency(nodelist=[("A", 0)])
