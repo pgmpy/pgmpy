@@ -301,3 +301,35 @@ class TestTimeseriesCoreGraph:
 
         assert set(subgraph.nodes()) == {("A", 0), ("B", 0)}
         assert subgraph.get_edges(lag_relative=True) == [("A", "B", 0, "->")]
+
+        subgraph = graph.get_subgraph(["A", "B"])
+        assert set(subgraph.nodes()) == {("A", -2), ("A", 0), ("B", 0)}
+        assert sorted(subgraph.get_edges(lag_relative=True)) == [("A", "B", 0, "->"), ("A", "B", 2, "->")]
+
+        subgraph = graph.get_subgraph([("A", -2)])
+        assert subgraph.tau_max == 2
+
+    def test_copy(self):
+
+        graph = _TimeSeriesCoreGraph(edge_list=[(("A", -2), ("B", 0), "->")], tau_max=3, latents={("A", -2)})
+        copied = graph.copy()
+
+        assert type(copied) is _TimeSeriesCoreGraph
+        assert copied == graph
+        assert copied.latents == {("A", -2)}
+        assert set(copied.nodes()) == set(graph.nodes())
+        check_graph_status(copied, 2, ["A", "B"], 3, [("A", "B", 2, "->")], {"latents": [("A", -2)]})
+
+        # the copy is independent of the original
+        copied.add_edge(("B", 0), ("C", 0), "->")
+        assert not graph.has_edge(("B", 0), ("C", 0))
+
+        # an inferred tau_max is not frozen by the copy: it still widens with the edges
+        inferred = _TimeSeriesCoreGraph(edge_list=[(("A", -2), ("B", 0), "->")]).copy()
+        inferred.add_edge(("A", -4), ("B", 0), "->")
+        assert inferred.tau_max == 4
+
+        # a copy still equals the original after the longest-lag edge is removed
+        graph = _TimeSeriesCoreGraph(edge_list=[(("A", -3), ("B", 0), "->"), (("C", 0), ("B", 0), "->")])
+        graph.remove_edge(("A", -3), ("B", 0), "->")
+        assert graph.copy() == graph
