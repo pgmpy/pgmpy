@@ -357,6 +357,76 @@ class TestTimeseriesCoreGraph:
         assert graph._normalize_edge(("B", 0), ("A", -1), None)[2] is None
 
 
+class TestTimeseriesCoreGraphRoles:
+    @pytest.mark.parametrize(
+        ("target", "expected"),
+        [
+            (("A", -1), [("A", -1)]),  # a (variable, time) pair marks that one node
+            ("A", [("A", -1), ("A", 0)]),  # a bare name marks every offset the variable occupies
+        ],
+        ids=["node_pair", "bare_name"],
+    )
+    def test_with_role(self):
+        # a DynamicNode is a node, not a bare variable name, even though it is not a tuple
+        from pgmpy.models.DynamicBayesianNetwork import DynamicNode
+
+        graph = _TimeSeriesCoreGraph(edge_list=[(("A", -1), ("A", 0), "->")], tau_max=2)
+        graph.with_role(role="latents", variables=[DynamicNode("A", 0)], inplace=True)
+        assert sorted(graph.latents) == [("A", 0)]
+
+        # a list of nodes is a list, not one (variable, time) pair -- as `get_subgraph` passes
+        graph = _TimeSeriesCoreGraph(edge_list=[(("A", -1), ("A", 0), "->")], tau_max=2)
+        graph.with_role(role="latents", variables=[("A", -1), ("A", 0)], inplace=True)
+        assert sorted(graph.latents) == [("A", -1), ("A", 0)]
+
+        # fails: the inherited error survives the expansion, rather than the name doing nothing
+        graph = _TimeSeriesCoreGraph(edge_list=[("A", "B", "->")])
+        with pytest.raises(ValueError, match="not found in the graph"):
+            graph.with_role(role="latents", variables={"Z"}, inplace=True)
+
+    def test_with_role_integer_variable_names(self):
+        """
+        Test that a list of integer names is a list of variables, not one (variable, time) pair.
+        """
+        array = np.zeros((3, 3, 2), dtype=int)
+        array[0, 1, 1] = array[1, 2, 1] = array[2, 0, 1] = 1
+        graph = _TimeSeriesCoreGraph.from_adjacency(array)
+
+        both_variables = [(0, -1), (0, 0), (2, -1), (2, 0)]
+        assert sorted(graph.with_role(role="latents", variables=[2, 0]).latents) == both_variables
+        assert sorted(graph.with_role(role="latents", variables={2, 0}).latents) == both_variables
+
+        # a tuple stays a node: with integer names (2, 0) is ambiguous, and is read as the node
+        assert sorted(graph.with_role(role="latents", variables=(2, 0)).latents) == [(2, 0)]
+
+    def test_without_role(self):
+        """
+        Test that `without_role` clears a role named by variable, not only by node.
+        """
+        graph = _TimeSeriesCoreGraph(edge_list=[(("A", -1), ("A", 0), "->")], tau_max=2, latents={"A"})
+        graph.without_role(role="latents", variables={"A"}, inplace=True)
+
+        assert sorted(graph.latents) == []
+
+    def test_role_is_not_inherited_by_later_nodes(self):
+        """
+        Test that a role marks the nodes present when it is set, as on every other pgmpy graph.
+        """
+        graph = _TimeSeriesCoreGraph(edge_list=[("A", "B", "->")], tau_max=3, latents={"A"})
+        graph.add_edge(("A", -2), ("B", 0), "->")
+
+        assert sorted(graph.latents) == [("A", 0)]
+
+    def test_copy_keeps_the_marked_nodes(self):
+        """
+        Test that `copy` carries over the nodes a variable-level role expanded to.
+        """
+        graph = _TimeSeriesCoreGraph(edge_list=[(("A", -1), ("A", 0), "->")], tau_max=2, latents={"A"})
+
+        assert sorted(graph.copy().latents) == [("A", -1), ("A", 0)]
+        assert graph.copy() == graph
+
+
 class TestTimeseriesCoreGraphAdjacency:
     def test_to_adjacency(self):
         graph = sample_graph2()
