@@ -388,3 +388,71 @@ class TestTimeseriesCoreGraphAdjacency:
         # fails: `nodelist` orders a 2-D matrix, so it is gone from the signature
         with pytest.raises(TypeError, match="nodelist"):
             graph.to_adjacency(nodelist=[("A", 0)])
+
+    def test_from_adjacency(self):
+        array = np.zeros((2, 2, 2), dtype=int)
+        array[0, 1, 0] = array[0, 1, 1] = 1
+        graph = _TimeSeriesCoreGraph.from_adjacency(array, variables=["A", "B"])
+
+        check_graph_status(graph, 3, ["A", "B"], 1, [("A", "B", 0, "->"), ("A", "B", 1, "->")], {})
+
+        # without `variables` the graph comes back index-keyed
+        array = np.zeros((2, 2, 1), dtype=int)
+        array[0, 1, 0] = 1
+        assert _TimeSeriesCoreGraph.from_adjacency(array).get_edges(lag_relative=True) == [(0, 1, 0, "->")]
+
+        # a variable with no links of its own still becomes a node
+        array = np.zeros((3, 3, 1), dtype=int)
+        array[0, 1, 0] = 1
+        assert _TimeSeriesCoreGraph.from_adjacency(array, variables=["A", "B", "C"]).variables == ["A", "B", "C"]
+
+        # fails: the first two axes must agree
+        with pytest.raises(ValueError, match=r"shape \(N, N, tau_max \+ 1\)"):
+            _TimeSeriesCoreGraph.from_adjacency(np.zeros((2, 3, 2), dtype=int), encoding="tigramite")
+
+        # fails: with one encoding there is nothing to auto-detect, so a 2-D array is simply wrong
+        with pytest.raises(ValueError, match="three-dimensional array"):
+            _TimeSeriesCoreGraph.from_adjacency(np.zeros((3, 3), dtype=int))
+
+        # fails: the names must cover the first axis exactly, and be unique
+        array = np.zeros((2, 2, 1), dtype=int)
+        with pytest.raises(ValueError, match="names for"):
+            _TimeSeriesCoreGraph.from_adjacency(array, variables=["A"])
+        with pytest.raises(ValueError, match="must be unique"):
+            _TimeSeriesCoreGraph.from_adjacency(array, variables=["A", "A"])
+
+        # fails: a lag-0 link must be written in both cells, the second the mirror of the first
+        for upper, lower in [("", "-->"), ("-->", ""), ("-->", "-->")]:
+            array = np.full((2, 2, 1), "", dtype="<U3")
+            array[0, 1, 0], array[1, 0, 0] = upper, lower
+            with pytest.raises(ValueError, match="do not describe the same link"):
+                _TimeSeriesCoreGraph.from_adjacency(array, variables=["A", "B"])
+
+        # fails: a numeric array marks presence only
+        array = np.zeros((2, 2, 1), dtype=int)
+        array[0, 1, 0] = 3
+        with pytest.raises(ValueError, match="0/1 link marker"):
+            _TimeSeriesCoreGraph.from_adjacency(array, variables=["A", "B"])
+
+        # a float array of exactly 0 and 1 is read as numbers; anything else raises rather than truncating to 0
+        array = np.zeros((2, 2, 2))
+        array[0, 1, 1] = 1.0
+        assert _TimeSeriesCoreGraph.from_adjacency(array, variables=["A", "B"]).get_edges(lag_relative=True) == [
+            ("A", "B", 1, "->")
+        ]
+        array[0, 1, 1] = 0.5
+        with pytest.raises(ValueError, match="0.5 is not a 0/1 link marker"):
+            _TimeSeriesCoreGraph.from_adjacency(array, variables=["A", "B"])
+
+        # an object array of strings, as pandas `.values` gives, is read as marks
+        array = np.full((2, 2, 2), "", dtype=object)
+        array[0, 1, 1] = "-->"
+        assert _TimeSeriesCoreGraph.from_adjacency(array, variables=["A", "B"]).get_edges(lag_relative=True) == [
+            ("A", "B", 1, "->")
+        ]
+
+        # fails: an object array mixing marks and numbers
+        array = np.zeros((2, 2, 2), dtype=object)
+        array[0, 1, 1] = "-->"
+        with pytest.raises(ValueError, match="mixes string marks and numbers"):
+            _TimeSeriesCoreGraph.from_adjacency(array, variables=["A", "B"])
